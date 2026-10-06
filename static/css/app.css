@@ -820,15 +820,16 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    side under its name, which takes a line of its own (floated, a legend is laid out as any
    other child). The box is the whole target; the input is there for keyboards and screen readers,
    its ring round the box. */
-.filter-options { display: flex; flex-wrap: wrap; gap: .45rem; }
+.filter-options { display: flex; flex-wrap: wrap; gap: .35rem; }
 .filter-options > .filter-label { float: left; width: 100%; margin-bottom: -.1rem; }
 .filter-form .check {
   position: relative;
   display: inline-flex;
   justify-self: start; /* a yes-or-no filter's lone box keeps its width */
-  padding: .45rem .8rem;
+  padding: .3rem .6rem;
   border: 1px solid var(--border-strong);
-  border-radius: 9px;
+  border-radius: 7px;
+  font-size: .875rem;
   line-height: 1.3;
   transition: background-color .15s, border-color .15s, color .15s;
   -webkit-tap-highlight-color: transparent;
@@ -860,12 +861,21 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 @media (prefers-reduced-motion: reduce) {
   .filters.is-open { animation: none; }
 }
-/* Wider, the form's groups stand side by side, as many as fit, and its button under them all, as
-   wide as its words. */
+/* The form in two columns: a field takes a line of its own, unless it is a small one (filter-half:
+   a dropdown, a range, a few boxes), which shares its line with the next small one, Marka beside
+   Modeli, Viti beside Kilometrazhi, Karburanti beside Kambio. Wide, in four, a field of its own
+   taking two of them; the button under them all, as wide as its words. */
+.filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: .75rem; align-items: start; }
+.filter-form > * { grid-column: 1 / -1; }
+.filter-form > .filter-half { grid-column: auto; }
 @media (min-width: 720px) {
-  .filter-form { grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); align-items: start; column-gap: 1.5rem; }
-  .filter-actions { grid-column: 1 / -1; }
   .filter-actions .button { flex: none; padding-inline: 2rem; }
+}
+@media (min-width: 960px) {
+  .filter-form { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 1.5rem; }
+  .filter-form > * { grid-column: span 2; }
+  .filter-form > .filter-half { grid-column: span 1; }
+  .filter-form > .filter-actions { grid-column: 1 / -1; }
 }
 
 /* Map page, and the ways to it */

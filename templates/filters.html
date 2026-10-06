@@ -54,7 +54,7 @@
   {% for field in fields %}
   {% match field.kind %}
   {% when FieldKind::Select %}
-  <div class="filter-group">
+  <div class="filter-group{% if field.half %} filter-half{% endif %}">
     <label class="filter-label" for="filter-{{ field.name }}">{{ field.label }}</label>
     <div class="picker" data-controller="picker">
     <select id="filter-{{ field.name }}" name="{{ field.name }}"{% if let Some(parent) = field.depends_on %} data-depends-on="{{ parent }}"{% endif %}>
@@ -69,14 +69,14 @@
     </div>
   </div>
   {% when FieldKind::Checkboxes %}
-  <fieldset class="filter-group filter-options">
+  <fieldset class="filter-group filter-options{% if field.half %} filter-half{% endif %}">
     <legend class="filter-label">{{ field.label }}</legend>
     {% for choice in field.choices %}
     <label class="check"><input type="checkbox" name="{{ field.name }}" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}> {{ choice.label }}</label>
     {% endfor %}
   </fieldset>
   {% when FieldKind::Range %}
-  <fieldset class="filter-group">
+  <fieldset class="filter-group{% if field.half %} filter-half{% endif %}">
     <legend class="filter-label">{{ field.label }}{% if !field.unit.is_empty() %} ({{ field.unit }}){% endif %}</legend>
     <div class="range">
       <input type="text" inputmode="numeric" name="{{ field.name }}_min" value="{{ field.min }}" placeholder="nga" aria-label="{{ field.label }} nga">
@@ -85,13 +85,13 @@
     </div>
   </fieldset>
   {% when FieldKind::Year %}
-  <div class="filter-group">
+  <div class="filter-group{% if field.half %} filter-half{% endif %}">
     <label class="filter-label" for="filter-{{ field.name }}">{{ field.label }}</label>
     <input id="filter-{{ field.name }}" type="text" inputmode="numeric" name="{{ field.name }}" value="{{ field.min }}"
            maxlength="4" placeholder="p.sh. 2006">
   </div>
   {% when FieldKind::Toggle %}
-  <div class="filter-group">
+  <div class="filter-group{% if field.half %} filter-half{% endif %}">
     <label class="check"><input type="checkbox" name="{{ field.name }}" value="1"{% if field.checked %} checked{% endif %}> {{ field.label }}</label>
   </div>
   {% endmatch %}

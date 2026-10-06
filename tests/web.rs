@@ -627,6 +627,14 @@ async fn filter_form_offers_the_category_properties(pool: PgPool) {
     assert!(cars.contains(r#"<input type="checkbox" name="vehicle_fuel" value="DIESEL">"#));
     assert!(cars.contains(r#"<optgroup label="Volkswagen" data-parent="VOLKSWAGEN">"#), "models are grouped by make");
     assert!(cars.contains("Gjendja"));
+    // A few boxes share their line with the next field (Karburanti, five, beside Kambio); more
+    // take one of their own (Karroceria, seven). A colour is a dropdown, however few.
+    let fuel = cars.find(r#"<legend class="filter-label">Karburanti</legend>"#).unwrap();
+    assert!(cars[..fuel].trim_end().ends_with(r#"<fieldset class="filter-group filter-options filter-half">"#));
+    let body = cars.find(r#"<legend class="filter-label">Karroceria</legend>"#).unwrap();
+    assert!(cars[..body].trim_end().ends_with(r#"<fieldset class="filter-group filter-options">"#));
+    assert!(cars.contains(r#"<select id="filter-vehicle_color" name="vehicle_color">"#));
+    assert!(!cars.contains(r#"<input type="checkbox" name="vehicle_color""#));
 
     let property = get(pool.clone(), "/c/prona").await.body;
     assert!(property.contains("<h1>Prona<svg class=\"chevron\""));
@@ -2119,7 +2127,7 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
         ("/shto", 6),
         ("/shto/fushat?category=makina", 6),
         ("/search?q=golf", 3),
-        ("/c/makina", 4),
+        ("/c/makina", 5),
         ("/harta", 2),
     ];
     for (uri, selects) in pages {

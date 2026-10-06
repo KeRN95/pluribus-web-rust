@@ -35,8 +35,12 @@ const DEFAULT_RADIUS_KM: u32 = 10;
 const TIRANA: (f64, f64) = (41.3275, 19.8187);
 
 /// Properties with at most this many options are offered as checkboxes, longer lists as a
-/// dropdown.
+/// dropdown; and a colour always as a dropdown, which reads better than boxes of its names.
 const CHECKBOX_LIMIT: usize = 8;
+
+/// A property's boxes share their line with the next field when there are at most this many;
+/// more take a line of their own (Karroceria's seven). See Field::half.
+const HALF_LIMIT: usize = 5;
 
 /// The query string as name/value pairs, without empty values.
 pub struct Params(Vec<(String, String)>);
@@ -108,6 +112,10 @@ pub struct Field {
     pub max: String,
     pub unit: String,
     pub checked: bool,
+    /// A small field, which takes half the form's width, beside the next small one: a dropdown, a
+    /// range, a few boxes (Marka beside Modeli, Viti beside Kilometrazhi, Karburanti beside
+    /// Kambio). The others take a line of their own.
+    pub half: bool,
 }
 
 #[derive(PartialEq, Eq)]
@@ -692,6 +700,7 @@ impl<'a> Property<'a> {
             max: self.max.map(plain).unwrap_or_default(),
             unit: attribute.unit.clone().unwrap_or_default(),
             checked: self.checked,
+            half: true,
         };
         if self.fits_to.is_some() {
             field.name = year_param(attribute);
@@ -735,10 +744,13 @@ impl<'a> Property<'a> {
                         }
                     }
                 }
-                let few = parent.is_none() && attribute.options.len() <= CHECKBOX_LIMIT;
+                let few = parent.is_none()
+                    && attribute.options.len() <= CHECKBOX_LIMIT
+                    && !attribute.code.ends_with("_color");
                 if data_type == "MULTISELECT" || few {
                     field.kind = FieldKind::Checkboxes;
                     field.choices.extend(field.groups.drain(..).flat_map(|group| group.choices));
+                    field.half = field.choices.len() <= HALF_LIMIT;
                 }
             }
         }
