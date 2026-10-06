@@ -47,40 +47,39 @@
 </nav>
 {% endif %}
 
-{#- The phone layout opens the filters with JavaScript; without it they stay on the page. -#}
+{#- Narrower than a sidebar, the filters are a section under the toolbar that "Filtrat" opens and
+    closes with JavaScript; without it they stay open. -#}
 <noscript><style>.filters { display: block; } .filters-open { display: none; }</style></noscript>
 <div class="browse" data-controller="filters"
      data-action="keydown.esc@document->filters#close turbo:before-cache@document->filters#reset">
-  <aside class="filters" id="filters" tabindex="-1" aria-labelledby="filters-heading" data-filters-target="panel">
+  <div class="toolbar">
+    <button type="button" class="button secondary filters-open" aria-controls="filters" aria-expanded="false"
+            data-filters-target="toggle" data-action="filters#toggle">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+      Filtrat{% if !chips.is_empty() %} <span class="count-badge">{{ chips.len() }}</span>{% endif %}
+    </button>
+    {#- Opens the map above these results, on this page, and closes it again. -#}
+    <a class="button secondary map-open{% if filters.map_open %} active{% endif %}" href="{{ filters.map_toggle_url() }}"
+       {%- if filters.map_open %} aria-label="Mbyll hartën"{% endif %}>{% include "pin.svg" %}Harta</a>
+    <div class="sort">
+      <label for="sort">Rendit</label>
+      {#- Part of the filter form through the form attribute, so it keeps the filters. -#}
+      <div class="picker" data-controller="picker">
+      <select id="sort" name="sort" form="filter-form" data-action="filters#submit">
+        {% for choice in filters.sort_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+      </select>
+      </div>
+    </div>
+  </div>
+
+  <aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">
     <div class="filters-header">
       <h2 id="filters-heading">Filtrat</h2>
-      <button type="button" class="icon-button filters-close" data-action="filters#close" aria-label="Mbyll filtrat">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-      </button>
     </div>
     {% include "filters.html" %}
   </aside>
 
   <section class="results" aria-label="Njoftimet">
-    <div class="toolbar">
-      <button type="button" class="button secondary filters-open" aria-controls="filters" aria-expanded="false"
-              data-filters-target="toggle" data-action="filters#open">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-        Filtrat{% if !chips.is_empty() %} <span class="count-badge">{{ chips.len() }}</span>{% endif %}
-      </button>
-      {#- Opens the map above these results, on this page, and closes it again. -#}
-      <a class="button secondary map-open{% if filters.map_open %} active{% endif %}" href="{{ filters.map_toggle_url() }}"
-         {%- if filters.map_open %} aria-label="Mbyll hartën"{% endif %}>{% include "pin.svg" %}Harta</a>
-      <div class="sort">
-        <label for="sort">Rendit</label>
-        {#- Part of the filter form through the form attribute, so it keeps the filters. -#}
-        <div class="picker" data-controller="picker">
-        <select id="sort" name="sort" form="filter-form" data-action="filters#submit">
-          {% for choice in filters.sort_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
-        </select>
-        </div>
-      </div>
-    </div>
 
     {%- if filters.map_open %}
     {#- The map of these results, in a card whose header folds it away and back

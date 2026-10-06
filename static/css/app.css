@@ -854,7 +854,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 .filters-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .filters-header h2 { margin: 0; font-size: 1.2rem; }
-.filters:focus { outline: none; }
 
 .filter-form { display: grid; gap: 1.1rem; padding-top: .75rem; }
 .filter-group { display: grid; gap: .35rem; min-width: 0; margin: 0; padding: 0; border: 0; }
@@ -867,32 +866,42 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .filter-actions { display: flex; align-items: center; gap: .75rem; }
 .filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
 
-/* Phones and tablets: the filters open as a full-screen sheet from the toolbar button. */
+/* Phones and tablets: the filters are a section right under the toolbar, a card like Claude's with
+   the menus' hairline, which "Filtrat" opens (fading in as the menus do) and closes, the button
+   shaded while it is open. The button names the section, so its heading is there for screen
+   readers only. */
 @media (max-width: 959px) {
-  .filters { display: none; }
-
-  .filters.is-open {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 30;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: 0 1rem;
-    background: var(--bg);
+  .filters {
+    display: none;
+    margin: 0 0 1rem;
+    padding: 0 1rem 1rem;
+    border: 1px solid var(--menu-border);
+    border-radius: var(--radius);
+    background: var(--surface);
   }
-
-  .filters.is-open .filters-header { position: sticky; top: 0; z-index: 1; padding: .75rem 0; background: var(--bg); border-bottom: 1px solid var(--border); }
-  .filters.is-open .filter-actions { position: sticky; bottom: 0; padding: .75rem 0 1rem; background: var(--bg); border-top: 1px solid var(--border); }
-  .has-sheet,
-  .has-sheet body { overflow: hidden; }
+  .filters.is-open { display: block; animation: menu-in .16s ease-out; }
+  .filters-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .filters-open[aria-expanded="true"] { background: var(--surface-muted); border-color: var(--text); }
+}
+@media (max-width: 959px) and (prefers-reduced-motion: reduce) {
+  .filters.is-open { animation: none; }
 }
 
-/* Wide screens: the filters are a sticky sidebar; picked options apply at once. */
+/* Wide screens: the filters are a sticky sidebar beside the toolbar and the results; picked options
+   apply at once. */
 @media (min-width: 960px) {
-  .browse { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 2rem; align-items: start; }
+  .browse {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    grid-template-areas: "filters toolbar" "filters results";
+    column-gap: 2rem;
+    align-items: start;
+  }
+  .toolbar { grid-area: toolbar; }
+  .results { grid-area: results; }
 
   .filters {
+    grid-area: filters;
     position: sticky;
     top: 4.5rem;
     max-height: calc(100vh - 5.5rem);
@@ -901,8 +910,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
     scrollbar-width: thin;
   }
 
-  .button.filters-open,
-  .filters-close { display: none; }
+  .button.filters-open { display: none; }
 }
 
 /* Map page, and the ways to it */
