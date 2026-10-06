@@ -66,12 +66,12 @@ impl ListingDetail {
 
     /// The price a loan calculator starts from: only for things on sale with a price of their own
     /// (not rents, wanted ads or "price on request") that cost enough to borrow for, at least
-    /// 10 000 € or 100 000 Lekë.
+    /// 10 000 € or, about the same, 1 000 000 Lekë.
     pub fn loan_amount(&self) -> Option<Decimal> {
         let priced = matches!(self.price_type.as_str(), "FIXED" | "NEGOTIABLE" | "FROM");
         let enough = match self.currency.as_str() {
             "EUR" => Decimal::from(10_000),
-            "ALL" => Decimal::from(100_000),
+            "ALL" => Decimal::from(1_000_000),
             _ => return None,
         };
         self.price_amount.filter(|amount| priced && self.listing_type == "SELL" && *amount >= enough)

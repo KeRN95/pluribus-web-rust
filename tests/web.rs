@@ -663,9 +663,19 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     let car = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
     assert!(car.contains(r#"data-controller="loan" data-loan-price-value="21500.00" data-loan-currency-value="€""#));
     assert!(car.contains("Llogarit kredinë"));
-    // Under 10 000 € or 100 000 Lekë it isn't worth a loan.
+    // Under 10 000 € or 1 000 000 Lekë it isn't worth a loan.
     for cheap in ["/listing/1001-volkswagen-golf-7-2016-nafte", "/listing/1005-iphone-13-128-gb-si-i-ri"] {
         assert!(!html(pool.clone(), cheap).await.contains("Llogarit kredinë"), "{cheap}");
+    }
+    // In Lekë, the limit is about the same as in euros: 500 000 Lekë isn't enough, 1 000 000 is.
+    for (price, offered) in [(500_000, false), (999_999, false), (1_000_000, true)] {
+        sqlx::query("UPDATE listings SET price_amount = $1::numeric, currency = 'ALL', price_type = 'FIXED' WHERE public_no = 1005")
+            .bind(price)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let page = html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await;
+        assert_eq!(page.contains("Llogarit kredinë"), offered, "{price}");
     }
     // A rent is paid monthly already.
     let rent = html(pool, "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
