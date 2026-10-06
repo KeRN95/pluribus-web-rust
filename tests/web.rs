@@ -2235,11 +2235,13 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur</p>"#,
         r#"<p class="listing-price">"#,
+        r#"<aside class="listing-contact" aria-label="Shitësi">"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="seller-name">Ana</span>"#,
         r#"<span class="seller-summary">Në Marketplace që nga "#,
         r#"<div class="actions">"#,
         r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
+        "</aside>",
         "<h2>Detajet</h2>",
     ]);
     assert!(order.is_sorted(), "{order:?}");

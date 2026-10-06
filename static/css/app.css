@@ -1237,6 +1237,50 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 
 .listing { max-width: 760px; padding-top: 1.25rem; }
 
+/* Wide screens: two columns, the listing on the left and on the right who sells it and how to
+   reach them, in a card like the posting form's (the menus' hairline on the surface), which
+   stays in view as the page scrolls. The notice and the category path span both. */
+@media (min-width: 960px) {
+  .listing {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    grid-template-rows: auto auto auto auto auto auto 1fr;
+    grid-template-areas:
+      "notice notice"
+      "tags tags"
+      "media side"
+      "header side"
+      "loan side"
+      "details side"
+      "description side";
+    column-gap: 2.5rem;
+    align-items: start;
+    max-width: none;
+  }
+  .listing > .notice { grid-area: notice; }
+  .listing > .listing-tags { grid-area: tags; }
+  .listing > .listing-media { grid-area: media; }
+  .listing > .listing-header { grid-area: header; }
+  .listing > .loan { grid-area: loan; }
+  .listing > .listing-details { grid-area: details; }
+  .listing > .listing-description { grid-area: description; }
+  .listing > .listing-contact {
+    grid-area: side;
+    position: sticky;
+    top: 5rem;
+    padding: 1rem;
+    border: 1px solid var(--menu-border);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
+  }
+  .listing-contact .seller { margin: 0 -.6rem; }
+  /* The card is narrow: since when and how many listings may take two lines. */
+  .listing-contact .seller-summary { white-space: normal; }
+  /* Under the seller, over a hairline across the card, the buttons. */
+  .listing-contact .actions { margin: .75rem -1rem 0; padding: 1rem 1rem 0; border-top: 1px solid var(--menu-border); }
+}
+
 .listing-photo {
   display: block;
   width: 100%;

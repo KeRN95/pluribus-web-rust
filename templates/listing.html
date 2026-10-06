@@ -85,6 +85,9 @@
     {%- endif %}
   </header>
 
+  {#- Who sells it and how to reach them: under the price on a phone, a card in the right column
+      on a wide screen, which stays in view as the page scrolls (app.css). -#}
+  <aside class="listing-contact" aria-label="Shitësi">
   {#- The seller, over the buttons: a small initial, the name, and since when and how many
       listings, leading to all their listings. -#}
   <a class="seller" href="{{ listing.seller_url }}">
@@ -130,6 +133,7 @@
       </button>
     </div>
   </div>
+  </aside>
 
   {%- if listing.loan_amount().is_some() %}
   <section class="loan" id="loan-calculator" data-loan-target="panel" aria-label="Llogaritësi i kredisë" hidden>
@@ -157,7 +161,7 @@
   {%- endif %}
 
   {% if !details.is_empty() %}
-  <section>
+  <section class="listing-details">
     <h2>Detajet</h2>
     {#- Pills that fill each line: a detail's icon before its value where it has one, otherwise its
         name; several values (a car's options) a pill each, with a check. The names are there for
@@ -179,7 +183,7 @@
   </section>
   {% endif %}
 
-  <section>
+  <section class="listing-description">
     <h2>Përshkrimi</h2>
     {%- if let Some(heading) = listing.heading %}
     {#- A car's own title, as its seller wrote it: the page's is made from what the car is. -#}
