@@ -413,8 +413,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .field select,
 .filter-form select,
 .sort select,
-.pending-form select,
-.picker-button {
+.pending-form select {
   appearance: none;
   padding-right: 2rem;
   background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
@@ -484,7 +483,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .welcome-form .with-icon select,
   .welcome-form .with-icon .picker-button { padding-left: 1.95rem; }
   .welcome-form .with-icon select,
-  .welcome-form .with-icon .picker-button { padding-right: 1.5rem; background-position: calc(100% - 14px) 55%, calc(100% - 9px) 55%; }
+  .welcome-form .with-icon .picker-button { padding-right: 1.8rem; background-position: calc(100% - 14px) 55%, calc(100% - 9px) 55%; }
+  .welcome-form .with-icon .picker-button::after { right: .5rem; }
 }
 
 /* A select chosen from a list in the page (picker_controller.js) rather than the phone's own picker.
@@ -494,7 +494,39 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    subcategories open. */
 .picker { position: relative; }
 .picker-native { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
-.picker-button { display: block; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+/* Drawn once, in black, and painted in the text's colour through a mask: Claude's thin chevron
+   and its check. */
+:root {
+  --chevron-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+/* As Claude's: a thin chevron, which turns over while the list is open. */
+.picker-button {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  padding-right: 2.2rem;
+  appearance: none;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.picker-button::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: .75rem;
+  width: 1rem;
+  height: 1rem;
+  background: var(--muted);
+  -webkit-mask: var(--chevron-down) center / contain no-repeat;
+  mask: var(--chevron-down) center / contain no-repeat;
+  transform: translateY(-50%);
+  transition: transform .15s, background-color .15s;
+}
+.picker-button:hover::after { background: var(--text); }
+.picker-button[aria-expanded="true"]::after { transform: translateY(-50%) rotate(180deg); }
 .picker-button.picker-invalid { border-color: var(--danger); }
 .picker-list {
   position: absolute;
@@ -507,13 +539,22 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   max-height: min(70vh, 30rem);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: .4rem;
-  border: 1px solid var(--border);
+  padding: .375rem;
+  border: 1px solid var(--menu-border);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
+  box-shadow: var(--menu-shadow);
+  transform-origin: top;
+  animation: menu-in .14s ease-out;
 }
 .picker-list[hidden] { display: none; }
+:root {
+  --menu-border: color-mix(in srgb, var(--text) 12%, transparent);
+  --menu-shadow: 0 12px 28px -6px rgb(0 0 0 / 16%), 0 2px 6px rgb(0 0 0 / 5%);
+}
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(.98); }
+}
 .picker-list.picker-start { right: auto; left: 0; }
 .picker-heading { padding: .6rem .85rem .2rem; color: var(--muted); font-size: .8rem; font-weight: var(--semibold); }
 /* Rows a finger finds easily, close enough to read as one list. */
@@ -530,6 +571,23 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .picker-option.is-current { background: var(--button); color: var(--on-button); font-weight: var(--medium); }
 .picker-option.is-current:hover { background: var(--button-hover); }
 .picker-option.is-current .picker-toggle { color: inherit; }
+.picker-option[aria-selected="true"],
+.picker-option.is-current { display: flex; align-items: center; gap: .5rem; }
+.picker-option[aria-selected="true"]::after,
+.picker-option.is-current::after {
+  content: "";
+  flex: none;
+  order: 1;
+  width: 1rem;
+  height: 1rem;
+  margin-left: auto;
+  background: currentColor;
+  -webkit-mask: var(--check) center / contain no-repeat;
+  mask: var(--check) center / contain no-repeat;
+}
+.picker-option .picker-toggle { order: 2; }
+.picker-option[aria-selected="true"] .picker-toggle,
+.picker-option.is-current .picker-toggle { margin-left: -.1rem; }
 .picker-list[role="tree"] [aria-level="1"] { font-weight: var(--semibold); }
 .picker-branch { display: flex; align-items: center; gap: .5rem; padding-top: .25rem; padding-bottom: .25rem; }
 /* A category's subcategories, once open: a level further in, with a faint line in the gap to their
@@ -559,7 +617,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .picker-toggle:hover { background: var(--border); color: var(--text); }
 .picker-branch[aria-expanded="true"] .picker-toggle { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) {
-  .picker-toggle { transition: none; }
+  .picker-toggle,
+  .picker-button::after { transition: none; }
+  .picker-list,
+  .category-menu { animation: none; }
 }
 
 /* Where the select sat beside something, the button does: the currency next to the price, the
@@ -642,17 +703,19 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   width: min(22rem, calc(100vw - 2rem));
   max-height: min(70vh, 32rem);
   overflow-y: auto;
-  padding: .4rem;
+  padding: .375rem;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--menu-border);
   border-radius: var(--radius);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
+  box-shadow: var(--menu-shadow);
   overscroll-behavior: contain;
+  transform-origin: top left;
+  animation: menu-in .14s ease-out;
 }
 /* Its rows are the in-page lists' (.picker-option); the top level stands out. A branch's name
    takes the row up to its arrow and leads to the category; the arrow opens it. */
 .category-menu .picker-option { display: block; color: var(--text); text-decoration: none; }
-.category-menu .picker-option.is-current { color: var(--on-button); }
+.category-menu .picker-option.is-current { display: flex; color: var(--on-button); }
 .category-menu > .picker-option,
 .category-menu > .menu-branch > .picker-branch { font-weight: var(--semibold); }
 .category-menu .picker-branch { display: flex; list-style: none; }
