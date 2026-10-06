@@ -21,10 +21,10 @@
   </div>
   {% endif %}
 
-  <div class="filter-group" data-controller="city">
+  <div class="filter-group">
     <label class="filter-label" for="filter-city">Qyteti</label>
     <div class="picker" data-controller="picker">
-    <select id="filter-city" name="city" data-city-target="select" data-action="city#change">
+    <select id="filter-city" name="city">
       <option value="">Gjithë Shqipëria</option>
       {% for group in filters.city_groups() %}
       <optgroup label="{{ group.label }}">

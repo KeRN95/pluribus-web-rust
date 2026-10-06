@@ -200,18 +200,13 @@ async fn home_page_lists_categories(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
-async fn welcome_page_asks_for_a_city_and_a_category(pool: PgPool) {
+async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     let body = get(pool, "/").await.body;
     assert!(body.contains("Çfarë po kërkon?"));
-    // Cities come grouped by county, each county's main town first.
-    let durres = body.find(r#"<optgroup label="Durrës">"#).expect("the Durrës county");
-    let towns = positions(&body[durres..], &[
-        r#"<option value="durres">Durrës</option>"#,
-        r#"<option value="kruje">Krujë</option>"#,
-        r#"<option value="shijak">Shijak</option>"#,
-    ]);
-    assert!(towns.is_sorted(), "{towns:?}");
-    assert!(body.contains(r#"<option value="makina">"#), "subcategories are offered too");
+    // Words only: no city, no category; the results' filters narrow them.
+    assert!(body.contains(r#"<form class="welcome-form" action="/search" method="get" role="search">"#));
+    assert!(body.contains(r#"<input id="welcome-q" type="search" name="q""#));
+    assert!(!body.contains(r#"name="city""#) && !body.contains(r#"name="category""#));
     // A shortcut to every main category, in their order, each its icon before its name; no more
     // listing-like cards.
     let main = [
@@ -228,10 +223,10 @@ async fn welcome_page_asks_for_a_city_and_a_category(pool: PgPool) {
         ("te-tjera", "Të tjera"),
     ];
     let links: Vec<String> =
-        main.iter().map(|(slug, _)| format!(r#"<a class="shortcut" href="/c/{slug}" data-city-target="link">"#)).collect();
+        main.iter().map(|(slug, _)| format!(r#"<a class="shortcut" href="/c/{slug}">"#)).collect();
     let shortcuts = positions(&body, &links.iter().map(String::as_str).collect::<Vec<_>>());
     assert!(shortcuts.is_sorted(), "{shortcuts:?}");
-    assert_eq!(body.matches(r#"data-city-target="link""#).count(), main.len());
+    assert_eq!(body.matches(r#"<a class="shortcut""#).count(), main.len());
     for (_, name) in main {
         assert!(body.contains(&format!("</svg>{name}</a>")), "{name}");
     }
@@ -240,14 +235,16 @@ async fn welcome_page_asks_for_a_city_and_a_category(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
-async fn welcome_page_remembers_the_city(pool: PgPool) {
+async fn welcome_page_ignores_the_city_it_used_to_remember(pool: PgPool) {
+    // The welcome page no longer asks for a city, so the one an older visit left in a cookie
+    // would narrow the categories unseen: it is ignored.
     let request = Request::get("/")
         .header(header::COOKIE, "consent=1; city=vlore")
         .body(Body::empty())
         .unwrap();
     let body = send(pool, request).await.body;
-    assert!(body.contains(r#"<option value="vlore" selected>Vlorë</option>"#));
-    assert!(body.contains(r#"href="/c/automjete?city=vlore""#));
+    assert!(body.contains(r#"<a class="shortcut" href="/c/automjete">"#));
+    assert!(!body.contains("city=vlore"));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -1305,9 +1302,9 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
 
     // The old address still works.
     assert_eq!(get(pool.clone(), "/c/pjese-kembimi").await.status, StatusCode::OK);
-    // Every dropdown of categories shows the kinds, a level further in.
-    let welcome = get(pool, "/").await.body;
-    assert!(welcome.contains("<option value=\"gps-dhe-navigatore\">\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}GPS dhe navigatorë</option>"));
+    // Every dropdown of categories shows the kinds, a level further in: the search's filter too.
+    let search = get(pool, "/search").await.body;
+    assert!(search.contains("<option value=\"gps-dhe-navigatore\">\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}GPS dhe navigatorë</option>"));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -2086,7 +2083,6 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     let folding = r#"<div class="picker" data-controller="picker" data-picker-tree-value="true">"#;
     let ana = new_seller(&pool, "+355691112233").await;
     let pages = [
-        ("/", 2),
         ("/shto", 6),
         ("/shto/fushat?category=makina", 6),
         ("/search?q=golf", 4),

@@ -483,43 +483,29 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 .welcome-form { display: grid; gap: .75rem; }
 
+/* Phones: the words, then the button under them; wider, side by side (below). */
 .welcome-form .button { justify-content: center; padding-block: .7rem; }
-/* Phones: the words on a line of their own, then the city and the category side by side. */
-.welcome-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.welcome-form .field-query,
-.welcome-form .button { grid-column: 1 / -1; }
 
-/* A field with an icon inside, on the left, saying what it is: a magnifier for the words, the
-   location pin for the city, four squares for the category. */
+/* A field with an icon inside, on the left, saying what it is: a magnifier for the words. */
 .with-icon { position: relative; }
-.with-icon input,
-.with-icon select,
-.with-icon .picker-button { padding-left: 2.2rem; }
-.with-icon select { text-overflow: ellipsis; }
+.with-icon input { padding-left: 2.2rem; }
 
 .with-icon .field-icon {
   position: absolute;
   top: 50%;
   left: .7rem;
   color: var(--muted);
-  z-index: 1; /* over a picker's button too */
+  z-index: 1;
   pointer-events: none; /* clicks go through to the field */
   transform: translateY(-50%);
 }
-.with-icon .pin { color: var(--location); }
 
-/* Phones: the two pickers side by side are narrow, so the icon, the text and the arrow sit closer
-   and the form's own padding is smaller, which keeps "Çdo kategori" whole on a 360px screen. */
+/* Phones: the icon and the text sit a little closer, and the form's own padding is smaller. */
 @media (max-width: 719px) {
   .welcome-card { padding: .25rem 0 0; }
   .welcome-form { gap: .6rem; }
   .welcome-form .with-icon .field-icon { left: .6rem; }
-  .welcome-form .with-icon input,
-  .welcome-form .with-icon select,
-  .welcome-form .with-icon .picker-button { padding-left: 1.95rem; }
-  .welcome-form .with-icon select,
-  .welcome-form .with-icon .picker-button { padding-right: 1.8rem; background-position: calc(100% - 14px) 55%, calc(100% - 9px) 55%; }
-  .welcome-form .with-icon .picker-button::after { right: .5rem; }
+  .welcome-form .with-icon input { padding-left: 1.95rem; }
 }
 
 /* A select chosen from a list in the page (picker_controller.js) rather than the phone's own picker.
@@ -710,9 +696,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .welcome { padding-top: 2rem; }
   .welcome h1 { font-size: 2.05rem; }
   .welcome-card { padding: .75rem 0 0; }
-  .welcome-form { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; }
-  .welcome-form .field-query,
-  .welcome-form .button { grid-column: auto; }
+  .welcome-form { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+  /* The button as tall as the field beside it. */
+  .welcome-form .button { align-self: stretch; padding-block: 0; }
 }
 
 /* Browse pages: filters beside the results */

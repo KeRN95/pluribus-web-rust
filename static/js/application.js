@@ -1,7 +1,6 @@
 // Turbo turns links and forms into fetch requests; Stimulus attaches small controllers to HTML.
 import "@hotwired/turbo";
 import { Application } from "@hotwired/stimulus";
-import CityController from "controllers/city_controller.js";
 import CopyController from "controllers/copy_controller.js";
 import DropdownController from "controllers/dropdown_controller.js";
 import FiltersController from "controllers/filters_controller.js";
@@ -16,7 +15,6 @@ import ShareController from "controllers/share_controller.js";
 import ThemeController from "controllers/theme_controller.js";
 
 const application = Application.start();
-application.register("city", CityController);
 application.register("copy", CopyController);
 application.register("dropdown", DropdownController);
 application.register("filters", FiltersController);

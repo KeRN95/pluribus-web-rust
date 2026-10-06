@@ -4,8 +4,8 @@
 {% block header_search %}{% endblock %}
 
 {% block content %}
-<section class="welcome" data-controller="city">
-  {#- The question, and the fields that answer it, together. -#}
+<section class="welcome">
+  {#- The question, and the field that answers it, together. -#}
   <div class="welcome-card">
   <div class="welcome-intro">
     {#- A star of soft tentacles that turns into an amoeba and back as it spins, a nod to Claude's
@@ -13,12 +13,13 @@
     {% include "thinking.svg" %}
     <div>
       <h1>Çfarë po kërkon?</h1>
-      <p class="lead">Zgjidh qytetin dhe kategorinë, ose shkruaj atë që të duhet.</p>
+      <p class="lead">Shkruaj atë që të duhet, ose zgjidh një kategori më poshtë.</p>
     </div>
   </div>
 
-  {#- No labels above the fields: an icon and the text inside say what each is (the labels stay
-      for screen readers). On phones the city and the category share a line. -#}
+  {#- Words only, searched in every category and town; the results' filters narrow them. No label
+      above the field: the magnifier and the text inside say what it is (the label stays for
+      screen readers). -#}
   <form class="welcome-form" action="/search" method="get" role="search">
     <div class="field field-query">
       <label class="visually-hidden" for="welcome-q">Kërko</label>
@@ -27,45 +28,16 @@
         <input id="welcome-q" type="search" name="q" placeholder="Kërko p.sh. Golf 7, apartament 2+1" autocomplete="off">
       </div>
     </div>
-    <div class="field">
-      <label class="visually-hidden" for="welcome-city">Qyteti</label>
-      <div class="with-icon">
-        <svg class="field-icon pin" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
-        <div class="picker" data-controller="picker">
-        <select id="welcome-city" name="city" data-city-target="select" data-action="city#change">
-          <option value="">Çdo qytet</option>
-          {% for group in cities %}
-          <optgroup label="{{ group.label }}">
-            {% for city in group.choices %}<option value="{{ city.value }}"{% if city.selected %} selected{% endif %}>{{ city.label }}</option>{% endfor %}
-          </optgroup>
-          {% endfor %}
-        </select>
-        </div>
-      </div>
-    </div>
-    <div class="field">
-      <label class="visually-hidden" for="welcome-category">Kategoria</label>
-      <div class="with-icon">
-        <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>
-        <div class="picker" data-controller="picker" data-picker-tree-value="true">
-        <select id="welcome-category" name="category">
-          <option value="">Çdo kategori</option>
-          {% for category in categories %}<option value="{{ category.value }}">{{ category.label }}</option>{% endfor %}
-        </select>
-        </div>
-      </div>
-    </div>
     <button type="submit" class="button">Shfaq njoftimet</button>
   </form>
   </div>
   <p class="map-entry"><a href="/harta">{% include "pin.svg" %}Ose vendos një pikë në hartë dhe shiko çfarë ka përreth</a></p>
 
   {#- Every main category at once, as pills like the listing page's details: its icon, then its
-      name. The links carry the city chosen above; city_controller.js updates them when it
-      changes. -#}
+      name. -#}
   <nav class="shortcuts" aria-label="Kategoritë">
     {%- for shortcut in shortcuts %}
-    <a class="shortcut" href="{{ shortcut.url }}" data-city-target="link">
+    <a class="shortcut" href="{{ shortcut.url }}">
       <svg class="shortcut-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ shortcut.icon|safe }}</svg>
       {{- shortcut.name -}}
     </a>

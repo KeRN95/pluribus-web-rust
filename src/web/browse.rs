@@ -9,8 +9,8 @@ use axum::{
 };
 
 use super::{
-    Result, cookie,
-    filters::{self, Chip, Choice, ChoiceGroup, Field, FieldKind, Filters, Params},
+    Result,
+    filters::{Chip, Field, FieldKind, Filters, Params},
     is_next_page_request, not_found, render,
 };
 use crate::{
@@ -104,14 +104,11 @@ pub struct Shortcut {
 #[derive(Template)]
 #[template(path = "home.html")]
 struct HomePage {
-    cities: Vec<ChoiceGroup>,
-    categories: Vec<Choice>,
     shortcuts: Vec<Shortcut>,
     page: ListingPage,
 }
 
-/// The welcome page asks what the visitor is looking for and where, then shows the newest
-/// listings.
+/// The welcome page asks what the visitor is looking for, then shows the newest listings.
 pub async fn home(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -126,31 +123,18 @@ pub async fn home(
         return frame_response(after, &ListingPage::new(rows, Sort::Newest, next_url));
     }
 
-    let (rows, categories, cities) = tokio::try_join!(
-        db::listing_page(&state.db, &filter),
-        db::categories(&state.db),
-        db::cities(&state.db),
-    )?;
-    // The city picked last time (see city_controller.js), if it still exists.
-    let city = cookie(&headers, "city").filter(|slug| cities.iter().any(|c| &c.slug == slug));
+    let (rows, categories) =
+        tokio::try_join!(db::listing_page(&state.db, &filter), db::categories(&state.db))?;
     // Every main category, in its order, with its icon.
     let shortcuts = categories
         .top_level()
         .map(|category| Shortcut {
             name: category.name.clone(),
-            url: match &city {
-                Some(city) => format!("/c/{}?city={city}", category.slug),
-                None => format!("/c/{}", category.slug),
-            },
+            url: format!("/c/{}", category.slug),
             icon: SHORTCUTS.iter().find(|(slug, _)| *slug == category.slug).map_or(BOX, |(_, icon)| *icon),
         })
         .collect();
-    render(HomePage {
-        cities: filters::city_groups(&cities, city.as_deref()),
-        categories: filters::category_choices(&categories, None),
-        shortcuts,
-        page: ListingPage::new(rows, Sort::Newest, next_url),
-    })
+    render(HomePage { shortcuts, page: ListingPage::new(rows, Sort::Newest, next_url) })
 }
 
 pub struct Link {
