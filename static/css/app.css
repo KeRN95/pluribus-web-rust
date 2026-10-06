@@ -709,16 +709,18 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    and on to the next line; the icon before the name, in the muted colour. Under the pointer or a
    finger a pill takes a warm shade and its icon the text's colour, and a press sinks it a
    little. */
-.shortcuts { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.25rem 0 0; }
+.shortcuts { display: flex; flex-wrap: wrap; gap: .55rem; margin: 1.25rem 0 0; }
+/* A little bigger than the details' pills, being the way into the site. */
 .shortcut {
   display: flex;
   align-items: center;
-  gap: .5rem;
-  padding: .55rem 1rem;
+  gap: .55rem;
+  padding: .7rem 1.1rem .7rem 1rem;
   border: 1px solid var(--menu-border);
   border-radius: 999px;
   background: var(--surface);
   color: var(--text);
+  font-size: 1.05rem;
   font-weight: var(--medium);
   text-decoration: none;
   white-space: nowrap;
