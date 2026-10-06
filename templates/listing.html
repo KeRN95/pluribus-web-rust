@@ -11,13 +11,13 @@
   {#- Posted just now without signing in (post.rs): changing it later takes signing in. -#}
   <p class="notice" role="status">Njoftimi yt u publikua. Për ta ndryshuar ose fshirë më vonë, <a href="/njoftimet-e-mia">hyr</a> me numrin ose email-in që shkruajte.</p>
   {%- endif %}
-  {#- Where it is: its category and those above it, pills joined by a faint chain link that stays
+  {#- Where it is: its category and those above it, pills with a small › between them that stays
       with the pill after it when the row wraps; then its status, if it isn't simply up. -#}
   <div class="listing-tags">
     <nav class="listing-trail" aria-label="Kategoria e njoftimit">
       {%- for crumb in trail %}
       <span class="trail-step">
-        {%- if !loop.first %}<svg class="trail-link" width="18" height="9" viewBox="0 0 20 10" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="1" y="1.5" width="11" height="7" rx="3.5"/><rect x="8" y="1.5" width="11" height="7" rx="3.5"/></svg>{% endif -%}
+        {%- if !loop.first %}<svg class="trail-sep" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>{% endif -%}
         <a class="chip" href="{{ crumb.url }}">{{ crumb.name }}</a>
       </span>
       {%- endfor %}
@@ -56,16 +56,6 @@
     {%- endif %}
   </div>
   {% endif %}
-
-  {#- The seller, under the photo: a small initial, the name, and since when and how many listings,
-      leading to all their listings. -#}
-  <a class="seller" href="{{ listing.seller_url }}">
-    <span class="avatar" aria-hidden="true">{{ listing.seller_initial() }}</span>
-    <span class="seller-text">
-      <span class="seller-name">{{ listing.seller_name }}</span>
-      <span class="seller-summary">{{ listing.seller_summary() }}</span>
-    </span>
-  </a>
 
   <header class="listing-header">
     <h1>{{ listing.title }}</h1>
@@ -142,6 +132,15 @@
   </section>
   {%- endif %}
 
+  {#- The seller, under the buttons (and the loan calculator, when it is open): a small initial,
+      the name, and since when and how many listings, leading to all their listings. -#}
+  <a class="seller" href="{{ listing.seller_url }}">
+    <span class="avatar" aria-hidden="true">{{ listing.seller_initial() }}</span>
+    <span class="seller-text">
+      <span class="seller-name">{{ listing.seller_name }}</span>
+      <span class="seller-summary">{{ listing.seller_summary() }}</span>
+    </span>
+  </a>
 
   {% if !attributes.is_empty() %}
   <section>

@@ -1054,7 +1054,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 
 /* A listing's seller, and the seller's profile */
 
-/* Under the listing's photo, no box: the seller's initial, small, their name, and quietly under
+/* Under the listing's buttons, no box: the seller's initial, small, their name, and quietly under
    it since when and how many listings. */
 .seller {
   display: flex;
@@ -1203,14 +1203,14 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   .gallery-next { right: .7rem; }
   .gallery-arrow:disabled { opacity: 0; pointer-events: none; }
 }
-/* Above the photo, the category's path as pills, joined by a faint chain link, and the status
-   after them. A link goes with the pill after it, so a wrapped row starts with one rather than a
-   row ending in one. */
+/* Above the photo, the category's path as pills with a small › between them, and the status after
+   them. A › goes with the pill after it, so a wrapped row starts with one rather than a row ending
+   in one. */
 .listing-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
 .listing-tags .badge { margin-left: 0; }
 .listing-trail { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .3rem; }
 .trail-step { display: inline-flex; align-items: center; gap: .3rem; }
-.trail-link { flex: none; color: var(--muted); opacity: .45; }
+.trail-sep { flex: none; color: var(--muted); }
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: 1.9rem; }
 .listing-price { margin: 0; font-size: 1.6rem; font-weight: var(--bold); letter-spacing: -.02em; }
 /* The price with the loan calculator's button beside it; the calculator opens under the actions. */

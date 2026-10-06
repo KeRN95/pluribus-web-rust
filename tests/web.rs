@@ -681,14 +681,14 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("<dd>Naftë</dd>"));
     assert!(response.body.contains("<dd>Hatchback</dd>"));
     assert!(response.body.contains("ABS, Kondicioner"));
-    // Its category's path, pills joined by a chain link: Automjete, then Makina.
+    // Its category's path, pills with a › between them: Automjete, then Makina.
     let trail = positions(&response.body, &[
         r#"<a class="chip" href="/c/automjete">Automjete</a>"#,
-        r#"<svg class="trail-link""#,
+        r#"<svg class="trail-sep""#,
         r#"<a class="chip" href="/c/makina">Makina</a>"#,
     ]);
     assert!(trail.is_sorted(), "{trail:?}");
-    assert_eq!(response.body.matches(r#"<svg class="trail-link""#).count(), 1);
+    assert_eq!(response.body.matches(r#"<svg class="trail-sep""#).count(), 1);
     let html = response.body.replace("&#38;", "&");
     assert!(html.contains("photo-1591230740238-e9a71182b67c?auto=format&fit=crop&w=1200"));
 }
@@ -1369,7 +1369,7 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
         r#"<a class="chip" href="/c/gps-dhe-navigatore">GPS dhe navigatorë</a>"#,
     ]);
     assert!(trail.is_sorted(), "{trail:?}");
-    assert_eq!(page.matches(r#"<svg class="trail-link""#).count(), 2);
+    assert_eq!(page.matches(r#"<svg class="trail-sep""#).count(), 2);
     for (label, value) in [("Marka e automjetit", "Volkswagen"), ("Modeli i automjetit", "Golf"), ("Nga viti", "2012"), ("Deri në vitin", "2019")] {
         assert!(page.contains(&format!("<dt>{label}</dt>")), "{label}");
         assert!(page.contains(&format!("<dd>{value}</dd>")), "{value}");
@@ -2135,16 +2135,18 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // A private seller: Ana, with the five fixture listings she sells.
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
-    // The category above the photo; under it her initial, her name, since when and how many
-    // listings, leading to her profile; then the title.
+    // The category above the photo; the title, the price and the buttons under it; then her
+    // initial, her name, since when and how many listings, leading to her profile; then the details.
     let order = positions(&page, &[
         r#"<nav class="listing-trail""#,
         r#"<div class="gallery">"#,
+        "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
+        r#"<p class="listing-price">"#,
+        r#"<div class="actions">"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="seller-name">Ana</span>"#,
         r#"<span class="seller-summary">Në Marketplace që nga "#,
-        "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
-        r#"<p class="listing-price">"#,
+        "<h2>Detajet</h2>",
     ]);
     assert!(order.is_sorted(), "{order:?}");
     assert!(page.contains(" · 5 njoftime</span>"));
