@@ -426,7 +426,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .filter-form input[type="search"],
 .filter-form input[type="text"],
 .filter-form select,
-.sort select,
 .pending-form input,
 .pending-form select,
 .picker-button {
@@ -443,7 +442,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* A chevron drawn in the text colour, so it follows the theme. */
 .field select,
 .filter-form select,
-.sort select,
 .pending-form select {
   appearance: none;
   padding-right: 2rem;
@@ -696,8 +694,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .filter-form .range .picker-button { display: inline-block; width: auto; }
 .amount .picker-list,
 .filter-form .range .picker-list { width: max(100%, 8rem); }
-.sort .picker { flex: none; }
-.sort .picker-button { width: auto; color: var(--text); font-size: 1rem; }
 
 /* Read by screen readers, not shown. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -812,20 +808,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   font-weight: var(--bold);
 }
 
-.sort { display: flex; align-items: center; gap: .5rem; margin-left: auto; color: var(--muted); font-size: .9rem; }
-.sort select { width: auto; color: var(--text); font-size: 1rem; }
-
-/* Phones: Filtrat and the sort share one row. The sort takes what room is left, without its
-   "Rendit" label (screen readers still read it), and a long choice ends in an ellipsis rather
-   than pushing the page wider than the screen. */
 @media (max-width: 719px) {
-  .toolbar { flex-wrap: nowrap; gap: .5rem; }
   .toolbar .filters-open { flex: none; padding: .5rem .7rem; }
-  .sort { flex: 1 1 auto; min-width: 0; }
-  .sort label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .sort select { flex: 1; min-width: 0; padding-left: .6rem; text-overflow: ellipsis; }
-  .sort .picker { flex: 1; min-width: 0; }
-  .sort .picker-button { width: 100%; padding-left: .6rem; }
 }
 
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
@@ -904,14 +888,39 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
     scrollbar-width: thin;
   }
 
-  .button.filters-open { display: none; }
+  /* Filtrat is the toolbar's only button, and the sidebar stands for it. */
+  .toolbar { display: none; }
 }
 
 /* Map page, and the ways to it */
 
 /* The map on a category or search page, between the toolbar and the results: a card that comes
-   folded down to its header, which opens it and folds it again. */
-.map-card { margin: 0 0 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+   folded down to its header, which opens it and folds it again. The order (Rendit) under it is a
+   card like it, a <details>, its header in the summary. */
+.map-card,
+.sort-card { margin: 0 0 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.map-card + .sort-card { margin-top: -.5rem; }
+.sort-card summary { list-style: none; border-radius: var(--radius); cursor: pointer; }
+.sort-card summary::-webkit-details-marker { display: none; }
+.sort-card .map-card-icon { color: var(--text); }
+.sort-card:not([open]) .map-card-chevron { transform: rotate(-90deg); }
+/* Open, the orders, as rows like the in-page dropdowns': the order now in the site's colour,
+   ticked; a tap on another reloads the page in it. The radio itself is there for keyboards and
+   screen readers only, its ring round the row. */
+.sort-options { display: grid; gap: .15rem; min-width: 0; margin: 0; padding: .1rem .5rem .6rem; border: 0; }
+.sort-option:has(input:checked) { display: flex; align-items: center; gap: .5rem; background: var(--button); color: var(--on-button); font-weight: var(--medium); }
+.sort-option:has(input:checked):hover { background: var(--button-hover); }
+.sort-option:has(input:checked)::after {
+  content: "";
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin-left: auto;
+  background: currentColor;
+  -webkit-mask: var(--check) center / contain no-repeat;
+  mask: var(--check) center / contain no-repeat;
+}
+.sort-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .map-card-header {
   display: flex; align-items: center; gap: .7rem; width: 100%; padding: .7rem .9rem;
   border: 0; border-radius: var(--radius); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer;
@@ -1555,7 +1564,6 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   .filter-form input[type="search"],
   .filter-form input[type="text"],
   .filter-form select,
-  .sort select,
   .pending-form input,
   .pending-form select,
   .picker-button { font-size: 16px; }
@@ -1565,7 +1573,6 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   .filter-form input[type="search"],
   .filter-form input[type="text"],
   .filter-form select,
-  .sort select,
   .pending-form input,
   .pending-form select,
   .picker-button { padding-top: .45rem; padding-bottom: .45rem; }

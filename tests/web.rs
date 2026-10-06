@@ -314,7 +314,7 @@ async fn a_map_pin_finds_the_listings_within_its_radius_nearest_first(pool: PgPo
     assert!(!body.contains("Mercedes-Benz C 220, 2018, automatike"));
     assert!(body.contains("</svg>Tiranë · 0\u{a0}m · 2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
     assert!(body.contains(r#"<a class="filter-chip" href="/search" aria-label="Hiq filtrin Brenda 10 km nga pika">"#));
-    assert!(body.contains(r#"<option value="" selected>Më afër</option>"#));
+    assert!(body.contains(r#"<input class="visually-hidden" type="radio" name="sort" value="" form="filter-form" data-action="filters#submit" checked>Më afër</label>"#));
 
     // From Durrës, 50 km reaches Tirana: Durrës's listings first, then Tirana's.
     let body = get(pool, "/search?lat=41.31333&lng=19.44583&radius=50").await.body;
@@ -1315,7 +1315,8 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     assert!(gps[..parts].trim_end().ends_with(r#"<details class="menu-branch" open>"#));
     let prona = gps.find(r#"<summary class="picker-option picker-branch"><a href="/c/prona">Prona</a>"#).expect("Prona's branch");
     assert!(gps[..prona].trim_end().ends_with(r#"<details class="menu-branch">"#), "folded");
-    assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - 1, "balanced");
+    // Every branch closes; the other two </details> are the category menu's own and the order's.
+    assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - 2, "balanced");
 
     // The old address still works.
     assert_eq!(get(pool.clone(), "/c/pjese-kembimi").await.status, StatusCode::OK);
@@ -2102,8 +2103,8 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     let pages = [
         ("/shto", 6),
         ("/shto/fushat?category=makina", 6),
-        ("/search?q=golf", 4),
-        ("/c/makina", 5),
+        ("/search?q=golf", 3),
+        ("/c/makina", 4),
         ("/harta", 1),
     ];
     for (uri, selects) in pages {
