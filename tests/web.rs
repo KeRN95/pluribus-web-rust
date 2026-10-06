@@ -212,7 +212,8 @@ async fn welcome_page_asks_for_a_city_and_a_category(pool: PgPool) {
     ]);
     assert!(towns.is_sorted(), "{towns:?}");
     assert!(body.contains(r#"<option value="makina">"#), "subcategories are offered too");
-    // A shortcut to every main category, each with its icon, in their order; no more cards.
+    // A shortcut to every main category, in their order, each its icon over its name; no more
+    // listing-like cards.
     let main = [
         ("automjete", "Automjete"),
         ("prona", "Prona"),
@@ -232,9 +233,9 @@ async fn welcome_page_asks_for_a_city_and_a_category(pool: PgPool) {
     assert!(shortcuts.is_sorted(), "{shortcuts:?}");
     assert_eq!(body.matches(r#"data-city-target="link""#).count(), main.len());
     for (_, name) in main {
-        assert!(body.contains(&format!("</svg>{name}</a>")), "{name}");
+        assert!(body.contains(&format!(r#"<span class="shortcut-name">{name}</span>"#)), "{name}");
     }
-    assert_eq!(body.matches(r#"<a class="shortcut""#).count(), body.matches(r#"stroke-width="1.8""#).count());
+    assert_eq!(body.matches(r#"<a class="shortcut""#).count(), body.matches(r#"<svg class="shortcut-icon""#).count());
     assert!(!body.contains(r#"class="tile""#));
 }
 
