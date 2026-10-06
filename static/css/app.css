@@ -1269,19 +1269,20 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .reveal-contact { gap: .45rem; }
 .contact-icon { flex: none; }
 
+/* The listing's details in two columns: each its label, small and quiet, over its value. */
 .attributes {
   display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: .5rem 1.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .9rem 1.25rem;
   margin: 0;
   padding: 1rem 1.1rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
-
-.attributes dt { color: var(--muted); }
-.attributes dd { margin: 0; font-weight: var(--medium); }
+.attributes div { display: grid; align-content: start; gap: .1rem; min-width: 0; }
+.attributes dt { color: var(--muted); font-size: .8rem; }
+.attributes dd { margin: 0; font-weight: var(--medium); overflow-wrap: anywhere; }
 .description { margin: 0; font-size: 1.0625rem; line-height: 1.7; white-space: pre-line; }
 
 .site-footer {

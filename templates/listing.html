@@ -149,10 +149,13 @@
   {% if !attributes.is_empty() %}
   <section>
     <h2>Detajet</h2>
+    {#- Two to a row, each its label over its value. -#}
     <dl class="attributes">
       {% for attribute in attributes %}
-      <dt>{{ attribute.label }}</dt>
-      <dd>{{ attribute.value }}</dd>
+      <div>
+        <dt>{{ attribute.label }}</dt>
+        <dd>{{ attribute.value }}</dd>
+      </div>
       {% endfor %}
     </dl>
   </section>
