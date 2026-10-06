@@ -1386,17 +1386,10 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .reveal-contact { gap: .45rem; }
 .contact-icon { flex: none; }
 .contact-revealed { display: flex; gap: .5rem; }
-/* The copy and share buttons: an icon in a soft circle, no border, as tall as the coral one; a
-   check for a moment once they copy (copy_controller.js, share_controller.js). */
-.actions .button.icon-circle {
-  justify-content: center;
-  width: 2.85rem;
-  height: 2.85rem;
-  padding: 0;
-  border-color: transparent;
-  background: var(--surface-muted);
-}
-.actions .button.icon-circle:hover { background: color-mix(in srgb, var(--text) 9%, var(--surface-muted)); }
+/* The copy and share buttons: an icon in a circle on the surface, with the menus' hairline, as
+   tall as the coral one; a check for a moment once they copy (copy_controller.js,
+   share_controller.js). */
+.actions .button.icon-circle { justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; }
 .icon-circle .icon-copied,
 .icon-circle.is-copied .icon-copy,
 .icon-circle.is-copied .icon-link { display: none; }
