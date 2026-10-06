@@ -18,7 +18,7 @@
 
   {% let types = filters.type_choices() %}
   {% if !types.is_empty() %}
-  <fieldset class="filter-group">
+  <fieldset class="filter-group filter-options">
     <legend class="filter-label">Lloji i njoftimit</legend>
     <label class="check"><input type="radio" name="type" value=""{% if filters.listing_type.is_none() %} checked{% endif %}> Të gjitha</label>
     {% for choice in types %}
@@ -43,7 +43,7 @@
 
   {% let conditions = filters.condition_choices() %}
   {% if !conditions.is_empty() %}
-  <fieldset class="filter-group">
+  <fieldset class="filter-group filter-options">
     <legend class="filter-label">Gjendja</legend>
     {% for choice in conditions %}
     <label class="check"><input type="checkbox" name="condition" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}> {{ choice.label }}</label>
@@ -69,7 +69,7 @@
     </div>
   </div>
   {% when FieldKind::Checkboxes %}
-  <fieldset class="filter-group">
+  <fieldset class="filter-group filter-options">
     <legend class="filter-label">{{ field.label }}</legend>
     {% for choice in field.choices %}
     <label class="check"><input type="checkbox" name="{{ field.name }}" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}> {{ choice.label }}</label>
