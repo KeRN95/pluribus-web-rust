@@ -123,7 +123,8 @@ struct ListingShow {
     attributes: Vec<AttributeValue>,
     photos: Vec<Photo>,
     /// The reveal button's label, when the seller's phone number or e-mail can be shown.
-    reveal_label: Option<&'static str>,
+    /// The button that shows how to reach the seller, when it can be shown.
+    reveal: Option<Reveal>,
     /// The visitor posted this listing: the page offers to edit it.
     own: bool,
     /// Posted just now without signing in: the page says it is up, and how to change it later.
@@ -163,9 +164,9 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         Some(user) => db::is_own_listing(&state.db, listing.id, user.id).await?,
         None => false,
     };
-    let reveal_label = contact.map(|contact| match contact {
-        SellerContact::Phone(_) => "Shfaq numrin",
-        SellerContact::Email(_) => "Shfaq email-in",
+    let reveal = contact.map(|contact| match contact {
+        SellerContact::Phone(_) => Reveal::Phone,
+        SellerContact::Email(_) => Reveal::Email,
     });
     if let Some(condition) = &listing.condition {
         let value = format::condition(condition).to_string();
@@ -173,11 +174,29 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     }
     // Said once: the cookie that says so (post.rs) goes with this answer.
     let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
-    let mut response = render(ListingShow { listing, trail, attributes, photos, reveal_label, own, posted })?;
+    let mut response = render(ListingShow { listing, trail, attributes, photos, reveal, own, posted })?;
     if posted {
         response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));
     }
     Ok(response)
+}
+
+/// How buyers reach the seller, behind a button that shows it and counts the showing: the phone
+/// number, or the e-mail address of a seller who signed in by e-mail.
+#[derive(Clone, Copy)]
+pub enum Reveal {
+    Phone,
+    Email,
+}
+
+impl Reveal {
+    /// The button's name, for screen readers and as a tooltip: it shows only an icon.
+    pub fn label(&self) -> &'static str {
+        match self {
+            Reveal::Phone => "Shfaq numrin",
+            Reveal::Email => "Shfaq email-in",
+        }
+    }
 }
 
 /// A category on the way to a listing's own.
@@ -189,6 +208,7 @@ pub struct Crumb {
 #[derive(Template)]
 #[template(path = "phone_stream.html")]
 struct PhoneStream {
+    reveal: Reveal,
     href: String,
     display: String,
 }
@@ -201,9 +221,9 @@ pub async fn reveal_phone(
     let Some(contact) = db::reveal_contact(&state.db, public_no).await? else {
         return not_found().await;
     };
-    let (href, display) = match contact {
-        SellerContact::Phone(phone) => (format!("tel:{phone}"), format::phone(&phone)),
-        SellerContact::Email(email) => (format!("mailto:{email}"), email),
+    let (reveal, href, display) = match contact {
+        SellerContact::Phone(phone) => (Reveal::Phone, format!("tel:{phone}"), format::phone(&phone)),
+        SellerContact::Email(email) => (Reveal::Email, format!("mailto:{email}"), email),
     };
-    render_stream(PhoneStream { href, display })
+    render_stream(PhoneStream { reveal, href, display })
 }

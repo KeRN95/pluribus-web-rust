@@ -1,5 +1,5 @@
 <turbo-stream action="replace" target="phone-reveal">
   <template>
-    <a id="phone-reveal" class="button" href="{{ href }}">{{ display }}</a>
+    <a id="phone-reveal" class="button reveal-contact" href="{{ href }}">{% match reveal %}{% when Reveal::Phone %}{% include "phone.svg" %}{% when Reveal::Email %}{% include "mail.svg" %}{% endmatch %}{{ display }}</a>
   </template>
 </turbo-stream>

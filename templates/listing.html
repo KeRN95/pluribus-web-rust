@@ -80,10 +80,14 @@
   </header>
 
   <div class="actions">
-    {% if let Some(label) = reveal_label %}
-    {#- Turbo submits this form and swaps in the phone number (or e-mail) from the Turbo Stream response. -#}
+    {% if let Some(reveal) = reveal %}
+    {#- A phone in a circle (an envelope for a seller who signed in by e-mail), named for screen
+        readers and in a tooltip. Turbo submits the form and swaps in the number (or address) from
+        the Turbo Stream response. -#}
     <form id="phone-reveal" method="post" action="/listing/{{ listing.public_no }}/phone">
-      <button type="submit" class="button">{{ label }}</button>
+      <button type="submit" class="button reveal-button" aria-label="{{ reveal.label() }}" title="{{ reveal.label() }}">
+        {%- match reveal %}{% when Reveal::Phone %}{% include "phone.svg" %}{% when Reveal::Email %}{% include "mail.svg" %}{% endmatch -%}
+      </button>
     </form>
     {% endif %}
     {%- if own %}

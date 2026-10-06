@@ -833,7 +833,8 @@ async fn revealing_a_phone_returns_a_turbo_stream_and_counts_it(pool: PgPool) {
         Some("text/vnd.turbo-stream.html; charset=utf-8")
     );
     assert!(response.body.contains(r#"<turbo-stream action="replace" target="phone-reveal">"#));
-    assert!(response.body.contains("+355 69 000 0001"));
+    assert!(response.body.contains(r#"href="tel:+355690000001"><svg class="contact-icon""#));
+    assert!(response.body.contains("</svg>+355 69 000 0001</a>"));
 
     let reveals: i64 = sqlx::query_scalar("SELECT phone_reveals FROM listing_daily_stats")
         .fetch_one(&pool)
@@ -1040,7 +1041,7 @@ async fn a_signed_in_seller_posts_a_listing(pool: PgPool) {
     let page = get(pool.clone(), &url).await.body;
     assert!(page.contains("<h1>Samsung Galaxy S21, 128 GB</h1>"));
     assert!(page.contains("32\u{a0}000\u{a0}Lekë"));
-    assert!(page.contains(">Shfaq numrin</button>"));
+    assert!(page.contains(r#"<button type="submit" class="button reveal-button" aria-label="Shfaq numrin" title="Shfaq numrin"><svg class="contact-icon""#));
     let public_no = url.trim_start_matches("/listing/").split('-').next().unwrap();
     let reveal = post_form(pool.clone(), &format!("/listing/{public_no}/phone"), &[], None).await;
     assert!(reveal.body.contains("+355 69 111 2233"), "the seller's own number");
@@ -1115,10 +1116,11 @@ async fn sellers_who_sign_in_by_email_get_an_email_button(pool: PgPool) {
     let started = started();
     let posted = post_form(pool.clone(), "/shto", &listing_fields(("", ""), &started), Some(&besa)).await;
     let url = posted.location.unwrap();
-    assert!(get(pool.clone(), &url).await.body.contains(">Shfaq email-in</button>"));
+    assert!(get(pool.clone(), &url).await.body.contains(r#"aria-label="Shfaq email-in""#));
     let public_no = url.trim_start_matches("/listing/").split('-').next().unwrap();
     let reveal = post_form(pool, &format!("/listing/{public_no}/phone"), &[], None).await;
-    assert!(reveal.body.contains(r#"href="mailto:besa@example.com">besa@example.com</a>"#));
+    assert!(reveal.body.contains(r#"href="mailto:besa@example.com"><svg class="contact-icon""#));
+    assert!(reveal.body.contains("</svg>besa@example.com</a>"));
 }
 
 #[sqlx::test]
