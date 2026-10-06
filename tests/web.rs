@@ -1679,6 +1679,29 @@ async fn a_car_is_posted_with_its_make_model_and_year(pool: PgPool) {
     let frame = get(pool.clone(), "/shto/fushat?category=makina").await.body;
     assert!(frame.starts_with(r#"<turbo-frame id="listing-properties">"#));
     assert!(frame.contains(r#"<input id="prop_vehicle_year" name="prop_vehicle_year" value="" inputmode="decimal" placeholder="Viti *" required>"#));
+    // Its main fields as tiles under icons, make, model and year on the first line, fuel, gearbox,
+    // body and mileage on the second; then its options, then its colour.
+    assert!(frame.contains(r#"<fieldset class="property-fields vehicle-fields">"#));
+    let order = positions(&frame, &[
+        r#"<div class="field span-4">"#,
+        r#"for="prop_vehicle_make""#,
+        r#"for="prop_vehicle_model""#,
+        r#"for="prop_vehicle_year""#,
+        r#"for="prop_vehicle_fuel""#,
+        r#"for="prop_vehicle_transmission""#,
+        r#"for="prop_vehicle_body_type""#,
+        r#"for="prop_vehicle_mileage""#,
+        r#"<span class="field-label">Opsionet</span>"#,
+        r#"for="prop_vehicle_color""#,
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
+    assert_eq!(frame.matches(r#"<div class="field span-4">"#).count(), 3);
+    assert_eq!(frame.matches(r#"<div class="field span-3">"#).count(), 4);
+    assert_eq!(frame.matches(r#"<svg class="tile-icon""#).count(), 7);
+    // A tile is narrow: the mileage says just its unit.
+    assert!(frame.contains(r#"name="prop_vehicle_mileage" value="" inputmode="decimal" placeholder="km">"#));
+    // A part's make and model are fields like the rest.
+    assert!(!get(pool.clone(), "/shto/fushat?category=gps-dhe-navigatore").await.body.contains("tile"));
     assert!(frame.contains(r#"<select id="prop_vehicle_model" name="prop_vehicle_model" required data-depends-on="prop_vehicle_make">"#));
     assert!(frame.contains(r#"<optgroup label="Volkswagen" data-parent="VOLKSWAGEN">"#));
     assert!(frame.contains(r#"name="prop_vehicle_features" value="ABS""#));

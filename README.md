@@ -70,6 +70,7 @@ cargo test
 | `migrations/0011_paused_listings.sql` | Sellers can take a listing down for a while and put it back (`PAUSED`) |
 | `migrations/0012_parts_and_accessories.sql` | Pjesë dhe aksesorë: car parts get kinds of their own, a third level (Pjesë këmbimi, Goma dhe disqe, GPS dhe navigatorë...), and say which vehicle they fit; a category's own name for a property (`category_attributes.label`) |
 | `migrations/0013_car_makes_and_models.sql` | The makes and models sellers pick from: 42 makes common in Albania with their usual models; makes and models sellers had typed that are on the list join it |
+| `migrations/0014_options_name.sql` | A car's equipment (ABS, air conditioning...) is called "Opsionet" |
 | `tests/` | Request tests (`web.rs`), the 71 schema checks (`schema_checks.sql`, also run by `schema.rs`) and sample data (`fixtures/`) |
 | `dev/sample_listings.sql` | 305 extra sample listings for the development database (not used by the tests) |
 | `.sqlx/` | Cached query metadata, so the project builds without a database (set `SQLX_OFFLINE=true`) |
@@ -132,7 +133,7 @@ Each category's properties are rows in the database, not code. A browse page bui
 
 | Category | Properties |
 |---|---|
-| Makina | make, model (grouped by make), year, mileage, fuel, gearbox, body type, colour, features |
+| Makina | make, model (grouped by make), year, mileage, fuel, gearbox, body type, colour, options ("Opsionet"); the posting form shows make, model and year on one line, fuel, gearbox, body type and mileage on the next, as tiles under icons |
 | Prona | rooms (1+1, 2+1...), area, floor, furnishing, features (lift, parking, sea view...) |
 | Elektronikë | brand, storage |
 | Punë | schedule |
@@ -201,7 +202,7 @@ All tables live in the default `public` schema, next to the citext, pg_trgm, una
 To apply and check the schema with psql instead:
 
 ```bash
-psql -v ON_ERROR_STOP=1 --single-transaction -f migrations/0001_marketplace_schema.sql -f migrations/0002_marketplace_reference_data.sql -f migrations/0003_category_properties.sql -f migrations/0004_plate_codes.sql -f migrations/0005_map_search.sql -f migrations/0006_rename_patundshmeri_to_prona.sql -f migrations/0007_sign_in_codes.sql -f migrations/0008_subcategories.sql -f migrations/0009_seller_options.sql -f migrations/0010_post_before_sign_in.sql -f migrations/0011_paused_listings.sql -f migrations/0012_parts_and_accessories.sql -f migrations/0013_car_makes_and_models.sql
+psql -v ON_ERROR_STOP=1 --single-transaction -f migrations/0001_marketplace_schema.sql -f migrations/0002_marketplace_reference_data.sql -f migrations/0003_category_properties.sql -f migrations/0004_plate_codes.sql -f migrations/0005_map_search.sql -f migrations/0006_rename_patundshmeri_to_prona.sql -f migrations/0007_sign_in_codes.sql -f migrations/0008_subcategories.sql -f migrations/0009_seller_options.sql -f migrations/0010_post_before_sign_in.sql -f migrations/0011_paused_listings.sql -f migrations/0012_parts_and_accessories.sql -f migrations/0013_car_makes_and_models.sql -f migrations/0014_options_name.sql
 ```
 
 ```bash
