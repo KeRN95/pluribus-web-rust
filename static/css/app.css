@@ -815,9 +815,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .sort { display: flex; align-items: center; gap: .5rem; margin-left: auto; color: var(--muted); font-size: .9rem; }
 .sort select { width: auto; color: var(--text); font-size: 1rem; }
 
-/* Phones: Filtrat, the map's pin and the sort share one row. The sort takes what room is left,
-   without its "Rendit" label (screen readers still read it), and a long choice ends in an
-   ellipsis rather than pushing the page wider than the screen. */
+/* Phones: Filtrat and the sort share one row. The sort takes what room is left, without its
+   "Rendit" label (screen readers still read it), and a long choice ends in an ellipsis rather
+   than pushing the page wider than the screen. */
 @media (max-width: 719px) {
   .toolbar { flex-wrap: nowrap; gap: .5rem; }
   .toolbar .filters-open { flex: none; padding: .5rem .7rem; }
@@ -909,22 +909,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* Map page, and the ways to it */
 
-/* The way to the map on a category or search page: a pin in the site's coral, alone on a square
-   button as tall as Filtrat beside it (its padding, its line, its border). While the map is open
-   above the results the button is coral and the pin white, and a tap closes it. */
-.button.map-open {
-  flex: none;
-  justify-content: center;
-  width: calc(2.55rem + 2px);
-  height: calc(2.55rem + 2px);
-  padding: 0;
-}
-.map-open .pin-icon { flex: none; width: 20px; height: 20px; margin: 0; color: var(--button); }
-.button.secondary.map-open.active { background: var(--button); border-color: var(--button); }
-.button.secondary.map-open.active:hover { background: var(--button-hover); }
-.map-open.active .pin-icon { color: var(--on-button); }
-/* The map on a category or search page, between the toolbar and the results: a card whose header
-   folds it down to that header and opens it again. */
+/* The map on a category or search page, between the toolbar and the results: a card that comes
+   folded down to its header, which opens it and folds it again. */
 .map-card { margin: 0 0 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
 .map-card-header {
   display: flex; align-items: center; gap: .7rem; width: 100%; padding: .7rem .9rem;
@@ -960,8 +946,12 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .map-radius input[type="range"] { width: 100%; height: 2.25rem; margin: 0; padding: 0; border: 0; background: none; accent-color: var(--button); cursor: pointer; }
 .map-locate { gap: .35rem; }
 .map-toggle[hidden] { display: none; }
-/* Under the map, the button that sets its point: the whole width, in the site's colour. */
-.map-confirm { justify-content: center; width: 100%; margin-top: .75rem; padding-block: .7rem; }
+/* Under the map, the button that sets its point, in the site's colour: the whole width on the map
+   page; in the card, beside "Të gjitha", which drops it, the two as wide. */
+.map-confirm { justify-content: center; padding-block: .7rem; }
+.map-stage .map-confirm { width: 100%; margin-top: .75rem; }
+.map-actions { display: flex; gap: .5rem; margin-top: .75rem; }
+.map-actions .button { flex: 1 1 0; justify-content: center; padding-block: .7rem; }
 /* The map folded away ("Fshih hartën"): the results get the whole width. */
 .map-hidden .map-canvas,
 .map-hidden .map-confirm { display: none; }

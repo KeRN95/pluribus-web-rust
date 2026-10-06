@@ -1,12 +1,12 @@
 import { Controller } from "@hotwired/stimulus";
 
 // A map of the results, as Facebook's: its pin stays in the middle and the map moves under it,
-// Tirana's middle to begin with (the server's starting pin, filters.rs). The slider sets how far
-// around it to look, and "Vendos hartën" sends the map's middle and the distance. On the map page
-// (/harta) that reloads only the results panel; on a category or search page with its map open
-// (harta=1) it reloads the page, which keeps the category and the filters, and closes the map,
-// as Facebook's place picker closes. Each result gets a dot on the map. Leaflet draws the map
-// with OpenStreetMap's tiles.
+// on the point set before or Tirana's middle (filters.rs). The slider sets how far around it to
+// look, and "Vendos hartën" sends the map's middle and the distance. On the map page (/harta) that
+// reloads only the results panel. On a category or search page the map is in a card that always
+// comes folded, and loads, with its dots, only when it first opens (lazy); "Vendos hartën" reloads
+// the page there, which keeps the category and the filters, the card folded again. Each result
+// gets a dot on the map. Leaflet draws the map with OpenStreetMap's tiles.
 
 const LEAFLET = "/static/vendor/leaflet-1.9.4";
 const TIRANA = [41.3275, 19.8187];
@@ -17,8 +17,6 @@ const CELL = 40;
 // The distance slider goes from 0 to 100 and stands for 1 to MAX_RADIUS_KM km, slowly near the
 // pin and faster further out: km = MAX_RADIUS_KM ^ (position / 100). As in filters.rs.
 const MAX_RADIUS_KM = 50;
-// Whether the map card on category pages is folded, kept while the visitor moves around the site.
-const FOLDED = "map-folded";
 const PIN = '<svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>';
 
 // Leaflet is only fetched on pages with a map, and only once: its script and its stylesheet.
@@ -40,17 +38,35 @@ function loadLeaflet() {
 export default class extends Controller {
   static targets = [
     "canvas", "form", "latitude", "longitude", "radius", "slider", "radiusLabel", "status", "results", "points", "toggle",
+    "frame",
   ];
-  // remember: the card folds the same way on the next page (category and search pages).
-  static values = { latitude: Number, longitude: Number, remember: Boolean };
+  // lazy: the map loads when its card is first opened (category and search pages).
+  static values = { latitude: Number, longitude: Number, lazy: Boolean };
 
-  async connect() {
-    if (this.rememberValue && remembered(FOLDED)) this.fold(true);
+  connect() {
+    if (!this.lazyValue) {
+      this.start();
+      return;
+    }
+    // Folded, as it always comes, even on a page Turbo restores from its cache open; that page
+    // still holds the old map's markup too.
+    this.fold(true);
+    this.canvasTarget.replaceChildren();
+  }
+
+  // Draws the map, Leaflet fetched first; once, whoever asks.
+  start() {
+    this.starting ??= this.draw();
+    return this.starting;
+  }
+
+  async draw() {
     let L;
     try {
       L = await loadLeaflet();
     } catch {
       this.statusTarget.textContent = "Harta nuk u ngarkua. Provo përsëri.";
+      this.starting = null;
       return;
     }
     if (!this.element.isConnected) return;
@@ -94,7 +110,7 @@ export default class extends Controller {
 
   disconnect() {
     this.map?.remove();
-    this.map = this.pin = this.circle = null;
+    this.map = this.pin = this.circle = this.starting = null;
   }
 
   // "Vendos hartën": the results follow the map's middle and the distance.
@@ -103,16 +119,22 @@ export default class extends Controller {
   }
 
   // Folds the map away so the results take its place, and brings it back: the map page's
-  // "Fshih hartën", or the header of the card on category pages.
-  toggleMap() {
+  // "Fshih hartën", or the header of the card on category pages, whose map loads the first time,
+  // and then the results' dots.
+  async toggleMap() {
     const fold = !this.element.classList.contains("map-hidden");
     this.fold(fold);
-    if (this.rememberValue) remember(FOLDED, fold);
-    if (!fold && this.map) {
-      // Leaflet measures its box; it had none while hidden.
-      this.map.invalidateSize();
-      this.fitView();
+    if (fold) return;
+    if (!this.map) {
+      await this.start();
+      if (this.hasFrameTarget && !this.frameTarget.hasAttribute("src")) {
+        this.frameTarget.src = this.frameTarget.dataset.src;
+      }
+      return;
     }
+    // Leaflet measures its box; it had none while hidden.
+    this.map.invalidateSize();
+    this.fitView();
   }
 
   fold(fold) {
@@ -177,10 +199,11 @@ export default class extends Controller {
   }
 
   // The results on the map, read from the list the server sent (every result, not only the cards
-  // loaded so far).
+  // loaded so far): on the map page in the results' frame, on a category page in the card's.
   plot(event) {
-    // The list's next pages load as frames inside the results; their points are already there.
-    if (!this.map || (event && event.target !== this.resultsTarget)) return;
+    if (!this.map || !this.hasPointsTarget) return;
+    // The list's next pages load as frames inside the results too; their points are already there.
+    if (event && event.target !== (this.hasResultsTarget ? this.resultsTarget : this.frameTarget)) return;
     this.points = [...this.pointsTarget.children].map((point) => ({
       latlng: this.L.latLng(Number(point.dataset.lat), Number(point.dataset.lng)),
       title: point.textContent,
@@ -254,14 +277,4 @@ export default class extends Controller {
   get radiusMeters() {
     return Number(this.radiusTarget.value) * 1000;
   }
-}
-
-// sessionStorage can be missing or refuse (private windows, blocked site data); the card then
-// just starts open.
-function remembered(key) {
-  try { return sessionStorage.getItem(key) === "1"; } catch { return false; }
-}
-
-function remember(key, on) {
-  try { on ? sessionStorage.setItem(key, "1") : sessionStorage.removeItem(key); } catch { /* not kept */ }
 }

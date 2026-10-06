@@ -58,13 +58,6 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
       Filtrat{% if !chips.is_empty() %} <span class="count-badge">{{ chips.len() }}</span>{% endif %}
     </button>
-    {#- Opens the map above these results, on this page, and closes it again: a pin in the site's
-        coral, the button coral while the map is open. Its name is for screen readers and a tooltip. -#}
-    {%- if filters.map_open %}
-    <a class="button secondary map-open active" href="{{ filters.map_toggle_url() }}" aria-label="Mbyll hartën" title="Mbyll hartën">{% include "pin.svg" %}</a>
-    {%- else %}
-    <a class="button secondary map-open" href="{{ filters.map_toggle_url() }}" aria-label="Harta" title="Harta">{% include "pin.svg" %}</a>
-    {%- endif %}
     <div class="sort">
       <label for="sort">Rendit</label>
       {#- Part of the filter form through the form attribute, so it keeps the filters. -#}
@@ -85,19 +78,21 @@
 
   <section class="results" aria-label="Njoftimet">
 
-    {%- if filters.map_open %}
-    {#- The map of these results, in a card whose header folds it away and back
-        (map_controller.js). Its pin stays in the middle, Tirana's to begin with, and the map moves
-        under it; "Vendos hartën" then sets the point and the distance: the page reloads with the
-        listings around it, keeping the category and the filters, and the map closes. -#}
-    <section class="map-card" data-controller="map" data-map-remember-value="true" aria-label="Harta"
+    {#- The map, in a card that always comes folded to its header: "Harta", and how far around a
+        point the results are, or "Kudo". The header opens it, and only then does the map load, its
+        dots after (map_controller.js). Its pin stays in the middle, on the point set before or on
+        Tirana, and the map moves under it; "Vendos hartën" sets the point and the distance,
+        "Të gjitha" drops them, and the page reloads with its category and filters, the card
+        folded again. -#}
+    <section class="map-card map-hidden" data-controller="map" data-map-lazy-value="true"
+      data-action="turbo:frame-load->map#plot" aria-label="Harta"
       {%- if let Some(near) = filters.near %} data-map-latitude-value="{{ near.latitude }}" data-map-longitude-value="{{ near.longitude }}"{% endif %}>
       <button type="button" class="map-card-header" data-map-target="toggle" data-action="map#toggleMap"
-              aria-controls="map-card-body" aria-expanded="true">
+              aria-controls="map-card-body" aria-expanded="false">
         <span class="map-card-icon" aria-hidden="true">{% include "pin.svg" %}</span>
         <span class="map-card-title">
           <strong>Harta</strong>
-          <span>Brenda {{ filters.radius_km }} km nga pika</span>
+          <span>{% if filters.near.is_some() %}Brenda {{ filters.radius_km }} km nga pika{% else %}Kudo{% endif %}</span>
         </span>
         <svg class="map-card-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </button>
@@ -120,18 +115,25 @@
         <p class="map-status" data-map-target="status" role="status"></p>
       </form>
       <div class="map-canvas" data-map-target="canvas" role="region" aria-label="Harta"></div>
-      {%- if more_points %}
-      <p class="map-note">Në hartë shfaqen {{ crate::db::MAP_POINTS }} njoftimet e para të listës.</p>
-      {%- endif %}
-      <button type="button" class="button map-confirm" data-action="map#confirm">Vendos hartën</button>
-      <ul class="map-points" hidden data-map-target="points">
-        {%- for point in points %}
-        <li data-lat="{{ point.latitude }}" data-lng="{{ point.longitude }}" data-url="{{ point.url() }}" data-price="{{ point.price_display() }}">{{ point.title }}</li>
-        {%- endfor %}
-      </ul>
+      {#- The results' dots, fetched when the map first opens (map_points_url). -#}
+      <turbo-frame id="map-points" data-map-target="frame" data-src="{{ filters.map_points_url() }}">
+        {%- if filters.map_points %}
+        {%- if more_points %}
+        <p class="map-note">Në hartë shfaqen {{ crate::db::MAP_POINTS }} njoftimet e para të listës.</p>
+        {%- endif %}
+        <ul class="map-points" hidden data-map-target="points">
+          {%- for point in points %}
+          <li data-lat="{{ point.latitude }}" data-lng="{{ point.longitude }}" data-url="{{ point.url() }}" data-price="{{ point.price_display() }}">{{ point.title }}</li>
+          {%- endfor %}
+        </ul>
+        {%- endif %}
+      </turbo-frame>
+      <div class="map-actions">
+        <button type="button" class="button map-confirm" data-action="map#confirm">Vendos hartën</button>
+        <a class="button secondary map-everywhere" href="{{ filters.everywhere_url() }}">Të gjitha</a>
+      </div>
       </div>
     </section>
-    {%- endif %}
 
     {% if !chips.is_empty() %}
     <ul class="active-filters" aria-label="Filtrat e zgjedhur">

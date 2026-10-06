@@ -4,7 +4,7 @@
 //! Parameters: q, category (on /search and /harta; on a category page the path names it), city,
 //! lat, lng and radius (a map pin, and how many km around it), type, condition (repeatable),
 //! price_min, price_max, currency, sort and after, harta=1 (a category or search page with its
-//! map open), plus one per filterable
+//! map's dots, which its map fetches when it first opens), plus one per filterable
 //! property of the category, named by the property's code: option codes for SELECT and
 //! MULTISELECT properties (vehicle_fuel=DIESEL, repeatable), <code>_min and <code>_max for
 //! NUMBER properties, and <code>=1 for BOOLEAN ones. Values that don't exist are ignored, so an
@@ -30,8 +30,8 @@ const MIN_RADIUS_KM: u32 = 1;
 const MAX_RADIUS_KM: u32 = 50;
 const DEFAULT_RADIUS_KM: u32 = 10;
 
-/// Where a map's pin stands until the visitor moves the map: the middle of Tirana (Skanderbeg
-/// Square). A map always has its pin, as Facebook's does (map_controller.js).
+/// Where a map's pin stands until the visitor sets another point: the middle of Tirana (Skanderbeg
+/// Square). On the map page it is the point the results are for; elsewhere a map only starts there.
 const TIRANA: (f64, f64) = (41.3275, 19.8187);
 
 /// Properties with at most this many options are offered as checkboxes, longer lists as a
@@ -128,16 +128,17 @@ pub struct Filters<'a> {
     pub q: Option<String>,
     pub category: Option<&'a Category>,
     pub city: Option<&'a City>,
-    /// The map pin, with its radius: the one in the address, or with a map shown and none there,
+    /// The map pin, with its radius: the one in the address, or on the map page without one there,
     /// TIRANA.
     pub near: Option<Near>,
-    /// Whether the pin came in the address (lat and lng). Tirana's isn't written into links, so
-    /// closing the map leaves no pin behind.
+    /// Whether the pin came in the address (lat and lng). The map page's Tirana isn't written into
+    /// links.
     pin_in_url: bool,
     /// The radius picked for the map, in kilometres; it stays picked without a pin.
     pub radius_km: u32,
-    /// A category or search page showing its map above the results (harta=1).
-    pub map_open: bool,
+    /// Whether the map's dots are asked for (harta=1): a category or search page's map fetches them
+    /// when it first opens (map_points_url).
+    pub map_points: bool,
     pub listing_type: Option<String>,
     pub conditions: Vec<&'static str>,
     pub price_min: Option<Decimal>,
@@ -228,9 +229,8 @@ impl<'a> Filters<'a> {
             (Some(latitude), Some(longitude)) => Some((latitude, longitude)),
             _ => None,
         };
-        let map_shown = path == "/harta" || params.first("harta") == Some("1");
         let near = pin
-            .or(map_shown.then_some(TIRANA))
+            .or((path == "/harta").then_some(TIRANA))
             .map(|(latitude, longitude)| Near { latitude, longitude, radius_m: f64::from(radius_km) * 1000.0 });
 
         // With a pin, nearest first unless another order is picked; without one, newest first.
@@ -253,7 +253,7 @@ impl<'a> Filters<'a> {
             near,
             pin_in_url: pin.is_some(),
             radius_km,
-            map_open: params.first("harta") == Some("1"),
+            map_points: params.first("harta") == Some("1"),
             listing_type,
             conditions,
             price_min,
@@ -309,9 +309,6 @@ impl<'a> Filters<'a> {
             // The map's starting pin isn't written down, but a distance picked for it is.
             Some(_) if self.radius_km != DEFAULT_RADIUS_KM => push("radius", &self.radius_km.to_string()),
             _ => {}
-        }
-        if self.map_open {
-            push("harta", "1");
         }
         if let Some(listing_type) = &self.listing_type {
             push("type", listing_type);
@@ -373,7 +370,7 @@ impl<'a> Filters<'a> {
         let kept = self
             .pairs()
             .into_iter()
-            .filter(|(name, _)| matches!(name.as_str(), "q" | "city" | "lat" | "lng" | "radius" | "harta"));
+            .filter(|(name, _)| matches!(name.as_str(), "q" | "city" | "lat" | "lng" | "radius"));
         url(&format!("/c/{}", category.slug), kept)
     }
 
@@ -390,7 +387,7 @@ impl<'a> Filters<'a> {
         let kept = self
             .pairs()
             .into_iter()
-            .filter(|(name, _)| matches!(name.as_str(), "q" | "city" | "lat" | "lng" | "radius" | "harta"));
+            .filter(|(name, _)| matches!(name.as_str(), "q" | "city" | "lat" | "lng" | "radius"));
         url("/search", kept)
     }
 
@@ -402,30 +399,33 @@ impl<'a> Filters<'a> {
             .collect()
     }
 
-    /// This page with its map opened, or closed again; the filters and the pin stay.
-    pub fn map_toggle_url(&self) -> String {
+    /// This page with its map's dots, which the map fetches when it first opens: the page comes
+    /// whole, and Turbo takes their frame out of it.
+    pub fn map_points_url(&self) -> String {
         let mut pairs = self.pairs();
-        if self.map_open {
-            pairs.retain(|(name, _)| name != "harta");
-        } else {
-            pairs.push(("harta".to_string(), "1".to_string()));
-        }
+        pairs.push(("harta".to_string(), "1".to_string()));
         url(&self.path, pairs)
     }
 
     /// What the map's form on a category or search page carries along hidden: everything but the
-    /// pin and its radius, which are its own fields, and the open map, which "Vendos hartën"
-    /// closes. A picked order stays; otherwise a pin makes it nearest first.
+    /// pin and its radius, which are its own fields. A picked order stays; otherwise a pin makes it
+    /// nearest first.
     pub fn map_form_fields(&self) -> Vec<(String, String)> {
         self.pairs()
             .into_iter()
-            .filter(|(name, _)| !matches!(name.as_str(), "lat" | "lng" | "radius" | "harta"))
+            .filter(|(name, _)| !matches!(name.as_str(), "lat" | "lng" | "radius"))
             .collect()
+    }
+
+    /// The same search everywhere, its map's point dropped and the rest kept: the map's "Të
+    /// gjitha", and the point's chip.
+    pub fn everywhere_url(&self) -> String {
+        self.url_without(|name, _| matches!(name, "lat" | "lng" | "radius"))
     }
 
     /// The same search without any filters.
     pub fn clear_url(&self) -> String {
-        self.url_without(|name, _| !matches!(name, "q" | "sort" | "harta"))
+        self.url_without(|name, _| !matches!(name, "q" | "sort"))
     }
 
     pub fn chips(&self) -> Vec<Chip> {
@@ -442,13 +442,9 @@ impl<'a> Filters<'a> {
         if let Some(city) = self.city {
             chip(city.name.clone(), self.url_without(|name, _| name == "city"));
         }
-        // Not on the map page, whose map is the pin. An open map always has one, so letting go of
-        // the pin closes the map too.
+        // Not on the map page, whose map is the pin.
         if self.near.is_some() && self.path != "/harta" {
-            chip(
-                format!("Brenda {} km nga pika", self.radius_km),
-                self.url_without(|name, _| matches!(name, "lat" | "lng" | "radius" | "harta")),
-            );
+            chip(format!("Brenda {} km nga pika", self.radius_km), self.everywhere_url());
         }
         if let Some(listing_type) = &self.listing_type {
             chip(format::listing_type(listing_type).to_string(), self.url_without(|name, _| name == "type"));
@@ -496,12 +492,12 @@ impl<'a> Filters<'a> {
 
     // ------------------------------------------------------------ the form
 
-    /// What the filter form carries along hidden, having no fields for it: the map pin, its
-    /// radius and whether the map is open.
+    /// What the filter form carries along hidden, having no fields for it: the map pin and its
+    /// radius.
     pub fn kept_fields(&self) -> Vec<(String, String)> {
         self.pairs()
             .into_iter()
-            .filter(|(name, _)| matches!(name.as_str(), "lat" | "lng" | "radius" | "harta"))
+            .filter(|(name, _)| matches!(name.as_str(), "lat" | "lng" | "radius"))
             .collect()
     }
 

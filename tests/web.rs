@@ -418,46 +418,46 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
-async fn category_pages_open_their_map_in_place(pool: PgPool) {
-    // Harta opens the map on the category page itself, keeping the filters.
+async fn category_pages_keep_their_map_folded(pool: PgPool) {
+    // Every category page has its map, in a card folded to its header; with no point, the
+    // results are from everywhere. Nothing in the toolbar opens it.
     let cars = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL").await;
-    assert!(cars.contains(r#"<a class="button secondary map-open" href="/c/makina?vehicle_fuel=DIESEL&harta=1" aria-label="Harta" title="Harta"><svg class="pin-icon""#));
-    assert!(!cars.contains(r#"data-controller="map""#));
+    assert!(cars.contains(r#"<section class="map-card map-hidden" data-controller="map" data-map-lazy-value="true""#));
+    assert!(cars.contains(r#"aria-controls="map-card-body" aria-expanded="false">"#));
+    assert!(cars.contains("<span>Kudo</span>"));
+    assert!(!cars.contains("map-open") && !cars.contains("Brenda 10 km nga pika"));
+    // Its dots come when it first opens: the same page with harta=1, whose frame has them.
+    assert!(cars.contains(r#"<turbo-frame id="map-points" data-map-target="frame" data-src="/c/makina?vehicle_fuel=DIESEL&harta=1">"#));
+    assert!(!cars.contains(r#"data-url="/listing/1001-volkswagen-golf-7-2016-nafte""#));
+    let dots = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&harta=1").await;
+    assert!(dots.contains(r#"data-url="/listing/1001-volkswagen-golf-7-2016-nafte""#));
+    // Its form sets the point, keeping the filters; "Të gjitha" drops it.
+    assert!(cars.contains(r#"<form class="map-form" action="/c/makina" method="get" data-map-target="form">"#));
+    assert!(cars.contains(r#"<input type="hidden" name="vehicle_fuel" value="DIESEL">"#));
+    assert!(cars.contains(r#"<button type="button" class="button map-confirm" data-action="map#confirm">Vendos hartën</button>"#));
+    assert!(cars.contains(r#"<a class="button secondary map-everywhere" href="/c/makina?vehicle_fuel=DIESEL">Të gjitha</a>"#));
 
-    let open = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&harta=1").await;
-    assert!(open.contains(r#"<section class="map-card" data-controller="map" data-map-remember-value="true" aria-label="Harta" data-map-latitude-value="41.3275" data-map-longitude-value="19.8187">"#));
-    // The map starts with its pin in the middle of Tirana, which the results follow; the pin isn't
-    // written into the links, so closing the map, or dropping the pin's chip, leaves none behind.
-    assert!(open.contains("Brenda 10 km nga pika"));
-    assert!(open.contains(r#"<a class="filter-chip" href="/c/makina?vehicle_fuel=DIESEL" aria-label="Hiq filtrin Brenda 10 km nga pika">"#));
-    assert!(open.contains(r#"<form class="map-form" action="/c/makina" method="get" data-map-target="form">"#));
-    assert!(open.contains(r#"<input type="hidden" name="vehicle_fuel" value="DIESEL">"#));
-    assert!(open.contains(r#"data-url="/listing/1001-volkswagen-golf-7-2016-nafte""#));
-    // Under the map, the button that sets its point; the map's form leaves the open map out, so
-    // setting the point closes it.
-    assert!(open.contains(r#"<button type="button" class="button map-confirm" data-action="map#confirm">Vendos hartën</button>"#));
-    let map_form = &open[open.find(r#"<form class="map-form""#).unwrap()..];
-    assert!(!map_form[..map_form.find("</form>").unwrap()].contains(r#"name="harta""#));
-    // A tap on the pin closes it again.
-    assert!(open.contains(r#"<a class="button secondary map-open active" href="/c/makina?vehicle_fuel=DIESEL" aria-label="Mbyll hartën" title="Mbyll hartën">"#));
-
-    // With a pin, the page stays the category's, with its heading and filters, and the filter
-    // form and the category menu keep the pin and the open map.
-    let pinned = html(pool, "/c/makina?lat=41.32833&lng=19.81806&radius=5&harta=1&sort=price_asc").await;
+    // With a point, the page stays the category's, with its heading and filters, the card still
+    // folded, saying how far around the point; the filter form and the category menu keep it.
+    let pinned = html(pool, "/c/makina?lat=41.32833&lng=19.81806&radius=5&sort=price_asc").await;
     assert!(pinned.contains("<h1>Makina"));
+    assert!(pinned.contains(r#"<section class="map-card map-hidden""#));
     assert!(pinned.contains(r#"data-map-latitude-value="41.32833""#));
-    assert!(pinned.contains("Brenda 5 km nga pika"));
+    assert!(pinned.contains("<span>Brenda 5 km nga pika</span>"));
     // The distance is a slider; 5 km stands at 41 of 100 (50 ^ 0.41 = 5).
     assert!(pinned.contains(r#"<output data-map-target="radiusLabel">5 km</output>"#));
     assert!(pinned.contains(r#"<input id="map-radius" type="range" min="0" max="100" step="1" value="41""#));
-    for (name, value) in [("lat", "41.32833"), ("lng", "19.81806"), ("radius", "5"), ("harta", "1")] {
+    for (name, value) in [("lat", "41.32833"), ("lng", "19.81806"), ("radius", "5")] {
         assert!(pinned.contains(&format!(r#"<input type="hidden" name="{name}" value="{value}">"#)), "{name}");
     }
     // A new pin or radius keeps the order picked.
     let map_form = &pinned[pinned.find(r#"<form class="map-form""#).unwrap()..];
     let map_form = &map_form[..map_form.find("</form>").unwrap()];
     assert!(map_form.contains(r#"<input type="hidden" name="sort" value="price_asc">"#));
-    assert!(pinned.contains(r#"href="/c/prona?lat=41.32833&lng=19.81806&radius=5&harta=1""#));
+    assert!(pinned.contains(r#"href="/c/prona?lat=41.32833&lng=19.81806&radius=5""#));
+    // "Të gjitha" and the point's chip both search everywhere again, keeping the rest.
+    assert!(pinned.contains(r#"<a class="button secondary map-everywhere" href="/c/makina?sort=price_asc">Të gjitha</a>"#));
+    assert!(pinned.contains(r#"<a class="filter-chip" href="/c/makina?sort=price_asc" aria-label="Hiq filtrin Brenda 5 km nga pika">"#));
 }
 
 #[sqlx::test(fixtures("listings"))]

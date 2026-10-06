@@ -156,7 +156,7 @@ struct BrowsePage<'a> {
     /// On a category page, the menu the heading opens to go to another category.
     category_menu: Vec<MenuItem>,
     page: ListingPage,
-    /// With the map open (harta=1), a dot for each result, up to db::MAP_POINTS.
+    /// With the map's dots asked for (harta=1), a dot for each result, up to db::MAP_POINTS.
     points: Vec<db::MapPoint>,
     more_points: bool,
 }
@@ -371,7 +371,7 @@ async fn browse(
         db::listing_page(&state.db, &filter),
         db::listing_count(&state.db, &filter),
         async {
-            if view == View::Map || filters.map_open {
+            if view == View::Map || filters.map_points {
                 db::map_points(&state.db, &filter).await
             } else {
                 Ok(Vec::new())
