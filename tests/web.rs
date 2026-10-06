@@ -676,7 +676,7 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("9\u{a0}500\u{a0}€"));
     // Each detail a pill, its icon before its value; its name for screen readers and as a
     // tooltip. The options, several, a pill each.
-    // When it went up, the date in bold, under the photo.
+    // When it went up, the date in bold, over the photo.
     assert!(response.body.contains("Publikuar më <strong>"));
     // What kind of listing it is, and its condition, over the price, not among the details.
     assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur</p>"#));
@@ -2227,7 +2227,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     let order = positions(&page, &[
         r#"<nav class="listing-trail""#,
         r#"<div class="gallery">"#,
-        r#"<p class="card-meta listing-meta">"#,
+        r#"<p class="listing-meta">"#,
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur</p>"#,
         r#"<p class="listing-price">"#,

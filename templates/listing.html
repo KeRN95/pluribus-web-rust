@@ -26,6 +26,8 @@
     <span class="badge">{{ label }}</span>
     {%- endif %}
   </div>
+  {#- The photos, with the line saying where, when and which number over their top corner. -#}
+  <div class="listing-media">
   {% if photos.is_empty() %}
   <div class="listing-photo placeholder" aria-hidden="true"></div>
   {% else %}
@@ -56,17 +58,17 @@
     {%- endif %}
   </div>
   {% endif %}
-
-  {#- Under the photo: where it is, when it went up, and its number. -#}
-  <p class="card-meta listing-meta">
+  {#- Over the photo's top corner: where it is, when it went up (the date in bold), its number. -#}
+  <p class="listing-meta">
     {% if let Some(location) = listing.location_name %}{{ location }} · {% endif %}
     {% if let Some(date) = listing.published_display() %}Publikuar më <strong>{{ date }}</strong> · {% endif %}
     Nr. {{ listing.public_no }}
   </p>
+  </div>
 
   <header class="listing-header">
     <h1>{{ listing.title }}</h1>
-    {#- What kind it is and its condition, like the line under the photo: "Në shitje · E përdorur". -#}
+    {#- What kind it is and its condition, quietly: "Në shitje · E përdorur". -#}
     <p class="card-meta listing-kind">{{ listing.kind_line() }}</p>
     {%- if listing.loan_amount().is_some() %}
     {#- The price, and the button that opens the loan calculator under the actions below. -#}

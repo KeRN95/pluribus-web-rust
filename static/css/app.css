@@ -394,13 +394,27 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   vertical-align: -.2em;
 }
 
-/* The listing page's line under the photo: where, when, which number. */
+/* A quiet line on the listing page: over the price, what kind of listing, and its condition. */
 .card-meta { margin: .25rem 0 0; color: var(--muted); font-size: .85rem; }
-.listing-meta { margin-top: .6rem; }
-/* Its date, of all the line, in bold. */
-.listing-meta strong { font-weight: var(--semibold); }
-/* Over the price, the same quiet line: what kind of listing, and its condition. */
 .listing-kind { margin: 0 0 .2rem; }
+/* Over the photo's top corner, where, when and which number, in a pill like the photo counter's
+   in the other corner: the site's dark colour, see-through, and the date in bold. */
+.listing-media { position: relative; }
+.listing-meta {
+  position: absolute;
+  top: .7rem;
+  left: .7rem;
+  z-index: 1;
+  max-width: calc(100% - 1.4rem);
+  margin: 0;
+  padding: .2rem .65rem;
+  border-radius: 999px;
+  background: rgb(38 38 36 / 60%);
+  color: #faf9f5;
+  font-size: .8rem;
+  pointer-events: none;
+}
+.listing-meta strong { font-weight: var(--semibold); }
 .more { display: inline-block; padding: 1rem; color: var(--muted); }
 .empty { color: var(--muted); }
 
