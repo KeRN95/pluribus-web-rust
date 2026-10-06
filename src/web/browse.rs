@@ -62,18 +62,15 @@ fn frame_response(after: Option<Cursor>, page: &ListingPage) -> Result<Response>
     render(ListingFrame { frame_id, page })
 }
 
-pub struct Tile {
-    pub name: String,
-    pub url: String,
-    pub count: String,
-}
+/// The welcome page's shortcuts, pills under the search: what people look for most.
+const SHORTCUTS: [&str; 5] = ["prona", "makina", "elektronike", "pune", "te-tjera"];
 
 #[derive(Template)]
 #[template(path = "home.html")]
 struct HomePage {
     cities: Vec<ChoiceGroup>,
     categories: Vec<Choice>,
-    tiles: Vec<Tile>,
+    shortcuts: Vec<Link>,
     page: ListingPage,
 }
 
@@ -93,29 +90,28 @@ pub async fn home(
         return frame_response(after, &ListingPage::new(rows, Sort::Newest, next_url));
     }
 
-    let (rows, categories, cities, counts) = tokio::try_join!(
+    let (rows, categories, cities) = tokio::try_join!(
         db::listing_page(&state.db, &filter),
         db::categories(&state.db),
         db::cities(&state.db),
-        db::listing_counts(&state.db),
     )?;
     // The city picked last time (see city_controller.js), if it still exists.
     let city = cookie(&headers, "city").filter(|slug| cities.iter().any(|c| &c.slug == slug));
-    let tiles = categories
-        .top_level()
-        .map(|category| Tile {
+    let shortcuts = SHORTCUTS
+        .iter()
+        .filter_map(|slug| categories.by_slug(slug))
+        .map(|category| Link {
             name: category.name.clone(),
             url: match &city {
                 Some(city) => format!("/c/{}?city={city}", category.slug),
                 None => format!("/c/{}", category.slug),
             },
-            count: format::listing_count(categories.listing_count(category.id, &counts), i64::MAX),
         })
         .collect();
     render(HomePage {
         cities: filters::city_groups(&cities, city.as_deref()),
         categories: filters::category_choices(&categories, None),
-        tiles,
+        shortcuts,
         page: ListingPage::new(rows, Sort::Newest, next_url),
     })
 }

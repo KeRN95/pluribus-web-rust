@@ -212,9 +212,17 @@ async fn welcome_page_asks_for_a_city_and_a_category(pool: PgPool) {
     ]);
     assert!(towns.is_sorted(), "{towns:?}");
     assert!(body.contains(r#"<option value="makina">"#), "subcategories are offered too");
-    // The category tiles count subcategories' listings: both cars are in Makina, under Automjete.
-    let tile = body.find(r#"<a class="tile" href="/c/automjete""#).expect("an Automjete tile");
-    assert!(body[tile..].contains(r#"<span class="tile-count">2 njoftime</span>"#));
+    // Shortcuts to what people look for most, as pills, in this order; no more cards.
+    let shortcuts = positions(&body, &[
+        r#"<a class="chip" href="/c/prona" data-city-target="link">Prona</a>"#,
+        r#"<a class="chip" href="/c/makina" data-city-target="link">Makina</a>"#,
+        r#"<a class="chip" href="/c/elektronike" data-city-target="link">Elektronikë</a>"#,
+        r#"<a class="chip" href="/c/pune" data-city-target="link">Punë</a>"#,
+        r#"<a class="chip" href="/c/te-tjera" data-city-target="link">Të tjera</a>"#,
+    ]);
+    assert!(shortcuts.is_sorted(), "{shortcuts:?}");
+    assert_eq!(body.matches(r#"data-city-target="link""#).count(), 5);
+    assert!(!body.contains(r#"class="tile""#));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -225,7 +233,7 @@ async fn welcome_page_remembers_the_city(pool: PgPool) {
         .unwrap();
     let body = send(pool, request).await.body;
     assert!(body.contains(r#"<option value="vlore" selected>Vlorë</option>"#));
-    assert!(body.contains(r#"href="/c/automjete?city=vlore""#));
+    assert!(body.contains(r#"href="/c/makina?city=vlore""#));
 }
 
 #[sqlx::test(fixtures("listings"))]

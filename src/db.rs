@@ -82,11 +82,6 @@ impl Categories {
         chain.reverse();
         chain
     }
-
-    /// Active listings in the category and its subcategories.
-    pub fn listing_count(&self, id: Uuid, counts: &HashMap<Uuid, i64>) -> i64 {
-        self.subtree_ids(id).iter().filter_map(|id| counts.get(id)).sum()
-    }
 }
 
 pub async fn categories(db: &PgPool) -> sqlx::Result<Categories> {
@@ -101,19 +96,6 @@ pub async fn categories(db: &PgPool) -> sqlx::Result<Categories> {
     .fetch_all(db)
     .await?;
     Ok(Categories(rows))
-}
-
-/// Active listings per category, not counting subcategories.
-pub async fn listing_counts(db: &PgPool) -> sqlx::Result<HashMap<Uuid, i64>> {
-    let rows = sqlx::query!(
-        r#"SELECT category_id, count(*) AS "count!"
-           FROM listings
-           WHERE status = 'ACTIVE'
-           GROUP BY category_id"#
-    )
-    .fetch_all(db)
-    .await?;
-    Ok(rows.into_iter().map(|row| (row.category_id, row.count)).collect())
 }
 
 /// A municipality: listings are placed in one (or somewhere inside one), so these are what the

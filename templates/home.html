@@ -60,15 +60,12 @@
   </div>
   <p class="map-entry"><a href="/harta">{% include "pin.svg" %}Ose vendos një pikë në hartë dhe shiko çfarë ka përreth</a></p>
 
-  <h2 class="tiles-heading">Ose shfleto sipas kategorisë</h2>
-  {#- The links carry the city chosen above; city_controller.js updates them when it changes. -#}
-  <nav class="tiles" aria-label="Kategoritë">
-    {% for tile in tiles %}
-    <a class="tile" href="{{ tile.url }}" data-city-target="link">
-      <span class="tile-name">{{ tile.name }}</span>
-      <span class="tile-count">{{ tile.count }}</span>
-    </a>
-    {% endfor %}
+  {#- Shortcuts to what people look for most, pills in a row that slides sideways where it doesn't
+      fit. The links carry the city chosen above; city_controller.js updates them when it changes. -#}
+  <nav class="shortcuts" aria-label="Kategoritë">
+    {%- for shortcut in shortcuts %}
+    <a class="chip" href="{{ shortcut.url }}" data-city-target="link">{{ shortcut.name }}</a>
+    {%- endfor %}
   </nav>
 </section>
 

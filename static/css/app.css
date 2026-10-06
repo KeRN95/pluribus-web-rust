@@ -573,22 +573,13 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .field { display: grid; gap: .3rem; min-width: 0; }
 .field-label { color: var(--muted); font-size: .85rem; font-weight: var(--semibold); letter-spacing: .01em; }
 
-.tiles-heading { margin: 2rem 0 .75rem; font-size: 1.15rem; }
-.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
-
-.tile {
-  display: grid;
-  gap: .1rem;
-  padding: .85rem 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  text-decoration: none;
-  transition: border-color .15s, box-shadow .15s;
+/* The welcome page's shortcuts: pills in a row that slides sideways where it doesn't fit, and on
+   a phone runs out to the screen's edges, so it plainly does. */
+.shortcuts { display: flex; gap: .5rem; overflow-x: auto; margin: 1.25rem 0 0; padding: .1rem 0; scrollbar-width: none; }
+.shortcuts::-webkit-scrollbar { display: none; }
+@media (max-width: 719px) {
+  .shortcuts { margin-inline: -1rem; padding-inline: 1rem; }
 }
-
-.tile-name { font-size: 1.1rem; font-weight: var(--semibold); line-height: 1.3; }
-.tile-count { color: var(--muted); font-size: .875rem; }
 
 @media (min-width: 720px) {
   .welcome { padding-top: 2rem; }
@@ -597,11 +588,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .welcome-form { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; }
   .welcome-form .field-query,
   .welcome-form .button { grid-column: auto; }
-  .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-@media (hover: hover) {
-  .tile:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
 }
 
 /* Browse pages: filters beside the results */
