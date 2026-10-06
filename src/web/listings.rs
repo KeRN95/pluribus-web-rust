@@ -66,8 +66,14 @@ impl ListingDetail {
         format!("/listing/{}-{}", self.public_no, self.slug)
     }
 
-    pub fn price_display(&self) -> String {
-        format::price(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
+    /// The price itself; what follows it, smaller on the page, is price_note.
+    pub fn price_main(&self) -> String {
+        format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).0
+    }
+
+    /// "/muaj", " (i diskutueshëm)", or empty.
+    pub fn price_note(&self) -> String {
+        format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).1
     }
 
     /// The price a loan calculator starts from: only for things on sale with a price of their own

@@ -8,23 +8,34 @@ const NBSP: char = '\u{a0}';
 
 /// A listing's price. Rents and salaries are per month.
 pub fn price(amount: Option<Decimal>, currency: &str, price_type: &str, listing_type: &str) -> String {
+    let (price, note) = price_parts(amount, currency, price_type, listing_type);
+    price + &note
+}
+
+/// A price in two parts: the price itself, and what follows it, which the listing page sets
+/// smaller: the month of a rent or a salary, and whether it can be discussed ("/muaj (i
+/// diskutueshëm)"); empty when nothing does.
+pub fn price_parts(amount: Option<Decimal>, currency: &str, price_type: &str, listing_type: &str) -> (String, String) {
     match (price_type, amount) {
-        ("FREE", _) => "Falas".to_string(),
+        ("FREE", _) => ("Falas".to_string(), String::new()),
         _ if listing_type == "JOB" && (price_type == "ON_REQUEST" || amount.is_none()) => {
-            "Paga me marrëveshje".to_string()
+            ("Paga me marrëveshje".to_string(), String::new())
         }
-        ("ON_REQUEST", _) | (_, None) => "Çmimi me marrëveshje".to_string(),
+        ("ON_REQUEST", _) | (_, None) => ("Çmimi me marrëveshje".to_string(), String::new()),
         (kind, Some(amount)) => {
             let period = match listing_type {
                 "RENT" | "WANTED_RENT" | "JOB" => "/muaj",
                 _ => "",
             };
-            let value = format!("{}{period}", money(amount, currency));
-            match kind {
-                "FROM" => format!("nga {value}"),
-                "NEGOTIABLE" => format!("{value} (i diskutueshëm)"),
-                _ => value,
-            }
+            let price = match kind {
+                "FROM" => format!("nga {}", money(amount, currency)),
+                _ => money(amount, currency),
+            };
+            let note = match kind {
+                "NEGOTIABLE" => format!("{period} (i diskutueshëm)"),
+                _ => period.to_string(),
+            };
+            (price, note)
         }
     }
 }

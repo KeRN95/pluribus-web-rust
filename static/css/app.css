@@ -1374,6 +1374,8 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 /* The price is the headline, the title under its size. */
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: 1.6rem; }
 .listing-price { margin: 0; font-size: 1.9rem; line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
+/* What follows the price ("/muaj", "(i diskutueshëm)"), half its size. */
+.price-note { font-size: .5em; letter-spacing: normal; }
 /* The price with the loan calculator's button beside it; the calculator opens under the actions. */
 .price-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
 .loan-button {

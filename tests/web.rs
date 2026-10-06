@@ -720,7 +720,8 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     }
     // A rent is paid monthly already.
     let rent = html(pool, "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
-    assert!(rent.contains("450\u{a0}€/muaj"));
+    // The month follows the price, smaller.
+    assert!(rent.contains("<p class=\"listing-price\">450\u{a0}€<span class=\"price-note\">/muaj</span></p>"));
     assert!(!rent.contains("Llogarit kredinë"));
 }
 
