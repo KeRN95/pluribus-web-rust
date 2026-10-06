@@ -1045,7 +1045,6 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .photo-picker:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* A category's own fields in the listing form: a car's make, model, year... */
 .property-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1rem; margin: 0; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
-.property-fields legend { padding: 0 .35rem; font-weight: var(--semibold); }
 .property-fields .field-wide { grid-column: 1 / -1; }
 /* A car's fields on a grid of twelve: its main ones as tiles, three to the first line (make,
    model, year) and four to the second (fuel, gearbox, body, mileage), then its options, then the

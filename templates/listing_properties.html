@@ -2,7 +2,8 @@
     sent alone, in its frame, when the category changes. -#}
 {%- if !fields.is_empty() %}
 <fieldset class="property-fields{% if crate::web::properties::tiled(fields) %} vehicle-fields{% endif %}">
-  <legend>Detajet</legend>
+  {#- Named for screen readers only: out of sight, it leaves the box's border whole. -#}
+  <legend class="visually-hidden">Detajet</legend>
   {%- for field in fields %}
   <div class="field{% if field.kind == "multi" || field.kind == "check" %} field-wide{% endif %}{% if let Some(tile) = field.tile %} span-{{ tile.span }}{% endif %}">
     {%- if field.kind == "check" %}
