@@ -514,15 +514,19 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
 }
 .picker-list[hidden] { display: none; }
-.picker-heading { padding: .75rem .85rem .3rem; color: var(--muted); font-size: .8rem; font-weight: var(--semibold); }
-/* Rows a finger finds easily. */
-.picker-option { padding: .7rem .85rem; border-radius: 10px; cursor: pointer; }
+.picker-heading { padding: .6rem .85rem .2rem; color: var(--muted); font-size: .8rem; font-weight: var(--semibold); }
+/* Rows a finger finds easily, close enough to read as one list. */
+.picker-option { padding: .55rem .85rem; border-radius: 10px; cursor: pointer; }
 .picker-option:hover,
 .picker-option:focus { outline: none; background: var(--surface-muted); }
-.picker-option[aria-selected="true"] { background: var(--badge); font-weight: var(--medium); }
 .picker-option[data-value=""] { color: var(--muted); font-weight: var(--regular); }
+/* The choice in the site's own colour, as its buttons are. */
+.picker-option[aria-selected="true"] { background: var(--button); color: var(--on-button); font-weight: var(--medium); }
+.picker-option[aria-selected="true"]:hover,
+.picker-option[aria-selected="true"]:focus { background: var(--button-hover); }
+.picker-option[aria-selected="true"] .picker-toggle { color: inherit; }
 .picker-list[role="tree"] [aria-level="1"] { font-weight: var(--semibold); }
-.picker-branch { display: flex; align-items: center; gap: .5rem; padding-top: .4rem; padding-bottom: .4rem; }
+.picker-branch { display: flex; align-items: center; gap: .5rem; padding-top: .25rem; padding-bottom: .25rem; }
 /* A category's subcategories, once open: a level further in, with a faint line in the gap to their
    left, from under the category's name down to the last of them, so the eye keeps its place. */
 .picker-children { position: relative; margin-left: 1.5rem; }
@@ -533,7 +537,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   bottom: .2rem;
   left: -.55rem;
   width: 1px;
-  background: var(--border-strong);
+  background: var(--border);
 }
 /* The arrow takes a finger's tap of its own: the category's name picks it, where it can be picked. */
 .picker-toggle {
@@ -541,7 +545,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   flex: none;
   place-items: center;
   width: 2.5rem;
-  height: 2.2rem;
+  height: 2rem;
   margin: 0 -.45rem 0 auto;
   border-radius: 9px;
   color: var(--muted);
