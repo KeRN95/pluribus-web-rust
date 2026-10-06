@@ -681,15 +681,14 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("<dd>Naftë</dd>"));
     assert!(response.body.contains("<dd>Hatchback</dd>"));
     assert!(response.body.contains("ABS, Kondicioner"));
-    // Its category's path, one pill split by arrows: Automjete, then Makina.
+    // Its category's path, pills with a › between them: Automjete, then Makina.
     let trail = positions(&response.body, &[
-        r#"<nav class="listing-trail" aria-label="Kategoria e njoftimit">"#,
-        r#"<a href="/c/automjete" title="Automjete">Automjete</a>"#,
-        r#"<a href="/c/makina" title="Makina">Makina</a>"#,
-        "</nav>",
+        r#"<a class="chip" href="/c/automjete">Automjete</a>"#,
+        r#"<svg class="trail-sep""#,
+        r#"<a class="chip" href="/c/makina">Makina</a>"#,
     ]);
     assert!(trail.is_sorted(), "{trail:?}");
-    assert_eq!(response.body[trail[0]..trail[3]].matches("<a ").count(), 2);
+    assert_eq!(response.body.matches(r#"<svg class="trail-sep""#).count(), 1);
     let html = response.body.replace("&#38;", "&");
     assert!(html.contains("photo-1591230740238-e9a71182b67c?auto=format&fit=crop&w=1200"));
 }
@@ -1367,14 +1366,12 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
     // The listing says it, under the same names, under its category's path, all three levels.
     let page = get(pool.clone(), &url).await.body;
     let trail = positions(&page, &[
-        r#"<nav class="listing-trail" aria-label="Kategoria e njoftimit">"#,
-        r#"<a href="/c/automjete" title="Automjete">Automjete</a>"#,
-        r#"<a href="/c/pjese-dhe-aksesore" title="Pjesë dhe aksesorë">Pjesë dhe aksesorë</a>"#,
-        r#"<a href="/c/gps-dhe-navigatore" title="GPS dhe navigatorë">GPS dhe navigatorë</a>"#,
-        "</nav>",
+        r#"<a class="chip" href="/c/automjete">Automjete</a>"#,
+        r#"<a class="chip" href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#,
+        r#"<a class="chip" href="/c/gps-dhe-navigatore">GPS dhe navigatorë</a>"#,
     ]);
     assert!(trail.is_sorted(), "{trail:?}");
-    assert_eq!(page[trail[0]..trail[4]].matches("<a ").count(), 3);
+    assert_eq!(page.matches(r#"<svg class="trail-sep""#).count(), 2);
     for (label, value) in [("Marka e automjetit", "Volkswagen"), ("Modeli i automjetit", "Golf"), ("Nga viti", "2012"), ("Deri në vitin", "2019")] {
         assert!(page.contains(&format!("<dt>{label}</dt>")), "{label}");
         assert!(page.contains(&format!("<dd>{value}</dd>")), "{value}");
