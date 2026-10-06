@@ -66,6 +66,8 @@
 
   <header class="listing-header">
     <h1>{{ listing.title }}</h1>
+    {#- What kind it is and its condition, like the line under the photo: "Në shitje · E përdorur". -#}
+    <p class="card-meta listing-kind">{{ listing.kind_line() }}</p>
     {%- if listing.loan_amount().is_some() %}
     {#- The price, and the button that opens the loan calculator under the actions below. -#}
     <div class="price-row">

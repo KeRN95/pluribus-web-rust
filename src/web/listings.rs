@@ -104,6 +104,15 @@ impl ListingDetail {
         self.published_at.map(format::date)
     }
 
+    /// What kind of listing it is, and in what condition when it has one: "Në shitje · E përdorur".
+    pub fn kind_line(&self) -> String {
+        let kind = format::listing_type(&self.listing_type);
+        match self.condition.as_deref() {
+            Some(condition) => format!("{kind} · {}", format::condition(condition)),
+            None => kind.to_string(),
+        }
+    }
+
     pub fn status_label(&self) -> Option<&'static str> {
         match self.status.as_str() {
             "RESERVED" => Some("Rezervuar"),
@@ -170,7 +179,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     });
     // A car's title says its make, model, body type and colour: its details leave them out.
     let titled = listing.heading.is_some();
-    let mut details: Vec<Detail> = attributes
+    let details: Vec<Detail> = attributes
         .into_iter()
         .filter(|attribute| !(titled && properties::TITLE_CODES.contains(&attribute.code.as_str())))
         .map(|attribute| Detail {
@@ -180,14 +189,6 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             values: attribute.shown,
         })
         .collect();
-    if let Some(condition) = &listing.condition {
-        details.insert(0, Detail {
-            label: "Gjendja".to_string(),
-            values: vec![format::condition(condition).to_string()],
-            icon: properties::icon("condition"),
-            multi: false,
-        });
-    }
     // Said once: the cookie that says so (post.rs) goes with this answer.
     let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
     let mut response = render(ListingShow { listing, trail, details, photos, reveal, own, posted })?;

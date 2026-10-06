@@ -676,9 +676,10 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("9\u{a0}500\u{a0}€"));
     // Each detail a pill, its icon before its value; its name for screen readers and as a
     // tooltip. The options, several, a pill each.
-    assert!(response.body.contains(r#"<dt class="visually-hidden">Gjendja</dt>"#));
-    assert!(response.body.contains(r#"<dd class="attribute" title="Gjendja"><svg class="attribute-icon""#));
-    assert!(response.body.contains("</svg>E përdorur</dd>"));
+    // What kind of listing it is, and its condition, over the price, not among the details.
+    assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur</p>"#));
+    assert!(!response.body.contains(">Gjendja</dt>"));
+    assert!(response.body.contains(r#"<dd class="attribute" title="Kilometrazhi"><svg class="attribute-icon""#));
     assert!(response.body.contains(r#"<dt class="visually-hidden">Kilometrazhi</dt>"#));
     assert!(response.body.contains("</svg>148\u{a0}000\u{a0}km</dd>"));
     assert!(response.body.contains("</svg>Naftë</dd>"));
@@ -2226,6 +2227,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         r#"<div class="gallery">"#,
         r#"<p class="card-meta listing-meta">"#,
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
+        r#"<p class="card-meta listing-kind">Në shitje · E përdorur</p>"#,
         r#"<p class="listing-price">"#,
         r#"<div class="actions">"#,
         &format!(r#"<a class="seller" href="{ana}">"#),

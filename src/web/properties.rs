@@ -79,15 +79,14 @@ const TILES: [(&str, &str); 8] = [
 /// leaves them out of the details, since the title says them.
 pub const TITLE_CODES: [&str; 4] = ["vehicle_make", "vehicle_model", "vehicle_body_type", "vehicle_color"];
 
-/// Icons for what isn't a form's tile but has one on the listing page: its condition (a circled
-/// check) and a car's options (a list of checks).
-const MORE_ICONS: [(&str, &str); 2] = [
-    ("condition", r#"<circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-5.5"/>"#),
+/// Icons for what isn't a form's tile but has one on the listing page: a car's options (a list of
+/// checks).
+const MORE_ICONS: [(&str, &str); 1] = [
     ("vehicle_features", r#"<path d="M10.5 6h10M10.5 12h10M10.5 18h10"/><path d="m3.5 6 1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5"/>"#),
 ];
 
-/// The icon of a property, by its code, or of a listing's "condition", where it has one: the
-/// inside of a 24-unit SVG drawn in strokes.
+/// The icon of a property, by its code, where it has one: the inside of a 24-unit SVG drawn in
+/// strokes.
 pub fn icon(code: &str) -> Option<&'static str> {
     TILES.iter().chain(&MORE_ICONS).find(|(of, _)| *of == code).map(|(_, icon)| *icon)
 }
