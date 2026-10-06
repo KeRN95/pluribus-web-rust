@@ -4,6 +4,7 @@ mod account;
 mod browse;
 mod filters;
 mod listings;
+mod moderation;
 mod photos;
 mod post;
 mod properties;
@@ -52,6 +53,9 @@ pub fn router(state: AppState) -> Router {
         .route("/media/{*key}", get(photos::serve))
         .route("/shto/fushat", get(properties::fields_for_category))
         .route("/njoftimet-e-mia", get(post::my_listings))
+        .route("/moderim", get(moderation::page))
+        .route("/moderim/{id}/mirato", post(moderation::approve))
+        .route("/moderim/{id}/bashko", post(moderation::merge))
         .route("/listing/{public_no}/caktivizo", post(post::pause_listing))
         .route("/listing/{public_no}/aktivizo", post(post::resume_listing))
         .route("/listing/{public_no}/fshi", post(post::delete_listing))

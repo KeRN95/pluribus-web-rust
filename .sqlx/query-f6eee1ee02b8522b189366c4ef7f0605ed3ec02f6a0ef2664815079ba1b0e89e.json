@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE listing_attribute_values SET value_option_id = $2 WHERE value_option_id = $1 RETURNING listing_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "listing_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f6eee1ee02b8522b189366c4ef7f0605ed3ec02f6a0ef2664815079ba1b0e89e"
+}

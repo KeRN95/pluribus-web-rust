@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT o.id AS pending_id, t.id, t.label, similarity(lower(t.label), lower(o.label)) AS \"similarity!\"\n           FROM attribute_options o\n           JOIN attribute_options t\n             ON t.attribute_id = o.attribute_id AND t.active AND t.parent_option_id IS NOT DISTINCT FROM o.parent_option_id\n           WHERE NOT o.active AND o.added_by_user_id IS NOT NULL\n           ORDER BY o.id, t.sort_order, t.label",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "pending_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "label",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "similarity!",
+        "type_info": "Float4"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "0cab3698467041dc7f892b9a0bf3ac3437fd4d606b3f0ec76d14a344c65c0d2d"
+}

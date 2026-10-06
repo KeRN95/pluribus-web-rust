@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT o.id, a.name AS attribute, o.label, parent.label AS \"parent_label?\",\n                  coalesce(NOT parent.active, false) AS \"parent_pending!\", u.display_name AS \"added_by?\",\n                  (SELECT count(*) FROM listing_attribute_values v JOIN listings l ON l.id = v.listing_id\n                   WHERE v.value_option_id = o.id AND l.status <> 'DELETED') AS \"listings!\"\n           FROM attribute_options o\n           JOIN attributes a ON a.id = o.attribute_id\n           LEFT JOIN attribute_options parent ON parent.id = o.parent_option_id\n           LEFT JOIN users u ON u.id = o.added_by_user_id\n           WHERE NOT o.active AND o.added_by_user_id IS NOT NULL\n           ORDER BY o.parent_option_id IS NOT NULL, a.name, lower(parent.label), lower(o.label)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "attribute",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "label",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "parent_label?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "parent_pending!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "added_by?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "listings!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null,
+      false,
+      null
+    ]
+  },
+  "hash": "c8aad6450a121468926f3f27a34de0feb2ac0e7f617ac9665b9503b6d9226bb3"
+}

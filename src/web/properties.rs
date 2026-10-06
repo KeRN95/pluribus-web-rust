@@ -56,6 +56,18 @@ pub struct PropertyField {
 /// The value a select sends for "Tjetër".
 pub const OTHER: &str = "__other__";
 
+/// What's wrong with a name typed for "Tjetër" that isn't plausible_name.
+pub const NAME_PROBLEM: &str = "Shkruaj vetëm emrin, me 2 deri në 40 shkronja.";
+
+/// A name typed for "Tjetër", or put right by a moderator, that can be one: 2 to 40 characters,
+/// some of them letters or digits, and no address in it.
+pub fn plausible_name(text: &str) -> bool {
+    let lower = text.to_lowercase();
+    text.chars().any(char::is_alphanumeric)
+        && (2..=40).contains(&text.chars().count())
+        && !["http", "www.", "@"].iter().any(|bit| lower.contains(bit))
+}
+
 pub fn field_name(code: &str) -> String {
     format!("prop_{code}")
 }
@@ -186,9 +198,8 @@ pub fn check(
                     fail(format!("Shkruaj \u{201e}{}\u{201c}.", attribute.name));
                     continue;
                 }
-                let named = text.chars().any(char::is_alphanumeric);
-                if !named || !(2..=40).contains(&text.chars().count()) || ["http", "www.", "@"].iter().any(|bit| lower.contains(bit)) {
-                    fail("Shkruaj vetëm emrin, me 2 deri në 40 shkronja.".to_string());
+                if !plausible_name(&text) {
+                    fail(NAME_PROBLEM.to_string());
                     continue;
                 }
                 // Typed as it is in the list ("bmw"): the listed one.

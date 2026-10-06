@@ -642,6 +642,8 @@ pub async fn update_listing(
 struct MyListingsPage {
     signed_in_as: String,
     listings: Vec<MyListing>,
+    /// For a moderator, how many typed options wait on /moderim.
+    pending: Option<i64>,
 }
 
 impl MyListing {
@@ -715,5 +717,9 @@ pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap) -> R
         return render(SignInPage::new());
     };
     let listings = db::my_listings(&state.db, user.id).await?;
-    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings })
+    let pending = match state.moderators.include(&user) {
+        true => Some(db::pending_option_count(&state.db).await?),
+        false => None,
+    };
+    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, pending })
 }

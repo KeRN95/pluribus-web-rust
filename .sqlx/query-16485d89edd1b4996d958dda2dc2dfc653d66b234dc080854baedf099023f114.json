@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE attribute_options o\n         SET active = true, label = $2::text,\n             sort_order = coalesce((SELECT max(s.sort_order) FROM attribute_options s\n                                    WHERE s.attribute_id = o.attribute_id AND s.active\n                                      AND s.parent_option_id IS NOT DISTINCT FROM o.parent_option_id\n                                      AND lower(s.label) < lower($2::text)), 0) + 1\n         WHERE o.id = $1 AND NOT o.active AND o.added_by_user_id IS NOT NULL\n           AND (o.parent_option_id IS NULL\n                OR EXISTS (SELECT 1 FROM attribute_options p WHERE p.id = o.parent_option_id AND p.active))\n         RETURNING o.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "16485d89edd1b4996d958dda2dc2dfc653d66b234dc080854baedf099023f114"
+}

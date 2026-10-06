@@ -6,6 +6,10 @@
 <section class="account">
   <h1>Njoftimet e mia</h1>
   <p class="lead">Njoftimet që ke publikuar me <strong>{{ signed_in_as }}</strong>.</p>
+  {%- if let Some(pending) = pending %}
+  {#- Moderators only: the makes and models sellers typed in, waiting. -#}
+  <p class="moderation-link"><a class="button secondary small" href="/moderim">Për miratim ({{ pending }})</a></p>
+  {%- endif %}
 
   {% if listings.is_empty() %}
   <p class="empty">Nuk ke publikuar asnjë njoftim ende.</p>

@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT o.id FROM attribute_options o\n         JOIN attribute_options t\n           ON t.id = $2 AND t.active AND t.attribute_id = o.attribute_id\n          AND t.parent_option_id IS NOT DISTINCT FROM o.parent_option_id\n         WHERE o.id = $1 AND NOT o.active AND o.added_by_user_id IS NOT NULL\n         FOR UPDATE OF o",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f95302129fbbacd38496c44c11d1dea47e8d8882f986caa41f3f0c9e60ac5fda"
+}

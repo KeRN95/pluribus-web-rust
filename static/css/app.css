@@ -395,7 +395,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .filter-form input[type="search"],
 .filter-form input[type="text"],
 .filter-form select,
-.sort select {
+.sort select,
+.pending-form input,
+.pending-form select {
   width: 100%;
   min-width: 0;
   padding: .55rem .7rem;
@@ -409,7 +411,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* A chevron drawn in the text colour, so it follows the theme. */
 .field select,
 .filter-form select,
-.sort select {
+.sort select,
+.pending-form select {
   appearance: none;
   padding-right: 2rem;
   background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
@@ -830,6 +833,18 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 @media (max-width: 719px) {
   .my-listing { flex-direction: column; align-items: stretch; }
 }
+/* The moderators' page (/moderim): each name sellers typed in, in a box like a listing on
+   "Njoftimet e mia", with its two forms side by side, under each other on phones. */
+.moderation-link { margin: -.5rem 0 1.25rem; }
+.pending-options { display: grid; gap: .6rem; margin: 0 0 1.25rem; padding: 0; list-style: none; }
+.pending-option { display: grid; gap: .6rem; padding: .75rem .9rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.pending-head { display: grid; gap: .1rem; }
+.pending-attribute { color: var(--muted); font-size: .85rem; }
+.pending-label { font-size: 1.05rem; font-weight: var(--semibold); }
+.pending-actions { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+.pending-form { display: flex; flex: 1 1 14rem; gap: .4rem; }
+.pending-form input, .pending-form select { flex: 1; min-width: 0; }
+.pending-option .field-hint, .pending-option .field-error { margin: 0; }
 /* Photos in the listing form: small squares, four to a row, then the picker, a button whose file
    input is hidden but still takes the tap (and the keyboard). */
 .photo-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; margin: .25rem 0 .5rem; padding: 0; list-style: none; }
@@ -1021,14 +1036,18 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .filter-form input[type="search"],
   .filter-form input[type="text"],
   .filter-form select,
-  .sort select { font-size: 16px; }
+  .sort select,
+  .pending-form input,
+  .pending-form select { font-size: 16px; }
 
   .field input,
   .field select,
   .filter-form input[type="search"],
   .filter-form input[type="text"],
   .filter-form select,
-  .sort select { padding-top: .45rem; padding-bottom: .45rem; }
+  .sort select,
+  .pending-form input,
+  .pending-form select { padding-top: .45rem; padding-bottom: .45rem; }
 }
 
 @media (max-width: 360px) {

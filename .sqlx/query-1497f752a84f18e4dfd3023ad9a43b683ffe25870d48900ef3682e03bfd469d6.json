@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (\n               SELECT 1 FROM attribute_options o\n               JOIN attribute_options t\n                 ON t.attribute_id = o.attribute_id AND t.parent_option_id IS NOT DISTINCT FROM o.parent_option_id\n                AND t.active AND t.id <> o.id AND lower(t.label) = lower($2)\n               WHERE o.id = $1\n           ) AS \"taken!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "taken!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "1497f752a84f18e4dfd3023ad9a43b683ffe25870d48900ef3682e03bfd469d6"
+}

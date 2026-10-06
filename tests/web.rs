@@ -9,15 +9,18 @@ use axum::{
     http::{Request, StatusCode, header},
 };
 use http_body_util::BodyExt;
-use marketplace::media::Media;
+use marketplace::{Moderators, media::Media};
 use sqlx::PgPool;
 use tower::ServiceExt;
 
+/// The tests' moderator (MODERATORS in .env): whoever signs in with this number.
+const MODERATOR: &str = "+355690000099";
+
 /// The app, with photos kept in memory, one store for all the tests: their photos' names never
-/// collide, and a photo posted in one request is there for the next.
+/// collide, and a photo posted in one request is there for the next. MODERATOR moderates.
 fn app(pool: PgPool) -> Router {
     static MEDIA: OnceLock<Media> = OnceLock::new();
-    marketplace::app_with_media(pool, MEDIA.get_or_init(Media::in_memory).clone())
+    marketplace::app_with(pool, MEDIA.get_or_init(Media::in_memory).clone(), Moderators::new([MODERATOR]))
 }
 
 struct TestResponse {
@@ -1746,6 +1749,133 @@ async fn sellers_type_a_make_or_model_the_list_lacks(pool: PgPool) {
     golf.iter_mut().find(|field| field.0 == "prop_vehicle_model").unwrap().1 = "VOLKSWAGEN_GOLF";
     let response = post_form(pool, "/shto", &golf, Some(&ana)).await;
     assert!(response.body.contains("Ky model nuk i përket markës së zgjedhur."));
+}
+
+/// The id of the make or model named so.
+async fn option_id(pool: &PgPool, label: &str) -> String {
+    sqlx::query_scalar("SELECT id::text FROM attribute_options WHERE label = $1")
+        .bind(label)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
+/// Whether the option named so is offered, approved.
+async fn option_active(pool: &PgPool, label: &str) -> Option<bool> {
+    sqlx::query_scalar("SELECT active FROM attribute_options WHERE label = $1")
+        .bind(label)
+        .fetch_optional(pool)
+        .await
+        .unwrap()
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn moderators_approve_or_merge_what_sellers_typed(pool: PgPool) {
+    let started = started();
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let moderator = new_seller(&pool, MODERATOR).await;
+    // Typed in: a make the list lacks, with its model; a listed make spelt short, with its model;
+    // and a model of a listed make, spelt long.
+    let post = |seller: String, make: &'static str, model: &'static str, title: &'static str| {
+        let pool = pool.clone();
+        let started = started.clone();
+        async move {
+            let mut fields = typed_car(make, model, &started);
+            fields.iter_mut().find(|field| field.0 == "title").unwrap().1 = title;
+            let posted = post_form(pool, "/shto", &fields, Some(&seller)).await;
+            assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+            posted.location.unwrap()
+        }
+    };
+    let yugo = post(ana.clone(), "Zastava", "Yugo", "Zastava Yugo 45, 1988").await;
+    let mercedes = post(besa.clone(), "Mercedes", "C 220", "Mercedes C 220, 2012").await;
+    let golf = post(ana.clone(), "volkswagen", "Golf IV", "VW Golf IV 1.9 TDI").await;
+    let zastava_id = option_id(&pool, "Zastava").await;
+    let yugo_id = option_id(&pool, "Yugo").await;
+    let golf_iv_id = option_id(&pool, "Golf IV").await;
+    let mercedes_id = option_id(&pool, "Mercedes").await;
+
+    // Only for moderators: anyone else finds nothing, and changes nothing.
+    assert_eq!(get(pool.clone(), "/moderim").await.status, StatusCode::NOT_FOUND);
+    assert_eq!(get_with_cookie(pool.clone(), "/moderim", &ana).await.status, StatusCode::NOT_FOUND);
+    let tried = post_form(pool.clone(), &format!("/moderim/{zastava_id}/mirato"), &[("label", "Zastava")], Some(&ana)).await;
+    assert_eq!(tried.status, StatusCode::NOT_FOUND);
+    let tried = post_form(pool.clone(), &format!("/moderim/{golf_iv_id}/bashko"), &[("into", &option_id(&pool, "Golf").await)], Some(&ana)).await;
+    assert_eq!(tried.status, StatusCode::NOT_FOUND);
+    assert_eq!(option_active(&pool, "Zastava").await, Some(false));
+    assert_eq!(option_active(&pool, "Golf IV").await, Some(false));
+    assert!(!get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains("/moderim"));
+
+    // The moderator's own page links to it, with how many wait.
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &moderator).await.body;
+    assert!(mine.contains(r#"<a class="button secondary small" href="/moderim">Për miratim (5)</a>"#));
+    // Each, with its make, how many listings have it, who typed it; the likeliest listed one
+    // comes chosen for a merge; a model whose make waits waits for it.
+    let page = get_with_cookie(pool.clone(), "/moderim", &moderator).await;
+    assert_eq!(page.status, StatusCode::OK);
+    let page = page.body;
+    assert!(page.contains(r#"<strong class="pending-label">Zastava</strong>"#));
+    assert!(page.contains(r#"<span class="pending-attribute">Modeli · Zastava</span>"#));
+    assert!(page.contains("Mirato ose bashko më parë markën, „Zastava“."));
+    assert!(page.contains(r#"<a href="/search?q=Golf+IV">1 njoftim</a> · shtuar nga Përdorues"#));
+    let golf_id = option_id(&pool, "Golf").await;
+    assert!(page.contains(&format!(r#"<option value="{golf_id}" selected>Golf</option>"#)));
+    let mercedes_benz_id = option_id(&pool, "Mercedes-Benz").await;
+    assert!(page.contains(&format!(r#"<option value="{mercedes_benz_id}" selected>Mercedes-Benz</option>"#)));
+    // The model of a make that waits can't be approved yet.
+    let early = post_form(pool.clone(), &format!("/moderim/{yugo_id}/mirato"), &[("label", "Yugo")], Some(&moderator)).await;
+    assert_eq!(early.status, StatusCode::SEE_OTHER);
+    assert_eq!(option_active(&pool, "Yugo").await, Some(false));
+
+    // Approved, the make is offered, in its alphabetical place: after Volvo.
+    let approved = post_form(pool.clone(), &format!("/moderim/{zastava_id}/mirato"), &[("label", " Zastava ")], Some(&moderator)).await;
+    assert_eq!((approved.status, approved.location.as_deref()), (StatusCode::SEE_OTHER, Some("/moderim")));
+    let frame = get(pool.clone(), "/shto/fushat?category=makina").await.body;
+    let places = positions(&frame, &[">Volkswagen<", ">Volvo<", ">Zastava<"]);
+    assert!(places.is_sorted(), "{places:?}");
+    // Its model, with its name put right: "Koral", which search finds it by now too.
+    let approved = post_form(pool.clone(), &format!("/moderim/{yugo_id}/mirato"), &[("label", "Koral")], Some(&moderator)).await;
+    assert_eq!(approved.status, StatusCode::SEE_OTHER);
+    assert_eq!(option_active(&pool, "Koral").await, Some(true));
+    assert!(get(pool.clone(), &yugo).await.body.contains(">Koral<"));
+    assert!(get(pool.clone(), "/search?q=koral").await.body.contains("Zastava Yugo 45, 1988"));
+    assert!(get(pool.clone(), "/c/makina").await.body.contains(">Zastava<"));
+
+    // A name the list has already, or one that can't be a name, is not approved.
+    for (label, message) in [("golf", "„golf“ është tashmë në listë: bashkoje me të."), ("x", "Shkruaj vetëm emrin, me 2 deri në 40 shkronja.")] {
+        let refused = post_form(pool.clone(), &format!("/moderim/{golf_iv_id}/mirato"), &[("label", label)], Some(&moderator)).await;
+        assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY, "{label}");
+        assert!(refused.body.contains(message), "{label}");
+        assert_eq!(option_active(&pool, "Golf IV").await, Some(false), "{label}");
+    }
+
+    // Merged, the listing has the listed model, and the typed one is gone.
+    let merged = post_form(pool.clone(), &format!("/moderim/{golf_iv_id}/bashko"), &[("into", &golf_id)], Some(&moderator)).await;
+    assert_eq!(merged.status, StatusCode::SEE_OTHER);
+    assert_eq!(option_active(&pool, "Golf IV").await, None);
+    let page = get(pool.clone(), &golf).await.body;
+    assert!(page.contains(">Golf<") && !page.contains(">Golf IV<"));
+    // A typed make merged into the listed one takes its typed model along, under the listed make.
+    let merged = post_form(pool.clone(), &format!("/moderim/{mercedes_id}/bashko"), &[("into", &mercedes_benz_id)], Some(&moderator)).await;
+    assert_eq!(merged.status, StatusCode::SEE_OTHER);
+    assert!(get(pool.clone(), &mercedes).await.body.contains(">Mercedes-Benz<"));
+    let page = get_with_cookie(pool.clone(), "/moderim", &moderator).await.body;
+    assert!(page.contains(r#"<span class="pending-attribute">Modeli · Mercedes-Benz</span>"#));
+    assert!(page.contains(r#"<strong class="pending-label">C 220</strong>"#));
+    assert!(!page.contains("më parë markën"));
+    // No listed model is like it, so the merge asks which, and won't go without one.
+    assert!(page.contains(r#"<option value="" selected>Bashkoje me…</option>"#));
+    let c220_id = option_id(&pool, "C 220").await;
+    let unchosen = post_form(pool.clone(), &format!("/moderim/{c220_id}/bashko"), &[("into", "")], Some(&moderator)).await;
+    assert_eq!(unchosen.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(unchosen.body.contains("Zgjidh me cilin emër të listës ta bashkosh."));
+    assert_eq!(option_active(&pool, "C 220").await, Some(false));
+    // Not into a model of another make.
+    post_form(pool.clone(), &format!("/moderim/{c220_id}/bashko"), &[("into", &golf_id)], Some(&moderator)).await;
+    assert_eq!(option_active(&pool, "C 220").await, Some(false));
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &moderator).await.body;
+    assert!(mine.contains("Për miratim (1)"));
 }
 
 #[sqlx::test]

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Për miratim | Marketplace{% endblock %}
+
+{% block content %}
+<section class="account">
+  <h1>Për miratim</h1>
+  <p class="lead">Emrat që shitësit kanë shkruar te „Tjetër“, kur lista nuk e kishte markën apo modelin e tyre. Miratoje një emër, që të dalë në lista dhe në filtra, ose bashkoje me një emër të listës, nëse është i njëjti i shkruar ndryshe.</p>
+
+  {% if rows.is_empty() %}
+  <p class="empty">Nuk ka asgjë për miratim.</p>
+  {% else %}
+  <ul class="pending-options">
+    {% for row in rows %}
+    <li class="pending-option">
+      <div class="pending-head">
+        <span class="pending-attribute">{{ row.option.attribute }}{% if let Some(make) = row.option.parent_label %} · {{ make }}{% endif %}</span>
+        <strong class="pending-label">{{ row.option.label }}</strong>
+        <span class="my-listing-meta">
+          <a href="{{ row.search_url() }}">{{ row.listings_text() }}</a>{% if let Some(name) = row.option.added_by %} · shtuar nga {{ name }}{% endif %}
+        </span>
+      </div>
+      {%- if row.option.parent_pending %}
+      <p class="field-hint">Mirato ose bashko më parë markën{% if let Some(make) = row.option.parent_label %}, „{{ make }}“{% endif %}.</p>
+      {%- else %}
+      {#- Approve, under the name as typed or put right; or merge into a listed one, the likeliest chosen. -#}
+      <div class="pending-actions">
+        <form class="pending-form" method="post" action="/moderim/{{ row.option.id }}/mirato">
+          <input name="label" value="{{ row.option.label }}" maxlength="40" aria-label="{{ row.option.label }}: emri siç do të dalë">
+          <button type="submit" class="button small">Mirato</button>
+        </form>
+        {%- if !row.targets.is_empty() %}
+        <form class="pending-form" method="post" action="/moderim/{{ row.option.id }}/bashko">
+          <select name="into" required aria-label="{{ row.option.label }}: bashkoje me">
+            {%- if !row.likely_chosen() %}<option value="" selected>Bashkoje me…</option>{% endif %}
+            {%- for target in row.targets %}<option value="{{ target.value }}"{% if target.selected %} selected{% endif %}>{{ target.label }}</option>{% endfor %}
+          </select>
+          <button type="submit" class="button secondary small">Bashko</button>
+        </form>
+        {%- endif %}
+      </div>
+      {%- endif %}
+      {%- if let Some(error) = row.error %}<p class="field-error">{{ error }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endblock %}
