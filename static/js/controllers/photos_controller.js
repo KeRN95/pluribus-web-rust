@@ -1,9 +1,11 @@
 import { Controller } from "@hotwired/stimulus";
 
-// The photo picker on the listing form. It shows small previews of the photos chosen, keeps to
-// the number still allowed, and makes big phone photos smaller before the form goes (longest side
-// MAX_SIDE, JPEG), so posting doesn't send megabytes over mobile data. The server checks and
-// re-encodes every photo all the same (media.rs); without this script the originals go as they are.
+// The photo picker on the listing form. Photos can be picked a few at a time, as phones offer
+// them: each pick adds to the ones before (a file input alone would forget them), up to the number
+// still allowed, and each new one shows as a small preview with "Hiq" to take it out again. Big
+// phone photos are made smaller before the form goes (longest side MAX_SIDE, JPEG), so posting
+// doesn't send megabytes over mobile data. The server checks and re-encodes every photo all the
+// same (media.rs); without this script the input sends what was picked last, as it is.
 
 const MAX_SIDE = 2000; // px; the server keeps 1600
 const QUALITY = 0.85;
@@ -12,38 +14,59 @@ export default class extends Controller {
   static targets = ["input", "previews", "status"];
   static values = { max: Number };
 
-  async chosen() {
-    let files = [...this.inputTarget.files].filter((file) => file.type.startsWith("image/"));
-    let note = "";
-    if (files.length > this.maxValue) {
-      files = files.slice(0, this.maxValue);
-      note = this.maxValue
-        ? `Mund të shtosh edhe ${this.maxValue} foto: u morën të parat.`
-        : "Njoftimi ka sa foto lejohen. Hiq ndonjë për të shtuar të tjera.";
-    }
-    this.statusTarget.textContent = files.length ? "Po përgatiten fotot…" : note;
-    const ready = await Promise.all(files.map(shrink));
-
-    // The input now holds the smaller copies (or the originals, where shrinking didn't work).
-    const transfer = new DataTransfer();
-    for (const file of ready) transfer.items.add(file);
-    this.inputTarget.files = transfer.files;
-
-    this.showPreviews(ready);
-    this.statusTarget.textContent = note || (ready.length ? `${ready.length} foto gati për t'u ngarkuar.` : "");
+  connect() {
+    // What goes with the form, made smaller, in the order picked: the first is the cover.
+    this.picked = [];
   }
 
-  showPreviews(files) {
+  async chosen() {
+    const room = this.maxValue - this.picked.length;
+    let files = [...this.inputTarget.files].filter((file) => file.type.startsWith("image/"));
+    let note = "";
+    if (files.length > room) {
+      files = files.slice(0, Math.max(room, 0));
+      note = room > 0
+        ? `Mund të shtosh edhe ${room} foto: u morën të parat.`
+        : "Njoftimi ka sa foto lejohen. Hiq ndonjë për të shtuar të tjera.";
+    }
+    if (files.length) this.statusTarget.textContent = "Po përgatiten fotot…";
+    this.picked.push(...(await Promise.all(files.map(shrink))));
+    this.sync();
+    this.statusTarget.textContent = note || this.summary();
+  }
+
+  remove(event) {
+    this.picked.splice(Number(event.currentTarget.dataset.index), 1);
+    this.sync();
+    this.statusTarget.textContent = this.summary();
+  }
+
+  // The input holds every photo picked, so they all go; the previews show them.
+  sync() {
+    const transfer = new DataTransfer();
+    for (const file of this.picked) transfer.items.add(file);
+    this.inputTarget.files = transfer.files;
+    this.showPreviews();
+  }
+
+  summary() {
+    return this.picked.length ? `${this.picked.length} foto gati për t'u ngarkuar.` : "";
+  }
+
+  showPreviews() {
     for (const img of this.previewsTarget.querySelectorAll("img")) URL.revokeObjectURL(img.src);
     this.previewsTarget.replaceChildren(
-      ...files.map((file) => {
+      ...this.picked.map((file, index) => {
         const item = document.createElement("li");
         item.className = "photo-item";
-        item.append(Object.assign(document.createElement("img"), { src: URL.createObjectURL(file), alt: "" }));
+        const remove = Object.assign(document.createElement("button"), { type: "button", className: "photo-remove", textContent: "Hiq" });
+        remove.dataset.index = index;
+        remove.dataset.action = "photos#remove";
+        item.append(Object.assign(document.createElement("img"), { src: URL.createObjectURL(file), alt: "" }), remove);
         return item;
       }),
     );
-    this.previewsTarget.hidden = files.length === 0;
+    this.previewsTarget.hidden = this.picked.length === 0;
   }
 
   disconnect() {

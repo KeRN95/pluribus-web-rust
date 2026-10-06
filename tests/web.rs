@@ -1462,6 +1462,12 @@ async fn listings_get_photos(pool: PgPool) {
     }).collect();
     assert_eq!(photo_urls.len(), 2, "{page}");
     assert!(page.contains(r#"width="1600" height="1067""#));
+    // Two make a strip to swipe through, one at a time, with a counter and arrows.
+    assert!(page.contains(r#"<div class="gallery" data-controller="gallery">"#));
+    assert!(page.contains(r#"data-gallery-target="track" tabindex="0" role="region" aria-label="Fotot e njoftimit""#));
+    assert!(page.contains(r#"<span class="gallery-count" data-gallery-target="count">1 / 2</span>"#));
+    assert!(page.contains(r#"aria-label="Foto e mëparshme" disabled"#) && page.contains(r#"aria-label="Foto tjetër""#));
+    assert!(page.contains(", foto 2 nga 2\""));
     let photo = get(pool.clone(), photo_urls[0]).await;
     assert_eq!(photo.status, StatusCode::OK);
     assert_eq!(photo.content_type.as_deref(), Some("image/jpeg"));
@@ -1483,6 +1489,9 @@ async fn listings_get_photos(pool: PgPool) {
     assert_eq!(saved.status, StatusCode::SEE_OTHER);
     let page = get(pool.clone(), &url).await.body;
     assert_eq!(page.matches(r#"<img src="/media/photos/"#).count(), 1);
+    // One is just the photo: nothing to swipe or count.
+    assert!(page.contains(r#"<div class="gallery">"#));
+    assert!(!page.contains("data-controller=\"gallery\"") && !page.contains("gallery-count") && !page.contains(", foto 1 nga"));
     assert_eq!(get(pool.clone(), photo_urls[0]).await.status, StatusCode::NOT_FOUND);
     let covers: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM listing_media m JOIN listings l ON l.id = m.listing_id WHERE l.public_no = $1::bigint AND m.is_cover",

@@ -175,9 +175,9 @@ TEXT and DATE properties appear on the listing page but not as filters.
 
 ## Photos
 
-Sellers add up to 8 photos to a listing, on the posting and edit forms; the first is the cover, which cards show. When editing, each photo has "Hiq" to remove it (the next one becomes the cover).
+Sellers add up to 8 photos to a listing, on the posting and edit forms; the first is the cover, which cards show. When editing, each photo has "Hiq" to remove it (the next one becomes the cover). On the listing's page, several photos make a strip to swipe through one at a time, with a counter in its corner ("2 / 5") and, on screens with a mouse, arrows (`gallery_controller.js`); one photo is just the photo.
 
-- **In the browser** (`photos_controller.js`): previews of the photos chosen, and big phone photos made smaller before they go (longest side 2000 px, JPEG), so posting doesn't send megabytes over mobile data.
+- **In the browser** (`photos_controller.js`): photos can be picked a few at a time, as phones offer them: each pick adds to the ones before (a file input alone keeps only the last pick), each new one shows as a preview with "Hiq" to take it out, and big phone photos are made smaller before they go (longest side 2000 px, JPEG), so posting doesn't send megabytes over mobile data.
 - **On the server** (`src/media.rs`, `src/web/photos.rs`): each photo is decoded (JPEG, PNG or WebP; at most 15 MB as sent, 64 MB for the whole form), turned the way the camera held it, and written out again as JPEG in two sizes: 1600 px for the listing page and 600 px for cards. Writing it out again drops what phones keep inside photos, the GPS position they were taken at included. `listing_media` keeps the key, both URLs, the size and a SHA-256 of what was sent.
 - **Storage**: an S3-compatible store. Locally that is [Garage](https://garagehq.deuxfleurs.fr/) in Docker (`compose.yaml`, `dev/garage.toml`, set up once by `dev/setup_garage.sh`); in production, Cloudflare R2. The app talks plain S3 to either (the `object_store` crate), with the `S3_*` settings in `.env`. Without them, photos are kept in memory, which is what the tests use.
 - **Serving**: the site serves photos itself from `/media/photos/...`, with year-long caching (their names never change), so they work wherever the site does, through ngrok included.

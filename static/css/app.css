@@ -852,6 +852,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .photo-item { display: grid; gap: .25rem; }
 .photo-item img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--surface-muted); }
 .photo-remove { display: flex; align-items: center; gap: .3rem; color: var(--muted); font-size: .8rem; cursor: pointer; }
+/* A saved photo's "Hiq" is a checkbox, sized like the form's others (.check) rather than as wide
+   as a field; a new one's is a button, which takes it out at once. */
+.photo-remove input { flex: none; width: 1.05rem; height: 1.05rem; margin: 0; padding: 0; accent-color: var(--button); }
+button.photo-remove { justify-self: start; padding: 0; border: 0; background: none; text-decoration: underline; }
 .photo-picker { position: relative; gap: .4rem; justify-self: start; overflow: hidden; }
 .photo-picker input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .photo-picker:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -945,7 +949,56 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   border-radius: var(--radius);
 }
 
-.listing-photos { display: grid; gap: .5rem; }
+/* A listing's photos. Several make a strip to swipe through, one at a time (scroll snapping), with
+   a counter in the corner, the site's dark colour behind it as on the cards' prices, and arrows on
+   screens with a mouse (gallery_controller.js). */
+.gallery { position: relative; }
+.listing-photos {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  border-radius: var(--radius);
+}
+.listing-photos::-webkit-scrollbar { display: none; }
+.listing-photos img { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; }
+.listing-photos:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.gallery-count {
+  position: absolute;
+  right: .7rem;
+  bottom: .7rem;
+  padding: .2rem .6rem;
+  border-radius: 999px;
+  background: rgb(38 38 36 / 60%);
+  color: #faf9f5;
+  font-size: .8rem;
+  font-weight: var(--medium);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.gallery-arrow { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .gallery-arrow {
+    position: absolute;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(250 249 245 / 90%);
+    box-shadow: var(--shadow);
+    color: #262624;
+    cursor: pointer;
+    translate: 0 -50%;
+    transition: opacity .15s;
+  }
+  .gallery-previous { left: .7rem; }
+  .gallery-next { right: .7rem; }
+  .gallery-arrow:disabled { opacity: 0; pointer-events: none; }
+}
 .listing-header { margin-top: 1rem; }
 /* The category's path as pills, joined by a faint chain link, and the status after them. A link
    goes with the pill after it, so a wrapped row starts with one rather than a row ending in one. */
