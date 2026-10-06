@@ -376,31 +376,42 @@ async fn browse(
         (Some(_), Some(category)) => categories.ancestors(category).into_iter().map(link).collect(),
         _ => Vec::new(),
     };
+    // The subcategories narrow the page, so their links keep its filters as well.
     let subcategories = category
-        .map(|category| categories.children(category.id).map(link).collect())
+        .map(|category| {
+            categories
+                .children(category.id)
+                .map(|child| Link { name: child.name.clone(), url: filters.narrowed_url(child) })
+                .collect()
+        })
         .unwrap_or_default();
     // Every category, each followed by its subcategories; the links keep the words, the town
-    // and the map pin, as the category links do.
+    // and the map pin, as the category links do, and those under the page's category its filters.
     let category_menu = match (&page_slug, category) {
         (Some(_), Some(current)) => {
             let mut menu = vec![MenuEntry { name: "Të gjitha njoftimet".to_string(), url: filters.all_categories_url(), depth: 0, current: false }];
+            let narrower: Vec<uuid::Uuid> =
+                categories.subtree_ids(current.id).into_iter().filter(|id| *id != current.id).collect();
             // Each category followed by its subcategories, at any depth.
             fn add(categories: &db::Categories, category: &db::Category, depth: usize, current: &db::Category,
-                   filters: &Filters, menu: &mut Vec<MenuEntry>) {
+                   narrower: &[uuid::Uuid], filters: &Filters, menu: &mut Vec<MenuEntry>) {
                 menu.push(MenuEntry {
                     name: category.name.clone(),
-                    url: filters.category_url(category),
+                    url: match narrower.contains(&category.id) {
+                        true => filters.narrowed_url(category),
+                        false => filters.category_url(category),
+                    },
                     depth,
                     current: category.id == current.id,
                 });
                 if depth < 5 {
                     for child in categories.children(category.id) {
-                        add(categories, child, depth + 1, current, filters, menu);
+                        add(categories, child, depth + 1, current, narrower, filters, menu);
                     }
                 }
             }
             for top in categories.top_level() {
-                add(&categories, top, 0, current, &filters, &mut menu);
+                add(&categories, top, 0, current, &narrower, &filters, &mut menu);
             }
             menu
         }

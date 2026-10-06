@@ -352,6 +352,14 @@ impl<'a> Filters<'a> {
         url(&format!("/c/{}", category.slug), kept)
     }
 
+    /// A category under this page's, which narrows it: every filter stays, as it has this
+    /// category's properties too (Pjesë dhe aksesorë with "Audi, 2006" opens GPS dhe navigatorë
+    /// with them). One it doesn't take is ignored there, and gone from its links.
+    pub fn narrowed_url(&self, category: &Category) -> String {
+        let kept = self.pairs().into_iter().filter(|(name, _)| name != "category");
+        url(&format!("/c/{}", category.slug), kept)
+    }
+
     /// Every category, keeping what category_url keeps.
     pub fn all_categories_url(&self) -> String {
         let kept = self

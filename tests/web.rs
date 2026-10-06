@@ -1379,6 +1379,18 @@ async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
     assert_eq!(found(&page), [true, false, false, false]);
     assert!(page.contains(r#"name="fits_year" value="2015""#));
     assert!(page.contains(r#"<a class="filter-chip" href="/c/pjese-dhe-aksesore?vehicle_make=VOLKSWAGEN" aria-label="Hiq filtrin Viti i automjetit: 2015">"#));
+    // A kind of part narrows the page, so its links keep the filters, in the chips and the menu;
+    // links that widen it or go elsewhere keep only the words, the town and the map pin.
+    let kept = "/c/gps-dhe-navigatore?vehicle_make=VOLKSWAGEN&fits_year=2015";
+    assert!(page.contains(&format!(r#"<a class="chip" href="{kept}">GPS dhe navigatorë</a>"#)));
+    assert!(page.contains(&format!(r#"<a class="menu-sub menu-deep" href="{kept}">GPS dhe navigatorë</a>"#)));
+    assert!(page.contains(r#"<a class="menu-sub" href="/c/makina">Makina</a>"#));
+    assert!(page.contains(r#"<a href="/c/automjete">Automjete</a>"#));
+    let page = html(pool.clone(), "/c/gps-dhe-navigatore?vehicle_make=VOLKSWAGEN&fits_year=2015").await;
+    assert_eq!(found(&page), [true, false, false, false]);
+    // A page that doesn't take a filter leaves it out of its links too: Automjete has no make.
+    let page = html(pool.clone(), "/c/automjete?vehicle_make=VOLKSWAGEN&fits_year=2015").await;
+    assert!(page.contains(r#"<a class="chip" href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#));
     // The years' ends count: 2012 and 2019 are in, 2011 and 2020 are not.
     for (year, fits) in [(2011, false), (2012, true), (2019, true), (2020, false)] {
         let page = html(pool.clone(), &format!("/c/pjese-dhe-aksesore?vehicle_make=VOLKSWAGEN&fits_year={year}")).await;

@@ -122,6 +122,8 @@ Most subcategories were a "type" property before (`property_type`, `electronics_
 
 Pjesë dhe aksesorë goes one level further, as on MerrJep: Pjesë këmbimi, Goma dhe disqe, Audio dhe video, GPS dhe navigatorë, Styling dhe pajisje sportive, Tapete makine, Rimorkio, Mbushës për makina elektrike and Të tjera (migration 0012; Pjesë këmbimi kept its address, `/c/pjese-kembimi`, and its listings). Nothing in the code counts levels: the category menu indents each level further, the posting form groups the kinds under "Automjete › Pjesë dhe aksesorë", and a category's page lists everything under it, however deep.
 
+Links to a narrower category, the subcategory chips and the menu's entries under the page's category, keep the page's filters, since a subcategory has its parent's properties: "Audi, 2006" on Pjesë dhe aksesorë stays on in GPS dhe navigatorë (`Filters::narrowed_url`). Links up the tree or across it keep only the search words, the town and the map pin (`Filters::category_url`).
+
 ### Properties
 
 Each category's properties are rows in the database, not code. A browse page builds its filters from the category's `filterable` properties, listing cards show the `show_in_card` ones after the city ("Tiranë · 2016 · 148 000 km · Naftë"), and the listing page shows the `show_in_details` ones. What `0003_category_properties.sql` sets up:
