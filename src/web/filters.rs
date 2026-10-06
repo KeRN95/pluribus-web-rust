@@ -10,7 +10,7 @@
 //! NUMBER properties, and <code>=1 for BOOLEAN ones. Values that don't exist are ignored, so an
 //! outdated or hand-edited URL still shows a page.
 
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, prelude::ToPrimitive};
 use uuid::Uuid;
 
 use crate::{
@@ -37,6 +37,12 @@ const TIRANA: (f64, f64) = (41.3275, 19.8187);
 /// Properties with at most this many options are offered as checkboxes, longer lists as a
 /// dropdown; and a colour always as a dropdown, which reads better than boxes of its names.
 const CHECKBOX_LIMIT: usize = 8;
+
+/// The price's slider (price_range_controller.js, which works the same out): PRICE_STEPS positions
+/// on a logarithmic scale of PRICE_DECADES decades from 10 €, or a hundred times as many Lekë, the
+/// rate listings' prices are compared at; either end at its edge is no limit.
+const PRICE_STEPS: u32 = 1000;
+const PRICE_DECADES: f64 = 5.0;
 
 /// A property's boxes share their line with the next field when there are at most this many;
 /// more take a line of their own (Karroceria's seven). See Field::half.
@@ -594,6 +600,39 @@ impl<'a> Filters<'a> {
         self.price_max.map(plain).unwrap_or_default()
     }
 
+    /// Where the slider's lower end stands: at the left edge without a lowest price.
+    pub fn price_from_position(&self) -> u32 {
+        self.price_min.map_or(0, |min| price_position(min, self.currency).max(1))
+    }
+
+    /// Where its upper end stands: at the right edge without a highest price.
+    pub fn price_to_position(&self) -> u32 {
+        self.price_max.map_or(PRICE_STEPS, |max| price_position(max, self.currency).min(PRICE_STEPS - 1))
+    }
+
+    /// The prices beside the slider's name, as their chip says them, or "Çdo çmim".
+    pub fn price_label(&self) -> String {
+        range_label(self.price_min, self.price_max, Some(format::currency_symbol(self.currency)), true)
+            .unwrap_or_else(|| "Çdo çmim".to_string())
+    }
+
+    /// What screen readers say for the slider's lower end: its price, or no limit.
+    pub fn price_min_text(&self) -> String {
+        self.price_text(self.price_min)
+    }
+
+    /// And for its upper end.
+    pub fn price_max_text(&self) -> String {
+        self.price_text(self.price_max)
+    }
+
+    fn price_text(&self, price: Option<Decimal>) -> String {
+        match price {
+            Some(price) => format!("{}\u{a0}{}", format::number(price), format::currency_symbol(self.currency)),
+            None => "Pa kufi".to_string(),
+        }
+    }
+
     /// The default order's value is empty, so it stays out of URLs. Nearest first is only on
     /// offer with a map pin.
     pub fn sort_choices(&self) -> Vec<Choice> {
@@ -856,6 +895,14 @@ fn ordered(min: Option<Decimal>, max: Option<Decimal>) -> (Option<Decimal>, Opti
 /// A number for a form field or a URL: "5000", "12.5".
 fn plain(value: Decimal) -> String {
     value.normalize().to_string()
+}
+
+/// A price's place on the slider, 0 to PRICE_STEPS (see PRICE_STEPS).
+fn price_position(price: Decimal, currency: &str) -> u32 {
+    let base = if currency == "ALL" { 1000.0 } else { 10.0 };
+    let price = price.to_f64().unwrap_or(0.0).max(base);
+    let position = (price / base).log10() / PRICE_DECADES * f64::from(PRICE_STEPS);
+    position.round().clamp(0.0, f64::from(PRICE_STEPS)) as u32
 }
 
 /// "5 000 – 10 000 €", "nga 2015", "deri 150 000 km". Years and the like are not grouped.

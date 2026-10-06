@@ -844,6 +844,60 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .range { display: flex; align-items: center; gap: .4rem; color: var(--muted); }
 .range input { flex: 1; }
 .filter-form .range select { flex: none; width: auto; }
+/* The price's two ends on one track (price_range_controller.js), the currency beside it: the
+   stretch between them in the site's coral, the ends white and round with a soft shadow, big
+   enough for a finger. The two range inputs lie on top of each other and let every touch through
+   but their ends'; the prices show beside the name. */
+.price-filter .filter-label output { margin-left: .25rem; color: var(--text); font-weight: var(--bold); }
+.price-slider { display: flex; align-items: center; gap: .75rem; }
+.price-slider .picker { flex: none; }
+.price-track { position: relative; flex: 1; height: 2.4rem; }
+.price-track::before,
+.price-fill { content: ""; position: absolute; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; }
+.price-track::before { left: 0; right: 0; background: var(--border-strong); }
+.price-fill { background: var(--button); }
+.price-track input[type="range"] {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  margin: -12px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: none;
+}
+.price-track input.is-top { z-index: 1; }
+.price-track input[type="range"]::-webkit-slider-runnable-track { height: 24px; background: none; }
+.price-track input[type="range"]::-moz-range-track { height: 24px; background: none; }
+.price-track input[type="range"]::-webkit-slider-thumb {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgb(0 0 0 / 12%);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.price-track input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgb(0 0 0 / 12%);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.price-track input[type="range"]:focus { outline: none; }
+.price-track input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--accent); }
+.price-track input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--accent); }
 .filter-actions { display: flex; align-items: center; gap: .75rem; }
 .filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
 

@@ -11,6 +11,7 @@ import MapController from "controllers/map_controller.js";
 import NarrowController from "controllers/narrow_controller.js";
 import PickerController from "controllers/picker_controller.js";
 import PhotosController from "controllers/photos_controller.js";
+import PriceRangeController from "controllers/price_range_controller.js";
 import ShareController from "controllers/share_controller.js";
 import ThemeController from "controllers/theme_controller.js";
 
@@ -25,6 +26,7 @@ application.register("map", MapController);
 application.register("narrow", NarrowController);
 application.register("picker", PickerController);
 application.register("photos", PhotosController);
+application.register("price-range", PriceRangeController);
 application.register("share", ShareController);
 application.register("theme", ThemeController);
 

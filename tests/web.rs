@@ -550,6 +550,22 @@ async fn price_filter_converts_currencies(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
+async fn the_price_is_a_slider_with_two_ends(pool: PgPool) {
+    // Without a price, the ends stand at the edges: no limit either way.
+    let any = html(pool.clone(), "/c/elektronike").await;
+    assert!(any.contains(r#"<legend class="filter-label">Çmimi <output data-price-range-target="label">Çdo çmim</output></legend>"#));
+    assert!(any.contains(r#"<input type="range" min="0" max="1000" step="1" value="0" aria-label="Çmimi nga""#));
+    assert!(any.contains(r#"<input type="range" min="0" max="1000" step="1" value="1000" aria-label="Çmimi deri""#));
+    // 1 000 € is two of the scale's five decades from 10 €, so 400 of 1 000; 20 000 € is
+    // log10(2 000) = 3.30 of them, so 660. The hidden fields carry the prices themselves.
+    let some = html(pool, "/c/elektronike?price_min=1000&price_max=20000&currency=EUR").await;
+    assert!(some.contains(r#"value="400" aria-label="Çmimi nga""#));
+    assert!(some.contains(r#"value="660" aria-label="Çmimi deri""#));
+    assert!(some.contains(r#"<input type="hidden" name="price_min" value="1000" data-price-range-target="min">"#));
+    assert!(some.contains("<output data-price-range-target=\"label\">1\u{a0}000 – 20\u{a0}000\u{a0}€</output>"));
+}
+
+#[sqlx::test(fixtures("listings"))]
 async fn sorts_by_price_with_unpriced_listings_last(pool: PgPool) {
     let body = get(pool.clone(), "/search?sort=price_asc").await.body;
     let order = positions(&body, &[

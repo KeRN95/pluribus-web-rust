@@ -27,14 +27,23 @@
   </fieldset>
   {% endif %}
 
-  <fieldset class="filter-group">
-    <legend class="filter-label">Çmimi</legend>
-    <div class="range">
-      <input type="text" inputmode="numeric" name="price_min" value="{{ filters.price_min_value() }}" placeholder="nga" aria-label="Çmimi nga">
-      <span aria-hidden="true">–</span>
-      <input type="text" inputmode="numeric" name="price_max" value="{{ filters.price_max_value() }}" placeholder="deri" aria-label="Çmimi deri">
+  {#- The price: one track with two ends, the lowest and the highest, on a scale that grows to the
+      right (price_range_controller.js). Either end at its edge is no limit; the hidden fields
+      carry the prices, and the label beside the name says them. -#}
+  <fieldset class="filter-group price-filter" data-controller="price-range">
+    <legend class="filter-label">Çmimi <output data-price-range-target="label">{{ filters.price_label() }}</output></legend>
+    <input type="hidden" name="price_min" value="{{ filters.price_min_value() }}" data-price-range-target="min">
+    <input type="hidden" name="price_max" value="{{ filters.price_max_value() }}" data-price-range-target="max">
+    <div class="price-slider">
+      <div class="price-track">
+        <span class="price-fill" data-price-range-target="fill"></span>
+        <input type="range" min="0" max="1000" step="1" value="{{ filters.price_from_position() }}" aria-label="Çmimi nga"
+               aria-valuetext="{{ filters.price_min_text() }}" data-price-range-target="from" data-action="price-range#slide">
+        <input type="range" min="0" max="1000" step="1" value="{{ filters.price_to_position() }}" aria-label="Çmimi deri"
+               aria-valuetext="{{ filters.price_max_text() }}" data-price-range-target="to" data-action="price-range#slide">
+      </div>
       <div class="picker" data-controller="picker">
-      <select name="currency" aria-label="Monedha">
+      <select name="currency" aria-label="Monedha" data-price-range-target="currency" data-action="price-range#slide">
         {% for choice in filters.currency_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
       </select>
       </div>
