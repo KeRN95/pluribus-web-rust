@@ -472,23 +472,32 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .welcome-card { padding: .5rem 0 0; }
 .welcome-card .lead { margin-bottom: 0; font-size: 1rem; }
 
-/* The question with a creature before it, in the button colour (thinking.svg), as Claude's spark
-   stands before its greeting: on the title's line, a little taller than its letters, and the line
-   under the title running the whole width, under the creature too. The creature is a star of 13
-   soft tentacles that sway, melts into an amoeba that wobbles and spins quickly, and back, spinning
-   all the while. Shapes and spin are SVG's own animation, which Safari runs too; application.js
-   stops them for visitors who ask for less motion. */
+/* The question with a creature before it, in the button colour (thinking.svg), as tall as the
+   question and the line under it together and level with them, the two starting at the same place
+   beside it. Its size is worked out from theirs: the question's line (its size, --title, by its
+   line height, 1.15), the space under it (.3rem), and the lines under that (--lead-lines of 1.45rem
+   each), which on a phone are kept to two, evened out, and wider fit on one.
+   The creature is a star of 13 soft tentacles that sway, melts into an amoeba that wobbles and
+   spins quickly, and back, spinning all the while. Shapes and spin are SVG's own animation, which
+   Safari runs too; application.js stops them for visitors who ask for less motion. */
 .welcome-intro {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  --title: 1.6rem;
+  --lead-lines: 2;
+  display: flex;
   align-items: center;
-  column-gap: .65rem;
+  gap: .8rem;
   margin-bottom: 1.6rem;
 }
-.welcome-intro > div { display: contents; }
-.welcome-intro h1 { margin: 0; }
-.welcome-intro .lead { grid-column: 1 / -1; margin-top: .6rem; text-wrap: balance; } /* two even lines, not one word alone */
-.thinking { width: 2.5rem; height: 2.5rem; margin: -.2rem; color: var(--button); }
+.welcome-intro > div { min-width: 0; }
+.welcome-intro h1 { font-size: var(--title); }
+.welcome-intro .lead { max-width: 20em; text-wrap: balance; }
+.thinking {
+  --size: calc(var(--title) * 1.15 + .3rem + var(--lead-lines) * 1.45rem);
+  flex: none;
+  width: var(--size);
+  height: var(--size);
+  color: var(--button);
+}
 .amoeba { fill: currentColor; }
 
 /* The search, drawn like the message box in Claude's app: a pill on the surface with the menus'
@@ -729,8 +738,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 @media (min-width: 720px) {
   .welcome { padding-top: 2.75rem; }
-  .welcome h1 { font-size: 2.05rem; }
-  .thinking { width: 2.85rem; height: 2.85rem; }
+  .welcome-intro { --title: 2.05rem; --lead-lines: 1; }
+  .welcome-intro .lead { max-width: none; }
   .welcome-card { padding: .75rem 0 0; }
 }
 
