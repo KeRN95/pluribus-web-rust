@@ -917,18 +917,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* Map page, and the ways to it */
 
-.map-entry { margin: .9rem 0 0; }
-
-.map-entry a {
-  display: inline-flex;
-  align-items: center;
-  gap: .3rem;
-  color: var(--text);
-  font-weight: var(--medium);
-  text-decoration-color: var(--border-strong);
-  text-underline-offset: .2em;
-}
-
 .map-open { gap: .35rem; padding: .5rem .9rem; }
 /* Harta while its map is open above the results: a tap closes it. */
 .button.secondary.map-open.active { background: var(--surface-muted); border-color: var(--text); }
@@ -955,8 +943,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .map-card .map-canvas { border-radius: calc(var(--radius) - 4px); }
 .map-card .map-note { margin: .6rem 0 0; }
 .map-open .pin-icon,
-.map-locate .pin-icon,
-.map-entry .pin-icon { margin-right: 0; }
+.map-locate .pin-icon { margin-right: 0; }
 
 .map-header { margin: 1.25rem 0 1rem; }
 .map-header h1 { margin: 0 0 .3rem; }
