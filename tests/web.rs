@@ -2028,7 +2028,7 @@ async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
     // Live at once, with its seller: a new account, active, named as typed.
     assert!(get(pool.clone(), "/search?q=galaxy").await.body.contains("Samsung Galaxy S21"));
     let page = get(pool.clone(), &url).await.body;
-    assert!(page.contains("<strong>Dorina</strong>"));
+    assert!(page.contains(r#"<span class="seller-name">Dorina</span>"#));
     let (name, status): (String, String) =
         sqlx::query_as("SELECT display_name, status FROM users WHERE phone_e164 = '+355697778899'")
             .fetch_one(&pool)
@@ -2135,13 +2135,19 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // A private seller: Ana, with the five fixture listings she sells.
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
-    assert!(page.contains(&format!(r#"<a class="seller" href="{ana}">"#)));
-    assert!(page.contains("<strong>Ana</strong>"));
-    assert!(page.contains("Në Marketplace që nga "));
-    assert!(page.contains(" · 5 njoftime</span>"));
+    // Under the title, before the price: her initial and her name, leading to her profile...
+    let order = positions(&page, &[
+        "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
+        &format!(r#"<a class="seller" href="{ana}">"#),
+        r#"<span class="seller-name">Ana</span>"#,
+        r#"<p class="listing-price">"#,
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
 
+    // ...which says since when, and how many listings.
     let profile = get(pool.clone(), ana).await.body;
     assert!(profile.contains("<h1>Ana</h1>"));
+    assert!(profile.contains("Në Marketplace që nga ") && profile.contains(" · 5 njoftime</p>"));
     assert_eq!(card_numbers(&profile).len(), 5);
     assert!(profile.contains("Volkswagen Golf 7, 2016, naftë"));
     assert!(!profile.contains("Mercedes-Benz C 220"), "Auto Durrësi's, not Ana's");

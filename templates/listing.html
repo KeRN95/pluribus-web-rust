@@ -59,6 +59,11 @@
       {%- endif %}
     </div>
     <h1>{{ listing.title }}</h1>
+    {#- The seller, under the title: a small initial and the name, leading to all their listings. -#}
+    <a class="seller" href="{{ listing.seller_url }}">
+      <span class="avatar" aria-hidden="true">{{ listing.seller_initial() }}</span>
+      <span class="seller-name">{{ listing.seller_name }}</span>
+    </a>
     {%- if listing.loan_amount().is_some() %}
     {#- The price, and the button that opens the loan calculator under the actions below. -#}
     <div class="price-row">
@@ -132,15 +137,6 @@
   </section>
   {%- endif %}
 
-  {#- The seller, and the way to all their listings. -#}
-  <a class="seller" href="{{ listing.seller_url }}">
-    <span class="avatar" aria-hidden="true">{{ listing.seller_initial() }}</span>
-    <span class="seller-text">
-      <strong>{{ listing.seller_name }}</strong>
-      <span>{{ listing.seller_summary() }}</span>
-    </span>
-    <span class="seller-more" aria-hidden="true">›</span>
-  </a>
 
   {% if !attributes.is_empty() %}
   <section>

@@ -1054,32 +1054,31 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 
 /* A listing's seller, and the seller's profile */
 
+/* Under the listing's title, one quiet line: the seller's initial, small, and their name. */
 .seller {
   display: flex;
   align-items: center;
-  gap: .75rem;
-  margin: 1.25rem 0;
-  padding: .75rem .9rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+  gap: .45rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 .6rem;
   color: var(--text);
+  font-size: .9rem;
+  font-weight: var(--medium);
   text-decoration: none;
 }
-.seller:hover { background: var(--surface-muted); }
-.seller-text { display: grid; flex: 1; gap: .1rem; min-width: 0; }
-.seller-text span { color: var(--muted); font-size: .85rem; }
-.seller-more { color: var(--muted); font-size: 1.4rem; line-height: 1; }
+.seller-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seller:hover .seller-name { text-decoration: underline; text-underline-offset: .15em; }
 .avatar {
   display: grid;
   flex: none;
   place-items: center;
-  width: 2.6rem;
-  height: 2.6rem;
+  width: 1.6rem;
+  height: 1.6rem;
   border-radius: 999px;
   background: var(--badge);
   color: var(--accent);
-  font-size: 1.1rem;
+  font-size: .75rem;
   font-weight: var(--heavy);
 }
 .avatar.large { width: 3rem; height: 3rem; font-size: 1.25rem; }

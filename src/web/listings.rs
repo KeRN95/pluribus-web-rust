@@ -91,15 +91,6 @@ impl ListingDetail {
         format::initial(&self.seller_name)
     }
 
-    /// "Në Marketplace që nga tetor 2026 · 12 njoftime".
-    pub fn seller_summary(&self) -> String {
-        format!(
-            "Në Marketplace që nga {} · {}",
-            format::month_year(self.seller_since),
-            format::listing_count(self.seller_listings, i64::MAX)
-        )
-    }
-
     pub fn published_display(&self) -> Option<String> {
         self.published_at.map(format::date)
     }

@@ -794,8 +794,6 @@ pub struct ListingDetail {
     /// The seller: a business's name, or the private seller's, with their profile's address.
     pub seller_name: String,
     pub seller_url: String,
-    pub seller_since: OffsetDateTime,
-    pub seller_listings: i64,
 }
 
 #[derive(Debug)]
@@ -825,11 +823,7 @@ pub async fn listing_by_public_no(
                   c.id AS category_id, c.name AS category_name, c.slug AS category_slug,
                   loc.name AS "location_name?", l.published_at,
                   coalesce(b.display_name, u.display_name) AS "seller_name!",
-                  CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || u.id END AS "seller_url!",
-                  coalesce(b.created_at, u.created_at) AS "seller_since!",
-                  (SELECT count(*) FROM listings o
-                   WHERE o.status = 'ACTIVE'
-                     AND (o.seller_business_id = l.seller_business_id OR o.seller_user_id = l.seller_user_id)) AS "seller_listings!"
+                  CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || u.id END AS "seller_url!"
            FROM listings l
            JOIN categories c ON c.id = l.category_id
            LEFT JOIN locations loc ON loc.id = l.location_id
