@@ -130,13 +130,6 @@ impl ListingForm {
     }
 }
 
-/// The categories under one heading in the form's select: a category's subcategories, or a
-/// category without any on its own (no heading).
-pub struct CategoryGroup {
-    label: Option<String>,
-    options: Vec<CategoryOption>,
-}
-
 /// A category in the form's select, with what the form adapts to it (listing_form_controller.js).
 pub struct CategoryOption {
     value: String,
@@ -158,7 +151,8 @@ struct ListingFormPage {
     cancel_url: Option<String>,
     /// The contact buyers get, masked; None when not signed in: the form then asks for one.
     signed_in_as: Option<String>,
-    category_groups: Vec<CategoryGroup>,
+    /// Every category: listings go into a main one too, not only into its subcategories.
+    category_options: Vec<CategoryOption>,
     cities: Vec<ChoiceGroup>,
     types: Vec<Choice>,
     conditions: Vec<Choice>,
@@ -213,22 +207,17 @@ fn page(
     form: ListingForm,
     errors: HashMap<String, String>,
 ) -> ListingFormPage {
-    // Listings go into the most specific category: under each heading, its subcategories.
-    let option = |category: &Category| CategoryOption {
-        value: category.slug.clone(),
-        label: category.name.clone(),
-        selected: category.slug == form.category,
-        types: category.listing_types.join(","),
-        uses_condition: category.uses_condition,
-        currency: category.default_currency.clone(),
-    };
-    let mut category_groups = Vec::new();
-    for top in categories.top_level() {
-        match categories.has_children(top.id) {
-            true => add_category_groups(categories, top, top.name.clone(), &option, &mut category_groups),
-            false => category_groups.push(CategoryGroup { label: None, options: vec![option(top)] }),
-        }
-    }
+    let category_options = filters::category_tree(categories)
+        .into_iter()
+        .map(|(category, depth)| CategoryOption {
+            value: category.slug.clone(),
+            label: filters::indented(&category.name, depth),
+            selected: category.slug == form.category,
+            types: category.listing_types.join(","),
+            uses_condition: category.uses_condition,
+            currency: category.default_currency.clone(),
+        })
+        .collect();
     let currency = match form.currency.as_str() {
         "" => categories.by_slug(&form.category).map_or("EUR", |c| c.default_currency.as_str()),
         chosen => chosen,
@@ -248,7 +237,7 @@ fn page(
         submit_label,
         cancel_url,
         signed_in_as: user.map(signed_in_as),
-        category_groups,
+        category_options,
         cities: filters::city_groups(cities, Some(form.city.as_str())),
         types: choices(LISTING_TYPES.iter().map(|code| (*code, format::listing_type(code))), &form.listing_type),
         conditions: choices(CONDITIONS.iter().map(|code| (*code, format::condition(code))), &form.condition),
@@ -259,29 +248,6 @@ fn page(
         errors,
         started: now(),
         photos: Vec::new(),
-    }
-}
-
-/// The categories listings go into under `parent`, at any depth, as the form's groups: one for
-/// those right under it, labelled with its path ("Automjete"), then one for each subcategory that
-/// has its own ("Automjete › Pjesë dhe aksesorë"). A select can't nest its groups, hence the path.
-fn add_category_groups(
-    categories: &Categories,
-    parent: &Category,
-    path: String,
-    option: &dyn Fn(&Category) -> CategoryOption,
-    groups: &mut Vec<CategoryGroup>,
-) {
-    let options: Vec<CategoryOption> = categories
-        .children(parent.id)
-        .filter(|child| !categories.has_children(child.id))
-        .map(option)
-        .collect();
-    if !options.is_empty() {
-        groups.push(CategoryGroup { label: Some(path.clone()), options });
-    }
-    for child in categories.children(parent.id).filter(|child| categories.has_children(child.id)) {
-        add_category_groups(categories, child, format!("{path} \u{203a} {}", child.name), option, groups);
     }
 }
 
@@ -396,14 +362,6 @@ fn check<'a>(
     if category.is_none() {
         fail(errors, "category", "Zgjidh kategorinë.");
     }
-    // A category with subcategories only groups them.
-    let category = category.filter(|category| {
-        let leaf = !categories.has_children(category.id);
-        if !leaf {
-            fail(errors, "category", "Zgjidh nënkategorinë, p.sh. Makina te Automjete.");
-        }
-        leaf
-    });
     let listing_type = match category {
         Some(category) if category.listing_types.len() == 1 => Some(category.listing_types[0].as_str()),
         Some(category) => category.listing_types.iter().map(String::as_str).find(|t| *t == form.listing_type),
@@ -477,9 +435,9 @@ pub async fn new_listing(State(state): State<AppState>, headers: HeaderMap) -> R
     render(page(&Purpose::New, user.as_ref(), &categories, &cities, &[], ListingForm::default(), HashMap::new()))
 }
 
-/// The properties of the category the form names, if it is one listings go into.
+/// The properties of the category the form names.
 async fn attributes_for(state: &AppState, categories: &Categories, slug: &str) -> Result<Vec<FormAttribute>> {
-    match categories.by_slug(slug).filter(|category| !categories.has_children(category.id)) {
+    match categories.by_slug(slug) {
         Some(category) => Ok(db::form_attributes(&state.db, category.id).await?),
         None => Ok(Vec::new()),
     }

@@ -1286,25 +1286,40 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
 async fn the_listing_form_offers_categories_at_every_depth(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let form = get_with_cookie(pool.clone(), "/shto", &ana).await.body;
-    // Vehicles: cars and the like in one group, the kinds of parts in the next, under their path.
-    let vehicles = form.find(r#"<optgroup label="Automjete">"#).expect("the vehicles group");
-    let parts = form.find(r#"<optgroup label="Automjete › Pjesë dhe aksesorë">"#).expect("the parts group");
-    assert!(vehicles < parts);
-    let vehicles_group = &form[vehicles..parts];
-    assert!(vehicles_group.contains(r#"<option value="makina""#));
-    assert!(vehicles_group.contains(r#"<option value="automjete-tregtare""#));
-    let parts_group = &form[parts..parts + form[parts..].find("</optgroup>").unwrap()];
-    assert_eq!(parts_group.matches("<option value=").count(), 9);
-    assert!(parts_group.contains(r#"<option value="gps-dhe-navigatore""#));
-    // Categories that only group take no listings, so they aren't offered...
-    assert!(!form.contains(r#"<option value="pjese-dhe-aksesore""#));
-    assert!(!form.contains(r#"<option value="automjete""#));
+    // Every category, a main one too, each subcategory after its own and a level further in: the
+    // list in the page nests them by the spaces.
+    let select = &form[form.find(r#"<select id="category""#).unwrap()..];
+    let select = &select[..select.find("</select>").unwrap()];
+    assert!(!select.contains("<optgroup"));
+    let order = positions(select, &[
+        r#"<option value="automjete" data-types="SELL,BUY,RENT" data-currency="EUR" data-condition>Automjete</option>"#,
+        "<option value=\"makina\" data-types=\"SELL,BUY,RENT\" data-currency=\"EUR\" data-condition>\u{a0}\u{a0}\u{a0}Makina</option>",
+        "<option value=\"pjese-dhe-aksesore\" data-types=\"SELL,BUY,RENT\" data-currency=\"ALL\" data-condition>\u{a0}\u{a0}\u{a0}Pjesë dhe aksesorë</option>",
+        "<option value=\"gps-dhe-navigatore\" data-types=\"SELL,BUY,RENT\" data-currency=\"ALL\" data-condition>\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}GPS dhe navigatorë</option>",
+        r#"<option value="prona" data-types="SELL,RENT,WANTED_RENT" data-currency="EUR">Prona</option>"#,
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
 
-    // ...nor taken.
+    // A main category has its own properties: Pjesë dhe aksesorë those of the vehicle a part
+    // fits, Automjete none, since its kinds each have theirs.
+    let fields = get(pool.clone(), "/shto/fushat?category=pjese-dhe-aksesore").await.body;
+    assert!(fields.contains(r#"<label class="field-label" for="prop_vehicle_make">Marka e automjetit</label>"#));
+    assert!(!get(pool.clone(), "/shto/fushat?category=automjete").await.body.contains("prop_"));
+
+    // A part none of the kinds fits goes into Pjesë dhe aksesorë itself, with the vehicle it fits:
+    // it shows there and under Automjete, under none of the kinds.
     let started = started();
-    let refused = post_form(pool, "/shto", &listing_fields(("category", "pjese-dhe-aksesore"), &started), Some(&ana)).await;
-    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert!(refused.body.contains("Zgjidh nënkategorinë"));
+    let mut fields = listing_fields(("category", "pjese-dhe-aksesore"), &started);
+    fields.iter_mut().find(|field| field.0 == "title").unwrap().1 = "Kuti veglash për makinë";
+    fields.push(("prop_vehicle_make", "VOLKSWAGEN"));
+    let posted = post_form(pool.clone(), "/shto", &fields, Some(&ana)).await;
+    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    let page = get(pool.clone(), &posted.location.unwrap()).await.body;
+    assert!(page.contains("<dt>Marka e automjetit</dt>") && page.contains("<dd>Volkswagen</dd>"));
+    assert!(page.contains(r#"<a class="chip" href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#));
+    assert!(get(pool.clone(), "/c/pjese-dhe-aksesore").await.body.contains("Kuti veglash për makinë"));
+    assert!(get(pool.clone(), "/c/automjete").await.body.contains("Kuti veglash për makinë"));
+    assert!(!get(pool, "/c/gps-dhe-navigatore").await.body.contains("Kuti veglash për makinë"));
 }
 
 /// A part posted by this seller, with the vehicle it fits; returns its URL.
@@ -1343,8 +1358,6 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
     let car_fields = get(pool.clone(), "/shto/fushat?category=makina").await.body;
     assert!(car_fields.contains(r#"<label class="field-label" for="prop_vehicle_make">Marka <span class="required""#));
     assert!(car_fields.contains("e detyrueshme"));
-    // A category that only groups has no fields to offer.
-    assert!(!get(pool.clone(), "/shto/fushat?category=pjese-dhe-aksesore").await.body.contains("prop_"));
 
     let ana = new_seller(&pool, "+355691112233").await;
     let url = post_part(&pool, &ana, "Navigator origjinal për Golf", &[
@@ -1596,21 +1609,18 @@ async fn sellers_pause_resume_and_delete_their_listings(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
-async fn listings_go_into_subcategories(pool: PgPool) {
+async fn listings_go_into_subcategories_or_their_category(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
-    // The form groups subcategories under their category.
+    // The form offers Elektronikë, then its subcategories a level further in.
     let form = get_with_cookie(pool.clone(), "/shto", &ana).await.body;
-    assert!(form.contains(r#"<optgroup label="Elektronikë">"#));
-    assert!(form.contains(r#"<option value="telefona" data-types="SELL,BUY" data-currency="ALL" data-condition>Telefona</option>"#));
-    assert!(!form.contains(r#"<option value="elektronike""#), "a category with subcategories isn't offered");
-
-    // Posting into the category itself is refused.
-    let started = started();
-    let refused = post_form(pool.clone(), "/shto", &listing_fields(("category", "elektronike"), &started), Some(&ana)).await;
-    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert!(refused.body.contains("Zgjidh nënkategorinë"));
+    let order = positions(&form, &[
+        r#"<option value="elektronike" data-types="SELL,BUY" data-currency="ALL" data-condition>Elektronikë</option>"#,
+        "<option value=\"telefona\" data-types=\"SELL,BUY\" data-currency=\"ALL\" data-condition>\u{a0}\u{a0}\u{a0}Telefona</option>",
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
 
     // A phone posted in Telefona shows under Elektronikë and Telefona, and "telefon" finds it.
+    let started = started();
     let posted = post_form(pool.clone(), "/shto", &listing_fields(("", ""), &started), Some(&ana)).await;
     assert_eq!(posted.status, StatusCode::SEE_OTHER);
     assert!(get(pool.clone(), "/c/elektronike").await.body.contains("Samsung Galaxy S21"));
@@ -1624,7 +1634,14 @@ async fn listings_go_into_subcategories(pool: PgPool) {
     let moved = post_form(pool.clone(), &format!("/listing/{no}/ndrysho"), &listing_fields(("category", "laptope"), &started), Some(&ana)).await;
     assert_eq!(moved.status, StatusCode::SEE_OTHER);
     // Neither its title nor its description says "laptop"; its kind does.
-    assert!(get(pool, "/search?q=laptop").await.body.contains("Samsung Galaxy S21"));
+    assert!(get(pool.clone(), "/search?q=laptop").await.body.contains("Samsung Galaxy S21"));
+
+    // Moved up to Elektronikë itself, it has no kind: it shows there, under none of the subcategories.
+    let moved = post_form(pool.clone(), &format!("/listing/{no}/ndrysho"), &listing_fields(("category", "elektronike"), &started), Some(&ana)).await;
+    assert_eq!(moved.status, StatusCode::SEE_OTHER, "{}", moved.body);
+    assert!(get(pool.clone(), "/c/elektronike").await.body.contains("Samsung Galaxy S21"));
+    assert!(!get(pool.clone(), "/c/laptope").await.body.contains("Samsung Galaxy S21"));
+    assert!(!get(pool, "/search?q=laptop").await.body.contains("Samsung Galaxy S21"));
 }
 
 /// A car for sale, with its properties, and one field replaced (or added).

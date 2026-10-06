@@ -748,23 +748,37 @@ pub fn city_groups(cities: &[City], selected: Option<&str>) -> Vec<ChoiceGroup> 
 
 /// Every category, for a dropdown: subcategories follow their parent, indented.
 pub fn category_choices(categories: &Categories, selected: Option<&str>) -> Vec<Choice> {
-    fn add(categories: &Categories, category: &Category, depth: usize, selected: Option<&str>, out: &mut Vec<Choice>) {
-        out.push(Choice {
+    category_tree(categories)
+        .into_iter()
+        .map(|(category, depth)| Choice {
             value: category.slug.clone(),
-            label: format!("{}{}", "\u{a0}\u{a0}\u{a0}".repeat(depth), category.name),
+            label: indented(&category.name, depth),
             selected: selected == Some(category.slug.as_str()),
-        });
+        })
+        .collect()
+}
+
+/// Every category in the dropdowns' order, with its depth: each followed by its subcategories.
+pub fn category_tree(categories: &Categories) -> Vec<(&Category, usize)> {
+    fn add<'a>(categories: &'a Categories, category: &'a Category, depth: usize, out: &mut Vec<(&'a Category, usize)>) {
+        out.push((category, depth));
         if depth < 5 {
             for child in categories.children(category.id) {
-                add(categories, child, depth + 1, selected, out);
+                add(categories, child, depth + 1, out);
             }
         }
     }
-    let mut choices = Vec::new();
+    let mut tree = Vec::new();
     for category in categories.top_level() {
-        add(categories, category, 0, selected, &mut choices);
+        add(categories, category, 0, &mut tree);
     }
-    choices
+    tree
+}
+
+/// A category's name in a dropdown, three spaces further in for each level down, spaces that don't
+/// collapse: picker_controller.js nests the list in the page by them.
+pub fn indented(name: &str, depth: usize) -> String {
+    format!("{}{name}", "\u{a0}\u{a0}\u{a0}".repeat(depth))
 }
 
 fn url(path: &str, pairs: impl IntoIterator<Item = (String, String)>) -> String {

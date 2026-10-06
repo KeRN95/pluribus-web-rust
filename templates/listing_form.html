@@ -24,16 +24,13 @@
 
     <div class="field">
       <label class="field-label" for="category">Kategoria</label>
-      {#- Chosen from a list in the page, not the phone's own picker (picker_controller.js). -#}
+      {#- Chosen from a list in the page, not the phone's own picker (picker_controller.js): a
+          category by its name, a main one too, its subcategories under its arrow. -#}
       <div class="picker" data-controller="picker" data-picker-tree-value="true">
       <select id="category" name="category" required data-listing-form-target="category" data-action="listing-form#categoryChanged">
         <option value="">Zgjidh kategorinë</option>
-        {%- for group in category_groups %}
-        {%- if let Some(label) = group.label %}<optgroup label="{{ label }}">{% endif %}
-        {%- for category in group.options %}
+        {%- for category in category_options %}
         <option value="{{ category.value }}" data-types="{{ category.types }}" data-currency="{{ category.currency }}"{% if category.uses_condition %} data-condition{% endif %}{% if category.selected %} selected{% endif %}>{{ category.label }}</option>
-        {%- endfor %}
-        {%- if group.label.is_some() %}</optgroup>{% endif %}
         {%- endfor %}
       </select>
       </div>
