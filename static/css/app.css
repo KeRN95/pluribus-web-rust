@@ -259,24 +259,37 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* A listing card: no box of its own, just the photo with all four corners rounded and the price
    on its dark lower edge, then under it, on the page, the title in Geist and a quiet details
-   line. */
+   line. Under a pointer it gets one (::before): a panel in the site's muted colour, a little
+   larger than the card and rounded to match, behind the photo and the text. */
 .card {
   display: flex;
   position: relative;
   flex-direction: column;
   border-radius: var(--radius); /* for the focus ring */
   text-decoration: none;
+  isolation: isolate;
+}
+.card::before {
+  content: "";
+  position: absolute;
+  inset: -.5rem;
+  z-index: -1;
+  border-radius: calc(var(--radius) + .5rem);
+  background: var(--surface-muted);
+  opacity: 0;
+  transition: opacity .15s;
+  pointer-events: none;
 }
 
 /* Hover effects only where there is a real pointer; on phones they would stick after a tap. */
 @media (hover: hover) {
   .chip:hover { background: var(--surface-muted); border-color: var(--border-strong); }
-  .card:hover .card-photo { box-shadow: var(--shadow); filter: brightness(1.04); }
+  .card:hover::before { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .chip,
-  .card-photo { transition: none; }
+  .card::before { transition: none; }
 }
 
 /* The photo fills the top of the card, square, as it is, and the title and price sit under it. A
@@ -293,7 +306,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   min-height: 100%;
   object-fit: cover;
   border-radius: var(--radius);
-  transition: box-shadow .15s, filter .15s;
 }
 .placeholder { background: linear-gradient(135deg, var(--placeholder-from), var(--placeholder-to)); }
 
