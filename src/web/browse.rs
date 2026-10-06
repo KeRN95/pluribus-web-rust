@@ -62,15 +62,35 @@ fn frame_response(after: Option<Cursor>, page: &ListingPage) -> Result<Response>
     render(ListingFrame { frame_id, page })
 }
 
-/// The welcome page's shortcuts, pills under the search: what people look for most.
-const SHORTCUTS: [&str; 5] = ["prona", "makina", "elektronike", "pune", "te-tjera"];
+/// The welcome page's shortcuts under the search, to what people look for most: each category,
+/// and its icon (an SVG's inside, in the 24-unit box the site's line icons share).
+const SHORTCUTS: [(&str, &str); 5] = [
+    // A house.
+    ("prona", r#"<path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v10.5a1 1 0 0 0 1 1H10v-5.5h4v5.5h3.5a1 1 0 0 0 1-1V9"/>"#),
+    // A car, from the side.
+    ("makina", r#"<path d="M5.5 11 7 7a2 2 0 0 1 1.9-1.4h6.2A2 2 0 0 1 17 7l1.5 4"/><path d="M5.2 16.5H4a1 1 0 0 1-1-1V13a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2.5a1 1 0 0 1-1 1h-1.2"/><path d="M9.8 16.5h4.4"/><circle cx="7.5" cy="16.5" r="2.2"/><circle cx="16.5" cy="16.5" r="2.2"/>"#),
+    // A phone.
+    ("elektronike", r#"<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18h3"/>"#),
+    // A briefcase.
+    ("pune", r#"<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M3 12.5h18"/>"#),
+    // A box: other things.
+    ("te-tjera", r#"<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5"/><path d="M12 12v9"/>"#),
+];
+
+/// A shortcut on the welcome page.
+pub struct Shortcut {
+    pub name: String,
+    pub url: String,
+    /// The icon's SVG inside, from SHORTCUTS.
+    pub icon: &'static str,
+}
 
 #[derive(Template)]
 #[template(path = "home.html")]
 struct HomePage {
     cities: Vec<ChoiceGroup>,
     categories: Vec<Choice>,
-    shortcuts: Vec<Link>,
+    shortcuts: Vec<Shortcut>,
     page: ListingPage,
 }
 
@@ -99,13 +119,14 @@ pub async fn home(
     let city = cookie(&headers, "city").filter(|slug| cities.iter().any(|c| &c.slug == slug));
     let shortcuts = SHORTCUTS
         .iter()
-        .filter_map(|slug| categories.by_slug(slug))
-        .map(|category| Link {
+        .filter_map(|(slug, icon)| categories.by_slug(slug).map(|category| (category, *icon)))
+        .map(|(category, icon)| Shortcut {
             name: category.name.clone(),
             url: match &city {
                 Some(city) => format!("/c/{}?city={city}", category.slug),
                 None => format!("/c/{}", category.slug),
             },
+            icon,
         })
         .collect();
     render(HomePage {

@@ -60,11 +60,15 @@
   </div>
   <p class="map-entry"><a href="/harta">{% include "pin.svg" %}Ose vendos një pikë në hartë dhe shiko çfarë ka përreth</a></p>
 
-  {#- Shortcuts to what people look for most, pills in a row that slides sideways where it doesn't
-      fit. The links carry the city chosen above; city_controller.js updates them when it changes. -#}
+  {#- Shortcuts to what people look for most, each with its icon, like the quick-start buttons under
+      Claude's message box; a row that slides sideways where it doesn't fit. The links carry the city
+      chosen above; city_controller.js updates them when it changes. -#}
   <nav class="shortcuts" aria-label="Kategoritë">
     {%- for shortcut in shortcuts %}
-    <a class="chip" href="{{ shortcut.url }}" data-city-target="link">{{ shortcut.name }}</a>
+    <a class="shortcut" href="{{ shortcut.url }}" data-city-target="link">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ shortcut.icon|safe }}</svg>
+      {{- shortcut.name -}}
+    </a>
     {%- endfor %}
   </nav>
 </section>

@@ -212,16 +212,20 @@ async fn welcome_page_asks_for_a_city_and_a_category(pool: PgPool) {
     ]);
     assert!(towns.is_sorted(), "{towns:?}");
     assert!(body.contains(r#"<option value="makina">"#), "subcategories are offered too");
-    // Shortcuts to what people look for most, as pills, in this order; no more cards.
+    // Shortcuts to what people look for most, each with its icon, in this order; no more cards.
     let shortcuts = positions(&body, &[
-        r#"<a class="chip" href="/c/prona" data-city-target="link">Prona</a>"#,
-        r#"<a class="chip" href="/c/makina" data-city-target="link">Makina</a>"#,
-        r#"<a class="chip" href="/c/elektronike" data-city-target="link">Elektronikë</a>"#,
-        r#"<a class="chip" href="/c/pune" data-city-target="link">Punë</a>"#,
-        r#"<a class="chip" href="/c/te-tjera" data-city-target="link">Të tjera</a>"#,
+        r#"<a class="shortcut" href="/c/prona" data-city-target="link">"#,
+        r#"<a class="shortcut" href="/c/makina" data-city-target="link">"#,
+        r#"<a class="shortcut" href="/c/elektronike" data-city-target="link">"#,
+        r#"<a class="shortcut" href="/c/pune" data-city-target="link">"#,
+        r#"<a class="shortcut" href="/c/te-tjera" data-city-target="link">"#,
     ]);
     assert!(shortcuts.is_sorted(), "{shortcuts:?}");
     assert_eq!(body.matches(r#"data-city-target="link""#).count(), 5);
+    for name in ["Prona", "Makina", "Elektronikë", "Punë", "Të tjera"] {
+        assert!(body.contains(&format!("</svg>{name}</a>")), "{name}");
+    }
+    assert_eq!(body.matches(r#"<a class="shortcut""#).count(), body.matches(r#"stroke-width="1.8""#).count());
     assert!(!body.contains(r#"class="tile""#));
 }
 

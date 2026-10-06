@@ -573,9 +573,30 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .field { display: grid; gap: .3rem; min-width: 0; }
 .field-label { color: var(--muted); font-size: .85rem; font-weight: var(--semibold); letter-spacing: .01em; }
 
-/* The welcome page's shortcuts: pills in a row that slides sideways where it doesn't fit, and on
-   a phone runs out to the screen's edges, so it plainly does. */
-.shortcuts { display: flex; gap: .5rem; overflow-x: auto; margin: 1.25rem 0 0; padding: .1rem 0; scrollbar-width: none; }
+/* The welcome page's shortcuts, in a row that slides sideways where it doesn't fit, and on a
+   phone runs out to the screen's edges, so it plainly does. Each is like the quick-start buttons
+   under Claude's message box: a soft rounded box with a hairline border, its icon before its name. */
+.shortcuts { display: flex; gap: .6rem; overflow-x: auto; margin: 1.25rem 0 0; padding: .15rem 0; scrollbar-width: none; }
+.shortcut {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: .55rem;
+  padding: .7rem 1.1rem .7rem .9rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(31 30 29 / 4%);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: var(--medium);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color .15s, border-color .15s;
+}
+.shortcut svg { flex: none; color: var(--muted); transition: color .15s; }
+.shortcut:hover { border-color: var(--border-strong); background: var(--surface-muted); }
+.shortcut:hover svg { color: var(--accent); }
 .shortcuts::-webkit-scrollbar { display: none; }
 @media (max-width: 719px) {
   .shortcuts { margin-inline: -1rem; padding-inline: 1rem; }
