@@ -1506,6 +1506,54 @@ pub async fn is_own_listing(db: &PgPool, listing_id: Uuid, user_id: Uuid) -> sql
     .await
 }
 
+/// What a seller can do to their own listing, besides editing it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ListingAction {
+    /// Take it down for a while (PAUSED): nobody else sees it until it is put back.
+    Pause,
+    /// Put a paused listing back up.
+    Resume,
+    /// Take it down for good (DELETED).
+    Delete,
+}
+
+impl ListingAction {
+    /// The statuses the action applies to, and the one it leaves.
+    fn statuses(self) -> (&'static [&'static str], &'static str) {
+        match self {
+            Self::Pause => (&["ACTIVE", "RESERVED"], "PAUSED"),
+            Self::Resume => (&["PAUSED"], "ACTIVE"),
+            Self::Delete => (&["DRAFT", "ACTIVE", "RESERVED", "SOLD", "EXPIRED", "PAUSED"], "DELETED"),
+        }
+    }
+}
+
+/// Pauses, resumes or deletes one of the user's listings. False when the listing isn't theirs, or
+/// isn't in a state the action applies to (a deleted one, or pausing one already paused). The
+/// status history records the seller as the one who changed it.
+pub async fn change_own_listing(db: &PgPool, public_no: i64, user_id: Uuid, action: ListingAction) -> sqlx::Result<bool> {
+    let (from, to) = action.statuses();
+    let from: Vec<String> = from.iter().map(|status| status.to_string()).collect();
+    let mut tx = db.begin().await?;
+    sqlx::query!("SELECT set_config('app.user_id', $1, true)", user_id.to_string())
+        .fetch_one(&mut *tx)
+        .await?;
+    let changed = sqlx::query!(
+        "UPDATE listings SET status = $3, updated_at = now()
+         WHERE public_no = $1 AND created_by_user_id = $2 AND status::text = ANY($4)",
+        public_no,
+        user_id,
+        to,
+        &from,
+    )
+    .execute(&mut *tx)
+    .await?
+    .rows_affected()
+        == 1;
+    tx.commit().await?;
+    Ok(changed)
+}
+
 /// A row on "Njoftimet e mia".
 pub struct MyListing {
     pub public_no: i64,

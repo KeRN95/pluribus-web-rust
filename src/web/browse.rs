@@ -63,8 +63,6 @@ fn frame_response(after: Option<Cursor>, page: &ListingPage) -> Result<Response>
 }
 
 pub struct Tile {
-    /// The category's slug, which app.css gives a photo (.tile[data-category]).
-    pub slug: String,
     pub name: String,
     pub url: String,
     pub count: String,
@@ -106,7 +104,6 @@ pub async fn home(
     let tiles = categories
         .top_level()
         .map(|category| Tile {
-            slug: category.slug.clone(),
             name: category.name.clone(),
             url: match &city {
                 Some(city) => format!("/c/{}?city={city}", category.slug),

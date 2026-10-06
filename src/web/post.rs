@@ -23,8 +23,8 @@ use super::{
 use crate::{
     AppState,
     db::{
-        self, Categories, Category, City, CodePurpose, FormAttribute, ListingProperty, MyListing, NewListing, OwnListing,
-        SessionUser,
+        self, Categories, Category, City, CodePurpose, FormAttribute, ListingAction, ListingProperty, MyListing, NewListing,
+        OwnListing, SessionUser,
     },
     format::{self, Contact},
 };
@@ -583,6 +583,7 @@ impl MyListing {
             "SOLD" => Some("Shitur"),
             "EXPIRED" => Some("Skaduar"),
             "PENDING_REVIEW" | "DRAFT" => Some("Në pritje"),
+            "PAUSED" => Some("Çaktivizuar"),
             _ => Some("Jo aktiv"),
         }
     }
@@ -590,6 +591,44 @@ impl MyListing {
     pub fn editable(&self) -> bool {
         matches!(self.status.as_str(), "ACTIVE" | "RESERVED")
     }
+
+    /// Up on the site, so it can be taken down for a while ("Çaktivizo").
+    pub fn pausable(&self) -> bool {
+        self.editable()
+    }
+
+    /// Taken down by its seller, so it can be put back ("Aktivizo").
+    pub fn paused(&self) -> bool {
+        self.status == "PAUSED"
+    }
+}
+
+/// "Çaktivizo": the seller takes a listing down for a while; only they still see it, on
+/// "Njoftimet e mia".
+pub async fn pause_listing(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
+    change_listing(&state, &headers, public_no, ListingAction::Pause).await
+}
+
+/// "Aktivizo": a paused listing goes back up, where it was in "newest first".
+pub async fn resume_listing(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
+    change_listing(&state, &headers, public_no, ListingAction::Resume).await
+}
+
+/// "Fshi": the listing is gone for good, from the site and from "Njoftimet e mia".
+pub async fn delete_listing(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
+    change_listing(&state, &headers, public_no, ListingAction::Delete).await
+}
+
+/// Only the listing's own seller may; anyone else gets "not found", as for a listing that doesn't
+/// exist. Back to "Njoftimet e mia" after.
+async fn change_listing(state: &AppState, headers: &HeaderMap, public_no: i64, action: ListingAction) -> Result<Response> {
+    let Some(user) = current_user(state, headers).await? else {
+        return render(SignInPage::new());
+    };
+    if !db::change_own_listing(&state.db, public_no, user.id, action).await? {
+        return not_found().await;
+    }
+    Ok(Redirect::to("/njoftimet-e-mia").into_response())
 }
 
 /// "Njoftimet e mia": the signed-in seller's listings, each with a way to edit it.

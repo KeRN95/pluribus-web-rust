@@ -51,7 +51,20 @@
       <button type="submit" class="button">{{ label }}</button>
     </form>
     {% endif %}
-    {% if own %}<a class="button secondary" href="/listing/{{ listing.public_no }}/ndrysho">Ndrysho</a>{% endif %}
+    {%- if own %}
+    {#- The seller's own: edit it, take it down for a while (back from "Njoftimet e mia"), or
+        delete it after the browser asks to be sure. -#}
+    <a class="button secondary" href="/listing/{{ listing.public_no }}/ndrysho">Ndrysho</a>
+    {%- if listing.status == "ACTIVE" || listing.status == "RESERVED" %}
+    <form method="post" action="/listing/{{ listing.public_no }}/caktivizo">
+      <button type="submit" class="button secondary">Çaktivizo</button>
+    </form>
+    {%- endif %}
+    <form method="post" action="/listing/{{ listing.public_no }}/fshi"
+          data-turbo-confirm="Ta fshijmë këtë njoftim? Nuk mund ta kthesh më.">
+      <button type="submit" class="button secondary danger">Fshi</button>
+    </form>
+    {%- endif %}
     <div data-controller="share" data-share-url-value="{{ listing.url() }}" data-share-title-value="{{ listing.title }}">
       <button type="button" class="button secondary" data-action="share#share">
         <span data-share-target="label">Shpërndaje</span>

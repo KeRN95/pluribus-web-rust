@@ -9,10 +9,6 @@
     {#- The first row loads straight away; the rest wait until they scroll near the screen. -#}
     <img class="card-photo" src="{{ src }}" alt="" width="480" height="360" decoding="async"
       {%- if loop.index > 4 %} loading="lazy"{% endif %}>
-    {#- The same photo again, blurred, behind the whole card (.card-blur); the browser has it
-        already, so it costs no download. -#}
-    <img class="card-blur" src="{{ src }}" alt="" aria-hidden="true" decoding="async"
-      {%- if loop.index > 4 %} loading="lazy"{% endif %}>
     {% else %}
     <div class="card-photo placeholder" aria-hidden="true"></div>
     {% endif %}

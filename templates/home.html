@@ -60,7 +60,7 @@
   {#- The links carry the city chosen above; city_controller.js updates them when it changes. -#}
   <nav class="tiles" aria-label="Kategoritë">
     {% for tile in tiles %}
-    <a class="tile" href="{{ tile.url }}" data-category="{{ tile.slug }}" data-city-target="link">
+    <a class="tile" href="{{ tile.url }}" data-city-target="link">
       <span class="tile-name">{{ tile.name }}</span>
       <span class="tile-count">{{ tile.count }}</span>
     </a>

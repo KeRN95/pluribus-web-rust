@@ -19,7 +19,26 @@
           {{ listing.price_display() }}{% if let Some(label) = listing.status_label() %} · <span class="badge">{{ label }}</span>{% endif %}
         </span>
       </div>
-      {% if listing.editable() %}<a class="button secondary" href="/listing/{{ listing.public_no }}/ndrysho">Ndrysho</a>{% endif %}
+      {#- Edit; take down for a while or put back; delete, after the browser asks to be sure
+          (data-turbo-confirm). -#}
+      <div class="my-listing-actions">
+        {%- if listing.editable() %}
+        <a class="button secondary small" href="/listing/{{ listing.public_no }}/ndrysho">Ndrysho</a>
+        {%- endif %}
+        {%- if listing.pausable() %}
+        <form method="post" action="/listing/{{ listing.public_no }}/caktivizo">
+          <button type="submit" class="button secondary small">Çaktivizo</button>
+        </form>
+        {%- else if listing.paused() %}
+        <form method="post" action="/listing/{{ listing.public_no }}/aktivizo">
+          <button type="submit" class="button secondary small">Aktivizo</button>
+        </form>
+        {%- endif %}
+        <form method="post" action="/listing/{{ listing.public_no }}/fshi"
+              data-turbo-confirm="Ta fshijmë njoftimin „{{ listing.title }}“? Nuk mund ta kthesh më.">
+          <button type="submit" class="button secondary small danger">Fshi</button>
+        </form>
+      </div>
     </li>
     {% endfor %}
   </ul>

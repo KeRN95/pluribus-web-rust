@@ -1143,6 +1143,60 @@ async fn nobody_else_can_edit_a_listing(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
+async fn sellers_pause_resume_and_delete_their_listings(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let no = post_listing(&pool, &ana).await;
+    let url = format!("/listing/{no}-samsung-galaxy-s21-128-gb");
+    let (pause, resume, delete) =
+        (format!("/listing/{no}/caktivizo"), format!("/listing/{no}/aktivizo"), format!("/listing/{no}/fshi"));
+    let searched = |pool: PgPool| async move { get(pool, "/search?q=Galaxy").await.body };
+
+    // The seller has the buttons on their listing; others don't.
+    let pause_form = format!(r#"action="{pause}""#);
+    assert!(get_with_cookie(pool.clone(), &url, &ana).await.body.contains(&pause_form));
+    assert!(!get(pool.clone(), &url).await.body.contains(&pause_form));
+
+    // Nobody else can pause or delete it.
+    for action in [&pause, &delete] {
+        assert_eq!(post_form(pool.clone(), action, &[], Some(&besa)).await.status, StatusCode::NOT_FOUND);
+    }
+
+    // Paused: gone from the site, still on "Njoftimet e mia", with a way back.
+    let paused = post_form(pool.clone(), &pause, &[], Some(&ana)).await;
+    assert_eq!(paused.location.as_deref(), Some("/njoftimet-e-mia"));
+    assert_eq!(get(pool.clone(), &url).await.status, StatusCode::NOT_FOUND);
+    assert!(!searched(pool.clone()).await.contains(&url));
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
+    assert!(mine.contains(r#"<span class="badge">Çaktivizuar</span>"#));
+    assert!(mine.contains(&format!(r#"action="{resume}""#)));
+    // Pausing it again changes nothing.
+    assert_eq!(post_form(pool.clone(), &pause, &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+
+    // Back up.
+    post_form(pool.clone(), &resume, &[], Some(&ana)).await;
+    assert_eq!(get(pool.clone(), &url).await.status, StatusCode::OK);
+    assert!(searched(pool.clone()).await.contains(&url));
+
+    // Deleted: gone everywhere, for good, and the history says who did it.
+    let deleted = post_form(pool.clone(), &delete, &[], Some(&ana)).await;
+    assert_eq!(deleted.location.as_deref(), Some("/njoftimet-e-mia"));
+    assert_eq!(get(pool.clone(), &url).await.status, StatusCode::NOT_FOUND);
+    assert!(!get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(&url));
+    assert_eq!(post_form(pool.clone(), &resume, &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+    let by_seller: bool = sqlx::query_scalar(
+        "SELECT h.changed_by_user_id = l.created_by_user_id
+         FROM listing_status_history h JOIN listings l ON l.id = h.listing_id
+         WHERE l.public_no = $1::bigint AND h.to_status = 'DELETED'",
+    )
+    .bind(&no)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(by_seller);
+}
+
+#[sqlx::test(fixtures("listings"))]
 async fn listings_go_into_subcategories(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     // The form groups subcategories under their category.

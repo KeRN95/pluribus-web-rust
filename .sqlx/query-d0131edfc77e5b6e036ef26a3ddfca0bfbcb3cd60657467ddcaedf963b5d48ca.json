@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE listings SET status = $3, updated_at = now()\n         WHERE public_no = $1 AND created_by_user_id = $2 AND status::text = ANY($4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Varchar",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d0131edfc77e5b6e036ef26a3ddfca0bfbcb3cd60657467ddcaedf963b5d48ca"
+}
