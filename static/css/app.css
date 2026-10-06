@@ -1358,15 +1358,14 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .reveal-contact { gap: .45rem; }
 .contact-icon { flex: none; }
 
-/* The listing's details as pills, the menus' hairline on the surface, that grow to fill each line,
-   their text on the left: a detail's icon before its value, or its name, quiet, before it; a
+/* The listing's details as pills, the menus' hairline on the surface, each as wide as what it
+   says, one after another: a detail's icon before its value, or its name, quiet, before it; a
    car's options a pill each.
    The groups (a name and its values) leave their pills to the line (display: contents). */
 .attributes { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; }
 .attribute-group { display: contents; }
 .attribute {
   display: flex;
-  flex: 1 1 auto;
   align-items: center;
   gap: .5rem;
   min-width: 0;
