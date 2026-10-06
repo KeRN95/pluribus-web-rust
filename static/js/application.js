@@ -41,3 +41,11 @@ document.addEventListener("turbo:load", () => {
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   for (const svg of document.querySelectorAll("svg.thinking")) svg.pauseAnimations();
 });
+
+// A tapped card keeps its border (app.css, .card.pressed) while its listing loads; the copy of the
+// page Turbo keeps for going back loses it. iOS only shows :active where a touch listener is.
+document.addEventListener("click", (event) => event.target.closest(".card")?.classList.add("pressed"));
+document.addEventListener("turbo:before-cache", () => {
+  for (const card of document.querySelectorAll(".card.pressed")) card.classList.remove("pressed");
+});
+document.addEventListener("touchstart", () => {}, { passive: true });

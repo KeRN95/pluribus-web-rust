@@ -741,11 +741,8 @@ async fn static_files_have_cache_headers(pool: PgPool) {
         "public, max-age=31536000, immutable"
     );
 
-    for uri in [
-        "/static/vendor/fonts/dm-sans-v17-latin.woff2",
-        "/static/vendor/fonts/source-serif-4-v15-latin.woff2",
-    ] {
-        let font = marketplace::app(pool.clone())
+    for uri in ["/static/vendor/fonts/geist-v5-latin.woff2"] {
+        let font = app(pool.clone())
             .oneshot(
                 Request::get(uri)
                     .header(header::ACCEPT_ENCODING, "br, gzip")

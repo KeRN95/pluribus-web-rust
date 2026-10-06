@@ -1,27 +1,14 @@
-/* Warm and quiet: ivory and charcoal with a terracotta accent, DM Sans for text, Geist for card
-   titles and Source Serif 4 for prices, soft rounded surfaces. */
+/* Warm and quiet: ivory and charcoal with a terracotta accent, soft rounded surfaces, and one
+   typeface, Geist, for everything: headings, prices and text differ only in weight and colour. */
 
-/* The fonts are all variable fonts, every weight in one file, in the Latin subset only, which covers
-   Albanian (ë, ç), the euro sign and the „quotes“. They are served from /static/vendor/, cached for
-   a year, and preloaded by base.html. Licences: fonts/OFL-DM-Sans.txt, fonts/OFL-Source-Serif-4.txt.
-
-   DM Sans, for all text: a free font close to the sans Claude's interface uses (Claude's own fonts
-   are Anthropic's and not licensed for other sites). Weights 100 to 1000, 36 KB. */
+/* Geist, Vercel's typeface, free under the SIL Open Font License (fonts/OFL-Geist.txt). A variable
+   font, every weight from 100 to 900 in one file, in the Latin subset only, which covers Albanian
+   (ë, ç), the euro sign and the „quotes“: 29 KB, served from /static/vendor/, cached for a year
+   and preloaded by base.html. */
 @font-face {
-  font-family: "DM Sans";
-  src: url("/static/vendor/fonts/dm-sans-v17-latin.woff2") format("woff2");
-  font-weight: 100 1000;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
-                 U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-/* Source Serif 4, for prices. Weights 200 to 900, 51 KB. */
-@font-face {
-  font-family: "Source Serif 4";
-  src: url("/static/vendor/fonts/source-serif-4-v15-latin.woff2") format("woff2");
-  font-weight: 200 900;
+  font-family: "Geist";
+  src: url("/static/vendor/fonts/geist-v5-latin.woff2") format("woff2");
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
@@ -49,9 +36,7 @@
   --placeholder-to: #e2ded2;
   --shadow: 0 1px 2px rgb(31 30 29 / 5%), 0 4px 16px rgb(31 30 29 / 5%);
   --radius: 14px;
-  --font: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --price-font: "Source Serif 4", Georgia, "Times New Roman", serif;
-  --title-font: "Geist", "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   /* The weights, from quiet to loud: lead text, body, emphasis (chips, values), headings and
      labels, prices, the logo. */
   --light: 300;
@@ -125,6 +110,8 @@ body {
 }
 
 a { color: inherit; }
+/* Form controls take the page's typeface too; browsers give them their own by default. */
+button, input, select, textarea { font-family: inherit; }
 b, strong { font-weight: var(--bold); }
 
 h1,
@@ -266,63 +253,59 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   transition: background-color .15s, border-color .15s;
 }
 
-/* Geist, Vercel's typeface, for the titles on listing cards: a crisp, modern sans. Weights 100
-   to 900, 29 KB. Licence: fonts/OFL-Geist.txt. */
-@font-face {
-  font-family: "Geist";
-  src: url("/static/vendor/fonts/geist-v5-latin.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
-                 U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
+/* Two columns on every phone; as many as fit on wider screens. The cards have no box, so the
+   space between rows, clearly more than inside a card, is what keeps each one together. */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem .75rem; }
 
-/* Two columns on every phone; as many as fit on wider screens. */
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
-
-/* A listing card, in the manner of Claude's: a soft ivory sheet with a hairline border and
-   rounded corners, the photo across its top with the price on its dark lower edge, then the
-   title in Geist and a quiet details line. */
+/* A listing card: no box of its own, just the photo with all four corners rounded and the price
+   on its dark lower edge, then under it, on the page, the title in Geist and a quiet details
+   line. */
 .card {
   display: flex;
   position: relative;
   flex-direction: column;
-  overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) + 4px);
+  border-radius: var(--radius); /* for the focus ring */
   text-decoration: none;
-  transition: border-color .15s, box-shadow .15s;
 }
 
 /* Hover effects only where there is a real pointer; on phones they would stick after a tap. */
 @media (hover: hover) {
   .chip:hover { background: var(--surface-muted); border-color: var(--border-strong); }
-  .card:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
+  .card:hover .card-photo { box-shadow: var(--shadow); filter: brightness(1.04); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .chip,
-  .card { transition: none; }
+  .card-photo { transition: none; }
 }
 
-/* The photo fills the top of the card, 4:3, as it is, and the title and price sit under it. A
+/* The photo fills the top of the card, square, as it is, and the title and price sit under it. A
    grid of two rows: the photo's space (::before), then the title and price. Nothing here is
    positioned, so the title's link still stretches over the whole card (.card-link). */
 .card-media { display: grid; grid-template-columns: minmax(0, 1fr); }
-.card-media::before { content: ""; grid-area: 1 / 1; aspect-ratio: 4 / 3; }
+.card-media::before { content: ""; grid-area: 1 / 1; aspect-ratio: 1; }
 /* height 0 with min-height 100%: the photo takes the row's height without setting it. */
-.card-photo { display: block; grid-area: 1 / 1; width: 100%; height: 0; min-height: 100%; object-fit: cover; }
+.card-photo {
+  display: block;
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 0;
+  min-height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius);
+  transition: box-shadow .15s, filter .15s;
+}
 .placeholder { background: linear-gradient(135deg, var(--placeholder-from), var(--placeholder-to)); }
 
-/* The photo as it is, but for a band along its bottom edge behind the price: the site's dark
-   colour (the dark theme's page), from nothing at about two thirds down to 85% at the edge, with
-   the price on it in the site's light colour (the light theme's page). The same in both themes. */
+/* The photo as it is, but for a soft shade in its bottom left corner, behind the price: the site's
+   dark colour (the dark theme's page), 60% in the corner and fading out toward the middle of the
+   photo, with the price on it in the site's light colour (the light theme's page). The same in
+   both themes. */
 .card-media::after {
   content: "";
   grid-area: 1 / 1;
-  background: linear-gradient(to bottom, transparent 68%, rgb(38 38 36 / 55%) 84%, rgb(38 38 36 / 85%));
+  border-radius: var(--radius);
+  background: radial-gradient(ellipse 85% 50% at 0% 100%, rgb(38 38 36 / 60%), rgb(38 38 36 / 30%) 55%, transparent);
   pointer-events: none;
 }
 .card-media .card-price {
@@ -331,11 +314,11 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   z-index: 1;
   padding: 0 .85rem .55rem;
   color: #f5f4ee;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 45%);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 55%), 0 0 6px rgb(0 0 0 / 25%);
 }
 
 /* The title, under the photo. */
-.card-head { grid-area: 2 / 1; padding: .75rem .85rem 0; }
+.card-head { grid-area: 2 / 1; padding: .55rem .15rem 0; }
 
 /* The title link covers the whole card, so a tap anywhere opens the listing. The card shows the
    focus ring, since the title alone would be a small target to outline. */
@@ -343,15 +326,19 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .card-link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
 .card-link:focus-visible { outline: none; }
 .card:has(.card-link:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* A tapped or clicked card gets a border in the accent colour, around the photo and the text, and
+   keeps it until its listing shows (application.js marks it .pressed); no grey tap flash on phones. */
+.card-link { -webkit-tap-highlight-color: transparent; }
+.card:active,
+.card.pressed { outline: 2px solid var(--accent); outline-offset: 4px; }
 
 /* Under the photo, the details line. The body fills the rest of the card. */
-.card-body { display: flex; flex: 1; flex-direction: column; padding: 0 .85rem .8rem; }
+.card-body { display: flex; flex: 1; flex-direction: column; padding: 0 .15rem .35rem; }
 
 /* One line, ending in "…" when longer; screen readers still get the whole title. */
 .card-title {
   margin: 0;
   overflow: hidden;
-  font-family: var(--title-font);
   font-size: .88rem;
   font-weight: var(--semibold);
   letter-spacing: -.015em;
@@ -376,7 +363,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    148 000 km · Naftë"), small and grey, so it stays behind the title and price. One line, ending
    in "…" when longer. */
 .card-summary {
-  margin: .5rem 0 0;
+  margin: .2rem 0 0;
   overflow: hidden;
   color: var(--muted);
   font-size: .8rem;
@@ -442,18 +429,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .welcome h1 { margin: 0 0 .3rem; color: color-mix(in srgb, var(--text) 50%, var(--muted)); font-size: 1.6rem; line-height: 1.15; letter-spacing: -0.02em; }
 .lead { margin: 0 0 1.25rem; color: var(--muted); font-size: 1.15rem; font-weight: var(--light); line-height: 1.45; }
 
-/* The welcome card: Skanderbeg Square and the National History Museum in Tirana (Douglas O,
-   Unsplash License) under the card's own colour, 50% at the top, where the sky shows, to 95% at
-   the bottom, behind the fields. */
-.welcome-card {
-  padding: 1.6rem 1.25rem 1.4rem;
-  background:
-    linear-gradient(color-mix(in srgb, var(--surface) 50%, transparent), color-mix(in srgb, var(--surface) 95%, transparent)),
-    var(--surface) url("https://images.unsplash.com/photo-1586674572976-68d3c69d3a7f?auto=format&fit=crop&w=1000&q=50") center / cover no-repeat;
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) + 4px);
-  box-shadow: var(--shadow);
-}
+/* The welcome section: the question and its fields, straight on the page, no box of their own. */
+.welcome-card { padding: .5rem 0 0; }
 .welcome-card .lead { margin-bottom: 0; font-size: 1rem; }
 
 /* The question with a creature before it, in the button colour (thinking.svg): a star of 13 soft
@@ -468,20 +445,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .welcome-form { display: grid; gap: .75rem; }
 
 .welcome-form .button { justify-content: center; padding-block: .7rem; }
-/* The fields and the button fade from left to right, 95% to 50%, letting the photo through.
-   A field's fade is on its box (.with-icon), so a picker keeps its own arrow. */
-.welcome-form .button {
-  background: linear-gradient(to right, color-mix(in srgb, var(--button) 95%, transparent), color-mix(in srgb, var(--button) 50%, transparent));
-}
-.welcome-form .button:hover {
-  background: linear-gradient(to right, color-mix(in srgb, var(--button-hover) 95%, transparent), color-mix(in srgb, var(--button-hover) 50%, transparent));
-}
-.welcome-form .with-icon {
-  border-radius: 10px;
-  background: linear-gradient(to right, color-mix(in srgb, var(--input) 95%, transparent), color-mix(in srgb, var(--input) 50%, transparent));
-}
-.welcome-form .with-icon input,
-.welcome-form .with-icon select { background-color: transparent; }
 /* Phones: the words on a line of their own, then the city and the category side by side. */
 .welcome-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .welcome-form .field-query,
@@ -507,7 +470,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* Phones: the two pickers side by side are narrow, so the icon, the text and the arrow sit closer
    and the form's own padding is smaller, which keeps "Çdo kategori" whole on a 360px screen. */
 @media (max-width: 719px) {
-  .welcome-card { padding: 1.35rem 1rem 1.15rem; }
+  .welcome-card { padding: .25rem 0 0; }
   .welcome-form { gap: .6rem; }
   .welcome-form .with-icon .field-icon { left: .6rem; }
   .welcome-form .with-icon input,
@@ -540,7 +503,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 @media (min-width: 720px) {
   .welcome { padding-top: 2rem; }
   .welcome h1 { font-size: 2.05rem; }
-  .welcome-card { padding: 2.25rem 2rem 2rem; }
+  .welcome-card { padding: .75rem 0 0; }
   .welcome-form { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; }
   .welcome-form .field-query,
   .welcome-form .button { grid-column: auto; }
@@ -801,7 +764,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* Two classes, so these win over leaflet.css, which loads after this file (and colours links blue). */
 .map-canvas.leaflet-container { background: var(--surface-muted); font-family: var(--font); }
 .map-canvas .map-popup { display: grid; gap: .15rem; min-width: 10rem; color: #1f1e1d; font: 500 .9rem/1.35 var(--font); text-decoration: none; }
-.map-popup span { font-family: var(--price-font); font-weight: var(--bold); }
+.map-popup span { font-weight: var(--bold); }
 
 /* The dark theme dims the (light) map tiles and turns them dark. */
 :root[data-theme="dark"] .map-canvas .leaflet-tile-pane {
@@ -968,7 +931,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .listing-photos { display: grid; gap: .5rem; }
 .listing-header { margin-top: 1rem; }
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: 1.9rem; }
-.listing-price { margin: 0; font-family: var(--price-font); font-size: 1.6rem; font-weight: var(--bold); }
+.listing-price { margin: 0; font-size: 1.6rem; font-weight: var(--bold); letter-spacing: -.02em; }
 /* The price with the loan calculator's button beside it; the calculator opens under the actions. */
 .price-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
 .loan-button {
@@ -987,7 +950,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* Last in the card: the monthly payment, right after its name. */
 .loan-result { display: flex; align-items: baseline; gap: .6rem; margin: .75rem 0 0; padding-top: .7rem; border-top: 1px solid var(--border); }
 .loan-result span { color: var(--muted); font-weight: var(--semibold); }
-.loan-result strong { font-family: var(--price-font); font-size: 1.4rem; }
+.loan-result strong { font-size: 1.4rem; font-weight: var(--bold); letter-spacing: -.02em; }
 .loan-summary { margin: .8rem 0 0; font-size: .85rem; }
 .loan-note { margin: .4rem 0 0; color: var(--muted); font-size: .8rem; }
 
@@ -1037,7 +1000,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 }
 
 @media (min-width: 720px) {
-  .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.75rem 1rem; }
   h1 { font-size: 2.25rem; }
   .logo { font-size: 1.4rem; }
   .listing-header h1 { font-size: 2.4rem; }
