@@ -69,6 +69,7 @@ cargo test
 | `migrations/0010_post_before_sign_in.sql` | A listing posted before signing in waits for the code (`login_codes.listing_id`), as does a new account's name |
 | `migrations/0011_paused_listings.sql` | Sellers can take a listing down for a while and put it back (`PAUSED`) |
 | `migrations/0012_parts_and_accessories.sql` | Pjesë dhe aksesorë: car parts get kinds of their own, a third level (Pjesë këmbimi, Goma dhe disqe, GPS dhe navigatorë...), and say which vehicle they fit; a category's own name for a property (`category_attributes.label`) |
+| `migrations/0013_car_makes_and_models.sql` | The makes and models sellers pick from: 42 makes common in Albania with their usual models; makes and models sellers had typed that are on the list join it |
 | `tests/` | Request tests (`web.rs`), the 71 schema checks (`schema_checks.sql`, also run by `schema.rs`) and sample data (`fixtures/`) |
 | `dev/sample_listings.sql` | 305 extra sample listings for the development database (not used by the tests) |
 | `.sqlx/` | Cached query metadata, so the project builds without a database (set `SQLX_OFFLINE=true`) |
@@ -135,6 +136,8 @@ Each category's properties are rows in the database, not code. A browse page bui
 | Makineri dhe biznes | year |
 | Pjesë dhe aksesorë (0012) | the vehicle a part fits, none required: make and model from the cars' lists ("Marka e automjetit", "Modeli i automjetit"), and the years from and to |
 
+The car makes and models are migration 0013's list: 42 makes common in Albania (Alfa Romeo to Volvo, Iveco and the Chinese BYD and MG included) with 556 models, in alphabetical order, numbers first. Their codes are the ones the posting form gives a name typed under "Tjetër" (`format::slug`, upper case, a model's after its make's: `VOLKSWAGEN_ID_BUZZ`), so a typed "id buzz" is the listed ID. Buzz. To add one, write a migration like 0013's, or approve one a seller typed.
+
 To add a property, write a new migration:
 
 ```sql
@@ -187,14 +190,14 @@ Nothing in the database changes: the photos keep their keys, and the site keeps 
 
 ## Database
 
-The application applies the migrations at startup with `sqlx::migrate!()`, which embeds `migrations/` in the binary; `sqlx migrate run` does the same from the command line. sqlx stores a checksum of every migration it has run and refuses to continue if one changes, so add schema changes as new files (`migrations/0013_<description>.sql`) instead of editing the existing ones.
+The application applies the migrations at startup with `sqlx::migrate!()`, which embeds `migrations/` in the binary; `sqlx migrate run` does the same from the command line. sqlx stores a checksum of every migration it has run and refuses to continue if one changes, so add schema changes as new files (`migrations/0014_<description>.sql`) instead of editing the existing ones.
 
 All tables live in the default `public` schema, next to the citext, pg_trgm, unaccent, cube and earthdistance extensions, so connections need no search-path setup. Don't take `public` off a connection's search path: without the citext operators, `WHERE email = $1` silently becomes a case-sensitive text comparison.
 
 To apply and check the schema with psql instead:
 
 ```bash
-psql -v ON_ERROR_STOP=1 --single-transaction -f migrations/0001_marketplace_schema.sql -f migrations/0002_marketplace_reference_data.sql -f migrations/0003_category_properties.sql -f migrations/0004_plate_codes.sql -f migrations/0005_map_search.sql -f migrations/0006_rename_patundshmeri_to_prona.sql -f migrations/0007_sign_in_codes.sql -f migrations/0008_subcategories.sql -f migrations/0009_seller_options.sql -f migrations/0010_post_before_sign_in.sql -f migrations/0011_paused_listings.sql -f migrations/0012_parts_and_accessories.sql
+psql -v ON_ERROR_STOP=1 --single-transaction -f migrations/0001_marketplace_schema.sql -f migrations/0002_marketplace_reference_data.sql -f migrations/0003_category_properties.sql -f migrations/0004_plate_codes.sql -f migrations/0005_map_search.sql -f migrations/0006_rename_patundshmeri_to_prona.sql -f migrations/0007_sign_in_codes.sql -f migrations/0008_subcategories.sql -f migrations/0009_seller_options.sql -f migrations/0010_post_before_sign_in.sql -f migrations/0011_paused_listings.sql -f migrations/0012_parts_and_accessories.sql -f migrations/0013_car_makes_and_models.sql
 ```
 
 ```bash

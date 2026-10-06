@@ -1364,7 +1364,8 @@ async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
 
     // The parts page offers the vehicle as filters, the years as one: the buyer's vehicle's.
     let page = html(pool.clone(), "/c/pjese-dhe-aksesore").await;
-    assert!(page.contains(r#"<legend class="filter-label">Marka e automjetit</legend>"#));
+    assert!(page.contains(r#"<label class="filter-label" for="filter-vehicle_make">Marka e automjetit</label>"#));
+    assert!(page.contains(r#"<option value="AUDI">Audi</option>"#));
     assert!(page.contains(r#"<label class="filter-label" for="filter-fits_year">Viti i automjetit</label>"#));
     assert!(page.contains(r#"name="fits_year" value="""#));
     assert!(!page.contains("fits_from_year") && !page.contains("fits_to_year_min"));
@@ -1648,7 +1649,7 @@ fn typed_car<'a>(make: &'a str, model: &'a str, started: &'a str) -> Vec<(&'a st
     for field in &mut fields {
         match field.0 {
             "prop_vehicle_model" => field.1 = "__other__",
-            "title" => field.1 = "Opel Astra 1.7 CDTI, 2014",
+            "title" => field.1 = "Zastava Yugo 45, 1988",
             _ => {}
         }
     }
@@ -1666,19 +1667,19 @@ async fn sellers_type_a_make_or_model_the_list_lacks(pool: PgPool) {
 
     let ana = new_seller(&pool, "+355691112233").await;
     let started = started();
-    let posted = post_form(pool.clone(), "/shto", &typed_car("Opel", "Astra", &started), Some(&ana)).await;
+    let posted = post_form(pool.clone(), "/shto", &typed_car("Zastava", "Yugo", &started), Some(&ana)).await;
     assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
     let url = posted.location.unwrap();
     let page = get(pool.clone(), &url).await.body;
-    assert!(page.contains(">Opel<") && page.contains(">Astra<"));
+    assert!(page.contains(">Zastava<") && page.contains(">Yugo<"));
     // Search finds it by them; the lists and filters don't offer them until someone approves them.
-    assert!(get(pool.clone(), "/search?q=astra").await.body.contains("Opel Astra 1.7 CDTI"));
-    assert!(!get(pool.clone(), "/shto/fushat?category=makina").await.body.contains(">Opel<"));
-    assert!(!get(pool.clone(), "/c/makina").await.body.contains(">Opel<"));
+    assert!(get(pool.clone(), "/search?q=yugo").await.body.contains("Zastava Yugo 45"));
+    assert!(!get(pool.clone(), "/shto/fushat?category=makina").await.body.contains(">Zastava<"));
+    assert!(!get(pool.clone(), "/c/makina").await.body.contains(">Zastava<"));
     let (active, model_under_make): (bool, bool) = sqlx::query_as(
         "SELECT make.active, model.parent_option_id = make.id
          FROM attribute_options make, attribute_options model
-         WHERE make.label = 'Opel' AND model.label = 'Astra'",
+         WHERE make.label = 'Zastava' AND model.label = 'Yugo'",
     )
     .fetch_one(&pool)
     .await
@@ -1689,38 +1690,74 @@ async fn sellers_type_a_make_or_model_the_list_lacks(pool: PgPool) {
     let no = url.trim_start_matches("/listing/").split('-').next().unwrap();
     let form = get_with_cookie(pool.clone(), &format!("/listing/{no}/ndrysho"), &ana).await.body;
     assert!(form.contains(r#"<option value="__other__" selected>Tjetër…</option>"#));
-    assert!(form.contains(r#"name="prop_vehicle_make_other" value="Opel""#));
+    assert!(form.contains(r#"name="prop_vehicle_make_other" value="Zastava""#));
 
     // Typed again, by someone else and in other letters, it is the same make; and "bmw" is the
     // listed BMW, not a new one.
     let besa = new_seller(&pool, "+355691112244").await;
-    let again = post_form(pool.clone(), "/shto", &typed_car("  OPEL ", "astra", &started), Some(&besa)).await;
+    let again = post_form(pool.clone(), "/shto", &typed_car("  ZASTAVA ", "yugo", &started), Some(&besa)).await;
     assert_eq!(again.status, StatusCode::SEE_OTHER, "{}", again.body);
-    let opels: i64 = sqlx::query_scalar("SELECT count(*) FROM attribute_options WHERE lower(label) IN ('opel', 'astra')")
+    let zastavas: i64 = sqlx::query_scalar("SELECT count(*) FROM attribute_options WHERE lower(label) IN ('zastava', 'yugo')")
         .fetch_one(&pool)
         .await
         .unwrap();
-    assert_eq!(opels, 2, "one Opel, one Astra");
+    assert_eq!(zastavas, 2, "one Zastava, one Yugo");
     let mut bmw = typed_car("bmw", "Seria 1", &started);
     bmw.iter_mut().find(|field| field.0 == "title").unwrap().1 = "BMW 118d, 2015";
     assert_eq!(post_form(pool.clone(), "/shto", &bmw, Some(&besa)).await.status, StatusCode::SEE_OTHER);
     assert!(get(pool.clone(), "/c/makina?vehicle_make=BMW").await.body.contains("BMW 118d, 2015"));
+    // A listed model typed without its punctuation ("id buzz") is the listed one too, ID. Buzz: it
+    // comes to the same code.
+    let mut buzz = typed_car("volkswagen", "id buzz", &started);
+    buzz.iter_mut().find(|field| field.0 == "title").unwrap().1 = "Volkswagen ID. Buzz, 2023";
+    let posted = post_form(pool.clone(), "/shto", &buzz, Some(&besa)).await;
+    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    assert!(get(pool.clone(), &posted.location.unwrap()).await.body.contains(">ID. Buzz<"));
+    let typed: i64 = sqlx::query_scalar("SELECT count(*) FROM attribute_options WHERE lower(label) = 'id buzz'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(typed, 0);
 
     // Checked like everything else.
     for ((make, model), message) in [
-        (("", "Astra"), "Shkruaj „Marka“."),
-        (("www.opel.al", "Astra"), "Shkruaj vetëm emrin"),
-        (("!!", "Astra"), "Shkruaj vetëm emrin"),
+        (("", "Yugo"), "Shkruaj „Marka“."),
+        (("www.zastava.al", "Yugo"), "Shkruaj vetëm emrin"),
+        (("!!", "Yugo"), "Shkruaj vetëm emrin"),
     ] {
         let response = post_form(pool.clone(), "/shto", &typed_car(make, model, &started), Some(&ana)).await;
         assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY, "{make}");
         assert!(response.body.contains(message), "{make}: {message}");
     }
     // A listed model doesn't go with a typed make.
-    let mut golf = typed_car("Opel", "", &started);
+    let mut golf = typed_car("Zastava", "", &started);
     golf.iter_mut().find(|field| field.0 == "prop_vehicle_model").unwrap().1 = "VOLKSWAGEN_GOLF";
     let response = post_form(pool, "/shto", &golf, Some(&ana)).await;
     assert!(response.body.contains("Ky model nuk i përket markës së zgjedhur."));
+}
+
+#[sqlx::test]
+async fn the_makes_and_models_have_the_codes_typing_them_gives(pool: PgPool) {
+    // As the posting form codes a typed option (properties.rs), a model's after its make's.
+    let code = |name: &str| marketplace::format::slug(name).to_uppercase().replace('-', "_");
+    let options: Vec<(String, String, Option<String>)> = sqlx::query_as(
+        "SELECT o.label, o.value_code, make.value_code
+         FROM attribute_options o
+         JOIN attributes a ON a.id = o.attribute_id
+         LEFT JOIN attribute_options make ON make.id = o.parent_option_id
+         WHERE a.code IN ('vehicle_make', 'vehicle_model') AND o.active",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert!(options.len() > 500, "{}", options.len());
+    for (label, value_code, make) in options {
+        let expected = match make {
+            Some(make) => format!("{make}_{}", code(&label)),
+            None => code(&label),
+        };
+        assert_eq!(value_code, expected, "{label}");
+    }
 }
 
 #[sqlx::test(fixtures("listings"))]
