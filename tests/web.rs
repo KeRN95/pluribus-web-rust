@@ -841,6 +841,9 @@ async fn revealing_a_phone_returns_a_turbo_stream_and_counts_it(pool: PgPool) {
     assert!(response.body.contains(r#"<turbo-stream action="replace" target="phone-reveal">"#));
     assert!(response.body.contains(r#"href="tel:+355690000001"><svg class="contact-icon""#));
     assert!(response.body.contains("</svg>+355 69 000 0001</a>"));
+    // Beside it, a button that copies it, as a phone dials it.
+    assert!(response.body.contains(r#"data-controller="copy" data-copy-text-value="+355690000001""#));
+    assert!(response.body.contains(r#"aria-label="Kopjo numrin""#));
 
     let reveals: i64 = sqlx::query_scalar("SELECT phone_reveals FROM listing_daily_stats")
         .fetch_one(&pool)

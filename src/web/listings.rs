@@ -223,6 +223,14 @@ impl Reveal {
             Reveal::Email => "Shfaq email-in",
         }
     }
+
+    /// The copy button's name, beside the number or address once shown.
+    pub fn copy_label(&self) -> &'static str {
+        match self {
+            Reveal::Phone => "Kopjo numrin",
+            Reveal::Email => "Kopjo email-in",
+        }
+    }
 }
 
 /// A category on the way to a listing's own.
@@ -237,6 +245,8 @@ struct PhoneStream {
     reveal: Reveal,
     href: String,
     display: String,
+    /// What the copy button copies: the number as a phone dials it, or the address.
+    copy: String,
 }
 
 /// Swaps the button for the seller's number (a tap calls it) or e-mail address.
@@ -247,9 +257,9 @@ pub async fn reveal_phone(
     let Some(contact) = db::reveal_contact(&state.db, public_no).await? else {
         return not_found().await;
     };
-    let (reveal, href, display) = match contact {
-        SellerContact::Phone(phone) => (Reveal::Phone, format!("tel:{phone}"), format::phone(&phone)),
-        SellerContact::Email(email) => (Reveal::Email, format!("mailto:{email}"), email),
+    let (reveal, href, display, copy) = match contact {
+        SellerContact::Phone(phone) => (Reveal::Phone, format!("tel:{phone}"), format::phone(&phone), phone),
+        SellerContact::Email(email) => (Reveal::Email, format!("mailto:{email}"), email.clone(), email),
     };
-    render_stream(PhoneStream { reveal, href, display })
+    render_stream(PhoneStream { reveal, href, display, copy })
 }

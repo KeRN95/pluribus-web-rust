@@ -111,8 +111,9 @@
     </form>
     {%- endif %}
     <div data-controller="share" data-share-url-value="{{ listing.url() }}" data-share-title-value="{{ listing.title }}">
-      <button type="button" class="button secondary" data-action="share#share">
-        <span data-share-target="label">Shpërndaje</span>
+      <button type="button" class="button secondary share-button" data-action="share#share">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5v11M7.5 8 12 3.5 16.5 8"/><path d="M5 12.5v6a2.5 2.5 0 0 0 2.5 2.5h9a2.5 2.5 0 0 0 2.5-2.5v-6"/></svg>
+        <span class="share-label" data-share-target="label">Shpërndaje</span>
       </button>
     </div>
   </div>
@@ -150,6 +151,7 @@
       <span class="seller-name">{{ listing.seller_name }}</span>
       <span class="seller-summary">{{ listing.seller_summary() }}</span>
     </span>
+    <svg class="seller-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
   </a>
 
   {% if !details.is_empty() %}
