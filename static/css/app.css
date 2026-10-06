@@ -1046,36 +1046,31 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 /* A category's own fields in the listing form: a car's make, model, year... */
 .property-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1rem; margin: 0; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .property-fields .field-wide { grid-column: 1 / -1; }
-/* A car's fields on a grid of twelve: its main ones as tiles, three to the first line (make,
-   model, year) and four to the second (fuel, gearbox, body, mileage), then its options, then the
-   rest two to a line. A tile is the field under its icon, the field's text small (12px) so that
-   four fit on a phone, "Automatike" whole on a 375px one. */
-.vehicle-fields { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: .75rem .4rem; }
-/* Each field no wider than its columns, however long its name: a tile cuts it short instead. */
-.vehicle-fields > .field { grid-column: span 6; grid-template-columns: minmax(0, 1fr); }
-.vehicle-fields > .span-4 { grid-column: span 4; }
-.vehicle-fields > .span-3 { grid-column: span 3; }
+/* A car's fields, two to a line: its main ones with their icon before their name or value, then
+   its options across. The text is a size smaller (14px) than the rest of the form's, so that
+   "Mercedes-Benz" fits beside its icon on a phone. */
+.vehicle-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem .5rem; }
+/* Each field no wider than its column, however long its name: the field cuts it short instead. */
+.vehicle-fields > .field { grid-template-columns: minmax(0, 1fr); }
 .vehicle-fields > .field-wide { grid-column: 1 / -1; }
-.tile { position: relative; height: 3.6rem; }
-.tile-icon { position: absolute; top: .55rem; left: calc(.35rem + 1px); z-index: 1; color: var(--muted); pointer-events: none; }
+.tile { position: relative; height: 2.75rem; }
+.tile-icon { position: absolute; top: 50%; left: .45rem; z-index: 1; color: var(--muted); pointer-events: none; transform: translateY(-50%); }
 .tile .picker { height: 100%; }
-.vehicle-fields .tile .picker-button { height: 100%; padding: 1.85rem .35rem .45rem; font-size: 12px; line-height: 1.3; }
-.vehicle-fields .tile .picker-button::after { top: .7rem; right: .4rem; width: .85rem; height: .85rem; transform: none; }
-.vehicle-fields .tile .picker-button[aria-expanded="true"]::after { transform: rotate(180deg); }
-/* A typed one keeps 16px text, or iPhones zoom into it, and is drawn at 12/16 of its size to
-   match the lists beside it: everything about it 16/12 larger, then scaled down. */
+.vehicle-fields .tile .picker-button { height: 100%; padding: 0 1.6rem 0 calc(.45rem + 23px); font-size: 14px; line-height: calc(2.75rem - 2px); }
+.vehicle-fields .tile .picker-button::after { right: .45rem; }
+/* A typed one keeps 16px text, or iPhones zoom into it, and is drawn at 14/16 of its size to
+   match the lists beside it: everything about it 16/14 larger, then scaled down. */
 .vehicle-fields .tile input {
-  --s: .75;
+  --s: .875;
   position: absolute;
   top: 0;
   left: 0;
   width: calc(100% / var(--s));
   height: calc(100% / var(--s));
-  padding: calc(1.85rem / var(--s)) calc(.35rem / var(--s)) calc(.45rem / var(--s));
+  padding: 0 calc(.6rem / var(--s)) 0 calc((.45rem + 23px) / var(--s));
   border-width: calc(1px / var(--s));
   border-radius: calc(10px / var(--s));
   font-size: 16px;
-  line-height: 1.3;
   transform: scale(var(--s));
   transform-origin: 0 0;
 }
@@ -1341,7 +1336,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
    with smaller text; they get less padding instead, so they don't look heavier than the rest. */
 @media (max-width: 719px) {
   html { font-size: 87.5%; }
-  .vehicle-fields { padding: .75rem; }
+  .vehicle-fields { padding: .5rem; }
 
   .search input,
   .field input,

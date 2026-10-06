@@ -5,7 +5,7 @@
   {#- Named for screen readers only: out of sight, it leaves the box's border whole. -#}
   <legend class="visually-hidden">Detajet</legend>
   {%- for field in fields %}
-  <div class="field{% if field.kind == "multi" || field.kind == "check" %} field-wide{% endif %}{% if let Some(tile) = field.tile %} span-{{ tile.span }}{% endif %}">
+  <div class="field{% if field.kind == "multi" || field.kind == "check" %} field-wide{% endif %}">
     {%- if field.kind == "check" %}
     <label class="check"><input type="checkbox" name="{{ field.name }}" value="1"{% if field.checked %} checked{% endif %}> {{ field.label }}</label>
     {%- else if field.kind == "multi" %}
@@ -17,7 +17,7 @@
     </div>
     {%- else %}
     {#- Named inside the field, as in the rest of the form; the label is for screen readers. A
-        car's main fields are tiles: the field under its icon (app.css). -#}
+        car's main fields have an icon before the name (app.css). -#}
     <label class="visually-hidden" for="{{ field.name }}">{{ field.label }}{% if let Some(unit) = field.unit %} ({{ unit }}){% endif %}</label>
     {%- if let Some(tile) = field.tile %}
     <div class="tile">

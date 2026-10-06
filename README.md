@@ -133,7 +133,7 @@ Each category's properties are rows in the database, not code. A browse page bui
 
 | Category | Properties |
 |---|---|
-| Makina | make, model (grouped by make), year, mileage, fuel, gearbox, body type, colour, options ("Opsionet"); the posting form shows make, model and year on one line, fuel, gearbox, body type and mileage on the next, as tiles under icons |
+| Makina | make, model (grouped by make), year, mileage, fuel, gearbox, body type, colour, options ("Opsionet"); the posting form shows them two to a line, each with its icon before its name, the options under them |
 | Prona | rooms (1+1, 2+1...), area, floor, furnishing, features (lift, parking, sea view...) |
 | Elektronikë | brand, storage |
 | Punë | schedule |

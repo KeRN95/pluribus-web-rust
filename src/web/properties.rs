@@ -55,42 +55,37 @@ pub struct PropertyField {
     pub tile: Option<Tile>,
 }
 
-/// A field shown as a tile: its icon (an SVG's inside) and how many of the twelve columns of the
-/// form's grid it takes.
+/// A field shown with an icon before its name: the icon, an SVG's inside.
 #[derive(Clone, Copy)]
 pub struct Tile {
     pub icon: &'static str,
-    pub span: u8,
 }
 
-/// A car's main fields, in their order and lines: make, model and year on the first, three to the
-/// line; fuel, gearbox, body and mileage on the second, four. Each under its icon: the car's front,
-/// a name tag, a calendar, a fuel pump, a gear lever's H, the car's side and a speedometer.
-const TILES: [(&str, u8, &str); 7] = [
-    ("vehicle_make", 4, r#"<path d="M5 11l1.5-4a2 2 0 0 1 1.9-1.3h7.2a2 2 0 0 1 1.9 1.3L19 11"/><rect x="3" y="11" width="18" height="6.5" rx="2"/><path d="M6.5 17.5V20M17.5 17.5V20"/><circle cx="7.5" cy="14.2" r=".9"/><circle cx="16.5" cy="14.2" r=".9"/>"#),
-    ("vehicle_model", 4, r#"<path d="M3.5 12.4V5A1.5 1.5 0 0 1 5 3.5h7.4a1.5 1.5 0 0 1 1.06.44l7 7a1.5 1.5 0 0 1 0 2.12l-7.4 7.4a1.5 1.5 0 0 1-2.12 0l-7-7a1.5 1.5 0 0 1-.44-1.06Z"/><circle cx="8.5" cy="8.5" r="1.3"/>"#),
-    ("vehicle_year", 4, r#"<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>"#),
-    ("vehicle_fuel", 3, r#"<path d="M4.5 20.5v-15a2 2 0 0 1 2-2h5.5a2 2 0 0 1 2 2v15M3 20.5h12.5"/><rect x="7" y="6.5" width="4.5" height="3.5" rx=".8"/><path d="M14 11h1.5a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 0 3 0V8.5l-2.5-3"/>"#),
-    ("vehicle_transmission", 3, r#"<circle cx="6" cy="5.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><circle cx="18" cy="5.5" r="1.5"/><circle cx="6" cy="18.5" r="1.5"/><circle cx="12" cy="18.5" r="1.5"/><path d="M6 7v10M12 7v10M18 7v5H6"/>"#),
-    ("vehicle_body_type", 3, r#"<path d="M5 16.5H3.5V13a1 1 0 0 1 .62-.92L6.5 11l2.2-3.3A1.5 1.5 0 0 1 9.95 7h4.7a1.5 1.5 0 0 1 1.17.56L18.5 11l1.4.42a1 1 0 0 1 .6.92v4.16H19M9 16.5h6"/><circle cx="7" cy="16.5" r="2"/><circle cx="17" cy="16.5" r="2"/>"#),
-    ("vehicle_mileage", 3, r#"<path d="M4.2 17.5a9 9 0 1 1 15.6 0"/><path d="m12 14 3.5-4"/><circle cx="12" cy="14.5" r="1.4"/>"#),
+/// A car's main fields, in their order, two to a line, each its icon before its name: the car's
+/// front, a name tag, a calendar, a fuel pump, a gear lever's H, the car's side, a speedometer and
+/// a paint palette.
+const TILES: [(&str, &str); 8] = [
+    ("vehicle_make", r#"<path d="M5 11l1.5-4a2 2 0 0 1 1.9-1.3h7.2a2 2 0 0 1 1.9 1.3L19 11"/><rect x="3" y="11" width="18" height="6.5" rx="2"/><path d="M6.5 17.5V20M17.5 17.5V20"/><circle cx="7.5" cy="14.2" r=".9"/><circle cx="16.5" cy="14.2" r=".9"/>"#),
+    ("vehicle_model", r#"<path d="M3.5 12.4V5A1.5 1.5 0 0 1 5 3.5h7.4a1.5 1.5 0 0 1 1.06.44l7 7a1.5 1.5 0 0 1 0 2.12l-7.4 7.4a1.5 1.5 0 0 1-2.12 0l-7-7a1.5 1.5 0 0 1-.44-1.06Z"/><circle cx="8.5" cy="8.5" r="1.3"/>"#),
+    ("vehicle_year", r#"<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>"#),
+    ("vehicle_fuel", r#"<path d="M4.5 20.5v-15a2 2 0 0 1 2-2h5.5a2 2 0 0 1 2 2v15M3 20.5h12.5"/><rect x="7" y="6.5" width="4.5" height="3.5" rx=".8"/><path d="M14 11h1.5a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 0 3 0V8.5l-2.5-3"/>"#),
+    ("vehicle_transmission", r#"<circle cx="6" cy="5.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><circle cx="18" cy="5.5" r="1.5"/><circle cx="6" cy="18.5" r="1.5"/><circle cx="12" cy="18.5" r="1.5"/><path d="M6 7v10M12 7v10M18 7v5H6"/>"#),
+    ("vehicle_body_type", r#"<path d="M5 16.5H3.5V13a1 1 0 0 1 .62-.92L6.5 11l2.2-3.3A1.5 1.5 0 0 1 9.95 7h4.7a1.5 1.5 0 0 1 1.17.56L18.5 11l1.4.42a1 1 0 0 1 .6.92v4.16H19M9 16.5h6"/><circle cx="7" cy="16.5" r="2"/><circle cx="17" cy="16.5" r="2"/>"#),
+    ("vehicle_mileage", r#"<path d="M4.2 17.5a9 9 0 1 1 15.6 0"/><path d="m12 14 3.5-4"/><circle cx="12" cy="14.5" r="1.4"/>"#),
+    ("vehicle_color", r#"<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2s-.5-.7-.5-1.2c0-1 .8-1.8 1.8-1.8h2.1a4.3 4.3 0 0 0 4.3-4.3C21 6.6 17 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/>"#),
 ];
 
-/// Whether the fields are a car's, with its main ones as tiles.
+/// Whether the fields are a car's, with its main ones under icons.
 pub fn tiled(fields: &[PropertyField]) -> bool {
     fields.iter().any(|field| field.tile.is_some())
 }
 
 impl PropertyField {
     /// What the field says inside it, as its placeholder or a list's empty choice: the label, with
-    /// the unit, and an asterisk when it is required ("Kilometrazhi (km)", "Marka *"). A tile,
-    /// narrow, says just its unit ("km"), under its icon.
+    /// the unit, and an asterisk when it is required ("Kilometrazhi (km)", "Marka *").
     pub fn placeholder(&self) -> String {
-        let mut text = match (&self.tile, &self.unit) {
-            (Some(_), Some(unit)) => unit.clone(),
-            _ => self.label.clone(),
-        };
-        if let (None, Some(unit)) = (&self.tile, &self.unit) {
+        let mut text = self.label.clone();
+        if let Some(unit) = &self.unit {
             text.push_str(&format!(" ({unit})"));
         }
         if self.required {
@@ -195,12 +190,12 @@ pub fn fields(
             }
         })
         .collect();
-    // A car's (a part's make and model aren't): its main fields as tiles, in their lines, then its
-    // options, then the rest.
+    // A car's (a part's make and model aren't): its main fields under icons, in their order, then
+    // its options, then the rest.
     if attributes.iter().any(|attribute| attribute.code == "vehicle_year") {
-        let rank = |field: &PropertyField| TILES.iter().position(|(code, ..)| field.name == field_name(code));
+        let rank = |field: &PropertyField| TILES.iter().position(|(code, _)| field.name == field_name(code));
         for field in &mut fields {
-            field.tile = rank(field).map(|at| Tile { span: TILES[at].1, icon: TILES[at].2 });
+            field.tile = rank(field).map(|at| Tile { icon: TILES[at].1 });
         }
         fields.sort_by_key(|field| rank(field).unwrap_or(TILES.len() + usize::from(field.kind != "multi")));
     }
