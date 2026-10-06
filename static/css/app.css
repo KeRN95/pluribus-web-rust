@@ -507,8 +507,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .welcome-form {
   display: flex;
   align-items: center;
-  gap: .5rem;
-  padding: .3rem .3rem .3rem 1.25rem;
+  gap: .6rem;
+  padding: .35rem .35rem .35rem 1.4rem;
   border: 1px solid var(--menu-border);
   border-radius: 999px;
   background: var(--surface);
@@ -527,7 +527,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   background: none;
   color: var(--text);
   font: inherit;
-  font-size: max(16px, 1rem); /* 16px at least, or phones zoom in on it */
+  font-size: max(17px, 1.1rem); /* a little bigger than other fields; 16px at least, or phones zoom in */
   appearance: none;
   outline: none;
 }
@@ -535,8 +535,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* No clearing cross: the pill keeps only its button, as Claude's box does. */
 .welcome-form input::-webkit-search-cancel-button { appearance: none; }
 .welcome-search {
-  width: 2.6rem;
-  height: 2.6rem;
+  width: 3rem;
+  height: 3rem;
   background: var(--button);
   color: var(--on-button);
   transition: background-color .15s, transform .1s;
