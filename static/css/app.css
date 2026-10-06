@@ -1377,6 +1377,8 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .attribute dd { display: flex; align-items: center; gap: .55rem; margin: 0; font-weight: var(--medium); overflow-wrap: anywhere; }
 .attribute-icon { flex: none; color: var(--muted); }
 .description { margin: 0; font-size: 1.0625rem; line-height: 1.7; white-space: pre-line; }
+/* A car's title as its seller wrote it, over the description. */
+.description-heading { margin: 0 0 .35rem; font-size: 1.1rem; font-weight: var(--semibold); line-height: 1.35; }
 
 .site-footer {
   padding: 2.5rem 1rem;

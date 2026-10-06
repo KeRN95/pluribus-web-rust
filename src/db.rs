@@ -515,7 +515,7 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
              FROM effective_category_attributes
              WHERE show_in_details AND NOT show_in_card
          )
-         SELECT l.id, l.public_no, l.slug, l.title, l.listing_type, l.price_amount,
+         SELECT l.id, l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.listing_type, l.price_amount,
                 l.currency::text AS currency, l.price_type, l.price_normalized,
                 loc.name AS location_name,
                 (SELECT t.name FROM locations t
@@ -545,7 +545,8 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
                        LEFT JOIN attribute_options o ON o.id = v.value_option_id
                        WHERE v.listing_id = l.id AND v.value_option_id IS NOT NULL) spare
                  -- Not what the title says already (\"Volkswagen\" in \"Volkswagen Golf 7\").
-                 WHERE spare.value IS NOT NULL AND strpos(lower(l.title), lower(spare.value)) = 0
+                 WHERE spare.value IS NOT NULL
+                   AND strpos(lower(coalesce(l.generated_title, l.title)), lower(spare.value)) = 0
                  ORDER BY spare.sort_order
                  LIMIT 1) AS spare_detail,
                 ",
@@ -621,7 +622,7 @@ pub struct MapPoint {
 /// at most MAP_POINTS + 1 of them, the extra one telling that some are left out.
 pub async fn map_points(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec<MapPoint>> {
     let mut query = QueryBuilder::<Postgres>::new(
-        "SELECT l.public_no, l.slug, l.title, l.listing_type, l.price_amount,
+        "SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.listing_type, l.price_amount,
                 l.currency::text AS currency, l.price_type,
                 l.latitude::float8 AS latitude, l.longitude::float8 AS longitude
          FROM listings l",
@@ -778,7 +779,11 @@ pub struct ListingDetail {
     pub id: Uuid,
     pub public_no: i64,
     pub slug: String,
+    /// What the page calls it: a car's title made from what it is (generated_title), or the
+    /// seller's.
     pub title: String,
+    /// The seller's own title, when the page shows a made one: it heads the description.
+    pub heading: Option<String>,
     pub description: String,
     pub status: String,
     pub listing_type: String,
@@ -823,7 +828,9 @@ pub async fn listing_by_public_no(
 ) -> sqlx::Result<Option<ListingDetail>> {
     sqlx::query_as!(
         ListingDetail,
-        r#"SELECT l.id, l.public_no, l.slug, l.title, l.description, l.status, l.listing_type,
+        r#"SELECT l.id, l.public_no, l.slug, coalesce(l.generated_title, l.title) AS "title!",
+                  CASE WHEN l.generated_title IS NOT NULL THEN l.title END AS heading,
+                  l.description, l.status, l.listing_type,
                   l.condition, l.price_amount, l.currency::text AS "currency!", l.price_type,
                   c.id AS category_id, c.name AS category_name, c.slug AS category_slug,
                   loc.name AS "location_name?", l.published_at,
@@ -1546,7 +1553,11 @@ pub async fn create_listing(db: &PgPool, listing: &NewListing<'_>) -> sqlx::Resu
     .execute(&mut *tx)
     .await?;
     save_properties(&mut tx, row.id, listing).await?;
-    sqlx::query!("UPDATE listings SET search_extra = listing_search_extra(id) WHERE id = $1", row.id)
+    sqlx::query!(
+        "UPDATE listings SET search_extra = listing_search_extra(id), generated_title = listing_generated_title(id)
+         WHERE id = $1",
+        row.id
+    )
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
@@ -1627,7 +1638,11 @@ pub async fn update_listing(db: &PgPool, public_no: i64, listing: &NewListing<'_
         .execute(&mut *tx)
         .await?;
     save_properties(&mut tx, id, listing).await?;
-    sqlx::query!("UPDATE listings SET search_extra = listing_search_extra(id) WHERE id = $1", id)
+    sqlx::query!(
+        "UPDATE listings SET search_extra = listing_search_extra(id), generated_title = listing_generated_title(id)
+         WHERE id = $1",
+        id
+    )
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
@@ -1709,7 +1724,8 @@ pub struct MyListing {
 pub async fn my_listings(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<MyListing>> {
     sqlx::query_as!(
         MyListing,
-        r#"SELECT public_no, slug, title, status, listing_type, price_amount, currency::text AS "currency!", price_type
+        r#"SELECT public_no, slug, coalesce(generated_title, title) AS "title!", status, listing_type, price_amount,
+                  currency::text AS "currency!", price_type
            FROM listings
            WHERE created_by_user_id = $1 AND status <> 'DELETED'
            ORDER BY created_at DESC, public_no DESC"#,
@@ -1838,9 +1854,10 @@ pub async fn approve_option(db: &PgPool, id: Uuid, label: &str) -> sqlx::Result<
     if approved.is_none() {
         return Ok(Approval::NotPending);
     }
-    // Search reads the names from search_extra (listing_search_extra), which has the old spelling.
+    // Search reads the names from search_extra (listing_search_extra), which has the old spelling,
+    // and a car's title from generated_title.
     sqlx::query!(
-        "UPDATE listings SET search_extra = listing_search_extra(id)
+        "UPDATE listings SET search_extra = listing_search_extra(id), generated_title = listing_generated_title(id)
          WHERE id IN (SELECT listing_id FROM listing_attribute_values WHERE value_option_id = $1)",
         id,
     )
@@ -1882,7 +1899,8 @@ pub async fn merge_option(db: &PgPool, id: Uuid, into: Uuid) -> sqlx::Result<boo
         .await?;
     sqlx::query!("DELETE FROM attribute_options WHERE id = $1", id).execute(&mut *tx).await?;
     sqlx::query!(
-        "UPDATE listings SET search_extra = listing_search_extra(id) WHERE id = ANY($1)",
+        "UPDATE listings SET search_extra = listing_search_extra(id), generated_title = listing_generated_title(id)
+         WHERE id = ANY($1)",
         &listings,
     )
     .execute(&mut *tx)

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE listings SET search_extra = listing_search_extra(id), generated_title = listing_generated_title(id)\n         WHERE id = ANY($1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "31586ddeb6eaa3915f5d6c5e30c200a87c8842d7ea8c0a4b95b6ca4107b351df"
+}

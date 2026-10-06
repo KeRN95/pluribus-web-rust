@@ -75,6 +75,10 @@ const TILES: [(&str, &str); 8] = [
     ("vehicle_color", r#"<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2s-.5-.7-.5-1.2c0-1 .8-1.8 1.8-1.8h2.1a4.3 4.3 0 0 0 4.3-4.3C21 6.6 17 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/>"#),
 ];
 
+/// What a car's title is made of (listing_generated_title, migration 0015): its listing page
+/// leaves them out of the details, since the title says them.
+pub const TITLE_CODES: [&str; 4] = ["vehicle_make", "vehicle_model", "vehicle_body_type", "vehicle_color"];
+
 /// Icons for what isn't a form's tile but has one on the listing page: its condition (a circled
 /// check) and a car's options (a list of checks).
 const MORE_ICONS: [(&str, &str); 2] = [

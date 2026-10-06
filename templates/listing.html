@@ -164,6 +164,10 @@
 
   <section>
     <h2>Përshkrimi</h2>
+    {%- if let Some(heading) = listing.heading %}
+    {#- A car's own title, as its seller wrote it: the page's is made from what the car is. -#}
+    <h3 class="description-heading">{{ heading }}</h3>
+    {%- endif %}
     <p class="description">{{ listing.description }}</p>
   </section>
 </article>

@@ -168,8 +168,11 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         SellerContact::Phone(_) => Reveal::Phone,
         SellerContact::Email(_) => Reveal::Email,
     });
+    // A car's title says its make, model, body type and colour: its details leave them out.
+    let titled = listing.heading.is_some();
     let mut details: Vec<Detail> = attributes
         .into_iter()
+        .filter(|attribute| !(titled && properties::TITLE_CODES.contains(&attribute.code.as_str())))
         .map(|attribute| Detail {
             icon: properties::icon(&attribute.code),
             wide: attribute.multi,
