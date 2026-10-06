@@ -1162,7 +1162,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 
 /* A listing's seller, and the seller's profile */
 
-/* Under the listing's buttons, a row like Claude's lists: the seller's initial, small, their name,
+/* Over the listing's buttons, a row like Claude's lists: the seller's initial, small, their name,
    and quietly under it since when and how many listings; a chevron at the end, since it leads to
    their profile, and a soft shade under the pointer or a finger. The shade reaches a little past
    the text, which stays in line with the page's. */
@@ -1170,7 +1170,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   display: flex;
   align-items: center;
   gap: .6rem;
-  margin: .6rem -.6rem 0;
+  margin: .75rem -.6rem 0;
   padding: .5rem .6rem;
   border-radius: 14px;
   color: var(--text);
@@ -1352,7 +1352,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .loan-note { margin: .4rem 0 0; color: var(--muted); font-size: .8rem; }
 
 .badge { margin-left: .4rem; padding: .2rem .65rem; border-radius: 999px; background: var(--badge); font-size: .85rem; font-weight: var(--semibold); }
-.actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.25rem 0; }
+.actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .9rem 0 1.25rem; }
 
 .button {
   display: inline-flex;
@@ -1374,35 +1374,33 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .button.secondary:hover { background: var(--surface-muted); }
 
 /* The listing's actions drawn like Claude's: pills, a press sinks them a little; the main one, the
-   seller's number, filled in the site's colour with a soft raise like Claude's send button, the
-   rest on the surface with the menus' hairline, their icon before their name. */
+   seller's number, filled in the site's colour, the rest on the surface with the menus'
+   hairline. */
 .actions .button { border-radius: 999px; transition: background-color .15s, transform .1s; }
 .actions .button:active { transform: scale(.97); }
 .actions .button.secondary { gap: .45rem; border-color: var(--menu-border); }
-/* The way to the seller's number: a phone in a coral circle (an envelope for an e-mail address),
-   as tall as the buttons beside it. Once tapped, the number takes its place, after the same icon,
-   with a button beside it that copies it (copy_controller.js). */
-.reveal-button {
+/* The way to the seller's number: a phone in a coral circle (an envelope for an e-mail address).
+   Once tapped, the number takes its place, after the same icon, with a button beside it that
+   copies it (copy_controller.js). */
+.reveal-button { justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; border-radius: 50%; }
+.reveal-contact { gap: .45rem; }
+.contact-icon { flex: none; }
+.contact-revealed { display: flex; gap: .5rem; }
+/* The copy and share buttons: an icon in a soft circle, no border, as tall as the coral one; a
+   check for a moment once they copy (copy_controller.js, share_controller.js). */
+.actions .button.icon-circle {
   justify-content: center;
   width: 2.85rem;
   height: 2.85rem;
   padding: 0;
-  border-radius: 50%;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%), 0 1px 2px rgb(0 0 0 / 12%);
+  border-color: transparent;
+  background: var(--surface-muted);
 }
-.reveal-contact { gap: .45rem; box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%), 0 1px 2px rgb(0 0 0 / 12%); }
-.contact-icon { flex: none; }
-.contact-revealed { display: flex; gap: .5rem; }
-.actions .copy-button { justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; }
-.copy-button .icon-copied,
-.copy-button.is-copied .icon-copy { display: none; }
-.copy-button.is-copied .icon-copied { display: block; color: var(--accent); }
-/* On a phone, once the number shows, Shpërndaje keeps just its icon, a circle like the copy
-   button, so that the row stays one line; screen readers still hear its name. */
-@media (max-width: 719px) {
-  .actions:has(.contact-revealed) .share-button { justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; }
-  .actions:has(.contact-revealed) .share-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
+.actions .button.icon-circle:hover { background: color-mix(in srgb, var(--text) 9%, var(--surface-muted)); }
+.icon-circle .icon-copied,
+.icon-circle.is-copied .icon-copy,
+.icon-circle.is-copied .icon-link { display: none; }
+.icon-circle.is-copied .icon-copied { display: block; color: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
   .actions .button { transition: none; }
   .actions .button:active { transform: none; }

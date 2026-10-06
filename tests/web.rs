@@ -2225,8 +2225,9 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // A private seller: Ana, with the five fixture listings she sells.
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
-    // The category above the photo; the title, the price and the buttons under it; then her
-    // initial, her name, since when and how many listings, leading to her profile; then the details.
+    // The category above the photo; the title and the price under it; then her initial, her
+    // name, since when and how many listings, leading to her profile; then the buttons, the
+    // share one a link in a circle; then the details.
     let order = positions(&page, &[
         r#"<nav class="listing-trail""#,
         r#"<div class="gallery">"#,
@@ -2234,10 +2235,11 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur</p>"#,
         r#"<p class="listing-price">"#,
-        r#"<div class="actions">"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="seller-name">Ana</span>"#,
         r#"<span class="seller-summary">Në Marketplace që nga "#,
+        r#"<div class="actions">"#,
+        r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
         "<h2>Detajet</h2>",
     ]);
     assert!(order.is_sorted(), "{order:?}");
