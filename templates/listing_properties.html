@@ -2,8 +2,10 @@
     sent alone, in its frame, when the category changes. -#}
 {%- if !fields.is_empty() %}
 <fieldset class="property-fields{% if crate::web::properties::tiled(fields) %} vehicle-fields{% endif %}">
-  {#- Named for screen readers only: out of sight, it leaves the box's border whole. -#}
+  {#- The box's name: for screen readers the legend, out of sight so that it leaves the border
+      whole; for the eye a header inside the box, over a hairline. -#}
   <legend class="visually-hidden">Detajet</legend>
+  <div class="property-heading" aria-hidden="true">Detajet</div>
   {%- for field in fields %}
   <div class="field{% if field.kind == "multi" || field.kind == "check" %} field-wide{% endif %}">
     {%- if field.kind == "check" %}

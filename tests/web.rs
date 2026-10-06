@@ -1682,8 +1682,10 @@ async fn a_car_is_posted_with_its_make_model_and_year(pool: PgPool) {
     // Its main fields with their icons, two to a line: make, model, year, fuel, gearbox, body,
     // mileage and colour; then its options.
     assert!(frame.contains(r#"<fieldset class="property-fields vehicle-fields">"#));
-    // The box is named for screen readers only, so nothing breaks its border.
+    // The box is named inside it, not in its border: for screen readers by its legend, out of
+    // sight, for the eye by a header.
     assert!(frame.contains(r#"<legend class="visually-hidden">Detajet</legend>"#));
+    assert!(frame.contains(r#"<div class="property-heading" aria-hidden="true">Detajet</div>"#));
     let order = positions(&frame, &[
         r#"for="prop_vehicle_make""#,
         r#"for="prop_vehicle_model""#,
