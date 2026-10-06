@@ -245,7 +245,6 @@ export default class extends Controller {
       row.setAttribute("aria-expanded", String(open));
       row.classList.add("picker-branch");
       row.dataset.key = child.key;
-      row.style.setProperty("--level", level - 1);
       const toggle = element("span", "picker-toggle", { innerHTML: CHEVRON });
       toggle.setAttribute("aria-hidden", "true");
       row.append(toggle);
@@ -260,10 +259,7 @@ export default class extends Controller {
     const item = element("div", "picker-option", { textContent: option.textContent.trim(), tabIndex: -1 });
     item.setAttribute("role", this.treeValue ? "treeitem" : "option");
     item.dataset.value = option.value;
-    if (this.treeValue) {
-      item.setAttribute("aria-level", level);
-      item.style.setProperty("--level", level - 1);
-    }
+    if (this.treeValue) item.setAttribute("aria-level", level);
     return item;
   }
 
