@@ -394,8 +394,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   vertical-align: -.2em;
 }
 
-/* The listing page's line under the price. */
+/* The listing page's line under the photo: where, when, which number. */
 .card-meta { margin: .25rem 0 0; color: var(--muted); font-size: .85rem; }
+.listing-meta { margin-top: .6rem; }
 .more { display: inline-block; padding: 1rem; color: var(--muted); }
 .empty { color: var(--muted); }
 

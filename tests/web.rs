@@ -2224,6 +2224,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     let order = positions(&page, &[
         r#"<nav class="listing-trail""#,
         r#"<div class="gallery">"#,
+        r#"<p class="card-meta listing-meta">"#,
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="listing-price">"#,
         r#"<div class="actions">"#,

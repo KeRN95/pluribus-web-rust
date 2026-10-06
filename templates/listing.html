@@ -57,6 +57,13 @@
   </div>
   {% endif %}
 
+  {#- Under the photo: where it is, when it went up, and its number. -#}
+  <p class="card-meta listing-meta">
+    {% if let Some(location) = listing.location_name %}{{ location }} · {% endif %}
+    {% if let Some(date) = listing.published_display() %}Publikuar më {{ date }} · {% endif %}
+    Nr. {{ listing.public_no }}
+  </p>
+
   <header class="listing-header">
     <h1>{{ listing.title }}</h1>
     {%- if listing.loan_amount().is_some() %}
@@ -72,11 +79,6 @@
     {%- else %}
     <p class="listing-price">{{ listing.price_display() }}</p>
     {%- endif %}
-    <p class="card-meta">
-      {% if let Some(location) = listing.location_name %}{{ location }} · {% endif %}
-      {% if let Some(date) = listing.published_display() %}Publikuar më {{ date }} · {% endif %}
-      Nr. {{ listing.public_no }}
-    </p>
   </header>
 
   <div class="actions">
