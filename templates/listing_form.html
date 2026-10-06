@@ -19,7 +19,7 @@
 
   {#- listing_form_controller.js offers the listing types and the condition the chosen category
       takes, and its usual currency; the server checks them all the same. Multipart, for the photos. -#}
-  <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data" data-controller="listing-form">
+  <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data" data-controller="listing-form narrow">
     {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
 
     <div class="field">

@@ -597,7 +597,7 @@ async fn filter_form_offers_the_category_properties(pool: PgPool) {
     let cars = get(pool.clone(), "/c/makina").await.body;
     assert!(cars.contains(r#"<legend class="filter-label">Karburanti</legend>"#));
     assert!(cars.contains(r#"<input type="checkbox" name="vehicle_fuel" value="DIESEL">"#));
-    assert!(cars.contains(r#"<optgroup label="Volkswagen">"#), "models are grouped by make");
+    assert!(cars.contains(r#"<optgroup label="Volkswagen" data-parent="VOLKSWAGEN">"#), "models are grouped by make");
     assert!(cars.contains("Gjendja"));
 
     let property = get(pool.clone(), "/c/prona").await.body;
@@ -615,10 +615,16 @@ async fn filter_form_offers_the_category_properties(pool: PgPool) {
     assert!(phones.contains("iPhone 13, 128 GB, si i ri"));
     assert!(phones.contains(r#"name="electronics_brand""#));
 
-    // A chosen make narrows the models to its own.
-    let bmw = get(pool, "/c/makina?vehicle_make=BMW").await.body;
-    assert!(bmw.contains(r#"<optgroup label="BMW">"#));
-    assert!(!bmw.contains(r#"<optgroup label="Volkswagen">"#));
+    // A chosen make narrows the models to its own: the others' wait, hidden, for the make to
+    // change in the form (narrow_controller.js).
+    let bmw = get(pool.clone(), "/c/makina?vehicle_make=BMW").await.body;
+    assert!(bmw.contains(r#"<select id="filter-vehicle_model" name="vehicle_model" data-depends-on="vehicle_make">"#));
+    assert!(bmw.contains(r#"<optgroup label="BMW" data-parent="BMW">"#));
+    assert!(bmw.contains(r#"<optgroup label="Volkswagen" data-parent="VOLKSWAGEN" hidden>"#));
+    // A model of another make filters nothing, nor shows as chosen.
+    let mixed = get(pool, "/c/makina?vehicle_make=MERCEDES_BENZ&vehicle_model=VOLKSWAGEN_GOLF").await.body;
+    assert!(mixed.contains("Mercedes-Benz C 220, 2018, automatike"));
+    assert!(!mixed.contains(r#"<option value="VOLKSWAGEN_GOLF" selected>"#));
 }
 
 #[sqlx::test(fixtures("listings"))]

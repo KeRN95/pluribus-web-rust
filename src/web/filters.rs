@@ -67,6 +67,16 @@ pub struct ChoiceGroup {
     pub choices: Vec<Choice>,
 }
 
+/// A dependent property's options under the parent option they belong to: a make's models.
+pub struct OptionGroup {
+    pub label: String,
+    /// The parent option's code, "BMW".
+    pub parent: String,
+    /// Under another parent than the one chosen: hidden, until the form's choice changes.
+    pub hidden: bool,
+    pub choices: Vec<Choice>,
+}
+
 /// A filter that is in use, shown above the results with a link that removes it.
 pub struct Chip {
     pub label: String,
@@ -80,7 +90,10 @@ pub struct Field {
     pub kind: FieldKind,
     pub choices: Vec<Choice>,
     /// Options grouped under the parent option they belong to, e.g. models under their make.
-    pub groups: Vec<ChoiceGroup>,
+    pub groups: Vec<OptionGroup>,
+    /// The field this one depends on, the make for the model: narrow_controller.js shows only the
+    /// groups under its choice, as soon as it changes.
+    pub depends_on: Option<String>,
     pub min: String,
     pub max: String,
     pub unit: String,
@@ -130,9 +143,6 @@ pub struct Filters<'a> {
 /// One filterable property and what is chosen for it.
 struct Property<'a> {
     attribute: &'a FilterAttribute,
-    /// The options on offer. A dependent property whose parent is chosen only offers the chosen
-    /// parents' options: pick Volkswagen, and the models are Golf and Passat.
-    options: Vec<&'a AttributeOption>,
     selected: Vec<&'a AttributeOption>,
     min: Option<Decimal>,
     max: Option<Decimal>,
@@ -194,9 +204,8 @@ impl<'a> Filters<'a> {
             if chosen_parents.is_empty() {
                 continue;
             }
-            let belongs = |o: &&AttributeOption| o.parent_id.is_some_and(|id| chosen_parents.contains(&id));
-            properties[i].options.retain(belongs);
-            properties[i].selected.retain(belongs);
+            // A Golf filters nothing once the make is BMW.
+            properties[i].selected.retain(|o| o.parent_id.is_some_and(|id| chosen_parents.contains(&id)));
         }
 
         let radius_km = params
@@ -584,21 +593,16 @@ impl<'a> Filters<'a> {
 impl<'a> Property<'a> {
     /// `all` is the category's other filterable properties: a year pair's closing year is there.
     fn read(attribute: &'a FilterAttribute, all: &'a [FilterAttribute], params: &Params) -> Self {
-        let options: Vec<&AttributeOption> = attribute.options.iter().collect();
         let code = attribute.code.as_str();
         let (mut selected, mut min, mut max, mut checked) = (Vec::new(), None, None, false);
         let fits_to = year_pair_end(attribute, all);
         if fits_to.is_some() {
             let year = params.first(&year_param(attribute)).and_then(parse_year);
-            return Self { attribute, options, selected, min, max, checked, fits_to, year };
+            return Self { attribute, selected, min, max, checked, fits_to, year };
         }
         match attribute.data_type.as_str() {
             "SELECT" | "MULTISELECT" => {
-                selected = options
-                    .iter()
-                    .copied()
-                    .filter(|o| params.all(code).any(|value| value == o.code))
-                    .collect();
+                selected = attribute.options.iter().filter(|o| params.all(code).any(|value| value == o.code)).collect();
             }
             "NUMBER" => {
                 (min, max) = ordered(
@@ -609,7 +613,7 @@ impl<'a> Property<'a> {
             "BOOLEAN" => checked = params.first(code) == Some("1"),
             _ => {}
         }
-        Self { attribute, options, selected, min, max, checked, fits_to, year: None }
+        Self { attribute, selected, min, max, checked, fits_to, year: None }
     }
 
     fn filter(&self) -> Option<AttributeFilter> {
@@ -643,7 +647,7 @@ impl<'a> Property<'a> {
 
     fn field(&self, all: &[Property]) -> Field {
         let attribute = self.attribute;
-        let choice = |option: &&AttributeOption| Choice {
+        let choice = |option: &AttributeOption| Choice {
             value: option.code.clone(),
             label: option.label.clone(),
             selected: self.selected.iter().any(|s| s.id == option.id),
@@ -654,6 +658,7 @@ impl<'a> Property<'a> {
             kind: FieldKind::Select,
             choices: Vec::new(),
             groups: Vec::new(),
+            depends_on: None,
             min: self.min.map(plain).unwrap_or_default(),
             max: self.max.map(plain).unwrap_or_default(),
             unit: attribute.unit.clone().unwrap_or_default(),
@@ -673,26 +678,35 @@ impl<'a> Property<'a> {
                 let parent = attribute
                     .parent_attribute_id
                     .and_then(|id| all.iter().find(|p| p.attribute.id == id));
-                field.choices = self
+                field.choices = attribute
                     .options
                     .iter()
                     .filter(|o| parent.is_none() || o.parent_id.is_none())
                     .map(choice)
                     .collect();
+                // Every make's models, so that picking another make in the form offers its own
+                // straight away; those of the makes not chosen start hidden.
                 if let Some(parent) = parent {
+                    field.depends_on = Some(parent.attribute.code.clone());
                     for parent_option in parent.attribute.options.iter() {
-                        let choices: Vec<Choice> = self
+                        let choices: Vec<Choice> = attribute
                             .options
                             .iter()
                             .filter(|o| o.parent_id == Some(parent_option.id))
                             .map(choice)
                             .collect();
                         if !choices.is_empty() {
-                            field.groups.push(ChoiceGroup { label: parent_option.label.clone(), choices });
+                            field.groups.push(OptionGroup {
+                                label: parent_option.label.clone(),
+                                parent: parent_option.code.clone(),
+                                hidden: !parent.selected.is_empty()
+                                    && !parent.selected.iter().any(|chosen| chosen.id == parent_option.id),
+                                choices,
+                            });
                         }
                     }
                 }
-                let few = parent.is_none() && self.options.len() <= CHECKBOX_LIMIT;
+                let few = parent.is_none() && attribute.options.len() <= CHECKBOX_LIMIT;
                 if data_type == "MULTISELECT" || few {
                     field.kind = FieldKind::Checkboxes;
                     field.choices.extend(field.groups.drain(..).flat_map(|group| group.choices));

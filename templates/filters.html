@@ -1,6 +1,6 @@
 {#- The filter form. Its fields come from the category's filterable properties (see filters.rs). -#}
 <form id="filter-form" class="filter-form" action="{{ filters.action() }}" method="get"
-      data-filters-target="form" data-action="change->filters#change">
+      data-controller="narrow" data-filters-target="form" data-action="change->filters#change">
   {%- for (name, value) in filters.kept_fields() %}
   <input type="hidden" name="{{ name }}" value="{{ value }}">
   {%- endfor %}
@@ -76,11 +76,11 @@
   <div class="filter-group">
     <label class="filter-label" for="filter-{{ field.name }}">{{ field.label }}</label>
     <div class="picker" data-controller="picker">
-    <select id="filter-{{ field.name }}" name="{{ field.name }}">
+    <select id="filter-{{ field.name }}" name="{{ field.name }}"{% if let Some(parent) = field.depends_on %} data-depends-on="{{ parent }}"{% endif %}>
       <option value="">Të gjitha</option>
       {% for choice in field.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
       {% for group in field.groups %}
-      <optgroup label="{{ group.label }}">
+      <optgroup label="{{ group.label }}" data-parent="{{ group.parent }}"{% if group.hidden %} hidden{% endif %}>
         {% for choice in group.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
       </optgroup>
       {% endfor %}
