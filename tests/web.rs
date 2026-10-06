@@ -1019,7 +1019,7 @@ fn listing_fields<'a>(replace: (&'a str, &'a str), started: &'a str) -> Vec<(&'a
 async fn a_signed_in_seller_posts_a_listing(pool: PgPool) {
     let started = started();
     // Not signed in, a listing needs a phone number or an e-mail address (see
-    // a_listing_posted_before_signing_in_goes_live_once_the_code_comes_back).
+    // a_listing_posted_without_signing_in_goes_live_at_once).
     let anonymous = post_form(pool.clone(), "/shto", &listing_fields(("", ""), &started), None).await;
     assert_eq!(anonymous.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert!(anonymous.body.contains("Shkruaj një numër celulari"));

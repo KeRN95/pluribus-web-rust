@@ -428,7 +428,7 @@ fn check<'a>(
 }
 
 /// The form for a new listing. A visitor who isn't signed in fills in a phone number or e-mail
-/// address too, and confirms it with a code once the listing is written (`create_listing`).
+/// address too, which the listing goes under (`create_listing`).
 pub async fn new_listing(State(state): State<AppState>, headers: HeaderMap) -> Result<Response> {
     let user = current_user(&state, &headers).await?;
     let (categories, cities) = tokio::try_join!(db::categories(&state.db), db::cities(&state.db))?;
@@ -443,10 +443,9 @@ async fn attributes_for(state: &AppState, categories: &Categories, slug: &str) -
     }
 }
 
-/// Publishes a listing. Signed in, at once. Otherwise the listing waits as a draft, under an
-/// account for the contact typed in (created if new, see db::account_for_contact), and a code goes
-/// to that contact; typing it back confirms the contact and publishes the listing
-/// (account::check_code). The same checks and limits apply either way.
+/// Publishes a listing at once, signed in or not: without signing in, under the account of the
+/// phone number or e-mail address typed with it, made with the listing if there is none (below).
+/// The same checks and limits apply either way.
 pub async fn create_listing(
     State(state): State<AppState>,
     ClientIp(ip): ClientIp,
