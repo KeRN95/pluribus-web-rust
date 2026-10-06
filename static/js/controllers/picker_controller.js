@@ -8,8 +8,9 @@ import { Controller } from "@hotwired/stimulus";
 //
 // A list with groups folds, as does a category list (data-picker-tree-value): a group's options, a
 // category's subcategories, show under it once its arrow opens them, the path to the choice open
-// from the start (towns under their county, models under their make). A category is chosen by its
-// name, its arrow only opens it; the spaces before its name (filters::indented) give its level.
+// from the start (towns under their county, models under their make). The posting form's groups,
+// "Automjete › Pjesë dhe aksesorë", nest by their path; the other category lists by the leading
+// spaces of category_choices (filters.rs), which give each category's level.
 
 let count = 0;
 const CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
@@ -186,19 +187,28 @@ export default class extends Controller {
     }
   }
 
-  // As a tree: [{ key, label, option, children }], options under their group, subcategories under
-  // their category.
+  // Categories as a tree: [{ label, option, children }], each subcategory under its category.
   fillTree() {
     const root = { children: [] };
     const leaf = (option) => ({ key: option.value, label: option.textContent.trim(), option, children: [] });
     if ([...this.select.children].some((child) => child.tagName === "OPTGROUP")) {
-      // Each group's options under its heading, which only opens and closes them.
+      // The posting form: groups by path, "Automjete › Pjesë dhe aksesorë" under "Automjete".
+      const groups = new Map();
+      const node = (path) => {
+        if (!groups.has(path)) {
+          const parts = path.split(" › ");
+          const parent = parts.length > 1 ? node(parts.slice(0, -1).join(" › ")) : root;
+          const made = { key: `group:${path}`, label: parts.at(-1), option: null, children: [] };
+          parent.children.push(made);
+          groups.set(path, made);
+        }
+        return groups.get(path);
+      };
       for (const child of this.select.children) {
-        if (child.tagName !== "OPTGROUP") {
+        if (child.tagName === "OPTGROUP") {
+          if (!child.hidden) node(child.label).children.push(...this.shownOptions(child.children).map(leaf));
+        } else {
           root.children.push(...this.shownOptions([child]).map(leaf));
-        } else if (!child.hidden) {
-          const options = this.shownOptions(child.children).map(leaf);
-          root.children.push({ key: `group:${child.label}`, label: child.label, option: null, children: options });
         }
       }
     } else {

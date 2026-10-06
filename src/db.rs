@@ -44,6 +44,11 @@ impl Categories {
         self.0.iter().filter(move |c| c.parent_id == Some(id))
     }
 
+    /// Whether the category only groups subcategories, so listings go into one of those instead.
+    pub fn has_children(&self, id: Uuid) -> bool {
+        self.children(id).next().is_some()
+    }
+
     pub fn by_slug(&self, slug: &str) -> Option<&Category> {
         self.0.iter().find(|c| c.slug == slug)
     }

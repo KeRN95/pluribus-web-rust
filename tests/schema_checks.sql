@@ -442,11 +442,13 @@ SELECT pg_temp.check('the deleted conversation left no messages behind',
 
 \echo '--- category properties'
 
-SELECT pg_temp.check('each kind of the old "type" properties is a subcategory, and every category takes listings, a main one too',
+SELECT pg_temp.check('each kind of the old "type" properties is a subcategory, and categories with subcategories take no listings',
     (SELECT count(*) = 53 FROM categories WHERE replaces_option_id IS NOT NULL)
     AND (SELECT count(*) = 4 FROM categories WHERE parent_id = (SELECT id FROM categories WHERE slug = 'automjete'))
     AND (SELECT count(*) = 9 FROM categories WHERE parent_id = (SELECT id FROM categories WHERE slug = 'pjese-dhe-aksesore'))
-    AND NOT EXISTS (SELECT 1 FROM categories WHERE NOT allow_listings));
+    AND NOT EXISTS (SELECT 1 FROM categories parent
+                    WHERE parent.allow_listings
+                      AND EXISTS (SELECT 1 FROM categories child WHERE child.parent_id = parent.id)));
 
 SELECT pg_temp.check('the old "type" properties are no longer filters, the subcategories are',
     NOT EXISTS (SELECT 1 FROM effective_category_attributes e

@@ -317,7 +317,10 @@ struct PropertiesFrame {
 pub async fn fields_for_category(State(state): State<AppState>, RawQuery(query): RawQuery) -> Result<Response> {
     let params = Params::parse(query.as_deref());
     let categories = db::categories(&state.db).await?;
-    let category = params.first("category").and_then(|slug| categories.by_slug(slug));
+    let category = params
+        .first("category")
+        .and_then(|slug| categories.by_slug(slug))
+        .filter(|category| !categories.has_children(category.id));
     let attributes = match category {
         Some(category) => db::form_attributes(&state.db, category.id).await?,
         None => Vec::new(),
