@@ -445,6 +445,7 @@ SELECT pg_temp.check('the deleted conversation left no messages behind',
 SELECT pg_temp.check('each kind of the old "type" properties is a subcategory, and categories with subcategories take no listings',
     (SELECT count(*) = 53 FROM categories WHERE replaces_option_id IS NOT NULL)
     AND (SELECT count(*) = 4 FROM categories WHERE parent_id = (SELECT id FROM categories WHERE slug = 'automjete'))
+    AND (SELECT count(*) = 9 FROM categories WHERE parent_id = (SELECT id FROM categories WHERE slug = 'pjese-dhe-aksesore'))
     AND NOT EXISTS (SELECT 1 FROM categories parent
                     WHERE parent.allow_listings
                       AND EXISTS (SELECT 1 FROM categories child WHERE child.parent_id = parent.id)));
@@ -466,6 +467,34 @@ SELECT pg_temp.check('a subcategory inherits its parent''s properties, and its o
          JOIN categories c ON c.id = e.category_id
          JOIN attributes a ON a.id = e.attribute_id
          WHERE c.slug = 'apartamente' AND a.code = 'property_floor'));
+
+INSERT INTO category_attributes (category_id, attribute_id, searchable, filterable, sort_order)
+SELECT c.id, a.id, false, false, 5 FROM categories c, attributes a WHERE c.slug = 'automjete' AND a.code = 'vehicle_color';
+INSERT INTO category_attributes (category_id, attribute_id, filterable, sort_order, label)
+SELECT c.id, a.id, false, 15, 'Marka e makinës' FROM categories c, attributes a
+WHERE c.slug = 'gps-dhe-navigatore' AND a.code = 'vehicle_make';
+
+SELECT pg_temp.check('three levels down, a kind of part inherits from its parent and grandparent, labels too, and its own settings win',
+    (SELECT string_agg(a.code || '=' || coalesce(e.label, '-'), ', ' ORDER BY e.sort_order)
+     FROM effective_category_attributes e
+     JOIN categories c ON c.id = e.category_id
+     JOIN attributes a ON a.id = e.attribute_id
+     WHERE c.slug = 'gps-dhe-navigatore')
+        = 'vehicle_color=-, vehicle_make=Marka e makinës, vehicle_model=Modeli i automjetit, fits_from_year=-, fits_to_year=-'
+    AND (SELECT e.label = 'Marka e automjetit' AND e.filterable
+         FROM effective_category_attributes e
+         JOIN categories c ON c.id = e.category_id
+         JOIN attributes a ON a.id = e.attribute_id
+         WHERE c.slug = 'goma-dhe-disqe' AND a.code = 'vehicle_make')
+    AND (SELECT count(*) = 9 AND count(e.label) = 0 AND bool_or(a.code = 'vehicle_color' AND e.sort_order = 65)
+         FROM effective_category_attributes e
+         JOIN categories c ON c.id = e.category_id
+         JOIN attributes a ON a.id = e.attribute_id
+         WHERE c.slug = 'makina'));
+
+DELETE FROM category_attributes ca USING categories c, attributes a
+WHERE ca.category_id = c.id AND ca.attribute_id = a.id
+  AND ((c.slug = 'automjete' AND a.code = 'vehicle_color') OR (c.slug = 'gps-dhe-navigatore' AND a.code = 'vehicle_make'));
 
 SELECT pg_temp.expect_error('a listing type categories do not know',
 $$UPDATE categories SET listing_types = '{SELL,SWAP}' WHERE slug = 'te-tjera'$$, '23514');

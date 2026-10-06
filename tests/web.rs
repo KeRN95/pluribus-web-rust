@@ -1189,6 +1189,222 @@ async fn nobody_else_can_edit_a_listing(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
+async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
+    // Automjete lists its four subcategories; the kinds of parts sit under the fourth.
+    let vehicles = html(pool.clone(), "/c/automjete").await;
+    for (slug, name) in [
+        ("makina", "Makina"),
+        ("motocikleta", "Motoçikleta"),
+        ("automjete-tregtare", "Automjete tregtare"),
+        ("pjese-dhe-aksesore", "Pjesë dhe aksesorë"),
+    ] {
+        assert!(vehicles.contains(&format!(r#"<a class="chip" href="/c/{slug}">{name}</a>"#)), "{slug}");
+    }
+    assert!(!vehicles.contains(r#"<a class="chip" href="/c/gps-dhe-navigatore">"#));
+
+    // The parts page lists its kinds in order, the spare parts first, under its old address.
+    let parts = html(pool.clone(), "/c/pjese-dhe-aksesore").await;
+    let kinds = positions(&parts, &[
+        r#"<a class="chip" href="/c/pjese-kembimi">Pjesë këmbimi</a>"#,
+        r#"<a class="chip" href="/c/goma-dhe-disqe">Goma dhe disqe</a>"#,
+        r#"<a class="chip" href="/c/audio-dhe-video">Audio dhe video</a>"#,
+        r#"<a class="chip" href="/c/gps-dhe-navigatore">GPS dhe navigatorë</a>"#,
+        r#"<a class="chip" href="/c/styling-dhe-pajisje-sportive">Styling dhe pajisje sportive</a>"#,
+        r#"<a class="chip" href="/c/tapete-makine">Tapete makine</a>"#,
+        r#"<a class="chip" href="/c/rimorkio">Rimorkio</a>"#,
+        r#"<a class="chip" href="/c/mbushes-per-makina-elektrike">Mbushës për makina elektrike</a>"#,
+        r#"<a class="chip" href="/c/pjese-te-tjera">Të tjera</a>"#,
+    ]);
+    assert!(kinds.is_sorted(), "{kinds:?}");
+
+    // A kind's page: its two levels above it in the breadcrumbs, and the menu shows it a level
+    // further in than its parent.
+    let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
+    let crumbs = positions(&gps, &[r#"<a href="/c/automjete">Automjete</a>"#, r#"<a href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#]);
+    assert!(crumbs.is_sorted());
+    assert!(gps.contains(r#"<a class="menu-sub" href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#));
+    assert!(gps.contains(r#"<a class="menu-sub menu-deep" href="/c/gps-dhe-navigatore" aria-current="page">GPS dhe navigatorë</a>"#));
+    assert!(gps.contains(r#"<a class="menu-sub menu-deep" href="/c/pjese-kembimi">Pjesë këmbimi</a>"#));
+
+    // The old address still works.
+    assert_eq!(get(pool.clone(), "/c/pjese-kembimi").await.status, StatusCode::OK);
+    // Every dropdown of categories shows the kinds, a level further in.
+    let welcome = get(pool, "/").await.body;
+    assert!(welcome.contains("<option value=\"gps-dhe-navigatore\">\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}GPS dhe navigatorë</option>"));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn the_listing_form_offers_categories_at_every_depth(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let form = get_with_cookie(pool.clone(), "/shto", &ana).await.body;
+    // Vehicles: cars and the like in one group, the kinds of parts in the next, under their path.
+    let vehicles = form.find(r#"<optgroup label="Automjete">"#).expect("the vehicles group");
+    let parts = form.find(r#"<optgroup label="Automjete › Pjesë dhe aksesorë">"#).expect("the parts group");
+    assert!(vehicles < parts);
+    let vehicles_group = &form[vehicles..parts];
+    assert!(vehicles_group.contains(r#"<option value="makina""#));
+    assert!(vehicles_group.contains(r#"<option value="automjete-tregtare""#));
+    let parts_group = &form[parts..parts + form[parts..].find("</optgroup>").unwrap()];
+    assert_eq!(parts_group.matches("<option value=").count(), 9);
+    assert!(parts_group.contains(r#"<option value="gps-dhe-navigatore""#));
+    // Categories that only group take no listings, so they aren't offered...
+    assert!(!form.contains(r#"<option value="pjese-dhe-aksesore""#));
+    assert!(!form.contains(r#"<option value="automjete""#));
+
+    // ...nor taken.
+    let started = started();
+    let refused = post_form(pool, "/shto", &listing_fields(("category", "pjese-dhe-aksesore"), &started), Some(&ana)).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("Zgjidh nënkategorinë"));
+}
+
+/// A part posted by this seller, with the vehicle it fits; returns its URL.
+async fn post_part(pool: &PgPool, seller: &str, title: &str, fits: &[(&str, &str)]) -> String {
+    let started = started();
+    let mut fields = listing_fields(("category", "gps-dhe-navigatore"), &started);
+    for field in &mut fields {
+        if field.0 == "title" {
+            field.1 = title;
+        }
+    }
+    fields.extend_from_slice(fits);
+    let posted = post_form(pool.clone(), "/shto", &fields, Some(seller)).await;
+    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    posted.location.expect("posted")
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
+    // The fields, under the parts' own names for them; none required.
+    let fields = get(pool.clone(), "/shto/fushat?category=gps-dhe-navigatore").await.body;
+    let labels = positions(&fields, &[
+        r#"<label class="field-label" for="prop_vehicle_make">Marka e automjetit</label>"#,
+        r#"<label class="field-label" for="prop_vehicle_model">Modeli i automjetit</label>"#,
+        r#"<label class="field-label" for="prop_fits_from_year">Nga viti</label>"#,
+        r#"<label class="field-label" for="prop_fits_to_year">Deri në vitin</label>"#,
+    ]);
+    assert!(labels.is_sorted(), "{labels:?}");
+    assert!(!fields.contains(" required"));
+    // So nothing says what the asterisk means.
+    assert!(!fields.contains("e detyrueshme"));
+    // The cars' own lists: models under their make, and "Tjetër".
+    assert!(fields.contains(r#"<optgroup label="Volkswagen" data-parent="VOLKSWAGEN">"#));
+    assert!(fields.contains(r#"<option value="__other__">Tjetër…</option>"#));
+    // Cars keep their own names for the same properties.
+    let car_fields = get(pool.clone(), "/shto/fushat?category=makina").await.body;
+    assert!(car_fields.contains(r#"<label class="field-label" for="prop_vehicle_make">Marka <span class="required""#));
+    assert!(car_fields.contains("e detyrueshme"));
+    // A category that only groups has no fields to offer.
+    assert!(!get(pool.clone(), "/shto/fushat?category=pjese-dhe-aksesore").await.body.contains("prop_"));
+
+    let ana = new_seller(&pool, "+355691112233").await;
+    let url = post_part(&pool, &ana, "Navigator origjinal për Golf", &[
+        ("prop_vehicle_make", "VOLKSWAGEN"),
+        ("prop_vehicle_model", "VOLKSWAGEN_GOLF"),
+        ("prop_fits_from_year", "2012"),
+        ("prop_fits_to_year", "2019"),
+    ])
+    .await;
+
+    // The listing says it, under the same names.
+    let page = get(pool.clone(), &url).await.body;
+    for (label, value) in [("Marka e automjetit", "Volkswagen"), ("Modeli i automjetit", "Golf"), ("Nga viti", "2012"), ("Deri në vitin", "2019")] {
+        assert!(page.contains(&format!("<dt>{label}</dt>")), "{label}");
+        assert!(page.contains(&format!("<dd>{value}</dd>")), "{value}");
+    }
+    // Its card gives the vehicle after the city; a search for the make finds it.
+    let path = url.trim_start_matches("http://localhost");
+    let parts = get(pool.clone(), "/c/pjese-dhe-aksesore").await.body;
+    assert!(parts.contains(&format!(r#"href="{path}">Navigator origjinal për Golf</a>"#)));
+    assert!(parts.contains("</svg>Tiranë · Volkswagen · Golf</p>"));
+    assert!(get(pool.clone(), "/search?q=volkswagen+navigator").await.body.contains(path));
+
+    // Only the make, or nothing at all: both fine.
+    post_part(&pool, &ana, "Navigator për çdo Volkswagen", &[("prop_vehicle_make", "VOLKSWAGEN")]).await;
+    post_part(&pool, &ana, "Navigator universal pa marke", &[]).await;
+
+    // The years can't end before they start, nor come after next year.
+    let started = started();
+    let mut fields = listing_fields(("category", "gps-dhe-navigatore"), &started);
+    fields.extend_from_slice(&[("prop_fits_from_year", "2019"), ("prop_fits_to_year", "2012")]);
+    let refused = post_form(pool.clone(), "/shto", &fields, Some(&ana)).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("Duhet të jetë 2019 ose më vonë."), "{}", refused.body);
+    let mut fields = listing_fields(("category", "gps-dhe-navigatore"), &started);
+    fields.push(("prop_fits_to_year", "2100"));
+    let refused = post_form(pool.clone(), "/shto", &fields, Some(&ana)).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("Duhet të jetë nga 1950 deri në"));
+    // A model that isn't the make's is refused, as for cars.
+    let mut fields = listing_fields(("category", "gps-dhe-navigatore"), &started);
+    fields.extend_from_slice(&[("prop_vehicle_make", "AUDI"), ("prop_vehicle_model", "VOLKSWAGEN_GOLF")]);
+    let refused = post_form(pool, "/shto", &fields, Some(&ana)).await;
+    assert!(refused.body.contains("Ky model nuk i përket markës së zgjedhur."));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let newer = post_part(&pool, &ana, "GPS Golf 7", &[
+        ("prop_vehicle_make", "VOLKSWAGEN"), ("prop_vehicle_model", "VOLKSWAGEN_GOLF"),
+        ("prop_fits_from_year", "2012"), ("prop_fits_to_year", "2019"),
+    ])
+    .await;
+    let older = post_part(&pool, &ana, "GPS Golf 5", &[
+        ("prop_vehicle_make", "VOLKSWAGEN"), ("prop_vehicle_model", "VOLKSWAGEN_GOLF"),
+        ("prop_fits_from_year", "2004"), ("prop_fits_to_year", "2008"),
+    ])
+    .await;
+    let from_only = post_part(&pool, &ana, "GPS Mercedes C", &[
+        ("prop_vehicle_make", "MERCEDES_BENZ"), ("prop_fits_from_year", "2014"),
+    ])
+    .await;
+    let any = post_part(&pool, &ana, "GPS universal", &[]).await;
+    let found = |html: &str| -> Vec<bool> { [&newer, &older, &from_only, &any].iter().map(|url| html.contains(url.as_str())).collect() };
+
+    // The parts page offers the vehicle as filters, the years as one: the buyer's vehicle's.
+    let page = html(pool.clone(), "/c/pjese-dhe-aksesore").await;
+    assert!(page.contains(r#"<legend class="filter-label">Marka e automjetit</legend>"#));
+    assert!(page.contains(r#"<label class="filter-label" for="filter-fits_year">Viti i automjetit</label>"#));
+    assert!(page.contains(r#"name="fits_year" value="""#));
+    assert!(!page.contains("fits_from_year") && !page.contains("fits_to_year_min"));
+    assert_eq!(found(&page), [true, true, true, true]);
+
+    // By make: the Golfs.
+    let page = html(pool.clone(), "/c/pjese-dhe-aksesore?vehicle_make=VOLKSWAGEN").await;
+    assert_eq!(found(&page), [true, true, false, false]);
+    // And year: the one whose years include it.
+    let page = html(pool.clone(), "/c/pjese-dhe-aksesore?vehicle_make=VOLKSWAGEN&fits_year=2015").await;
+    assert_eq!(found(&page), [true, false, false, false]);
+    assert!(page.contains(r#"name="fits_year" value="2015""#));
+    assert!(page.contains(r#"<a class="filter-chip" href="/c/pjese-dhe-aksesore?vehicle_make=VOLKSWAGEN" aria-label="Hiq filtrin Viti i automjetit: 2015">"#));
+    // The years' ends count: 2012 and 2019 are in, 2011 and 2020 are not.
+    for (year, fits) in [(2011, false), (2012, true), (2019, true), (2020, false)] {
+        let page = html(pool.clone(), &format!("/c/pjese-dhe-aksesore?vehicle_make=VOLKSWAGEN&fits_year={year}")).await;
+        assert_eq!(found(&page)[0], fits, "{year}");
+    }
+    // Year alone: what may fit stays, the one only from 2014 and the one that doesn't say.
+    let page = html(pool.clone(), "/c/pjese-dhe-aksesore?fits_year=2006").await;
+    assert_eq!(found(&page), [false, true, false, true]);
+    let page = html(pool.clone(), "/c/pjese-dhe-aksesore?fits_year=2016").await;
+    assert_eq!(found(&page), [true, false, true, true]);
+    // The same on a kind's own page, and on search with the category.
+    let page = html(pool.clone(), "/c/gps-dhe-navigatore?fits_year=2006").await;
+    assert_eq!(found(&page), [false, true, false, true]);
+    let page = html(pool.clone(), "/search?category=pjese-dhe-aksesore&fits_year=2006").await;
+    assert_eq!(found(&page), [false, true, false, true]);
+    // A year that can't be one is ignored.
+    for nonsense in ["abc", "1800", "20155"] {
+        let page = html(pool.clone(), &format!("/c/pjese-dhe-aksesore?fits_year={nonsense}")).await;
+        assert_eq!(found(&page), [true, true, true, true], "{nonsense}");
+    }
+    // Cars don't get it: their year is a range, as before.
+    let cars = html(pool, "/c/makina").await;
+    assert!(!cars.contains("fits_year"));
+    assert!(cars.contains(r#"name="vehicle_year_min""#));
+}
+
+#[sqlx::test(fixtures("listings"))]
 async fn listings_get_photos(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let started = started();

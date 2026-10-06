@@ -41,6 +41,8 @@
     {%- if let Some(error) = field.error %}<p class="field-error">{{ error }}</p>{% endif %}
   </div>
   {%- endfor %}
+  {%- if crate::web::properties::any_required(fields) %}
   <p class="property-note"><span class="required">*</span> e detyrueshme</p>
+  {%- endif %}
 </fieldset>
 {%- endif %}

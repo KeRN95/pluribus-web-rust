@@ -95,6 +95,12 @@
       <input type="text" inputmode="numeric" name="{{ field.name }}_max" value="{{ field.max }}" placeholder="deri" aria-label="{{ field.label }} deri">
     </div>
   </fieldset>
+  {% when FieldKind::Year %}
+  <div class="filter-group">
+    <label class="filter-label" for="filter-{{ field.name }}">{{ field.label }}</label>
+    <input id="filter-{{ field.name }}" type="text" inputmode="numeric" name="{{ field.name }}" value="{{ field.min }}"
+           maxlength="4" placeholder="p.sh. 2006">
+  </div>
   {% when FieldKind::Toggle %}
   <div class="filter-group">
     <label class="check"><input type="checkbox" name="{{ field.name }}" value="1"{% if field.checked %} checked{% endif %}> {{ field.label }}</label>

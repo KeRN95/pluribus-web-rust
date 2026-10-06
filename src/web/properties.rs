@@ -60,6 +60,11 @@ pub fn field_name(code: &str) -> String {
     format!("prop_{code}")
 }
 
+/// Whether the form says what the asterisk means: not where nothing is required (a part's fields).
+pub fn any_required(fields: &[PropertyField]) -> bool {
+    fields.iter().any(|field| field.required)
+}
+
 /// The form's fields for these properties, holding what was typed (or what the listing has).
 pub fn fields(
     attributes: &[FormAttribute],
@@ -264,7 +269,31 @@ pub fn check(
         };
         properties.push(ListingProperty { attribute_id: attribute.id, value });
     }
+    check_year_pairs(attributes, &properties, errors);
     properties
+}
+
+/// A pair of years, "<x>_from_year" and "<x>_to_year" (the years a part fits), can't end before
+/// it starts.
+fn check_year_pairs(attributes: &[FormAttribute], properties: &[ListingProperty], errors: &mut HashMap<String, String>) {
+    let number = |attribute: &FormAttribute| {
+        properties.iter().find(|property| property.attribute_id == attribute.id).and_then(|property| match &property.value {
+            PropertyValue::Number(number) => Some(*number),
+            _ => None,
+        })
+    };
+    for opening in attributes {
+        let Some(prefix) = opening.code.strip_suffix("_from_year") else { continue };
+        let closing_code = format!("{prefix}_to_year");
+        let Some(closing) = attributes.iter().find(|attribute| attribute.code == closing_code) else { continue };
+        if let (Some(from), Some(to)) = (number(opening), number(closing)) {
+            if from > to {
+                errors
+                    .entry(field_name(&closing.code))
+                    .or_insert(format!("Duhet të jetë {} ose më vonë.", from.normalize()));
+            }
+        }
+    }
 }
 
 /// The property fields alone, in their frame: the form reloads them when the category changes.

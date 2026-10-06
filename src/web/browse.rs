@@ -144,11 +144,12 @@ struct BrowsePage<'a> {
     more_points: bool,
 }
 
-/// A line in the category menu: a top-level category, or one of its subcategories under it.
+/// A line in the category menu: a top-level category (depth 0), or a subcategory under its
+/// parent, indented by its depth.
 pub struct MenuEntry {
     pub name: String,
     pub url: String,
-    pub top: bool,
+    pub depth: usize,
     pub current: bool,
 }
 
@@ -382,16 +383,24 @@ async fn browse(
     // and the map pin, as the category links do.
     let category_menu = match (&page_slug, category) {
         (Some(_), Some(current)) => {
-            let entry = |category: &db::Category, top: bool| MenuEntry {
-                name: category.name.clone(),
-                url: filters.category_url(category),
-                top,
-                current: category.id == current.id,
-            };
-            let mut menu = vec![MenuEntry { name: "Të gjitha njoftimet".to_string(), url: filters.all_categories_url(), top: true, current: false }];
+            let mut menu = vec![MenuEntry { name: "Të gjitha njoftimet".to_string(), url: filters.all_categories_url(), depth: 0, current: false }];
+            // Each category followed by its subcategories, at any depth.
+            fn add(categories: &db::Categories, category: &db::Category, depth: usize, current: &db::Category,
+                   filters: &Filters, menu: &mut Vec<MenuEntry>) {
+                menu.push(MenuEntry {
+                    name: category.name.clone(),
+                    url: filters.category_url(category),
+                    depth,
+                    current: category.id == current.id,
+                });
+                if depth < 5 {
+                    for child in categories.children(category.id) {
+                        add(categories, child, depth + 1, current, filters, menu);
+                    }
+                }
+            }
             for top in categories.top_level() {
-                menu.push(entry(top, true));
-                menu.extend(categories.children(top.id).map(|child| entry(child, false)));
+                add(&categories, top, 0, current, &filters, &mut menu);
             }
             menu
         }

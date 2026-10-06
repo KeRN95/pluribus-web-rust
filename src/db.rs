@@ -165,15 +165,16 @@ pub struct AttributeOption {
     pub parent_id: Option<Uuid>,
 }
 
-/// The category's filterable properties, its own and inherited, in display order. Looked up by
-/// slug, so a page can load them alongside the categories.
+/// The category's filterable properties, its own and inherited, in display order, each under the
+/// category's name for it (category_attributes.label) where it has one. Looked up by slug, so a
+/// page can load them alongside the categories.
 pub async fn filter_attributes(
     db: &PgPool,
     category_slug: &str,
 ) -> sqlx::Result<Vec<FilterAttribute>> {
     sqlx::query_as!(
         FilterAttribute,
-        r#"SELECT a.id, a.code, a.name, a.data_type, a.unit, a.parent_attribute_id,
+        r#"SELECT a.id, a.code, coalesce(eca.label, a.name) AS "name!", a.data_type, a.unit, a.parent_attribute_id,
                   coalesce(jsonb_agg(jsonb_build_object('id', o.id, 'code', o.value_code,
                                                          'label', o.label, 'parent_id', o.parent_option_id)
                                      ORDER BY o.sort_order, o.label)
@@ -185,7 +186,7 @@ pub async fn filter_attributes(
            WHERE eca.category_id = (SELECT id FROM categories WHERE slug = $1 AND active)
              AND eca.filterable
              AND a.data_type IN ('SELECT', 'MULTISELECT', 'NUMBER', 'BOOLEAN')
-           GROUP BY a.id, eca.sort_order
+           GROUP BY a.id, eca.sort_order, eca.label
            ORDER BY eca.sort_order, a.name"#,
         category_slug
     )
@@ -211,12 +212,14 @@ pub struct FormAttribute {
     pub options: Json<Vec<AttributeOption>>,
 }
 
-/// The properties a listing in this category can have, its own and inherited, in form order.
-/// Not the subcategory's kind (the old "type" property): the subcategory sets that one.
+/// The properties a listing in this category can have, its own and inherited, in form order, under
+/// the category's name for them where it has one. Not the subcategory's kind (the old "type"
+/// property): the subcategory sets that one.
 pub async fn form_attributes(db: &PgPool, category_id: Uuid) -> sqlx::Result<Vec<FormAttribute>> {
     sqlx::query_as!(
         FormAttribute,
-        r#"SELECT a.id, a.code, a.name, a.data_type, a.unit, a.parent_attribute_id, eca.required AS "required!",
+        r#"SELECT a.id, a.code, coalesce(eca.label, a.name) AS "name!", a.data_type, a.unit, a.parent_attribute_id,
+                  eca.required AS "required!",
                   a.allow_other,
                   (a.validation_json ->> 'min')::numeric AS min, (a.validation_json ->> 'max')::numeric AS max,
                   coalesce(jsonb_agg(jsonb_build_object('id', o.id, 'code', o.value_code,
@@ -231,7 +234,7 @@ pub async fn form_attributes(db: &PgPool, category_id: Uuid) -> sqlx::Result<Vec
              AND a.data_type IN ('SELECT', 'MULTISELECT', 'NUMBER', 'BOOLEAN', 'TEXT')
              AND NOT EXISTS (SELECT 1 FROM categories k JOIN attribute_options ko ON ko.id = k.replaces_option_id
                              WHERE ko.attribute_id = a.id)
-           GROUP BY a.id, eca.sort_order, eca.required
+           GROUP BY a.id, eca.sort_order, eca.required, eca.label
            ORDER BY eca.sort_order, a.name"#,
         category_id
     )
@@ -295,7 +298,7 @@ pub struct ListingCard {
     pub details: Vec<String>,
     /// The first property the listing page shows that the card doesn't and the title doesn't
     /// mention, e.g. a phone's brand: what the card shows instead of the city when the search is
-    /// in that city already.
+    /// in that city already. Only a chosen option: a bare number ("2003") says nothing on a card.
     pub spare_detail: Option<String>,
     pub sort_at: OffsetDateTime,
     /// Set when the search is limited to the listing's own city, which the card then leaves out.
@@ -512,6 +515,9 @@ pub enum AttributeFilter {
     Range { attribute_id: Uuid, min: Option<Decimal>, max: Option<Decimal> },
     /// A BOOLEAN property that is true.
     IsTrue { attribute_id: Uuid },
+    /// A pair of years a listing fits ("fits_from_year", "fits_to_year") that includes `year`. A
+    /// listing that doesn't give one end, or either, may fit, so it stays.
+    Fits { from_attribute_id: Uuid, to_attribute_id: Uuid, year: Decimal },
 }
 
 /// One page of active listings in the filter's order, with at most PAGE_SIZE + 1 rows.
@@ -555,7 +561,7 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
                          ON sa.category_id = l.category_id AND sa.attribute_id = v.attribute_id
                        JOIN attributes a ON a.id = v.attribute_id
                        LEFT JOIN attribute_options o ON o.id = v.value_option_id
-                       WHERE v.listing_id = l.id) spare
+                       WHERE v.listing_id = l.id AND v.value_option_id IS NOT NULL) spare
                  -- Not what the title says already (\"Volkswagen\" in \"Volkswagen Golf 7\").
                  WHERE spare.value IS NOT NULL AND strpos(lower(l.title), lower(spare.value)) = 0
                  ORDER BY spare.sort_order
@@ -761,6 +767,24 @@ fn push_filters(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilter) 
                     .push_bind(*attribute_id)
                     .push(" AND v.value_boolean)");
             }
+            AttributeFilter::Fits { from_attribute_id, to_attribute_id, year } => {
+                query
+                    .push(
+                        " AND NOT EXISTS (SELECT 1 FROM listing_attribute_values v
+                                          WHERE v.listing_id = l.id AND v.attribute_id = ",
+                    )
+                    .push_bind(*from_attribute_id)
+                    .push(" AND v.value_number > ")
+                    .push_bind(*year)
+                    .push(
+                        ") AND NOT EXISTS (SELECT 1 FROM listing_attribute_values v
+                                           WHERE v.listing_id = l.id AND v.attribute_id = ",
+                    )
+                    .push_bind(*to_attribute_id)
+                    .push(" AND v.value_number < ")
+                    .push_bind(*year)
+                    .push(")");
+            }
         }
     }
 }
@@ -845,7 +869,7 @@ pub async fn listing_attributes(
         AttributeValue,
         r#"SELECT label AS "label!", value AS "value!"
            FROM (
-               SELECT a.name AS label,
+               SELECT coalesce(eca.label, a.name) AS label,
                       coalesce(o.label, v.value_text, format_attribute_number(v.value_number, a.unit),
                                CASE v.value_boolean WHEN true THEN 'Po' WHEN false THEN 'Jo' END,
                                to_char(v.value_date, 'DD.MM.YYYY')) AS value,
@@ -857,14 +881,14 @@ pub async fn listing_attributes(
                LEFT JOIN attribute_options o ON o.id = v.value_option_id
                WHERE v.listing_id = $1
                UNION ALL
-               SELECT a.name, string_agg(o.label, ', ' ORDER BY o.sort_order), eca.sort_order
+               SELECT coalesce(eca.label, a.name), string_agg(o.label, ', ' ORDER BY o.sort_order), eca.sort_order
                FROM listing_attribute_options lo
                JOIN attributes a ON a.id = lo.attribute_id
                JOIN effective_category_attributes eca
                  ON eca.category_id = $2 AND eca.attribute_id = lo.attribute_id AND eca.show_in_details
                JOIN attribute_options o ON o.id = lo.option_id
                WHERE lo.listing_id = $1
-               GROUP BY a.id, a.name, eca.sort_order
+               GROUP BY a.id, a.name, eca.label, eca.sort_order
            ) attrs
            ORDER BY sort_order, label"#,
         listing_id,

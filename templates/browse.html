@@ -21,7 +21,7 @@
     </summary>
     <nav class="category-menu" aria-label="Ndrysho kategorinë">
       {%- for entry in category_menu %}
-      <a class="{% if entry.top %}menu-top{% else %}menu-sub{% endif %}" href="{{ entry.url }}"{% if entry.current %} aria-current="page"{% endif %}>{{ entry.name }}</a>
+      <a class="{% if entry.depth == 0 %}menu-top{% else if entry.depth == 1 %}menu-sub{% else %}menu-sub menu-deep{% endif %}" href="{{ entry.url }}"{% if entry.current %} aria-current="page"{% endif %}>{{ entry.name }}</a>
       {%- endfor %}
     </nav>
   </details>

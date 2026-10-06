@@ -93,7 +93,13 @@ pub enum FieldKind {
     Checkboxes,
     Range,
     Toggle,
+    /// One year, the buyer's vehicle's, for a part's pair of years (FITS_YEAR_LABEL).
+    Year,
 }
+
+/// The filter a pair of years makes, "<x>_from_year" and "<x>_to_year" (a part's): the year of the
+/// buyer's vehicle, which the listing's years must include. Its parameter is "<x>_year".
+const FITS_YEAR_LABEL: &str = "Viti i automjetit";
 
 /// A browse page's filters, checked against the categories, cities and properties that exist.
 pub struct Filters<'a> {
@@ -131,6 +137,9 @@ struct Property<'a> {
     min: Option<Decimal>,
     max: Option<Decimal>,
     checked: bool,
+    /// For "<x>_from_year", the "<x>_to_year" it makes a pair with: the two filter as one year.
+    fits_to: Option<&'a FilterAttribute>,
+    year: Option<Decimal>,
 }
 
 impl<'a> Filters<'a> {
@@ -169,8 +178,12 @@ impl<'a> Filters<'a> {
             .or_else(|| CURRENCIES.into_iter().find(|c| *c == default_currency))
             .unwrap_or("ALL");
 
-        let mut properties: Vec<Property> =
-            attributes.iter().map(|attribute| Property::read(attribute, params)).collect();
+        // The closing year of a pair filters along with its opening one, not on its own.
+        let mut properties: Vec<Property> = attributes
+            .iter()
+            .filter(|attribute| !closes_year_pair(attribute, attributes))
+            .map(|attribute| Property::read(attribute, attributes, params))
+            .collect();
         for i in 0..properties.len() {
             let Some(parent_id) = properties[i].attribute.parent_attribute_id else { continue };
             let chosen_parents: Vec<Uuid> = properties
@@ -292,6 +305,9 @@ impl<'a> Filters<'a> {
         }
         for property in &self.properties {
             let code = &property.attribute.code;
+            if let (Some(_), Some(year)) = (property.fits_to, property.year) {
+                push(&year_param(property.attribute), &plain(year));
+            }
             for option in &property.selected {
                 push(code, &option.code);
             }
@@ -418,6 +434,10 @@ impl<'a> Filters<'a> {
         for property in &self.properties {
             let attribute = property.attribute;
             let code = attribute.code.as_str();
+            if let (Some(_), Some(year)) = (property.fits_to, property.year) {
+                let param = year_param(attribute);
+                chip(format!("{FITS_YEAR_LABEL}: {year}"), self.url_without(|name, _| name == param));
+            }
             for option in &property.selected {
                 chip(
                     option.label.clone(),
@@ -554,10 +574,16 @@ impl<'a> Filters<'a> {
 }
 
 impl<'a> Property<'a> {
-    fn read(attribute: &'a FilterAttribute, params: &Params) -> Self {
+    /// `all` is the category's other filterable properties: a year pair's closing year is there.
+    fn read(attribute: &'a FilterAttribute, all: &'a [FilterAttribute], params: &Params) -> Self {
         let options: Vec<&AttributeOption> = attribute.options.iter().collect();
         let code = attribute.code.as_str();
         let (mut selected, mut min, mut max, mut checked) = (Vec::new(), None, None, false);
+        let fits_to = year_pair_end(attribute, all);
+        if fits_to.is_some() {
+            let year = params.first(&year_param(attribute)).and_then(parse_year);
+            return Self { attribute, options, selected, min, max, checked, fits_to, year };
+        }
         match attribute.data_type.as_str() {
             "SELECT" | "MULTISELECT" => {
                 selected = options
@@ -575,11 +601,14 @@ impl<'a> Property<'a> {
             "BOOLEAN" => checked = params.first(code) == Some("1"),
             _ => {}
         }
-        Self { attribute, options, selected, min, max, checked }
+        Self { attribute, options, selected, min, max, checked, fits_to, year: None }
     }
 
     fn filter(&self) -> Option<AttributeFilter> {
         let attribute_id = self.attribute.id;
+        if let Some(to) = self.fits_to {
+            return self.year.map(|year| AttributeFilter::Fits { from_attribute_id: attribute_id, to_attribute_id: to.id, year });
+        }
         let option_ids = || self.selected.iter().map(|o| o.id).collect();
         match self.attribute.data_type.as_str() {
             "SELECT" if !self.selected.is_empty() => {
@@ -596,9 +625,12 @@ impl<'a> Property<'a> {
         }
     }
 
-    fn param_names(&self) -> [String; 3] {
+    fn param_names(&self) -> Vec<String> {
         let code = &self.attribute.code;
-        [code.clone(), format!("{code}_min"), format!("{code}_max")]
+        if self.fits_to.is_some() {
+            return vec![year_param(self.attribute)];
+        }
+        vec![code.clone(), format!("{code}_min"), format!("{code}_max")]
     }
 
     fn field(&self, all: &[Property]) -> Field {
@@ -619,6 +651,13 @@ impl<'a> Property<'a> {
             unit: attribute.unit.clone().unwrap_or_default(),
             checked: self.checked,
         };
+        if self.fits_to.is_some() {
+            field.name = year_param(attribute);
+            field.label = FITS_YEAR_LABEL.to_string();
+            field.kind = FieldKind::Year;
+            field.min = self.year.map(plain).unwrap_or_default();
+            return field;
+        }
         match attribute.data_type.as_str() {
             "NUMBER" => field.kind = FieldKind::Range,
             "BOOLEAN" => field.kind = FieldKind::Toggle,
@@ -654,6 +693,32 @@ impl<'a> Property<'a> {
         }
         field
     }
+}
+
+/// For "<x>_from_year", the category's "<x>_to_year": the pair filters as one year.
+fn year_pair_end<'a>(attribute: &FilterAttribute, all: &'a [FilterAttribute]) -> Option<&'a FilterAttribute> {
+    let prefix = attribute.code.strip_suffix("_from_year")?;
+    let closing = format!("{prefix}_to_year");
+    all.iter().find(|other| other.code == closing)
+}
+
+/// "<x>_to_year", when the category has its "<x>_from_year".
+fn closes_year_pair(attribute: &FilterAttribute, all: &[FilterAttribute]) -> bool {
+    attribute
+        .code
+        .strip_suffix("_to_year")
+        .is_some_and(|prefix| all.iter().any(|other| other.code == format!("{prefix}_from_year")))
+}
+
+/// The pair's parameter, "<x>_year": "fits_year".
+fn year_param(opening: &FilterAttribute) -> String {
+    format!("{}_year", opening.code.strip_suffix("_from_year").unwrap_or(&opening.code))
+}
+
+/// A year a vehicle could have been made in; anything else is ignored.
+fn parse_year(value: &str) -> Option<Decimal> {
+    let year: i32 = value.trim().parse().ok()?;
+    (1900..=2100).contains(&year).then(|| Decimal::from(year))
 }
 
 /// The cities by county, for a dropdown.

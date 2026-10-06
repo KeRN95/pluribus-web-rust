@@ -218,13 +218,13 @@ fn page(
         uses_condition: category.uses_condition,
         currency: category.default_currency.clone(),
     };
-    let category_groups = categories
-        .top_level()
-        .map(|top| match categories.has_children(top.id) {
-            true => CategoryGroup { label: Some(top.name.clone()), options: categories.children(top.id).map(option).collect() },
-            false => CategoryGroup { label: None, options: vec![option(top)] },
-        })
-        .collect();
+    let mut category_groups = Vec::new();
+    for top in categories.top_level() {
+        match categories.has_children(top.id) {
+            true => add_category_groups(categories, top, top.name.clone(), &option, &mut category_groups),
+            false => category_groups.push(CategoryGroup { label: None, options: vec![option(top)] }),
+        }
+    }
     let currency = match form.currency.as_str() {
         "" => categories.by_slug(&form.category).map_or("EUR", |c| c.default_currency.as_str()),
         chosen => chosen,
@@ -255,6 +255,29 @@ fn page(
         errors,
         started: now(),
         photos: Vec::new(),
+    }
+}
+
+/// The categories listings go into under `parent`, at any depth, as the form's groups: one for
+/// those right under it, labelled with its path ("Automjete"), then one for each subcategory that
+/// has its own ("Automjete › Pjesë dhe aksesorë"). A select can't nest its groups, hence the path.
+fn add_category_groups(
+    categories: &Categories,
+    parent: &Category,
+    path: String,
+    option: &dyn Fn(&Category) -> CategoryOption,
+    groups: &mut Vec<CategoryGroup>,
+) {
+    let options: Vec<CategoryOption> = categories
+        .children(parent.id)
+        .filter(|child| !categories.has_children(child.id))
+        .map(option)
+        .collect();
+    if !options.is_empty() {
+        groups.push(CategoryGroup { label: Some(path.clone()), options });
+    }
+    for child in categories.children(parent.id).filter(|child| categories.has_children(child.id)) {
+        add_category_groups(categories, child, format!("{path} \u{203a} {}", child.name), option, groups);
     }
 }
 

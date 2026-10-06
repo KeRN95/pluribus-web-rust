@@ -64,10 +64,12 @@ cargo test
 | `migrations/0005_map_search.sql` | Radius search: the `cube` and `earthdistance` extensions, the index radius searches use, and a point for each municipality (its seat) |
 | `migrations/0006_rename_patundshmeri_to_prona.sql` | Renames the property category from Patundshmëri to Prona (`/c/prona`) |
 | `migrations/0007_sign_in_codes.sql` | Sign-in codes and sessions, for signing in with a phone number or an e-mail address |
+| `migrations/0008_subcategories.sql` | Subcategories: each category's kinds (flats, houses... phones, laptops...) as subcategories, with the listings moved into them |
 | `migrations/0009_seller_options.sql` | "Tjetër": options sellers type when a list lacks theirs (a car make or model, a phone brand), kept inactive until approved |
 | `migrations/0010_post_before_sign_in.sql` | A listing posted before signing in waits for the code (`login_codes.listing_id`), as does a new account's name |
-| `migrations/0008_subcategories.sql` | Subcategories: each category's kinds (flats, houses... phones, laptops...) as subcategories, with the listings moved into them |
-| `tests/` | Request tests (`web.rs`), the 70 schema checks (`schema_checks.sql`, also run by `schema.rs`) and sample data (`fixtures/`) |
+| `migrations/0011_paused_listings.sql` | Sellers can take a listing down for a while and put it back (`PAUSED`) |
+| `migrations/0012_parts_and_accessories.sql` | Pjesë dhe aksesorë: car parts get kinds of their own, a third level (Pjesë këmbimi, Goma dhe disqe, GPS dhe navigatorë...), and say which vehicle they fit; a category's own name for a property (`category_attributes.label`) |
+| `tests/` | Request tests (`web.rs`), the 71 schema checks (`schema_checks.sql`, also run by `schema.rs`) and sample data (`fixtures/`) |
 | `dev/sample_listings.sql` | 305 extra sample listings for the development database (not used by the tests) |
 | `.sqlx/` | Cached query metadata, so the project builds without a database (set `SQLX_OFFLINE=true`) |
 | `CHANGES.md` | What changed from the first version of the schema, and why |
@@ -104,7 +106,7 @@ Every category except Të tjera has subcategories, and listings go into those: t
 
 | Category | Subcategories |
 |---|---|
-| Automjete | Makina, Motoçikleta, Automjete tregtare, Pjesë këmbimi |
+| Automjete | Makina, Motoçikleta, Automjete tregtare, Pjesë dhe aksesorë |
 | Prona | Apartamente, Garsoniera, Vila dhe shtëpi, Dyqane, Zyra, Truall, Garazhe |
 | Elektronikë | Telefona, Laptopë, Kompjuterë, Tableta, Televizorë, Konsola lojërash, Aparate fotografike, Audio dhe kufje |
 | Shtëpi dhe kopsht | Mobilje, Elektroshtëpiake, Kopsht, Dekor |
@@ -116,6 +118,8 @@ Every category except Të tjera has subcategories, and listings go into those: t
 | Makineri dhe biznes | Makineri ndërtimi, Makineri bujqësore, Energji dhe gjeneratorë, Makineri industriale |
 
 Most subcategories were a "type" property before (`property_type`, `electronics_type`...). Migration 0008 turned each of its options into a subcategory (`categories.replaces_option_id`) and moved the listings; the property stays on the listings, and on new ones posted in that subcategory, only so that search finds them by it ("telefon" finds the phones). `categories.allow_listings` is false for a category with subcategories.
+
+Pjesë dhe aksesorë goes one level further, as on MerrJep: Pjesë këmbimi, Goma dhe disqe, Audio dhe video, GPS dhe navigatorë, Styling dhe pajisje sportive, Tapete makine, Rimorkio, Mbushës për makina elektrike and Të tjera (migration 0012; Pjesë këmbimi kept its address, `/c/pjese-kembimi`, and its listings). Nothing in the code counts levels: the category menu indents each level further, the posting form groups the kinds under "Automjete › Pjesë dhe aksesorë", and a category's page lists everything under it, however deep.
 
 ### Properties
 
@@ -129,6 +133,7 @@ Each category's properties are rows in the database, not code. A browse page bui
 | Punë | schedule |
 | Veshje dhe aksesorë | for whom, size |
 | Makineri dhe biznes | year |
+| Pjesë dhe aksesorë (0012) | the vehicle a part fits, none required: make and model from the cars' lists ("Marka e automjetit", "Modeli i automjetit"), and the years from and to |
 
 To add a property, write a new migration:
 
@@ -151,11 +156,14 @@ How each type of property is offered as a filter:
 | MULTISELECT | checkboxes; a listing must have every ticked option | `vehicle_features=ABS&vehicle_features=NAVIGATION` |
 | NUMBER | from and to | `vehicle_year_min=2015&vehicle_mileage_max=150000` |
 | BOOLEAN | one checkbox | `<code>=1` |
+| a pair of NUMBERs, `<x>_from_year` and `<x>_to_year` (the years a part fits) | one year, the buyer's vehicle's ("Viti i automjetit"); a listing matches unless its years leave that year out, so one that doesn't give its years still shows | `fits_year=2015` |
 
 TEXT and DATE properties appear on the listing page but not as filters.
 
-- Subcategories inherit their parents' properties. The `effective_category_attributes` view resolves that, and where a subcategory configures a property its parent has too, the subcategory's settings win.
-- Property codes become URL parameters, so don't name one `q`, `category`, `city`, `lat`, `lng`, `radius`, `type`, `condition`, `price_min`, `price_max`, `currency`, `sort` or `after`.
+- Subcategories inherit their parents' properties, from every level above them. The `effective_category_attributes` view resolves that, and where a subcategory configures a property its parent has too, the subcategory's settings win.
+- `category_attributes.label` is a category's own name for a property, where the property's name would mislead: on a part, "Marka" would read as the part's own brand, so there it is "Marka e automjetit". It is inherited like the other settings; NULL means the property's name.
+- Property codes become URL parameters, so don't name one `q`, `category`, `city`, `lat`, `lng`, `radius`, `type`, `condition`, `price_min`, `price_max`, `currency`, `sort` or `after`; a year pair's filter takes `<x>_year` too.
+- A property whose code ends in `_year` can't be later than next year, and in a year pair the second can't come before the first.
 - `categories.listing_types` lists the kinds of listing a category takes (sale, wanted, rent...); with more than one, the filter offers them. `categories.uses_condition` is false where new or used means nothing: property, jobs, services and pets.
 - Searchable property labels reach full-text search through `listings.search_extra`. After saving a listing's values, run `UPDATE listings SET search_extra = listing_search_extra(id) WHERE id = $1`; that is how "telefon" finds an iPhone.
 - `format_attribute_number(value, unit)` formats numbers for display: grouped with the unit when there is one ("148 000 km"), as they are when there isn't (a year).
@@ -179,14 +187,14 @@ Nothing in the database changes: the photos keep their keys, and the site keeps 
 
 ## Database
 
-The application applies the migrations at startup with `sqlx::migrate!()`, which embeds `migrations/` in the binary; `sqlx migrate run` does the same from the command line. sqlx stores a checksum of every migration it has run and refuses to continue if one changes, so add schema changes as new files (`migrations/0012_<description>.sql`) instead of editing the existing ones.
+The application applies the migrations at startup with `sqlx::migrate!()`, which embeds `migrations/` in the binary; `sqlx migrate run` does the same from the command line. sqlx stores a checksum of every migration it has run and refuses to continue if one changes, so add schema changes as new files (`migrations/0013_<description>.sql`) instead of editing the existing ones.
 
 All tables live in the default `public` schema, next to the citext, pg_trgm, unaccent, cube and earthdistance extensions, so connections need no search-path setup. Don't take `public` off a connection's search path: without the citext operators, `WHERE email = $1` silently becomes a case-sensitive text comparison.
 
 To apply and check the schema with psql instead:
 
 ```bash
-psql -v ON_ERROR_STOP=1 --single-transaction -f migrations/0001_marketplace_schema.sql -f migrations/0002_marketplace_reference_data.sql -f migrations/0003_category_properties.sql -f migrations/0004_plate_codes.sql -f migrations/0005_map_search.sql -f migrations/0006_rename_patundshmeri_to_prona.sql -f migrations/0007_sign_in_codes.sql -f migrations/0008_subcategories.sql -f migrations/0009_seller_options.sql -f migrations/0010_post_before_sign_in.sql
+psql -v ON_ERROR_STOP=1 --single-transaction -f migrations/0001_marketplace_schema.sql -f migrations/0002_marketplace_reference_data.sql -f migrations/0003_category_properties.sql -f migrations/0004_plate_codes.sql -f migrations/0005_map_search.sql -f migrations/0006_rename_patundshmeri_to_prona.sql -f migrations/0007_sign_in_codes.sql -f migrations/0008_subcategories.sql -f migrations/0009_seller_options.sql -f migrations/0010_post_before_sign_in.sql -f migrations/0011_paused_listings.sql -f migrations/0012_parts_and_accessories.sql
 ```
 
 ```bash
@@ -238,7 +246,7 @@ The usual weakness of this design is that any value can end up anywhere. Here th
 
 When inserting a value, copy `data_type` from the attribute. Leave `listing_attribute_options.data_type` out of inserts; it defaults to `MULTISELECT`.
 
-Still the application's job: which attributes a category has and which are required, `validation_json` ranges, and that the chosen model belongs to the chosen make (`attribute_options.parent_option_id`).
+Still the application's job: which attributes a category has and which are required, `validation_json` ranges, and that the chosen model belongs to the chosen make (`attribute_options.parent_option_id`), and that a part's years don't end before they start.
 
 Attributes are inherited down the category tree. A listing in Makina (Cars) gets the attributes of Makina and of Automjete (Vehicles), and the nearest category's settings win (query below). `categories.allow_listings = false` marks categories that only group subcategories.
 
