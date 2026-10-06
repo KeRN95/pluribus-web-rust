@@ -124,7 +124,6 @@ pub struct Filters<'a> {
     /// On /search the category is one of the filters; on a category page it is the page.
     category_is_filter: bool,
     categories: &'a Categories,
-    cities: &'a [City],
     pub q: Option<String>,
     pub category: Option<&'a Category>,
     pub city: Option<&'a City>,
@@ -246,7 +245,6 @@ impl<'a> Filters<'a> {
             path,
             category_is_filter,
             categories,
-            cities,
             q: params.first("q").map(str::to_string),
             category,
             city: params.first("city").and_then(|slug| cities.iter().find(|c| c.slug == slug)),
@@ -492,12 +490,13 @@ impl<'a> Filters<'a> {
 
     // ------------------------------------------------------------ the form
 
-    /// What the filter form carries along hidden, having no fields for it: the map pin and its
-    /// radius.
+    /// What the filter form carries along hidden, having no fields for it: the search words (the
+    /// header's search has them), the town (a link may bring it; its chip drops it), the map pin
+    /// and its radius.
     pub fn kept_fields(&self) -> Vec<(String, String)> {
         self.pairs()
             .into_iter()
-            .filter(|(name, _)| matches!(name.as_str(), "lat" | "lng" | "radius"))
+            .filter(|(name, _)| matches!(name.as_str(), "q" | "city" | "lat" | "lng" | "radius"))
             .collect()
     }
 
@@ -515,10 +514,6 @@ impl<'a> Filters<'a> {
 
     pub fn category_choices(&self) -> Vec<Choice> {
         category_choices(self.categories, self.category.map(|c| c.slug.as_str()))
-    }
-
-    pub fn city_groups(&self) -> Vec<ChoiceGroup> {
-        city_groups(self.cities, self.city.map(|c| c.slug.as_str()))
     }
 
     /// Empty unless the category takes more than one kind of listing.

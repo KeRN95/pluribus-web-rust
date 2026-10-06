@@ -675,13 +675,23 @@ async fn filters_on_properties(pool: PgPool) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn chosen_filters_can_be_removed_one_by_one(pool: PgPool) {
-    let body = html(pool, "/c/makina?vehicle_fuel=DIESEL&city=durres&sort=price_desc").await;
+    let body = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&city=durres&sort=price_desc").await;
     // Each chip links to the page without its own filter, in a fixed parameter order.
     assert!(body.contains(r#"<a class="filter-chip" href="/c/makina?vehicle_fuel=DIESEL&sort=price_desc""#));
     assert!(body.contains(r#"<a class="filter-chip" href="/c/makina?city=durres&sort=price_desc""#));
     assert!(body.contains(r#"<a class="clear-filters" href="/c/makina?sort=price_desc">"#));
     // The filters' card says which are on.
     assert!(body.contains("<span>Durrës · Naftë</span>"));
+    // The filter form has no fields for the town and the search words, so it carries them along:
+    // filtering keeps them, and the town's chip, or the header's search, changes them.
+    let filter_form = |page: &str| {
+        let form = &page[page.find(r#"<form id="filter-form""#).unwrap()..];
+        form[..form.find("</form>").unwrap()].to_string()
+    };
+    assert!(!body.contains(r#"id="filter-city""#) && !body.contains(r#"id="filter-q""#));
+    assert!(filter_form(&body).contains(r#"<input type="hidden" name="city" value="durres">"#));
+    let words = html(pool, "/c/makina?q=golf").await;
+    assert!(filter_form(&words).contains(r#"<input type="hidden" name="q" value="golf">"#));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -2104,8 +2114,8 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     let pages = [
         ("/shto", 6),
         ("/shto/fushat?category=makina", 6),
-        ("/search?q=golf", 3),
-        ("/c/makina", 4),
+        ("/search?q=golf", 2),
+        ("/c/makina", 3),
         ("/harta", 1),
     ];
     for (uri, selects) in pages {

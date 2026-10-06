@@ -423,7 +423,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .field input,
 .field select,
 .field textarea,
-.filter-form input[type="search"],
 .filter-form input[type="text"],
 .filter-form select,
 .pending-form input,
@@ -1517,7 +1516,6 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   .field input,
   .field select,
   .field textarea,
-  .filter-form input[type="search"],
   .filter-form input[type="text"],
   .filter-form select,
   .pending-form input,
@@ -1526,7 +1524,6 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 
   .field input,
   .field select,
-  .filter-form input[type="search"],
   .filter-form input[type="text"],
   .filter-form select,
   .pending-form input,

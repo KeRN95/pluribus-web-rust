@@ -4,11 +4,6 @@
   {%- for (name, value) in filters.kept_fields() %}
   <input type="hidden" name="{{ name }}" value="{{ value }}">
   {%- endfor %}
-  <div class="filter-group">
-    <label class="filter-label" for="filter-q">Fjalë kyçe</label>
-    <input id="filter-q" type="search" name="q" value="{{ filters.q_value() }}" placeholder="p.sh. Golf, 2+1">
-  </div>
-
   {% if filters.shows_category() %}
   <div class="filter-group">
     <label class="filter-label" for="filter-category">Kategoria</label>
@@ -20,20 +15,6 @@
     </div>
   </div>
   {% endif %}
-
-  <div class="filter-group">
-    <label class="filter-label" for="filter-city">Qyteti</label>
-    <div class="picker" data-controller="picker">
-    <select id="filter-city" name="city">
-      <option value="">Gjithë Shqipëria</option>
-      {% for group in filters.city_groups() %}
-      <optgroup label="{{ group.label }}">
-        {% for city in group.choices %}<option value="{{ city.value }}"{% if city.selected %} selected{% endif %}>{{ city.label }}</option>{% endfor %}
-      </optgroup>
-      {% endfor %}
-    </select>
-    </div>
-  </div>
 
   {% let types = filters.type_choices() %}
   {% if !types.is_empty() %}
