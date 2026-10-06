@@ -947,6 +947,13 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 .listing-photos { display: grid; gap: .5rem; }
 .listing-header { margin-top: 1rem; }
+/* The category's path as pills, joined by a faint chain link, and the status after them. A link
+   goes with the pill after it, so a wrapped row starts with one rather than a row ending in one. */
+.listing-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.listing-tags .badge { margin-left: 0; }
+.listing-trail { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .3rem; }
+.trail-step { display: inline-flex; align-items: center; gap: .3rem; }
+.trail-link { flex: none; color: var(--muted); opacity: .45; }
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: 1.9rem; }
 .listing-price { margin: 0; font-size: 1.6rem; font-weight: var(--bold); letter-spacing: -.02em; }
 /* The price with the loan calculator's button beside it; the calculator opens under the actions. */

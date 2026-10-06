@@ -111,6 +111,9 @@ impl ListingDetail {
 #[template(path = "listing.html")]
 struct ListingShow {
     listing: ListingDetail,
+    /// Its category and those above it, from the top: Automjete, Pjesë dhe aksesorë, GPS dhe
+    /// navigatorë.
+    trail: Vec<Crumb>,
     attributes: Vec<AttributeValue>,
     photos: Vec<Photo>,
     /// The reveal button's label, when the seller's phone number or e-mail can be shown.
@@ -132,11 +135,22 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     if key != canonical {
         return Ok(Redirect::permanent(&format!("/listing/{canonical}")).into_response());
     }
-    let (mut attributes, photos, contact) = tokio::try_join!(
+    let (mut attributes, photos, contact, categories) = tokio::try_join!(
         db::listing_attributes(&state.db, listing.id, listing.category_id),
         db::listing_photos(&state.db, listing.id),
         db::visible_contact(&state.db, listing.id),
+        db::categories(&state.db),
     )?;
+    let crumb = |name: &str, slug: &str| Crumb { name: name.to_string(), url: format!("/c/{slug}") };
+    let trail = match categories.by_slug(&listing.category_slug) {
+        Some(category) => categories
+            .ancestors(category)
+            .into_iter()
+            .chain([category])
+            .map(|category| crumb(&category.name, &category.slug))
+            .collect(),
+        None => vec![crumb(&listing.category_name, &listing.category_slug)],
+    };
     let own = match current_user(&state, &headers).await? {
         Some(user) => db::is_own_listing(&state.db, listing.id, user.id).await?,
         None => false,
@@ -149,7 +163,13 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         let value = format::condition(condition).to_string();
         attributes.insert(0, AttributeValue { label: "Gjendja".to_string(), value });
     }
-    render(ListingShow { listing, attributes, photos, reveal_label, own })
+    render(ListingShow { listing, trail, attributes, photos, reveal_label, own })
+}
+
+/// A category on the way to a listing's own.
+pub struct Crumb {
+    pub name: String,
+    pub url: String,
 }
 
 #[derive(Template)]
