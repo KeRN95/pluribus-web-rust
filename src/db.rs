@@ -807,6 +807,8 @@ pub struct AttributeValue {
 #[derive(Debug)]
 pub struct Photo {
     pub url: String,
+    /// Its card-sized copy, which the listing page blurs to fill the frame around the photo.
+    pub card_url: String,
     pub width_px: Option<i32>,
     pub height_px: Option<i32>,
 }
@@ -883,7 +885,8 @@ pub async fn listing_attributes(
 pub async fn listing_photos(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Vec<Photo>> {
     sqlx::query_as!(
         Photo,
-        r#"SELECT coalesce(public_url, thumbnail_url) AS "url!", width_px, height_px
+        r#"SELECT coalesce(public_url, thumbnail_url) AS "url!", coalesce(thumbnail_url, public_url) AS "card_url!",
+                  width_px, height_px
            FROM listing_media
            WHERE listing_id = $1 AND status = 'READY' AND media_type = 'IMAGE'
              AND coalesce(public_url, thumbnail_url) IS NOT NULL

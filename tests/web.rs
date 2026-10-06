@@ -1496,6 +1496,12 @@ async fn listings_get_photos(pool: PgPool) {
     }).collect();
     assert_eq!(photo_urls.len(), 2, "{page}");
     assert!(page.contains(r#"width="1600" height="1067""#));
+    // Each whole in its frame, over a blurred copy of itself: its small copy, a decoration.
+    for url in &photo_urls {
+        let backdrop = format!(r#"<img class="gallery-backdrop" src="{}" alt="">"#, url.replace(".jpg", "-card.jpg"));
+        let at = page.find(&backdrop).expect("the blurred copy") + backdrop.len();
+        assert!(page[at..].trim_start().starts_with(&format!(r#"<img src="{url}""#)));
+    }
     // Two make a strip to swipe through, one at a time, with a counter and arrows.
     assert!(page.contains(r#"<div class="gallery" data-controller="gallery">"#));
     assert!(page.contains(r#"data-gallery-target="track" tabindex="0" role="region" aria-label="Fotot e njoftimit""#));
