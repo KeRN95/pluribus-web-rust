@@ -105,9 +105,12 @@
         <input type="hidden" name="{{ name }}" value="{{ value }}">
         {%- endfor %}
         {% include "map_radius.html" %}
-        <button type="button" class="button secondary map-locate" data-action="map#locate">
-          {%- include "pin.svg" %}Vendndodhja ime
-        </button>
+        <div class="map-place">
+          <button type="button" class="button secondary map-locate" data-action="map#locate">
+            {%- include "pin.svg" %}Vendndodhja ime
+          </button>
+          {% include "map_town.html" %}
+        </div>
         <p class="map-status" data-map-target="status" role="status"></p>
       </form>
       <div class="map-canvas" data-map-target="canvas" role="region" aria-label="Harta"></div>

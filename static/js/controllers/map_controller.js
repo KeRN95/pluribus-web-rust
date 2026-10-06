@@ -38,7 +38,7 @@ function loadLeaflet() {
 export default class extends Controller {
   static targets = [
     "canvas", "form", "latitude", "longitude", "radius", "slider", "radiusLabel", "status", "results", "points", "toggle",
-    "frame",
+    "frame", "town",
   ];
   // lazy: the map loads when its card is first opened (category and search pages).
   static values = { latitude: Number, longitude: Number, lazy: Boolean };
@@ -179,6 +179,14 @@ export default class extends Controller {
       () => { this.statusTarget.textContent = "Vendndodhja nuk u gjet. Lëviz hartën për ta vendosur pikën."; },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
     );
+  }
+
+  // A town from the dropdown: the map moves onto its point, for "Vendos hartën" to set, as with
+  // "Vendndodhja ime".
+  goToTown() {
+    const option = this.townTarget.selectedOptions[0];
+    if (!this.map || !option?.dataset.lat) return;
+    this.fitCircle({ point: this.L.latLng(Number(option.dataset.lat), Number(option.dataset.lng)) });
   }
 
   // The map page's category: the results follow, for the map as it is.

@@ -436,6 +436,10 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(cars.contains(r#"<input type="hidden" name="vehicle_fuel" value="DIESEL">"#));
     assert!(cars.contains(r#"<button type="button" class="button map-confirm" data-action="map#confirm">Vendos hartën</button>"#));
     assert!(cars.contains(r#"<a class="button secondary map-everywhere" href="/c/makina?vehicle_fuel=DIESEL">Të gjitha</a>"#));
+    // Beside "Vendndodhja ime", the towns, by county, each with its point, which the map moves
+    // onto; the dropdown has no name, so it sends no town of its own.
+    assert!(cars.contains(r#"<select aria-label="Qyteti" data-map-target="town" data-action="map#goToTown">"#));
+    assert!(cars.contains(r#"<option value="tirane" data-lat="41.328333" data-lng="19.818056">Tiranë</option>"#));
 
     // With a point, the page stays the category's, with its heading and filters, the card still
     // folded, saying how far around the point; the filter form and the category menu keep it.
@@ -2114,9 +2118,9 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     let pages = [
         ("/shto", 6),
         ("/shto/fushat?category=makina", 6),
-        ("/search?q=golf", 2),
-        ("/c/makina", 3),
-        ("/harta", 1),
+        ("/search?q=golf", 3),
+        ("/c/makina", 4),
+        ("/harta", 2),
     ];
     for (uri, selects) in pages {
         let page = get_with_cookie(pool.clone(), uri, &ana).await.body;

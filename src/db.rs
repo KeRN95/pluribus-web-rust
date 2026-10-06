@@ -106,17 +106,22 @@ pub struct City {
     pub name: String,
     pub slug: String,
     pub county: String,
+    /// The town's point, where its listings stand on the map without one of their own, and where
+    /// the map's town dropdown moves it.
+    pub latitude: f64,
+    pub longitude: f64,
 }
 
 /// Grouped by county, each county's main town first.
 pub async fn cities(db: &PgPool) -> sqlx::Result<Vec<City>> {
     sqlx::query_as!(
         City,
-        "SELECT m.id, m.name, m.slug, county.name AS county
+        r#"SELECT m.id, m.name, m.slug, county.name AS county,
+                m.latitude::float8 AS "latitude!", m.longitude::float8 AS "longitude!"
          FROM locations m
          JOIN locations county ON county.id = m.parent_id
          WHERE m.location_type = 'MUNICIPALITY' AND m.active
-         ORDER BY county.name, m.slug <> county.slug, m.name"
+         ORDER BY county.name, m.slug <> county.slug, m.name"#
     )
     .fetch_all(db)
     .await

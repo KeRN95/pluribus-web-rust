@@ -1,0 +1,12 @@
+{#- Or a town: the map moves onto it, for "Vendos hartën" to set, as with "Vendndodhja ime".
+    It has no name, so it sends no town of its own: only the map's point counts. -#}
+<div class="picker" data-controller="picker">
+<select aria-label="Qyteti" data-map-target="town" data-action="map#goToTown">
+  <option value="">Qyteti</option>
+  {%- for group in filters.town_groups() %}
+  <optgroup label="{{ group.label }}">
+    {%- for town in group.towns %}<option value="{{ town.slug }}" data-lat="{{ town.latitude }}" data-lng="{{ town.longitude }}">{{ town.name }}</option>{% endfor %}
+  </optgroup>
+  {%- endfor %}
+</select>
+</div>

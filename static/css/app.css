@@ -908,7 +908,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* The distance slider, in the button colour, with the distance it stands for beside its name. */
 .map-radius output { margin-left: .25rem; color: var(--text); font-weight: var(--bold); }
 .map-radius input[type="range"] { width: 100%; height: 2.25rem; margin: 0; padding: 0; border: 0; background: none; accent-color: var(--button); cursor: pointer; }
-.map-locate { gap: .35rem; }
+.map-locate { flex: none; gap: .35rem; }
+/* "Vendndodhja ime" and the towns' dropdown beside it, the dropdown taking what room is left. */
+.map-place { display: flex; flex: 1 1 18rem; align-items: center; gap: .5rem; min-width: 0; }
+.map-place .picker { flex: 1 1 9rem; min-width: 0; max-width: 16rem; }
 .map-toggle[hidden] { display: none; }
 /* Under the map, the button that sets its point, in the site's colour: the whole width on the map
    page; in the card, beside "Të gjitha", which drops it, the two as wide. */

@@ -38,9 +38,12 @@
       </select>
       </div>
     </div>
-    <button type="button" class="button secondary map-locate" data-action="map#locate">
-      {%- include "pin.svg" %}Vendndodhja ime
-    </button>
+    <div class="map-place">
+      <button type="button" class="button secondary map-locate" data-action="map#locate">
+        {%- include "pin.svg" %}Vendndodhja ime
+      </button>
+      {% include "map_town.html" %}
+    </div>
     {#- The map can be folded away for the results (map_controller.js). -#}
     <button type="button" class="button secondary map-toggle" data-map-target="toggle" data-action="map#toggleMap"
             aria-controls="map-canvas" aria-expanded="true" data-show-label="Shfaq hartën" data-hide-label="Fshih hartën" hidden>Fshih hartën</button>

@@ -71,6 +71,12 @@ pub struct ChoiceGroup {
     pub choices: Vec<Choice>,
 }
 
+/// A county's towns, for the map's dropdown, each with its point.
+pub struct TownGroup<'a> {
+    pub label: &'a str,
+    pub towns: Vec<&'a City>,
+}
+
 /// A dependent property's options under the parent option they belong to: a make's models.
 pub struct OptionGroup {
     pub label: String,
@@ -124,6 +130,7 @@ pub struct Filters<'a> {
     /// On /search the category is one of the filters; on a category page it is the page.
     category_is_filter: bool,
     categories: &'a Categories,
+    cities: &'a [City],
     pub q: Option<String>,
     pub category: Option<&'a Category>,
     pub city: Option<&'a City>,
@@ -245,6 +252,7 @@ impl<'a> Filters<'a> {
             path,
             category_is_filter,
             categories,
+            cities,
             q: params.first("q").map(str::to_string),
             category,
             city: params.first("city").and_then(|slug| cities.iter().find(|c| c.slug == slug)),
@@ -510,6 +518,18 @@ impl<'a> Filters<'a> {
 
     pub fn shows_category(&self) -> bool {
         self.category_is_filter
+    }
+
+    /// The towns the map's dropdown moves it onto, by county, each county's main town first.
+    pub fn town_groups(&self) -> Vec<TownGroup<'a>> {
+        let mut groups: Vec<TownGroup<'a>> = Vec::new();
+        for city in self.cities {
+            match groups.last_mut() {
+                Some(group) if group.label == city.county => group.towns.push(city),
+                _ => groups.push(TownGroup { label: &city.county, towns: vec![city] }),
+            }
+        }
+        groups
     }
 
     pub fn category_choices(&self) -> Vec<Choice> {
