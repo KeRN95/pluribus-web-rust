@@ -822,45 +822,26 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .filter-actions { display: flex; align-items: center; gap: .75rem; }
 .filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
 
-/* Phones and tablets: the filters are a card like the map's under it, three alike, folded to their
-   headers. "Filtrat", the header, says which filters are on, opens the form inside the card
-   (fading in as the menus do) and closes it. It names the section, so the panel's own heading is
-   there for screen readers only. */
-@media (max-width: 959px) {
-  .filters-card { margin: 0 0 .5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-  .filters-card .map-card-icon { color: var(--text); }
-  .filters-open[aria-expanded="false"] .map-card-chevron { transform: rotate(-90deg); }
-  .filters { display: none; padding: 0 .9rem .9rem; }
-  .filters.is-open { display: block; animation: menu-in .16s ease-out; }
-  .filters-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
-@media (max-width: 959px) and (prefers-reduced-motion: reduce) {
+/* The filters are a card like the map's under it, the three alike, folded to their headers, on
+   every screen. "Filtrat", the header, says which filters are on, opens the form inside the card
+   (fading in as the menus do) and closes it; the options picked apply together, with the form's
+   button. The header names the section, so the panel's own heading is there for screen readers
+   only. */
+.filters-card { margin: 0 0 .5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.filters-card .map-card-icon { color: var(--text); }
+.filters-open[aria-expanded="false"] .map-card-chevron { transform: rotate(-90deg); }
+.filters { display: none; padding: 0 .9rem .9rem; }
+.filters.is-open { display: block; animation: menu-in .16s ease-out; }
+.filters-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
   .filters.is-open { animation: none; }
 }
-
-/* Wide screens: the filters are a sticky sidebar beside the results, their own heading on top;
-   picked options apply at once. The card is only its panel here, its header gone. */
-@media (min-width: 960px) {
-  .browse {
-    display: grid;
-    grid-template-columns: 250px minmax(0, 1fr);
-    grid-template-areas: "filters results";
-    column-gap: 2rem;
-    align-items: start;
-  }
-  .results { grid-area: results; }
-  .filters-card { display: contents; }
-  .filters-card .filters-open { display: none; }
-
-  .filters {
-    grid-area: filters;
-    position: sticky;
-    top: 4.5rem;
-    max-height: calc(100vh - 5.5rem);
-    overflow-y: auto;
-    padding-right: .5rem;
-    scrollbar-width: thin;
-  }
+/* Wider, the form's groups stand side by side, as many as fit, and its button under them all, as
+   wide as its words. */
+@media (min-width: 720px) {
+  .filter-form { grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); align-items: start; column-gap: 1.5rem; }
+  .filter-actions { grid-column: 1 / -1; }
+  .filter-actions .button { flex: none; padding-inline: 2rem; }
 }
 
 /* Map page, and the ways to it */
@@ -910,6 +891,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .map-card.map-hidden .map-card-body { display: none; }
 .map-card .map-form { margin-bottom: .75rem; }
 .map-card .map-canvas { border-radius: calc(var(--radius) - 4px); }
+/* Wide, the card is the page's width: its map is less tall, two wide and one tall. */
+@media (min-width: 960px) {
+  .map-card .map-canvas { aspect-ratio: 2 / 1; }
+}
 .map-card .map-note { margin: .6rem 0 0; }
 .map-locate .pin-icon { margin-right: 0; }
 

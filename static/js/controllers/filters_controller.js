@@ -1,10 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 
-const wide = window.matchMedia("(min-width: 960px)");
-
-// The filter panel. On wide screens it sits beside the results and a picked option applies at
-// once. Narrower, it is a section right under the "Filtrat" button, which opens and closes it,
-// so several options can be picked and then applied together with its own button.
+// The filter panel: a card whose header, "Filtrat", opens and closes it, so several options can
+// be picked and then applied together with its own button.
 export default class extends Controller {
   static targets = ["panel", "form", "toggle"];
 
@@ -30,13 +27,6 @@ export default class extends Controller {
   reset() {
     this.panelTarget.classList.remove("is-open");
     this.toggleTarget.setAttribute("aria-expanded", "false");
-  }
-
-  // Typed values (a price, a year) wait for Enter or the button, so typing isn't interrupted.
-  change(event) {
-    if (wide.matches && event.target.matches("select, input[type=checkbox], input[type=radio]")) {
-      this.submit();
-    }
   }
 
   submit() {
