@@ -146,15 +146,16 @@
     </span>
   </a>
 
-  {% if !attributes.is_empty() %}
+  {% if !details.is_empty() %}
   <section>
     <h2>Detajet</h2>
-    {#- Two to a row, each its label over its value. -#}
+    {#- Two to a row, each in its own box: its icon before its value where it has one, its name
+        then for screen readers and as a tooltip; otherwise its name, small, over its value. -#}
     <dl class="attributes">
-      {% for attribute in attributes %}
-      <div>
-        <dt>{{ attribute.label }}</dt>
-        <dd>{{ attribute.value }}</dd>
+      {% for detail in details %}
+      <div class="attribute{% if detail.wide %} attribute-wide{% endif %}"{% if detail.icon.is_some() %} title="{{ detail.label }}"{% endif %}>
+        <dt{% if detail.icon.is_some() %} class="visually-hidden"{% endif %}>{{ detail.label }}</dt>
+        <dd>{% if let Some(icon) = detail.icon %}<svg class="attribute-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}{{ detail.value }}</dd>
       </div>
       {% endfor %}
     </dl>

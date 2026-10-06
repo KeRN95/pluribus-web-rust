@@ -13,11 +13,11 @@ use super::{
     account::{cookie_header, current_user},
     cookie, not_found,
     post::POSTED_COOKIE,
-    render, render_stream,
+    properties, render, render_stream,
 };
 use crate::{
     AppState,
-    db::{self, AttributeValue, ListingCard, ListingDetail, MapPoint, Photo, SellerContact},
+    db::{self, ListingCard, ListingDetail, MapPoint, Photo, SellerContact},
     format,
 };
 
@@ -120,7 +120,7 @@ struct ListingShow {
     /// Its category and those above it, from the top: Automjete, Pjesë dhe aksesorë, GPS dhe
     /// navigatorë.
     trail: Vec<Crumb>,
-    attributes: Vec<AttributeValue>,
+    details: Vec<Detail>,
     photos: Vec<Photo>,
     /// The reveal button's label, when the seller's phone number or e-mail can be shown.
     /// The button that shows how to reach the seller, when it can be shown.
@@ -144,7 +144,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     if key != canonical {
         return Ok(Redirect::permanent(&format!("/listing/{canonical}")).into_response());
     }
-    let (mut attributes, photos, contact, categories) = tokio::try_join!(
+    let (attributes, photos, contact, categories) = tokio::try_join!(
         db::listing_attributes(&state.db, listing.id, listing.category_id),
         db::listing_photos(&state.db, listing.id),
         db::visible_contact(&state.db, listing.id),
@@ -168,17 +168,40 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         SellerContact::Phone(_) => Reveal::Phone,
         SellerContact::Email(_) => Reveal::Email,
     });
+    let mut details: Vec<Detail> = attributes
+        .into_iter()
+        .map(|attribute| Detail {
+            icon: properties::icon(&attribute.code),
+            wide: attribute.multi,
+            label: attribute.label,
+            value: attribute.value,
+        })
+        .collect();
     if let Some(condition) = &listing.condition {
-        let value = format::condition(condition).to_string();
-        attributes.insert(0, AttributeValue { label: "Gjendja".to_string(), value });
+        details.insert(0, Detail {
+            label: "Gjendja".to_string(),
+            value: format::condition(condition).to_string(),
+            icon: properties::icon("condition"),
+            wide: false,
+        });
     }
     // Said once: the cookie that says so (post.rs) goes with this answer.
     let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
-    let mut response = render(ListingShow { listing, trail, attributes, photos, reveal, own, posted })?;
+    let mut response = render(ListingShow { listing, trail, details, photos, reveal, own, posted })?;
     if posted {
         response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));
     }
     Ok(response)
+}
+
+/// One of a listing's details, in its own box: its icon before its value where it has one, its
+/// name then for screen readers and as a tooltip; otherwise its name over its value.
+pub struct Detail {
+    pub label: String,
+    pub value: String,
+    pub icon: Option<&'static str>,
+    /// Several values, a car's options: the box takes the whole line.
+    pub wide: bool,
 }
 
 /// How buyers reach the seller, behind a button that shows it and counts the showing: the phone

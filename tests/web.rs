@@ -674,12 +674,17 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     let response = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await;
     assert_eq!(response.status, StatusCode::OK);
     assert!(response.body.contains("9\u{a0}500\u{a0}€"));
-    assert!(response.body.contains("<dt>Gjendja</dt>"));
-    assert!(response.body.contains("<dd>E përdorur</dd>"));
-    assert!(response.body.contains("<dt>Kilometrazhi</dt>"));
-    assert!(response.body.contains("<dd>148\u{a0}000\u{a0}km</dd>"));
-    assert!(response.body.contains("<dd>Naftë</dd>"));
-    assert!(response.body.contains("<dd>Hatchback</dd>"));
+    // Each detail in its box, its icon before its value; its name for screen readers and as a
+    // tooltip. The options, several, take a whole line.
+    assert!(response.body.contains(r#"<div class="attribute" title="Gjendja">"#));
+    assert!(response.body.contains(r#"<dt class="visually-hidden">Gjendja</dt>"#));
+    assert!(response.body.contains(r#"<dd><svg class="attribute-icon""#));
+    assert!(response.body.contains("</svg>E përdorur</dd>"));
+    assert!(response.body.contains(r#"<dt class="visually-hidden">Kilometrazhi</dt>"#));
+    assert!(response.body.contains("</svg>148\u{a0}000\u{a0}km</dd>"));
+    assert!(response.body.contains("</svg>Naftë</dd>"));
+    assert!(response.body.contains("</svg>Hatchback</dd>"));
+    assert!(response.body.contains(r#"<div class="attribute attribute-wide" title="Opsionet">"#));
     assert!(response.body.contains("ABS, Kondicioner"));
     // Its category's path, pills with a › between them: Automjete, then Makina.
     let trail = positions(&response.body, &[
@@ -1376,9 +1381,11 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
     assert!(trail.is_sorted(), "{trail:?}");
     assert_eq!(page.matches(r#"<svg class="trail-sep""#).count(), 2);
     for (label, value) in [("Marka e automjetit", "Volkswagen"), ("Modeli i automjetit", "Golf"), ("Nga viti", "2012"), ("Deri në vitin", "2019")] {
-        assert!(page.contains(&format!("<dt>{label}</dt>")), "{label}");
-        assert!(page.contains(&format!("<dd>{value}</dd>")), "{value}");
+        assert!(page.contains(&format!(">{label}</dt>")), "{label}");
+        assert!(page.contains(&format!(">{value}</dd>")), "{value}");
     }
+    // The years have no icon: their names show, over them.
+    assert!(page.contains("<dt>Nga viti</dt>") && page.contains("<dd>2012</dd>"));
     // Its card gives the vehicle after the city; a search for the make finds it.
     let path = url.trim_start_matches("http://localhost");
     let parts = get(pool.clone(), "/c/pjese-dhe-aksesore").await.body;

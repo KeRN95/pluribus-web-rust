@@ -75,6 +75,19 @@ const TILES: [(&str, &str); 8] = [
     ("vehicle_color", r#"<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2s-.5-.7-.5-1.2c0-1 .8-1.8 1.8-1.8h2.1a4.3 4.3 0 0 0 4.3-4.3C21 6.6 17 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/>"#),
 ];
 
+/// Icons for what isn't a form's tile but has one on the listing page: its condition (a circled
+/// check) and a car's options (a list of checks).
+const MORE_ICONS: [(&str, &str); 2] = [
+    ("condition", r#"<circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-5.5"/>"#),
+    ("vehicle_features", r#"<path d="M10.5 6h10M10.5 12h10M10.5 18h10"/><path d="m3.5 6 1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5"/>"#),
+];
+
+/// The icon of a property, by its code, or of a listing's "condition", where it has one: the
+/// inside of a 24-unit SVG drawn in strokes.
+pub fn icon(code: &str) -> Option<&'static str> {
+    TILES.iter().chain(&MORE_ICONS).find(|(of, _)| *of == code).map(|(_, icon)| *icon)
+}
+
 /// Whether the fields are a car's, with its main ones under icons.
 pub fn tiled(fields: &[PropertyField]) -> bool {
     fields.iter().any(|field| field.tile.is_some())

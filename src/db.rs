@@ -800,8 +800,11 @@ pub struct ListingDetail {
 
 #[derive(Debug)]
 pub struct AttributeValue {
+    pub code: String,
     pub label: String,
     pub value: String,
+    /// Several values, a multi-select's: their labels, joined.
+    pub multi: bool,
 }
 
 #[derive(Debug)]
@@ -851,12 +854,13 @@ pub async fn listing_attributes(
 ) -> sqlx::Result<Vec<AttributeValue>> {
     sqlx::query_as!(
         AttributeValue,
-        r#"SELECT label AS "label!", value AS "value!"
+        r#"SELECT code AS "code!", label AS "label!", value AS "value!", multi AS "multi!"
            FROM (
-               SELECT coalesce(eca.label, a.name) AS label,
+               SELECT a.code, coalesce(eca.label, a.name) AS label,
                       coalesce(o.label, v.value_text, format_attribute_number(v.value_number, a.unit),
                                CASE v.value_boolean WHEN true THEN 'Po' WHEN false THEN 'Jo' END,
                                to_char(v.value_date, 'DD.MM.YYYY')) AS value,
+                      false AS multi,
                       eca.sort_order
                FROM listing_attribute_values v
                JOIN attributes a ON a.id = v.attribute_id
@@ -865,14 +869,15 @@ pub async fn listing_attributes(
                LEFT JOIN attribute_options o ON o.id = v.value_option_id
                WHERE v.listing_id = $1
                UNION ALL
-               SELECT coalesce(eca.label, a.name), string_agg(o.label, ', ' ORDER BY o.sort_order), eca.sort_order
+               SELECT a.code, coalesce(eca.label, a.name), string_agg(o.label, ', ' ORDER BY o.sort_order), true,
+                      eca.sort_order
                FROM listing_attribute_options lo
                JOIN attributes a ON a.id = lo.attribute_id
                JOIN effective_category_attributes eca
                  ON eca.category_id = $2 AND eca.attribute_id = lo.attribute_id AND eca.show_in_details
                JOIN attribute_options o ON o.id = lo.option_id
                WHERE lo.listing_id = $1
-               GROUP BY a.id, a.name, eca.label, eca.sort_order
+               GROUP BY a.id, a.code, a.name, eca.label, eca.sort_order
            ) attrs
            ORDER BY sort_order, label"#,
         listing_id,

@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT code AS \"code!\", label AS \"label!\", value AS \"value!\", multi AS \"multi!\"\n           FROM (\n               SELECT a.code, coalesce(eca.label, a.name) AS label,\n                      coalesce(o.label, v.value_text, format_attribute_number(v.value_number, a.unit),\n                               CASE v.value_boolean WHEN true THEN 'Po' WHEN false THEN 'Jo' END,\n                               to_char(v.value_date, 'DD.MM.YYYY')) AS value,\n                      false AS multi,\n                      eca.sort_order\n               FROM listing_attribute_values v\n               JOIN attributes a ON a.id = v.attribute_id\n               JOIN effective_category_attributes eca\n                 ON eca.category_id = $2 AND eca.attribute_id = v.attribute_id AND eca.show_in_details\n               LEFT JOIN attribute_options o ON o.id = v.value_option_id\n               WHERE v.listing_id = $1\n               UNION ALL\n               SELECT a.code, coalesce(eca.label, a.name), string_agg(o.label, ', ' ORDER BY o.sort_order), true,\n                      eca.sort_order\n               FROM listing_attribute_options lo\n               JOIN attributes a ON a.id = lo.attribute_id\n               JOIN effective_category_attributes eca\n                 ON eca.category_id = $2 AND eca.attribute_id = lo.attribute_id AND eca.show_in_details\n               JOIN attribute_options o ON o.id = lo.option_id\n               WHERE lo.listing_id = $1\n               GROUP BY a.id, a.code, a.name, eca.label, eca.sort_order\n           ) attrs\n           ORDER BY sort_order, label",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "label!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "value!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "multi!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "5ea4cf980c2dcbbe1210fab7e5124cc476391b67e97059c8fc31ca8120fa2b09"
+}
