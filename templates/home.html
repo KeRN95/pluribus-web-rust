@@ -60,13 +60,14 @@
   </div>
   <p class="map-entry"><a href="/harta">{% include "pin.svg" %}Ose vendos një pikë në hartë dhe shiko çfarë ka përreth</a></p>
 
-  {#- Every main category at once: a quiet tile with its icon, and the name under the tile. The
-      links carry the city chosen above; city_controller.js updates them when it changes. -#}
+  {#- Every main category at once, as pills like the listing page's details: its icon, then its
+      name. The links carry the city chosen above; city_controller.js updates them when it
+      changes. -#}
   <nav class="shortcuts" aria-label="Kategoritë">
     {%- for shortcut in shortcuts %}
     <a class="shortcut" href="{{ shortcut.url }}" data-city-target="link">
-      <span class="shortcut-tile"><svg class="shortcut-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ shortcut.icon|safe }}</svg></span>
-      <span class="shortcut-name">{{ shortcut.name }}</span>
+      <svg class="shortcut-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ shortcut.icon|safe }}</svg>
+      {{- shortcut.name -}}
     </a>
     {%- endfor %}
   </nav>
