@@ -1,0 +1,20 @@
+# Garage, the S3-compatible photo store for local development (compose.yaml). One node, one copy of
+# every file, data in the `garage` Docker volume. The secrets here are for this local container
+# only; production uses Cloudflare R2 (or any S3 service) with its own keys in .env.
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+replication_factor = 1
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+rpc_secret = "6033e5dec4123c678a308c5b4cb114d5b9d4738222475889f2c4d39ae0fbdcda"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+api_bind_addr = "[::]:3903"
+admin_token = "f51625d0cc5f00796aca05fa17a470b2aae4dd727b1b41a6"

@@ -4,6 +4,7 @@ mod account;
 mod browse;
 mod filters;
 mod listings;
+mod photos;
 mod post;
 mod properties;
 
@@ -16,7 +17,7 @@ use std::{
 use askama::Template;
 use axum::{
     Router,
-    extract::{Request, State},
+    extract::{DefaultBodyLimit, Request, State},
     http::{HeaderMap, HeaderValue, Method, StatusCode, header},
     middleware::{self, Next},
     response::{Html, IntoResponse, Response},
@@ -33,7 +34,12 @@ use tower_http::{
 
 use crate::{AppState, db};
 
+/// The posting and edit forms carry photos: MAX_PHOTOS of them, which phones shrink before sending
+/// (photos_controller.js). Other requests keep axum's 2 MB.
+const FORM_WITH_PHOTOS_BYTES: usize = 64 * 1024 * 1024;
+
 pub fn router(state: AppState) -> Router {
+    let with_photos = || DefaultBodyLimit::max(FORM_WITH_PHOTOS_BYTES);
     Router::new()
         .route("/", get(browse::home))
         .route("/c/{slug}", get(browse::category))
@@ -41,8 +47,9 @@ pub fn router(state: AppState) -> Router {
         .route("/harta", get(browse::map))
         .route("/listing/{key}", get(listings::show))
         .route("/listing/{public_no}/phone", post(listings::reveal_phone))
-        .route("/shto", get(post::new_listing).post(post::create_listing))
-        .route("/listing/{public_no}/ndrysho", get(post::edit_listing).post(post::update_listing))
+        .route("/shto", get(post::new_listing).post(post::create_listing).layer(with_photos()))
+        .route("/listing/{public_no}/ndrysho", get(post::edit_listing).post(post::update_listing).layer(with_photos()))
+        .route("/media/{*key}", get(photos::serve))
         .route("/shto/fushat", get(properties::fields_for_category))
         .route("/njoftimet-e-mia", get(post::my_listings))
         .route("/listing/{public_no}/caktivizo", post(post::pause_listing))

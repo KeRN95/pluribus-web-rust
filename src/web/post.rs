@@ -5,7 +5,6 @@ use std::collections::HashMap;
 
 use askama::Template;
 use axum::{
-    Form,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
@@ -17,6 +16,7 @@ use super::{
     account::{ClientIp, MIN_FORM_SECONDS, SignInPage, code_limit, current_user, display_name, now, send_code_and_ask},
     filters::{self, Choice, ChoiceGroup, parse_number},
     not_found,
+    photos::{self, Submission},
     properties::{self, PropertyField},
     render,
 };
@@ -24,9 +24,10 @@ use crate::{
     AppState,
     db::{
         self, Categories, Category, City, CodePurpose, FormAttribute, ListingAction, ListingProperty, MyListing, NewListing,
-        OwnListing, SessionUser,
+        OwnListing, OwnPhoto, SessionUser,
     },
     format::{self, Contact},
+    media::MAX_PHOTOS,
 };
 
 /// At most this many listings a day from one account.
@@ -164,11 +165,18 @@ struct ListingFormPage {
     form: ListingForm,
     errors: HashMap<String, String>,
     started: i64,
+    /// When editing, the photos the listing has; each can be removed.
+    photos: Vec<OwnPhoto>,
 }
 
 impl ListingFormPage {
     fn error(&self, field: &str) -> Option<&str> {
         self.errors.get(field).map(String::as_str)
+    }
+
+    /// How many more photos fit.
+    fn photos_left(&self) -> usize {
+        MAX_PHOTOS.saturating_sub(self.photos.len())
     }
 }
 
@@ -246,12 +254,36 @@ fn page(
         form,
         errors,
         started: now(),
+        photos: Vec::new(),
     }
 }
 
 /// The form shown again with its errors; Turbo renders it because of the 422 status.
 fn form_again(page: ListingFormPage) -> Result<Response> {
     Ok((StatusCode::UNPROCESSABLE_ENTITY, render(page)?).into_response())
+}
+
+/// The photos sent with a form that is otherwise right, decoded and resized; None when the form
+/// goes back with errors. Browsers can't keep chosen files when it does, so the form says to pick
+/// them again.
+async fn read_photos(
+    photos: &[axum::body::Bytes],
+    errors: &mut HashMap<String, String>,
+) -> Result<Option<Vec<crate::media::Processed>>> {
+    let mut processed = Vec::new();
+    if errors.is_empty() && !photos.is_empty() {
+        match photos::process(photos.to_vec()).await? {
+            Ok(done) => processed = done,
+            Err(message) => fail(errors, "photos", message),
+        }
+    }
+    if errors.is_empty() {
+        return Ok(Some(processed));
+    }
+    if !photos.is_empty() {
+        fail(errors, "photos", "Zgjidh fotot përsëri: formulari i harron kur ka një gabim.");
+    }
+    Ok(None)
 }
 
 /// The first message for a field is the one shown.
@@ -434,7 +466,7 @@ pub async fn create_listing(
     State(state): State<AppState>,
     ClientIp(ip): ClientIp,
     headers: HeaderMap,
-    Form(pairs): Form<Vec<(String, String)>>,
+    Submission { pairs, photos }: Submission,
 ) -> Result<Response> {
     let form = ListingForm::from_pairs(pairs);
     let user = current_user(&state, &headers).await?;
@@ -443,6 +475,7 @@ pub async fn create_listing(
     let mut errors = HashMap::new();
     let checked = check(&form, &categories, &cities, &mut errors);
     let properties = properties::check(&attributes, &form.properties, &mut errors);
+    photos::check(&photos, 0, &mut errors);
 
     // Not signed in: the contact to confirm, if a code may go to it now.
     let contact = match user {
@@ -483,12 +516,15 @@ pub async fn create_listing(
             fail(&mut errors, "title", "Ke publikuar tashmë një njoftim me këtë titull sot.");
         }
     }
-    let (Some(checked), Some(poster), true) = (checked, poster, errors.is_empty()) else {
+    let processed = read_photos(&photos, &mut errors).await?;
+    let (Some(checked), Some(poster), Some(processed)) = (checked, poster, processed) else {
         return form_again(page(&Purpose::New, user.as_ref(), &categories, &cities, &attributes, form, errors));
     };
+    let stored = photos::store(&state.media, processed).await?;
     let slug = format::slug(checked.title);
     let publish = user.is_some();
     let (listing_id, public_no) = db::create_listing(&state.db, &checked.listing(&poster, &slug, &properties, publish)).await?;
+    db::add_listing_photos(&state.db, listing_id, &stored).await?;
     match &contact {
         Some(contact) if !publish => {
             let purpose = CodePurpose { listing_id: Some(listing_id), display_name: display_name(&form.name) };
@@ -525,16 +561,25 @@ pub async fn edit_listing(
     )?;
     let attributes = attributes_for(&state, &categories, &listing.category).await?;
     let purpose = Purpose::Edit { public_no, slug: listing.slug.clone() };
+    let listing_photos = db::own_listing_photos(&state.db, listing.id).await?;
     let form = ListingForm::from_listing(listing, values);
-    render(page(&purpose, Some(&user), &categories, &cities, &attributes, form, HashMap::new()))
+    let mut page = page(&purpose, Some(&user), &categories, &cities, &attributes, form, HashMap::new());
+    page.photos = listing_photos;
+    render(page)
 }
 
 pub async fn update_listing(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(public_no): Path<i64>,
-    Form(pairs): Form<Vec<(String, String)>>,
+    Submission { pairs, photos }: Submission,
 ) -> Result<Response> {
+    // Photos ticked "Hiq"; only the listing's own count, whatever the form says.
+    let removed: Vec<uuid::Uuid> = pairs
+        .iter()
+        .filter(|(name, _)| name == "remove_photo")
+        .filter_map(|(_, value)| value.parse().ok())
+        .collect();
     let form = ListingForm::from_pairs(pairs);
     let Some(user) = current_user(&state, &headers).await? else {
         return Ok(Redirect::to("/shto").into_response());
@@ -548,14 +593,24 @@ pub async fn update_listing(
     let mut errors = HashMap::new();
     let checked = check(&form, &categories, &cities, &mut errors);
     let properties = properties::check(&attributes, &form.properties, &mut errors);
-    let Some(checked) = checked.filter(|_| errors.is_empty()) else {
-        return form_again(page(&purpose, Some(&user), &categories, &cities, &attributes, form, errors));
+    let listing_photos = db::own_listing_photos(&state.db, listing.id).await?;
+    let removed: Vec<uuid::Uuid> = removed.into_iter().filter(|id| listing_photos.iter().any(|photo| photo.id == *id)).collect();
+    photos::check(&photos, listing_photos.len() - removed.len(), &mut errors);
+    let processed = read_photos(&photos, &mut errors).await?;
+    let (Some(checked), Some(processed)) = (checked, processed) else {
+        let mut page = page(&purpose, Some(&user), &categories, &cities, &attributes, form, errors);
+        page.photos = listing_photos;
+        return form_again(page);
     };
     let slug = format::slug(checked.title);
-    let listing = checked.listing(&Poster::of(&user), &slug, &properties, true);
-    if !db::update_listing(&state.db, public_no, &listing).await? {
+    let changed = checked.listing(&Poster::of(&user), &slug, &properties, true);
+    if !db::update_listing(&state.db, public_no, &changed).await? {
         return not_found().await;
     }
+    let gone = db::remove_listing_photos(&state.db, listing.id, &removed).await?;
+    photos::delete(&state.media, &gone).await;
+    let stored = photos::store(&state.media, processed).await?;
+    db::add_listing_photos(&state.db, listing.id, &stored).await?;
     Ok(Redirect::to(&format!("/listing/{public_no}-{slug}")).into_response())
 }
 

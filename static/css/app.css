@@ -865,6 +865,16 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 @media (max-width: 719px) {
   .my-listing { flex-direction: column; align-items: stretch; }
 }
+/* Photos in the listing form: small squares, four to a row, then the picker, a button whose file
+   input is hidden but still takes the tap (and the keyboard). */
+.photo-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; margin: .25rem 0 .5rem; padding: 0; list-style: none; }
+.photo-list[hidden] { display: none; }
+.photo-item { display: grid; gap: .25rem; }
+.photo-item img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--surface-muted); }
+.photo-remove { display: flex; align-items: center; gap: .3rem; color: var(--muted); font-size: .8rem; cursor: pointer; }
+.photo-picker { position: relative; gap: .4rem; justify-self: start; overflow: hidden; }
+.photo-picker input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.photo-picker:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* A category's own fields in the listing form: a car's make, model, year... */
 .property-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1rem; margin: 0; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .property-fields legend { padding: 0 .35rem; font-weight: var(--semibold); }

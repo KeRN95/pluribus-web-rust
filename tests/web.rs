@@ -1,13 +1,24 @@
 //! Requests through the full router. Each test gets a fresh database with the migrations applied,
 //! plus the fixtures named in its attribute.
 
+use std::sync::OnceLock;
+
 use axum::{
+    Router,
     body::Body,
     http::{Request, StatusCode, header},
 };
 use http_body_util::BodyExt;
+use marketplace::media::Media;
 use sqlx::PgPool;
 use tower::ServiceExt;
+
+/// The app, with photos kept in memory, one store for all the tests: their photos' names never
+/// collide, and a photo posted in one request is there for the next.
+fn app(pool: PgPool) -> Router {
+    static MEDIA: OnceLock<Media> = OnceLock::new();
+    marketplace::app_with_media(pool, MEDIA.get_or_init(Media::in_memory).clone())
+}
 
 struct TestResponse {
     status: StatusCode,
@@ -25,7 +36,7 @@ impl TestResponse {
 }
 
 async fn send(pool: PgPool, request: Request<Body>) -> TestResponse {
-    let response = marketplace::app(pool).oneshot(request).await.unwrap();
+    let response = app(pool).oneshot(request).await.unwrap();
     let header = |name| {
         response
             .headers()
@@ -44,7 +55,7 @@ async fn send(pool: PgPool, request: Request<Body>) -> TestResponse {
         .map(|value| value.to_str().unwrap().split(';').next().unwrap().to_string())
         .collect();
     let body = response.into_body().collect().await.unwrap().to_bytes();
-    TestResponse { status, location, content_type, cookies, body: String::from_utf8(body.to_vec()).unwrap() }
+    TestResponse { status, location, content_type, cookies, body: String::from_utf8_lossy(&body).into_owned() }
 }
 
 async fn get(pool: PgPool, uri: &str) -> TestResponse {
@@ -59,6 +70,44 @@ async fn post_form(pool: PgPool, uri: &str, fields: &[(&str, &str)], cookie: Opt
         request = request.header(header::COOKIE, cookie);
     }
     send(pool, request.body(Body::from(body)).unwrap()).await
+}
+
+/// The listing form as the browser sends it with photos: multipart, the photos as files.
+async fn post_with_photos(
+    pool: PgPool,
+    uri: &str,
+    fields: &[(&str, &str)],
+    photos: &[Vec<u8>],
+    cookie: &str,
+) -> TestResponse {
+    let boundary = "----marketplace-test-boundary";
+    let mut body = Vec::new();
+    for (name, value) in fields {
+        body.extend_from_slice(format!("--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n").as_bytes());
+    }
+    for (i, photo) in photos.iter().enumerate() {
+        body.extend_from_slice(
+            format!("--{boundary}\r\nContent-Disposition: form-data; name=\"photos\"; filename=\"photo{i}.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n").as_bytes(),
+        );
+        body.extend_from_slice(photo);
+        body.extend_from_slice(b"\r\n");
+    }
+    body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+    let request = Request::post(uri)
+        .header(header::CONTENT_TYPE, format!("multipart/form-data; boundary={boundary}"))
+        .header(header::COOKIE, cookie)
+        .body(Body::from(body))
+        .unwrap();
+    send(pool, request).await
+}
+
+/// A plain JPEG of that size, as a camera might send.
+fn jpeg(width: u32, height: u32) -> Vec<u8> {
+    let mut out = Vec::new();
+    image::codecs::jpeg::JpegEncoder::new(&mut out)
+        .encode_image(&image::DynamicImage::new_rgb8(width, height).to_rgb8())
+        .unwrap();
+    out
 }
 
 async fn get_with_cookie(pool: PgPool, uri: &str, cookie: &str) -> TestResponse {
@@ -674,7 +723,7 @@ async fn static_files_have_cache_headers(pool: PgPool) {
     let cache_control = |uri: &'static str| {
         let pool = pool.clone();
         async move {
-            let response = marketplace::app(pool)
+            let response = app(pool)
                 .oneshot(Request::get(uri).body(Body::empty()).unwrap())
                 .await
                 .unwrap();
@@ -1140,6 +1189,65 @@ async fn nobody_else_can_edit_a_listing(pool: PgPool) {
     let mine = get_with_cookie(pool, "/njoftimet-e-mia", &ana).await.body;
     assert!(mine.contains(r#"<span class="badge">Shitur</span>"#));
     assert!(!mine.contains(&edit));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn listings_get_photos(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let started = started();
+    let fields = listing_fields(("", ""), &started);
+    let posted = post_with_photos(pool.clone(), "/shto", &fields, &[jpeg(3000, 2000), jpeg(800, 600)], &ana).await;
+    let url = posted.location.expect("posted");
+    let no = url.trim_start_matches("/listing/").split('-').next().unwrap().to_string();
+
+    // The listing shows both, the first as its cover, and serves them: the full one 1600 px wide.
+    let page = get(pool.clone(), &url).await.body;
+    let photo_urls: Vec<&str> = page.match_indices(r#"<img src="/media/photos/"#).map(|(at, _)| {
+        let start = at + r#"<img src=""#.len();
+        &page[start..start + page[start..].find('"').unwrap()]
+    }).collect();
+    assert_eq!(photo_urls.len(), 2, "{page}");
+    assert!(page.contains(r#"width="1600" height="1067""#));
+    let photo = get(pool.clone(), photo_urls[0]).await;
+    assert_eq!(photo.status, StatusCode::OK);
+    assert_eq!(photo.content_type.as_deref(), Some("image/jpeg"));
+
+    // The card uses the small copy of the cover.
+    let cards = get(pool.clone(), "/search?q=Galaxy").await.body;
+    assert!(cards.contains(&photo_urls[0].replace(".jpg", "-card.jpg")));
+
+    // Editing: the photos are on the form; one removed, and the other becomes the cover.
+    let edit = format!("/listing/{no}/ndrysho");
+    let form = get_with_cookie(pool.clone(), &edit, &ana).await.body;
+    let first_id = {
+        let at = form.find(r#"name="remove_photo" value=""#).expect("a photo to remove") + r#"name="remove_photo" value=""#.len();
+        form[at..at + 36].to_string()
+    };
+    let mut fields = listing_fields(("", ""), &started);
+    fields.push(("remove_photo", &first_id));
+    let saved = post_with_photos(pool.clone(), &edit, &fields, &[], &ana).await;
+    assert_eq!(saved.status, StatusCode::SEE_OTHER);
+    let page = get(pool.clone(), &url).await.body;
+    assert_eq!(page.matches(r#"<img src="/media/photos/"#).count(), 1);
+    assert_eq!(get(pool.clone(), photo_urls[0]).await.status, StatusCode::NOT_FOUND);
+    let covers: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM listing_media m JOIN listings l ON l.id = m.listing_id WHERE l.public_no = $1::bigint AND m.is_cover",
+    )
+    .bind(&no)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(covers, 1);
+
+    // What isn't a photo is refused, and too many are too.
+    let refused = post_with_photos(pool.clone(), &edit, &listing_fields(("", ""), &started), &[b"not a photo".to_vec()], &ana).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("Një nga fotot nuk u lexua"));
+    let many: Vec<Vec<u8>> = (0..8).map(|_| jpeg(40, 30)).collect();
+    let refused = post_with_photos(pool.clone(), &edit, &listing_fields(("", ""), &started), &many, &ana).await;
+    assert!(refused.body.contains("deri në 8 foto"));
+    // Nor are other paths in the store served.
+    assert_eq!(get(pool, "/media/../.env").await.status, StatusCode::NOT_FOUND);
 }
 
 #[sqlx::test(fixtures("listings"))]

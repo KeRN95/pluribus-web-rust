@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, coalesce(thumbnail_url, public_url) AS \"card_url!\"\n           FROM listing_media\n           WHERE listing_id = $1 AND media_type = 'IMAGE' AND coalesce(thumbnail_url, public_url) IS NOT NULL\n           ORDER BY is_cover DESC, sort_order",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "card_url!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "cbdef6ab391498a2c017a42d710ca26f0bc801c0cadc33788bb66a2ab626b940"
+}

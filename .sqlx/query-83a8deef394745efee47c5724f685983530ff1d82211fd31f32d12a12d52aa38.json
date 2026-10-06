@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO listing_media (listing_id, media_type, status, storage_key, public_url, thumbnail_url,\n                                        mime_type, size_bytes, width_px, height_px, sha256, sort_order, is_cover)\n             VALUES ($1, 'IMAGE', 'READY', $2, $3, $4, 'image/jpeg', $5, $6, $7, $8, $9, $10)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Int4",
+        "Int4",
+        "Bytea",
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "83a8deef394745efee47c5724f685983530ff1d82211fd31f32d12a12d52aa38"
+}

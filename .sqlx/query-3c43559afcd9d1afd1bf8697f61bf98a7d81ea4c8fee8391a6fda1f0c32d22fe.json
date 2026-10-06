@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT coalesce(max(sort_order), -1) AS \"last!\", coalesce(bool_or(is_cover), false) AS \"has_cover!\"\n           FROM listing_media WHERE listing_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "last!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "has_cover!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "3c43559afcd9d1afd1bf8697f61bf98a7d81ea4c8fee8391a6fda1f0c32d22fe"
+}

@@ -888,6 +888,99 @@ pub async fn listing_photos(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Vec<P
     .await
 }
 
+/// A photo stored for a listing (media.rs): its key in the store, where the site serves it and its
+/// card-sized copy, and what the full one weighs.
+pub struct NewPhoto {
+    pub storage_key: String,
+    pub url: String,
+    pub card_url: String,
+    pub size_bytes: i64,
+    pub width: i32,
+    pub height: i32,
+    pub sha256: Vec<u8>,
+}
+
+/// Adds photos after the listing's others, in order; the first photo a listing gets is its cover.
+pub async fn add_listing_photos(db: &PgPool, listing_id: Uuid, photos: &[NewPhoto]) -> sqlx::Result<()> {
+    if photos.is_empty() {
+        return Ok(());
+    }
+    let mut tx = db.begin().await?;
+    let last = sqlx::query!(
+        r#"SELECT coalesce(max(sort_order), -1) AS "last!", coalesce(bool_or(is_cover), false) AS "has_cover!"
+           FROM listing_media WHERE listing_id = $1"#,
+        listing_id,
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    for (i, photo) in photos.iter().enumerate() {
+        sqlx::query!(
+            "INSERT INTO listing_media (listing_id, media_type, status, storage_key, public_url, thumbnail_url,
+                                        mime_type, size_bytes, width_px, height_px, sha256, sort_order, is_cover)
+             VALUES ($1, 'IMAGE', 'READY', $2, $3, $4, 'image/jpeg', $5, $6, $7, $8, $9, $10)",
+            listing_id,
+            photo.storage_key,
+            photo.url,
+            photo.card_url,
+            photo.size_bytes,
+            photo.width,
+            photo.height,
+            photo.sha256,
+            last.last + 1 + i as i32,
+            !last.has_cover && i == 0,
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await
+}
+
+/// A photo on the edit form, which its seller can remove.
+pub struct OwnPhoto {
+    pub id: Uuid,
+    pub card_url: String,
+}
+
+/// The listing's photos, the cover first.
+pub async fn own_listing_photos(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Vec<OwnPhoto>> {
+    sqlx::query_as!(
+        OwnPhoto,
+        r#"SELECT id, coalesce(thumbnail_url, public_url) AS "card_url!"
+           FROM listing_media
+           WHERE listing_id = $1 AND media_type = 'IMAGE' AND coalesce(thumbnail_url, public_url) IS NOT NULL
+           ORDER BY is_cover DESC, sort_order"#,
+        listing_id,
+    )
+    .fetch_all(db)
+    .await
+}
+
+/// Removes some of the listing's photos; returns their keys in the store, to delete the files.
+/// When the cover goes, the first photo left takes its place.
+pub async fn remove_listing_photos(db: &PgPool, listing_id: Uuid, ids: &[Uuid]) -> sqlx::Result<Vec<String>> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut tx = db.begin().await?;
+    let keys = sqlx::query_scalar!(
+        "DELETE FROM listing_media WHERE listing_id = $1 AND id = ANY($2) RETURNING storage_key",
+        listing_id,
+        ids,
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+    sqlx::query!(
+        "UPDATE listing_media SET is_cover = true
+         WHERE id = (SELECT id FROM listing_media WHERE listing_id = $1 ORDER BY sort_order LIMIT 1)
+           AND NOT EXISTS (SELECT 1 FROM listing_media WHERE listing_id = $1 AND is_cover)",
+        listing_id,
+    )
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(keys)
+}
+
 /// How a buyer reaches the seller: the phone number, or, for sellers who signed up with an e-mail
 /// address, that address.
 #[derive(Debug, Clone, PartialEq, Eq)]

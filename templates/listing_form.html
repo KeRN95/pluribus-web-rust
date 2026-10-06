@@ -18,8 +18,8 @@
   {%- endif %}
 
   {#- listing_form_controller.js offers the listing types and the condition the chosen category
-      takes, and its usual currency; the server checks them all the same. -#}
-  <form class="account-form" action="{{ action }}" method="post" data-controller="listing-form">
+      takes, and its usual currency; the server checks them all the same. Multipart, for the photos. -#}
+  <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data" data-controller="listing-form">
     {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
 
     <div class="field">
@@ -69,6 +69,30 @@
       <label class="field-label" for="description">Përshkrimi</label>
       <textarea id="description" name="description" rows="6" required minlength="10" maxlength="5000">{{ form.description }}</textarea>
       {% if let Some(error) = self.error("description") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    {#- Photos: the ones the listing has (when editing), each with "Hiq", then a picker for more.
+        photos_controller.js shows what was picked and makes big phone photos smaller first. -#}
+    <div class="field" data-controller="photos" data-photos-max-value="{{ self.photos_left() }}">
+      <span class="field-label">Fotot <span class="optional">(deri në {{ crate::media::MAX_PHOTOS }}; e para del në krye)</span></span>
+      {%- if !photos.is_empty() %}
+      <ul class="photo-list">
+        {%- for photo in photos %}
+        <li class="photo-item">
+          <img src="{{ photo.card_url }}" alt="" loading="lazy">
+          <label class="photo-remove"><input type="checkbox" name="remove_photo" value="{{ photo.id }}"> Hiq</label>
+        </li>
+        {%- endfor %}
+      </ul>
+      {%- endif %}
+      <ul class="photo-list" data-photos-target="previews" hidden></ul>
+      <label class="button secondary photo-picker">
+        <input type="file" name="photos" accept="image/*" multiple data-photos-target="input" data-action="change->photos#chosen">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2.5"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8.5 5l1.5-2h4l1.5 2"/></svg>
+        Shto foto
+      </label>
+      <p class="field-hint" data-photos-target="status" role="status"></p>
+      {% if let Some(error) = self.error("photos") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
 
     <div class="form-row price-row">

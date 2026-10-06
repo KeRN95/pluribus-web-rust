@@ -7,6 +7,7 @@ import FiltersController from "controllers/filters_controller.js";
 import ListingFormController from "controllers/listing_form_controller.js";
 import LoanController from "controllers/loan_controller.js";
 import MapController from "controllers/map_controller.js";
+import PhotosController from "controllers/photos_controller.js";
 import ShareController from "controllers/share_controller.js";
 import ThemeController from "controllers/theme_controller.js";
 
@@ -17,6 +18,7 @@ application.register("filters", FiltersController);
 application.register("listing-form", ListingFormController);
 application.register("loan", LoanController);
 application.register("map", MapController);
+application.register("photos", PhotosController);
 application.register("share", ShareController);
 application.register("theme", ThemeController);
 

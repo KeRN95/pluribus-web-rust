@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM listing_media WHERE listing_id = $1 AND id = ANY($2) RETURNING storage_key",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "storage_key",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d36d1cefada06c2ae9c0884867c1e1dc93dc4b756cbc7569a12940a3f094dd34"
+}
