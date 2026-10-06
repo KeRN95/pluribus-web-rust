@@ -376,8 +376,15 @@ async fn the_map_page_reloads_only_its_results(pool: PgPool) {
     assert_eq!(page.status, StatusCode::OK);
     assert!(page.body.contains(r#"data-controller="map""#));
     assert!(page.body.contains(r#"<turbo-frame id="map-results""#));
-    // The button that folds the map away, shown once there is a pin (map_controller.js).
+    // The button that folds the map away (map_controller.js).
     assert!(page.body.contains(r#"data-action="map#toggleMap""#) && page.body.contains("Fshih hartën</button>"));
+    // Until the map is moved, its pin is in the middle of Tirana, and so are the results: not the
+    // Mercedes in Durrës, 31 km away. The map is the pin here, so no chip offers to drop it.
+    assert!(page.body.contains(r#"data-map-latitude-value="41.3275" data-map-longitude-value="19.8187""#));
+    assert!(page.body.contains(r#"<input type="hidden" name="lat" value="41.32750" data-map-target="latitude">"#));
+    assert!(page.body.contains("Volkswagen Golf 7, 2016, naftë"));
+    assert!(!page.body.contains("Mercedes-Benz C 220, 2018, automatike"));
+    assert!(!page.body.contains("Hiq filtrin Brenda"));
     // A dot for each result, with what its popup shows.
     assert!(page.body.contains(
         "<li data-lat=\"41.328333\" data-lng=\"19.818056\" data-url=\"/listing/1001-volkswagen-golf-7-2016-nafte\" \
@@ -414,17 +421,25 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
 async fn category_pages_open_their_map_in_place(pool: PgPool) {
     // Harta opens the map on the category page itself, keeping the filters.
     let cars = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL").await;
-    assert!(cars.contains(r#"<a class="button secondary map-open" href="/c/makina?vehicle_fuel=DIESEL&harta=1">"#));
+    assert!(cars.contains(r#"<a class="button secondary map-open" href="/c/makina?vehicle_fuel=DIESEL&harta=1" aria-label="Harta" title="Harta"><svg class="pin-icon""#));
     assert!(!cars.contains(r#"data-controller="map""#));
 
     let open = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&harta=1").await;
-    assert!(open.contains(r#"<section class="map-card" data-controller="map" data-map-remember-value="true" aria-label="Harta">"#));
-    assert!(open.contains("Prek hartën për të vendosur pikën"));
+    assert!(open.contains(r#"<section class="map-card" data-controller="map" data-map-remember-value="true" aria-label="Harta" data-map-latitude-value="41.3275" data-map-longitude-value="19.8187">"#));
+    // The map starts with its pin in the middle of Tirana, which the results follow; the pin isn't
+    // written into the links, so closing the map, or dropping the pin's chip, leaves none behind.
+    assert!(open.contains("Brenda 10 km nga pika"));
+    assert!(open.contains(r#"<a class="filter-chip" href="/c/makina?vehicle_fuel=DIESEL" aria-label="Hiq filtrin Brenda 10 km nga pika">"#));
     assert!(open.contains(r#"<form class="map-form" action="/c/makina" method="get" data-map-target="form">"#));
     assert!(open.contains(r#"<input type="hidden" name="vehicle_fuel" value="DIESEL">"#));
     assert!(open.contains(r#"data-url="/listing/1001-volkswagen-golf-7-2016-nafte""#));
-    // A tap on Harta closes it again.
-    assert!(open.contains(r#"<a class="button secondary map-open active" href="/c/makina?vehicle_fuel=DIESEL" aria-label="Mbyll hartën">"#));
+    // Under the map, the button that sets its point; the map's form leaves the open map out, so
+    // setting the point closes it.
+    assert!(open.contains(r#"<button type="button" class="button map-confirm" data-action="map#confirm">Vendos hartën</button>"#));
+    let map_form = &open[open.find(r#"<form class="map-form""#).unwrap()..];
+    assert!(!map_form[..map_form.find("</form>").unwrap()].contains(r#"name="harta""#));
+    // A tap on the pin closes it again.
+    assert!(open.contains(r#"<a class="button secondary map-open active" href="/c/makina?vehicle_fuel=DIESEL" aria-label="Mbyll hartën" title="Mbyll hartën">"#));
 
     // With a pin, the page stays the category's, with its heading and filters, and the filter
     // form and the category menu keep the pin and the open map.

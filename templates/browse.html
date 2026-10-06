@@ -58,9 +58,13 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
       Filtrat{% if !chips.is_empty() %} <span class="count-badge">{{ chips.len() }}</span>{% endif %}
     </button>
-    {#- Opens the map above these results, on this page, and closes it again. -#}
-    <a class="button secondary map-open{% if filters.map_open %} active{% endif %}" href="{{ filters.map_toggle_url() }}"
-       {%- if filters.map_open %} aria-label="Mbyll hartën"{% endif %}>{% include "pin.svg" %}Harta</a>
+    {#- Opens the map above these results, on this page, and closes it again: a pin in the site's
+        coral, the button coral while the map is open. Its name is for screen readers and a tooltip. -#}
+    {%- if filters.map_open %}
+    <a class="button secondary map-open active" href="{{ filters.map_toggle_url() }}" aria-label="Mbyll hartën" title="Mbyll hartën">{% include "pin.svg" %}</a>
+    {%- else %}
+    <a class="button secondary map-open" href="{{ filters.map_toggle_url() }}" aria-label="Harta" title="Harta">{% include "pin.svg" %}</a>
+    {%- endif %}
     <div class="sort">
       <label for="sort">Rendit</label>
       {#- Part of the filter form through the form attribute, so it keeps the filters. -#}
@@ -83,8 +87,9 @@
 
     {%- if filters.map_open %}
     {#- The map of these results, in a card whose header folds it away and back
-        (map_controller.js). A tap puts the pin there and the page reloads with the listings
-        around it, keeping the category, the filters and the open map. -#}
+        (map_controller.js). Its pin stays in the middle, Tirana's to begin with, and the map moves
+        under it; "Vendos hartën" then sets the point and the distance: the page reloads with the
+        listings around it, keeping the category and the filters, and the map closes. -#}
     <section class="map-card" data-controller="map" data-map-remember-value="true" aria-label="Harta"
       {%- if let Some(near) = filters.near %} data-map-latitude-value="{{ near.latitude }}" data-map-longitude-value="{{ near.longitude }}"{% endif %}>
       <button type="button" class="map-card-header" data-map-target="toggle" data-action="map#toggleMap"
@@ -92,7 +97,7 @@
         <span class="map-card-icon" aria-hidden="true">{% include "pin.svg" %}</span>
         <span class="map-card-title">
           <strong>Harta</strong>
-          <span>{% if filters.near.is_some() %}Brenda {{ filters.radius_km }} km nga pika{% else %}Prek hartën për të vendosur pikën{% endif %}</span>
+          <span>Brenda {{ filters.radius_km }} km nga pika</span>
         </span>
         <svg class="map-card-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </button>
@@ -118,6 +123,7 @@
       {%- if more_points %}
       <p class="map-note">Në hartë shfaqen {{ crate::db::MAP_POINTS }} njoftimet e para të listës.</p>
       {%- endif %}
+      <button type="button" class="button map-confirm" data-action="map#confirm">Vendos hartën</button>
       <ul class="map-points" hidden data-map-target="points">
         {%- for point in points %}
         <li data-lat="{{ point.latitude }}" data-lng="{{ point.longitude }}" data-url="{{ point.url() }}" data-price="{{ point.price_display() }}">{{ point.title }}</li>

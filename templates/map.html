@@ -5,14 +5,15 @@
 {% block query %}{{ filters.q_value() }}{% endblock %}
 
 {% block content %}
-{#- map_controller.js draws the map. A tap puts the pin there; the form then reloads only the
-    results panel (a turbo-frame), so the map stays as it is, and the address bar follows. -#}
+{#- map_controller.js draws the map, its pin in the middle; "Vendos hartën" sets the point, and
+    the form reloads only the results panel (a turbo-frame), so the map stays as it is, and the
+    address bar follows. -#}
 <div class="map-page" data-controller="map"
   {%- if let Some(near) = filters.near %} data-map-latitude-value="{{ near.latitude }}" data-map-longitude-value="{{ near.longitude }}"{% endif %}
   data-action="turbo:frame-load->map#plot">
   <header class="map-header">
     <h1>Kërko në hartë</h1>
-    <p class="lead">Prek hartën për të vendosur pikën, pastaj zgjidh largësinë.</p>
+    <p class="lead">Lëviz hartën derisa pika të jetë aty ku kërkon, zgjidh largësinë dhe shtyp „Vendos hartën“.</p>
   </header>
 
   <form id="map-form" class="map-form" action="/harta" method="get"
@@ -40,14 +41,18 @@
     <button type="button" class="button secondary map-locate" data-action="map#locate">
       {%- include "pin.svg" %}Vendndodhja ime
     </button>
-    {#- Once there is a pin, the map can be folded away for the results (map_controller.js). -#}
+    {#- The map can be folded away for the results (map_controller.js). -#}
     <button type="button" class="button secondary map-toggle" data-map-target="toggle" data-action="map#toggleMap"
             aria-controls="map-canvas" aria-expanded="true" data-show-label="Shfaq hartën" data-hide-label="Fshih hartën" hidden>Fshih hartën</button>
     <p class="map-status" data-map-target="status" role="status"></p>
   </form>
 
   <div class="map-layout">
-    <div class="map-canvas" id="map-canvas" data-map-target="canvas" role="region" aria-label="Harta"></div>
+    {#- The map, and under it the button that sets its point; beside the results on wide screens. -#}
+    <div class="map-stage">
+      <div class="map-canvas" id="map-canvas" data-map-target="canvas" role="region" aria-label="Harta"></div>
+      <button type="button" class="button map-confirm" data-action="map#confirm">Vendos hartën</button>
+    </div>
     {#- Links inside go to whole pages (target="_top"); only the form reloads this frame. -#}
     <turbo-frame id="map-results" class="map-results" target="_top" data-map-target="results">
       <p class="result-count">{{ count }}</p>

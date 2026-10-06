@@ -815,25 +815,17 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .sort { display: flex; align-items: center; gap: .5rem; margin-left: auto; color: var(--muted); font-size: .9rem; }
 .sort select { width: auto; color: var(--text); font-size: 1rem; }
 
-/* Phones: Filtrat, Harta and the sort share one row. The sort takes what room is left, without
-   its "Rendit" label (screen readers still read it), and a long choice ends in an ellipsis rather
-   than pushing the page wider than the screen. */
+/* Phones: Filtrat, the map's pin and the sort share one row. The sort takes what room is left,
+   without its "Rendit" label (screen readers still read it), and a long choice ends in an
+   ellipsis rather than pushing the page wider than the screen. */
 @media (max-width: 719px) {
   .toolbar { flex-wrap: nowrap; gap: .5rem; }
-  .toolbar .filters-open,
-  .toolbar .map-open { flex: none; padding: .5rem .7rem; }
+  .toolbar .filters-open { flex: none; padding: .5rem .7rem; }
   .sort { flex: 1 1 auto; min-width: 0; }
   .sort label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .sort select { flex: 1; min-width: 0; padding-left: .6rem; text-overflow: ellipsis; }
   .sort .picker { flex: 1; min-width: 0; }
   .sort .picker-button { width: 100%; padding-left: .6rem; }
-}
-
-/* The narrowest phones: Harta is its pin alone (its name stays for screen readers), so the sort
-   keeps room to be read. */
-@media (max-width: 359px) {
-  .toolbar .map-open { font-size: 0; gap: 0; }
-  .toolbar .map-open .pin-icon { width: 18px; height: 18px; }
 }
 
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
@@ -917,9 +909,20 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* Map page, and the ways to it */
 
-.map-open { gap: .35rem; padding: .5rem .9rem; }
-/* Harta while its map is open above the results: a tap closes it. */
-.button.secondary.map-open.active { background: var(--surface-muted); border-color: var(--text); }
+/* The way to the map on a category or search page: a pin in the site's coral, alone on a square
+   button as tall as Filtrat beside it (its padding, its line, its border). While the map is open
+   above the results the button is coral and the pin white, and a tap closes it. */
+.button.map-open {
+  flex: none;
+  justify-content: center;
+  width: calc(2.55rem + 2px);
+  height: calc(2.55rem + 2px);
+  padding: 0;
+}
+.map-open .pin-icon { flex: none; width: 20px; height: 20px; margin: 0; color: var(--button); }
+.button.secondary.map-open.active { background: var(--button); border-color: var(--button); }
+.button.secondary.map-open.active:hover { background: var(--button-hover); }
+.map-open.active .pin-icon { color: var(--on-button); }
 /* The map on a category or search page, between the toolbar and the results: a card whose header
    folds it down to that header and opens it again. */
 .map-card { margin: 0 0 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
@@ -942,7 +945,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .map-card .map-form { margin-bottom: .75rem; }
 .map-card .map-canvas { border-radius: calc(var(--radius) - 4px); }
 .map-card .map-note { margin: .6rem 0 0; }
-.map-open .pin-icon,
 .map-locate .pin-icon { margin-right: 0; }
 
 .map-header { margin: 1.25rem 0 1rem; }
@@ -958,8 +960,11 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .map-radius input[type="range"] { width: 100%; height: 2.25rem; margin: 0; padding: 0; border: 0; background: none; accent-color: var(--button); cursor: pointer; }
 .map-locate { gap: .35rem; }
 .map-toggle[hidden] { display: none; }
+/* Under the map, the button that sets its point: the whole width, in the site's colour. */
+.map-confirm { justify-content: center; width: 100%; margin-top: .75rem; padding-block: .7rem; }
 /* The map folded away ("Fshih hartën"): the results get the whole width. */
-.map-hidden .map-canvas { display: none; }
+.map-hidden .map-canvas,
+.map-hidden .map-confirm { display: none; }
 .map-status { flex-basis: 100%; margin: 0; color: var(--muted); font-size: .9rem; }
 .map-status:empty { display: none; }
 
@@ -982,9 +987,41 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .map-results .result-count { margin: 0 0 .75rem; }
 .map-note { margin: -.5rem 0 .75rem; color: var(--muted); font-size: .85rem; }
 
-/* The pin, in the location colour: Lufthansa blue, or coral in the dark theme. touch-action
-   keeps a finger dragging the pin from scrolling the page instead. */
-.map-pin { color: var(--location); filter: drop-shadow(0 1px 2px rgb(0 0 0 / 45%)); touch-action: none; }
+/* The pin, in the location colour: Lufthansa blue, or coral in the dark theme. It stands fixed in
+   the middle of the map, its tip on it, and the map moves under it, as on Facebook's
+   (map_controller.js): it lifts a little while the map moves and sets down when it stops, its
+   shadow staying on the spot. Over the tiles, the circle and the dots; under the popups, which
+   Leaflet puts at 700; it lets every touch through to the map. */
+.map-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 650;
+  width: 34px;
+  height: 34px;
+  margin: -32px 0 0 -17px;
+  color: var(--location);
+  pointer-events: none;
+  transition: transform .15s ease-out;
+}
+.map-center svg { display: block; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 45%)); }
+.map-center::after {
+  content: "";
+  position: absolute;
+  top: 30px;
+  left: 13px;
+  width: 8px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 30%);
+  transition: transform .15s ease-out;
+}
+.map-center.is-moving { transform: translateY(-8px); }
+.map-center.is-moving::after { transform: translateY(8px); }
+@media (prefers-reduced-motion: reduce) {
+  .map-center,
+  .map-center::after { transition: none; }
+}
 /* The circle around it, and a dot for each listing. CSS beats the colours Leaflet sets as attributes. */
 .map-area { stroke: var(--location); fill: var(--location); }
 .map-dot { stroke: #fff; fill: var(--accent); }
@@ -1014,7 +1051,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* Wide screens: the map stays beside the results while they scroll. */
 @media (min-width: 960px) {
   .map-page:not(.map-hidden) .map-layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; gap: 1.5rem; }
-  .map-page .map-canvas { position: sticky; top: 4.5rem; }
+  .map-page .map-stage { position: sticky; top: 4.5rem; }
   .map-page:not(.map-hidden) .map-results .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 

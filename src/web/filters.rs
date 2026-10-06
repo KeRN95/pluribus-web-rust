@@ -30,6 +30,10 @@ const MIN_RADIUS_KM: u32 = 1;
 const MAX_RADIUS_KM: u32 = 50;
 const DEFAULT_RADIUS_KM: u32 = 10;
 
+/// Where a map's pin stands until the visitor moves the map: the middle of Tirana (Skanderbeg
+/// Square). A map always has its pin, as Facebook's does (map_controller.js).
+const TIRANA: (f64, f64) = (41.3275, 19.8187);
+
 /// Properties with at most this many options are offered as checkboxes, longer lists as a
 /// dropdown.
 const CHECKBOX_LIMIT: usize = 8;
@@ -124,8 +128,12 @@ pub struct Filters<'a> {
     pub q: Option<String>,
     pub category: Option<&'a Category>,
     pub city: Option<&'a City>,
-    /// The map pin, with its radius.
+    /// The map pin, with its radius: the one in the address, or with a map shown and none there,
+    /// TIRANA.
     pub near: Option<Near>,
+    /// Whether the pin came in the address (lat and lng). Tirana's isn't written into links, so
+    /// closing the map leaves no pin behind.
+    pin_in_url: bool,
     /// The radius picked for the map, in kilometres; it stays picked without a pin.
     pub radius_km: u32,
     /// A category or search page showing its map above the results (harta=1).
@@ -213,15 +221,17 @@ impl<'a> Filters<'a> {
             .and_then(|value| value.parse().ok())
             .filter(|radius| (MIN_RADIUS_KM..=MAX_RADIUS_KM).contains(radius))
             .unwrap_or(DEFAULT_RADIUS_KM);
-        let near = match (
+        let pin = match (
             params.first("lat").and_then(|value| parse_coordinate(value, 90.0)),
             params.first("lng").and_then(|value| parse_coordinate(value, 180.0)),
         ) {
-            (Some(latitude), Some(longitude)) => {
-                Some(Near { latitude, longitude, radius_m: f64::from(radius_km) * 1000.0 })
-            }
+            (Some(latitude), Some(longitude)) => Some((latitude, longitude)),
             _ => None,
         };
+        let map_shown = path == "/harta" || params.first("harta") == Some("1");
+        let near = pin
+            .or(map_shown.then_some(TIRANA))
+            .map(|(latitude, longitude)| Near { latitude, longitude, radius_m: f64::from(radius_km) * 1000.0 });
 
         // With a pin, nearest first unless another order is picked; without one, newest first.
         let default_sort = if near.is_some() { Sort::Nearest } else { Sort::Newest };
@@ -241,6 +251,7 @@ impl<'a> Filters<'a> {
             category,
             city: params.first("city").and_then(|slug| cities.iter().find(|c| c.slug == slug)),
             near,
+            pin_in_url: pin.is_some(),
             radius_km,
             map_open: params.first("harta") == Some("1"),
             listing_type,
@@ -288,11 +299,16 @@ impl<'a> Filters<'a> {
         if let Some(city) = self.city {
             push("city", &city.slug);
         }
-        if let Some(near) = self.near {
-            // Five decimals is about a metre.
-            push("lat", &format!("{:.5}", near.latitude));
-            push("lng", &format!("{:.5}", near.longitude));
-            push("radius", &self.radius_km.to_string());
+        match self.near {
+            Some(near) if self.pin_in_url => {
+                // Five decimals is about a metre.
+                push("lat", &format!("{:.5}", near.latitude));
+                push("lng", &format!("{:.5}", near.longitude));
+                push("radius", &self.radius_km.to_string());
+            }
+            // The map's starting pin isn't written down, but a distance picked for it is.
+            Some(_) if self.radius_km != DEFAULT_RADIUS_KM => push("radius", &self.radius_km.to_string()),
+            _ => {}
         }
         if self.map_open {
             push("harta", "1");
@@ -398,12 +414,12 @@ impl<'a> Filters<'a> {
     }
 
     /// What the map's form on a category or search page carries along hidden: everything but the
-    /// pin and its radius, which are its own fields. A picked order stays; otherwise a pin makes
-    /// it nearest first.
+    /// pin and its radius, which are its own fields, and the open map, which "Vendos hartën"
+    /// closes. A picked order stays; otherwise a pin makes it nearest first.
     pub fn map_form_fields(&self) -> Vec<(String, String)> {
         self.pairs()
             .into_iter()
-            .filter(|(name, _)| !matches!(name.as_str(), "lat" | "lng" | "radius"))
+            .filter(|(name, _)| !matches!(name.as_str(), "lat" | "lng" | "radius" | "harta"))
             .collect()
     }
 
@@ -426,10 +442,12 @@ impl<'a> Filters<'a> {
         if let Some(city) = self.city {
             chip(city.name.clone(), self.url_without(|name, _| name == "city"));
         }
-        if self.near.is_some() {
+        // Not on the map page, whose map is the pin. An open map always has one, so letting go of
+        // the pin closes the map too.
+        if self.near.is_some() && self.path != "/harta" {
             chip(
                 format!("Brenda {} km nga pika", self.radius_km),
-                self.url_without(|name, _| matches!(name, "lat" | "lng" | "radius")),
+                self.url_without(|name, _| matches!(name, "lat" | "lng" | "radius" | "harta")),
             );
         }
         if let Some(listing_type) = &self.listing_type {
