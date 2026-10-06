@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_option_id)\n         SELECT $1, a.id, a.data_type, o.id\n         FROM categories c\n         JOIN attribute_options o ON o.id = c.replaces_option_id\n         JOIN attributes a ON a.id = o.attribute_id\n         WHERE c.id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c1fec37daae485e6d0dfc396f9591284cfe9435807a254c0ec391f4a1b05b29e"
+}

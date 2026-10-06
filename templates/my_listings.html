@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Njoftimet e mia | Marketplace{% endblock %}
+
+{% block content %}
+<section class="account">
+  <h1>Njoftimet e mia</h1>
+  <p class="lead">Njoftimet që ke publikuar me <strong>{{ signed_in_as }}</strong>.</p>
+
+  {% if listings.is_empty() %}
+  <p class="empty">Nuk ke publikuar asnjë njoftim ende.</p>
+  {% else %}
+  <ul class="my-listings">
+    {% for listing in listings %}
+    <li class="my-listing">
+      <div class="my-listing-text">
+        <a class="my-listing-title" href="{{ listing.url() }}">{{ listing.title }}</a>
+        <span class="my-listing-meta">
+          {{ listing.price_display() }}{% if let Some(label) = listing.status_label() %} · <span class="badge">{{ label }}</span>{% endif %}
+        </span>
+      </div>
+      {% if listing.editable() %}<a class="button secondary" href="/listing/{{ listing.public_no }}/ndrysho">Ndrysho</a>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p><a class="button" href="/shto">+ Shto një njoftim</a></p>
+</section>
+{% endblock %}

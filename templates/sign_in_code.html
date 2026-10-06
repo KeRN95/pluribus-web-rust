@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Shkruaj kodin | Marketplace{% endblock %}
+
+{% block content %}
+<section class="account">
+  <h1>Shkruaj kodin</h1>
+  {% if gone %}
+  <p class="form-error" role="alert">{% if let Some(error) = error %}{{ error }}{% endif %}</p>
+  <p><a class="button" href="/llogaria">Kërko një kod të ri</a></p>
+  {% else %}
+  <p class="lead">Të dërguam një kod me 6 shifra{{ sent_via }} te <strong>{{ sent_to }}</strong>. Vlen për 10 minuta.
+    {%- if publishes %} Shkruaje dhe njoftimi yt publikohet.{% endif %}</p>
+
+  {% if let Some(code) = test_code %}
+  <p class="form-error test-mode">Versioni provë: kodi është <strong>{{ code }}</strong>. Në versionin e vërtetë vjen me SMS ose email.</p>
+  {% endif %}
+  <form class="account-form" action="/hyr/kodi" method="post">
+    {% if let Some(error) = error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+    <div class="field">
+      <label class="field-label" for="code">Kodi</label>
+      <input id="code" name="code" required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}"
+             maxlength="7" class="code-input" autofocus{% if let Some(code) = test_code %} value="{{ code }}"{% endif %}>
+    </div>
+    <button type="submit" class="button">Hyr</button>
+  </form>
+  <p class="account-note">Nuk erdhi? <a href="/llogaria">Kërko një kod të ri</a> pas një minute.</p>
+  {% endif %}
+</section>
+{% endblock %}

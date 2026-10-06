@@ -1,0 +1,36 @@
+{#- The card's link is its title, stretched over the whole card (see .card-link in app.css), so
+    screen readers name the link by the title alone. The listing's point, when it has one, is
+    there for the map page, which puts a dot on the map for each card. -#}
+<article class="card">
+  {#- The photo, darkening toward its bottom edge, with the price on it there; the title under it
+      (.card-media in app.css). -#}
+  <div class="card-media">
+    {% if let Some(src) = card.cover_url %}
+    {#- The first row loads straight away; the rest wait until they scroll near the screen. -#}
+    <img class="card-photo" src="{{ src }}" alt="" width="480" height="360" decoding="async"
+      {%- if loop.index > 4 %} loading="lazy"{% endif %}>
+    {#- The same photo again, blurred, behind the whole card (.card-blur); the browser has it
+        already, so it costs no download. -#}
+    <img class="card-blur" src="{{ src }}" alt="" aria-hidden="true" decoding="async"
+      {%- if loop.index > 4 %} loading="lazy"{% endif %}>
+    {% else %}
+    <div class="card-photo placeholder" aria-hidden="true"></div>
+    {% endif %}
+    <div class="card-head">
+      <h2 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h2>
+    </div>
+    <p class="card-price">{{ card.price_display() }}</p>
+  </div>
+  {#- The details line, which starts with a location pin and the city, then the distance from the
+      map pin when there is one: "Tiranë · 2,4 km · 2016 · Naftë". One line, ending in "…" when
+      longer. -#}
+  <div class="card-body">
+    <p class="card-summary">
+      {%- let rest = card.details_line() -%}
+      {%- if let Some(city) = card.city_label() -%}
+      {% include "pin.svg" %}{{ city }}{% if !rest.is_empty() %} · {% endif %}
+      {%- endif -%}
+      {{- rest -}}
+    </p>
+  </div>
+</article>

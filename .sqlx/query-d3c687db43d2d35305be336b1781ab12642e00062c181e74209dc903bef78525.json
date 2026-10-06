@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, parent_id, name, slug, default_currency::text AS \"default_currency!\",\n                  listing_types, uses_condition\n           FROM categories\n           WHERE active\n           ORDER BY sort_order, name",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "parent_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "slug",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "default_currency!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "listing_types",
+        "type_info": "VarcharArray"
+      },
+      {
+        "ordinal": 6,
+        "name": "uses_condition",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "d3c687db43d2d35305be336b1781ab12642e00062c181e74209dc903bef78525"
+}

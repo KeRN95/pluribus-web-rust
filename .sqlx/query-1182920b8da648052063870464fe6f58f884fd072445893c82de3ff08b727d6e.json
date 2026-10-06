@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE listing_contacts SET contact_name = $2 WHERE listing_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1182920b8da648052063870464fe6f58f884fd072445893c82de3ff08b727d6e"
+}

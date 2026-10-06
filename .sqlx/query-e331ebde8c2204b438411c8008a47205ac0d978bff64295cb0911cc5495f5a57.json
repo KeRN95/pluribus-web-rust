@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO listing_contacts (listing_id, contact_name, phone_e164, email, show_phone, show_email)\n         VALUES ($1, $2, $3::text::e164_phone, $4::text::citext, $3 IS NOT NULL, $4 IS NOT NULL)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e331ebde8c2204b438411c8008a47205ac0d978bff64295cb0911cc5495f5a57"
+}

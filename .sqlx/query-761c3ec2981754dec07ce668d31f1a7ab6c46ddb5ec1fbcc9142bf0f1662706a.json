@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO listing_attribute_options (listing_id, attribute_id, option_id)\n                     SELECT $1, $2, unnest($3::uuid[])",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "761c3ec2981754dec07ce668d31f1a7ab6c46ddb5ec1fbcc9142bf0f1662706a"
+}

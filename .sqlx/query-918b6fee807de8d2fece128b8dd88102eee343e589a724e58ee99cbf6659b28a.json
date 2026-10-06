@@ -1,0 +1,95 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT l.id, l.public_no, l.slug, c.slug AS category, l.listing_type, l.condition, l.title, l.description,\n                  l.price_amount, l.currency::text AS \"currency!\", l.price_type,\n                  (SELECT m.slug FROM locations m WHERE m.id = location_municipality(l.location_id)) AS city,\n                  lc.contact_name\n           FROM listings l\n           JOIN categories c ON c.id = l.category_id\n           LEFT JOIN listing_contacts lc ON lc.listing_id = l.id\n           WHERE l.public_no = $1 AND l.created_by_user_id = $2 AND l.status IN ('ACTIVE', 'RESERVED')",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "public_no",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "slug",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "category",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "listing_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "condition",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "price_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 9,
+        "name": "currency!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "price_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "city",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "contact_name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      null,
+      false,
+      null,
+      true
+    ]
+  },
+  "hash": "918b6fee807de8d2fece128b8dd88102eee343e589a724e58ee99cbf6659b28a"
+}

@@ -1,0 +1,4 @@
+<turbo-frame id="{{ frame_id }}" target="_top">
+  {% for card in page.cards %}{% include "listing_card.html" %}{% endfor %}
+  {% if let Some(next) = page.next %}{% include "next_page.html" %}{% endif %}
+</turbo-frame>

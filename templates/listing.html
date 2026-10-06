@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}{{ listing.title }} | Marketplace{% endblock %}
+
+{% block content %}
+{#- With a loan calculator (loan_controller.js), its button is by the price and the calculator
+    opens under the actions: years and interest give the monthly payment. -#}
+<article class="listing"
+  {%- if let Some(amount) = listing.loan_amount() %} data-controller="loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}"{% endif %}>
+  {% if photos.is_empty() %}
+  <div class="listing-photo placeholder" aria-hidden="true"></div>
+  {% else %}
+  <div class="listing-photos">
+    {% for photo in photos %}
+    <img src="{{ photo.url }}" alt="{{ listing.title }}"
+      {%- if let Some(width) = photo.width_px %} width="{{ width }}"{% endif %}
+      {%- if let Some(height) = photo.height_px %} height="{{ height }}"{% endif %}
+      {%- if !loop.first %} loading="lazy"{% endif %}>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <header class="listing-header">
+    <a class="chip" href="/c/{{ listing.category_slug }}">{{ listing.category_name }}</a>
+    {% if let Some(label) = listing.status_label() %}<span class="badge">{{ label }}</span>{% endif %}
+    <h1>{{ listing.title }}</h1>
+    {%- if listing.loan_amount().is_some() %}
+    {#- The price, and the button that opens the loan calculator under the actions below. -#}
+    <div class="price-row">
+      <p class="listing-price">{{ listing.price_display() }}</p>
+      <button type="button" class="loan-button" data-loan-target="button" data-action="loan#toggle"
+              aria-controls="loan-calculator" aria-expanded="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01"/></svg>
+        Llogarit kredinë
+      </button>
+    </div>
+    {%- else %}
+    <p class="listing-price">{{ listing.price_display() }}</p>
+    {%- endif %}
+    <p class="card-meta">
+      {% if let Some(location) = listing.location_name %}{{ location }} · {% endif %}
+      {% if let Some(date) = listing.published_display() %}Publikuar më {{ date }} · {% endif %}
+      Nr. {{ listing.public_no }}
+    </p>
+  </header>
+
+  <div class="actions">
+    {% if let Some(label) = reveal_label %}
+    {#- Turbo submits this form and swaps in the phone number (or e-mail) from the Turbo Stream response. -#}
+    <form id="phone-reveal" method="post" action="/listing/{{ listing.public_no }}/phone">
+      <button type="submit" class="button">{{ label }}</button>
+    </form>
+    {% endif %}
+    {% if own %}<a class="button secondary" href="/listing/{{ listing.public_no }}/ndrysho">Ndrysho</a>{% endif %}
+    <div data-controller="share" data-share-url-value="{{ listing.url() }}" data-share-title-value="{{ listing.title }}">
+      <button type="button" class="button secondary" data-action="share#share">
+        <span data-share-target="label">Shpërndaje</span>
+      </button>
+    </div>
+  </div>
+
+  {%- if listing.loan_amount().is_some() %}
+  <section class="loan" id="loan-calculator" data-loan-target="panel" aria-label="Llogaritësi i kredisë" hidden>
+    <div class="loan-fields">
+      <div class="field">
+        <label class="field-label" for="loan-down">Paradhënia ({{ listing.currency_symbol() }})</label>
+        <input id="loan-down" type="text" inputmode="decimal" value="0" autocomplete="off" data-loan-target="down" data-action="input->loan#calculate">
+      </div>
+      <div class="field">
+        <label class="field-label" for="loan-years">Vitet</label>
+        <input id="loan-years" type="text" inputmode="numeric" value="10" autocomplete="off" data-loan-target="years" data-action="input->loan#calculate">
+      </div>
+      <div class="field">
+        <label class="field-label" for="loan-rate">Interesi vjetor (%)</label>
+        <input id="loan-rate" type="text" inputmode="decimal" value="6" autocomplete="off" data-loan-target="rate" data-action="input->loan#calculate">
+      </div>
+    </div>
+    <p class="loan-summary" data-loan-target="summary"></p>
+    <p class="loan-note">Llogaritje orientuese. Kushtet e sakta i jep banka.</p>
+    <p class="loan-result" aria-live="polite">
+      <span>Kësti mujor</span>
+      <strong data-loan-target="monthly">–</strong>
+    </p>
+  </section>
+  {%- endif %}
+
+  {#- The seller, and the way to all their listings. -#}
+  <a class="seller" href="{{ listing.seller_url }}">
+    <span class="avatar" aria-hidden="true">{{ listing.seller_initial() }}</span>
+    <span class="seller-text">
+      <strong>{{ listing.seller_name }}</strong>
+      <span>{{ listing.seller_summary() }}</span>
+    </span>
+    <span class="seller-more" aria-hidden="true">›</span>
+  </a>
+
+  {% if !attributes.is_empty() %}
+  <section>
+    <h2>Detajet</h2>
+    <dl class="attributes">
+      {% for attribute in attributes %}
+      <dt>{{ attribute.label }}</dt>
+      <dd>{{ attribute.value }}</dd>
+      {% endfor %}
+    </dl>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>Përshkrimi</h2>
+    <p class="description">{{ listing.description }}</p>
+  </section>
+</article>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}{{ name }} | Marketplace{% endblock %}
+
+{% block content %}
+{#- A seller's public profile: who they are and their active listings, newest first. -#}
+<header class="profile-header">
+  <span class="avatar large" aria-hidden="true">{{ initial }}</span>
+  <div>
+    <h1>{{ name }}</h1>
+    <p>{% if business %}Biznes · {% endif %}Në Marketplace që nga {{ since }} · {{ count }}</p>
+  </div>
+</header>
+{#- A search within this seller's listings only. -#}
+<form class="profile-search" action="{{ path }}" method="get" role="search">
+  <input type="search" name="q" value="{% if let Some(q) = query %}{{ q }}{% endif %}" placeholder="Kërko te njoftimet e {{ name }}"
+         aria-label="Kërko te njoftimet e {{ name }}">
+  <button type="submit" class="icon-button" aria-label="Kërko">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+  </button>
+</form>
+{%- if let Some(q) = query %}
+<p class="profile-found">{{ found }} për „{{ q }}“ · <a href="{{ path }}">Hiq kërkimin</a></p>
+{%- endif %}
+{% include "listing_grid.html" %}
+{% endblock %}

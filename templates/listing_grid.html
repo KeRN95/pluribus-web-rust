@@ -1,0 +1,9 @@
+{#- The first page of results. Later pages load into the trailing frame as it scrolls into view. -#}
+{% if page.cards.is_empty() %}
+<p class="empty">Nuk u gjet asnjë njoftim.</p>
+{% else %}
+<div class="grid">
+  {% for card in page.cards %}{% include "listing_card.html" %}{% endfor %}
+  {% if let Some(next) = page.next %}{% include "next_page.html" %}{% endif %}
+</div>
+{% endif %}

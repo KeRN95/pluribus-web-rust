@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_boolean)\n                     VALUES ($1, $2, 'BOOLEAN', $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e490742b2a87dbc0c14af1b99c0c396760a8d31cad00a4e97e66cff3a545c30e"
+}

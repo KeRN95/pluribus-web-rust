@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO users (auth_subject, phone_e164, email, display_name, status)\n         VALUES ($1, $2::text::e164_phone, $3::text::citext, coalesce($4, 'Përdorues'), 'PENDING')\n         ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0cabf629aee55de8acce49e440158a49ddc83c2c75b973430a38f7784485fa39"
+}

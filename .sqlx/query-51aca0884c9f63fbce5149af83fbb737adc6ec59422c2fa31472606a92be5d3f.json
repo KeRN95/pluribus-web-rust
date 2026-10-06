@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO listing_daily_stats (listing_id, stat_date, phone_reveals)\n         VALUES ($1, current_date, 1)\n         ON CONFLICT (listing_id, stat_date)\n         DO UPDATE SET phone_reveals = listing_daily_stats.phone_reveals + 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "51aca0884c9f63fbce5149af83fbb737adc6ec59422c2fa31472606a92be5d3f"
+}

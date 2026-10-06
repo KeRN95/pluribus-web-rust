@@ -1,0 +1,10 @@
+{#- How far around the pin to look. The slider moves slowly near the pin and faster further out;
+    map_controller.js turns its position into whole km (1 to 50) in the radius field, and the
+    form goes when the slider is let go. -#}
+<div class="field map-radius">
+  <label class="field-label" for="map-radius">Largësia <output data-map-target="radiusLabel">{{ filters.radius_km }} km</output></label>
+  <input type="hidden" name="radius" value="{{ filters.radius_km }}" data-map-target="radius">
+  <input id="map-radius" type="range" min="0" max="100" step="1" value="{{ filters.radius_position() }}"
+         aria-valuetext="{{ filters.radius_km }} km" data-map-target="slider"
+         data-action="input->map#radiusInput change->map#radiusChanged">
+</div>

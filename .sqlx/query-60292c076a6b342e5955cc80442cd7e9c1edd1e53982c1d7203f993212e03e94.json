@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.code AS \"code!\",\n                  CASE WHEN o.id IS NOT NULL AND NOT o.active THEN '__other__'\n                       ELSE coalesce(o.value_code, trim_scale(v.value_number)::text, v.value_text,\n                                     CASE WHEN v.value_boolean THEN '1' END)\n                  END AS value\n           FROM listing_attribute_values v\n           JOIN attributes a ON a.id = v.attribute_id\n           LEFT JOIN attribute_options o ON o.id = v.value_option_id\n           WHERE v.listing_id = $1\n           UNION ALL\n           SELECT a.code || '_other', o.label\n           FROM listing_attribute_values v\n           JOIN attributes a ON a.id = v.attribute_id\n           JOIN attribute_options o ON o.id = v.value_option_id AND NOT o.active\n           WHERE v.listing_id = $1\n           UNION ALL\n           SELECT a.code, o.value_code\n           FROM listing_attribute_options lo\n           JOIN attributes a ON a.id = lo.attribute_id\n           JOIN attribute_options o ON o.id = lo.option_id\n           WHERE lo.listing_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "value",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "60292c076a6b342e5955cc80442cd7e9c1edd1e53982c1d7203f993212e03e94"
+}

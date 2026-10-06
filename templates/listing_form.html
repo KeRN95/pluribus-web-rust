@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}{{ heading }} | Marketplace{% endblock %}
+
+{% block content %}
+<section class="account new-listing">
+  <h1>{{ heading }}</h1>
+  {%- if let Some(who) = signed_in_as %}
+  {%- if cancel_url.is_some() %}
+  <p class="lead">Ndryshimet shfaqen menjëherë. Blerësit të kontaktojnë te <strong>{{ who }}</strong>.</p>
+  {%- else %}
+  <p class="lead">Publikohet menjëherë. Blerësit të kontaktojnë te <strong>{{ who }}</strong>.</p>
+  {%- endif %}
+  {%- else %}
+  {#- Not signed in: the account comes with the listing (post.rs, create_listing). -#}
+  <p class="lead">S'ke llogari? S'ka problem: në fund shkruaj celularin ose email-in. Të dërgojmë një kod, dhe njoftimi
+    publikohet sapo ta shkruash; llogaria krijohet vetë. <a href="/llogaria">Ke llogari? Hyr</a></p>
+  {%- endif %}
+
+  {#- listing_form_controller.js offers the listing types and the condition the chosen category
+      takes, and its usual currency; the server checks them all the same. -#}
+  <form class="account-form" action="{{ action }}" method="post" data-controller="listing-form">
+    {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+
+    <div class="field">
+      <label class="field-label" for="category">Kategoria</label>
+      <select id="category" name="category" required data-listing-form-target="category" data-action="listing-form#categoryChanged">
+        <option value="">Zgjidh kategorinë</option>
+        {%- for group in category_groups %}
+        {%- if let Some(label) = group.label %}<optgroup label="{{ label }}">{% endif %}
+        {%- for category in group.options %}
+        <option value="{{ category.value }}" data-types="{{ category.types }}" data-currency="{{ category.currency }}"{% if category.uses_condition %} data-condition{% endif %}{% if category.selected %} selected{% endif %}>{{ category.label }}</option>
+        {%- endfor %}
+        {%- if group.label.is_some() %}</optgroup>{% endif %}
+        {%- endfor %}
+      </select>
+      {% if let Some(error) = self.error("category") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    <div class="form-row">
+      <div class="field" data-listing-form-target="typeField">
+        <label class="field-label" for="listing_type">Lloji</label>
+        <select id="listing_type" name="listing_type" data-listing-form-target="type">
+          {% for choice in types %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+        </select>
+        {% if let Some(error) = self.error("listing_type") %}<p class="field-error">{{ error }}</p>{% endif %}
+      </div>
+      <div class="field" data-listing-form-target="conditionField">
+        <label class="field-label" for="condition">Gjendja</label>
+        <select id="condition" name="condition">
+          <option value="">Pa specifikuar</option>
+          {% for choice in conditions %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    {#- The category's own fields; listing_form_controller.js reloads them when the category changes. -#}
+    <turbo-frame id="listing-properties" data-listing-form-target="properties">
+      {%- include "listing_properties.html" %}
+    </turbo-frame>
+
+    <div class="field">
+      <label class="field-label" for="title">Titulli</label>
+      <input id="title" name="title" value="{{ form.title }}" required minlength="5" maxlength="120" placeholder="p.sh. Volkswagen Golf 7, 2016, naftë">
+      {% if let Some(error) = self.error("title") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="description">Përshkrimi</label>
+      <textarea id="description" name="description" rows="6" required minlength="10" maxlength="5000">{{ form.description }}</textarea>
+      {% if let Some(error) = self.error("description") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    <div class="form-row price-row">
+      <div class="field">
+        <label class="field-label" for="price_type">Çmimi</label>
+        <select id="price_type" name="price_type" data-listing-form-target="priceType" data-action="listing-form#priceTypeChanged">
+          {% for choice in price_types %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field" data-listing-form-target="amountField">
+        <label class="field-label" for="price">Shuma</label>
+        <div class="amount">
+          <input id="price" name="price" value="{{ form.price }}" inputmode="decimal" placeholder="p.sh. 9 500">
+          <select name="currency" aria-label="Monedha" data-listing-form-target="currency">
+            {% for choice in currencies %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+    {% if let Some(error) = self.error("price") %}<p class="field-error">{{ error }}</p>{% endif %}
+
+    <div class="form-row">
+      <div class="field">
+        <label class="field-label" for="city">Qyteti</label>
+        <select id="city" name="city" required>
+          <option value="">Zgjidh qytetin</option>
+          {% for group in cities %}
+          <optgroup label="{{ group.label }}">
+            {% for city in group.choices %}<option value="{{ city.value }}"{% if city.selected %} selected{% endif %}>{{ city.label }}</option>{% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+        {% if let Some(error) = self.error("city") %}<p class="field-error">{{ error }}</p>{% endif %}
+      </div>
+      <div class="field">
+        <label class="field-label" for="name">Emri <span class="optional">(s'është i detyrueshëm)</span></label>
+        <input id="name" name="name" value="{{ form.name }}" maxlength="60" autocomplete="name">
+        {% if let Some(error) = self.error("name") %}<p class="field-error">{{ error }}</p>{% endif %}
+      </div>
+    </div>
+
+    {%- if signed_in_as.is_none() %}
+    <div class="field">
+      <label class="field-label" for="contact">Celulari ose email-i <span class="required" aria-hidden="true">*</span></label>
+      <input id="contact" name="contact" value="{{ form.contact }}" required autocomplete="username"
+             placeholder="069 123 4567 ose emri@shembull.com">
+      <p class="field-hint">Këtu të dërgojmë kodin. Blerësit e shohin vetëm kur shtypin „Shfaq numrin“.</p>
+      {% if let Some(error) = self.error("contact") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+    {%- endif %}
+
+    <div class="trap" aria-hidden="true">
+      <label for="website">Faqja</label>
+      <input id="website" name="website" tabindex="-1" autocomplete="off">
+    </div>
+    <input type="hidden" name="started" value="{{ started }}">
+    <div class="form-actions">
+      <button type="submit" class="button">{{ submit_label }}</button>
+      {% if let Some(url) = cancel_url %}<a class="button secondary" href="{{ url }}">Anulo</a>{% endif %}
+    </div>
+  </form>
+
+  {%- if signed_in_as.is_some() %}
+  <form class="account-note" action="/dil" method="post">
+    <a href="/njoftimet-e-mia">Njoftimet e mia</a> · Nuk je ti? <button type="submit" class="link-button">Dil</button>
+  </form>
+  {%- endif %}
+</section>
+{% endblock %}

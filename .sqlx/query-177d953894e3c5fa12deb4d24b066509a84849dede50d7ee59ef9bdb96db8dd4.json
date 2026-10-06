@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT category_id, count(*) AS \"count!\"\n           FROM listings\n           WHERE status = 'ACTIVE'\n           GROUP BY category_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "category_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "177d953894e3c5fa12deb4d24b066509a84849dede50d7ee59ef9bdb96db8dd4"
+}

@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT b.id, b.display_name, b.created_at,\n                  (SELECT count(*) FROM listings l WHERE l.seller_business_id = b.id AND l.status = 'ACTIVE') AS \"listings!\"\n           FROM businesses b WHERE b.slug = $1 AND b.status = 'ACTIVE'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "display_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "listings!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "2a748a1a2dd080acad02bb9725a1a86f92c1212098d41e5201692f08b53f135c"
+}

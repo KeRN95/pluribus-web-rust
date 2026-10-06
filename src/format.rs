@@ -1,0 +1,350 @@
+//! Display formatting with Albanian conventions: "9 500 €", "60 000 Lekë", "04.10.2026".
+
+use rust_decimal::{Decimal, prelude::ToPrimitive};
+use time::{OffsetDateTime, macros::format_description};
+
+/// Keeps a number and its unit on one line.
+const NBSP: char = '\u{a0}';
+
+/// A listing's price. Rents and salaries are per month.
+pub fn price(amount: Option<Decimal>, currency: &str, price_type: &str, listing_type: &str) -> String {
+    match (price_type, amount) {
+        ("FREE", _) => "Falas".to_string(),
+        _ if listing_type == "JOB" && (price_type == "ON_REQUEST" || amount.is_none()) => {
+            "Paga me marrëveshje".to_string()
+        }
+        ("ON_REQUEST", _) | (_, None) => "Çmimi me marrëveshje".to_string(),
+        (kind, Some(amount)) => {
+            let period = match listing_type {
+                "RENT" | "WANTED_RENT" | "JOB" => "/muaj",
+                _ => "",
+            };
+            let value = format!("{}{period}", money(amount, currency));
+            match kind {
+                "FROM" => format!("nga {value}"),
+                "NEGOTIABLE" => format!("{value} (i diskutueshëm)"),
+                _ => value,
+            }
+        }
+    }
+}
+
+/// An amount with its currency: "9 500 €".
+pub fn money(amount: Decimal, currency: &str) -> String {
+    format!("{}{NBSP}{}", number(amount), currency_symbol(currency))
+}
+
+pub fn currency_symbol(code: &str) -> &str {
+    match code {
+        "EUR" => "€",
+        "ALL" => "Lekë",
+        other => other,
+    }
+}
+
+/// Thousands separated by no-break spaces, decimal comma, decimals only when there are any.
+pub fn number(amount: Decimal) -> String {
+    let cents = (amount.round_dp(2) * Decimal::ONE_HUNDRED)
+        .to_i64()
+        .unwrap_or(0);
+    let (whole, fraction) = (cents.abs() / 100, cents.abs() % 100);
+    let digits = whole.to_string();
+    let mut grouped = String::new();
+    for (i, digit) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            grouped.push(NBSP);
+        }
+        grouped.push(digit);
+    }
+    let sign = if cents < 0 { "-" } else { "" };
+    if fraction == 0 {
+        format!("{sign}{grouped}")
+    } else {
+        format!("{sign}{grouped},{fraction:02}")
+    }
+}
+
+/// "1 njoftim", "24 njoftime"; counts that reached `limit` show as "1 000+ njoftime".
+pub fn listing_count(count: i64, limit: i64) -> String {
+    match count {
+        1 => "1 njoftim".to_string(),
+        n if n > limit => format!("{}+ njoftime", number(Decimal::from(limit))),
+        n => format!("{} njoftime", number(Decimal::from(n))),
+    }
+}
+
+/// A distance from the map pin: "850 m", "2,4 km", "18 km".
+pub fn distance(meters: f64) -> String {
+    if meters < 950.0 {
+        format!("{}{NBSP}m", ((meters / 10.0).round() * 10.0) as i64)
+    } else if meters < 9_950.0 {
+        format!("{:.1}{NBSP}km", meters / 1000.0).replace('.', ",")
+    } else {
+        format!("{}{NBSP}km", (meters / 1000.0).round() as i64)
+    }
+}
+
+/// How a listing type reads in filters.
+pub fn listing_type(code: &str) -> &str {
+    match code {
+        "SELL" => "Në shitje",
+        "BUY" => "Kërkoj të blej",
+        "RENT" => "Me qira",
+        "WANTED_RENT" => "Kërkoj me qira",
+        "SERVICE" => "Shërbim",
+        "JOB" => "Ofertë pune",
+        other => other,
+    }
+}
+
+pub fn condition(code: &str) -> &str {
+    match code {
+        "NEW" => "E re",
+        "LIKE_NEW" => "Si e re",
+        "USED" => "E përdorur",
+        "FOR_PARTS" => "Për pjesë",
+        other => other,
+    }
+}
+
+pub fn date(value: OffsetDateTime) -> String {
+    value
+        .format(format_description!("[day].[month].[year]"))
+        .unwrap_or_default()
+}
+
+/// Albanian mobile numbers as +355 69 123 4567; anything else is shown unchanged.
+pub fn phone(e164: &str) -> String {
+    match e164.strip_prefix("+355") {
+        Some(rest) if rest.len() == 9 && rest.starts_with('6') => {
+            format!("+355 {} {} {}", &rest[..2], &rest[2..5], &rest[5..])
+        }
+        _ => e164.to_string(),
+    }
+}
+
+/// A month and year, for "on the site since": "tetor 2026".
+pub fn month_year(value: OffsetDateTime) -> String {
+    const MONTHS: [&str; 12] = [
+        "janar", "shkurt", "mars", "prill", "maj", "qershor", "korrik", "gusht", "shtator", "tetor", "nëntor", "dhjetor",
+    ];
+    format!("{} {}", MONTHS[usize::from(u8::from(value.month())) - 1], value.year())
+}
+
+/// The first letter of a name, for its round badge: "Auto Elbasani" gives "A".
+pub fn initial(name: &str) -> String {
+    name.chars().find(|c| c.is_alphanumeric()).map(|c| c.to_uppercase().collect()).unwrap_or_else(|| "?".to_string())
+}
+
+/// A phone number or an e-mail address, as someone signs in with it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Contact {
+    /// In E.164: +355691234567.
+    Phone(String),
+    /// In lower case.
+    Email(String),
+}
+
+impl Contact {
+    /// Reads a contact the way people type it: "069 123 4567", "0691234567", "+355 69 123 4567",
+    /// "00355691234567" or "Ana@Example.com". Albanian numbers without a country code must be
+    /// mobile numbers (06x), since the code goes out by SMS.
+    pub fn parse(input: &str) -> Option<Contact> {
+        let input = input.trim();
+        if input.contains('@') {
+            let email = input.to_lowercase();
+            let (user, domain) = email.split_once('@')?;
+            let valid = !user.is_empty()
+                && !domain.contains('@')
+                && domain.contains('.')
+                && !domain.starts_with('.')
+                && !domain.ends_with('.')
+                && email.len() <= 254
+                && !email.chars().any(char::is_whitespace);
+            return valid.then_some(Contact::Email(email));
+        }
+        let digits: String = input.chars().filter(|c| !matches!(c, ' ' | '-' | '.' | '(' | ')')).collect();
+        let e164 = if let Some(rest) = digits.strip_prefix('+') {
+            format!("+{rest}")
+        } else if let Some(rest) = digits.strip_prefix("00") {
+            format!("+{rest}")
+        } else if let Some(rest) = digits.strip_prefix('0') {
+            format!("+355{rest}")
+        } else {
+            return None;
+        };
+        let number = &e164[1..];
+        let valid = number.chars().all(|c| c.is_ascii_digit())
+            && (7..=15).contains(&number.len())
+            && !number.starts_with('0')
+            && match number.strip_prefix("355") {
+                Some(national) => national.len() == 9 && national.starts_with('6'),
+                None => true,
+            };
+        valid.then_some(Contact::Phone(e164))
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            Contact::Phone(value) | Contact::Email(value) => value,
+        }
+    }
+
+    pub fn phone(&self) -> Option<&str> {
+        match self {
+            Contact::Phone(phone) => Some(phone),
+            Contact::Email(_) => None,
+        }
+    }
+
+    pub fn email(&self) -> Option<&str> {
+        match self {
+            Contact::Email(email) => Some(email),
+            Contact::Phone(_) => None,
+        }
+    }
+
+    /// Enough to recognise it on the screen without showing it to someone looking over a
+    /// shoulder: "+355 69 *** **67", "a***@example.com".
+    pub fn masked(&self) -> String {
+        match self {
+            // The country and network codes and the last two digits stay.
+            Contact::Phone(number) => {
+                let shown = phone(number);
+                let total = shown.chars().filter(char::is_ascii_digit).count();
+                let keep_start = if number.starts_with("+355") { 5 } else { 4 };
+                let mut seen = 0;
+                shown
+                    .chars()
+                    .map(|c| {
+                        if !c.is_ascii_digit() {
+                            return c;
+                        }
+                        seen += 1;
+                        if seen > keep_start && seen + 2 <= total { '*' } else { c }
+                    })
+                    .collect()
+            }
+            Contact::Email(email) => {
+                let (user, domain) = email.split_once('@').unwrap_or((email, ""));
+                let first: String = user.chars().take(1).collect();
+                format!("{first}***@{domain}")
+            }
+        }
+    }
+}
+
+/// The URL slug for a title: "Shtëpi 2+1 në Durrës!" becomes "shtepi-2-1-ne-durres".
+pub fn slug(title: &str) -> String {
+    let mut slug = String::new();
+    for c in title.to_lowercase().chars() {
+        let c = match c {
+            'ë' | 'é' | 'è' | 'ê' => 'e',
+            'ç' | 'ć' | 'č' => 'c',
+            'á' | 'à' | 'â' | 'ä' => 'a',
+            'ó' | 'ò' | 'ô' | 'ö' => 'o',
+            'ú' | 'ù' | 'û' | 'ü' => 'u',
+            'í' | 'ì' | 'î' | 'ï' => 'i',
+            'š' => 's',
+            'ž' => 'z',
+            c => c,
+        };
+        if c.is_ascii_alphanumeric() {
+            slug.push(c);
+        } else if !slug.is_empty() && !slug.ends_with('-') {
+            slug.push('-');
+        }
+    }
+    let mut slug: String = slug.trim_end_matches('-').chars().take(80).collect();
+    while slug.ends_with('-') {
+        slug.pop();
+    }
+    if slug.is_empty() { "njoftim".to_string() } else { slug }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn reads_contacts_the_way_people_type_them() {
+        let phone = |n: &str| Some(Contact::Phone(n.to_string()));
+        assert_eq!(Contact::parse("069 123 4567"), phone("+355691234567"));
+        assert_eq!(Contact::parse("+355 69 123 4567"), phone("+355691234567"));
+        assert_eq!(Contact::parse("00355-69-123-4567"), phone("+355691234567"));
+        assert_eq!(Contact::parse("+39 333 123 4567"), phone("+393331234567"));
+        assert_eq!(Contact::parse(" Ana@Example.com "), Some(Contact::Email("ana@example.com".to_string())));
+        // A landline can't get an SMS; nor can half a number, or a broken address.
+        assert_eq!(Contact::parse("04 222 3333"), None);
+        assert_eq!(Contact::parse("069 123"), None);
+        assert_eq!(Contact::parse("ana@example"), None);
+        assert_eq!(Contact::parse("ana@@example.com"), None);
+        assert_eq!(Contact::parse("hello"), None);
+    }
+
+    #[test]
+    fn masks_contacts() {
+        assert_eq!(Contact::Phone("+355691234567".to_string()).masked(), "+355 69 *** **67");
+        assert_eq!(Contact::Email("ana@example.com".to_string()).masked(), "a***@example.com");
+    }
+
+    #[test]
+    fn makes_slugs() {
+        assert_eq!(slug("Shtëpi 2+1 në Durrës!"), "shtepi-2-1-ne-durres");
+        assert_eq!(slug("  Çanta lëkure  "), "canta-lekure");
+        assert_eq!(slug("!!!"), "njoftim");
+    }
+
+    fn amount(value: &str) -> Option<Decimal> {
+        Some(Decimal::from_str(value).unwrap())
+    }
+
+    #[test]
+    fn formats_prices() {
+        assert_eq!(price(amount("9500.00"), "EUR", "FIXED", "SELL"), "9\u{a0}500\u{a0}€");
+        assert_eq!(
+            price(amount("60000"), "ALL", "NEGOTIABLE", "SELL"),
+            "60\u{a0}000\u{a0}Lekë (i diskutueshëm)"
+        );
+        assert_eq!(
+            price(amount("1234567.5"), "EUR", "FROM", "SELL"),
+            "nga 1\u{a0}234\u{a0}567,50\u{a0}€"
+        );
+        assert_eq!(price(None, "EUR", "ON_REQUEST", "SELL"), "Çmimi me marrëveshje");
+        assert_eq!(price(amount("0"), "ALL", "FREE", "SELL"), "Falas");
+    }
+
+    #[test]
+    fn rents_and_salaries_are_per_month() {
+        assert_eq!(price(amount("450"), "EUR", "FIXED", "RENT"), "450\u{a0}€/muaj");
+        assert_eq!(
+            price(amount("60000"), "ALL", "NEGOTIABLE", "JOB"),
+            "60\u{a0}000\u{a0}Lekë/muaj (i diskutueshëm)"
+        );
+        assert_eq!(price(None, "ALL", "ON_REQUEST", "JOB"), "Paga me marrëveshje");
+    }
+
+    #[test]
+    fn counts_listings() {
+        assert_eq!(listing_count(0, 1000), "0 njoftime");
+        assert_eq!(listing_count(1, 1000), "1 njoftim");
+        assert_eq!(listing_count(1000, 1000), "1\u{a0}000 njoftime");
+        assert_eq!(listing_count(1001, 1000), "1\u{a0}000+ njoftime");
+    }
+
+    #[test]
+    fn formats_distances() {
+        assert_eq!(distance(0.0), "0\u{a0}m");
+        assert_eq!(distance(847.0), "850\u{a0}m");
+        assert_eq!(distance(960.0), "1,0\u{a0}km");
+        assert_eq!(distance(2_430.0), "2,4\u{a0}km");
+        assert_eq!(distance(18_400.0), "18\u{a0}km");
+    }
+
+    #[test]
+    fn formats_albanian_mobile_numbers() {
+        assert_eq!(phone("+355691234567"), "+355 69 123 4567");
+        assert_eq!(phone("+390612345678"), "+390612345678");
+    }
+}

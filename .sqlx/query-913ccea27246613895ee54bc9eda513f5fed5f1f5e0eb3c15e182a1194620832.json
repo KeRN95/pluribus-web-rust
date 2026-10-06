@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT public_no, slug, title, status, listing_type, price_amount, currency::text AS \"currency!\", price_type\n           FROM listings\n           WHERE created_by_user_id = $1 AND status <> 'DELETED'\n           ORDER BY created_at DESC, public_no DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "public_no",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "slug",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "listing_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "price_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 6,
+        "name": "currency!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "price_type",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      null,
+      false
+    ]
+  },
+  "hash": "913ccea27246613895ee54bc9eda513f5fed5f1f5e0eb3c15e182a1194620832"
+}

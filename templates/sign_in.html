@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}{% if create %}Krijo llogari{% else %}Hyr{% endif %} | Marketplace{% endblock %}
+
+{% block content %}
+<section class="account">
+  {%- if create %}
+  <h1>Krijo një llogari</h1>
+  <p class="lead">Vetëm me numrin e celularit ose me email-in, pa fjalëkalim: të dërgojmë një kod me 6 shifra për ta
+    konfirmuar. Ke llogari? Shkruaj të njëjtin numër dhe hyn në të.</p>
+  {%- else %}
+  <h1>Hyr</h1>
+  <p class="lead">Hyr me numrin e celularit ose me email-in. Të dërgojmë një kod me 6 shifra, pa fjalëkalim.</p>
+  {%- endif %}
+
+  <form class="account-form" action="/hyr" method="post">
+    {% if let Some(error) = error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+    {%- if create %}
+    <div class="field">
+      <label class="field-label" for="name">Emri</label>
+      <input id="name" name="name" value="{{ name }}" maxlength="60" autocomplete="name" placeholder="p.sh. Ana ose Auto Elbasani">
+      <p class="field-hint">Shfaqet te njoftimet e tua dhe në profilin tënd.</p>
+    </div>
+    {%- endif %}
+    <div class="field">
+      <label class="field-label" for="contact">Celulari ose email-i</label>
+      <input id="contact" name="contact" value="{{ contact }}" required autocomplete="username"
+             placeholder="069 123 4567 ose emri@shembull.com">
+    </div>
+    {#- People never see or fill this field; a bot filling in every field does (see account.rs). -#}
+    <div class="trap" aria-hidden="true">
+      <label for="website">Faqja</label>
+      <input id="website" name="website" tabindex="-1" autocomplete="off">
+    </div>
+    <input type="hidden" name="started" value="{{ started }}">
+    <button type="submit" class="button">Më dërgo kodin</button>
+  </form>
+  <p class="account-note">Numri ose email-i yt shfaqet në njoftim vetëm kur dikush shtyp „Shfaq numrin“.</p>
+</section>
+{% endblock %}

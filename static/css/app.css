@@ -1,0 +1,1083 @@
+/* Warm and quiet: ivory and charcoal with a terracotta accent, DM Sans for text, Geist for card
+   titles and Source Serif 4 for prices, soft rounded surfaces. */
+
+/* The fonts are all variable fonts, every weight in one file, in the Latin subset only, which covers
+   Albanian (ë, ç), the euro sign and the „quotes“. They are served from /static/vendor/, cached for
+   a year, and preloaded by base.html. Licences: fonts/OFL-DM-Sans.txt, fonts/OFL-Source-Serif-4.txt.
+
+   DM Sans, for all text: a free font close to the sans Claude's interface uses (Claude's own fonts
+   are Anthropic's and not licensed for other sites). Weights 100 to 1000, 36 KB. */
+@font-face {
+  font-family: "DM Sans";
+  src: url("/static/vendor/fonts/dm-sans-v17-latin.woff2") format("woff2");
+  font-weight: 100 1000;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+                 U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Source Serif 4, for prices. Weights 200 to 900, 51 KB. */
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("/static/vendor/fonts/source-serif-4-v15-latin.woff2") format("woff2");
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+                 U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f5f4ee;
+  --surface: #fdfcf9;
+  --surface-muted: #eeece3;
+  --input: #ffffff;
+  --text: #1f1e1d;
+  --muted: #6e6d66;
+  --border: #e4e1d7;
+  --border-strong: #cfcbbf;
+  --accent: #c96442;            /* logo and focus rings */
+  --button: #d97757;            /* Claude's coral, as in the dark theme */
+  --button-hover: #c96442;
+  --on-button: #ffffff;
+  --badge: #f6e1d3;
+  --location: #05164d;          /* Lufthansa blue; Claude's coral in the dark theme */
+  --danger: #b42318;
+  --placeholder-from: #ece9df;
+  --placeholder-to: #e2ded2;
+  --shadow: 0 1px 2px rgb(31 30 29 / 5%), 0 4px 16px rgb(31 30 29 / 5%);
+  --radius: 14px;
+  --font: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --price-font: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --title-font: "Geist", "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  /* The weights, from quiet to loud: lead text, body, emphasis (chips, values), headings and
+     labels, prices, the logo. */
+  --light: 300;
+  --regular: 400;
+  --medium: 500;
+  --semibold: 600;
+  --bold: 700;
+  --heavy: 800;
+}
+
+/* Dark theme: the visitor's choice (data-theme on <html>, set by theme_controller.js) or, until
+   they make one, the device setting. The two blocks hold the same values. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #262624;
+  --surface: #302f2c;
+  --surface-muted: #3a3935;
+  --input: #262624;
+  --text: #f2f0e8;
+  --muted: #b3b0a5;
+  --border: #3f3e3a;
+  --border-strong: #57554f;
+  --accent: #d97757;
+  --button: #d97757;
+  --button-hover: #e38a6c;
+  --on-button: #1f1e1d;
+  --badge: #4a382e;
+  --location: #d97757;
+  --danger: #f97066;
+  --placeholder-from: #34332f;
+  --placeholder-to: #3c3b36;
+  --shadow: 0 1px 2px rgb(0 0 0 / 30%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #262624;
+    --surface: #302f2c;
+    --surface-muted: #3a3935;
+    --input: #262624;
+    --text: #f2f0e8;
+    --muted: #b3b0a5;
+    --border: #3f3e3a;
+    --border-strong: #57554f;
+    --accent: #d97757;
+    --button: #d97757;
+    --button-hover: #e38a6c;
+    --on-button: #1f1e1d;
+    --badge: #4a382e;
+    --location: #d97757;
+    --danger: #f97066;
+    --placeholder-from: #34332f;
+    --placeholder-to: #3c3b36;
+    --shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1rem; /* 16px, a little less on phones (see the end of this file) */
+  font-weight: var(--regular);
+  font-variant-numeric: lining-nums; /* prices and years sit on the baseline */
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+b, strong { font-weight: var(--bold); }
+
+h1,
+h2 {
+  font-weight: var(--semibold);
+  letter-spacing: -0.015em;
+}
+
+h1 { margin: 1.5rem 0 1rem; font-size: 1.75rem; line-height: 1.15; }
+h2 { margin: 1.75rem 0 .75rem; font-size: 1.25rem; line-height: 1.25; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+
+/* Frames only group content for Turbo; their cards stay items of the surrounding grid. */
+turbo-frame { display: contents; }
+
+/* Except a next-page frame that hasn't loaded yet: browsers only report an element as scrolled
+   into view if it has a box, and Turbo waits for that before loading the page. */
+turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -1; text-align: center; }
+
+.turbo-progress-bar { background: var(--accent); }
+
+/* Header */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: .65rem 1rem;
+}
+
+.logo {
+  color: var(--accent);
+  font-size: 1.25rem;
+  font-weight: var(--heavy);
+  letter-spacing: -0.025em;
+  text-decoration: none;
+}
+
+.search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: .25rem;
+  min-width: 0;
+  padding: .25rem .25rem .25rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+}
+
+.search:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding: .4rem 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+.search input::placeholder { color: var(--muted); }
+
+.icon-button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.search .icon-button { background: var(--button); color: var(--on-button); }
+.search .icon-button:hover { background: var(--button-hover); }
+
+/* Posting is the main action: the plus is filled, beside the account and theme buttons. */
+.post-button { margin-left: auto; background: var(--button); color: var(--on-button); }
+.post-button:hover { background: var(--button-hover); }
+.theme-toggle,
+.account-button { background: var(--surface); border-color: var(--border); }
+.account-button:hover { background: var(--surface-muted); }
+
+/* On phones the search gets a full-width row of its own, below the logo and the toggle. */
+@media (max-width: 719px) {
+  .header-inner { flex-wrap: wrap; row-gap: .55rem; }
+  .search { order: 1; flex-basis: 100%; }
+}
+
+.theme-toggle:hover { background: var(--surface-muted); }
+
+/* The toggle shows the theme it switches to: a moon in light mode, a sun in dark mode. */
+.icon-sun { display: none; }
+:root[data-theme="dark"] .icon-sun { display: block; }
+:root[data-theme="dark"] .icon-moon { display: none; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .icon-sun { display: block; }
+  :root:not([data-theme="light"]) .icon-moon { display: none; }
+}
+
+/* Page */
+
+.container { max-width: 1100px; margin: 0 auto; padding: 0 1rem 3rem; }
+
+.categories { display: flex; gap: .5rem; overflow-x: auto; padding: 1rem 0 .25rem; scrollbar-width: none; }
+
+.chip {
+  flex: none;
+  padding: .4rem .9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: .9rem;
+  font-weight: var(--medium);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color .15s, border-color .15s;
+}
+
+/* Geist, Vercel's typeface, for the titles on listing cards: a crisp, modern sans. Weights 100
+   to 900, 29 KB. Licence: fonts/OFL-Geist.txt. */
+@font-face {
+  font-family: "Geist";
+  src: url("/static/vendor/fonts/geist-v5-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+                 U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Two columns on every phone; as many as fit on wider screens. */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+
+/* A listing card, in the manner of Claude's: a soft ivory sheet with a hairline border and
+   rounded corners, the photo across its top with the price on its dark lower edge, then the
+   title in Geist and a quiet details line. */
+.card {
+  display: flex;
+  position: relative;
+  flex-direction: column;
+  isolation: isolate; /* the blurred photo and its veil stay inside the card, under its text */
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 4px);
+  text-decoration: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+/* Hover effects only where there is a real pointer; on phones they would stick after a tap. */
+@media (hover: hover) {
+  .chip:hover { background: var(--surface-muted); border-color: var(--border-strong); }
+  .card:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip,
+  .card { transition: none; }
+}
+
+/* The photo fills the top of the card, 4:3, as it is, and the title and price sit under it. A
+   grid of two rows: the photo's space (::before), then the title and price. Nothing here is
+   positioned, so the title's link still stretches over the whole card (.card-link). */
+.card-media { display: grid; grid-template-columns: minmax(0, 1fr); }
+.card-media::before { content: ""; grid-area: 1 / 1; aspect-ratio: 4 / 3; }
+/* height 0 with min-height 100%: the photo takes the row's height without setting it. */
+.card-photo { display: block; grid-area: 1 / 1; width: 100%; height: 0; min-height: 100%; object-fit: cover; }
+.placeholder { background: linear-gradient(135deg, var(--placeholder-from), var(--placeholder-to)); }
+
+/* Behind the whole card, its photo again, blurred and a little brighter, under a veil of the
+   card's colour, so the card takes the photo's colours while the text stays easy to read. Scaled
+   up a touch, so the blur doesn't fade at the card's edges. Cards without a photo stay plain. */
+.card-blur {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(18px) saturate(1.3);
+  transform: scale(1.25);
+  pointer-events: none;
+}
+.card:has(.card-blur)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  pointer-events: none;
+}
+
+/* Over the photo, the site's dark colour (the dark theme's page), clear down to the middle and
+   solid at the bottom edge, where the price sits on it in the site's light colour (the light
+   theme's page). The same in both themes, so the price always reads. */
+.card-media::after {
+  content: "";
+  grid-area: 1 / 1;
+  background: linear-gradient(to bottom, transparent 45%, rgb(38 38 36 / 75%) 75%, rgb(38 38 36));
+  pointer-events: none;
+}
+.card-media .card-price { grid-area: 1 / 1; align-self: end; z-index: 1; padding: 0 .85rem .55rem; color: #f5f4ee; }
+
+/* The title, under the photo. */
+.card-head { grid-area: 2 / 1; padding: .75rem .85rem 0; }
+
+/* The title link covers the whole card, so a tap anywhere opens the listing. The card shows the
+   focus ring, since the title alone would be a small target to outline. */
+.card-link { color: inherit; text-decoration: none; }
+.card-link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+.card-link:focus-visible { outline: none; }
+.card:has(.card-link:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Under the photo, the details line. The body fills the rest of the card. */
+.card-body { display: flex; flex: 1; flex-direction: column; padding: 0 .85rem .8rem; }
+
+/* One line, ending in "…" when longer; screen readers still get the whole title. */
+.card-title {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--title-font);
+  font-size: 1rem;
+  font-weight: var(--semibold);
+  letter-spacing: -.015em;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One line; a price too long for the card ends in "…". */
+.card-price {
+  margin: 0;
+  overflow: hidden;
+  color: var(--accent);
+  font-size: .82rem;
+  font-weight: var(--semibold);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The details line: the city first, then the category's card properties ("Tiranë · 2016 ·
+   148 000 km · Naftë"), small and grey, so it stays behind the title and price. One line, ending
+   in "…" when longer. */
+.card-summary {
+  margin: .5rem 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The location pin (templates/pin.svg), as before the city on cards: the same as on the welcome
+   page's city picker, in Lufthansa blue, or coral in the dark theme. Sized with the text. */
+.pin-icon {
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: .15em;
+  color: var(--location);
+  vertical-align: -.2em;
+}
+
+/* The listing page's line under the price. */
+.card-meta { margin: .25rem 0 0; color: var(--muted); font-size: .85rem; }
+.more { display: inline-block; padding: 1rem; color: var(--muted); }
+.empty { color: var(--muted); }
+
+/* Form fields */
+
+.field input,
+.field select,
+.field textarea,
+.filter-form input[type="search"],
+.filter-form input[type="text"],
+.filter-form select,
+.sort select {
+  width: 100%;
+  min-width: 0;
+  padding: .55rem .7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background-color: var(--input);
+  color: var(--text);
+  font: inherit; /* kept at 16px on phones, so they don't zoom in on focus (end of file) */
+}
+
+/* A chevron drawn in the text colour, so it follows the theme. */
+.field select,
+.filter-form select,
+.sort select {
+  appearance: none;
+  padding-right: 2rem;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 17px) 55%, calc(100% - 12px) 55%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.field input::placeholder,
+.filter-form input::placeholder { color: var(--muted); }
+
+/* Welcome page */
+
+.welcome { padding: 1.25rem 0 .5rem; }
+.welcome h1 { margin: 0 0 .3rem; color: color-mix(in srgb, var(--text) 50%, var(--muted)); font-size: 1.6rem; line-height: 1.15; letter-spacing: -0.02em; }
+.lead { margin: 0 0 1.25rem; color: var(--muted); font-size: 1.15rem; font-weight: var(--light); line-height: 1.45; }
+
+/* The welcome card: Skanderbeg Square and the National History Museum in Tirana (Douglas O,
+   Unsplash License) under the card's own colour, 50% at the top, where the sky shows, to 95% at
+   the bottom, behind the fields. */
+.welcome-card {
+  padding: 1.6rem 1.25rem 1.4rem;
+  background:
+    linear-gradient(color-mix(in srgb, var(--surface) 50%, transparent), color-mix(in srgb, var(--surface) 95%, transparent)),
+    var(--surface) url("https://images.unsplash.com/photo-1586674572976-68d3c69d3a7f?auto=format&fit=crop&w=1000&q=50") center / cover no-repeat;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow);
+}
+.welcome-card .lead { margin-bottom: 0; font-size: 1rem; }
+
+/* The question with a creature before it, in the button colour (thinking.svg): a star of 13 soft
+   tentacles that sway, melts into an amoeba that wobbles quickly, and back, spinning all the
+   while, faster as an amoeba. Shapes and spin are SVG's own animation, which Safari runs too;
+   application.js stops them for visitors who ask for less motion. */
+.welcome-intro { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; }
+.welcome-intro > div { min-width: 0; }
+.thinking { flex: none; width: 3.7rem; height: 3.7rem; margin: -.25rem; color: var(--button); }
+.amoeba { fill: currentColor; }
+
+.welcome-form { display: grid; gap: .75rem; }
+
+.welcome-form .button { justify-content: center; padding-block: .7rem; }
+/* The fields and the button fade from left to right, 95% to 50%, letting the photo through.
+   A field's fade is on its box (.with-icon), so a picker keeps its own arrow. */
+.welcome-form .button {
+  background: linear-gradient(to right, color-mix(in srgb, var(--button) 95%, transparent), color-mix(in srgb, var(--button) 50%, transparent));
+}
+.welcome-form .button:hover {
+  background: linear-gradient(to right, color-mix(in srgb, var(--button-hover) 95%, transparent), color-mix(in srgb, var(--button-hover) 50%, transparent));
+}
+.welcome-form .with-icon {
+  border-radius: 10px;
+  background: linear-gradient(to right, color-mix(in srgb, var(--input) 95%, transparent), color-mix(in srgb, var(--input) 50%, transparent));
+}
+.welcome-form .with-icon input,
+.welcome-form .with-icon select { background-color: transparent; }
+/* Phones: the words on a line of their own, then the city and the category side by side. */
+.welcome-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.welcome-form .field-query,
+.welcome-form .button { grid-column: 1 / -1; }
+
+/* A field with an icon inside, on the left, saying what it is: a magnifier for the words, the
+   location pin for the city, four squares for the category. */
+.with-icon { position: relative; }
+.with-icon input,
+.with-icon select { padding-left: 2.2rem; }
+.with-icon select { text-overflow: ellipsis; }
+
+.with-icon .field-icon {
+  position: absolute;
+  top: 50%;
+  left: .7rem;
+  color: var(--muted);
+  pointer-events: none; /* clicks go through to the field */
+  transform: translateY(-50%);
+}
+.with-icon .pin { color: var(--location); }
+
+/* Phones: the two pickers side by side are narrow, so the icon, the text and the arrow sit closer
+   and the form's own padding is smaller, which keeps "Çdo kategori" whole on a 360px screen. */
+@media (max-width: 719px) {
+  .welcome-card { padding: 1.35rem 1rem 1.15rem; }
+  .welcome-form { gap: .6rem; }
+  .welcome-form .with-icon .field-icon { left: .6rem; }
+  .welcome-form .with-icon input,
+  .welcome-form .with-icon select { padding-left: 1.95rem; }
+  .welcome-form .with-icon select { padding-right: 1.5rem; background-position: calc(100% - 14px) 55%, calc(100% - 9px) 55%; }
+}
+
+/* Read by screen readers, not shown. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.field { display: grid; gap: .3rem; min-width: 0; }
+.field-label { color: var(--muted); font-size: .85rem; font-weight: var(--semibold); letter-spacing: .01em; }
+
+.tiles-heading { margin: 2rem 0 .75rem; font-size: 1.15rem; }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+
+/* Each category tile has a photo (Unsplash License, small: 400x160) under the tile's own colour
+   at 90%, so it shows through just faintly behind the name. */
+.tile {
+  --tile-veil: color-mix(in srgb, var(--surface) 90%, transparent);
+  display: grid;
+  gap: .1rem;
+  padding: .85rem 1rem;
+  background: linear-gradient(var(--tile-veil), var(--tile-veil)), var(--surface) var(--tile-photo, none) center / cover no-repeat;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.tile[data-category="automjete"] { --tile-photo: url("https://images.unsplash.com/photo-1574710337549-b2d4b229da8f?auto=format&fit=crop&w=400&h=160&q=50"); } /* Jarrod Reed */
+.tile[data-category="prona"] { --tile-photo: url("https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=400&h=160&q=50"); } /* Marlene Céline Nordvik */
+.tile[data-category="elektronike"] { --tile-photo: url("https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?auto=format&fit=crop&w=400&h=160&q=50"); } /* Ben Kolde */
+.tile[data-category="shtepi-dhe-kopsht"] { --tile-photo: url("https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=400&h=160&q=50"); } /* Spacejoy */
+.tile[data-category="pune"] { --tile-photo: url("https://images.unsplash.com/photo-1606857521015-7f9fcf423740?auto=format&fit=crop&w=400&h=160&q=50"); } /* Israel Andrade */
+.tile[data-category="sherbime"] { --tile-photo: url("https://images.unsplash.com/photo-1426927308491-6380b6a9936f?auto=format&fit=crop&w=400&h=160&q=50"); } /* Barn Images */
+.tile[data-category="veshje-dhe-aksesore"] { --tile-photo: url("https://images.unsplash.com/photo-1540221652346-e5dd6b50f3e7?auto=format&fit=crop&w=400&h=160&q=50"); } /* Fujiphilm */
+.tile[data-category="sport-dhe-hobi"] { --tile-photo: url("https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=400&h=160&q=50"); } /* Robert Bye */
+.tile[data-category="kafshe-shtepiake"] { --tile-photo: url("https://images.unsplash.com/photo-1561037404-61cd46aa615b?auto=format&fit=crop&w=400&h=160&q=50"); } /* Victor G */
+.tile[data-category="makineri-dhe-biznes"] { --tile-photo: url("https://images.unsplash.com/photo-1614977645540-7abd88ba8e56?auto=format&fit=crop&w=400&h=160&q=50"); } /* Julia Koblitz */
+.tile[data-category="te-tjera"] { --tile-photo: url("https://images.unsplash.com/photo-1488841714725-bb4c32d1ac94?auto=format&fit=crop&w=400&h=160&q=50"); } /* Clem Onojeghuo */
+
+.tile-name { font-size: 1.1rem; font-weight: var(--semibold); line-height: 1.3; }
+.tile-count { color: var(--muted); font-size: .875rem; }
+
+@media (min-width: 720px) {
+  .welcome { padding-top: 2rem; }
+  .welcome h1 { font-size: 2.05rem; }
+  .welcome-card { padding: 2.25rem 2rem 2rem; }
+  .welcome-form { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; }
+  .welcome-form .field-query,
+  .welcome-form .button { grid-column: auto; }
+  .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (hover: hover) {
+  .tile:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
+}
+
+/* Browse pages: filters beside the results */
+
+.breadcrumbs { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1.25rem; color: var(--muted); font-size: .9rem; }
+.breadcrumbs a { color: inherit; text-decoration: none; }
+.breadcrumbs a:hover { color: var(--text); text-decoration: underline; }
+
+.results-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem 1rem; margin: 1.25rem 0 .25rem; }
+.breadcrumbs + .results-header { margin-top: .35rem; }
+.results-header h1 { margin: 0; }
+
+/* The heading of a category page opens a menu of every category. */
+.category-switch { position: relative; }
+.category-switch summary { list-style: none; cursor: pointer; border-radius: 10px; }
+.category-switch summary::-webkit-details-marker { display: none; }
+.category-switch h1 { display: inline-flex; align-items: center; gap: .3rem; }
+.category-switch .chevron { flex: none; color: var(--muted); transition: transform .15s; }
+.category-switch[open] .chevron { transform: rotate(180deg); }
+.category-switch summary:hover .chevron { color: var(--text); }
+.category-menu {
+  position: absolute;
+  top: calc(100% + .4rem);
+  left: 0;
+  z-index: 20;
+  display: grid;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: min(70vh, 32rem);
+  overflow-y: auto;
+  padding: .4rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
+  overscroll-behavior: contain;
+}
+.category-menu a { padding: .45rem .7rem; border-radius: 8px; color: var(--text); text-decoration: none; }
+.category-menu a:hover { background: var(--surface-muted); }
+.category-menu .menu-top { margin-top: .2rem; font-weight: var(--semibold); }
+.category-menu .menu-sub { padding-left: 1.5rem; color: var(--muted); font-size: .92rem; }
+.category-menu [aria-current="page"] { background: var(--badge); color: var(--text); }
+.result-count { margin: 0; color: var(--muted); }
+
+.browse { margin-top: 1rem; }
+
+/* Wraps rather than pushing the page wider than the screen when the buttons and the sort don't all
+   fit on one line. */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-bottom: .75rem; }
+.filters-open { gap: .45rem; padding: .5rem .9rem; }
+
+.count-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  padding: 0 .35rem;
+  border-radius: 999px;
+  background: var(--button);
+  color: var(--on-button);
+  font-size: .75rem;
+  font-weight: var(--bold);
+}
+
+.sort { display: flex; align-items: center; gap: .5rem; margin-left: auto; color: var(--muted); font-size: .9rem; }
+.sort select { width: auto; color: var(--text); font-size: 1rem; }
+
+/* Phones: Filtrat, Harta and the sort share one row. The sort takes what room is left, without
+   its "Rendit" label (screen readers still read it), and a long choice ends in an ellipsis rather
+   than pushing the page wider than the screen. */
+@media (max-width: 719px) {
+  .toolbar { flex-wrap: nowrap; gap: .5rem; }
+  .toolbar .filters-open,
+  .toolbar .map-open { flex: none; padding: .5rem .7rem; }
+  .sort { flex: 1 1 auto; min-width: 0; }
+  .sort label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .sort select { flex: 1; min-width: 0; padding-left: .6rem; text-overflow: ellipsis; }
+}
+
+/* The narrowest phones: Harta is its pin alone (its name stays for screen readers), so the sort
+   keeps room to be read. */
+@media (max-width: 359px) {
+  .toolbar .map-open { font-size: 0; gap: 0; }
+  .toolbar .map-open .pin-icon { width: 18px; height: 18px; }
+}
+
+.active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .3rem .55rem .3rem .8rem;
+  border-radius: 999px;
+  background: var(--badge);
+  font-size: .875rem;
+  font-weight: var(--medium);
+  text-decoration: none;
+}
+
+.filter-chip svg { opacity: .65; }
+.filter-chip:hover svg { opacity: 1; }
+.clear-filters { padding: .3rem .4rem; color: var(--muted); font-size: .875rem; }
+
+.filters-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.filters-header h2 { margin: 0; font-size: 1.2rem; }
+.filters:focus { outline: none; }
+
+.filter-form { display: grid; gap: 1.1rem; padding-top: .75rem; }
+.filter-group { display: grid; gap: .35rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+.filter-label { padding: 0; font-size: .9rem; font-weight: var(--semibold); }
+.check { display: flex; align-items: center; gap: .55rem; padding: .1rem 0; cursor: pointer; }
+.check input { flex: none; width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--button); }
+.range { display: flex; align-items: center; gap: .4rem; color: var(--muted); }
+.range input { flex: 1; }
+.filter-form .range select { flex: none; width: auto; }
+.filter-actions { display: flex; align-items: center; gap: .75rem; }
+.filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
+
+/* Phones and tablets: the filters open as a full-screen sheet from the toolbar button. */
+@media (max-width: 959px) {
+  .filters { display: none; }
+
+  .filters.is-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 1rem;
+    background: var(--bg);
+  }
+
+  .filters.is-open .filters-header { position: sticky; top: 0; z-index: 1; padding: .75rem 0; background: var(--bg); border-bottom: 1px solid var(--border); }
+  .filters.is-open .filter-actions { position: sticky; bottom: 0; padding: .75rem 0 1rem; background: var(--bg); border-top: 1px solid var(--border); }
+  .has-sheet,
+  .has-sheet body { overflow: hidden; }
+}
+
+/* Wide screens: the filters are a sticky sidebar; picked options apply at once. */
+@media (min-width: 960px) {
+  .browse { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 2rem; align-items: start; }
+
+  .filters {
+    position: sticky;
+    top: 4.5rem;
+    max-height: calc(100vh - 5.5rem);
+    overflow-y: auto;
+    padding-right: .5rem;
+    scrollbar-width: thin;
+  }
+
+  .button.filters-open,
+  .filters-close { display: none; }
+}
+
+/* Map page, and the ways to it */
+
+.map-entry { margin: .9rem 0 0; }
+
+.map-entry a {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  color: var(--text);
+  font-weight: var(--medium);
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: .2em;
+}
+
+.map-open { gap: .35rem; padding: .5rem .9rem; }
+/* Harta while its map is open above the results: a tap closes it. */
+.button.secondary.map-open.active { background: var(--surface-muted); border-color: var(--text); }
+/* The map on a category or search page, between the toolbar and the results: a card whose header
+   folds it down to that header and opens it again. */
+.map-card { margin: 0 0 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.map-card-header {
+  display: flex; align-items: center; gap: .7rem; width: 100%; padding: .7rem .9rem;
+  border: 0; border-radius: var(--radius); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.map-card-header:hover { background: var(--surface-muted); }
+.map-card-icon {
+  display: grid; place-items: center; flex: none; width: 2rem; height: 2rem;
+  border-radius: 50%; background: var(--surface-muted); color: var(--location);
+}
+.map-card-icon .pin-icon { margin: 0; }
+.map-card-title { display: grid; flex: 1; min-width: 0; line-height: 1.3; }
+.map-card-title span { overflow: hidden; color: var(--muted); font-size: .85rem; white-space: nowrap; text-overflow: ellipsis; }
+.map-card-chevron { flex: none; color: var(--muted); transition: transform .15s; }
+.map-card.map-hidden .map-card-chevron { transform: rotate(-90deg); }
+.map-card-body { padding: .1rem .9rem .9rem; }
+.map-card.map-hidden .map-card-body { display: none; }
+.map-card .map-form { margin-bottom: .75rem; }
+.map-card .map-canvas { border-radius: calc(var(--radius) - 4px); }
+.map-card .map-note { margin: .6rem 0 0; }
+.map-open .pin-icon,
+.map-locate .pin-icon,
+.map-entry .pin-icon { margin-right: 0; }
+
+.map-header { margin: 1.25rem 0 1rem; }
+.map-header h1 { margin: 0 0 .3rem; }
+.map-header .lead { margin: 0; }
+
+.map-form { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; margin-bottom: 1rem; }
+/* The radius only needs room for "50 km", so on phones both selects share one row. */
+.map-form .field { flex: 1 1 10rem; max-width: 16rem; }
+.map-form .map-radius { flex: 1 1 12rem; max-width: 20rem; }
+/* The distance slider, in the button colour, with the distance it stands for beside its name. */
+.map-radius output { margin-left: .25rem; color: var(--text); font-weight: var(--bold); }
+.map-radius input[type="range"] { width: 100%; height: 2.25rem; margin: 0; padding: 0; border: 0; background: none; accent-color: var(--button); cursor: pointer; }
+.map-locate { gap: .35rem; }
+.map-toggle[hidden] { display: none; }
+/* The map folded away ("Fshih hartën"): the results get the whole width. */
+.map-hidden .map-canvas { display: none; }
+.map-status { flex-basis: 100%; margin: 0; color: var(--muted); font-size: .9rem; }
+.map-status:empty { display: none; }
+
+.map-layout { display: grid; gap: 1rem; }
+
+/* 3:2, three wide and two tall, so the page around it is easy to scroll. z-index: 0 keeps
+   Leaflet's own layers (z-index up to 1000) under the sticky header. */
+.map-canvas {
+  position: relative;
+  z-index: 0;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* A frame of its own box: unlike the next-page frames, its contents mustn't join the layout. */
+.map-results { display: block; }
+.map-results .result-count { margin: 0 0 .75rem; }
+.map-note { margin: -.5rem 0 .75rem; color: var(--muted); font-size: .85rem; }
+
+/* The pin, in the location colour: Lufthansa blue, or coral in the dark theme. touch-action
+   keeps a finger dragging the pin from scrolling the page instead. */
+.map-pin { color: var(--location); filter: drop-shadow(0 1px 2px rgb(0 0 0 / 45%)); touch-action: none; }
+/* The circle around it, and a dot for each listing. CSS beats the colours Leaflet sets as attributes. */
+.map-area { stroke: var(--location); fill: var(--location); }
+.map-dot { stroke: #fff; fill: var(--accent); }
+/* Listings near each other while the map is zoomed out: one bubble with their count. Taps go
+   through it to the map (map_controller.js). */
+.map-canvas .map-cluster {
+  display: grid; place-items: center; box-sizing: border-box; border: 2px solid #fff; border-radius: 50%;
+  background: var(--accent); color: #fff; font: 700 11px/1 var(--font); box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+}
+
+/* Two classes, so these win over leaflet.css, which loads after this file (and colours links blue). */
+.map-canvas.leaflet-container { background: var(--surface-muted); font-family: var(--font); }
+.map-canvas .map-popup { display: grid; gap: .15rem; min-width: 10rem; color: #1f1e1d; font: 500 .9rem/1.35 var(--font); text-decoration: none; }
+.map-popup span { font-family: var(--price-font); font-weight: var(--bold); }
+
+/* The dark theme dims the (light) map tiles and turns them dark. */
+:root[data-theme="dark"] .map-canvas .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.85) saturate(.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .map-canvas .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.85) saturate(.6);
+  }
+}
+
+/* Wide screens: the map stays beside the results while they scroll. */
+@media (min-width: 960px) {
+  .map-page:not(.map-hidden) .map-layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; gap: 1.5rem; }
+  .map-page .map-canvas { position: sticky; top: 4.5rem; }
+  .map-page:not(.map-hidden) .map-results .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Signing in and posting a listing */
+
+.account { max-width: 600px; padding-top: 1.25rem; }
+.account h1 { margin: 0 0 .3rem; }
+.account .lead { margin: 0 0 1.25rem; color: var(--muted); }
+.account .lead strong { white-space: nowrap; }
+.account-form { display: grid; gap: 1rem; }
+.account-form [hidden] { display: none; }
+.account-form > .button { justify-content: center; }
+.account-note { margin-top: 1rem; color: var(--muted); font-size: .9rem; }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; }
+.form-error { margin: 0; padding: .7rem .9rem; border-radius: 10px; background: var(--badge); }
+.field-error { margin: .15rem 0 0; color: var(--danger); font-size: .85rem; }
+.field-hint { margin: .15rem 0 0; color: var(--muted); font-size: .85rem; }
+.optional { color: var(--muted); font-weight: var(--regular); }
+.field textarea { resize: vertical; line-height: 1.5; }
+.amount { display: flex; gap: .5rem; }
+.amount select { flex: none; width: auto; }
+.code-input { max-width: 12rem; font-size: 1.5rem !important; letter-spacing: .3em; text-align: center; }
+.form-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.form-actions .button { justify-content: center; }
+.my-listings { display: grid; gap: .6rem; margin: 0 0 1.25rem; padding: 0; list-style: none; }
+.my-listing {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem .9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.my-listing-text { display: grid; flex: 1; gap: .15rem; min-width: 0; }
+.my-listing-title { overflow: hidden; color: var(--text); font-weight: var(--semibold); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.my-listing-meta { color: var(--muted); font-size: .9rem; }
+/* A category's own fields in the listing form: a car's make, model, year... */
+.property-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1rem; margin: 0; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.property-fields legend { padding: 0 .35rem; font-weight: var(--semibold); }
+.property-fields .field-wide { grid-column: 1 / -1; }
+.property-fields .checks { display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; }
+.other-input { margin-top: .4rem; }
+.property-fields .other-input[hidden] { display: none; }
+.property-note { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: .8rem; }
+.required { color: var(--danger); }
+.link-button { padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-decoration: underline; cursor: pointer; }
+/* Kept out of sight and out of reach of the keyboard: only bots fill it in (see account.rs). */
+.trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* A listing's seller, and the seller's profile */
+
+.seller {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 1.25rem 0;
+  padding: .75rem .9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+.seller:hover { background: var(--surface-muted); }
+.seller-text { display: grid; flex: 1; gap: .1rem; min-width: 0; }
+.seller-text span { color: var(--muted); font-size: .85rem; }
+.seller-more { color: var(--muted); font-size: 1.4rem; line-height: 1; }
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  background: var(--badge);
+  color: var(--accent);
+  font-size: 1.1rem;
+  font-weight: var(--heavy);
+}
+.avatar.large { width: 3rem; height: 3rem; font-size: 1.25rem; }
+/* The seller's details, in a card like the site's others: the soft surface, a hairline border. */
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  margin: 1rem 0 .75rem;
+  padding: .9rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.profile-header h1 { margin: 0; font-size: 1.4rem; line-height: 1.2; }
+.profile-header p { margin: .15rem 0 0; color: var(--muted); font-size: .85rem; }
+/* Searching one seller's listings: a small field under their name. */
+.profile-search {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  max-width: 22rem;
+  margin: 0 0 1rem;
+  padding: .2rem .2rem .2rem .85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.profile-search:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.profile-search input { flex: 1; min-width: 0; padding: .3rem 0; border: 0; background: transparent; color: inherit; font: inherit; font-size: max(16px, .95rem); outline: none; }
+.profile-search .icon-button { width: 2rem; height: 2rem; background: var(--button); color: var(--on-button); }
+.profile-search .icon-button:hover { background: var(--button-hover); }
+.profile-found { margin: -.4rem 0 1rem; color: var(--muted); font-size: .9rem; }
+
+/* Listing page */
+
+.listing { max-width: 760px; padding-top: 1.25rem; }
+
+.listing-photo,
+.listing-photos img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.listing-photos { display: grid; gap: .5rem; }
+.listing-header { margin-top: 1rem; }
+.listing-header h1 { margin: .75rem 0 .35rem; font-size: 1.9rem; }
+.listing-price { margin: 0; font-family: var(--price-font); font-size: 1.6rem; font-weight: var(--bold); }
+/* The price with the loan calculator's button beside it; the calculator opens under the actions. */
+.price-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
+.loan-button {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .3rem .7rem; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); color: var(--text); font: inherit; font-size: .85rem; font-weight: var(--semibold);
+  cursor: pointer; transition: background-color .15s;
+}
+.loan-button:hover, .loan-button[aria-expanded="true"] { background: var(--surface-muted); }
+.loan {
+  max-width: 30rem; margin: -.25rem 0 1.25rem; padding: .9rem 1rem;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+}
+.loan[hidden] { display: none; }
+.loan-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
+/* Last in the card: the monthly payment, right after its name. */
+.loan-result { display: flex; align-items: baseline; gap: .6rem; margin: .75rem 0 0; padding-top: .7rem; border-top: 1px solid var(--border); }
+.loan-result span { color: var(--muted); font-weight: var(--semibold); }
+.loan-result strong { font-family: var(--price-font); font-size: 1.4rem; }
+.loan-summary { margin: .8rem 0 0; font-size: .85rem; }
+.loan-note { margin: .4rem 0 0; color: var(--muted); font-size: .8rem; }
+
+.badge { margin-left: .4rem; padding: .2rem .65rem; border-radius: 999px; background: var(--badge); font-size: .85rem; font-weight: var(--semibold); }
+.actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.25rem 0; }
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  padding: .6rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--button);
+  color: var(--on-button);
+  font: inherit;
+  font-weight: var(--semibold);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .15s;
+}
+
+.button:hover { background: var(--button-hover); }
+.button.secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+.button.secondary:hover { background: var(--surface-muted); }
+
+.attributes {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: .5rem 1.5rem;
+  margin: 0;
+  padding: 1rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.attributes dt { color: var(--muted); }
+.attributes dd { margin: 0; font-weight: var(--medium); }
+.description { margin: 0; font-size: 1.0625rem; line-height: 1.7; white-space: pre-line; }
+
+.site-footer {
+  padding: 2.5rem 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .85rem;
+  text-align: center;
+}
+
+@media (min-width: 720px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+  h1 { font-size: 2.25rem; }
+  .logo { font-size: 1.4rem; }
+  .listing-header h1 { font-size: 2.4rem; }
+}
+
+/* Phones: everything smaller, since nearly all of it is sized in rem: 14px instead of 16px, and
+   13.5px on the narrowest. Form fields keep 16px text, because iPhones zoom into a focused field
+   with smaller text; they get less padding instead, so they don't look heavier than the rest. */
+@media (max-width: 719px) {
+  html { font-size: 87.5%; }
+
+  .search input,
+  .field input,
+  .field select,
+  .field textarea,
+  .filter-form input[type="search"],
+  .filter-form input[type="text"],
+  .filter-form select,
+  .sort select { font-size: 16px; }
+
+  .field input,
+  .field select,
+  .filter-form input[type="search"],
+  .filter-form input[type="text"],
+  .filter-form select,
+  .sort select { padding-top: .45rem; padding-bottom: .45rem; }
+}
+
+@media (max-width: 360px) {
+  html { font-size: 84.375%; }
+}

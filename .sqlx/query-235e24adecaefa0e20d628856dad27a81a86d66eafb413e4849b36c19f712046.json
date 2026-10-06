@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_text)\n                     VALUES ($1, $2, 'TEXT', $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "235e24adecaefa0e20d628856dad27a81a86d66eafb413e4849b36c19f712046"
+}

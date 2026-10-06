@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM listing_attribute_options WHERE listing_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b30b0c3005eeeddef4d451efc9a89f8a8e8b653d413c39b34db33dfb00572a86"
+}

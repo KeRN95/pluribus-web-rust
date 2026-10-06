@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE listings l\n         SET category_id = $3, slug = $5, title = $6, description = $7, listing_type = $8, condition = $9,\n             price_amount = $10, currency = $11::text::currency_code, price_type = $12,\n             price_normalized = price_in_eur($10, $11::text::currency_code),\n             latitude = CASE WHEN l.location_id = $4 THEN l.latitude ELSE loc.latitude END,\n             longitude = CASE WHEN l.location_id = $4 THEN l.longitude ELSE loc.longitude END,\n             location_id = $4\n         FROM locations loc\n         WHERE loc.id = $4 AND l.public_no = $1 AND l.created_by_user_id = $2 AND l.status IN ('ACTIVE', 'RESERVED')\n         RETURNING l.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Text",
+        "Varchar",
+        "Varchar",
+        "Numeric",
+        "Text",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "fb35c05298fd81cfc3a92ac3be2699cbda28eff1731ed36797e9aa2cc297898d"
+}

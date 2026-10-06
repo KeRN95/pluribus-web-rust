@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Kërko në hartë | Marketplace{% endblock %}
+
+{% block query %}{{ filters.q_value() }}{% endblock %}
+
+{% block content %}
+{#- map_controller.js draws the map. A tap puts the pin there; the form then reloads only the
+    results panel (a turbo-frame), so the map stays as it is, and the address bar follows. -#}
+<div class="map-page" data-controller="map"
+  {%- if let Some(near) = filters.near %} data-map-latitude-value="{{ near.latitude }}" data-map-longitude-value="{{ near.longitude }}"{% endif %}
+  data-action="turbo:frame-load->map#plot">
+  <header class="map-header">
+    <h1>Kërko në hartë</h1>
+    <p class="lead">Prek hartën për të vendosur pikën, pastaj zgjidh largësinë.</p>
+  </header>
+
+  <form id="map-form" class="map-form" action="/harta" method="get"
+        data-map-target="form" data-turbo-frame="map-results" data-turbo-action="advance">
+    {%- if let Some(near) = filters.near %}
+    <input type="hidden" name="lat" value="{{ "{:.5}"|format(near.latitude) }}" data-map-target="latitude">
+    <input type="hidden" name="lng" value="{{ "{:.5}"|format(near.longitude) }}" data-map-target="longitude">
+    {%- else %}
+    <input type="hidden" name="lat" data-map-target="latitude">
+    <input type="hidden" name="lng" data-map-target="longitude">
+    {%- endif %}
+    {%- for (name, value) in filters.hidden_map_fields() %}
+    <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {%- endfor %}
+    {% include "map_radius.html" %}
+    <div class="field">
+      <label class="field-label" for="map-category">Kategoria</label>
+      <select id="map-category" name="category" data-action="map#submit">
+        <option value="">Të gjitha kategoritë</option>
+        {% for choice in filters.category_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="button" class="button secondary map-locate" data-action="map#locate">
+      {%- include "pin.svg" %}Vendndodhja ime
+    </button>
+    {#- Once there is a pin, the map can be folded away for the results (map_controller.js). -#}
+    <button type="button" class="button secondary map-toggle" data-map-target="toggle" data-action="map#toggleMap"
+            aria-controls="map-canvas" aria-expanded="true" data-show-label="Shfaq hartën" data-hide-label="Fshih hartën" hidden>Fshih hartën</button>
+    <p class="map-status" data-map-target="status" role="status"></p>
+  </form>
+
+  <div class="map-layout">
+    <div class="map-canvas" id="map-canvas" data-map-target="canvas" role="region" aria-label="Harta"></div>
+    {#- Links inside go to whole pages (target="_top"); only the form reloads this frame. -#}
+    <turbo-frame id="map-results" class="map-results" target="_top" data-map-target="results">
+      <p class="result-count">{{ count }}</p>
+      {%- if more_points %}
+      <p class="map-note">Në hartë shfaqen {{ crate::db::MAP_POINTS }} njoftimet e para të listës.</p>
+      {%- endif %}
+      {% if !chips.is_empty() %}
+      <ul class="active-filters" aria-label="Filtrat e zgjedhur">
+        {% for chip in chips %}
+        <li><a class="filter-chip" href="{{ chip.url }}" aria-label="Hiq filtrin {{ chip.label }}">{{ chip.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {#- A dot on the map for each result, not only for the cards loaded so far. -#}
+      <ul class="map-points" hidden data-map-target="points">
+        {%- for point in points %}
+        <li data-lat="{{ point.latitude }}" data-lng="{{ point.longitude }}" data-url="{{ point.url() }}" data-price="{{ point.price_display() }}">{{ point.title }}</li>
+        {%- endfor %}
+      </ul>
+      {% include "listing_grid.html" %}
+    </turbo-frame>
+  </div>
+</div>
+{% endblock %}

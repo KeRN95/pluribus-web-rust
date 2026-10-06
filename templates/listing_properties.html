@@ -1,0 +1,46 @@
+{#- A category's properties in the listing form (web/properties.rs). Included in the form, and
+    sent alone, in its frame, when the category changes. -#}
+{%- if !fields.is_empty() %}
+<fieldset class="property-fields">
+  <legend>Detajet</legend>
+  {%- for field in fields %}
+  <div class="field{% if field.kind == "multi" || field.kind == "check" %} field-wide{% endif %}">
+    {%- if field.kind == "check" %}
+    <label class="check"><input type="checkbox" name="{{ field.name }}" value="1"{% if field.checked %} checked{% endif %}> {{ field.label }}</label>
+    {%- else if field.kind == "multi" %}
+    <span class="field-label">{{ field.label }}</span>
+    <div class="checks">
+      {%- for choice in field.choices %}
+      <label class="check"><input type="checkbox" name="{{ field.name }}" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}> {{ choice.label }}</label>
+      {%- endfor %}
+    </div>
+    {%- else %}
+    <label class="field-label" for="{{ field.name }}">{{ field.label }}{% if let Some(unit) = field.unit %} ({{ unit }}){% endif %}{% if field.required %} <span class="required" aria-hidden="true">*</span>{% endif %}</label>
+    {%- if field.kind == "select" %}
+    <select id="{{ field.name }}" name="{{ field.name }}"{% if field.required %} required{% endif %}{% if let Some(parent) = field.depends_on %} data-depends-on="{{ parent }}"{% endif %}>
+      <option value="">Zgjidh</option>
+      {%- for choice in field.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+      {%- for group in field.groups %}
+      <optgroup label="{{ group.label }}" data-parent="{{ group.parent }}">
+        {%- for choice in group.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+      </optgroup>
+      {%- endfor %}
+      {%- if field.allow_other %}<option value="__other__"{% if field.other_selected %} selected{% endif %}>Tjetër…</option>{% endif %}
+    </select>
+    {%- if field.allow_other %}
+    {#- Shown while "Tjetër" is chosen (listing_form_controller.js); always, without JavaScript. -#}
+    <input class="other-input" name="{{ field.other_name }}" value="{{ field.other_value }}" maxlength="40"
+           placeholder="Shkruaje këtu" aria-label="{{ field.label }}: tjetër" data-other-for="{{ field.name }}">
+    {%- endif %}
+    {%- else if field.kind == "number" %}
+    <input id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value }}" inputmode="decimal"{% if field.required %} required{% endif %}>
+    {%- else %}
+    <input id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value }}" maxlength="200"{% if field.required %} required{% endif %}>
+    {%- endif %}
+    {%- endif %}
+    {%- if let Some(error) = field.error %}<p class="field-error">{{ error }}</p>{% endif %}
+  </div>
+  {%- endfor %}
+  <p class="property-note"><span class="required">*</span> e detyrueshme</p>
+</fieldset>
+{%- endif %}

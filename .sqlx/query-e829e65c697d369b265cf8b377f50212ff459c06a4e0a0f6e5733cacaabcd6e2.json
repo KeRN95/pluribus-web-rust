@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"count!\",\n                  coalesce(bool_or(lower(title) = lower($2)), false) AS \"same_title!\"\n           FROM listings\n           WHERE created_by_user_id = $1 AND created_at > now() - interval '1 day'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "same_title!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "e829e65c697d369b265cf8b377f50212ff459c06a4e0a0f6e5733cacaabcd6e2"
+}

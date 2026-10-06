@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE users\n         SET status = CASE WHEN status = 'PENDING' THEN 'ACTIVE' ELSE status END,\n             display_name = CASE WHEN display_name = 'Përdorues' THEN coalesce($2, display_name) ELSE display_name END\n         WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "21ccd7d2472c2fd274b39fa7b40b5e8c9d20be85427fe4e01eebe6b31a7696fe"
+}

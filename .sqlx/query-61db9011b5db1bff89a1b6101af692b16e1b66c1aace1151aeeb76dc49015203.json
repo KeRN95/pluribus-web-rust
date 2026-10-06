@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT contact, listing_id IS NOT NULL AS \"publishes!\" FROM login_codes\n           WHERE id = $1 AND used_at IS NULL AND expires_at > now() AND attempts < $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "contact",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "publishes!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "61db9011b5db1bff89a1b6101af692b16e1b66c1aace1151aeeb76dc49015203"
+}
