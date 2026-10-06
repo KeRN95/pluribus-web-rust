@@ -60,7 +60,7 @@
   {#- Under the photo: where it is, when it went up, and its number. -#}
   <p class="card-meta listing-meta">
     {% if let Some(location) = listing.location_name %}{{ location }} · {% endif %}
-    {% if let Some(date) = listing.published_display() %}Publikuar më {{ date }} · {% endif %}
+    {% if let Some(date) = listing.published_display() %}Publikuar më <strong>{{ date }}</strong> · {% endif %}
     Nr. {{ listing.public_no }}
   </p>
 

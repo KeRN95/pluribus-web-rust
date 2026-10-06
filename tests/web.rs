@@ -676,6 +676,8 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("9\u{a0}500\u{a0}€"));
     // Each detail a pill, its icon before its value; its name for screen readers and as a
     // tooltip. The options, several, a pill each.
+    // When it went up, the date in bold, under the photo.
+    assert!(response.body.contains("Publikuar më <strong>"));
     // What kind of listing it is, and its condition, over the price, not among the details.
     assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur</p>"#));
     assert!(!response.body.contains(">Gjendja</dt>"));
