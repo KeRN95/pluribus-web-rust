@@ -420,7 +420,7 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
 #[sqlx::test(fixtures("listings"))]
 async fn category_pages_keep_their_map_folded(pool: PgPool) {
     // Every category page has its map, in a card folded to its header; with no point, the
-    // results are from everywhere. Nothing in the toolbar opens it.
+    // results are from everywhere. Nothing else opens it.
     let cars = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL").await;
     assert!(cars.contains(r#"<section class="map-card map-hidden" data-controller="map" data-map-lazy-value="true""#));
     assert!(cars.contains(r#"aria-controls="map-card-body" aria-expanded="false">"#));
@@ -680,7 +680,8 @@ async fn chosen_filters_can_be_removed_one_by_one(pool: PgPool) {
     assert!(body.contains(r#"<a class="filter-chip" href="/c/makina?vehicle_fuel=DIESEL&sort=price_desc""#));
     assert!(body.contains(r#"<a class="filter-chip" href="/c/makina?city=durres&sort=price_desc""#));
     assert!(body.contains(r#"<a class="clear-filters" href="/c/makina?sort=price_desc">"#));
-    assert!(body.contains(r#"<span class="count-badge">2</span>"#));
+    // The filters' card says which are on.
+    assert!(body.contains("<span>Durrës · Naftë</span>"));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -851,7 +852,7 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     // The fingerprint only changes the URL; the file is served as before.
     let css = get(pool, &format!("/static/css/app.css?v={version}")).await;
     assert_eq!(css.status, StatusCode::OK);
-    assert!(css.body.contains(".toolbar"));
+    assert!(css.body.contains(".filters-card"));
 }
 
 #[sqlx::test(fixtures("listings"))]

@@ -790,28 +790,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 .browse { margin-top: 1rem; }
 
-/* Wraps rather than pushing the page wider than the screen when the buttons and the sort don't all
-   fit on one line. */
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-bottom: .75rem; }
-.filters-open { gap: .45rem; padding: .5rem .9rem; }
-
-.count-badge {
-  display: inline-grid;
-  place-items: center;
-  min-width: 1.3rem;
-  height: 1.3rem;
-  padding: 0 .35rem;
-  border-radius: 999px;
-  background: var(--button);
-  color: var(--on-button);
-  font-size: .75rem;
-  font-weight: var(--bold);
-}
-
-@media (max-width: 719px) {
-  .toolbar .filters-open { flex: none; padding: .5rem .7rem; }
-}
-
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 
 .filter-chip {
@@ -844,39 +822,35 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .filter-actions { display: flex; align-items: center; gap: .75rem; }
 .filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
 
-/* Phones and tablets: the filters are a section right under the toolbar, a card like Claude's with
-   the menus' hairline, which "Filtrat" opens (fading in as the menus do) and closes, the button
-   shaded while it is open. The button names the section, so its heading is there for screen
-   readers only. */
+/* Phones and tablets: the filters are a card like the map's under it, three alike, folded to their
+   headers. "Filtrat", the header, says which filters are on, opens the form inside the card
+   (fading in as the menus do) and closes it. It names the section, so the panel's own heading is
+   there for screen readers only. */
 @media (max-width: 959px) {
-  .filters {
-    display: none;
-    margin: 0 0 1rem;
-    padding: 0 1rem 1rem;
-    border: 1px solid var(--menu-border);
-    border-radius: var(--radius);
-    background: var(--surface);
-  }
+  .filters-card { margin: 0 0 .5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  .filters-card .map-card-icon { color: var(--text); }
+  .filters-open[aria-expanded="false"] .map-card-chevron { transform: rotate(-90deg); }
+  .filters { display: none; padding: 0 .9rem .9rem; }
   .filters.is-open { display: block; animation: menu-in .16s ease-out; }
   .filters-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .filters-open[aria-expanded="true"] { background: var(--surface-muted); border-color: var(--text); }
 }
 @media (max-width: 959px) and (prefers-reduced-motion: reduce) {
   .filters.is-open { animation: none; }
 }
 
-/* Wide screens: the filters are a sticky sidebar beside the toolbar and the results; picked options
-   apply at once. */
+/* Wide screens: the filters are a sticky sidebar beside the results, their own heading on top;
+   picked options apply at once. The card is only its panel here, its header gone. */
 @media (min-width: 960px) {
   .browse {
     display: grid;
     grid-template-columns: 250px minmax(0, 1fr);
-    grid-template-areas: "filters toolbar" "filters results";
+    grid-template-areas: "filters results";
     column-gap: 2rem;
     align-items: start;
   }
-  .toolbar { grid-area: toolbar; }
   .results { grid-area: results; }
+  .filters-card { display: contents; }
+  .filters-card .filters-open { display: none; }
 
   .filters {
     grid-area: filters;
@@ -887,14 +861,11 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
     padding-right: .5rem;
     scrollbar-width: thin;
   }
-
-  /* Filtrat is the toolbar's only button, and the sidebar stands for it. */
-  .toolbar { display: none; }
 }
 
 /* Map page, and the ways to it */
 
-/* The map on a category or search page, between the toolbar and the results: a card that comes
+/* The map on a category or search page, between the filters and the results: a card that comes
    folded down to its header, which opens it and folds it again. The order (Rendit) under it is a
    card like it, a <details>, its header in the summary. */
 .map-card,

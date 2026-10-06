@@ -47,25 +47,30 @@
 </nav>
 {% endif %}
 
-{#- Narrower than a sidebar, the filters are a section under the toolbar that "Filtrat" opens and
-    closes with JavaScript; without it they stay open. -#}
+{#- Narrower than a sidebar, the filters are a card like the map's: "Filtrat", its header, says
+    which filters are on and opens the form inside it, and closes it, with JavaScript; without it
+    they stay open. -#}
 <noscript><style>.filters { display: block; } .filters-open { display: none; }</style></noscript>
 <div class="browse" data-controller="filters"
      data-action="keydown.esc@document->filters#close turbo:before-cache@document->filters#reset">
-  <div class="toolbar">
-    <button type="button" class="button secondary filters-open" aria-controls="filters" aria-expanded="false"
+  {#- On wide screens the card is only its panel, the sidebar (display: contents). -#}
+  <div class="filters-card">
+    <button type="button" class="map-card-header filters-open" aria-controls="filters" aria-expanded="false"
             data-filters-target="toggle" data-action="filters#toggle">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-      Filtrat{% if !chips.is_empty() %} <span class="count-badge">{{ chips.len() }}</span>{% endif %}
+      <span class="map-card-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span>
+      <span class="map-card-title">
+        <strong>Filtrat</strong>
+        <span>{% if chips.is_empty() %}Asnjë filtër{% else %}{% for chip in chips.iter() %}{% if !loop.first %} · {% endif %}{{ chip.label }}{% endfor %}{% endif %}</span>
+      </span>
+      <svg class="map-card-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
     </button>
+    <aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">
+      <div class="filters-header">
+        <h2 id="filters-heading">Filtrat</h2>
+      </div>
+      {% include "filters.html" %}
+    </aside>
   </div>
-
-  <aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">
-    <div class="filters-header">
-      <h2 id="filters-heading">Filtrat</h2>
-    </div>
-    {% include "filters.html" %}
-  </aside>
 
   <section class="results" aria-label="Njoftimet">
 
