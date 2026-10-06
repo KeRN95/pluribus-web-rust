@@ -206,6 +206,8 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     // Words only: no city, no category; the results' filters narrow them.
     assert!(body.contains(r#"<form class="welcome-form" action="/search" method="get" role="search">"#));
     assert!(body.contains(r#"<input id="welcome-q" type="search" name="q""#));
+    // The search button is a magnifier inside the field's pill, as in Claude's app.
+    assert!(body.contains(r#"<button type="submit" class="icon-button welcome-search" aria-label="Kërko""#));
     assert!(!body.contains(r#"name="city""#) && !body.contains(r#"name="category""#));
     // A shortcut to every main category, in their order, each its icon before its name; no more
     // listing-like cards.
