@@ -212,17 +212,26 @@ async fn welcome_page_asks_for_a_city_and_a_category(pool: PgPool) {
     ]);
     assert!(towns.is_sorted(), "{towns:?}");
     assert!(body.contains(r#"<option value="makina">"#), "subcategories are offered too");
-    // Shortcuts to what people look for most, each with its icon, in this order; no more cards.
-    let shortcuts = positions(&body, &[
-        r#"<a class="shortcut" href="/c/prona" data-city-target="link">"#,
-        r#"<a class="shortcut" href="/c/makina" data-city-target="link">"#,
-        r#"<a class="shortcut" href="/c/elektronike" data-city-target="link">"#,
-        r#"<a class="shortcut" href="/c/pune" data-city-target="link">"#,
-        r#"<a class="shortcut" href="/c/te-tjera" data-city-target="link">"#,
-    ]);
+    // A shortcut to every main category, each with its icon, in their order; no more cards.
+    let main = [
+        ("automjete", "Automjete"),
+        ("prona", "Prona"),
+        ("elektronike", "Elektronikë"),
+        ("shtepi-dhe-kopsht", "Shtëpi dhe kopsht"),
+        ("pune", "Punë"),
+        ("sherbime", "Shërbime"),
+        ("veshje-dhe-aksesore", "Veshje dhe aksesorë"),
+        ("sport-dhe-hobi", "Sport dhe hobi"),
+        ("kafshe-shtepiake", "Kafshë shtëpiake"),
+        ("makineri-dhe-biznes", "Makineri dhe biznes"),
+        ("te-tjera", "Të tjera"),
+    ];
+    let links: Vec<String> =
+        main.iter().map(|(slug, _)| format!(r#"<a class="shortcut" href="/c/{slug}" data-city-target="link">"#)).collect();
+    let shortcuts = positions(&body, &links.iter().map(String::as_str).collect::<Vec<_>>());
     assert!(shortcuts.is_sorted(), "{shortcuts:?}");
-    assert_eq!(body.matches(r#"data-city-target="link""#).count(), 5);
-    for name in ["Prona", "Makina", "Elektronikë", "Punë", "Të tjera"] {
+    assert_eq!(body.matches(r#"data-city-target="link""#).count(), main.len());
+    for (_, name) in main {
         assert!(body.contains(&format!("</svg>{name}</a>")), "{name}");
     }
     assert_eq!(body.matches(r#"<a class="shortcut""#).count(), body.matches(r#"stroke-width="1.8""#).count());
@@ -237,7 +246,7 @@ async fn welcome_page_remembers_the_city(pool: PgPool) {
         .unwrap();
     let body = send(pool, request).await.body;
     assert!(body.contains(r#"<option value="vlore" selected>Vlorë</option>"#));
-    assert!(body.contains(r#"href="/c/makina?city=vlore""#));
+    assert!(body.contains(r#"href="/c/automjete?city=vlore""#));
 }
 
 #[sqlx::test(fixtures("listings"))]

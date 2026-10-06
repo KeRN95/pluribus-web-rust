@@ -674,9 +674,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .field { display: grid; gap: .3rem; min-width: 0; }
 .field-label { color: var(--muted); font-size: .85rem; font-weight: var(--semibold); letter-spacing: .01em; }
 
-/* The welcome page's shortcuts, in a row that slides sideways where it doesn't fit, and on a
-   phone runs out to the screen's edges, so it plainly does. Each is like the quick-start buttons
-   under Claude's message box: a soft rounded box with a hairline border, its icon before its name. */
+/* The welcome page's shortcuts, one for each main category. On a phone, a row that slides
+   sideways and runs out to the screen's edges, so it plainly does; wider, where a mouse can't
+   slide it, they wrap onto a second line instead. Each is like the quick-start buttons under
+   Claude's message box: a soft rounded box with a hairline border, its icon before its name. */
 .shortcuts { display: flex; gap: .6rem; overflow-x: auto; margin: 1.25rem 0 0; padding: .15rem 0; scrollbar-width: none; }
 .shortcut {
   display: inline-flex;
@@ -701,6 +702,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .shortcuts::-webkit-scrollbar { display: none; }
 @media (max-width: 719px) {
   .shortcuts { margin-inline: -1rem; padding-inline: 1rem; }
+}
+@media (min-width: 720px) {
+  .shortcuts { flex-wrap: wrap; overflow-x: visible; }
 }
 
 @media (min-width: 720px) {

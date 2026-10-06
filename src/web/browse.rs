@@ -62,20 +62,36 @@ fn frame_response(after: Option<Cursor>, page: &ListingPage) -> Result<Response>
     render(ListingFrame { frame_id, page })
 }
 
-/// The welcome page's shortcuts under the search, to what people look for most: each category,
-/// and its icon (an SVG's inside, in the 24-unit box the site's line icons share).
-const SHORTCUTS: [(&str, &str); 5] = [
+/// The icons of the welcome page's shortcuts under the search, one for each main category (an
+/// SVG's inside, in the 24-unit box the site's line icons share). A main category added later
+/// gets BOX until it has one of its own.
+const SHORTCUTS: [(&str, &str); 11] = [
+    // A car, from the side.
+    ("automjete", r#"<path d="M5.5 11 7 7a2 2 0 0 1 1.9-1.4h6.2A2 2 0 0 1 17 7l1.5 4"/><path d="M5.2 16.5H4a1 1 0 0 1-1-1V13a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2.5a1 1 0 0 1-1 1h-1.2"/><path d="M9.8 16.5h4.4"/><circle cx="7.5" cy="16.5" r="2.2"/><circle cx="16.5" cy="16.5" r="2.2"/>"#),
     // A house.
     ("prona", r#"<path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v10.5a1 1 0 0 0 1 1H10v-5.5h4v5.5h3.5a1 1 0 0 0 1-1V9"/>"#),
-    // A car, from the side.
-    ("makina", r#"<path d="M5.5 11 7 7a2 2 0 0 1 1.9-1.4h6.2A2 2 0 0 1 17 7l1.5 4"/><path d="M5.2 16.5H4a1 1 0 0 1-1-1V13a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2.5a1 1 0 0 1-1 1h-1.2"/><path d="M9.8 16.5h4.4"/><circle cx="7.5" cy="16.5" r="2.2"/><circle cx="16.5" cy="16.5" r="2.2"/>"#),
     // A phone.
     ("elektronike", r#"<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18h3"/>"#),
+    // A sofa.
+    ("shtepi-dhe-kopsht", r#"<path d="M5.5 11V8.5A2.5 2.5 0 0 1 8 6h8a2.5 2.5 0 0 1 2.5 2.5V11"/><path d="M3.5 17.5v-5a2 2 0 0 1 4 0V14h9v-1.5a2 2 0 0 1 4 0v5z"/><path d="M5.5 17.5V20M18.5 17.5V20"/>"#),
     // A briefcase.
     ("pune", r#"<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M3 12.5h18"/>"#),
+    // A hammer.
+    ("sherbime", r#"<path d="m4.5 19.5 9-9"/><rect x="11" y="3.8" width="10" height="5.2" rx="1.3" transform="rotate(45 16 6.4)"/>"#),
+    // A T-shirt.
+    ("veshje-dhe-aksesore", r#"<path d="M8.5 3.5 3.5 6l-1.5 4.5 3.5 1.5v8.5h13V12l3.5-1.5-1.5-4.5-5-2.5a3.5 3.5 0 0 1-7 0z"/>"#),
+    // A tennis ball.
+    ("sport-dhe-hobi", r#"<circle cx="12" cy="12" r="8.5"/><path d="M5.8 6.2a8.5 8.5 0 0 1 0 11.6M18.2 6.2a8.5 8.5 0 0 0 0 11.6"/>"#),
+    // A paw.
+    ("kafshe-shtepiake", r#"<circle cx="8.5" cy="5.5" r="1.8"/><circle cx="15.5" cy="5.5" r="1.8"/><circle cx="4.8" cy="10.5" r="1.7"/><circle cx="19.2" cy="10.5" r="1.7"/><path d="M12 10.5c-2.6 0-5 3.2-5 5.8 0 1.6 1.2 2.7 2.6 2.7 1 0 1.6-.5 2.4-.5s1.4.5 2.4.5c1.4 0 2.6-1.1 2.6-2.7 0-2.6-2.4-5.8-5-5.8z"/>"#),
+    // A factory.
+    ("makineri-dhe-biznes", r#"<path d="M3 20.5V10l5 3v-3l5 3v-3l5 3V4.5h3v16z"/><path d="M7 17h2M11.5 17h2M16 17h2"/>"#),
     // A box: other things.
-    ("te-tjera", r#"<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5"/><path d="M12 12v9"/>"#),
+    ("te-tjera", BOX),
 ];
+
+/// Other things, and a main category without an icon of its own yet.
+const BOX: &str = r#"<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5"/><path d="M12 12v9"/>"#;
 
 /// A shortcut on the welcome page.
 pub struct Shortcut {
@@ -117,16 +133,16 @@ pub async fn home(
     )?;
     // The city picked last time (see city_controller.js), if it still exists.
     let city = cookie(&headers, "city").filter(|slug| cities.iter().any(|c| &c.slug == slug));
-    let shortcuts = SHORTCUTS
-        .iter()
-        .filter_map(|(slug, icon)| categories.by_slug(slug).map(|category| (category, *icon)))
-        .map(|(category, icon)| Shortcut {
+    // Every main category, in its order, with its icon.
+    let shortcuts = categories
+        .top_level()
+        .map(|category| Shortcut {
             name: category.name.clone(),
             url: match &city {
                 Some(city) => format!("/c/{}?city={city}", category.slug),
                 None => format!("/c/{}", category.slug),
             },
-            icon,
+            icon: SHORTCUTS.iter().find(|(slug, _)| *slug == category.slug).map_or(BOX, |(_, icon)| *icon),
         })
         .collect();
     render(HomePage {
