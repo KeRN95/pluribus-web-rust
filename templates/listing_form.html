@@ -24,6 +24,8 @@
 
     <div class="field">
       <label class="field-label" for="category">Kategoria</label>
+      {#- Chosen from a list in the page, not the phone's own picker (picker_controller.js). -#}
+      <div class="picker" data-controller="picker">
       <select id="category" name="category" required data-listing-form-target="category" data-action="listing-form#categoryChanged">
         <option value="">Zgjidh kategorinë</option>
         {%- for group in category_groups %}
@@ -34,6 +36,7 @@
         {%- if group.label.is_some() %}</optgroup>{% endif %}
         {%- endfor %}
       </select>
+      </div>
       {% if let Some(error) = self.error("category") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
 

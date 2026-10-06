@@ -12,10 +12,12 @@
   {% if filters.shows_category() %}
   <div class="filter-group">
     <label class="filter-label" for="filter-category">Kategoria</label>
+    <div class="picker" data-controller="picker">
     <select id="filter-category" name="category">
       <option value="">Të gjitha</option>
       {% for choice in filters.category_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
     </select>
+    </div>
   </div>
   {% endif %}
 

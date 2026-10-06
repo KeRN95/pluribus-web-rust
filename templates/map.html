@@ -30,10 +30,12 @@
     {% include "map_radius.html" %}
     <div class="field">
       <label class="field-label" for="map-category">Kategoria</label>
+      <div class="picker" data-controller="picker">
       <select id="map-category" name="category" data-action="map#submit">
         <option value="">Të gjitha kategoritë</option>
         {% for choice in filters.category_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
       </select>
+      </div>
     </div>
     <button type="button" class="button secondary map-locate" data-action="map#locate">
       {%- include "pin.svg" %}Vendndodhja ime

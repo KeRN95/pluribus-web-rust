@@ -1946,6 +1946,24 @@ async fn the_makes_and_models_have_the_codes_typing_them_gives(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
+async fn categories_are_chosen_from_a_list_in_the_page(pool: PgPool) {
+    // Every category select comes inside the picker (picker_controller.js), which keeps it for the
+    // form and offers its options in a list in the page instead of the phone's own picker.
+    let wrapper = r#"<div class="picker" data-controller="picker">"#;
+    for (uri, select) in [
+        ("/", r#"<select id="welcome-category""#),
+        ("/shto", r#"<select id="category""#),
+        ("/search?q=golf", r#"<select id="filter-category""#),
+        ("/harta", r#"<select id="map-category""#),
+    ] {
+        let page = get(pool.clone(), uri).await.body;
+        let at = page.find(select).unwrap_or_else(|| panic!("{uri}: no {select}"));
+        let start = page[..at].rfind(wrapper).unwrap_or_else(|| panic!("{uri}: no picker"));
+        assert!(page[start + wrapper.len()..at].trim().is_empty(), "{uri}: the select isn't the picker's");
+    }
+}
+
+#[sqlx::test(fixtures("listings"))]
 async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
     // Not signed in, the form asks for a phone number or an e-mail address as well, and no code.
     let form = get(pool.clone(), "/shto").await.body;
