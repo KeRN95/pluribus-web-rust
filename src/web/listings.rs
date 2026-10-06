@@ -175,17 +175,17 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         .filter(|attribute| !(titled && properties::TITLE_CODES.contains(&attribute.code.as_str())))
         .map(|attribute| Detail {
             icon: properties::icon(&attribute.code),
-            wide: attribute.multi,
+            multi: attribute.multi,
             label: attribute.label,
-            value: attribute.value,
+            values: attribute.shown,
         })
         .collect();
     if let Some(condition) = &listing.condition {
         details.insert(0, Detail {
             label: "Gjendja".to_string(),
-            value: format::condition(condition).to_string(),
+            values: vec![format::condition(condition).to_string()],
             icon: properties::icon("condition"),
-            wide: false,
+            multi: false,
         });
     }
     // Said once: the cookie that says so (post.rs) goes with this answer.
@@ -197,14 +197,13 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     Ok(response)
 }
 
-/// One of a listing's details, in its own box: its icon before its value where it has one, its
-/// name then for screen readers and as a tooltip; otherwise its name over its value.
+/// One of a listing's details, as pills: its icon before its value where it has one, otherwise
+/// its name; a pill for each of several values (a car's options), each with a check.
 pub struct Detail {
     pub label: String,
-    pub value: String,
+    pub values: Vec<String>,
     pub icon: Option<&'static str>,
-    /// Several values, a car's options: the box takes the whole line.
-    pub wide: bool,
+    pub multi: bool,
 }
 
 /// How buyers reach the seller, behind a button that shows it and counts the showing: the phone

@@ -807,8 +807,8 @@ pub struct ListingDetail {
 pub struct AttributeValue {
     pub code: String,
     pub label: String,
-    pub value: String,
-    /// Several values, a multi-select's: their labels, joined.
+    /// Its value as the page shows it; a multi-select's options, each on its own.
+    pub shown: Vec<String>,
     pub multi: bool,
 }
 
@@ -861,12 +861,12 @@ pub async fn listing_attributes(
 ) -> sqlx::Result<Vec<AttributeValue>> {
     sqlx::query_as!(
         AttributeValue,
-        r#"SELECT code AS "code!", label AS "label!", value AS "value!", multi AS "multi!"
+        r#"SELECT code AS "code!", label AS "label!", shown AS "shown!", multi AS "multi!"
            FROM (
                SELECT a.code, coalesce(eca.label, a.name) AS label,
-                      coalesce(o.label, v.value_text, format_attribute_number(v.value_number, a.unit),
-                               CASE v.value_boolean WHEN true THEN 'Po' WHEN false THEN 'Jo' END,
-                               to_char(v.value_date, 'DD.MM.YYYY')) AS value,
+                      ARRAY[coalesce(o.label, v.value_text, format_attribute_number(v.value_number, a.unit),
+                                     CASE v.value_boolean WHEN true THEN 'Po' WHEN false THEN 'Jo' END,
+                                     to_char(v.value_date, 'DD.MM.YYYY'))] AS shown,
                       false AS multi,
                       eca.sort_order
                FROM listing_attribute_values v
@@ -876,7 +876,7 @@ pub async fn listing_attributes(
                LEFT JOIN attribute_options o ON o.id = v.value_option_id
                WHERE v.listing_id = $1
                UNION ALL
-               SELECT a.code, coalesce(eca.label, a.name), string_agg(o.label, ', ' ORDER BY o.sort_order), true,
+               SELECT a.code, coalesce(eca.label, a.name), array_agg(o.label ORDER BY o.sort_order), true,
                       eca.sort_order
                FROM listing_attribute_options lo
                JOIN attributes a ON a.id = lo.attribute_id
