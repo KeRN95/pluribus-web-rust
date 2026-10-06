@@ -53,6 +53,21 @@ pub struct PropertyField {
     pub error: Option<String>,
 }
 
+impl PropertyField {
+    /// What the field says inside it, as its placeholder or a list's empty choice: the label, with
+    /// the unit, and an asterisk when it is required ("Kilometrazhi (km)", "Marka *").
+    pub fn placeholder(&self) -> String {
+        let mut text = self.label.clone();
+        if let Some(unit) = &self.unit {
+            text.push_str(&format!(" ({unit})"));
+        }
+        if self.required {
+            text.push_str(" *");
+        }
+        text
+    }
+}
+
 /// The value a select sends for "Tjetër".
 pub const OTHER: &str = "__other__";
 

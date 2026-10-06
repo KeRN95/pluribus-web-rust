@@ -117,6 +117,9 @@ export default class extends Controller {
   show() {
     const chosen = this.select.selectedOptions[0];
     this.value.textContent = chosen ? chosen.textContent.trim() : "";
+    // Nothing chosen yet: where the empty choice names the field (the posting form), it looks
+    // like a placeholder.
+    this.button.classList.toggle("is-empty", !this.select.value);
     for (const item of this.list.querySelectorAll("[data-value]")) {
       item.setAttribute("aria-selected", String(item.dataset.value === this.select.value));
     }

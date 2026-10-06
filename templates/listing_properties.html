@@ -15,11 +15,12 @@
       {%- endfor %}
     </div>
     {%- else %}
-    <label class="field-label" for="{{ field.name }}">{{ field.label }}{% if let Some(unit) = field.unit %} ({{ unit }}){% endif %}{% if field.required %} <span class="required" aria-hidden="true">*</span>{% endif %}</label>
+    {#- Named inside the field, as in the rest of the form; the label is for screen readers. -#}
+    <label class="visually-hidden" for="{{ field.name }}">{{ field.label }}{% if let Some(unit) = field.unit %} ({{ unit }}){% endif %}</label>
     {%- if field.kind == "select" %}
     <div class="picker" data-controller="picker">
     <select id="{{ field.name }}" name="{{ field.name }}"{% if field.required %} required{% endif %}{% if let Some(parent) = field.depends_on %} data-depends-on="{{ parent }}"{% endif %}>
-      <option value="">Zgjidh</option>
+      <option value="">{{ field.placeholder() }}</option>
       {%- for choice in field.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
       {%- for group in field.groups %}
       <optgroup label="{{ group.label }}" data-parent="{{ group.parent }}">
@@ -35,9 +36,9 @@
            placeholder="Shkruaje këtu" aria-label="{{ field.label }}: tjetër" data-other-for="{{ field.name }}">
     {%- endif %}
     {%- else if field.kind == "number" %}
-    <input id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value }}" inputmode="decimal"{% if field.required %} required{% endif %}>
+    <input id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value }}" inputmode="decimal" placeholder="{{ field.placeholder() }}"{% if field.required %} required{% endif %}>
     {%- else %}
-    <input id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value }}" maxlength="200"{% if field.required %} required{% endif %}>
+    <input id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value }}" maxlength="200" placeholder="{{ field.placeholder() }}"{% if field.required %} required{% endif %}>
     {%- endif %}
     {%- endif %}
     {%- if let Some(error) = field.error %}<p class="field-error">{{ error }}</p>{% endif %}

@@ -1335,10 +1335,12 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
     // The fields, under the parts' own names for them; none required.
     let fields = get(pool.clone(), "/shto/fushat?category=gps-dhe-navigatore").await.body;
     let labels = positions(&fields, &[
-        r#"<label class="field-label" for="prop_vehicle_make">Marka e automjetit</label>"#,
-        r#"<label class="field-label" for="prop_vehicle_model">Modeli i automjetit</label>"#,
-        r#"<label class="field-label" for="prop_fits_from_year">Nga viti</label>"#,
-        r#"<label class="field-label" for="prop_fits_to_year">Deri në vitin</label>"#,
+        r#"<label class="visually-hidden" for="prop_vehicle_make">Marka e automjetit</label>"#,
+        r#"<option value="">Marka e automjetit</option>"#,
+        r#"<label class="visually-hidden" for="prop_vehicle_model">Modeli i automjetit</label>"#,
+        r#"<label class="visually-hidden" for="prop_fits_from_year">Nga viti</label>"#,
+        r#"placeholder="Nga viti">"#,
+        r#"<label class="visually-hidden" for="prop_fits_to_year">Deri në vitin</label>"#,
     ]);
     assert!(labels.is_sorted(), "{labels:?}");
     assert!(!fields.contains(" required"));
@@ -1349,7 +1351,8 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
     assert!(fields.contains(r#"<option value="__other__">Tjetër…</option>"#));
     // Cars keep their own names for the same properties.
     let car_fields = get(pool.clone(), "/shto/fushat?category=makina").await.body;
-    assert!(car_fields.contains(r#"<label class="field-label" for="prop_vehicle_make">Marka <span class="required""#));
+    assert!(car_fields.contains(r#"<label class="visually-hidden" for="prop_vehicle_make">Marka</label>"#));
+    assert!(car_fields.contains(r#"<option value="">Marka *</option>"#));
     assert!(car_fields.contains("e detyrueshme"));
     // A category that only groups has no fields to offer.
     assert!(!get(pool.clone(), "/shto/fushat?category=pjese-dhe-aksesore").await.body.contains("prop_"));
@@ -1675,7 +1678,7 @@ async fn a_car_is_posted_with_its_make_model_and_year(pool: PgPool) {
     // The fields come with the category: the frame the form reloads when it changes.
     let frame = get(pool.clone(), "/shto/fushat?category=makina").await.body;
     assert!(frame.starts_with(r#"<turbo-frame id="listing-properties">"#));
-    assert!(frame.contains(r#"<input id="prop_vehicle_year" name="prop_vehicle_year" value="" inputmode="decimal" required>"#));
+    assert!(frame.contains(r#"<input id="prop_vehicle_year" name="prop_vehicle_year" value="" inputmode="decimal" placeholder="Viti *" required>"#));
     assert!(frame.contains(r#"<select id="prop_vehicle_model" name="prop_vehicle_model" required data-depends-on="prop_vehicle_make">"#));
     assert!(frame.contains(r#"<optgroup label="Volkswagen" data-parent="VOLKSWAGEN">"#));
     assert!(frame.contains(r#"name="prop_vehicle_features" value="ABS""#));

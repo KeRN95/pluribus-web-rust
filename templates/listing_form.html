@@ -22,12 +22,15 @@
   <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data" data-controller="listing-form narrow">
     {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
 
+    {#- No labels in sight: each field says what it is inside it, as its placeholder or a list's
+        empty choice (in the placeholder's grey until something is chosen, picker_controller.js).
+        The labels stay for screen readers. -#}
     <div class="field">
-      <label class="field-label" for="category">Kategoria</label>
+      <label class="visually-hidden" for="category">Kategoria</label>
       {#- Chosen from a list in the page, not the phone's own picker (picker_controller.js). -#}
       <div class="picker" data-controller="picker" data-picker-tree-value="true">
       <select id="category" name="category" required data-listing-form-target="category" data-action="listing-form#categoryChanged">
-        <option value="">Zgjidh kategorinë</option>
+        <option value="">Kategoria</option>
         {%- for group in category_groups %}
         {%- if let Some(label) = group.label %}<optgroup label="{{ label }}">{% endif %}
         {%- for category in group.options %}
@@ -42,7 +45,7 @@
 
     <div class="form-row">
       <div class="field" data-listing-form-target="typeField">
-        <label class="field-label" for="listing_type">Lloji</label>
+        <label class="visually-hidden" for="listing_type">Lloji</label>
         <div class="picker" data-controller="picker">
         <select id="listing_type" name="listing_type" data-listing-form-target="type">
           {% for choice in types %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
@@ -51,10 +54,10 @@
         {% if let Some(error) = self.error("listing_type") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
       <div class="field" data-listing-form-target="conditionField">
-        <label class="field-label" for="condition">Gjendja</label>
+        <label class="visually-hidden" for="condition">Gjendja</label>
         <div class="picker" data-controller="picker">
         <select id="condition" name="condition">
-          <option value="">Pa specifikuar</option>
+          <option value="">Gjendja</option>
           {% for choice in conditions %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
         </select>
         </div>
@@ -67,21 +70,20 @@
     </turbo-frame>
 
     <div class="field">
-      <label class="field-label" for="title">Titulli</label>
-      <input id="title" name="title" value="{{ form.title }}" required minlength="5" maxlength="120" placeholder="p.sh. Volkswagen Golf 7, 2016, naftë">
+      <label class="visually-hidden" for="title">Titulli</label>
+      <input id="title" name="title" value="{{ form.title }}" required minlength="5" maxlength="120" placeholder="Titulli, p.sh. Golf 7, 2016, naftë">
       {% if let Some(error) = self.error("title") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
 
     <div class="field">
-      <label class="field-label" for="description">Përshkrimi</label>
-      <textarea id="description" name="description" rows="6" required minlength="10" maxlength="5000">{{ form.description }}</textarea>
+      <label class="visually-hidden" for="description">Përshkrimi</label>
+      <textarea id="description" name="description" rows="6" required minlength="10" maxlength="5000" placeholder="Përshkrimi">{{ form.description }}</textarea>
       {% if let Some(error) = self.error("description") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
 
     {#- Photos: the ones the listing has (when editing), each with "Hiq", then a picker for more.
         photos_controller.js shows what was picked and makes big phone photos smaller first. -#}
     <div class="field" data-controller="photos" data-photos-max-value="{{ self.photos_left() }}">
-      <span class="field-label">Fotot <span class="optional">(deri në {{ crate::media::MAX_PHOTOS }}; e para del në krye)</span></span>
       {%- if !photos.is_empty() %}
       <ul class="photo-list">
         {%- for photo in photos %}
@@ -98,13 +100,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2.5"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8.5 5l1.5-2h4l1.5 2"/></svg>
         Shto foto
       </label>
+      <p class="field-hint">Deri në {{ crate::media::MAX_PHOTOS }} foto; e para del në krye.</p>
       <p class="field-hint" data-photos-target="status" role="status"></p>
       {% if let Some(error) = self.error("photos") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
 
     <div class="form-row price-row">
       <div class="field">
-        <label class="field-label" for="price_type">Çmimi</label>
+        <label class="visually-hidden" for="price_type">Çmimi</label>
         <div class="picker" data-controller="picker">
         <select id="price_type" name="price_type" data-listing-form-target="priceType" data-action="listing-form#priceTypeChanged">
           {% for choice in price_types %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
@@ -112,9 +115,9 @@
         </div>
       </div>
       <div class="field" data-listing-form-target="amountField">
-        <label class="field-label" for="price">Shuma</label>
+        <label class="visually-hidden" for="price">Shuma</label>
         <div class="amount">
-          <input id="price" name="price" value="{{ form.price }}" inputmode="decimal" placeholder="p.sh. 9 500">
+          <input id="price" name="price" value="{{ form.price }}" inputmode="decimal" placeholder="Shuma">
           <div class="picker" data-controller="picker">
           <select name="currency" aria-label="Monedha" data-listing-form-target="currency">
             {% for choice in currencies %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
@@ -127,10 +130,10 @@
 
     <div class="form-row">
       <div class="field">
-        <label class="field-label" for="city">Qyteti</label>
+        <label class="visually-hidden" for="city">Qyteti</label>
         <div class="picker" data-controller="picker">
         <select id="city" name="city" required>
-          <option value="">Zgjidh qytetin</option>
+          <option value="">Qyteti</option>
           {% for group in cities %}
           <optgroup label="{{ group.label }}">
             {% for city in group.choices %}<option value="{{ city.value }}"{% if city.selected %} selected{% endif %}>{{ city.label }}</option>{% endfor %}
@@ -141,17 +144,17 @@
         {% if let Some(error) = self.error("city") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
       <div class="field">
-        <label class="field-label" for="name">Emri <span class="optional">(s'është i detyrueshëm)</span></label>
-        <input id="name" name="name" value="{{ form.name }}" maxlength="60" autocomplete="name">
+        <label class="visually-hidden" for="name">Emri</label>
+        <input id="name" name="name" value="{{ form.name }}" maxlength="60" autocomplete="name" placeholder="Emri (s'është i detyrueshëm)">
         {% if let Some(error) = self.error("name") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
     </div>
 
     {%- if signed_in_as.is_none() %}
     <div class="field">
-      <label class="field-label" for="contact">Celulari ose email-i <span class="required" aria-hidden="true">*</span></label>
+      <label class="visually-hidden" for="contact">Celulari ose email-i</label>
       <input id="contact" name="contact" value="{{ form.contact }}" required autocomplete="username"
-             placeholder="069 123 4567 ose emri@shembull.com">
+             placeholder="Celulari ose email-i *">
       <p class="field-hint">Blerësit të kontaktojnë këtu; e shohin vetëm kur shtypin butonin e telefonit te njoftimi. Me të hyn më vonë, për ta ndryshuar njoftimin.</p>
       {% if let Some(error) = self.error("contact") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>

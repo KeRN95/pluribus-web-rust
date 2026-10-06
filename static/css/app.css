@@ -437,7 +437,11 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 }
 
 .field input::placeholder,
+.field textarea::placeholder,
 .filter-form input::placeholder { color: var(--muted); }
+/* The posting form names its lists inside them: an empty one shows its name in the placeholder's
+   grey. */
+.account-form .picker-button.is-empty { color: var(--muted); }
 
 /* Welcome page */
 
