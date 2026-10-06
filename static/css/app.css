@@ -1203,14 +1203,58 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   .gallery-next { right: .7rem; }
   .gallery-arrow:disabled { opacity: 0; pointer-events: none; }
 }
-/* Above the photo, the category's path as pills with a small › between them, and the status after
-   them. A › goes with the pill after it, so a wrapped row starts with one rather than a row ending
-   in one. */
+/* Above the photo, the category's path, and the status after it. The path is one pill split by
+   arrows: each category's part points into the next (clip-path), and the pill's own colour, its
+   border's, shows between them as a thin >. On a narrow screen the parts between the first and
+   the last give way first, ending in "…". */
 .listing-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
 .listing-tags .badge { margin-left: 0; }
-.listing-trail { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .3rem; }
-.trail-step { display: inline-flex; align-items: center; gap: .3rem; }
-.trail-sep { flex: none; color: var(--muted); }
+.listing-trail {
+  --tip: .55rem;
+  --gap: 2px;
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--border);
+}
+.listing-trail a {
+  flex: none;
+  margin-left: calc(var(--gap) - var(--tip));
+  padding: .4rem calc(.7rem + var(--tip));
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--text);
+  font-size: .85rem;
+  font-weight: var(--medium);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  clip-path: polygon(0 0, calc(100% - var(--tip)) 0, 100% 50%, calc(100% - var(--tip)) 100%, 0 100%, var(--tip) 50%);
+  transition: background-color .15s;
+}
+.listing-trail a:first-child {
+  margin-left: 0;
+  padding-left: .9rem;
+  clip-path: polygon(0 0, calc(100% - var(--tip)) 0, 100% 50%, calc(100% - var(--tip)) 100%, 0 100%);
+}
+.listing-trail a:last-child {
+  padding-right: .9rem;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, var(--tip) 50%);
+}
+.listing-trail a:only-child { clip-path: none; }
+/* The first and the last part keep their whole names; the parts between take the room left, up
+   to theirs. The last gives way only once those are as short as they get. */
+.listing-trail a:not(:first-child, :last-child) { flex: 1 1 0; min-width: calc(2 * var(--tip) + 2.5rem); max-width: max-content; }
+.listing-trail a:last-child:not(:first-child) { flex: 0 1 auto; min-width: calc(var(--tip) + 2.5rem); }
+/* The clipped parts would cut a focus ring: the whole pill shows it, the part its shade. */
+.listing-trail a:focus-visible { outline: none; background: var(--surface-muted); }
+.listing-trail:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) {
+  .listing-trail a:hover { background: var(--surface-muted); }
+}
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: 1.9rem; }
 .listing-price { margin: 0; font-size: 1.6rem; font-weight: var(--bold); letter-spacing: -.02em; }
 /* The price with the loan calculator's button beside it; the calculator opens under the actions. */

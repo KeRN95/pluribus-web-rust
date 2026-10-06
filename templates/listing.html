@@ -11,15 +11,13 @@
   {#- Posted just now without signing in (post.rs): changing it later takes signing in. -#}
   <p class="notice" role="status">Njoftimi yt u publikua. Për ta ndryshuar ose fshirë më vonë, <a href="/njoftimet-e-mia">hyr</a> me numrin ose email-in që shkruajte.</p>
   {%- endif %}
-  {#- Where it is: its category and those above it, pills with a small › between them that stays
-      with the pill after it when the row wraps; then its status, if it isn't simply up. -#}
+  {#- Where it is: its category and those above it, as one pill split by arrows (app.css), each
+      name whole in a tooltip should the pill have to shorten it; then its status, if it isn't
+      simply up. -#}
   <div class="listing-tags">
     <nav class="listing-trail" aria-label="Kategoria e njoftimit">
       {%- for crumb in trail %}
-      <span class="trail-step">
-        {%- if !loop.first %}<svg class="trail-sep" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>{% endif -%}
-        <a class="chip" href="{{ crumb.url }}">{{ crumb.name }}</a>
-      </span>
+      <a href="{{ crumb.url }}" title="{{ crumb.name }}">{{ crumb.name }}</a>
       {%- endfor %}
     </nav>
     {%- if let Some(label) = listing.status_label() %}
