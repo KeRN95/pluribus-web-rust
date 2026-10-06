@@ -2135,16 +2135,21 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // A private seller: Ana, with the five fixture listings she sells.
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
-    // Under the title, before the price: her initial and her name, leading to her profile...
+    // The category above the photo; under it her initial, her name, since when and how many
+    // listings, leading to her profile; then the title.
     let order = positions(&page, &[
-        "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
+        r#"<nav class="listing-trail""#,
+        r#"<div class="gallery">"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="seller-name">Ana</span>"#,
+        r#"<span class="seller-summary">Në Marketplace që nga "#,
+        "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="listing-price">"#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
+    assert!(page.contains(" · 5 njoftime</span>"));
 
-    // ...which says since when, and how many listings.
+    // Her profile says so too.
     let profile = get(pool.clone(), ana).await.body;
     assert!(profile.contains("<h1>Ana</h1>"));
     assert!(profile.contains("Në Marketplace që nga ") && profile.contains(" · 5 njoftime</p>"));
