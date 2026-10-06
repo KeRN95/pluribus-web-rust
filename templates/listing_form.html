@@ -25,7 +25,7 @@
     <div class="field">
       <label class="field-label" for="category">Kategoria</label>
       {#- Chosen from a list in the page, not the phone's own picker (picker_controller.js). -#}
-      <div class="picker" data-controller="picker">
+      <div class="picker" data-controller="picker" data-picker-tree-value="true">
       <select id="category" name="category" required data-listing-form-target="category" data-action="listing-form#categoryChanged">
         <option value="">Zgjidh kategorinë</option>
         {%- for group in category_groups %}
@@ -43,17 +43,21 @@
     <div class="form-row">
       <div class="field" data-listing-form-target="typeField">
         <label class="field-label" for="listing_type">Lloji</label>
+        <div class="picker" data-controller="picker">
         <select id="listing_type" name="listing_type" data-listing-form-target="type">
           {% for choice in types %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
         </select>
+        </div>
         {% if let Some(error) = self.error("listing_type") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
       <div class="field" data-listing-form-target="conditionField">
         <label class="field-label" for="condition">Gjendja</label>
+        <div class="picker" data-controller="picker">
         <select id="condition" name="condition">
           <option value="">Pa specifikuar</option>
           {% for choice in conditions %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
         </select>
+        </div>
       </div>
     </div>
 
@@ -101,17 +105,21 @@
     <div class="form-row price-row">
       <div class="field">
         <label class="field-label" for="price_type">Çmimi</label>
+        <div class="picker" data-controller="picker">
         <select id="price_type" name="price_type" data-listing-form-target="priceType" data-action="listing-form#priceTypeChanged">
           {% for choice in price_types %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
         </select>
+        </div>
       </div>
       <div class="field" data-listing-form-target="amountField">
         <label class="field-label" for="price">Shuma</label>
         <div class="amount">
           <input id="price" name="price" value="{{ form.price }}" inputmode="decimal" placeholder="p.sh. 9 500">
+          <div class="picker" data-controller="picker">
           <select name="currency" aria-label="Monedha" data-listing-form-target="currency">
             {% for choice in currencies %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
           </select>
+          </div>
         </div>
       </div>
     </div>
@@ -120,6 +128,7 @@
     <div class="form-row">
       <div class="field">
         <label class="field-label" for="city">Qyteti</label>
+        <div class="picker" data-controller="picker">
         <select id="city" name="city" required>
           <option value="">Zgjidh qytetin</option>
           {% for group in cities %}
@@ -128,6 +137,7 @@
           </optgroup>
           {% endfor %}
         </select>
+        </div>
         {% if let Some(error) = self.error("city") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
       <div class="field">

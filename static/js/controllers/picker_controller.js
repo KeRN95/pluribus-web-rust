@@ -2,14 +2,21 @@ import { Controller } from "@hotwired/stimulus";
 
 // A <select> chosen from a list in the page rather than the phone's own picker (a wheel on
 // iPhones, a dialog on Android): a button shows the choice, and a list under it offers the
-// options, under their group's heading ("Automjete › Pjesë dhe aksesorë") or indented by their
-// level (the leading spaces category_choices gives them, filters.rs). The select stays, unseen,
-// and is what the form sends: choosing sets it and says so ("change"), so whatever listens to it
-// still hears. Without this script the select is just a select.
+// options, under their group's heading. The select stays, unseen, and is what the form sends:
+// choosing sets it and says so ("change"), so whatever listens to it still hears. Without this
+// script the select is just a select.
+//
+// A category list (data-picker-tree-value) folds: a category's subcategories show under it once
+// its arrow opens them, the path to the choice open from the start. The posting form's groups,
+// "Automjete › Pjesë dhe aksesorë", nest by their path; elsewhere the leading spaces of
+// category_choices (filters.rs) give each category's level.
 
 let count = 0;
+const CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 
 export default class extends Controller {
+  static values = { tree: Boolean };
+
   connect() {
     this.select = this.element.querySelector("select");
     if (!this.select) return;
@@ -20,21 +27,27 @@ export default class extends Controller {
     if (this.label) this.label.id ||= `${id}-label`;
 
     this.button = element("button", "picker-button", { type: "button" });
-    this.button.setAttribute("aria-haspopup", "listbox");
+    this.button.setAttribute("aria-haspopup", this.treeValue ? "tree" : "listbox");
     this.button.setAttribute("aria-expanded", "false");
     this.button.setAttribute("aria-controls", id);
     this.value = element("span", "picker-value", { id: `${id}-value` });
     this.button.append(this.value);
-    if (this.label) this.button.setAttribute("aria-labelledby", `${this.label.id} ${id}-value`);
+    // Named by the select's label, or by its aria-label ("Monedha"), and then the choice.
+    let name = this.label?.id;
+    if (!name && this.select.getAttribute("aria-label")) {
+      name = `${id}-name`;
+      this.button.append(element("span", "visually-hidden", { id: name, textContent: this.select.getAttribute("aria-label") }));
+    }
+    if (name) this.button.setAttribute("aria-labelledby", `${name} ${id}-value`);
 
     this.list = element("div", "picker-list", { id, hidden: true, tabIndex: -1 });
-    this.list.setAttribute("role", "listbox");
-    if (this.label) this.list.setAttribute("aria-labelledby", this.label.id);
-    this.fill();
+    this.list.setAttribute("role", this.treeValue ? "tree" : "listbox");
+    if (name) this.list.setAttribute("aria-labelledby", name);
     for (const part of [this.button, this.list]) part.dataset.pickerUi = "";
     this.select.after(this.button, this.list);
     this.select.classList.add("picker-native");
     this.select.tabIndex = -1;
+    this.follow();
     this.show();
 
     this.button.addEventListener("click", () => (this.list.hidden ? this.open() : this.close()));
@@ -44,10 +57,7 @@ export default class extends Controller {
         this.open();
       }
     });
-    this.list.addEventListener("click", (event) => {
-      const option = event.target.closest("[role=option]");
-      if (option) this.choose(option);
-    });
+    this.list.addEventListener("click", (event) => this.clicked(event));
     this.list.addEventListener("keydown", (event) => this.key(event));
 
     this.shown = () => this.show();
@@ -77,55 +87,48 @@ export default class extends Controller {
     this.select.removeEventListener("change", this.shown);
     this.select.removeEventListener("invalid", this.invalid);
     this.label?.removeEventListener("click", this.labelled);
+    delete this.select.value;
+    delete this.select.selectedIndex;
   }
 
-  // The options as the select has them: each group under its heading; without groups, by level.
-  fill() {
-    const add = (option, parent) => {
-      // A required select's "Zgjidh…" is only what the button says while nothing is chosen.
-      if (option.value === "" && this.select.required) return;
-      const indent = option.textContent.match(/^ */)[0].length;
-      const item = element("div", "picker-option", { textContent: option.textContent.trim(), tabIndex: -1 });
-      item.setAttribute("role", "option");
-      item.dataset.value = option.value;
-      item.dataset.depth = Math.floor(indent / 3);
-      parent.append(item);
-    };
-    const groups = [...this.select.children].some((child) => child.tagName === "OPTGROUP");
-    this.list.classList.toggle("picker-levels", !groups);
-    for (const child of this.select.children) {
-      if (child.tagName !== "OPTGROUP") {
-        add(child, this.list);
-        continue;
-      }
-      const group = element("div", "picker-group");
-      group.setAttribute("role", "group");
-      group.setAttribute("aria-label", child.label);
-      const heading = element("div", "picker-heading", { textContent: child.label });
-      heading.setAttribute("aria-hidden", "true");
-      group.append(heading);
-      for (const option of child.children) add(option, group);
-      this.list.append(group);
+  // Scripts that set the select (listing_form_controller.js: the kind of listing a category takes,
+  // its currency, a model that no longer fits its make) don't say so with an event: the button
+  // follows the value however it is set.
+  follow() {
+    const picker = this;
+    for (const property of ["value", "selectedIndex"]) {
+      const own = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, property);
+      Object.defineProperty(this.select, property, {
+        configurable: true,
+        get() {
+          return own.get.call(this);
+        },
+        set(value) {
+          own.set.call(this, value);
+          picker.show();
+        },
+      });
     }
   }
 
-  get options() {
-    return [...this.list.querySelectorAll("[role=option]")];
-  }
-
-  // The button and the list follow the select.
+  // The button, and the list if it is open, show what the select has.
   show() {
     const chosen = this.select.selectedOptions[0];
     this.value.textContent = chosen ? chosen.textContent.trim() : "";
-    for (const item of this.options) item.setAttribute("aria-selected", String(item.dataset.value === this.select.value));
+    for (const item of this.list.querySelectorAll("[data-value]")) {
+      item.setAttribute("aria-selected", String(item.dataset.value === this.select.value));
+    }
     if (this.select.value) this.button.classList.remove("picker-invalid");
   }
 
   open() {
+    // Built each time, from the options as they are now: a script may have hidden some.
+    this.fill();
     this.list.hidden = false;
     this.button.setAttribute("aria-expanded", "true");
     // The choice in view and in focus, ready for the arrow keys; the list in view on the page.
-    const current = this.options.find((item) => item.getAttribute("aria-selected") === "true") ?? this.options[0];
+    const items = this.items();
+    const current = items.find((item) => item.getAttribute("aria-selected") === "true") ?? items[0];
     if (current) {
       this.list.scrollTop = current.offsetTop - this.list.clientHeight / 2;
       current.focus({ preventScroll: true });
@@ -143,23 +146,176 @@ export default class extends Controller {
   choose(item) {
     const changed = this.select.value !== item.dataset.value;
     this.select.value = item.dataset.value;
-    this.show();
     this.close(true);
     if (changed) this.select.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
+  // The options a person can pick now: not a required select's "Zgjidh…", nor hidden ones.
+  shownOptions(options) {
+    return [...options].filter((option) => !option.hidden && !option.disabled && !(option.value === "" && this.select.required));
+  }
+
+  fill() {
+    this.list.replaceChildren();
+    if (this.treeValue) this.fillTree();
+    else this.fillList();
+    this.show();
+  }
+
+  // As the select has them, each group under its heading.
+  fillList() {
+    for (const child of this.select.children) {
+      if (child.tagName !== "OPTGROUP") {
+        for (const option of this.shownOptions([child])) this.list.append(this.optionItem(option, 0));
+        continue;
+      }
+      const options = this.shownOptions(child.children);
+      if (child.hidden || !options.length) continue;
+      const group = element("div", "picker-group");
+      group.setAttribute("role", "group");
+      group.setAttribute("aria-label", child.label);
+      const heading = element("div", "picker-heading", { textContent: child.label });
+      heading.setAttribute("aria-hidden", "true");
+      group.append(heading, ...options.map((option) => this.optionItem(option, 0)));
+      this.list.append(group);
+    }
+  }
+
+  // Categories as a tree: [{ label, option, children }], each subcategory under its category.
+  fillTree() {
+    const root = { children: [] };
+    const leaf = (option) => ({ key: option.value, label: option.textContent.trim(), option, children: [] });
+    if ([...this.select.children].some((child) => child.tagName === "OPTGROUP")) {
+      // The posting form: groups by path, "Automjete › Pjesë dhe aksesorë" under "Automjete".
+      const groups = new Map();
+      const node = (path) => {
+        if (!groups.has(path)) {
+          const parts = path.split(" › ");
+          const parent = parts.length > 1 ? node(parts.slice(0, -1).join(" › ")) : root;
+          const made = { key: `group:${path}`, label: parts.at(-1), option: null, children: [] };
+          parent.children.push(made);
+          groups.set(path, made);
+        }
+        return groups.get(path);
+      };
+      for (const child of this.select.children) {
+        if (child.tagName === "OPTGROUP") {
+          if (!child.hidden) node(child.label).children.push(...this.shownOptions(child.children).map(leaf));
+        } else {
+          root.children.push(...this.shownOptions([child]).map(leaf));
+        }
+      }
+    } else {
+      // Levels by leading spaces: a category's subcategories follow it, a level further in.
+      const path = [root];
+      for (const option of this.shownOptions(this.select.options)) {
+        const level = Math.floor(option.textContent.match(/^ */)[0].length / 3);
+        path.length = Math.min(path.length, level + 1);
+        const made = leaf(option);
+        path.at(-1).children.push(made);
+        path.push(made);
+      }
+    }
+    // Open from the start: the categories on the way to the choice.
+    if (!this.opened) {
+      this.opened = new Set();
+      const find = (node, trail) => {
+        for (const child of node.children) {
+          if (child.option?.value === this.select.value && child.option.value !== "") {
+            for (const key of trail) this.opened.add(key);
+          }
+          find(child, [...trail, child.key]);
+        }
+      };
+      find(root, []);
+    }
+    this.branch(root, this.list, 1);
+  }
+
+  branch(node, container, level) {
+    for (const child of node.children) {
+      if (!child.children.length) {
+        if (child.option) container.append(this.optionItem(child.option, level));
+        continue;
+      }
+      const open = this.opened.has(child.key);
+      const row = child.option ? this.optionItem(child.option, level) : element("div", "picker-option", { textContent: child.label, tabIndex: -1 });
+      row.setAttribute("role", "treeitem");
+      row.setAttribute("aria-level", level);
+      row.setAttribute("aria-expanded", String(open));
+      row.classList.add("picker-branch");
+      row.dataset.key = child.key;
+      row.style.setProperty("--level", level - 1);
+      const toggle = element("span", "picker-toggle", { innerHTML: CHEVRON });
+      toggle.setAttribute("aria-hidden", "true");
+      row.append(toggle);
+      const children = element("div", "picker-children", { hidden: !open });
+      children.setAttribute("role", "group");
+      container.append(row, children);
+      this.branch(child, children, level + 1);
+    }
+  }
+
+  optionItem(option, level) {
+    const item = element("div", "picker-option", { textContent: option.textContent.trim(), tabIndex: -1 });
+    item.setAttribute("role", this.treeValue ? "treeitem" : "option");
+    item.dataset.value = option.value;
+    if (this.treeValue) {
+      item.setAttribute("aria-level", level);
+      item.style.setProperty("--level", level - 1);
+    }
+    return item;
+  }
+
+  // Opens or closes a category's subcategories.
+  fold(row, open = row.getAttribute("aria-expanded") !== "true") {
+    row.setAttribute("aria-expanded", String(open));
+    row.nextElementSibling.hidden = !open;
+    if (open) this.opened.add(row.dataset.key);
+    else this.opened.delete(row.dataset.key);
+  }
+
+  clicked(event) {
+    const item = event.target.closest(".picker-option");
+    if (!item) return;
+    // The arrow, or a heading that can't be chosen itself, folds; the rest is chosen.
+    if (item.classList.contains("picker-branch") && (event.target.closest(".picker-toggle") || !("value" in item.dataset))) {
+      this.fold(item);
+      item.focus({ preventScroll: true });
+    } else if ("value" in item.dataset) {
+      this.choose(item);
+    }
+  }
+
+  // What the arrow keys move through: the options in view, folded ones aside.
+  items() {
+    return [...this.list.querySelectorAll(".picker-option")].filter((item) => item.offsetParent !== null);
+  }
+
   key(event) {
-    const options = this.options;
-    const at = options.indexOf(document.activeElement);
-    const go = (index) => options[Math.max(0, Math.min(options.length - 1, index))]?.focus();
+    const items = this.items();
+    const at = items.indexOf(document.activeElement);
+    const item = items[at];
+    const go = (index) => items[Math.max(0, Math.min(items.length - 1, index))]?.focus();
+    const branch = item?.classList.contains("picker-branch");
+    const open = item?.getAttribute("aria-expanded") === "true";
     switch (event.key) {
       case "ArrowDown": go(at + 1); break;
       case "ArrowUp": go(at - 1); break;
       case "Home": go(0); break;
-      case "End": go(options.length - 1); break;
+      case "End": go(items.length - 1); break;
+      case "ArrowRight":
+        if (branch && !open) this.fold(item, true);
+        else if (branch) go(at + 1);
+        break;
+      case "ArrowLeft":
+        if (branch && open) this.fold(item, false);
+        else item?.parentElement.closest(".picker-children")?.previousElementSibling?.focus();
+        break;
       case "Enter":
       case " ":
-        if (at >= 0) this.choose(options[at]);
+        if (item && "value" in item.dataset) this.choose(item);
+        else if (branch) this.fold(item);
         break;
       case "Escape":
         // The list closes, not what holds it too (the filter sheet closes on Escape as well).
@@ -168,11 +324,11 @@ export default class extends Controller {
         break;
       case "Tab": this.close(); return;
       default: {
-        // A letter: the next option that starts with it.
+        // A letter: the next option in view that starts with it.
         if (event.key.length !== 1 || !/\S/.test(event.key)) return;
         const letter = event.key.toLocaleLowerCase("sq");
-        const after = [...options.slice(at + 1), ...options.slice(0, at + 1)];
-        after.find((item) => item.textContent.toLocaleLowerCase("sq").startsWith(letter))?.focus();
+        const after = [...items.slice(at + 1), ...items.slice(0, at + 1)];
+        after.find((other) => other.textContent.toLocaleLowerCase("sq").startsWith(letter))?.focus();
       }
     }
     event.preventDefault();

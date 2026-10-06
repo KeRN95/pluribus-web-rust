@@ -61,9 +61,11 @@
       <div class="sort">
         <label for="sort">Rendit</label>
         {#- Part of the filter form through the form attribute, so it keeps the filters. -#}
+        <div class="picker" data-controller="picker">
         <select id="sort" name="sort" form="filter-form" data-action="filters#submit">
           {% for choice in filters.sort_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
         </select>
+        </div>
       </div>
     </div>
 

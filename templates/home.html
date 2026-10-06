@@ -31,6 +31,7 @@
       <label class="visually-hidden" for="welcome-city">Qyteti</label>
       <div class="with-icon">
         <svg class="field-icon pin" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
+        <div class="picker" data-controller="picker">
         <select id="welcome-city" name="city" data-city-target="select" data-action="city#change">
           <option value="">Çdo qytet</option>
           {% for group in cities %}
@@ -39,13 +40,14 @@
           </optgroup>
           {% endfor %}
         </select>
+        </div>
       </div>
     </div>
     <div class="field">
       <label class="visually-hidden" for="welcome-category">Kategoria</label>
       <div class="with-icon">
         <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>
-        <div class="picker" data-controller="picker">
+        <div class="picker" data-controller="picker" data-picker-tree-value="true">
         <select id="welcome-category" name="category">
           <option value="">Çdo kategori</option>
           {% for category in categories %}<option value="{{ category.value }}">{{ category.label }}</option>{% endfor %}

@@ -31,10 +31,12 @@
         </form>
         {%- if !row.targets.is_empty() %}
         <form class="pending-form" method="post" action="/moderim/{{ row.option.id }}/bashko">
+          <div class="picker" data-controller="picker">
           <select name="into" required aria-label="{{ row.option.label }}: bashkoje me">
             {%- if !row.likely_chosen() %}<option value="" selected>Bashkoje me…</option>{% endif %}
             {%- for target in row.targets %}<option value="{{ target.value }}"{% if target.selected %} selected{% endif %}>{{ target.label }}</option>{% endfor %}
           </select>
+          </div>
           <button type="submit" class="button secondary small">Bashko</button>
         </form>
         {%- endif %}

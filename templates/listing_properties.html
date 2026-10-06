@@ -17,6 +17,7 @@
     {%- else %}
     <label class="field-label" for="{{ field.name }}">{{ field.label }}{% if let Some(unit) = field.unit %} ({{ unit }}){% endif %}{% if field.required %} <span class="required" aria-hidden="true">*</span>{% endif %}</label>
     {%- if field.kind == "select" %}
+    <div class="picker" data-controller="picker">
     <select id="{{ field.name }}" name="{{ field.name }}"{% if field.required %} required{% endif %}{% if let Some(parent) = field.depends_on %} data-depends-on="{{ parent }}"{% endif %}>
       <option value="">Zgjidh</option>
       {%- for choice in field.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
@@ -27,6 +28,7 @@
       {%- endfor %}
       {%- if field.allow_other %}<option value="__other__"{% if field.other_selected %} selected{% endif %}>Tjetër…</option>{% endif %}
     </select>
+    </div>
     {%- if field.allow_other %}
     {#- Shown while "Tjetër" is chosen (listing_form_controller.js); always, without JavaScript. -#}
     <input class="other-input" name="{{ field.other_name }}" value="{{ field.other_value }}" maxlength="40"

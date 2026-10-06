@@ -489,8 +489,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* A select chosen from a list in the page (picker_controller.js) rather than the phone's own picker.
    The select stays, unseen, where the button is, so a "required" note points there; the list opens
-   under the button like the category menu, the choice marked, groups under their headings, or
-   each level indented further. */
+   under the button like the category menu, the choice marked, groups under their headings. A
+   category list folds: each level indented further, a category's arrow turning as its
+   subcategories open. */
 .picker { position: relative; }
 .picker-native { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
 .picker-button { display: block; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
@@ -518,10 +519,38 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .picker-option:hover,
 .picker-option:focus { outline: none; background: var(--surface-muted); }
 .picker-option[aria-selected="true"] { background: var(--badge); font-weight: var(--medium); }
-.picker-option[data-value=""] { color: var(--muted); }
-.picker-levels [data-depth="0"] { font-weight: var(--semibold); }
-.picker-levels [data-depth="1"] { padding-left: 1.5rem; }
-.picker-levels [data-depth="2"] { padding-left: 2.6rem; font-size: .95rem; }
+.picker-option[data-value=""] { color: var(--muted); font-weight: var(--regular); }
+.picker-list[role="tree"] .picker-option { padding-left: calc(.7rem + var(--level, 0) * 1.1rem); }
+.picker-list[role="tree"] [aria-level="1"] { font-weight: var(--semibold); }
+.picker-branch { display: flex; align-items: center; gap: .5rem; padding-top: .3rem; padding-bottom: .3rem; }
+/* The arrow takes a finger's tap of its own: the category's name picks it, where it can be picked. */
+.picker-toggle {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.1rem;
+  margin: 0 -.35rem 0 auto;
+  border-radius: 8px;
+  color: var(--muted);
+  transition: transform .15s;
+}
+.picker-toggle:hover { background: var(--border); color: var(--text); }
+.picker-branch[aria-expanded="true"] .picker-toggle { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) {
+  .picker-toggle { transition: none; }
+}
+
+/* Where the select sat beside something, the button does: the currency next to the price, the
+   order next to Filtrat and Harta. */
+.amount .picker,
+.filter-form .range .picker { flex: none; }
+.amount .picker-button,
+.filter-form .range .picker-button { display: inline-block; width: auto; }
+.amount .picker-list,
+.filter-form .range .picker-list { width: max(100%, 8rem); }
+.sort .picker { flex: none; }
+.sort .picker-button { width: auto; color: var(--text); font-size: 1rem; }
 
 /* Read by screen readers, not shown. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -635,6 +664,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .sort { flex: 1 1 auto; min-width: 0; }
   .sort label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .sort select { flex: 1; min-width: 0; padding-left: .6rem; text-overflow: ellipsis; }
+  .sort .picker { flex: 1; min-width: 0; }
+  .sort .picker-button { width: 100%; padding-left: .6rem; }
 }
 
 /* The narrowest phones: Harta is its pin alone (its name stays for screen readers), so the sort

@@ -1946,20 +1946,32 @@ async fn the_makes_and_models_have_the_codes_typing_them_gives(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
-async fn categories_are_chosen_from_a_list_in_the_page(pool: PgPool) {
-    // Every category select comes inside the picker (picker_controller.js), which keeps it for the
-    // form and offers its options in a list in the page instead of the phone's own picker.
-    let wrapper = r#"<div class="picker" data-controller="picker">"#;
-    for (uri, select) in [
-        ("/", r#"<select id="welcome-category""#),
-        ("/shto", r#"<select id="category""#),
-        ("/search?q=golf", r#"<select id="filter-category""#),
-        ("/harta", r#"<select id="map-category""#),
-    ] {
-        let page = get(pool.clone(), uri).await.body;
-        let at = page.find(select).unwrap_or_else(|| panic!("{uri}: no {select}"));
-        let start = page[..at].rfind(wrapper).unwrap_or_else(|| panic!("{uri}: no picker"));
-        assert!(page[start + wrapper.len()..at].trim().is_empty(), "{uri}: the select isn't the picker's");
+async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
+    // Each select comes inside the picker (picker_controller.js), which keeps it for the form and
+    // offers its options in a list in the page instead of the phone's own picker; a category's
+    // list folds, its subcategories under it.
+    let plain = r#"<div class="picker" data-controller="picker">"#;
+    let folding = r#"<div class="picker" data-controller="picker" data-picker-tree-value="true">"#;
+    let ana = new_seller(&pool, "+355691112233").await;
+    let pages = [
+        ("/", 2),
+        ("/shto", 6),
+        ("/shto/fushat?category=makina", 6),
+        ("/search?q=golf", 4),
+        ("/c/makina", 5),
+        ("/harta", 1),
+    ];
+    for (uri, selects) in pages {
+        let page = get_with_cookie(pool.clone(), uri, &ana).await.body;
+        let found: Vec<usize> = page.match_indices("<select").map(|(at, _)| at).collect();
+        assert_eq!(found.len(), selects, "{uri}");
+        for at in found {
+            let tag = &page[at..at + page[at..].find('>').unwrap()];
+            let category = tag.contains(r#"name="category""#);
+            let wrapper = if category { folding } else { plain };
+            let start = page[..at].rfind(wrapper).unwrap_or_else(|| panic!("{uri}: {tag} has no picker"));
+            assert!(page[start + wrapper.len()..at].trim().is_empty(), "{uri}: {tag} isn't its picker's");
+        }
     }
 }
 

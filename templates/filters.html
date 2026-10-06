@@ -12,7 +12,7 @@
   {% if filters.shows_category() %}
   <div class="filter-group">
     <label class="filter-label" for="filter-category">Kategoria</label>
-    <div class="picker" data-controller="picker">
+    <div class="picker" data-controller="picker" data-picker-tree-value="true">
     <select id="filter-category" name="category">
       <option value="">Të gjitha</option>
       {% for choice in filters.category_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
@@ -23,6 +23,7 @@
 
   <div class="filter-group" data-controller="city">
     <label class="filter-label" for="filter-city">Qyteti</label>
+    <div class="picker" data-controller="picker">
     <select id="filter-city" name="city" data-city-target="select" data-action="city#change">
       <option value="">Gjithë Shqipëria</option>
       {% for group in filters.city_groups() %}
@@ -31,6 +32,7 @@
       </optgroup>
       {% endfor %}
     </select>
+    </div>
   </div>
 
   {% let types = filters.type_choices() %}
@@ -50,9 +52,11 @@
       <input type="text" inputmode="numeric" name="price_min" value="{{ filters.price_min_value() }}" placeholder="nga" aria-label="Çmimi nga">
       <span aria-hidden="true">–</span>
       <input type="text" inputmode="numeric" name="price_max" value="{{ filters.price_max_value() }}" placeholder="deri" aria-label="Çmimi deri">
+      <div class="picker" data-controller="picker">
       <select name="currency" aria-label="Monedha">
         {% for choice in filters.currency_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
       </select>
+      </div>
     </div>
   </fieldset>
 
@@ -71,6 +75,7 @@
   {% when FieldKind::Select %}
   <div class="filter-group">
     <label class="filter-label" for="filter-{{ field.name }}">{{ field.label }}</label>
+    <div class="picker" data-controller="picker">
     <select id="filter-{{ field.name }}" name="{{ field.name }}">
       <option value="">Të gjitha</option>
       {% for choice in field.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
@@ -80,6 +85,7 @@
       </optgroup>
       {% endfor %}
     </select>
+    </div>
   </div>
   {% when FieldKind::Checkboxes %}
   <fieldset class="filter-group">
