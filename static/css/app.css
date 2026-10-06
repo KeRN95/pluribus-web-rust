@@ -801,6 +801,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .account-note { margin-top: 1rem; color: var(--muted); font-size: .9rem; }
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; }
 .form-error { margin: 0; padding: .7rem .9rem; border-radius: 10px; background: var(--badge); }
+/* News for the visitor, in the same box: "Njoftimi yt u publikua." */
+.notice { margin: 1rem 0; padding: .7rem .9rem; border-radius: 10px; background: var(--badge); }
 .field-error { margin: .15rem 0 0; color: var(--danger); font-size: .85rem; }
 .field-hint { margin: .15rem 0 0; color: var(--muted); font-size: .85rem; }
 .optional { color: var(--muted); font-weight: var(--regular); }

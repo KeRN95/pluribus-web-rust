@@ -3,12 +3,18 @@
 use askama::Template;
 use axum::{
     extract::{Path, State},
-    http::HeaderMap,
+    http::{HeaderMap, header},
     response::{IntoResponse, Redirect, Response},
 };
 use rust_decimal::Decimal;
 
-use super::{Result, account::current_user, not_found, render, render_stream};
+use super::{
+    Result,
+    account::{cookie_header, current_user},
+    cookie, not_found,
+    post::POSTED_COOKIE,
+    render, render_stream,
+};
 use crate::{
     AppState,
     db::{self, AttributeValue, ListingCard, ListingDetail, MapPoint, Photo, SellerContact},
@@ -120,6 +126,8 @@ struct ListingShow {
     reveal_label: Option<&'static str>,
     /// The visitor posted this listing: the page offers to edit it.
     own: bool,
+    /// Posted just now without signing in: the page says it is up, and how to change it later.
+    posted: bool,
 }
 
 /// URLs look like /listing/1042-vw-golf-7: the number identifies the listing, and the slug is
@@ -163,7 +171,13 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         let value = format::condition(condition).to_string();
         attributes.insert(0, AttributeValue { label: "Gjendja".to_string(), value });
     }
-    render(ListingShow { listing, trail, attributes, photos, reveal_label, own })
+    // Said once: the cookie that says so (post.rs) goes with this answer.
+    let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
+    let mut response = render(ListingShow { listing, trail, attributes, photos, reveal_label, own, posted })?;
+    if posted {
+        response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));
+    }
+    Ok(response)
 }
 
 /// A category on the way to a listing's own.

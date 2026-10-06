@@ -1200,16 +1200,7 @@ pub async fn account_for_contact(
     email: Option<&str>,
     name: Option<&str>,
 ) -> sqlx::Result<Account> {
-    let find = || {
-        sqlx::query_as!(
-            Account,
-            "SELECT id, status FROM users WHERE (phone_e164 = $1 OR email = $2::text::citext) AND status <> 'DELETED'",
-            phone,
-            email,
-        )
-        .fetch_optional(db)
-    };
-    if let Some(account) = find().await? {
+    if let Some(account) = account_by_contact(db, phone, email).await? {
         return Ok(account);
     }
     let subject = match (phone, email) {
@@ -1229,7 +1220,7 @@ pub async fn account_for_contact(
     )
     .execute(db)
     .await?;
-    find().await?.ok_or(sqlx::Error::RowNotFound)
+    account_by_contact(db, phone, email).await?.ok_or(sqlx::Error::RowNotFound)
 }
 
 /// The contact is confirmed: a new account becomes active, and takes the name given when it was
@@ -1246,6 +1237,47 @@ pub async fn confirm_account(db: &PgPool, id: Uuid, name: Option<&str>) -> sqlx:
     .execute(db)
     .await
     .map(|_| ())
+}
+
+/// The account this phone number or e-mail address has, if any.
+pub async fn account_by_contact(db: &PgPool, phone: Option<&str>, email: Option<&str>) -> sqlx::Result<Option<Account>> {
+    sqlx::query_as!(
+        Account,
+        "SELECT id, status FROM users WHERE (phone_e164 = $1 OR email = $2::text::citext) AND status <> 'DELETED'",
+        phone,
+        email,
+    )
+    .fetch_optional(db)
+    .await
+}
+
+/// The account a listing posted without signing in goes under: the one its phone number or e-mail
+/// address has, or a new one, active at once (posting needs no code), under the name typed or else
+/// "Përdorues".
+pub async fn poster_account(db: &PgPool, phone: Option<&str>, email: Option<&str>, name: Option<&str>) -> sqlx::Result<Account> {
+    let subject = match (phone, email) {
+        (Some(phone), _) => format!("phone:{phone}"),
+        (None, Some(email)) => format!("email:{email}"),
+        (None, None) => unreachable!("an account always has a phone number or an e-mail address"),
+    };
+    // Two first posts at once: one insert makes it, and the other finds it.
+    let created = sqlx::query_as!(
+        Account,
+        "INSERT INTO users (auth_subject, phone_e164, email, display_name, status)
+         VALUES ($1, $2::text::e164_phone, $3::text::citext, coalesce($4, 'Përdorues'), 'ACTIVE')
+         ON CONFLICT DO NOTHING
+         RETURNING id, status",
+        subject,
+        phone,
+        email,
+        name,
+    )
+    .fetch_optional(db)
+    .await?;
+    match created {
+        Some(account) => Ok(account),
+        None => account_by_contact(db, phone, email).await?.ok_or(sqlx::Error::RowNotFound),
+    }
 }
 
 /// Publishes a listing posted before signing in, once its seller confirmed their contact;

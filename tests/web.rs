@@ -75,6 +75,15 @@ async fn post_form(pool: PgPool, uri: &str, fields: &[(&str, &str)], cookie: Opt
     send(pool, request.body(Body::from(body)).unwrap()).await
 }
 
+/// A form sent from this network: the address a proxy in front of the app says it came from.
+async fn post_form_from(pool: PgPool, uri: &str, fields: &[(&str, &str)], ip: &str) -> TestResponse {
+    let body = form_urlencoded::Serializer::new(String::new()).extend_pairs(fields).finish();
+    let request = Request::post(uri)
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header("x-forwarded-for", ip);
+    send(pool, request.body(Body::from(body)).unwrap()).await
+}
+
 /// The listing form as the browser sends it with photos: multipart, the photos as files.
 async fn post_with_photos(
     pool: PgPool,
@@ -1937,65 +1946,127 @@ async fn the_makes_and_models_have_the_codes_typing_them_gives(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
-async fn a_listing_posted_before_signing_in_goes_live_once_the_code_comes_back(pool: PgPool) {
-    // Not signed in, the form asks for a phone number or an e-mail address as well.
+async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
+    // Not signed in, the form asks for a phone number or an e-mail address as well, and no code.
     let form = get(pool.clone(), "/shto").await.body;
     assert!(form.contains(r#"<input id="contact" name="contact" value="" required"#));
+    assert!(form.contains("njoftimi publikohet menjëherë"));
     assert!(form.contains("llogaria krijohet vetë"));
+    assert!(!form.contains("Të dërgojmë një kod") && !form.contains("të dërgojmë kodin"));
 
     let started = started();
     let mut fields = listing_fields(("name", "Dorina"), &started);
     fields.push(("contact", "069 777 8899"));
-    let sent = post_form(pool.clone(), "/shto", &fields, None).await;
-    assert_eq!(sent.status, StatusCode::SEE_OTHER, "{}", sent.body);
-    assert_eq!(sent.location.as_deref(), Some("/hyr/kodi"));
+    let posted = post_form(pool.clone(), "/shto", &fields, None).await;
+    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    let url = posted.location.clone().unwrap();
+    assert!(url.ends_with("-samsung-galaxy-s21-128-gb"), "{url}");
+    // Posting signs no one in: that takes a code, so typing someone's number opens nothing.
+    assert!(posted.cookie("session").is_none());
+
+    // Live at once, with its seller: a new account, active, named as typed.
+    assert!(get(pool.clone(), "/search?q=galaxy").await.body.contains("Samsung Galaxy S21"));
+    let page = get(pool.clone(), &url).await.body;
+    assert!(page.contains("<strong>Dorina</strong>"));
+    let (name, status): (String, String) =
+        sqlx::query_as("SELECT display_name, status FROM users WHERE phone_e164 = '+355697778899'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!((name.as_str(), status.as_str()), ("Dorina", "ACTIVE"));
+
+    // Its page says so, once, to whoever posted it, and how to change it later.
+    let notice = "Njoftimi yt u publikua. Për ta ndryshuar ose fshirë më vonë";
+    assert!(!page.contains(notice));
+    let posted_cookie = format!("posted={}", posted.cookie("posted").unwrap());
+    let shown = get_with_cookie(pool.clone(), &url, &posted_cookie).await;
+    assert!(shown.body.contains(notice));
+    assert_eq!(shown.cookie("posted"), Some(""), "said once");
+
+    // Changing it takes signing in, with a code sent to that number.
+    let sent = post_form(pool.clone(), "/hyr", &[("contact", "069 777 8899"), ("started", &started)], None).await;
     let login = format!("login={}", sent.cookie("login").unwrap());
-
-    // Until then, the listing waits, unseen, under an account waiting too.
-    assert!(!get(pool.clone(), "/search?q=galaxy").await.body.contains("Samsung Galaxy S21"));
-    let (listing, account): (String, String) = sqlx::query_as(
-        "SELECT l.status, u.status FROM listings l JOIN users u ON u.id = l.created_by_user_id
-         WHERE u.phone_e164 = '+355697778899'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-    assert_eq!((listing.as_str(), account.as_str()), ("DRAFT", "PENDING"));
-    let page = get_with_cookie(pool.clone(), "/hyr/kodi", &login).await.body;
-    assert!(page.contains("Shkruaje dhe njoftimi yt publikohet."));
-
     sqlx::query("UPDATE login_codes SET code_hash = sha256(convert_to(contact || ':123456', 'UTF8'))")
         .execute(&pool)
         .await
         .unwrap();
-    let confirmed = post_form(pool.clone(), "/hyr/kodi", &[("code", "123456")], Some(&login)).await;
-    let url = confirmed.location.clone().unwrap();
-    assert!(url.ends_with("-samsung-galaxy-s21-128-gb"), "{url}");
-    assert!(confirmed.cookie("session").is_some_and(|token| !token.is_empty()), "signed in as well");
+    let signed = post_form(pool.clone(), "/hyr/kodi", &[("code", "123456")], Some(&login)).await;
+    let session = format!("session={}", signed.cookie("session").unwrap());
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &session).await.body.contains("Samsung Galaxy S21"));
 
-    // Live, with its seller: the new account, named as typed.
-    let page = get(pool.clone(), &url).await.body;
-    assert!(page.contains("<strong>Dorina</strong>"));
-    assert!(get(pool.clone(), "/search?q=galaxy").await.body.contains("Samsung Galaxy S21"));
-    let status: String = sqlx::query_scalar("SELECT status FROM users WHERE phone_e164 = '+355697778899'")
+    // An e-mail address does as well; with no name, the account is "Përdorues".
+    let mut fields = listing_fields(("name", ""), &started);
+    fields.extend([("title", "Laptop Lenovo ThinkPad T14"), ("contact", "Ana.Re@Example.com")]);
+    let posted = post_form(pool.clone(), "/shto", &fields, None).await;
+    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    let name: String = sqlx::query_scalar("SELECT display_name FROM users WHERE email = 'ana.re@example.com'")
         .fetch_one(&pool)
         .await
         .unwrap();
-    assert_eq!(status, "ACTIVE");
+    assert_eq!(name, "Përdorues");
 
-    // Someone who has an account already posts under it, after the same code.
-    let mut fields = listing_fields(("title", "Telefon tjetër për shitje"), &started);
-    fields.push(("contact", "+355 69 000 0003"));
-    let sent = post_form(pool.clone(), "/shto", &fields, None).await;
-    assert_eq!(sent.status, StatusCode::SEE_OTHER, "{}", sent.body);
+    // A number with an account already: the listing goes under it, which keeps its name.
+    let mut fields = listing_fields(("name", "Dikush tjetër"), &started);
+    fields.extend([("title", "Telefon tjetër për shitje"), ("contact", "+355 69 000 0003")]);
+    let posted = post_form(pool.clone(), "/shto", &fields, None).await;
+    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    assert!(posted.cookie("session").is_none());
     let owner: String = sqlx::query_scalar(
         "SELECT u.display_name FROM listings l JOIN users u ON u.id = l.created_by_user_id
-         WHERE l.title = 'Telefon tjetër për shitje'",
+         WHERE l.title = 'Telefon tjetër për shitje' AND l.status = 'ACTIVE'",
     )
     .fetch_one(&pool)
     .await
     .unwrap();
     assert_eq!(owner, "Dritan");
+
+    // Not under a suspended account, nor without a contact that can be one.
+    sqlx::query("UPDATE users SET status = 'SUSPENDED' WHERE phone_e164 = '+355690000003'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    for (contact, message) in [("069 000 0003", "Kjo llogari është pezulluar."), ("04 222 3333", "Shkruaj një numër celulari")] {
+        let mut fields = listing_fields(("title", "Edhe një telefon"), &started);
+        fields.push(("contact", contact));
+        let refused = post_form(pool.clone(), "/shto", &fields, None).await;
+        assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY, "{contact}");
+        assert!(refused.body.contains(message), "{contact}");
+    }
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn posting_without_signing_in_is_limited_per_network(pool: PgPool) {
+    // Twenty an hour from one network (IP address), each under a new number; the next waits.
+    let started = started();
+    for i in 0..21 {
+        let (title, phone) = (format!("Njoftim nga i njëjti rrjet {i}"), format!("069 700 {i:04}"));
+        let mut fields = listing_fields(("title", &title), &started);
+        fields.push(("contact", &phone));
+        let response = post_form_from(pool.clone(), "/shto", &fields, "203.0.113.9").await;
+        if i < 20 {
+            assert_eq!(response.status, StatusCode::SEE_OTHER, "{i}: {}", response.body);
+        } else {
+            assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
+            assert!(response.body.contains("Shumë njoftime nga ky rrjet brenda një ore."));
+        }
+    }
+    // Another network posts as before, and so does someone signed in on the first.
+    let mut fields = listing_fields(("title", "Nga një rrjet tjetër"), &started);
+    fields.push(("contact", "069 701 0000"));
+    assert_eq!(post_form_from(pool.clone(), "/shto", &fields, "203.0.113.10").await.status, StatusCode::SEE_OTHER);
+    let ana = new_seller(&pool, "+355691112233").await;
+    let fields = listing_fields(("title", "E Anës, e hyrë në llogari"), &started);
+    let signed_in = send(
+        pool.clone(),
+        Request::post("/shto")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("x-forwarded-for", "203.0.113.9")
+            .header(header::COOKIE, ana.as_str())
+            .body(Body::from(form_urlencoded::Serializer::new(String::new()).extend_pairs(&fields).finish()))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(signed_in.status, StatusCode::SEE_OTHER, "{}", signed_in.body);
 }
 
 #[sqlx::test(fixtures("listings"))]

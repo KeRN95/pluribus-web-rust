@@ -83,14 +83,14 @@ impl<S: Send + Sync> FromRequestParts<S> for ClientIp {
 
 /// A cookie only the server reads, sent over HTTPS only when the visitor came over HTTPS (behind
 /// ngrok or a proxy), so plain local development keeps working.
-fn cookie_header(headers: &HeaderMap, name: &str, value: &str, max_age: i64) -> HeaderValue {
+pub fn cookie_header(headers: &HeaderMap, name: &str, value: &str, max_age: i64) -> HeaderValue {
     let https = headers.get("x-forwarded-proto").is_some_and(|proto| proto == "https");
     let secure = if https { "; Secure" } else { "" };
     HeaderValue::from_str(&format!("{name}={value}; Path=/; Max-Age={max_age}; HttpOnly; SameSite=Lax{secure}"))
         .expect("cookie values are ASCII")
 }
 
-fn redirect_with_cookies(to: &str, cookies: Vec<HeaderValue>) -> Response {
+pub fn redirect_with_cookies(to: &str, cookies: Vec<HeaderValue>) -> Response {
     let mut response = Redirect::to(to).into_response();
     for value in cookies {
         response.headers_mut().append(header::SET_COOKIE, value);

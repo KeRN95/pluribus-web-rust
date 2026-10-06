@@ -1,7 +1,11 @@
 //! Posting and editing listings: the form, its checks, and the limits that keep one account from
 //! flooding the site.
 
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Mutex, OnceLock},
+    time::{Duration, Instant},
+};
 
 use askama::Template;
 use axum::{
@@ -13,7 +17,7 @@ use rust_decimal::Decimal;
 
 use super::{
     Result,
-    account::{ClientIp, MIN_FORM_SECONDS, SignInPage, code_limit, current_user, display_name, now, send_code_and_ask},
+    account::{ClientIp, MIN_FORM_SECONDS, SignInPage, cookie_header, current_user, display_name, now, redirect_with_cookies},
     filters::{self, Choice, ChoiceGroup, parse_number},
     not_found,
     photos::{self, Submission},
@@ -23,7 +27,7 @@ use super::{
 use crate::{
     AppState,
     db::{
-        self, Categories, Category, City, CodePurpose, FormAttribute, ListingAction, ListingProperty, MyListing, NewListing,
+        self, Categories, Category, City, FormAttribute, ListingAction, ListingProperty, MyListing, NewListing,
         OwnListing, OwnPhoto, SessionUser,
     },
     format::{self, Contact},
@@ -500,67 +504,105 @@ pub async fn create_listing(
     let properties = properties::check(&attributes, &form.properties, &mut errors);
     photos::check(&photos, 0, &mut errors);
 
-    // Not signed in: the contact to confirm, if a code may go to it now.
+    // Not signed in: the listing goes under the phone number or e-mail address typed with it, and
+    // the account that has it, or one made with the listing under the name typed. No code, so
+    // posting is as quick as it gets; and it signs no one in, which takes a code (account.rs), so
+    // typing someone's number never opens their account.
     let contact = match user {
         Some(_) => None,
         None => {
             let contact = Contact::parse(&form.contact);
-            match &contact {
-                None => fail(&mut errors, "contact", "Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i."),
-                Some(contact) if errors.is_empty() => {
-                    if let Some(limit) = code_limit(&state, contact, ip.as_deref()).await? {
-                        fail(&mut errors, "form", limit);
-                    }
-                }
-                Some(_) => {}
+            if contact.is_none() {
+                fail(&mut errors, "contact", "Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i.");
             }
             contact
         }
     };
-    let poster = match (&user, &contact) {
-        (Some(user), _) => Some(Poster::of(user)),
-        (None, Some(contact)) if errors.is_empty() => {
-            let name = display_name(&form.name);
-            let account = db::account_for_contact(&state.db, contact.phone(), contact.email(), name.as_deref()).await?;
-            if account.status == "SUSPENDED" {
-                fail(&mut errors, "contact", "Kjo llogari është pezulluar.");
-            }
-            Some(Poster { id: account.id, phone: contact.phone(), email: contact.email() })
-        }
-        _ => None,
+    let existing = match &contact {
+        Some(contact) => db::account_by_contact(&state.db, contact.phone(), contact.email()).await?,
+        None => None,
     };
+    if existing.as_ref().is_some_and(|account| account.status == "SUSPENDED") {
+        fail(&mut errors, "contact", "Kjo llogari është pezulluar.");
+    }
 
     // Limits per account: a few listings a day, and the same one only once.
-    if let (true, Some(poster)) = (errors.is_empty(), &poster) {
-        let recent = db::recent_posts(&state.db, poster.id, form.title.trim()).await?;
+    let account_id = user.as_ref().map(|user| user.id).or(existing.as_ref().map(|account| account.id));
+    if let (true, Some(account_id)) = (errors.is_empty(), account_id) {
+        let recent = db::recent_posts(&state.db, account_id, form.title.trim()).await?;
         if recent.count >= POSTS_PER_DAY {
             fail(&mut errors, "form", &format!("Ke publikuar {POSTS_PER_DAY} njoftime sot. Mund të publikosh të tjera nesër."));
         } else if recent.same_title {
             fail(&mut errors, "title", "Ke publikuar tashmë një njoftim me këtë titull sot.");
         }
     }
+    // And per network without signing in, since no code stands in a script's way.
+    if user.is_none() && errors.is_empty() && !unsigned_post_allowed(ip.as_deref()) {
+        fail(&mut errors, "form", "Shumë njoftime nga ky rrjet brenda një ore. Provo përsëri më vonë.");
+    }
     let processed = read_photos(&photos, &mut errors).await?;
-    let (Some(checked), Some(poster), Some(processed)) = (checked, poster, processed) else {
+    let (Some(checked), Some(processed)) = (checked, processed) else {
         return form_again(page(&Purpose::New, user.as_ref(), &categories, &cities, &attributes, form, errors));
+    };
+
+    // All checked: the account of someone not signed in, made now if their contact has none.
+    let poster = match (&user, &contact) {
+        (Some(user), _) => Poster::of(user),
+        (None, Some(contact)) => {
+            let name = display_name(&form.name);
+            let account = db::poster_account(&state.db, contact.phone(), contact.email(), name.as_deref()).await?;
+            if account.status == "PENDING" {
+                // Waiting for a code from when posting needed one: it needs none now.
+                db::confirm_account(&state.db, account.id, name.as_deref()).await?;
+            }
+            Poster { id: account.id, phone: contact.phone(), email: contact.email() }
+        }
+        (None, None) => unreachable!("without a contact, the form went back with an error"),
     };
     let stored = photos::store(&state.media, processed).await?;
     let slug = format::slug(checked.title);
-    let publish = user.is_some();
-    let (listing_id, public_no) = db::create_listing(&state.db, &checked.listing(&poster, &slug, &properties, publish)).await?;
+    let (listing_id, public_no) = db::create_listing(&state.db, &checked.listing(&poster, &slug, &properties, true)).await?;
     db::add_listing_photos(&state.db, listing_id, &stored).await?;
-    match &contact {
-        Some(contact) if !publish => {
-            let purpose = CodePurpose { listing_id: Some(listing_id), display_name: display_name(&form.name) };
-            match send_code_and_ask(&state, &headers, contact, ip.as_deref(), &purpose).await? {
-                Ok(response) => Ok(response),
-                Err(message) => {
-                    let mut errors = HashMap::new();
-                    fail(&mut errors, "contact", message);
-                    form_again(page(&Purpose::New, user.as_ref(), &categories, &cities, &attributes, form, errors))
-                }
-            }
-        }
-        _ => Ok(Redirect::to(&format!("/listing/{public_no}-{slug}")).into_response()),
+    let to = format!("/listing/{public_no}-{slug}");
+    if user.is_some() {
+        return Ok(Redirect::to(&to).into_response());
+    }
+    record_unsigned_post(ip.as_deref());
+    // Its page says it is up, once, and how to change it later: by signing in (listings.rs).
+    let posted = cookie_header(&headers, POSTED_COOKIE, &public_no.to_string(), 600);
+    Ok(redirect_with_cookies(&to, vec![posted]))
+}
+
+/// The listing just posted without signing in, by number: its page says it is up.
+pub const POSTED_COOKIE: &str = "posted";
+
+/// Listings posted without signing in from one network (IP address) in an hour. With no code to
+/// confirm a contact, this keeps a script from filling the site from one place; mobile networks
+/// put many people behind one address, hence not fewer.
+const UNSIGNED_POSTS_PER_IP_HOUR: usize = 20;
+
+/// When listings were posted without signing in, by network, over the last hour. In memory: a
+/// restart forgets them, which costs no more than an hour's limit.
+fn unsigned_posts() -> &'static Mutex<HashMap<String, Vec<Instant>>> {
+    static POSTS: OnceLock<Mutex<HashMap<String, Vec<Instant>>>> = OnceLock::new();
+    POSTS.get_or_init(Default::default)
+}
+
+/// Whether this network may post one more listing without signing in; an unknown one may.
+fn unsigned_post_allowed(ip: Option<&str>) -> bool {
+    let Some(ip) = ip else { return true };
+    let hour_ago = Instant::now().checked_sub(Duration::from_secs(3600));
+    let mut posts = unsigned_posts().lock().unwrap();
+    posts.retain(|_, times| {
+        times.retain(|time| hour_ago.is_none_or(|hour_ago| *time > hour_ago));
+        !times.is_empty()
+    });
+    posts.get(ip).map_or(0, Vec::len) < UNSIGNED_POSTS_PER_IP_HOUR
+}
+
+fn record_unsigned_post(ip: Option<&str>) {
+    if let Some(ip) = ip {
+        unsigned_posts().lock().unwrap().entry(ip.to_string()).or_default().push(Instant::now());
     }
 }
 

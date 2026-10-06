@@ -13,8 +13,8 @@
   {%- endif %}
   {%- else %}
   {#- Not signed in: the account comes with the listing (post.rs, create_listing). -#}
-  <p class="lead">S'ke llogari? S'ka problem: në fund shkruaj celularin ose email-in. Të dërgojmë një kod, dhe njoftimi
-    publikohet sapo ta shkruash; llogaria krijohet vetë. <a href="/llogaria">Ke llogari? Hyr</a></p>
+  <p class="lead">S'ke llogari? S'ka problem: në fund shkruaj celularin ose email-in, dhe njoftimi publikohet menjëherë;
+    llogaria krijohet vetë. <a href="/llogaria">Ke llogari? Hyr</a></p>
   {%- endif %}
 
   {#- listing_form_controller.js offers the listing types and the condition the chosen category
@@ -139,7 +139,7 @@
       <label class="field-label" for="contact">Celulari ose email-i <span class="required" aria-hidden="true">*</span></label>
       <input id="contact" name="contact" value="{{ form.contact }}" required autocomplete="username"
              placeholder="069 123 4567 ose emri@shembull.com">
-      <p class="field-hint">Këtu të dërgojmë kodin. Blerësit e shohin vetëm kur shtypin „Shfaq numrin“.</p>
+      <p class="field-hint">Blerësit të kontaktojnë këtu; e shohin vetëm kur shtypin „Shfaq numrin“. Me të hyn më vonë, për ta ndryshuar njoftimin.</p>
       {% if let Some(error) = self.error("contact") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
     {%- endif %}
