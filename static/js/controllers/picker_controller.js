@@ -6,10 +6,11 @@ import { Controller } from "@hotwired/stimulus";
 // choosing sets it and says so ("change"), so whatever listens to it still hears. Without this
 // script the select is just a select.
 //
-// A category list (data-picker-tree-value) folds: a category's subcategories show under it once
-// its arrow opens them, the path to the choice open from the start. The posting form's groups,
-// "Automjete › Pjesë dhe aksesorë", nest by their path; elsewhere the leading spaces of
-// category_choices (filters.rs) give each category's level.
+// A list with groups folds, as does a category list (data-picker-tree-value): a group's options, a
+// category's subcategories, show under it once its arrow opens them, the path to the choice open
+// from the start (towns under their county, models under their make). The posting form's groups,
+// "Automjete › Pjesë dhe aksesorë", nest by their path; the other category lists by the leading
+// spaces of category_choices (filters.rs), which give each category's level.
 
 let count = 0;
 const CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
@@ -23,11 +24,12 @@ export default class extends Controller {
     // A page Turbo kept has the list built already: built again, from the select as it is.
     for (const old of this.element.querySelectorAll("[data-picker-ui]")) old.remove();
     const id = `picker-${++count}`;
+    this.tree = this.treeValue || [...this.select.children].some((child) => child.tagName === "OPTGROUP");
     this.label = this.select.labels?.[0];
     if (this.label) this.label.id ||= `${id}-label`;
 
     this.button = element("button", "picker-button", { type: "button" });
-    this.button.setAttribute("aria-haspopup", this.treeValue ? "tree" : "listbox");
+    this.button.setAttribute("aria-haspopup", this.tree ? "tree" : "listbox");
     this.button.setAttribute("aria-expanded", "false");
     this.button.setAttribute("aria-controls", id);
     this.value = element("span", "picker-value", { id: `${id}-value` });
@@ -41,7 +43,7 @@ export default class extends Controller {
     if (name) this.button.setAttribute("aria-labelledby", `${name} ${id}-value`);
 
     this.list = element("div", "picker-list", { id, hidden: true, tabIndex: -1 });
-    this.list.setAttribute("role", this.treeValue ? "tree" : "listbox");
+    this.list.setAttribute("role", this.tree ? "tree" : "listbox");
     if (name) this.list.setAttribute("aria-labelledby", name);
     for (const part of [this.button, this.list]) part.dataset.pickerUi = "";
     this.select.after(this.button, this.list);
@@ -124,6 +126,10 @@ export default class extends Controller {
   open() {
     // Built each time, from the options as they are now: a script may have hidden some.
     this.fill();
+    // Wider than a narrow field, the list grows from the field's side nearer the middle of the
+    // screen: rightward from the welcome form's town, leftward from its category.
+    const field = this.element.getBoundingClientRect();
+    this.list.classList.toggle("picker-start", field.left + field.width / 2 < document.documentElement.clientWidth / 2);
     this.list.hidden = false;
     this.button.setAttribute("aria-expanded", "true");
     // The choice in view and in focus, ready for the arrow keys; the list in view on the page.
@@ -157,7 +163,7 @@ export default class extends Controller {
 
   fill() {
     this.list.replaceChildren();
-    if (this.treeValue) this.fillTree();
+    if (this.tree) this.fillTree();
     else this.fillList();
     this.show();
   }
@@ -229,6 +235,9 @@ export default class extends Controller {
       };
       find(root, []);
     }
+    // A list of one group comes open, the models of the make chosen say: nothing to choose between.
+    const branches = root.children.filter((child) => child.children.length);
+    if (branches.length === 1) this.opened.add(branches[0].key);
     this.branch(root, this.list, 1);
   }
 
@@ -257,9 +266,9 @@ export default class extends Controller {
 
   optionItem(option, level) {
     const item = element("div", "picker-option", { textContent: option.textContent.trim(), tabIndex: -1 });
-    item.setAttribute("role", this.treeValue ? "treeitem" : "option");
+    item.setAttribute("role", this.tree ? "treeitem" : "option");
     item.dataset.value = option.value;
-    if (this.treeValue) item.setAttribute("aria-level", level);
+    if (this.tree) item.setAttribute("aria-level", level);
     return item;
   }
 

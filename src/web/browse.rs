@@ -154,20 +154,33 @@ struct BrowsePage<'a> {
     breadcrumbs: Vec<Link>,
     subcategories: Vec<Link>,
     /// On a category page, the menu the heading opens to go to another category.
-    category_menu: Vec<MenuEntry>,
+    category_menu: Vec<MenuItem>,
     page: ListingPage,
     /// With the map open (harta=1), a dot for each result, up to db::MAP_POINTS.
     points: Vec<db::MapPoint>,
     more_points: bool,
 }
 
-/// A line in the category menu: a top-level category (depth 0), or a subcategory under its
-/// parent, indented by its depth.
+/// A category in the category menu.
 pub struct MenuEntry {
     pub name: String,
     pub url: String,
-    pub depth: usize,
     pub current: bool,
+}
+
+/// A category with subcategories in the category menu, folded unless the page's category is it or
+/// is under it.
+pub struct MenuBranch {
+    pub entry: MenuEntry,
+    pub open: bool,
+}
+
+/// The category menu, line by line: a category with subcategories opens a branch, which an `End`
+/// closes once they are listed; one without is a leaf. browse.html nests them as it goes.
+pub enum MenuItem {
+    Branch(MenuBranch),
+    Leaf(MenuEntry),
+    End,
 }
 
 /// A seller's profile: a private seller's (/perdorues/{id}) or a business's (/biznes/{slug}),
@@ -406,29 +419,39 @@ async fn browse(
     // and the map pin, as the category links do, and those under the page's category its filters.
     let category_menu = match (&page_slug, category) {
         (Some(_), Some(current)) => {
-            let mut menu = vec![MenuEntry { name: "Të gjitha njoftimet".to_string(), url: filters.all_categories_url(), depth: 0, current: false }];
+            let all = MenuEntry { name: "Të gjitha njoftimet".to_string(), url: filters.all_categories_url(), current: false };
+            let mut menu = vec![MenuItem::Leaf(all)];
             let narrower: Vec<uuid::Uuid> =
                 categories.subtree_ids(current.id).into_iter().filter(|id| *id != current.id).collect();
+            // Open: the page's category and those above it.
+            let path: Vec<uuid::Uuid> = categories.ancestors(current).iter().map(|c| c.id).chain([current.id]).collect();
             // Each category followed by its subcategories, at any depth.
             fn add(categories: &db::Categories, category: &db::Category, depth: usize, current: &db::Category,
-                   narrower: &[uuid::Uuid], filters: &Filters, menu: &mut Vec<MenuEntry>) {
-                menu.push(MenuEntry {
+                   narrower: &[uuid::Uuid], path: &[uuid::Uuid], filters: &Filters, menu: &mut Vec<MenuItem>) {
+                let entry = MenuEntry {
                     name: category.name.clone(),
                     url: match narrower.contains(&category.id) {
                         true => filters.narrowed_url(category),
                         false => filters.category_url(category),
                     },
-                    depth,
                     current: category.id == current.id,
-                });
-                if depth < 5 {
-                    for child in categories.children(category.id) {
-                        add(categories, child, depth + 1, current, narrower, filters, menu);
-                    }
+                };
+                let children: Vec<&db::Category> = match depth < 5 {
+                    true => categories.children(category.id).collect(),
+                    false => Vec::new(),
+                };
+                if children.is_empty() {
+                    menu.push(MenuItem::Leaf(entry));
+                    return;
                 }
+                menu.push(MenuItem::Branch(MenuBranch { entry, open: path.contains(&category.id) }));
+                for child in children {
+                    add(categories, child, depth + 1, current, narrower, path, filters, menu);
+                }
+                menu.push(MenuItem::End);
             }
             for top in categories.top_level() {
-                add(&categories, top, 0, current, &narrower, &filters, &mut menu);
+                add(&categories, top, 0, current, &narrower, &path, &filters, &mut menu);
             }
             menu
         }

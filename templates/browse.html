@@ -19,9 +19,22 @@
     <summary aria-label="{{ heading }}: ndrysho kategorinë">
       <h1>{{ heading }}<svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></h1>
     </summary>
+    {#- Rows as the in-page lists have them (picker_controller.js): a category with subcategories
+        folds them (<details>), its name leading to it and its arrow opening them, the path to
+        this page's category open from the start. -#}
     <nav class="category-menu" aria-label="Ndrysho kategorinë">
-      {%- for entry in category_menu %}
-      <a class="{% if entry.depth == 0 %}menu-top{% else if entry.depth == 1 %}menu-sub{% else %}menu-sub menu-deep{% endif %}" href="{{ entry.url }}"{% if entry.current %} aria-current="page"{% endif %}>{{ entry.name }}</a>
+      {%- for item in category_menu %}
+      {%- match item %}
+      {%- when MenuItem::Branch with (branch) %}
+      <details class="menu-branch"{% if branch.open %} open{% endif %}>
+        <summary class="picker-option picker-branch{% if branch.entry.current %} is-current{% endif %}"><a href="{{ branch.entry.url }}"{% if branch.entry.current %} aria-current="page"{% endif %}>{{ branch.entry.name }}</a><span class="picker-toggle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></summary>
+        <div class="picker-children">
+      {%- when MenuItem::Leaf with (entry) %}
+      <a class="picker-option{% if entry.current %} is-current{% endif %}" href="{{ entry.url }}"{% if entry.current %} aria-current="page"{% endif %}>{{ entry.name }}</a>
+      {%- when MenuItem::End %}
+        </div>
+      </details>
+      {%- endmatch %}
       {%- endfor %}
     </nav>
   </details>

@@ -1259,14 +1259,21 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     ]);
     assert!(kinds.is_sorted(), "{kinds:?}");
 
-    // A kind's page: its two levels above it in the breadcrumbs, and the menu shows it a level
-    // further in than its parent.
+    // A kind's page: its two levels above it in the breadcrumbs, and in the menu, inside its
+    // parent's branch, inside Automjete's, both open; other categories folded.
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
     let crumbs = positions(&gps, &[r#"<a href="/c/automjete">Automjete</a>"#, r#"<a href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#]);
     assert!(crumbs.is_sorted());
-    assert!(gps.contains(r#"<a class="menu-sub" href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#));
-    assert!(gps.contains(r#"<a class="menu-sub menu-deep" href="/c/gps-dhe-navigatore" aria-current="page">GPS dhe navigatorë</a>"#));
-    assert!(gps.contains(r#"<a class="menu-sub menu-deep" href="/c/pjese-kembimi">Pjesë këmbimi</a>"#));
+    let automjete = gps.find(r#"<summary class="picker-option picker-branch"><a href="/c/automjete">Automjete</a>"#).expect("Automjete's branch");
+    let parts = gps.find(r#"<summary class="picker-option picker-branch"><a href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#).expect("the parts' branch");
+    let here = gps.find(r#"<a class="picker-option is-current" href="/c/gps-dhe-navigatore" aria-current="page">GPS dhe navigatorë</a>"#).expect("the page's own");
+    let after = gps[here..].find("</details>").map(|at| here + at).unwrap();
+    assert!(automjete < parts && parts < here && gps[parts..after].contains(r#"<a class="picker-option" href="/c/pjese-kembimi">Pjesë këmbimi</a>"#));
+    assert!(gps[..automjete].trim_end().ends_with(r#"<details class="menu-branch" open>"#));
+    assert!(gps[..parts].trim_end().ends_with(r#"<details class="menu-branch" open>"#));
+    let prona = gps.find(r#"<summary class="picker-option picker-branch"><a href="/c/prona">Prona</a>"#).expect("Prona's branch");
+    assert!(gps[..prona].trim_end().ends_with(r#"<details class="menu-branch">"#), "folded");
+    assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - 1, "balanced");
 
     // The old address still works.
     assert_eq!(get(pool.clone(), "/c/pjese-kembimi").await.status, StatusCode::OK);
@@ -1432,8 +1439,8 @@ async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
     // links that widen it or go elsewhere keep only the words, the town and the map pin.
     let kept = "/c/gps-dhe-navigatore?vehicle_make=VOLKSWAGEN&fits_year=2015";
     assert!(page.contains(&format!(r#"<a class="chip" href="{kept}">GPS dhe navigatorë</a>"#)));
-    assert!(page.contains(&format!(r#"<a class="menu-sub menu-deep" href="{kept}">GPS dhe navigatorë</a>"#)));
-    assert!(page.contains(r#"<a class="menu-sub" href="/c/makina">Makina</a>"#));
+    assert!(page.contains(&format!(r#"<a class="picker-option" href="{kept}">GPS dhe navigatorë</a>"#)));
+    assert!(page.contains(r#"<a class="picker-option" href="/c/makina">Makina</a>"#));
     assert!(page.contains(r#"<a href="/c/automjete">Automjete</a>"#));
     let page = html(pool.clone(), "/c/gps-dhe-navigatore?vehicle_make=VOLKSWAGEN&fits_year=2015").await;
     assert_eq!(found(&page), [true, false, false, false]);
@@ -2146,11 +2153,10 @@ async fn a_category_page_heading_switches_category(pool: PgPool) {
     let page = html(pool.clone(), "/c/prona?city=durres&q=shtepi").await;
     assert!(page.contains(r#"<details class="category-switch" data-controller="dropdown">"#));
     // Every category and subcategory, keeping the town and the words; the current one marked.
-    assert!(page.contains(r#"<a class="menu-top" href="/c/makina?q=shtepi&city=durres">Makina</a>"#)
-        || page.contains(r#"<a class="menu-sub" href="/c/makina?q=shtepi&city=durres">Makina</a>"#));
-    assert!(page.contains(r#"<a class="menu-sub" href="/c/apartamente?q=shtepi&city=durres">Apartamente</a>"#));
-    assert!(page.contains(r#"<a class="menu-top" href="/c/prona?q=shtepi&city=durres" aria-current="page">Prona</a>"#));
-    assert!(page.contains(r#"<a class="menu-top" href="/search?q=shtepi&city=durres">Të gjitha njoftimet</a>"#));
+    assert!(page.contains(r#"<a class="picker-option" href="/c/makina?q=shtepi&city=durres">Makina</a>"#));
+    assert!(page.contains(r#"<a class="picker-option" href="/c/apartamente?q=shtepi&city=durres">Apartamente</a>"#));
+    assert!(page.contains(r#"<summary class="picker-option picker-branch is-current"><a href="/c/prona?q=shtepi&city=durres" aria-current="page">Prona</a>"#));
+    assert!(page.contains(r#"<a class="picker-option" href="/search?q=shtepi&city=durres">Të gjitha njoftimet</a>"#));
     // A search page's heading is just a heading.
     assert!(!get(pool, "/search?q=golf").await.body.contains("category-switch"));
 }

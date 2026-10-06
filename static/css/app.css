@@ -501,8 +501,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   top: calc(100% + .3rem);
   right: 0;
   z-index: 30;
-  /* As wide as the field, or wider for a narrow one (the welcome form's half), growing leftward
-     from its right edge, which is where the narrow one sits. */
+  /* As wide as the field, or wider for a narrow one (the welcome form's halves), growing from the
+     side nearer the middle of the screen (picker_controller.js): leftward unless .picker-start. */
   width: max(100%, min(20rem, calc(100vw - 2rem)));
   max-height: min(70vh, 30rem);
   overflow-y: auto;
@@ -514,6 +514,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
 }
 .picker-list[hidden] { display: none; }
+.picker-list.picker-start { right: auto; left: 0; }
 .picker-heading { padding: .6rem .85rem .2rem; color: var(--muted); font-size: .8rem; font-weight: var(--semibold); }
 /* Rows a finger finds easily, close enough to read as one list. */
 .picker-option { padding: .55rem .85rem; border-radius: 10px; cursor: pointer; }
@@ -525,6 +526,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .picker-option[aria-selected="true"]:hover,
 .picker-option[aria-selected="true"]:focus { background: var(--button-hover); }
 .picker-option[aria-selected="true"] .picker-toggle { color: inherit; }
+/* The same for the category menu's page: its row in the site's colour. */
+.picker-option.is-current { background: var(--button); color: var(--on-button); font-weight: var(--medium); }
+.picker-option.is-current:hover { background: var(--button-hover); }
+.picker-option.is-current .picker-toggle { color: inherit; }
 .picker-list[role="tree"] [aria-level="1"] { font-weight: var(--semibold); }
 .picker-branch { display: flex; align-items: center; gap: .5rem; padding-top: .25rem; padding-bottom: .25rem; }
 /* A category's subcategories, once open: a level further in, with a faint line in the gap to their
@@ -634,7 +639,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   top: calc(100% + .4rem);
   left: 0;
   z-index: 20;
-  display: grid;
   width: min(22rem, calc(100vw - 2rem));
   max-height: min(70vh, 32rem);
   overflow-y: auto;
@@ -645,13 +649,16 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
   overscroll-behavior: contain;
 }
-.category-menu a { padding: .45rem .7rem; border-radius: 8px; color: var(--text); text-decoration: none; }
-.category-menu a:hover { background: var(--surface-muted); }
-.category-menu .menu-top { margin-top: .2rem; font-weight: var(--semibold); }
-.category-menu .menu-sub { padding-left: 1.5rem; color: var(--muted); font-size: .92rem; }
-/* A level further down (Automjete › Pjesë dhe aksesorë › GPS), indented further. */
-.category-menu .menu-deep { padding-left: 2.6rem; font-size: .88rem; }
-.category-menu [aria-current="page"] { background: var(--badge); color: var(--text); }
+/* Its rows are the in-page lists' (.picker-option); the top level stands out. A branch's name
+   takes the row up to its arrow and leads to the category; the arrow opens it. */
+.category-menu .picker-option { display: block; color: var(--text); text-decoration: none; }
+.category-menu .picker-option.is-current { color: var(--on-button); }
+.category-menu > .picker-option,
+.category-menu > .menu-branch > .picker-branch { font-weight: var(--semibold); }
+.category-menu .picker-branch { display: flex; list-style: none; }
+.category-menu .picker-branch::-webkit-details-marker { display: none; }
+.category-menu .picker-branch a { flex: 1; min-width: 0; padding: .3rem 0; color: inherit; text-decoration: none; }
+.category-menu .menu-branch[open] > .picker-branch .picker-toggle { transform: rotate(90deg); }
 .result-count { margin: 0; color: var(--muted); }
 
 .browse { margin-top: 1rem; }
