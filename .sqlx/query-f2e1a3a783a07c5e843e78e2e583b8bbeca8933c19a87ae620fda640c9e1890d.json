@@ -1,0 +1,62 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.code, a.name, a.data_type, a.unit, parent.code AS \"parent_code?\",\n                  (a.validation_json ->> 'min')::numeric AS min, (a.validation_json ->> 'max')::numeric AS max,\n                  coalesce(jsonb_agg(jsonb_build_object('code', o.value_code, 'label', o.label, 'parent', po.value_code)\n                                     ORDER BY po.sort_order, po.label, o.sort_order, o.label)\n                               FILTER (WHERE o.id IS NOT NULL),\n                           '[]') AS \"options!: Json<Vec<CatalogueOption>>\"\n           FROM attributes a\n           LEFT JOIN attributes parent ON parent.id = a.parent_attribute_id\n           LEFT JOIN attribute_options o ON o.attribute_id = a.id AND o.active\n           LEFT JOIN attribute_options po ON po.id = o.parent_option_id\n           WHERE a.data_type IN ('SELECT', 'MULTISELECT', 'NUMBER', 'BOOLEAN', 'TEXT')\n           GROUP BY a.id, parent.code\n           ORDER BY a.code",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "data_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "unit",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "parent_code?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "min",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 6,
+        "name": "max",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 7,
+        "name": "options!: Json<Vec<CatalogueOption>>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "f2e1a3a783a07c5e843e78e2e583b8bbeca8933c19a87ae620fda640c9e1890d"
+}

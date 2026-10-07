@@ -1,7 +1,7 @@
 //! Requests through the full router. Each test gets a fresh database with the migrations applied,
 //! plus the fixtures named in its attribute.
 
-use std::sync::OnceLock;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use axum::{
     Router,
@@ -9,7 +9,8 @@ use axum::{
     http::{Request, StatusCode, header},
 };
 use http_body_util::BodyExt;
-use marketplace::{Moderators, media::Media};
+use marketplace::{Moderators, ai::Ai, media::Media};
+use serde_json::{Value, json};
 use sqlx::PgPool;
 use tower::ServiceExt;
 
@@ -19,8 +20,19 @@ const MODERATOR: &str = "+355690000099";
 /// The app, with photos kept in memory, one store for all the tests: their photos' names never
 /// collide, and a photo posted in one request is there for the next. MODERATOR moderates.
 fn app(pool: PgPool) -> Router {
+    marketplace::app_with(pool, media(), Moderators::new([MODERATOR]))
+}
+
+fn media() -> Media {
     static MEDIA: OnceLock<Media> = OnceLock::new();
-    marketplace::app_with(pool, MEDIA.get_or_init(Media::in_memory).clone(), Moderators::new([MODERATOR]))
+    MEDIA.get_or_init(Media::in_memory).clone()
+}
+
+/// The app with an AI to fill in the listing form, which the server at `url` stands in for
+/// (ai_stand_in).
+fn app_with_ai(pool: PgPool, url: &str) -> Router {
+    let ai = Ai::new("test-key", url, "claude-haiku-4-5-20251001");
+    marketplace::app_with_ai(pool, media(), Moderators::new([MODERATOR]), Some(ai))
 }
 
 struct TestResponse {
@@ -39,7 +51,11 @@ impl TestResponse {
 }
 
 async fn send(pool: PgPool, request: Request<Body>) -> TestResponse {
-    let response = app(pool).oneshot(request).await.unwrap();
+    send_to(app(pool), request).await
+}
+
+async fn send_to(app: Router, request: Request<Body>) -> TestResponse {
+    let response = app.oneshot(request).await.unwrap();
     let header = |name| {
         response
             .headers()
@@ -92,6 +108,17 @@ async fn post_with_photos(
     photos: &[Vec<u8>],
     cookie: &str,
 ) -> TestResponse {
+    let (content_type, body) = multipart(fields, photos);
+    let request = Request::post(uri)
+        .header(header::CONTENT_TYPE, content_type)
+        .header(header::COOKIE, cookie)
+        .body(Body::from(body))
+        .unwrap();
+    send(pool, request).await
+}
+
+/// A form with photos as the browser sends it: its content type and its body.
+fn multipart(fields: &[(&str, &str)], photos: &[Vec<u8>]) -> (String, Vec<u8>) {
     let boundary = "----marketplace-test-boundary";
     let mut body = Vec::new();
     for (name, value) in fields {
@@ -105,12 +132,59 @@ async fn post_with_photos(
         body.extend_from_slice(b"\r\n");
     }
     body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
-    let request = Request::post(uri)
-        .header(header::CONTENT_TYPE, format!("multipart/form-data; boundary={boundary}"))
-        .header(header::COOKIE, cookie)
+    (format!("multipart/form-data; boundary={boundary}"), body)
+}
+
+/// What the AI stand-in was asked: the key each call came with, and the request.
+type Asked = Arc<Mutex<Vec<(Option<String>, Value)>>>;
+
+/// A stand-in for Anthropic's Messages API, on a port of its own: it answers every call by calling
+/// the listing form's tool with `input`, or, with none, fails as an overloaded API does; and keeps
+/// what it was asked. Its address, and what it was asked.
+async fn ai_stand_in(input: Option<Value>) -> (String, Asked) {
+    let asked: Asked = Arc::default();
+    let kept = asked.clone();
+    let answer = move |headers: axum::http::HeaderMap, axum::Json(request): axum::Json<Value>| {
+        let (kept, input) = (kept.clone(), input.clone());
+        async move {
+            let key = headers.get("x-api-key").map(|key| key.to_str().unwrap().to_string());
+            kept.lock().unwrap().push((key, request));
+            match input {
+                Some(input) => (
+                    StatusCode::OK,
+                    axum::Json(json!({
+                        "type": "message",
+                        "role": "assistant",
+                        "content": [{"type": "tool_use", "id": "toolu_test", "name": "fill_listing_form", "input": input}],
+                        "stop_reason": "tool_use",
+                        "usage": {"input_tokens": 2000, "output_tokens": 120}
+                    })),
+                ),
+                None => (
+                    StatusCode::from_u16(529).unwrap(),
+                    axum::Json(json!({"type": "error", "error": {"type": "overloaded_error", "message": "Overloaded"}})),
+                ),
+            }
+        }
+    };
+    let stand_in = Router::new().route("/v1/messages", axum::routing::post(answer));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    tokio::spawn(async move { axum::serve(listener, stand_in).await.unwrap() });
+    (url, asked)
+}
+
+/// Asks `app` to fill in the listing form, as the form's script does, from the network `ip`: the
+/// answer's status and its JSON.
+async fn ai_fill(app: Router, fields: &[(&str, &str)], photos: &[Vec<u8>], ip: &str) -> (StatusCode, Value) {
+    let (content_type, body) = multipart(fields, photos);
+    let request = Request::post("/shto/ploteso")
+        .header(header::CONTENT_TYPE, content_type)
+        .header("x-forwarded-for", ip)
         .body(Body::from(body))
         .unwrap();
-    send(pool, request).await
+    let response = send_to(app, request).await;
+    (response.status, serde_json::from_str(&response.body).unwrap_or(Value::Null))
 }
 
 /// A plain JPEG of that size, as a camera might send.
@@ -1384,6 +1458,123 @@ async fn a_property_in_a_zone_compares_its_square_metre_with_the_zones(pool: PgP
     marketplace::db::refresh_zone_prices(&pool).await.unwrap();
     let alone = bubble(html(pool.clone(), &page(2009)).await);
     assert!(alone.starts_with(r#"<details class="bubble area-price" data-controller="dropdown">"#), "{alone}");
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn the_listing_form_asks_for_the_writing_first_and_offers_ai_when_it_is_set_up(pool: PgPool) {
+    // The title, the description and the photos first, then the category, the price and the town.
+    let form = html(pool.clone(), "/shto").await;
+    let order = positions(&form, &[r#"id="title""#, r#"id="description""#, r#"name="photos""#, r#"id="category""#, r#"id="price_type""#, r#"id="city""#]);
+    assert!(order.is_sorted(), "{order:?}");
+    // Without the AI, nothing offers it, and asking for it says to fill the form in by hand.
+    assert!(!form.contains("Plotëso pjesën tjetër me AI"));
+    let words = [("title", "Volkswagen Golf 7, 2016"), ("description", "Makina në gjendje shumë të mirë.")];
+    let (status, answer) = ai_fill(app(pool.clone()), &words, &[], "198.51.100.10").await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    assert!(answer["message"].as_str().unwrap().contains("Plotëso vetë"), "{answer}");
+
+    // With it, a new listing's form has the button, between the photos and the category; the
+    // edit form doesn't.
+    let (url, _) = ai_stand_in(None).await;
+    let new = send_to(app_with_ai(pool.clone(), &url), Request::get("/shto").body(Body::empty()).unwrap()).await.body;
+    let order = positions(&new, &[r#"name="photos""#, "Plotëso pjesën tjetër me AI", r#"id="category""#]);
+    assert!(order.is_sorted(), "{order:?}");
+    assert!(new.contains(r##"data-controller="listing-form narrow ai-fill" data-ai-fill-photos-outlet="#listing-photos""##));
+    assert!(new.contains(r#"<div class="field" id="listing-photos" data-controller="photos""#));
+    let session = session_for(&pool, "11111111-1111-4111-8111-111111111111").await;
+    let request = Request::get("/listing/1001/ndrysho").header(header::COOKIE, &session).body(Body::empty()).unwrap();
+    let edit = send_to(app_with_ai(pool, &url), request).await.body;
+    assert!(edit.contains(r#"id="category""#) && !edit.contains("Plotëso pjesën tjetër me AI"));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn ai_fills_in_the_rest_of_the_form_from_the_writing_and_the_photos(pool: PgPool) {
+    // The AI's answer, with what the form can't take mixed in: a colour and an option it doesn't
+    // list, a flat's area, and a zone, which a car doesn't say.
+    let (url, asked) = ai_stand_in(Some(json!({
+        "category": "makina",
+        "listing_type": "SELL",
+        "condition": "USED",
+        "properties": {
+            "vehicle_make": "VOLKSWAGEN",
+            "vehicle_model": "VOLKSWAGEN_GOLF",
+            "vehicle_year": 2016,
+            "vehicle_mileage": 148000,
+            "vehicle_fuel": "DIESEL",
+            "vehicle_transmission": "MANUAL",
+            "vehicle_color": "TURQUOISE",
+            "vehicle_features": ["ABS", "JETPACK"],
+            "property_area": 85
+        },
+        "price": 9500,
+        "currency": "EUR",
+        "price_type": "NEGOTIABLE",
+        "city": "tirane",
+        "zone": "blloku"
+    })))
+    .await;
+    let words = [
+        ("title", "Volkswagen Golf 7, 2016, naftë"),
+        ("description", "148 000 km, kambio manuale, me ABS. Çmimi 9 500 €, i diskutueshëm. Ndodhet në Tiranë."),
+    ];
+    let (status, filled) = ai_fill(app_with_ai(pool.clone(), &url), &words, &[jpeg(3000, 2000)], "198.51.100.20").await;
+    assert_eq!(status, StatusCode::OK, "{filled}");
+    assert_eq!(filled["fields"], json!({
+        "category": "makina", "listing_type": "SELL", "condition": "USED",
+        "price_type": "NEGOTIABLE", "price": "9500", "currency": "EUR", "city": "tirane"
+    }));
+    assert_eq!(filled["properties"], json!({
+        "prop_vehicle_make": ["VOLKSWAGEN"], "prop_vehicle_model": ["VOLKSWAGEN_GOLF"],
+        "prop_vehicle_year": ["2016"], "prop_vehicle_mileage": ["148000"],
+        "prop_vehicle_fuel": ["DIESEL"], "prop_vehicle_transmission": ["MANUAL"],
+        "prop_vehicle_features": ["ABS"]
+    }));
+
+    // What the AI was asked: with the key and the model, to call the form's tool, following
+    // instructions that list the form's choices, about the photo, made smaller, and the writing.
+    let asked = asked.lock().unwrap();
+    let [(key, request)] = asked.as_slice() else { panic!("{} calls", asked.len()) };
+    assert_eq!(key.as_deref(), Some("test-key"));
+    assert_eq!(request["model"], "claude-haiku-4-5-20251001");
+    assert_eq!(request["tool_choice"], json!({"type": "tool", "name": "fill_listing_form"}));
+    let instructions = request["system"][0]["text"].as_str().unwrap();
+    for choice in ["makina: Automjete › Makina [SELL, BUY, RENT] (condition)", "VOLKSWAGEN_GOLF Golf", "tirane Tiranë", "tirane: 21-dhjetori 21 Dhjetori"] {
+        assert!(instructions.contains(choice), "{choice}");
+    }
+    let content = request["messages"][0]["content"].as_array().unwrap();
+    assert_eq!(content.len(), 2);
+    assert_eq!(content[0]["source"]["media_type"], "image/jpeg");
+    use base64::Engine;
+    let photo = base64::engine::general_purpose::STANDARD.decode(content[0]["source"]["data"].as_str().unwrap()).unwrap();
+    let photo = image::load_from_memory(&photo).unwrap();
+    assert_eq!(photo.width().max(photo.height()), 1024);
+    assert!(content[1]["text"].as_str().unwrap().starts_with("Titulli: Volkswagen Golf 7, 2016, naftë"));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn ai_fill_wants_the_writing_first_has_limits_and_says_when_it_fails(pool: PgPool) {
+    let (url, asked) = ai_stand_in(Some(json!({"category": "makina"}))).await;
+    let words = [("title", "Volkswagen Golf 7, 2016"), ("description", "Makina në gjendje shumë të mirë.")];
+    // Too little to go on: the AI isn't asked.
+    let (status, answer) = ai_fill(app_with_ai(pool.clone(), &url), &[("title", "Golf"), ("description", "")], &[], "198.51.100.30").await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(answer["message"].as_str().unwrap().starts_with("Shkruaj së pari titullin"), "{answer}");
+    assert!(asked.lock().unwrap().is_empty());
+    // Ten fills an hour from one network, then no more for a while; another network still may.
+    for _ in 0..10 {
+        let (status, answer) = ai_fill(app_with_ai(pool.clone(), &url), &words, &[], "198.51.100.31").await;
+        assert_eq!((status, answer["fields"]["category"].as_str()), (StatusCode::OK, Some("makina")));
+    }
+    let (status, answer) = ai_fill(app_with_ai(pool.clone(), &url), &words, &[], "198.51.100.31").await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+    assert!(answer["message"].as_str().unwrap().contains("brenda një ore"), "{answer}");
+    assert_eq!(asked.lock().unwrap().len(), 10);
+    assert_eq!(ai_fill(app_with_ai(pool.clone(), &url), &words, &[], "198.51.100.32").await.0, StatusCode::OK);
+    // An AI that doesn't answer: the seller fills the form in themselves.
+    let (down, _) = ai_stand_in(None).await;
+    let (status, answer) = ai_fill(app_with_ai(pool, &down), &words, &[], "198.51.100.33").await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    assert!(answer["message"].as_str().unwrap().contains("Plotëso vetë"), "{answer}");
 }
 
 #[sqlx::test]

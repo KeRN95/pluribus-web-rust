@@ -18,13 +18,66 @@
   {%- endif %}
 
   {#- listing_form_controller.js offers the listing types and the condition the chosen category
-      takes, and its usual currency; the server checks them all the same. Multipart, for the photos. -#}
-  <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data" data-controller="listing-form narrow">
+      takes, and its usual currency; the server checks them all the same. Multipart, for the photos.
+      With the AI set up, a new listing's form fills itself in from what the seller wrote
+      (ai_fill_controller.js, which takes the photos picked from photos_controller.js). -#}
+  <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data"
+        data-controller="listing-form narrow{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% endif %}>
     {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
 
     {#- No labels in sight: each field says what it is inside it, as its placeholder or a list's
         empty choice (in the placeholder's grey until something is chosen, picker_controller.js).
-        The labels stay for screen readers. -#}
+        The labels stay for screen readers. What the seller writes comes first, the title, the
+        description and the photos, then the rest, which the AI can fill in from them. -#}
+    <div class="field">
+      <label class="visually-hidden" for="title">Titulli</label>
+      <input id="title" name="title" value="{{ form.title }}" required minlength="5" maxlength="120" placeholder="Titulli, p.sh. Golf 7, 2016, naftë">
+      {% if let Some(error) = self.error("title") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    <div class="field">
+      <label class="visually-hidden" for="description">Përshkrimi</label>
+      <textarea id="description" name="description" rows="6" required minlength="10" maxlength="5000" placeholder="Përshkrimi">{{ form.description }}</textarea>
+      {% if let Some(error) = self.error("description") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    {#- Photos: the ones the listing has (when editing), each with "Hiq", then a picker for more.
+        photos_controller.js shows what was picked and makes big phone photos smaller first. -#}
+    <div class="field" id="listing-photos" data-controller="photos" data-photos-max-value="{{ self.photos_left() }}">
+      {%- if !photos.is_empty() %}
+      <ul class="photo-list">
+        {%- for photo in photos %}
+        <li class="photo-item">
+          <img src="{{ photo.card_url }}" alt="" loading="lazy">
+          <label class="photo-remove"><input type="checkbox" name="remove_photo" value="{{ photo.id }}"> Hiq</label>
+        </li>
+        {%- endfor %}
+      </ul>
+      {%- endif %}
+      <ul class="photo-list" data-photos-target="previews" hidden></ul>
+      <label class="button secondary photo-picker">
+        <input type="file" name="photos" accept="image/*" multiple data-photos-target="input" data-action="change->photos#chosen">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2.5"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8.5 5l1.5-2h4l1.5 2"/></svg>
+        Shto foto
+      </label>
+      <p class="field-hint">Deri në {{ crate::media::MAX_PHOTOS }} foto; e para del në krye.</p>
+      <p class="field-hint" data-photos-target="status" role="status"></p>
+      {% if let Some(error) = self.error("photos") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    {%- if ai_fill %}
+    {#- "Plotëso pjesën tjetër me AI" (ai_fill_controller.js, web/ai_fill.rs): from the title, the
+        description and the photos, the AI chooses the category and fills in its details, the price
+        and the town, for the seller to check; what it filled is tinted until changed. -#}
+    <div class="ai-fill">
+      <button type="button" class="button secondary ai-fill-button" data-ai-fill-target="button" data-action="ai-fill#fill">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.9 5 5.1 1.9-5.1 1.9-1.9 5-1.9-5L5 10.4l5.1-1.9z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>
+        Plotëso pjesën tjetër me AI
+      </button>
+      <p class="field-hint" data-ai-fill-target="status" role="status">Nga titulli, përshkrimi dhe fotot, AI zgjedh kategorinë dhe plotëson detajet, çmimin dhe qytetin. Ti i kontrollon para se ta publikosh.</p>
+    </div>
+    {%- endif %}
+
     <div class="field">
       <label class="visually-hidden" for="category">Kategoria</label>
       {#- Chosen from a list in the page, not the phone's own picker (picker_controller.js). -#}
@@ -68,42 +121,6 @@
     <turbo-frame id="listing-properties" data-listing-form-target="properties">
       {%- include "listing_properties.html" %}
     </turbo-frame>
-
-    <div class="field">
-      <label class="visually-hidden" for="title">Titulli</label>
-      <input id="title" name="title" value="{{ form.title }}" required minlength="5" maxlength="120" placeholder="Titulli, p.sh. Golf 7, 2016, naftë">
-      {% if let Some(error) = self.error("title") %}<p class="field-error">{{ error }}</p>{% endif %}
-    </div>
-
-    <div class="field">
-      <label class="visually-hidden" for="description">Përshkrimi</label>
-      <textarea id="description" name="description" rows="6" required minlength="10" maxlength="5000" placeholder="Përshkrimi">{{ form.description }}</textarea>
-      {% if let Some(error) = self.error("description") %}<p class="field-error">{{ error }}</p>{% endif %}
-    </div>
-
-    {#- Photos: the ones the listing has (when editing), each with "Hiq", then a picker for more.
-        photos_controller.js shows what was picked and makes big phone photos smaller first. -#}
-    <div class="field" data-controller="photos" data-photos-max-value="{{ self.photos_left() }}">
-      {%- if !photos.is_empty() %}
-      <ul class="photo-list">
-        {%- for photo in photos %}
-        <li class="photo-item">
-          <img src="{{ photo.card_url }}" alt="" loading="lazy">
-          <label class="photo-remove"><input type="checkbox" name="remove_photo" value="{{ photo.id }}"> Hiq</label>
-        </li>
-        {%- endfor %}
-      </ul>
-      {%- endif %}
-      <ul class="photo-list" data-photos-target="previews" hidden></ul>
-      <label class="button secondary photo-picker">
-        <input type="file" name="photos" accept="image/*" multiple data-photos-target="input" data-action="change->photos#chosen">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2.5"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8.5 5l1.5-2h4l1.5 2"/></svg>
-        Shto foto
-      </label>
-      <p class="field-hint">Deri në {{ crate::media::MAX_PHOTOS }} foto; e para del në krye.</p>
-      <p class="field-hint" data-photos-target="status" role="status"></p>
-      {% if let Some(error) = self.error("photos") %}<p class="field-error">{{ error }}</p>{% endif %}
-    </div>
 
     <div class="form-row price-row">
       <div class="field">

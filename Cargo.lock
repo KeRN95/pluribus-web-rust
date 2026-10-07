@@ -1316,6 +1316,7 @@ dependencies = [
  "anyhow",
  "askama",
  "axum",
+ "base64 0.22.1",
  "dotenvy",
  "form_urlencoded",
  "http-body-util",

@@ -1,6 +1,7 @@
 //! Marketplace web application: pages rendered on the server with Askama, enhanced in the
 //! browser by Turbo and Stimulus.
 
+pub mod ai;
 pub mod db;
 pub mod format;
 pub mod media;
@@ -11,7 +12,7 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
-use crate::{db::SessionUser, format::Contact, media::Media};
+use crate::{ai::Ai, db::SessionUser, format::Contact, media::Media};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -20,6 +21,9 @@ pub struct AppState {
     pub media: Media,
     /// Who may approve what sellers type in ("Tjetër"), on /moderim.
     pub moderators: Moderators,
+    /// The AI that fills in the listing form from what a seller wrote (web/ai_fill.rs); None
+    /// without ANTHROPIC_API_KEY, and then the form has no "Plotëso pjesën tjetër me AI".
+    pub ai: Option<Ai>,
 }
 
 /// The people who may approve the makes, models and brands sellers type in when a list lacks
@@ -49,14 +53,23 @@ impl Moderators {
     }
 }
 
-/// The application's router. `main` serves it, with photos in the store .env names, and its
-/// moderators.
+/// The application's router. `main` serves it, with photos in the store .env names, its
+/// moderators, and the AI if .env has a key for it.
 pub fn app(db: PgPool) -> axum::Router {
-    app_with(db, Media::from_env(), Moderators::from_env())
+    let ai = Ai::from_env();
+    if ai.is_none() {
+        tracing::info!("ANTHROPIC_API_KEY isn't set: the listing form has no AI to fill it in");
+    }
+    app_with_ai(db, Media::from_env(), Moderators::from_env(), ai)
 }
 
 /// The router with photos kept in `media` and these moderators: the integration tests keep their
-/// photos in memory, and name their own moderator.
+/// photos in memory, and name their own moderator. No AI.
 pub fn app_with(db: PgPool, media: Media, moderators: Moderators) -> axum::Router {
-    web::router(AppState { db, media, moderators })
+    app_with_ai(db, media, moderators, None)
+}
+
+/// The same with an AI to fill in the listing form: the tests' stands in for Anthropic's API.
+pub fn app_with_ai(db: PgPool, media: Media, moderators: Moderators, ai: Option<Ai>) -> axum::Router {
+    web::router(AppState { db, media, moderators, ai })
 }

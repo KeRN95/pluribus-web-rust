@@ -1502,6 +1502,33 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .photo-picker { position: relative; gap: .4rem; justify-self: start; overflow: hidden; }
 .photo-picker input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .photo-picker:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* "Plotëso pjesën tjetër me AI", between what the seller writes and the rest of the form
+   (ai_fill_controller.js): the button, and under it what it does, then what it did, in a box
+   tinted the accent. The button's sparkles pulse while the AI reads. */
+.ai-fill {
+  display: grid;
+  justify-items: start;
+  gap: .5rem;
+  padding: .85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+.ai-fill .field-hint { margin: 0; }
+.ai-fill-button { gap: .45rem; }
+.ai-fill-button svg { flex: none; color: var(--accent); }
+.ai-fill-button[aria-busy="true"] { cursor: progress; }
+.ai-fill-button[aria-busy="true"] svg { animation: ai-pulse .8s ease-in-out infinite alternate; }
+@keyframes ai-pulse { from { opacity: .3; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .ai-fill-button[aria-busy="true"] svg { animation: none; }
+}
+/* What the AI filled in, until the seller changes it: the field tinted the accent. */
+.ai-filled :is(input:not([type="checkbox"]), textarea, .picker-button) {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-strong));
+  background-color: color-mix(in srgb, var(--accent) 7%, var(--input));
+}
+.ai-filled .checks .check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
 /* A category's own fields in the listing form: a car's make, model, year... */
 /* A category's own fields, in a card drawn like Claude's: the menus' hairline border on the
    surface, rounder corners, a shadow you barely see, and its name as a header inside it over a

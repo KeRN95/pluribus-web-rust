@@ -74,12 +74,12 @@ export default class extends Controller {
   }
 }
 
-// A smaller JPEG copy, turned the way the camera held it; the original when it is small already or
-// the browser can't draw it.
-async function shrink(file) {
+// A smaller JPEG copy, no longer than `side`, turned the way the camera held it; the original when
+// it is small already or the browser can't draw it. The AI gets smaller ones (ai_fill_controller.js).
+export async function shrink(file, side = MAX_SIDE) {
   try {
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
     if (scale === 1 && file.type === "image/jpeg" && file.size < 1_500_000) return file;
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(bitmap.width * scale);

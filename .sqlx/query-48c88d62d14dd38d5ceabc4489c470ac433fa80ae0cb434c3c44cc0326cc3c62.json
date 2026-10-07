@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT eca.category_id AS \"category_id!\", array_agg(a.code ORDER BY eca.sort_order, a.name) AS \"codes!\"\n           FROM effective_category_attributes eca\n           JOIN attributes a ON a.id = eca.attribute_id\n           WHERE a.data_type IN ('SELECT', 'MULTISELECT', 'NUMBER', 'BOOLEAN', 'TEXT')\n             AND NOT EXISTS (SELECT 1 FROM categories k JOIN attribute_options ko ON ko.id = k.replaces_option_id\n                             WHERE ko.attribute_id = a.id)\n           GROUP BY eca.category_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "category_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "codes!",
+        "type_info": "VarcharArray"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      null
+    ]
+  },
+  "hash": "48c88d62d14dd38d5ceabc4489c470ac433fa80ae0cb434c3c44cc0326cc3c62"
+}

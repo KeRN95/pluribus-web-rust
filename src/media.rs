@@ -108,6 +108,25 @@ pub struct NotAPhoto;
 /// Decodes a photo, turns it the way the camera held it, and writes the two sizes. Slow work: run
 /// it off the async threads (tokio::task::spawn_blocking).
 pub fn process(bytes: &[u8]) -> Result<Processed, NotAPhoto> {
+    let full = shrink(decode(bytes)?, FULL_SIDE);
+    let card = shrink(full.clone(), CARD_SIDE);
+    Ok(Processed {
+        width: full.width(),
+        height: full.height(),
+        full: jpeg(&full)?,
+        card: jpeg(&card)?,
+        sha256: Sha256::digest(bytes).into(),
+    })
+}
+
+/// A JPEG copy no longer than `side` on its longer side, turned the way the camera held it: what
+/// the AI looks at when it fills in the listing form (web/ai_fill.rs). Slow work too.
+pub fn small_copy(bytes: &[u8], side: u32) -> Result<Vec<u8>, NotAPhoto> {
+    jpeg(&shrink(decode(bytes)?, side))
+}
+
+/// The photo, decoded within sane limits and turned the way the camera held it.
+fn decode(bytes: &[u8]) -> Result<DynamicImage, NotAPhoto> {
     let mut reader = ImageReader::new(Cursor::new(bytes)).with_guessed_format().map_err(|_| NotAPhoto)?;
     let mut limits = Limits::default();
     limits.max_image_width = Some(12_000);
@@ -118,16 +137,7 @@ pub fn process(bytes: &[u8]) -> Result<Processed, NotAPhoto> {
     let orientation = decoder.orientation().unwrap_or(Orientation::NoTransforms);
     let mut image = DynamicImage::from_decoder(decoder).map_err(|_| NotAPhoto)?;
     image.apply_orientation(orientation);
-
-    let full = shrink(image, FULL_SIDE);
-    let card = shrink(full.clone(), CARD_SIDE);
-    Ok(Processed {
-        width: full.width(),
-        height: full.height(),
-        full: jpeg(&full)?,
-        card: jpeg(&card)?,
-        sha256: Sha256::digest(bytes).into(),
-    })
+    Ok(image)
 }
 
 /// No side longer than `side`; smaller photos stay as they are.

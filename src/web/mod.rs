@@ -1,6 +1,7 @@
 //! HTTP layer: routes, error handling and response helpers shared by the page handlers.
 
 mod account;
+mod ai_fill;
 mod browse;
 mod filters;
 mod listings;
@@ -54,6 +55,7 @@ pub fn router(state: AppState) -> Router {
         .route("/listing/{public_no}/ndrysho", get(post::edit_listing).post(post::update_listing).layer(with_photos()))
         .route("/media/{*key}", get(photos::serve))
         .route("/shto/fushat", get(properties::fields_for_category))
+        .route("/shto/ploteso", post(ai_fill::fill).layer(with_photos()))
         .route("/njoftimet-e-mia", get(post::my_listings))
         .route("/moderim", get(moderation::page))
         .route("/moderim/{id}/mirato", post(moderation::approve))

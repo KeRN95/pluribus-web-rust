@@ -39,20 +39,20 @@ const POSTS_PER_DAY: i64 = 5;
 /// Links in a listing; spam is mostly links.
 const MAX_LINKS: usize = 2;
 
-const PRICE_TYPES: [(&str, &str); 4] = [
+pub(super) const PRICE_TYPES: [(&str, &str); 4] = [
     ("FIXED", "Çmim fiks"),
     ("NEGOTIABLE", "I diskutueshëm"),
     ("FREE", "Falas"),
     ("ON_REQUEST", "Me marrëveshje"),
 ];
-const CONDITIONS: [&str; 4] = ["NEW", "LIKE_NEW", "USED", "FOR_PARTS"];
-const LISTING_TYPES: [&str; 6] = ["SELL", "BUY", "RENT", "WANTED_RENT", "SERVICE", "JOB"];
+pub(super) const CONDITIONS: [&str; 4] = ["NEW", "LIKE_NEW", "USED", "FOR_PARTS"];
+pub(super) const LISTING_TYPES: [&str; 6] = ["SELL", "BUY", "RENT", "WANTED_RENT", "SERVICE", "JOB"];
 
 /// The category whose listings can say their zone in the town (Blloku, Tiranë), and its
 /// subcategories': property.
 const ZONED: &str = "prona";
 
-fn zoned(categories: &Categories, category: &Category) -> bool {
+pub(super) fn zoned(categories: &Categories, category: &Category) -> bool {
     category.slug == ZONED || categories.ancestors(category).iter().any(|above| above.slug == ZONED)
 }
 
@@ -197,6 +197,8 @@ struct ListingFormPage {
     started: i64,
     /// When editing, the photos the listing has; each can be removed.
     photos: Vec<OwnPhoto>,
+    /// "Plotëso pjesën tjetër me AI": on a new listing's form, when the AI is set up.
+    ai_fill: bool,
 }
 
 impl ListingFormPage {
@@ -307,6 +309,7 @@ fn page(
         errors,
         started: now(),
         photos: Vec::new(),
+        ai_fill: false,
     }
 }
 
@@ -536,7 +539,9 @@ fn check<'a>(
 pub async fn new_listing(State(state): State<AppState>, headers: HeaderMap) -> Result<Response> {
     let user = current_user(&state, &headers).await?;
     let (categories, cities) = tokio::try_join!(db::categories(&state.db), db::cities(&state.db))?;
-    render(page(&Purpose::New, user.as_ref(), &categories, &cities, &[], ListingForm::default(), HashMap::new()))
+    let mut page = page(&Purpose::New, user.as_ref(), &categories, &cities, &[], ListingForm::default(), HashMap::new());
+    page.ai_fill = state.ai.is_some();
+    render(page)
 }
 
 /// The properties of the category the form names, if it is one listings go into.
@@ -603,7 +608,9 @@ pub async fn create_listing(
     }
     let processed = read_photos(&photos, &mut errors).await?;
     let (Some(checked), Some(processed)) = (checked, processed) else {
-        return form_again(page(&Purpose::New, user.as_ref(), &categories, &cities, &attributes, form, errors));
+        let mut again = page(&Purpose::New, user.as_ref(), &categories, &cities, &attributes, form, errors);
+        again.ai_fill = state.ai.is_some();
+        return form_again(again);
     };
 
     // All checked: the account of someone not signed in, made now if their contact has none.

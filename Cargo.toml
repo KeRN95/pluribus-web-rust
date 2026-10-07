@@ -6,6 +6,7 @@ rust-version = "1.85"
 
 [dependencies]
 anyhow = "1.0.104"
+base64 = "0.22"
 askama = "0.14.0"
 axum = { version = "0.8.9", features = ["multipart"] }
 dotenvy = "0.15.7"
