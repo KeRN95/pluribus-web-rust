@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ name }} | Marketplace{% endblock %}
+{% block title %}{{ name }} | Pluribus{% endblock %}
 
 {% block content %}
 {#- A seller's public profile: who they are and their active listings, newest first. -#}
@@ -8,7 +8,7 @@
   <span class="avatar large" aria-hidden="true">{{ initial }}</span>
   <div>
     <h1>{{ name }}</h1>
-    <p>{% if business %}Biznes · {% endif %}Në Marketplace që nga {{ since }} · {{ count }}</p>
+    <p>{% if business %}Biznes · {% endif %}Në Pluribus që nga {{ since }} · {{ count }}</p>
   </div>
 </header>
 {#- A search within this seller's listings only. -#}

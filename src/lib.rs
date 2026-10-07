@@ -1,4 +1,4 @@
-//! Marketplace web application: pages rendered on the server with Askama, enhanced in the
+//! The Pluribus web application: pages rendered on the server with Askama, enhanced in the
 //! browser by Turbo and Stimulus.
 
 pub mod ai;

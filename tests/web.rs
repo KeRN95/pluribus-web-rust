@@ -1702,6 +1702,23 @@ async fn electronics_subcategories_have_properties_of_their_own(pool: PgPool) {
     assert!(!get(pool.clone(), "/shto/fushat?category=televizore").await.body.contains("Fairphone"));
 }
 
+#[sqlx::test(fixtures("listings"))]
+async fn the_site_is_called_pluribus(pool: PgPool) {
+    // The logo is the welcome page's creature, still, and the name in lowercase, in a typeface of
+    // its own that comes with the page; the pages' titles and the footer say the name.
+    let home = html(pool.clone(), "/").await;
+    assert!(home.contains(r#"<a class="logo" href="/"><svg class="logo-mark""#));
+    assert!(home.contains(r#"</svg><span class="logo-word">pluribus</span></a>"#));
+    assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
+    assert!(home.contains(
+        r#"<link rel="preload" href="/static/vendor/fonts/merriweather-5.3.0-latin-700.woff2" as="font" type="font/woff2" crossorigin>"#
+    ));
+    let font = get(pool.clone(), "/static/vendor/fonts/merriweather-5.3.0-latin-700.woff2").await;
+    assert_eq!(font.status, StatusCode::OK);
+    let listing = html(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await;
+    assert!(listing.contains(" | Pluribus</title>") && !listing.contains("Marketplace"), "{listing}");
+}
+
 #[sqlx::test]
 async fn unknown_pages_are_404(pool: PgPool) {
     for uri in ["/listing/999999-nothing", "/c/does-not-exist", "/nowhere"] {
@@ -3204,7 +3221,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         r#"<aside class="listing-contact" aria-label="Shitësi">"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="seller-name">Ana</span>"#,
-        r#"<span class="seller-summary">Në Marketplace që nga "#,
+        r#"<span class="seller-summary">Në Pluribus që nga "#,
         r#"<div class="actions">"#,
         r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
         "</aside>",
@@ -3216,7 +3233,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // Her profile says so too.
     let profile = get(pool.clone(), ana).await.body;
     assert!(profile.contains("<h1>Ana</h1>"));
-    assert!(profile.contains("Në Marketplace që nga ") && profile.contains(" · 5 njoftime</p>"));
+    assert!(profile.contains("Në Pluribus që nga ") && profile.contains(" · 5 njoftime</p>"));
     assert_eq!(card_numbers(&profile).len(), 5);
     assert!(profile.contains("Volkswagen Golf 7, 2016, naftë"));
     assert!(!profile.contains("Mercedes-Benz C 220"), "Auto Durrësi's, not Ana's");

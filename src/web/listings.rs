@@ -193,10 +193,10 @@ impl ListingDetail {
         self.seller_url.starts_with("/biznes/")
     }
 
-    /// "Në Marketplace që nga tetor 2026 · 12 njoftime".
+    /// "Në Pluribus që nga tetor 2026 · 12 njoftime".
     pub fn seller_summary(&self) -> String {
         format!(
-            "Në Marketplace që nga {} · {}",
+            "Në Pluribus që nga {} · {}",
             format::month_year(self.seller_since),
             format::listing_count(self.seller_listings, i64::MAX)
         )

@@ -62,7 +62,7 @@ const TOOL: &str = "fill_listing_form";
 
 /// How the AI is to fill the form in. The lists it chooses from follow (instructions).
 const RULES: &str = "\
-You fill in the posting form of Marketplace, an Albanian classifieds site, from what a seller wrote \
+You fill in the posting form of Pluribus, an Albanian classifieds site, from what a seller wrote \
 (a title and a description, in Albanian) and the photos they added. Answer by calling \
 fill_listing_form once.
 

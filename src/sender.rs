@@ -106,10 +106,10 @@ impl Email {
         Message::builder()
             .from(self.from.clone())
             .to(to.parse().map_err(|error| format!("address: {error}"))?)
-            .subject(format!("{code} është kodi yt për Marketplace"))
+            .subject(format!("{code} është kodi yt për Pluribus"))
             .header(ContentType::TEXT_PLAIN)
             .body(format!(
-                "Kodi yt për të hyrë në Marketplace:\n\n    {code}\n\nVlen për 10 minuta. \
+                "Kodi yt për të hyrë në Pluribus:\n\n    {code}\n\nVlen për 10 minuta. \
                  Nëse nuk e kërkove ti, mund ta injorosh këtë email.\n"
             ))
             .map_err(|error| format!("message: {error}"))
@@ -240,10 +240,10 @@ mod tests {
 
     #[test]
     fn emails_carry_the_code() {
-        let email = Email::new("smtp.example.com", 587, "user", "password", "Marketplace <kodi@example.com>").unwrap();
+        let email = Email::new("smtp.example.com", 587, "user", "password", "Pluribus <kodi@example.com>").unwrap();
         let message = String::from_utf8(email.message("ana@example.com", "482910").unwrap().formatted()).unwrap();
         assert!(message.contains("To: ana@example.com"));
-        assert!(message.contains("From: Marketplace <kodi@example.com>"));
+        assert!(message.contains("From: Pluribus <kodi@example.com>"));
         assert!(message.contains("482910"));
     }
 
