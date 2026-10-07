@@ -104,13 +104,27 @@ const BODY_TYPES: [(&str, &str); 7] = [
     ("VAN", r#"<path d="M8.5 18H5a1 1 0 0 1-1-1V6a2.5 2.5 0 0 1 2.5-2.5h21.3a2 2 0 0 1 1.5.68L38.5 10l4.3 1.1A1.5 1.5 0 0 1 44 12.6V17a1 1 0 0 1-1 1h-3.5M15.5 18h17M4 10h34.5M23 3.5V10"/><circle cx="12" cy="18" r="3"/><circle cx="36" cy="18" r="3"/>"#),
 ];
 
-/// The icon of one of a property's options, where it has one: a car's body type, its side (the
-/// inside of a 48-by-24 SVG drawn in strokes, BODY_TYPES).
+/// A car's colours, each a dot of it in the same box, ringed in the text's colour so that a white
+/// one shows on a white page; another colour, the four quarters of a colour wheel.
+const COLOURS: [(&str, &str); 7] = [
+    ("BLACK", r##"<circle cx="24" cy="12" r="8.5" fill="#1f1e1d"/>"##),
+    ("WHITE", r##"<circle cx="24" cy="12" r="8.5" fill="#ffffff"/>"##),
+    ("GREY", r##"<circle cx="24" cy="12" r="8.5" fill="#8b8a86"/>"##),
+    ("SILVER", r##"<circle cx="24" cy="12" r="8.5" fill="#c9cacc"/>"##),
+    ("BLUE", r##"<circle cx="24" cy="12" r="8.5" fill="#2f5eb5"/>"##),
+    ("RED", r##"<circle cx="24" cy="12" r="8.5" fill="#c8312b"/>"##),
+    ("OTHER", r##"<g stroke="none"><path d="M24 12V3.5a8.5 8.5 0 0 1 8.5 8.5Z" fill="#e0a92e"/><path d="M24 12h8.5a8.5 8.5 0 0 1-8.5 8.5Z" fill="#3a9b5c"/><path d="M24 12v8.5a8.5 8.5 0 0 1-8.5-8.5Z" fill="#2f5eb5"/><path d="M24 12h-8.5A8.5 8.5 0 0 1 24 3.5Z" fill="#c8312b"/></g><circle cx="24" cy="12" r="8.5"/>"##),
+];
+
+/// The icon of one of a property's options, where it has one: a car's body type, its side
+/// (BODY_TYPES); a colour, a dot of it (COLOURS). The inside of a 48-by-24 SVG drawn in strokes.
 pub fn option_icon(code: &str, option: &str) -> Option<&'static str> {
-    match code {
-        "vehicle_body_type" => BODY_TYPES.iter().find(|(of, _)| *of == option).map(|(_, icon)| *icon),
-        _ => None,
-    }
+    let icons: &[(&str, &str)] = match code {
+        "vehicle_body_type" => &BODY_TYPES,
+        "vehicle_color" => &COLOURS,
+        _ => return None,
+    };
+    icons.iter().find(|(of, _)| *of == option).map(|(_, icon)| *icon)
 }
 
 /// Whether the fields are a car's, with its main ones under icons.

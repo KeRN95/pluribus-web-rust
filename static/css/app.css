@@ -813,6 +813,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .filter-form { display: grid; gap: 1.1rem; padding-top: .75rem; }
 .filter-group { display: grid; gap: .35rem; min-width: 0; margin: 0; padding: 0; border: 0; }
 .filter-label { padding: 0; font-size: .9rem; font-weight: var(--semibold); }
+/* A filter's name starts where the text in its field does, past the field's border and padding,
+   rather than at its rounded edge, which makes the name look set off to the side. */
+.filter-form .filter-label { padding-left: calc(.7rem + 1px); }
 .check { display: flex; align-items: center; gap: .55rem; padding: .1rem 0; cursor: pointer; }
 .check input { flex: none; width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--button); }
 /* The filters' options, a box each rather than a tick: an outline and the name, no colour;
@@ -841,14 +844,15 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 @media (hover: hover) {
   .filter-form .check:hover { border-color: var(--text); }
 }
-/* Boxes with icons, a car's body types (Karroceria), on a line of their own: the car's side over
-   its name, the boxes as wide as each other: four to a line on a phone, however wide, and from a
-   tablet up as many as fit, all seven. */
+/* Boxes with icons, a car's body types (Karroceria) and its colours (Ngjyra), on a line of their
+   own: the car's side, or a dot of the colour, over its name, the boxes as wide as each other: four
+   to a line on a phone, however wide, and from a tablet up as many as fit, all seven. */
 .filter-form .filter-icons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .filter-icons > .filter-label { grid-column: 1 / -1; }
 .filter-form .filter-icons .check {
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end; /* the names on one line, a box without an icon too */
   justify-self: stretch;
   gap: .2rem;
   padding: .5rem .2rem .4rem;
