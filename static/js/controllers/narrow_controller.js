@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 
 // A select that depends on another, a car's model on its make, offers only the options under the
 // one chosen, as soon as it is chosen, and drops a choice that no longer fits: in the posting form
-// and in the filters, where on phones nothing applies until the sheet's button. In the posting
+// and in the filters, before the change applies (filters_controller.js waits for it). In the posting
 // form, "Tjetër" opens a box to type a make or model the list lacks. Without JavaScript every
 // option simply shows (in the filters, those the server left visible).
 export default class extends Controller {

@@ -2,6 +2,11 @@ import { visit } from "@hotwired/turbo";
 
 // Not a controller: what the filters' and the map's controllers share with application.js.
 
+// The address a refresh is fetching, until the page it brings has loaded: a field left and then
+// its card closed ask for it twice.
+let refreshing = null;
+document.addEventListener("turbo:load", () => { refreshing = null; });
+
 // What a GET form's address carries: its fields filled in only, so filter addresses stay short and
 // shareable (/c/makina?vehicle_fuel=DIESEL rather than a dozen empty parameters). A currency means
 // nothing without a price, so it goes too. The server ignores empty values anyway, which keeps the
@@ -19,11 +24,12 @@ export function filledIn(params) {
 // morphs (turbo:before-morph-element and turbo:before-morph-attribute). It needs no cross-fade
 // (the view transitions base.html asks for), which would also hold the page still for a moment,
 // taps and all, so the setting goes until the new page's head brings it back. An address the page
-// already has needs nothing.
+// already has, or is already fetching (refreshing), needs nothing.
 export function refreshFor(form) {
   const url = new URL(form.action);
   url.search = filledIn(new FormData(form)).toString();
-  if (sameAddress(url, new URL(location.href))) return;
+  if (sameAddress(url, new URL(refreshing ?? location.href))) return;
+  refreshing = url.href;
   document.head.querySelector('meta[name="view-transition"]')?.remove();
   visit(url.href, { action: "replace", shouldCacheSnapshot: false, refresh: { method: "morph", scroll: "preserve" } });
 }

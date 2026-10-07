@@ -1,8 +1,8 @@
 {#- The filter form. Its fields come from the category's filterable properties (see filters.rs).
-    They apply by themselves, a second after a change (filters_controller.js). -#}
+    They apply as soon as one changes, and as the card closes (filters_controller.js). -#}
 <form id="filter-form" class="filter-form" action="{{ filters.action() }}" method="get"
       data-controller="narrow" data-filters-target="form"
-      data-action="input->filters#changed change->filters#changed keydown.enter->filters#enter">
+      data-action="change->filters#changed keydown.enter->filters#enter">
   {%- for (name, value) in filters.kept_fields() %}
   <input type="hidden" name="{{ name }}" value="{{ value }}">
   {%- endfor %}

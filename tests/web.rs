@@ -440,10 +440,10 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         assert!(cars.contains(&format!("section:open@document->{listener}")), "{listener}");
     }
     assert!(cars.contains("keydown.esc@document->filters#foldAll"));
-    // The filters and the map apply by themselves a second after a change, the page refreshing in
-    // place, which keeps what is open as it is and each listing's card; only without JavaScript
-    // do the filters have a button.
-    assert!(cars.contains(r#"data-action="input->filters#changed change->filters#changed keydown.enter->filters#enter">"#));
+    // The filters and the map apply as soon as something changes, the filters also as they close,
+    // the page refreshing in place, which keeps what is open as it is and each listing's card;
+    // only without JavaScript do the filters have a button.
+    assert!(cars.contains(r#"data-action="change->filters#changed keydown.enter->filters#enter">"#));
     assert!(cars.contains(r#"<noscript><div class="filter-actions">"#));
     for keep in [
         "turbo:before-morph-element->filters#keep",
@@ -539,8 +539,8 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(!cars.contains(r#"data-url="/listing/1001-volkswagen-golf-7-2016-nafte""#));
     let dots = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&harta=1").await;
     assert!(dots.contains(r#"data-url="/listing/1001-volkswagen-golf-7-2016-nafte""#));
-    // Its form sets the point, keeping the filters, by itself a second after the map moves: the
-    // card has no buttons, and the point's chip drops it.
+    // Its form sets the point, keeping the filters, by itself once the map stops: the card has no
+    // buttons, and the point's chip drops it.
     assert!(cars.contains(r#"<form class="map-form" action="/c/makina" method="get" data-map-target="form">"#));
     assert!(cars.contains(r#"<input type="hidden" name="vehicle_fuel" value="DIESEL">"#));
     assert!(!cars.contains("map#confirm") && !cars.contains("map-everywhere"));
