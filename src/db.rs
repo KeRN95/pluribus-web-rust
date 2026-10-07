@@ -962,6 +962,15 @@ pub async fn most_viewed(db: &PgPool, days: i32, limit: i64) -> sqlx::Result<Vec
     query.build_query_as().fetch_all(db).await
 }
 
+/// How many times the listing's page was seen, every day's views added up (views.rs); those
+/// gathered but not yet written aside.
+pub async fn listing_views(db: &PgPool, listing_id: Uuid) -> sqlx::Result<i64> {
+    sqlx::query_scalar("SELECT coalesce(sum(detail_views), 0)::bigint FROM listing_daily_stats WHERE listing_id = $1")
+        .bind(listing_id)
+        .fetch_one(db)
+        .await
+}
+
 /// Adds views to today's statistics: the listings' numbers, and how many times each was seen
 /// (views.rs, which gathers them). Numbers no listing has are left out.
 pub async fn add_views(db: &PgPool, numbers: &[i64], views: &[i64]) -> sqlx::Result<()> {

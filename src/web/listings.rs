@@ -243,6 +243,8 @@ struct ListingShow {
     reveal: Option<Reveal>,
     /// The visitor posted this listing: the page offers to edit it.
     own: bool,
+    /// How many times its page was seen, "1 234", under the heart; None before any.
+    views: Option<String>,
     /// Posted just now without signing in: the page says it is up, and how to change it later.
     posted: bool,
     /// The seller's other listings, over the related ones (db::seller_listings); None when this
@@ -269,14 +271,16 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         return Ok(Redirect::permanent(&format!("/listing/{canonical}")).into_response());
     }
     // One more of the seller's listings than the page shows says whether they have more.
-    let (attributes, photos, contact, categories, mut from_seller, related) = tokio::try_join!(
+    let (attributes, photos, contact, categories, mut from_seller, related, views) = tokio::try_join!(
         db::listing_attributes(&state.db, listing.id, listing.category_id),
         db::listing_photos(&state.db, listing.id),
         db::visible_contact(&state.db, listing.id),
         db::categories(&state.db),
         db::seller_listings(&state.db, listing.id, db::FROM_SELLER + 1),
         db::related_listings(&state.db, listing.id, db::RELATED),
+        db::listing_views(&state.db, listing.id),
     )?;
+    let views = (views > 0).then(|| format::number(Decimal::from(views)));
     let crumb = |name: &str, slug: &str| Crumb { name: name.to_string(), url: format!("/c/{slug}") };
     let trail = match categories.by_slug(&listing.category_slug) {
         Some(category) => categories
@@ -319,7 +323,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let seller_page = (!from_seller.is_empty()).then(|| ListingPage::related(from_seller));
     let page = ListingPage::related(related);
     let mut response =
-        render(ListingShow { listing, trail, details, photos, reveal, own, posted, seller_page, seller_more, page })?;
+        render(ListingShow { listing, trail, details, photos, reveal, own, posted, seller_page, seller_more, page, views })?;
     if posted {
         response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));
     }

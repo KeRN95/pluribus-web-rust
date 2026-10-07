@@ -458,16 +458,22 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .heart-button:hover::before { background: rgb(38 38 36 / 65%); }
 }
 /* On "Më të klikuarat", how many times a listing's page was seen this week: an eye and the
-   number, white on a soft dark pill like the heart's circle, in the photo's top left corner. */
+   number, white on a soft dark pill like the heart's circle, in the photo's top left corner. On
+   the listing's page, how many times in all, at the heart's left, level with its circle; the line
+   about the listing in the other corner leaves room for both. */
 .card-views {
-  display: flex;
   grid-area: 1 / 1;
   align-self: start;
   justify-self: start;
   z-index: 6;
+  margin: .45rem;
+}
+.listing-views { position: absolute; top: calc(1.6rem - .7rem); right: 2.95rem; z-index: 2; height: 1.4rem; margin: 0; }
+.card-views,
+.listing-views {
+  display: flex;
   align-items: center;
   gap: .3rem;
-  margin: .45rem;
   padding: .2rem .55rem .2rem .45rem;
   border-radius: 999px;
   background: rgb(38 38 36 / 45%);
@@ -480,11 +486,13 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   line-height: 1.2;
   pointer-events: none;
 }
-.card-views svg { flex: none; }
+.card-views svg,
+.listing-views svg { flex: none; }
 .listing-media .heart { position: absolute; top: .3rem; right: .3rem; z-index: 2; }
 .listing-media .heart-button { --circle: 2rem; --reach: .3rem; }
 .listing-media .heart-button svg { width: 17px; height: 17px; }
 .listing-media:has(.heart) .listing-meta { max-width: calc(100% - 4.5rem); }
+.listing-media:has(.listing-views) .listing-meta { max-width: calc(100% - 10rem); }
 @media (prefers-reduced-motion: reduce) {
   .heart-button,
   .heart-button::before { transition: none; }

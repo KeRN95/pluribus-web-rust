@@ -3555,4 +3555,11 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     assert_eq!(card_numbers(row), vec![1002, 1001]);
     assert!(row.contains(r#"title="3 shikime këtë javë""#) && row.contains(r#"title="2 shikime këtë javë""#), "{row}");
     assert!(!home[home.find(r#"id="latest-heading""#).unwrap()..].contains("card-views"));
+
+    // The listing's own page says how many times it was seen in all, under the heart; one nobody
+    // saw says nothing.
+    let page = get(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await.body;
+    assert!(page.contains(r#"<p class="listing-views" title="3 shikime">"#), "{page}");
+    let unseen = get(pool.clone(), "/listing/1003-apartament-2-1-me-qira-ne-tirane").await.body;
+    assert!(unseen.contains("listing-meta") && !unseen.contains("listing-views"));
 }
