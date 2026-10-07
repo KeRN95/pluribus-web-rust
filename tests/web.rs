@@ -434,8 +434,11 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     for listener in ["filters#foldFor", "map#foldFor", "fold#foldFor"] {
         assert!(cars.contains(&format!("section:open@document->{listener}")), "{listener}");
     }
-    // The order's header is a button like the others', its list folded under it.
+    // The order's header is a button like the others', its list folded under it, with only its
+    // icon to see: its name and the order now are for screen readers, and its tooltip.
     assert!(cars.contains(r#"<button type="button" class="map-card-header sort-open" aria-controls="sort-options" aria-expanded="false""#));
+    assert!(cars.contains(r#"title="Rendit: Më të rejat""#));
+    assert!(cars.contains(r#"<span class="map-card-title visually-hidden">"#));
     assert!(cars.contains(r#"<fieldset class="sort-options" id="sort-options" data-fold-target="panel">"#));
     assert!(!cars.contains(r#"<details class="sort-card""#));
 }

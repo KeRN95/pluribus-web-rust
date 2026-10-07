@@ -930,18 +930,18 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .filter-actions { display: flex; align-items: center; gap: .75rem; }
 .filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
 
-/* Filtrat, Harta and Rendit side by side, each a card folded to its header, Harta and Rendit as
-   wide as what they say and Filtrat the rest (at least 7.5rem; short of room, the other two give
-   way, cutting what they say short), drawn like Claude's as the listing form's own fields are: the
-   menus' hairline on the surface, rounder corners and a shadow you barely see. The one opened, only one at a time (section:open), its header on the
-   accent's tint, unfolds under the three, as wide as them all, in a card of the same kind, fading
-   in as the menus do. The cards are no boxes of their own (display: contents): their headers and
-   what they open are the row's. "Filtrat" says which filters are on and opens the form, whose
-   options apply together, with its button; the header names the section, so the panel's own
-   heading is there for screen readers only. */
+/* Filtrat, Harta and Rendit side by side, each a card folded to its header: Rendit a button with
+   only its icon, about square, and Filtrat and Harta sharing the rest. Drawn like Claude's, as the
+   listing form's own fields are: the menus' hairline on the surface, rounder corners and a shadow
+   you barely see. The one opened, only one at a time (section:open), its header on the accent's
+   tint, unfolds under the three, as wide as them all, in a card of the same kind, fading in as
+   the menus do. The cards are no boxes of their own (display: contents): their headers and what
+   they open are the row's. "Filtrat" says which filters are on and opens the form, whose options
+   apply together, with its button; the header names the section, so the panel's own heading is
+   there for screen readers only. */
 .browse-tools {
   display: grid;
-  grid-template-columns: minmax(7.5rem, 1fr) minmax(0, max-content) minmax(0, max-content);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: .5rem;
   margin: 0 0 1rem;
 }
@@ -958,6 +958,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
 }
 .browse-tools .map-card-header { grid-row: 1; align-self: stretch; min-width: 0; }
+.browse-tools .sort-open { justify-content: center; }
 .browse-tools .map-card-header[aria-expanded="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
 .filters,
 .map-card-body,
@@ -972,15 +973,14 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   .map-card-body,
   .sort-options { animation: none; }
 }
-/* On a phone, three to a line, the headers are tighter and leave their chevrons out: the open
-   one's tint says which it is. On the narrowest, Filtrat gives a little too, and the icons are
-   smaller. */
+/* On a phone, three to a line, the headers are a little tighter and leave their chevrons out: the
+   open one's tint says which it is. On the narrowest, tighter still, with smaller icons. */
 @media (max-width: 719px) {
-  .browse-tools .map-card-header { gap: .5rem; padding: .55rem .6rem; }
+  .browse-tools .map-card-header { gap: .6rem; padding: .6rem .75rem; }
   .browse-tools .map-card-chevron { display: none; }
 }
 @media (max-width: 360px) {
-  .browse-tools { grid-template-columns: minmax(6.5rem, 1fr) minmax(0, max-content) minmax(0, max-content); }
+  .browse-tools .map-card-header { gap: .5rem; padding-inline: .6rem; }
   .browse-tools .map-card-icon { width: 1.75rem; height: 1.75rem; }
 }
 /* The form in two columns: a field takes a line of its own, unless it is a small one (filter-half:
