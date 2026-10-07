@@ -973,14 +973,10 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("</svg>Naftë</dd>"));
     assert!(response.body.contains("</svg>Hatchback</dd>"));
     assert!(response.body.contains("</svg>ABS</dd>") && response.body.contains("</svg>Kondicioner</dd>"));
-    // Its category's path, pills with a › between them: Automjete, then Makina.
-    let trail = positions(&response.body, &[
-        r#"<a class="chip" href="/c/automjete">Automjete</a>"#,
-        r#"<svg class="trail-sep""#,
-        r#"<a class="chip" href="/c/makina">Makina</a>"#,
-    ]);
-    assert!(trail.is_sorted(), "{trail:?}");
-    assert_eq!(response.body.matches(r#"<svg class="trail-sep""#).count(), 1);
+    // Its category's path, as a category page's heading shows it: Automjete › Makina.
+    assert!(response.body.contains(
+        r#"<nav class="breadcrumbs listing-trail" aria-label="Kategoria e njoftimit"><a href="/c/automjete">Automjete</a><span aria-hidden="true">›</span><a href="/c/makina">Makina</a></nav>"#
+    ));
     let html = response.body.replace("&#38;", "&");
     assert!(html.contains("photo-1591230740238-e9a71182b67c?auto=format&fit=crop&w=1200"));
 }
@@ -2034,13 +2030,11 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
 
     // The listing says it, under the same names, under its category's path, all three levels.
     let page = get(pool.clone(), &url).await.body;
-    let trail = positions(&page, &[
-        r#"<a class="chip" href="/c/automjete">Automjete</a>"#,
-        r#"<a class="chip" href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#,
-        r#"<a class="chip" href="/c/gps-dhe-navigatore">GPS dhe navigatorë</a>"#,
-    ]);
-    assert!(trail.is_sorted(), "{trail:?}");
-    assert_eq!(page.matches(r#"<svg class="trail-sep""#).count(), 2);
+    assert!(page.contains(concat!(
+        r#"<a href="/c/automjete">Automjete</a><span aria-hidden="true">›</span>"#,
+        r#"<a href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a><span aria-hidden="true">›</span>"#,
+        r#"<a href="/c/gps-dhe-navigatore">GPS dhe navigatorë</a></nav>"#,
+    )));
     for (label, value) in [("Marka e automjetit", "Volkswagen"), ("Modeli i automjetit", "Golf"), ("Nga viti", "2012"), ("Deri në vitin", "2019")] {
         assert!(page.contains(&format!(">{label}</dt>")), "{label}");
         assert!(page.contains(&format!(">{value}</dd>")), "{value}");
@@ -2885,7 +2879,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // name, since when and how many listings, leading to her profile; then the buttons, the
     // share one a link in a circle; then the details.
     let order = positions(&page, &[
-        r#"<nav class="listing-trail""#,
+        r#"<nav class="breadcrumbs listing-trail""#,
         r#"<div class="gallery">"#,
         r#"<p class="listing-meta">"#,
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",

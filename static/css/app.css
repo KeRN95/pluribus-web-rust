@@ -1853,14 +1853,11 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   .gallery-next { right: .7rem; }
   .gallery-arrow:disabled { opacity: 0; pointer-events: none; }
 }
-/* Above the photo, the category's path as pills with a small › between them, and the status after
-   them. A › goes with the pill after it, so a wrapped row starts with one rather than a row ending
-   in one. */
+/* Above the photo, the category's path as a category page's heading has it (.breadcrumbs), the
+   listing's own category last in the heading's colour and weight; the status after it. */
 .listing-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
 .listing-tags .badge { margin-left: 0; }
-.listing-trail { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .3rem; }
-.trail-step { display: inline-flex; align-items: center; gap: .3rem; }
-.trail-sep { flex: none; color: var(--muted); }
+.listing-trail a:last-child { color: var(--text); font-weight: var(--medium); }
 /* The price is the headline, the title under its size. */
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: var(--text-2xl); }
 .listing-price { margin: 0; font-size: var(--text-3xl); line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
