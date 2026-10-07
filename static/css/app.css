@@ -1978,7 +1978,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   /* Across the page a photo's frame is wider than the photo, and no taller than most screens
      leave room for: the photo whole in the middle, its blurred copy filling the sides. */
   .listing-media .gallery-photo,
-  .listing-media .listing-photo { aspect-ratio: auto; height: min(60vh, 32rem); }
+  .listing-media .listing-photo { aspect-ratio: auto; height: min(70vh, 38rem); }
   /* The card's top level with the title's, under the photo. */
   .listing > .listing-contact {
     grid-area: side;
@@ -2001,7 +2001,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .listing-photo {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 6 / 5;
   border-radius: var(--radius);
 }
 
@@ -2020,13 +2020,14 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   isolation: isolate;
 }
 .listing-photos::-webkit-scrollbar { display: none; }
-/* Each photo whole, never cut, in a 4:3 frame. Where it doesn't fill it, at a tall photo's sides
-   or above and below a wide one, the photo shows again behind it, blurred: its card-sized copy,
-   larger than the frame, so that the blur's faded edges fall outside. */
+/* Each photo whole, never cut, in a 6:5 frame, a little taller than most photos. Where it doesn't
+   fill it, at a tall photo's sides or above and below a wide one, the photo shows again behind
+   it, blurred: its card-sized copy, larger than the frame, so that the blur's faded edges fall
+   outside. */
 .gallery-photo {
   position: relative;
   flex: 0 0 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 6 / 5;
   overflow: hidden;
   background: var(--surface-muted);
   scroll-snap-align: start;
