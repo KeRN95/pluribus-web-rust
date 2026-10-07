@@ -643,16 +643,16 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .thinking { flex: none; color: var(--button); }
 .amoeba { fill: currentColor; }
 /* Behind the search and the categories, the creature as tall as the section, its middle a fifth
-   of the way across (30% left of the middle), faint enough to be there without being in the way,
-   and taking no taps. What goes past the section's side is cut off; on a phone the section runs to
-   the screen's edges for it, so it is cut off there and the page doesn't scroll sideways. */
+   of the way across (30% left of the middle), so faint (6%) that it is only just there, and taking
+   no taps. What goes past the section's side is cut off; on a phone the section runs to the
+   screen's edges for it, so it is cut off there and the page doesn't scroll sideways. */
 .welcome-backdrop {
   position: absolute;
   inset: 0;
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-  opacity: .12;
+  opacity: .06;
 }
 .welcome-backdrop .thinking {
   position: absolute;
