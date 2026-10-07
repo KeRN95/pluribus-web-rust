@@ -8,12 +8,10 @@ import { Controller } from "@hotwired/stimulus";
 // under a finger or still moving, they wait instead, so that nothing moves under the visitor: a
 // fade over the row's start says how many have come, and a tap on it goes back to the start,
 // where they come in. The stream's address moves on to the newest card in the row, for when Turbo
-// shows the page again from its cache. A mouse drags the row too, as a finger slides it; its wheel
-// scrolls the page, as anywhere else, and a trackpad's sideways swipe slides the row.
+// shows the page again from its cache. A mouse drags the row too, as a finger slides it
+// (drag_row_controller.js); its wheel scrolls the page, and a trackpad's sideways swipe slides it.
 const KEEP = 30;
 const PACE = 500;
-// How far a pressed mouse moves before it drags the row, rather than clicking a card.
-const DRAG_FROM = 5;
 // How long the row is still before cards come in again, in milliseconds.
 const STILL = 200;
 
@@ -28,8 +26,6 @@ export default class extends Controller {
   // A finger or the mouse is down on the row; the row is moving.
   touching = false;
   moving = false;
-  // The mouse while it is pressed on the row.
-  hold = null;
 
   disconnect() {
     for (const card of this.queue) card.done();
@@ -55,7 +51,7 @@ export default class extends Controller {
 
   // Cards come in only while the row is at its start and still.
   get free() {
-    return this.stripTarget.scrollLeft < 8 && !this.touching && !this.moving && !this.hold;
+    return this.stripTarget.scrollLeft < 8 && !this.touching && !this.moving;
   }
 
   // The cards that wait come in one by one, PACE apart, for as long as the row is free.
@@ -125,64 +121,16 @@ export default class extends Controller {
     }, STILL);
   }
 
-  // A finger or the mouse down on the row: cards wait until it is off again. A mouse pressed on the
-  // row drags it along once it has moved DRAG_FROM; let go, the row carries on a little the way it
-  // was going, and the click that ends the drag opens no card.
-  grab(event) {
+  // A finger or the mouse down on the row: cards wait until it is off again. The mouse drags the
+  // row as a finger slides it (drag_row_controller.js, on the same section).
+  grab() {
     this.touching = true;
-    if (event.pointerType !== "mouse" || event.button !== 0) return;
-    this.hold = { id: event.pointerId, x: event.clientX, scroll: this.stripTarget.scrollLeft, dragging: false, moves: [] };
-  }
-
-  drag(event) {
-    const hold = this.hold;
-    if (!hold || event.pointerId !== hold.id) return;
-    const moved = event.clientX - hold.x;
-    if (!hold.dragging) {
-      if (Math.abs(moved) < DRAG_FROM) return;
-      hold.dragging = true;
-      this.stripTarget.setPointerCapture(hold.id);
-      this.stripTarget.classList.add("is-dragging");
-    }
-    this.stripTarget.scrollLeft = hold.scroll - moved;
-    hold.moves.push([event.timeStamp, event.clientX]);
-    if (hold.moves.length > 5) hold.moves.shift();
   }
 
   // pointerup and pointercancel, anywhere on the page.
-  drop(event) {
+  drop() {
     this.touching = false;
-    const hold = this.hold;
-    if (hold && event.pointerId === hold.id) {
-      this.hold = null;
-      if (hold.dragging) this.fling(hold, event);
-    }
     this.next();
-  }
-
-  fling(hold, event) {
-    this.stripTarget.classList.remove("is-dragging");
-    this.dragged = true;
-    setTimeout(() => { this.dragged = false; });
-    // How fast it was going when let go, in pixels a millisecond, if it hadn't stopped first.
-    const first = hold.moves[0];
-    const last = hold.moves.at(-1);
-    const going = first && last[0] > first[0] && event.timeStamp - last[0] < 100;
-    const speed = going ? (last[1] - first[1]) / (last[0] - first[0]) : 0;
-    if (Math.abs(speed) > 0.3) this.stripTarget.scrollBy({ left: -speed * 250, behavior: this.smooth });
-  }
-
-  // The click that ends a drag, which would open the card it ended on.
-  swallow(event) {
-    if (!this.dragged) return;
-    event.preventDefault();
-    event.stopPropagation();
-    this.dragged = false;
-  }
-
-  // The browser's own dragging of a photo or a link, which would take the mouse from the row.
-  cancel(event) {
-    event.preventDefault();
   }
 
   get smooth() {

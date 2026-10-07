@@ -54,13 +54,13 @@
     row grows to the newest thirty (newest_controller.js). While the row is slid along, the new ones wait, and a fade over its
     start says how many; a tap on it goes back to the start, where they come in. The row is hidden
     while there are none (app.css), and shows with the first. -#}
-<section class="newest" data-controller="newest"
+<section class="newest" data-controller="newest drag-row"
          data-action="turbo:before-stream-render@document->newest#arrive turbo:before-cache@document->newest#settle"
          aria-labelledby="newest-heading">
   <h2 id="newest-heading"><span class="live-dot" aria-hidden="true"></span>Sapo u shtuan</h2>
   <div class="newest-frame">
-    <div class="newest-strip" id="newest-strip" data-newest-target="strip"
-         data-action="scroll->newest#scrolled pointerdown->newest#grab pointermove->newest#drag pointerup@window->newest#drop pointercancel@window->newest#drop dragstart->newest#cancel click->newest#swallow:capture">
+    <div class="newest-strip" id="newest-strip" data-newest-target="strip" data-drag-row-target="row"
+         data-action="scroll->newest#scrolled pointerdown->newest#grab pointerup@window->newest#drop pointercancel@window->newest#drop">
       {%- for card in page.cards.iter().take(*strip) %}
       {%- let eager = loop.index <= 2 %}
       {% include "newest_card.html" %}
