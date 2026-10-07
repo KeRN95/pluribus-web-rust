@@ -1220,7 +1220,7 @@ async fn filter_form_offers_the_category_properties(pool: PgPool) {
 
     // Kinds of electronics are subcategories now, not a filter.
     let electronics = get(pool.clone(), "/c/elektronike").await.body;
-    assert!(electronics.contains(r#"<a class="chip" href="/c/laptope">Laptopë</a>"#));
+    assert!(electronics.contains(r#"<a class="shortcut" href="/c/laptope"><svg class="shortcut-icon""#));
     assert!(!electronics.contains(r#"name="electronics_type""#));
     // A subcategory has its parent's properties: brand and storage for phones.
     let phones = get(pool.clone(), "/c/telefona").await.body;
@@ -2597,7 +2597,8 @@ async fn nobody_else_can_edit_a_listing(pool: PgPool) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
-    // Automjete lists its four subcategories; the kinds of parts sit under the fourth.
+    // Automjete lists its four subcategories, each with its icon; the kinds of parts sit under the
+    // fourth.
     let vehicles = html(pool.clone(), "/c/automjete").await;
     for (slug, name) in [
         ("makina", "Makina"),
@@ -2605,22 +2606,33 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
         ("automjete-tregtare", "Automjete tregtare"),
         ("pjese-dhe-aksesore", "Pjesë dhe aksesorë"),
     ] {
-        assert!(vehicles.contains(&format!(r#"<a class="chip" href="/c/{slug}">{name}</a>"#)), "{slug}");
+        let pill = &vehicles[vehicles.find(&format!(r#"<a class="shortcut" href="/c/{slug}">"#)).expect(slug)..];
+        assert!(pill.starts_with(&format!(r#"<a class="shortcut" href="/c/{slug}"><svg class="shortcut-icon""#)), "{slug}");
+        assert!(pill[..pill.find("</a>").unwrap()].ends_with(&format!("</svg>{name}")), "{slug}");
     }
-    assert!(!vehicles.contains(r#"<a class="chip" href="/c/gps-dhe-navigatore">"#));
+    assert!(!vehicles.contains(r#"<a class="shortcut" href="/c/gps-dhe-navigatore">"#));
+    // Every main category's subcategories have icons of their own too.
+    for slug in ["prona", "elektronike", "shtepi-dhe-kopsht", "pune", "sherbime", "veshje-dhe-aksesore", "sport-dhe-hobi",
+                 "kafshe-shtepiake", "makineri-dhe-biznes"] {
+        let page = html(pool.clone(), &format!("/c/{slug}")).await;
+        let nav = &page[page.find(r#"aria-label="Nënkategoritë""#).expect(slug)..];
+        let nav = &nav[..nav.find("</nav>").unwrap()];
+        let pills = nav.matches(r#"<a class="shortcut""#).count();
+        assert!(pills > 0 && nav.matches(r#"<svg class="shortcut-icon""#).count() == pills, "{slug}: {nav}");
+    }
 
     // The parts page lists its kinds in order, the spare parts first, under its old address.
     let parts = html(pool.clone(), "/c/pjese-dhe-aksesore").await;
     let kinds = positions(&parts, &[
-        r#"<a class="chip" href="/c/pjese-kembimi">Pjesë këmbimi</a>"#,
-        r#"<a class="chip" href="/c/goma-dhe-disqe">Goma dhe disqe</a>"#,
-        r#"<a class="chip" href="/c/audio-dhe-video">Audio dhe video</a>"#,
-        r#"<a class="chip" href="/c/gps-dhe-navigatore">GPS dhe navigatorë</a>"#,
-        r#"<a class="chip" href="/c/styling-dhe-pajisje-sportive">Styling dhe pajisje sportive</a>"#,
-        r#"<a class="chip" href="/c/tapete-makine">Tapete makine</a>"#,
-        r#"<a class="chip" href="/c/rimorkio">Rimorkio</a>"#,
-        r#"<a class="chip" href="/c/mbushes-per-makina-elektrike">Mbushës për makina elektrike</a>"#,
-        r#"<a class="chip" href="/c/pjese-te-tjera">Të tjera</a>"#,
+        r#"<a class="shortcut" href="/c/pjese-kembimi"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/goma-dhe-disqe"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/audio-dhe-video"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/gps-dhe-navigatore"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/styling-dhe-pajisje-sportive"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/tapete-makine"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/rimorkio"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/mbushes-per-makina-elektrike"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/pjese-te-tjera"><svg class="shortcut-icon""#,
     ]);
     assert!(kinds.is_sorted(), "{kinds:?}");
 
@@ -2809,7 +2821,7 @@ async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
     // A kind of part narrows the page, so its links keep the filters, in the chips and the menu;
     // links that widen it or go elsewhere keep only the words, the town and the map pin.
     let kept = "/c/gps-dhe-navigatore?vehicle_make=VOLKSWAGEN&fits_year=2015";
-    assert!(page.contains(&format!(r#"<a class="chip" href="{kept}">GPS dhe navigatorë</a>"#)));
+    assert!(page.contains(&format!(r#"<a class="shortcut" href="{kept}"><svg class="shortcut-icon""#)));
     assert!(page.contains(&format!(r#"<a class="picker-option" href="{kept}">GPS dhe navigatorë</a>"#)));
     assert!(page.contains(r#"<a class="picker-option" href="/c/makina">Makina</a>"#));
     assert!(page.contains(r#"<a href="/c/automjete">Automjete</a>"#));
@@ -2817,7 +2829,7 @@ async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
     assert_eq!(found(&page), [true, false, false, false]);
     // A page that doesn't take a filter leaves it out of its links too: Automjete has no make.
     let page = html(pool.clone(), "/c/automjete?vehicle_make=VOLKSWAGEN&fits_year=2015").await;
-    assert!(page.contains(r#"<a class="chip" href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#));
+    assert!(page.contains(r#"<a class="shortcut" href="/c/pjese-dhe-aksesore">"#));
     // The years' ends count: 2012 and 2019 are in, 2011 and 2020 are not.
     for (year, fits) in [(2011, false), (2012, true), (2019, true), (2020, false)] {
         let page = html(pool.clone(), &format!("/c/pjese-dhe-aksesore?vehicle_make=VOLKSWAGEN&fits_year={year}")).await;
