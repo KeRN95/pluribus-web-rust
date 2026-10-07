@@ -219,11 +219,12 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .search .icon-button { background: var(--button); color: var(--on-button); }
 .search .icon-button:hover { background: var(--button-hover); }
 
-/* Posting is the main action: the plus is filled, beside the account and theme buttons. */
-.post-button { margin-left: auto; background: var(--button); color: var(--on-button); }
-.post-button:hover { background: var(--button-hover); }
+/* Posting, the account and the theme: round buttons on the surface at the top bar's end. */
+.post-button { margin-left: auto; }
+.post-button,
 .theme-toggle,
 .account-button { background: var(--surface); border-color: var(--border); }
+.post-button:hover,
 .account-button:hover { background: var(--surface-muted); }
 
 
@@ -1100,24 +1101,23 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .filter-actions { display: flex; align-items: center; gap: .75rem; }
 .filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
 
-/* Filtrat, a pill, takes the row but for Harta and Rendit, round buttons at its end, all three as
-   tall as each other. Drawn like Claude's, as the listing form's own fields are: the menus'
-   hairline on the surface, rounder corners and a shadow you barely see. Only one of the three is
-   open at a time (section:open); the filters and the map unfold under the row, as wide as it, in a
-   card of the same kind, fading in as the menus do, and the opener is on the accent's tint. The
-   two cards are no boxes of their own (display: contents): their headers, or buttons, and what
-   they open are the row's. "Filtrat" says which filters are on and opens the form, whose options
-   apply together, with its button; the header names the section, so the panel's own heading is
-   there for screen readers only. */
+/* The browse row: round buttons side by side, the search first, in the site's colour, then the
+   filters, the map, the order and the cards' size (--row tall and wide); the last column takes
+   what is left. Only one is open at a time (section:open); the search, the filters and the map
+   unfold under the row, as wide as it, the filters and the map in cards drawn like Claude's, as the
+   listing form's own fields are: the menus' hairline on the surface, rounder corners and a shadow
+   you barely see, fading in as the menus do. The cards are no boxes of their own (display:
+   contents): their buttons and what they open are the row's. The filters' form names its section
+   with a heading for screen readers only, the button showing just its icon. */
 .browse-tools {
+  --row: 3.4rem;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  grid-template-columns: repeat(5, auto) minmax(0, 1fr);
   gap: .5rem;
   margin: 0 0 1rem;
 }
 .filters-card,
 .map-card { display: contents; }
-.browse-tools .map-card-header,
 .filters,
 .map-card-body {
   background: var(--surface);
@@ -1125,32 +1125,8 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   border-radius: 16px;
   box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
 }
-.browse-tools .map-card-header { grid-row: 1; align-self: stretch; min-width: 0; }
-.browse-tools .map-card-header[aria-expanded="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
-/* Filtrat's header a pill, as tall as the round buttons beside it (--row), the circle of its icon
-   (--icon) in its rounded end as Claude's message box holds its buttons. On a phone, between the
-   search and three more, it leaves its chevron out; on the narrowest all of them are smaller. */
-.browse-tools { --row: 3.4rem; --icon: 2.25rem; }
-.browse-tools .filters-open {
-  align-self: center;
-  height: var(--row);
-  padding: 0 1rem 0 calc((var(--row) - var(--icon)) / 2 - 1px);
-  gap: .65rem;
-  border-radius: 999px;
-}
-.browse-tools .filters-open .map-card-icon { width: var(--icon); height: var(--icon); }
-@media (max-width: 719px) {
-  .browse-tools .filters-open .map-card-chevron { display: none; }
-}
-@media (max-width: 360px) {
-  .browse-tools { --row: 2.9rem; --icon: 1.9rem; gap: .4rem; }
-  .browse-tools .filters-open { padding-right: .75rem; gap: .5rem; }
-}
-.browse-tools .filters-open .map-card-icon svg { width: 20px; height: 20px; }
-.browse-tools .filters-open .map-card-title { line-height: 1.2; }
 .filters,
 .map-card-body { grid-column: 1 / -1; animation: menu-in .16s ease-out; }
-.filters-card .map-card-icon { color: var(--text); }
 .filters { display: none; padding: 0 1rem 1rem; }
 .filters.is-open { display: block; }
 .filters-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -1158,10 +1134,11 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   .filters,
   .map-card-body { animation: none; }
 }
-/* Harta and Rendit: round buttons with only their icons, in the page's own colours, on the surface
-   with the menus' hairline, as the listing page's share button is; while what they open is open,
-   on the accent's tint, as Filtrat's header is; a press sinks them a little. (Three classes, to
-   win over .button and .button.secondary, which come later.) */
+/* The round buttons: only their icons, in the page's own colours, on the surface with the menus'
+   hairline, as the listing page's share button is; while what they open is open, on the accent's
+   tint; a press sinks them a little. The search is the site's coral, as the welcome page's is,
+   darker while its box is open. (Three classes, to win over .button and .button.secondary, which
+   come later.) */
 .browse-tools .button.round-button {
   justify-content: center;
   width: var(--row);
@@ -1177,9 +1154,12 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .browse-tools .button.round-button[aria-expanded="true"],
 .browse-tools .button.round-button[aria-pressed="true"],
 .sort-menu[open] > .button.round-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+.browse-tools .button.search-button { border-color: transparent; }
+.browse-tools .button.search-button[aria-expanded="true"] { border-color: transparent; background: var(--button-hover); }
 .browse-tools .round-button svg { width: 20px; height: 20px; }
 .round-button .pin-icon { margin: 0; color: inherit; }
 .search-button,
+.filters-open,
 .map-button,
 .cards-button { grid-row: 1; align-self: center; }
 /* The search box the round search button opens, under the row, as wide as it: the welcome page's
@@ -1214,8 +1194,6 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 
 /* Map page, and the ways to it */
 
-/* The map on a category or search page, beside the filters and the order: a round button (above)
-   that opens it under them and folds it again. */
 /* The order (Rendit): a round button like the map's, its orders in a menu under it. */
 .sort-menu { position: relative; grid-row: 1; align-self: center; }
 /* Its menu, as the in-page dropdowns' are, under it and growing leftward from its right edge: the
@@ -1252,21 +1230,8 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   mask: var(--check) center / contain no-repeat;
 }
 .sort-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
-.map-card-header {
-  display: flex; align-items: center; gap: .7rem; width: 100%; padding: .7rem .9rem;
-  border: 0; border-radius: 15px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer;
-}
-.map-card-header:hover { background: var(--surface-muted); }
-.map-card-icon {
-  display: grid; place-items: center; flex: none; width: 2rem; height: 2rem;
-  border-radius: 50%; background: var(--surface-muted); color: var(--location);
-}
-.map-card-icon .pin-icon { margin: 0; }
-.map-card-title { display: grid; flex: 1; min-width: 0; line-height: 1.3; }
-.map-card-title strong { overflow: hidden; font-weight: var(--semibold); white-space: nowrap; text-overflow: ellipsis; }
-.map-card-title span { overflow: hidden; color: var(--muted); font-size: var(--text-sm); white-space: nowrap; text-overflow: ellipsis; }
-.map-card-chevron { flex: none; color: var(--muted); transition: transform .15s; }
-.map-card-header[aria-expanded="false"] .map-card-chevron { transform: rotate(-90deg); }
+/* The map on a category or search page: a round button in the row (above) that opens it under the
+   row and folds it again. */
 .map-card-body { padding: .9rem 1rem 1rem; }
 .map-card.map-hidden .map-card-body { display: none; }
 .map-card .map-form { margin-bottom: .75rem; }

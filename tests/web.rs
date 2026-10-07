@@ -421,9 +421,9 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
-    // Filtrat, Harta and Rendit stand in one row over the results, Filtrat a card folded to its
-    // header, Harta and Rendit round buttons, the orders opening in a menu; opening one says so
-    // (section:open) and the others fold, so only one is open at a time.
+    // The search, Filtrat, Harta and Rendit stand in one row over the results, round buttons, the
+    // orders opening in a menu; opening one says so (section:open) and the others fold, so only
+    // one is open at a time. The search is in the site's colour.
     let cars = html(pool.clone(), "/c/makina").await;
     let order = positions(&cars, &[
         r#"<div class="browse-tools">"#,
@@ -441,6 +441,8 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     // are set to are for screen readers, and their tooltips; the orders' menu opens with no
     // JavaScript.
     assert!(cars.contains(r#"<button type="button" class="button secondary round-button map-button" data-map-target="toggle""#));
+    assert!(cars.contains(r#"<button type="button" class="button secondary round-button filters-open" aria-controls="filters" aria-expanded="false""#));
+    assert!(cars.contains(r#"<button type="button" class="button round-button search-button""#));
     assert!(cars.contains(r#"<summary class="button secondary round-button sort-button" aria-label="Rendit: Më të rejat" title="Rendit: Më të rejat">"#));
     assert!(cars.contains("toggle->dropdown#announce"));
     let menu = &cars[cars.find(r#"<details class="sort-menu""#).unwrap()..];
@@ -537,8 +539,7 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     // The map's button says how far, to screen readers and as its tooltip; the filters' summary
     // leaves the point to it, and to its chip.
     assert!(pinned.contains(r#"aria-label="Harta: 5 km""#));
-    let filtrat = &pinned[pinned.find("<strong>Filtrat</strong>").unwrap()..];
-    assert!(filtrat[..filtrat.find("</span>").unwrap()].ends_with("<span>Asnjë filtër"));
+    assert!(pinned.contains(r#"aria-label="Filtrat: Asnjë filtër""#));
     // The distance is a slider; 5 km stands at 41 of 100 (50 ^ 0.41 = 5).
     assert!(pinned.contains(r#"<output data-map-target="radiusLabel">5 km</output>"#));
     assert!(pinned.contains(r#"<input id="map-radius" type="range" min="0" max="100" step="1" value="41""#));
@@ -891,8 +892,8 @@ async fn chosen_filters_can_be_removed_one_by_one(pool: PgPool) {
     assert!(body.contains(r#"<a class="filter-chip" href="/c/makina?vehicle_fuel=DIESEL&sort=price_desc""#));
     assert!(body.contains(r#"<a class="filter-chip" href="/c/makina?city=durres&sort=price_desc""#));
     assert!(body.contains(r#"<a class="clear-filters" href="/c/makina?sort=price_desc">"#));
-    // The filters' card says which are on.
-    assert!(body.contains("<span>Durrës · Naftë</span>"));
+    // The filters' button says which are on, to screen readers and as its tooltip.
+    assert!(body.contains(r#"aria-label="Filtrat: Durrës · Naftë" title="Filtrat: Durrës · Naftë""#));
     // The filter form has no fields for the town and the search words, so it carries them along:
     // filtering keeps them, and the town's chip, or the header's search, changes them.
     let filter_form = |page: &str| {

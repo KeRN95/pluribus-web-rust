@@ -58,7 +58,7 @@
 </nav>
 {%- endif %}
 
-{#- Filtrat, a pill, and Harta and Rendit, round buttons, stand side by side, as tall as each other;
+{#- The search, the filters, the map, the order and the cards' size, round buttons side by side;
     the filters and the map open under the row, as wide as it, the orders in a menu, and only one
     is open at a time: opening one says so (section:open) and the others fold. Without JavaScript the filters stay open, their header
     gone, and the map, which needs it, is not there. -#}
@@ -72,7 +72,7 @@
         (suggest_controller.js). Its words search the page's category, its filters kept. -#}
     <div class="search-card" data-controller="panel"
          data-action="section:open@document->panel#foldFor turbo:before-cache@document->panel#close">
-      <button type="button" class="button secondary round-button search-button" aria-controls="search-panel" aria-expanded="false"
+      <button type="button" class="button round-button search-button" aria-controls="search-panel" aria-expanded="false"
               aria-label="Kërko" title="Kërko" data-panel-target="toggle" data-action="panel#toggle">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       </button>
@@ -92,18 +92,15 @@
       </div>
     </div>
 
-    {#- "Filtrat", the filters' header, says which are on (the map's point is the map's to say),
-        and opens the form and closes it. -#}
+    {#- The filters: a round button like the map's, which opens the form under the row and folds it
+        again, and says which are on (the map's point is the map's to say), "Filtrat: Naftë", to
+        screen readers and as its tooltip; their chips under the row say them too. -#}
     <div class="filters-card">
-      <button type="button" class="map-card-header filters-open" aria-controls="filters" aria-expanded="false"
+      {%- let summary = filters.summary() %}
+      <button type="button" class="button secondary round-button filters-open" aria-controls="filters" aria-expanded="false"
+              aria-label="Filtrat: {% if summary.is_empty() %}Asnjë filtër{% else %}{{ summary }}{% endif %}" title="Filtrat: {% if summary.is_empty() %}Asnjë filtër{% else %}{{ summary }}{% endif %}"
               data-filters-target="toggle" data-action="filters#toggle">
-        <span class="map-card-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span>
-        <span class="map-card-title">
-          <strong>Filtrat</strong>
-          {%- let summary = filters.summary() %}
-          <span>{% if summary.is_empty() %}Asnjë filtër{% else %}{{ summary }}{% endif %}</span>
-        </span>
-        <svg class="map-card-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
       </button>
       <aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">
         <div class="filters-header">
