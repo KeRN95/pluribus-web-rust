@@ -363,6 +363,13 @@ pub struct Detail {
     pub multi: bool,
 }
 
+impl Detail {
+    /// Whether its name goes before `value`: not where the value says it, as "6 GB RAM" does RAM.
+    pub fn named_before(&self, value: &str) -> bool {
+        !value.split_whitespace().any(|word| word.eq_ignore_ascii_case(&self.label))
+    }
+}
+
 /// How buyers reach the seller, behind a button that shows it and counts the showing: the phone
 /// number, or the e-mail address of a seller who signed in by e-mail.
 #[derive(Clone, Copy)]

@@ -1595,6 +1595,113 @@ async fn ai_fill_wants_the_writing_first_has_limits_and_says_when_it_fails(pool:
     assert!(answer["message"].as_str().unwrap().contains("Plotëso vetë"), "{answer}");
 }
 
+#[sqlx::test(fixtures("listings"))]
+async fn electronics_subcategories_have_properties_of_their_own(pool: PgPool) {
+    // A phone's form: phones' brands (Huawei, not Canon) in their own order, the models under
+    // them, storage from 32 GB, RAM, battery, colour, features, a warranty and what comes with it;
+    // no screen size.
+    let phones = get(pool.clone(), "/shto/fushat?category=telefona").await.body;
+    for name in ["phone_model", "electronics_storage", "electronics_ram", "phone_battery", "electronics_color",
+                 "electronics_features", "electronics_warranty", "electronics_included"] {
+        assert!(phones.contains(&format!(r#"name="prop_{name}""#)), "{name}");
+    }
+    assert!(!phones.contains("prop_electronics_screen"));
+    assert!(phones.contains(r#"<option value="HUAWEI">Huawei</option>"#));
+    assert!(!phones.contains(r#"<option value="CANON">"#));
+    let brands = positions(&phones, &[r#"<option value="APPLE">"#, r#"<option value="SAMSUNG">"#,
+                                      r#"<option value="HUAWEI">"#, r#"<option value="OTHER">"#]);
+    assert!(brands.is_sorted(), "{brands:?}");
+    assert!(phones.contains(r#"<optgroup label="Apple" data-parent="APPLE">"#));
+    assert!(phones.contains(r#"<option value="APPLE_IPHONE_13">iPhone 13</option>"#));
+    assert!(phones.contains(r#"<option value="GB32">32 GB</option>"#) && !phones.contains(r#"value="TB2""#));
+    assert!(phones.contains(r#"placeholder="Bateria (%)""#));
+
+    // A TV's: its size as "Diagonalja", in inches, resolution, panel and Smart TV, TV brands, and
+    // its remote among what comes with it; no storage, no pen.
+    let tvs = get(pool.clone(), "/shto/fushat?category=televizore").await.body;
+    assert!(tvs.contains(r#"placeholder="Diagonalja (inç)""#));
+    for name in ["tv_resolution", "tv_panel", "tv_smart"] {
+        assert!(tvs.contains(&format!(r#"name="prop_{name}""#)), "{name}");
+    }
+    assert!(!tvs.contains("prop_electronics_storage"));
+    assert!(tvs.contains(r#"<option value="TCL">TCL</option>"#) && !tvs.contains(r#"<option value="APPLE">"#));
+    assert!(tvs.contains(r#"value="REMOTE""#) && !tvs.contains(r#"value="PEN""#));
+
+    // A laptop's: processor, RAM from 4 GB to 64 and more, disk, screen, graphics and system.
+    let laptops = get(pool.clone(), "/shto/fushat?category=laptope").await.body;
+    for name in ["computer_cpu", "electronics_ram", "computer_disk", "electronics_screen", "computer_gpu", "computer_os"] {
+        assert!(laptops.contains(&format!(r#"name="prop_{name}""#)), "{name}");
+    }
+    assert!(laptops.contains(r#"value="GB64""#) && !laptops.contains(r#"value="GB3""#));
+
+    // Posted with them, a phone says them on its page, and the filters find it by them.
+    let ana = new_seller(&pool, "+355691112233").await;
+    let started = started();
+    let mut fields = listing_fields(("title", "iPhone 13, 128 GB"), &started);
+    fields.extend_from_slice(&[
+        ("prop_electronics_brand", "APPLE"),
+        ("prop_phone_model", "APPLE_IPHONE_13"),
+        ("prop_electronics_storage", "GB128"),
+        ("prop_electronics_ram", "GB4"),
+        ("prop_phone_battery", "89"),
+        ("prop_electronics_color", "BLUE"),
+        ("prop_electronics_features", "FIVE_G"),
+        ("prop_electronics_features", "ESIM"),
+        ("prop_electronics_warranty", "1"),
+        ("prop_electronics_included", "BOX"),
+    ]);
+    let posted = post_form(pool.clone(), "/shto", &fields, Some(&ana)).await;
+    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    let page = get(pool.clone(), &posted.location.unwrap()).await.body;
+    // RAM's pill says "4 GB RAM", not "RAM 4 GB RAM".
+    for value in [">iPhone 13</dd>", r#"title="RAM">4 GB RAM</dd>"#, ">Blu</dd>", ">5G</dd>", ">eSIM</dd>",
+                  ">Kutia origjinale</dd>", r#"title="Me garanci""#] {
+        assert!(page.contains(value), "{value}");
+    }
+    assert!(page.contains("89\u{a0}%") || page.contains("89 %"), "the battery");
+    for (uri, found) in [
+        ("/c/telefona?electronics_ram=GB4", 1),
+        ("/c/telefona?electronics_ram=GB8", 0),
+        ("/c/telefona?electronics_brand=APPLE&phone_model=APPLE_IPHONE_13", 1),
+        ("/c/telefona?phone_battery_min=85", 1),
+        ("/c/telefona?phone_battery_min=90", 0),
+        ("/c/telefona?electronics_features=ESIM", 1),
+    ] {
+        assert_eq!(card_numbers(&html(pool.clone(), uri).await).len(), found, "{uri}");
+    }
+    // The phones' filters offer phones' brands; a TV page filters by size, resolution and panel.
+    let phone_page = html(pool.clone(), "/c/telefona").await;
+    assert!(phone_page.contains(r#"value="HUAWEI""#) && !phone_page.contains(r#"value="CANON""#));
+    let tv_page = html(pool.clone(), "/c/televizore").await;
+    for name in ["electronics_screen_min", "tv_resolution", "tv_panel", "tv_smart"] {
+        assert!(tv_page.contains(&format!(r#"name="{name}""#)), "{name}");
+    }
+    assert!(!tv_page.contains(r#"name="electronics_storage""#));
+
+    // A brand phones don't offer is refused, as one that doesn't exist is.
+    let mut canon = listing_fields(("title", "Telefon Canon"), &started);
+    canon.push(("prop_electronics_brand", "CANON"));
+    let refused = post_form(pool.clone(), "/shto", &canon, Some(&ana)).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("Zgjidh një nga mundësitë."));
+
+    // A brand typed in for a phone, once approved, is offered for phones, before Tjetër, and not
+    // for TVs.
+    let mut typed = listing_fields(("title", "Fairphone 5, 256 GB"), &started);
+    typed.extend_from_slice(&[("prop_electronics_brand", "__other__"), ("prop_electronics_brand_other", "Fairphone")]);
+    let posted = post_form(pool.clone(), "/shto", &typed, Some(&ana)).await;
+    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    let moderator = new_seller(&pool, MODERATOR).await;
+    let fairphone = option_id(&pool, "Fairphone").await;
+    let approved = post_form(pool.clone(), &format!("/moderim/{fairphone}/mirato"), &[("label", "Fairphone")], Some(&moderator)).await;
+    assert_eq!(approved.status, StatusCode::SEE_OTHER);
+    let phones = get(pool.clone(), "/shto/fushat?category=telefona").await.body;
+    let order = positions(&phones, &[r#"<option value="NOKIA">"#, r#"<option value="FAIRPHONE">Fairphone</option>"#,
+                                     r#"<option value="OTHER">"#]);
+    assert!(order.is_sorted(), "{order:?}");
+    assert!(!get(pool.clone(), "/shto/fushat?category=televizore").await.body.contains("Fairphone"));
+}
+
 #[sqlx::test]
 async fn unknown_pages_are_404(pool: PgPool) {
     for uri in ["/listing/999999-nothing", "/c/does-not-exist", "/nowhere"] {

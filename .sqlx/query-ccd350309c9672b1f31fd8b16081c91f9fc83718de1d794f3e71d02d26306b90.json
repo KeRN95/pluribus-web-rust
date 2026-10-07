@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO category_attribute_options (category_id, option_id, sort_order)\n         SELECT DISTINCT l.category_id, o.id,\n                coalesce((SELECT max(s.sort_order) FROM category_attribute_options s\n                          JOIN attribute_options so ON so.id = s.option_id\n                          WHERE s.category_id = l.category_id AND so.attribute_id = o.attribute_id\n                            AND so.value_code <> 'OTHER'), 0) + 1\n         FROM attribute_options o\n         JOIN listing_attribute_values v ON v.value_option_id = o.id\n         JOIN listings l ON l.id = v.listing_id\n         WHERE o.id = $1\n           AND EXISTS (SELECT 1 FROM category_attribute_options s\n                       JOIN attribute_options so ON so.id = s.option_id\n                       WHERE s.category_id = l.category_id AND so.attribute_id = o.attribute_id)\n         ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ccd350309c9672b1f31fd8b16081c91f9fc83718de1d794f3e71d02d26306b90"
+}

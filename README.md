@@ -60,6 +60,16 @@ A generated property listing stands in the zone its title names where its town h
 docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v zones=1 < dev/generate_listings.sql
 ```
 
+`only=<top-level category>` keeps making or removing to that category's listings (removing, with the sellers it leaves without any; making, with sellers and shops of their own): after electronics got their own properties (migration 0021), its listings were made anew with them:
+
+```bash
+docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v remove=1 -v only=elektronike < dev/generate_listings.sql
+```
+
+```bash
+docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v count=150000 -v only=elektronike < dev/generate_listings.sql
+```
+
 The tests need the database running; each test gets a fresh database of its own:
 
 ```bash
@@ -100,6 +110,7 @@ cargo test
 | `migrations/0019_zones.sql` | Zones: the parts of Tirana, Durrës and Vlorë people name (Blloku, Plazh, Lungomare...), places under their town, which property listings can say they are in |
 | `migrations/0018_category_order_indexes.sql` | A category's listings by price (cheapest or dearest first) and nearest a point first, read straight off indexes; `btree_gist`, for the category beside the place in one GiST index |
 | `migrations/0020_zone_area_prices.sql` | What a square metre costs in each zone, by category (`zone_area_prices`), which a property's price per square metre is compared with |
+| `migrations/0021_electronics_properties.sql` | Electronics' own properties, subcategory by subcategory (a phone's model and battery, a laptop's processor, a TV's size and resolution...), and `category_attribute_options`: the options of a property each category offers, its own brands and storage sizes |
 | `tests/` | Request tests (`web.rs`), the 78 schema checks (`schema_checks.sql`, also run by `schema.rs`) and sample data (`fixtures/`) |
 | `dev/sample_listings.sql` | 305 extra sample listings for the development database (not used by the tests) |
 | `dev/generate_listings.sql` | Generates as many realistic listings as you ask for, with sellers and photos, for trying the site at scale; removes them again with `remove=1`, gives listings with only a cover more photos with `photos=1`, and puts property listings from earlier versions of it in their zones with `zones=1` |
@@ -172,7 +183,7 @@ Each category's properties are rows in the database, not code. A browse page bui
 |---|---|
 | Makina | make, model (grouped by make), year, mileage, fuel, gearbox, body type, colour, options ("Opsionet"); the posting form shows them two to a line, each with its icon before its name, the options under them; its title is made from its make, model, body type and colour ("Mercedes-Benz S-Class Sedan, e zezë", `listings.generated_title`, kept by `listing_generated_title()` wherever `search_extra` is), the seller's own heading the description and the details leaving those four out |
 | Prona | rooms (1+1, 2+1...), area, floor, furnishing, features (lift, parking, sea view...) |
-| Elektronikë | brand, storage |
+| Elektronikë (0021) | for every kind: brand, warranty, what comes with it (the box, the receipt...); a phone: model (grouped by brand), storage, RAM, battery (%), colour, 5G / Dual SIM / eSIM; a laptop: processor, RAM, storage, disk, screen (inches), graphics, system; a desktop: what it is (gaming PC, All-in-One...), the same and whether a monitor comes with it; a tablet: storage, screen, Wi-Fi or SIM; a TV: size ("Diagonalja", inches), resolution, panel, Smart TV; audio: what it is, wireless, noise cancelling; a camera: what it is (DSLR, mirrorless, lens, drone...), sensor, lens mount, shutter count; a console: the console (grouped by maker), edition, games, controllers |
 | Punë | schedule |
 | Veshje dhe aksesorë | for whom, size |
 | Makineri dhe biznes | year |
@@ -184,12 +195,12 @@ To add a property, write a new migration:
 
 ```sql
 INSERT INTO attributes (code, name, name_i18n, data_type, unit)
-VALUES ('laptop_screen', 'Ekrani', '{"en": "Screen"}', 'NUMBER', 'inç');
+VALUES ('tv_refresh_rate', 'Frekuenca', '{"en": "Refresh rate"}', 'NUMBER', 'Hz');
 
 INSERT INTO category_attributes (category_id, attribute_id, filterable, show_in_card, sort_order)
-SELECT c.id, a.id, true, false, 40
+SELECT c.id, a.id, true, false, 45
 FROM categories c, attributes a
-WHERE c.slug = 'elektronike' AND a.code = 'laptop_screen';
+WHERE c.slug = 'televizore' AND a.code = 'tv_refresh_rate';
 ```
 
 How each type of property is offered as a filter:
@@ -206,6 +217,7 @@ How each type of property is offered as a filter:
 TEXT and DATE properties appear on the listing page but not as filters.
 
 - Subcategories inherit their parents' properties, from every level above them. The `effective_category_attributes` view resolves that, and where a subcategory configures a property its parent has too, the subcategory's settings win.
+- A category can offer only some of a property's options, in its own order (`category_attribute_options`, migration 0021): phones' brands aren't cameras', and a laptop's storage starts at 128 GB where a phone's starts at 32. The form, the filters and the generator's check all read `category_options(category, property)`, which gives a category's own list where it has one and otherwise every option, as a parent category's filters offer every brand. An option a seller typed and a moderator approves is offered in the categories it was typed in, before "Tjetër".
 - `category_attributes.label` is a category's own name for a property, where the property's name would mislead: on a part, "Marka" would read as the part's own brand, so there it is "Marka e automjetit". It is inherited like the other settings; NULL means the property's name.
 - Property codes become URL parameters, so don't name one `q`, `category`, `city`, `lat`, `lng`, `radius`, `type`, `condition`, `price_min`, `price_max`, `currency`, `sort` or `after`; a year pair's filter takes `<x>_year` too.
 - A property whose code ends in `_year` can't be later than next year, and in a year pair the second can't come before the first.

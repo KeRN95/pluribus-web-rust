@@ -10,6 +10,10 @@
 -- count is how many to make, 10 000 if left out; runs add up. seed, between -1 and 1, makes a run
 -- repeatable: -v seed=0.42. remove=1 removes everything the script has made, and nothing else:
 --   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v remove=1 < dev/generate_listings.sql
+-- only=<top-level category> keeps either to that one's listings (removing, with the sellers it
+-- leaves without any): making electronics anew, say, after their properties changed:
+--   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v remove=1 -v only=elektronike < dev/generate_listings.sql
+--   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v count=20000 -v only=elektronike < dev/generate_listings.sql
 -- photos=1 makes nothing, but gives the listings there that have only a cover (from an earlier
 -- version of this script, dev/sample_listings.sql or tests/fixtures/listings.sql) more of their
 -- category's photos; listings people made on the site keep theirs:
@@ -42,13 +46,35 @@
 
 \if :remove
 BEGIN;
+\if :{?only}
+DELETE FROM listings
+WHERE created_by_user_id IN (SELECT id FROM users WHERE auth_subject LIKE 'dev|generated-%')
+  AND category_id IN (WITH RECURSIVE family AS (
+                          SELECT id FROM categories WHERE slug = :'only'
+                          UNION ALL
+                          SELECT c.id FROM categories c JOIN family f ON c.parent_id = f.id
+                      )
+                      SELECT id FROM family);
+-- And the sellers that leaves without listings.
+DELETE FROM businesses b
+WHERE b.slug LIKE 'gen-%' AND NOT EXISTS (SELECT 1 FROM listings l WHERE l.seller_business_id = b.id);
+DELETE FROM users u
+WHERE u.auth_subject LIKE 'dev|generated-%'
+  AND NOT EXISTS (SELECT 1 FROM listings l WHERE l.created_by_user_id = u.id)
+  AND NOT EXISTS (SELECT 1 FROM business_members m WHERE m.user_id = u.id);
+\else
 DELETE FROM listings WHERE created_by_user_id IN (SELECT id FROM users WHERE auth_subject LIKE 'dev|generated-%');
 DELETE FROM businesses WHERE slug LIKE 'gen-%';
 DELETE FROM users WHERE auth_subject LIKE 'dev|generated-%';
+\endif
 REFRESH MATERIALIZED VIEW search_words;
 REFRESH MATERIALIZED VIEW zone_area_prices;
 COMMIT;
+\if :{?only}
+\echo 'Removed the generated listings under' :only 'and the sellers left without any.'
+\else
 \echo 'Removed the generated listings, their sellers and businesses.'
+\endif
 \quit
 \endif
 
@@ -698,82 +724,253 @@ $$;
 
 -- ---------------------------------------------------------------- electronics
 
--- "category|brand|model|price in lekë, new|storages in GB".
+-- "category|brand|model|price in lekë, new|storages in GB|…", then what that kind of thing has
+-- (migrations/0021_electronics_properties.sql), a/b where it varies: a phone's model, RAM and
+-- 5G (1 or 0); a laptop's processor, RAM, screen in inches, graphics and system; a desktop's kind,
+-- processor, RAM, graphics and system; a tablet's screen; a TV's size, resolution and panel; a
+-- console's model and edition; a camera's kind, sensor and lens mount; audio's kind, wireless and
+-- noise cancelling (1 or 0).
 CREATE FUNCTION pg_temp.electronics(category text) RETURNS pg_temp.writing LANGUAGE plpgsql VOLATILE AS $$
 DECLARE
     w pg_temp.writing;
     item text := pg_temp.pick(ARRAY(SELECT i FROM unnest(ARRAY[
-        'telefona|APPLE|iPhone 11|38000|64,128', 'telefona|APPLE|iPhone 12|48000|64,128,256', 'telefona|APPLE|iPhone 13|58000|128,256',
-        'telefona|APPLE|iPhone 13 Pro|72000|128,256,512', 'telefona|APPLE|iPhone 14|72000|128,256', 'telefona|APPLE|iPhone 14 Pro Max|105000|128,256,512',
-        'telefona|APPLE|iPhone 15|92000|128,256', 'telefona|APPLE|iPhone 15 Pro|118000|128,256,512', 'telefona|APPLE|iPhone 16|112000|128,256',
-        'telefona|APPLE|iPhone 16 Pro Max|155000|256,512,1000', 'telefona|SAMSUNG|Galaxy S21|38000|128,256', 'telefona|SAMSUNG|Galaxy S22 Ultra|62000|128,256,512',
-        'telefona|SAMSUNG|Galaxy S23|62000|128,256', 'telefona|SAMSUNG|Galaxy S24 Ultra|115000|256,512', 'telefona|SAMSUNG|Galaxy A54|32000|128,256',
-        'telefona|SAMSUNG|Galaxy A34|24000|128', 'telefona|SAMSUNG|Galaxy A15|15000|64,128', 'telefona|SAMSUNG|Galaxy Z Flip5|75000|256,512',
-        'telefona|XIAOMI|Redmi Note 12|18000|64,128', 'telefona|XIAOMI|Redmi Note 13 Pro|26000|128,256', 'telefona|XIAOMI|Xiaomi 13T|42000|256',
-        'telefona|XIAOMI|Poco X6 Pro|30000|256,512', 'telefona|OTHER|Huawei P30 Pro|22000|128,256', 'telefona|OTHER|Google Pixel 8|58000|128,256',
-        'telefona|OTHER|OnePlus 11|48000|128,256',
-        'laptope|APPLE|MacBook Air M1|68000|256,512', 'laptope|APPLE|MacBook Air M2|98000|256,512', 'laptope|APPLE|MacBook Pro 14" M3|185000|512,1000',
-        'laptope|LENOVO|ThinkPad T14|62000|256,512', 'laptope|LENOVO|IdeaPad 5|46000|512', 'laptope|LENOVO|Legion 5|115000|512,1000',
-        'laptope|DELL|XPS 13|92000|512,1000', 'laptope|DELL|Latitude 7420|56000|256,512', 'laptope|DELL|Inspiron 15|42000|256,512',
-        'laptope|HP|EliteBook 840 G8|57000|256,512', 'laptope|HP|Pavilion 15|42000|512', 'laptope|HP|Victus 16|88000|512,1000',
-        'laptope|ASUS|ZenBook 14|72000|512', 'laptope|ASUS|ROG Strix G15|125000|512,1000', 'laptope|ASUS|VivoBook 15|36000|256,512',
-        'laptope|MICROSOFT|Surface Laptop 5|92000|256,512',
-        'kompjutere|OTHER|PC Gaming RTX 3060, Ryzen 5 5600|92000|512,1000', 'kompjutere|OTHER|PC Gaming RTX 4070, Intel i7|185000|1000',
-        'kompjutere|DELL|OptiPlex 7080, Intel i5, 16 GB RAM|36000|256,512', 'kompjutere|HP|EliteDesk 800 G5|32000|256,512',
-        'kompjutere|APPLE|iMac 24" M1|112000|256,512', 'kompjutere|APPLE|Mac mini M2|68000|256,512', 'kompjutere|LENOVO|ThinkCentre M720|26000|256',
-        'tableta|APPLE|iPad 9|32000|64,256', 'tableta|APPLE|iPad Air 5|62000|64,256', 'tableta|APPLE|iPad Pro 11" M2|98000|128,256,512',
-        'tableta|SAMSUNG|Galaxy Tab S8|56000|128,256', 'tableta|SAMSUNG|Galaxy Tab A8|19000|64,128', 'tableta|XIAOMI|Xiaomi Pad 6|32000|128,256',
-        'tableta|LENOVO|Tab P11|23000|64,128',
-        'televizore|SAMSUNG|Smart TV 55" 4K Crystal UHD|46000|', 'televizore|SAMSUNG|QLED 65" Q70|98000|', 'televizore|SAMSUNG|Smart TV 43" Full HD|26000|',
-        'televizore|LG|OLED 55" C2|125000|', 'televizore|LG|Smart TV 50" 4K UHD|42000|', 'televizore|SONY|Bravia 55" 4K|72000|',
-        'televizore|OTHER|TCL 55" 4K|36000|', 'televizore|OTHER|Hisense 65" 4K|56000|',
-        'konsola-lojerash|SONY|PlayStation 5|56000|', 'konsola-lojerash|SONY|PlayStation 5 Slim Digital|49000|', 'konsola-lojerash|SONY|PlayStation 4 Pro|26000|',
-        'konsola-lojerash|MICROSOFT|Xbox Series X|52000|', 'konsola-lojerash|MICROSOFT|Xbox Series S|29000|',
-        'konsola-lojerash|NINTENDO|Nintendo Switch OLED|33000|', 'konsola-lojerash|NINTENDO|Nintendo Switch Lite|18000|',
-        'aparate-fotografike|CANON|Canon EOS 2000D|36000|', 'aparate-fotografike|CANON|Canon EOS 90D|92000|', 'aparate-fotografike|CANON|Canon EOS R6|195000|',
-        'aparate-fotografike|SONY|Sony Alpha a7 III|155000|', 'aparate-fotografike|SONY|Sony ZV-E10|62000|', 'aparate-fotografike|OTHER|Nikon D750|82000|',
-        'aparate-fotografike|OTHER|Fujifilm X-T30|78000|', 'aparate-fotografike|OTHER|GoPro HERO11|36000|',
-        'audio-dhe-kufje|APPLE|AirPods Pro 2|25000|', 'audio-dhe-kufje|APPLE|AirPods 3|18000|', 'audio-dhe-kufje|SONY|Sony WH-1000XM5|36000|',
-        'audio-dhe-kufje|SONY|Sony WF-1000XM4|21000|', 'audio-dhe-kufje|SAMSUNG|Galaxy Buds2 Pro|15000|', 'audio-dhe-kufje|OTHER|JBL Charge 5|16000|',
-        'audio-dhe-kufje|OTHER|Bose QuietComfort 45|29000|', 'audio-dhe-kufje|OTHER|Marshall Emberton II|18000|', 'audio-dhe-kufje|OTHER|JBL PartyBox 310|46000|']) AS i
+        'telefona|APPLE|iPhone 11|38000|64,128|APPLE_IPHONE_11|GB4|0',
+        'telefona|APPLE|iPhone 12|48000|64,128,256|APPLE_IPHONE_12|GB4|1',
+        'telefona|APPLE|iPhone 13|58000|128,256|APPLE_IPHONE_13|GB4|1',
+        'telefona|APPLE|iPhone 13 Pro|72000|128,256,512|APPLE_IPHONE_13_PRO|GB6|1',
+        'telefona|APPLE|iPhone 14|72000|128,256|APPLE_IPHONE_14|GB6|1',
+        'telefona|APPLE|iPhone 14 Pro Max|105000|128,256,512|APPLE_IPHONE_14_PRO_MAX|GB6|1',
+        'telefona|APPLE|iPhone 15|92000|128,256|APPLE_IPHONE_15|GB6|1',
+        'telefona|APPLE|iPhone 15 Pro|118000|128,256,512|APPLE_IPHONE_15_PRO|GB8|1',
+        'telefona|APPLE|iPhone 16|112000|128,256|APPLE_IPHONE_16|GB8|1',
+        'telefona|APPLE|iPhone 16 Pro Max|155000|256,512,1000|APPLE_IPHONE_16_PRO_MAX|GB8|1',
+        'telefona|APPLE|iPhone 17 Pro|160000|256,512,1000|APPLE_IPHONE_17_PRO|GB12|1',
+        'telefona|SAMSUNG|Galaxy S21|38000|128,256|SAMSUNG_GALAXY_S21|GB8|1',
+        'telefona|SAMSUNG|Galaxy S22 Ultra|62000|128,256,512|SAMSUNG_GALAXY_S22_ULTRA|GB8/GB12|1',
+        'telefona|SAMSUNG|Galaxy S23|62000|128,256|SAMSUNG_GALAXY_S23|GB8|1',
+        'telefona|SAMSUNG|Galaxy S24 Ultra|115000|256,512|SAMSUNG_GALAXY_S24_ULTRA|GB12|1',
+        'telefona|SAMSUNG|Galaxy S25 Ultra|135000|256,512,1000|SAMSUNG_GALAXY_S25_ULTRA|GB12|1',
+        'telefona|SAMSUNG|Galaxy A54|32000|128,256|SAMSUNG_GALAXY_A54|GB6/GB8|1',
+        'telefona|SAMSUNG|Galaxy A34|24000|128|SAMSUNG_GALAXY_A34|GB6/GB8|1',
+        'telefona|SAMSUNG|Galaxy A15|15000|64,128|SAMSUNG_GALAXY_A15|GB4/GB6|0',
+        'telefona|SAMSUNG|Galaxy Z Flip5|75000|256,512|SAMSUNG_GALAXY_Z_FLIP5|GB8|1',
+        'telefona|XIAOMI|Redmi Note 12|18000|64,128|XIAOMI_REDMI_NOTE_12|GB4/GB6/GB8|0',
+        'telefona|XIAOMI|Redmi Note 13 Pro|26000|128,256|XIAOMI_REDMI_NOTE_13_PRO|GB8/GB12|1',
+        'telefona|XIAOMI|Xiaomi 13T|42000|256|XIAOMI_13T|GB8/GB12|1',
+        'telefona|XIAOMI|Poco X6 Pro|30000|256,512|XIAOMI_POCO_X6_PRO|GB8/GB12|1',
+        'telefona|HUAWEI|Huawei P30 Pro|22000|128,256|HUAWEI_P30_PRO|GB8|0',
+        'telefona|GOOGLE|Google Pixel 8|58000|128,256|GOOGLE_PIXEL_8|GB8|1',
+        'telefona|GOOGLE|Google Pixel 9|78000|128,256|GOOGLE_PIXEL_9|GB12|1',
+        'telefona|ONEPLUS|OnePlus 11|48000|128,256|ONEPLUS_11|GB8/GB16|1',
+        'laptope|APPLE|MacBook Air M1|68000|256,512|APPLE_M1|GB8/GB16|13.3|INTEGRATED|MACOS',
+        'laptope|APPLE|MacBook Air M2|98000|256,512|APPLE_M2|GB8/GB16/GB24|13.6|INTEGRATED|MACOS',
+        'laptope|APPLE|MacBook Air M4|125000|256,512,1000|APPLE_M4|GB16/GB24|13.6|INTEGRATED|MACOS',
+        'laptope|APPLE|MacBook Pro 14" M3|185000|512,1000|APPLE_M3|GB8/GB16/GB24|14.2|INTEGRATED|MACOS',
+        'laptope|LENOVO|ThinkPad T14|62000|256,512|INTEL_CORE_I5/INTEL_CORE_I7/AMD_RYZEN_5/AMD_RYZEN_7|GB8/GB16/GB32|14|INTEGRATED|WINDOWS',
+        'laptope|LENOVO|IdeaPad 5|46000|512|INTEL_CORE_I5/INTEL_CORE_I7/AMD_RYZEN_5/AMD_RYZEN_7|GB8/GB16|14|INTEGRATED|WINDOWS',
+        'laptope|LENOVO|Legion 5|115000|512,1000|AMD_RYZEN_7/INTEL_CORE_I7|GB16/GB32|15.6|NVIDIA|WINDOWS',
+        'laptope|DELL|XPS 13|92000|512,1000|INTEL_CORE_I5/INTEL_CORE_I7/INTEL_CORE_ULTRA_7|GB8/GB16/GB32|13.4|INTEGRATED|WINDOWS',
+        'laptope|DELL|Latitude 7420|56000|256,512|INTEL_CORE_I5/INTEL_CORE_I7|GB8/GB16|14|INTEGRATED|WINDOWS',
+        'laptope|DELL|Inspiron 15|42000|256,512|INTEL_CORE_I3/INTEL_CORE_I5/INTEL_CORE_I7|GB8/GB16|15.6|INTEGRATED|WINDOWS',
+        'laptope|HP|EliteBook 840 G8|57000|256,512|INTEL_CORE_I5/INTEL_CORE_I7|GB8/GB16/GB32|14|INTEGRATED|WINDOWS',
+        'laptope|HP|Pavilion 15|42000|512|INTEL_CORE_I5/INTEL_CORE_I7/AMD_RYZEN_5|GB8/GB16|15.6|INTEGRATED|WINDOWS',
+        'laptope|HP|Victus 16|88000|512,1000|INTEL_CORE_I5/INTEL_CORE_I7/AMD_RYZEN_5/AMD_RYZEN_7|GB16/GB32|16.1|NVIDIA|WINDOWS',
+        'laptope|ASUS|ZenBook 14|72000|512|INTEL_CORE_I5/INTEL_CORE_I7/INTEL_CORE_ULTRA_7/AMD_RYZEN_7|GB16/GB32|14|INTEGRATED|WINDOWS',
+        'laptope|ASUS|ROG Strix G15|125000|512,1000|AMD_RYZEN_7/AMD_RYZEN_9/INTEL_CORE_I7|GB16/GB32|15.6|NVIDIA|WINDOWS',
+        'laptope|ASUS|VivoBook 15|36000|256,512|INTEL_CORE_I3/INTEL_CORE_I5/AMD_RYZEN_5|GB8/GB16|15.6|INTEGRATED|WINDOWS',
+        'laptope|ACER|Aspire 5|38000|256,512|INTEL_CORE_I5/INTEL_CORE_I7/AMD_RYZEN_5|GB8/GB16|15.6|INTEGRATED|WINDOWS',
+        'laptope|MSI|Katana 15|92000|512,1000|INTEL_CORE_I7|GB16/GB32|15.6|NVIDIA|WINDOWS',
+        'laptope|MICROSOFT|Surface Laptop 5|92000|256,512|INTEL_CORE_I5/INTEL_CORE_I7|GB8/GB16|13.5|INTEGRATED|WINDOWS',
+        'kompjutere|BUILT|PC Gaming RTX 3060, Ryzen 5 5600|92000|512,1000|PC_GAMING|AMD_RYZEN_5|GB16/GB32|NVIDIA|WINDOWS',
+        'kompjutere|BUILT|PC Gaming RTX 4070, Intel i7|185000|1000,2000|PC_GAMING|INTEL_CORE_I7|GB32/GB64|NVIDIA|WINDOWS',
+        'kompjutere|DELL|OptiPlex 7080, Intel i5, 16 GB RAM|36000|256,512|PC_DESKTOP|INTEL_CORE_I5|GB16|INTEGRATED|WINDOWS',
+        'kompjutere|HP|EliteDesk 800 G5|32000|256,512|PC_DESKTOP|INTEL_CORE_I5/INTEL_CORE_I7|GB8/GB16|INTEGRATED|WINDOWS',
+        'kompjutere|APPLE|iMac 24" M1|112000|256,512|ALL_IN_ONE|APPLE_M1|GB8/GB16|INTEGRATED|MACOS',
+        'kompjutere|APPLE|Mac mini M2|68000|256,512|MINI_PC|APPLE_M2|GB8/GB16|INTEGRATED|MACOS',
+        'kompjutere|LENOVO|ThinkCentre M720|26000|256|PC_DESKTOP|INTEL_CORE_I3/INTEL_CORE_I5|GB8/GB16|INTEGRATED|WINDOWS',
+        'tableta|APPLE|iPad 9|32000|64,256|10.2', 'tableta|APPLE|iPad Air 5|62000|64,256|10.9',
+        'tableta|APPLE|iPad Pro 11" M2|98000|128,256,512|11', 'tableta|SAMSUNG|Galaxy Tab S8|56000|128,256|11',
+        'tableta|SAMSUNG|Galaxy Tab A8|19000|64,128|10.5', 'tableta|XIAOMI|Xiaomi Pad 6|32000|128,256|11',
+        'tableta|LENOVO|Tab P11|23000|64,128|11',
+        'televizore|SAMSUNG|Smart TV 55" 4K Crystal UHD|46000||55|UHD_4K|LED', 'televizore|SAMSUNG|QLED 65" Q70|98000||65|UHD_4K|QLED',
+        'televizore|SAMSUNG|Smart TV 43" Full HD|26000||43|FULL_HD|LED', 'televizore|LG|OLED 55" C2|125000||55|UHD_4K|OLED',
+        'televizore|LG|Smart TV 50" 4K UHD|42000||50|UHD_4K|LED', 'televizore|SONY|Bravia 55" 4K|72000||55|UHD_4K|LED',
+        'televizore|TCL|TCL 55" 4K|36000||55|UHD_4K|LED', 'televizore|HISENSE|Hisense 65" 4K|56000||65|UHD_4K|LED',
+        'televizore|PHILIPS|Philips 32" HD|15000||32|HD|LED',
+        'konsola-lojerash|SONY|PlayStation 5|56000||PLAYSTATION_5|DISC',
+        'konsola-lojerash|SONY|PlayStation 5 Slim Digital|49000||PLAYSTATION_5|DIGITAL',
+        'konsola-lojerash|SONY|PlayStation 5 Pro|85000||PLAYSTATION_5_PRO|DIGITAL',
+        'konsola-lojerash|SONY|PlayStation 4 Pro|26000||PLAYSTATION_4_PRO|DISC',
+        'konsola-lojerash|MICROSOFT|Xbox Series X|52000||XBOX_SERIES_X|DISC',
+        'konsola-lojerash|MICROSOFT|Xbox Series S|29000||XBOX_SERIES_S|DIGITAL',
+        'konsola-lojerash|NINTENDO|Nintendo Switch OLED|33000||SWITCH_OLED|', 'konsola-lojerash|NINTENDO|Nintendo Switch Lite|18000||SWITCH_LITE|',
+        'konsola-lojerash|NINTENDO|Nintendo Switch 2|52000||SWITCH_2|', 'konsola-lojerash|VALVE|Steam Deck OLED|62000||STEAM_DECK_OLED|',
+        'aparate-fotografike|CANON|Canon EOS 2000D|36000||DSLR|APS_C|CANON_EF', 'aparate-fotografike|CANON|Canon EOS 90D|92000||DSLR|APS_C|CANON_EF',
+        'aparate-fotografike|CANON|Canon EOS R6|195000||MIRRORLESS|FULL_FRAME|CANON_RF',
+        'aparate-fotografike|SONY|Sony Alpha a7 III|155000||MIRRORLESS|FULL_FRAME|SONY_E',
+        'aparate-fotografike|SONY|Sony ZV-E10|62000||MIRRORLESS|APS_C|SONY_E', 'aparate-fotografike|NIKON|Nikon D750|82000||DSLR|FULL_FRAME|NIKON_F',
+        'aparate-fotografike|FUJIFILM|Fujifilm X-T30|78000||MIRRORLESS|APS_C|FUJIFILM_X', 'aparate-fotografike|GOPRO|GoPro HERO11|36000||ACTION|ONE_INCH|',
+        'aparate-fotografike|CANON|Objektiv Canon EF 50mm f/1.8 STM|14000||LENS||CANON_EF', 'aparate-fotografike|DJI|DJI Mini 3 Pro|62000||DRONE|ONE_INCH|',
+        'audio-dhe-kufje|APPLE|AirPods Pro 2|25000||EARBUDS|1|1', 'audio-dhe-kufje|APPLE|AirPods 3|18000||EARBUDS|1|0',
+        'audio-dhe-kufje|SONY|Sony WH-1000XM5|36000||HEADPHONES|1|1', 'audio-dhe-kufje|SONY|Sony WF-1000XM4|21000||EARBUDS|1|1',
+        'audio-dhe-kufje|SAMSUNG|Galaxy Buds2 Pro|15000||EARBUDS|1|1', 'audio-dhe-kufje|JBL|JBL Charge 5|16000||SPEAKER|1|0',
+        'audio-dhe-kufje|BOSE|Bose QuietComfort 45|29000||HEADPHONES|1|1', 'audio-dhe-kufje|MARSHALL|Marshall Emberton II|18000||SPEAKER|1|0',
+        'audio-dhe-kufje|JBL|JBL PartyBox 310|46000||SPEAKER|1|0', 'audio-dhe-kufje|SONY|Soundbar Sony HT-S400|24000||SOUNDBAR|1|0',
+        'audio-dhe-kufje|YAMAHA|Amplifikator Yamaha A-S501|42000||AMPLIFIER|0|0']) AS i
         WHERE split_part(i, '|', 1) = category));
-    storages text[] := string_to_array(nullif(split_part(item, '|', 5), ''), ',');
+    spec text[] := string_to_array(item, '|');
+    storages text[] := string_to_array(nullif(spec[5], ''), ',');
     storage text := pg_temp.pick(storages);
+    selling boolean;
+    battery int;
+    warranty boolean;
+    included text[];
+    features text[];
+    smart boolean;
+    controllers int;
+    games int;
+    shutters int;
 BEGIN
     w.listing_type := pg_temp.pick(ARRAY['SELL', 'SELL', 'SELL', 'SELL', 'SELL', 'SELL', 'SELL', 'SELL', 'SELL', 'BUY']);
     w.condition := CASE WHEN random() < 0.04 THEN 'FOR_PARTS' ELSE pg_temp.condition() END;
-    w.price := pg_temp.round_price(split_part(item, '|', 4)::numeric * pg_temp.worth(w.condition) * (0.85 + random() * 0.3)
+    w.price := pg_temp.round_price(spec[4]::numeric * pg_temp.worth(w.condition) * (0.85 + random() * 0.3)
                                    * (1 + 0.12 * coalesce(array_position(storages, storage) - 1, 0)));
     w.price_type := pg_temp.pick(ARRAY['FIXED', 'FIXED', 'NEGOTIABLE']);
-    w.title := concat_ws(', ', CASE w.listing_type WHEN 'BUY' THEN 'Blej ' ELSE '' END || split_part(item, '|', 3),
-                         CASE WHEN storage = '1000' THEN '1 TB' WHEN storage IS NOT NULL THEN storage || ' GB' END,
+    w.title := concat_ws(', ', CASE w.listing_type WHEN 'BUY' THEN 'Blej ' ELSE '' END || spec[3],
+                         CASE storage WHEN '1000' THEN '1 TB' WHEN '2000' THEN '2 TB' ELSE storage || ' GB' END,
                          CASE WHEN w.listing_type = 'BUY' THEN NULL
                               WHEN w.condition = 'NEW' THEN pg_temp.pick(ARRAY['i ri në kuti', 'i pahapur', 'i ri, me garanci'])
                               WHEN w.condition = 'LIKE_NEW' THEN 'si i ri'
                               WHEN w.condition = 'USED' THEN pg_temp.pick(ARRAY['i përdorur', 'në gjendje të mirë', 'punon perfekt'])
                               ELSE 'për pjesë' END);
-    w.properties := jsonb_strip_nulls(jsonb_build_object(
-        'electronics_brand', split_part(item, '|', 2),
-        'electronics_storage', CASE storage WHEN '1000' THEN 'TB1' ELSE 'GB' || storage END));
+    -- What the thing is goes into a wanted ad too; how this one is kept, only into a sale.
+    selling := w.listing_type = 'SELL';
+    IF selling THEN
+        battery := CASE WHEN category IN ('telefona', 'tableta', 'laptope') AND w.condition <> 'NEW'
+                        THEN pg_temp.number_between(78, 100) END;
+        warranty := random() < CASE w.condition WHEN 'NEW' THEN 0.85 WHEN 'LIKE_NEW' THEN 0.3 WHEN 'USED' THEN 0.05 ELSE 0 END;
+        included := array_remove(ARRAY[
+            CASE WHEN random() < CASE w.condition WHEN 'NEW' THEN 0.95 WHEN 'LIKE_NEW' THEN 0.6 ELSE 0.25 END THEN 'BOX' END,
+            CASE WHEN random() < CASE w.condition WHEN 'NEW' THEN 0.6 WHEN 'LIKE_NEW' THEN 0.35 ELSE 0.1 END THEN 'INVOICE' END,
+            CASE WHEN category IN ('telefona', 'tableta', 'laptope', 'audio-dhe-kufje', 'aparate-fotografike') AND random() < 0.5
+                 THEN 'CHARGER' END,
+            CASE WHEN category IN ('telefona', 'tableta') AND random() < 0.2 THEN 'CASE' END,
+            CASE WHEN category = 'tableta' AND random() < 0.1 THEN 'PEN' END,
+            CASE WHEN category = 'tableta' AND random() < 0.1 THEN 'KEYBOARD' END,
+            CASE WHEN category = 'televizore' AND random() < 0.85 THEN 'REMOTE' END], NULL);
+    END IF;
+    w.properties := jsonb_build_object(
+        'electronics_brand', spec[2],
+        'electronics_storage', CASE storage WHEN '1000' THEN 'TB1' WHEN '2000' THEN 'TB2' ELSE 'GB' || storage END,
+        'electronics_warranty', CASE WHEN warranty THEN true END,
+        'electronics_included', CASE WHEN cardinality(included) > 0 THEN to_jsonb(included) END);
+    CASE category
+    WHEN 'telefona' THEN
+        features := array_remove(ARRAY[
+            CASE WHEN spec[8] = '1' THEN 'FIVE_G' END,
+            CASE WHEN random() < CASE spec[2] WHEN 'APPLE' THEN 0.2 ELSE 0.6 END THEN 'DUAL_SIM' END,
+            CASE WHEN random() < CASE spec[2] WHEN 'APPLE' THEN 0.5 WHEN 'GOOGLE' THEN 0.4 ELSE 0.1 END THEN 'ESIM' END], NULL);
+        w.properties := w.properties || jsonb_build_object(
+            'phone_model', spec[6],
+            'electronics_ram', pg_temp.pick(string_to_array(spec[7], '/')),
+            'phone_battery', battery,
+            'electronics_color', CASE WHEN selling THEN pg_temp.pick(ARRAY['BLACK', 'BLACK', 'BLACK', 'WHITE', 'WHITE', 'GREY', 'SILVER',
+                                                                           'GOLD', 'BLUE', 'BLUE', 'GREEN', 'RED', 'PURPLE', 'PINK']) END,
+            'electronics_features', CASE WHEN selling AND cardinality(features) > 0 THEN to_jsonb(features) END);
+    WHEN 'laptope' THEN
+        features := array_remove(ARRAY[CASE WHEN random() < 0.08 THEN 'TOUCHSCREEN' END,
+                                       CASE WHEN random() < 0.5 THEN 'BACKLIT_KEYBOARD' END,
+                                       CASE WHEN random() < 0.04 THEN 'TWO_IN_ONE' END], NULL);
+        w.properties := w.properties || jsonb_build_object(
+            'computer_cpu', pg_temp.pick(string_to_array(spec[6], '/')),
+            'electronics_ram', pg_temp.pick(string_to_array(spec[7], '/')),
+            'electronics_screen', spec[8]::numeric,
+            'computer_gpu', spec[9],
+            'computer_os', spec[10],
+            'computer_disk', CASE WHEN selling THEN CASE WHEN random() < 0.95 THEN 'SSD' ELSE 'SSD_HDD' END END,
+            'electronics_features', CASE WHEN selling AND cardinality(features) > 0 THEN to_jsonb(features) END);
+    WHEN 'kompjutere' THEN
+        w.properties := w.properties || jsonb_build_object(
+            'electronics_device', spec[6],
+            'computer_cpu', pg_temp.pick(string_to_array(spec[7], '/')),
+            'electronics_ram', pg_temp.pick(string_to_array(spec[8], '/')),
+            'computer_gpu', spec[9],
+            'computer_os', spec[10],
+            'computer_disk', CASE WHEN selling THEN CASE WHEN random() < 0.75 THEN 'SSD' WHEN random() < 0.8 THEN 'SSD_HDD' ELSE 'HDD' END END,
+            'computer_monitor', CASE WHEN selling AND spec[6] IN ('PC_DESKTOP', 'PC_GAMING') AND random() < 0.25 THEN true END);
+    WHEN 'tableta' THEN
+        w.properties := w.properties || jsonb_build_object(
+            'electronics_screen', spec[6]::numeric,
+            'tablet_connectivity', CASE WHEN random() < 0.25 THEN 'CELLULAR' ELSE 'WIFI' END);
+    WHEN 'televizore' THEN
+        smart := spec[7] <> 'HD' OR random() < 0.5;
+        w.properties := w.properties || jsonb_build_object(
+            'electronics_screen', spec[6]::numeric,
+            'tv_resolution', spec[7],
+            'tv_panel', spec[8],
+            'tv_smart', CASE WHEN smart THEN true END);
+    WHEN 'konsola-lojerash' THEN
+        controllers := CASE WHEN selling AND spec[6] NOT IN ('SWITCH_LITE', 'STEAM_DECK_OLED')
+                            THEN pg_temp.pick(ARRAY[1, 1, 1, 1, 2, 2, 2, 3]) END;
+        games := CASE WHEN selling AND random() < 0.4 THEN pg_temp.number_between(2, 6) END;
+        w.properties := w.properties || jsonb_build_object(
+            'console_model', spec[6],
+            'console_edition', nullif(spec[7], ''),
+            'console_games', CASE WHEN games IS NOT NULL THEN true END,
+            'console_controllers', controllers);
+    WHEN 'aparate-fotografike' THEN
+        shutters := CASE WHEN selling AND w.condition <> 'NEW' AND spec[6] IN ('DSLR', 'MIRRORLESS')
+                         THEN round(pg_temp.number_between(1000, 60000)::numeric, -2)::int END;
+        w.properties := w.properties || jsonb_build_object(
+            'electronics_device', spec[6],
+            'camera_sensor', nullif(spec[7], ''),
+            'camera_mount', nullif(spec[8], ''),
+            'camera_shutter_count', shutters);
+    WHEN 'audio-dhe-kufje' THEN
+        w.properties := w.properties || jsonb_build_object(
+            'electronics_device', spec[6],
+            'audio_wireless', CASE WHEN spec[7] = '1' THEN true END,
+            'audio_noise_cancelling', CASE WHEN spec[8] = '1' THEN true END);
+    ELSE
+        NULL;
+    END CASE;
+    w.properties := jsonb_strip_nulls(w.properties);
+    -- The description doesn't say what the properties don't: no remote that didn't come with it.
     w.description := concat_ws(' ',
-        CASE WHEN category IN ('telefona', 'laptope', 'tableta') AND w.condition <> 'NEW'
-             THEN format('Bateria %s%%.', pg_temp.number_between(78, 100)) END,
-        pg_temp.sentences(CASE category
-            WHEN 'televizore' THEN ARRAY['Me telekomandë dhe këmbë origjinale.', 'Smart TV me Netflix dhe YouTube.', 'Asnjë pixel i djegur.',
-                                         'Garanci 6 muaj.', 'Shitet sepse kam marrë një më të madh.']
-            WHEN 'konsola-lojerash' THEN ARRAY['Me dy kontrollerë.', format('Me %s lojëra.', pg_temp.number_between(2, 6)), 'Garanci 12 muaj.',
-                                               'Me kuti dhe të gjithë kabllot.', 'Përdorur shumë pak.']
-            WHEN 'aparate-fotografike' THEN ARRAY['Numër i ulët shkrepjesh.', 'Me çantë dhe kartë memorie.', 'Me objektiv 18-55 mm.',
-                                                  'Sensor i pastër, asnjë njollë.', 'Ideal për fotografi dhe video.']
-            WHEN 'audio-dhe-kufje' THEN ARRAY['Zë i pastër dhe bas i fortë.', 'Me kutinë karikuese.', 'Anulim aktiv i zhurmës.',
-                                              'Bateria mban gjatë.', 'Origjinale, me faturë.']
-            WHEN 'laptope' THEN ARRAY['Tastierë me ndriçim.', 'Windows 11 i instaluar.', 'Ideal për punë dhe studime.',
-                                      'Me karikues origjinal.', 'Ekrani pa asnjë gërvishtje.', 'Shumë i shpejtë, me SSD.']
-            WHEN 'kompjutere' THEN ARRAY['Windows 11 i instaluar.', 'Ideal për lojëra dhe punë grafike.', 'I pastër nga brenda, me ftohje të mirë.',
-                                         'Me tastierë dhe maus.', 'Fatura dhe garancia në dispozicion.']
-            ELSE ARRAY['Pa asnjë gërvishtje.', 'Me kuti dhe karikues.', 'Garanci 6 muaj.', 'Ekrani origjinal, asnjë riparim.',
-                       'I pabllokuar, punon me çdo operator.', 'Shitet sepse kam marrë një të ri.',
-                       'Mbrojtëse ekrani e vendosur që ditën e parë.'] END, 3));
+        CASE WHEN battery IS NOT NULL THEN format('Bateria %s%%.', battery) END,
+        pg_temp.sentences(array_remove(CASE category
+            WHEN 'televizore' THEN ARRAY[CASE WHEN 'REMOTE' = ANY(included) THEN 'Me telekomandë dhe këmbë origjinale.' END,
+                                         CASE WHEN smart THEN 'Smart TV me Netflix dhe YouTube.' END, 'Asnjë pixel i djegur.',
+                                         CASE WHEN warranty THEN 'Garanci 6 muaj.' END, 'Shitet sepse kam marrë një më të madh.']
+            WHEN 'konsola-lojerash' THEN ARRAY[CASE controllers WHEN 2 THEN 'Me dy kontrollerë.' WHEN 3 THEN 'Me tre kontrollerë.' END,
+                                               CASE WHEN games IS NOT NULL THEN format('Me %s lojëra.', games) END,
+                                               CASE WHEN warranty THEN 'Garanci 12 muaj.' END,
+                                               CASE WHEN 'BOX' = ANY(included) THEN 'Me kuti dhe të gjithë kabllot.' END,
+                                               'Përdorur shumë pak.']
+            WHEN 'aparate-fotografike' THEN ARRAY[CASE WHEN shutters < 15000 THEN 'Numër i ulët shkrepjesh.' END,
+                                                  'Me çantë dhe kartë memorie.',
+                                                  CASE WHEN spec[6] = 'DSLR' AND spec[7] = 'APS_C' THEN 'Me objektiv 18-55 mm.' END,
+                                                  CASE WHEN spec[6] <> 'LENS' THEN 'Sensor i pastër, asnjë njollë.' END,
+                                                  'Ideal për fotografi dhe video.']
+            WHEN 'audio-dhe-kufje' THEN ARRAY['Zë i pastër dhe bas i fortë.',
+                                              CASE WHEN spec[6] = 'EARBUDS' THEN 'Me kutinë karikuese.' END,
+                                              CASE WHEN spec[8] = '1' THEN 'Anulim aktiv i zhurmës.' END,
+                                              CASE WHEN spec[7] = '1' THEN 'Bateria mban gjatë.' END,
+                                              CASE WHEN 'INVOICE' = ANY(included) THEN 'Origjinale, me faturë.' END]
+            WHEN 'laptope' THEN ARRAY[CASE WHEN 'BACKLIT_KEYBOARD' = ANY(features) THEN 'Tastierë me ndriçim.' END,
+                                      CASE WHEN spec[10] = 'WINDOWS' THEN 'Windows 11 i instaluar.' END,
+                                      'Ideal për punë dhe studime.',
+                                      CASE WHEN 'CHARGER' = ANY(included) THEN 'Me karikues origjinal.' END,
+                                      'Ekrani pa asnjë gërvishtje.', 'Shumë i shpejtë, me SSD.']
+            WHEN 'kompjutere' THEN ARRAY[CASE WHEN spec[10] = 'WINDOWS' THEN 'Windows 11 i instaluar.' END,
+                                         'Ideal për lojëra dhe punë grafike.', 'I pastër nga brenda, me ftohje të mirë.',
+                                         'Me tastierë dhe maus.',
+                                         CASE WHEN warranty AND 'INVOICE' = ANY(included) THEN 'Fatura dhe garancia në dispozicion.' END]
+            ELSE ARRAY['Pa asnjë gërvishtje.',
+                       CASE WHEN 'BOX' = ANY(included) AND 'CHARGER' = ANY(included) THEN 'Me kuti dhe karikues.' END,
+                       CASE WHEN warranty THEN 'Garanci 6 muaj.' END,
+                       'Ekrani origjinal, asnjë riparim.', 'I pabllokuar, punon me çdo operator.',
+                       'Shitet sepse kam marrë një të ri.', 'Mbrojtëse ekrani e vendosur që ditën e parë.'] END, NULL), 3));
     RETURN w;
 END
 $$;
@@ -1017,6 +1214,18 @@ WITH RECURSIVE up AS (
 SELECT c.id, c.slug, c.default_currency::text AS currency, up.slug AS family
 FROM categories c JOIN up ON up.category_id = c.id AND up.parent_id IS NULL;
 
+\if :{?only}
+-- Only one top-level category's listings, in its own categories' shares.
+DELETE FROM shares s WHERE NOT EXISTS (SELECT 1 FROM families f WHERE f.slug = s.slug AND f.family = :'only');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM shares) THEN
+        RAISE EXCEPTION 'only: no top-level category by that slug takes listings';
+    END IF;
+END
+$$;
+\endif
+
 -- Towns, by about how many listings each has.
 CREATE TEMP TABLE towns AS
 SELECT m.id, m.slug, m.name::text AS name, m.latitude::float8 AS latitude, m.longitude::float8 AS longitude,
@@ -1051,7 +1260,7 @@ CROSS JOIN LATERAL pg_temp.write(f.family, f.slug, t.slug, t.name) AS w;
 -- ---------------------------------------------------------------- sellers
 
 -- Numbers go on from earlier runs', so every run's sellers have addresses and numbers of their own.
-SELECT count(*) AS made FROM users WHERE auth_subject LIKE 'dev|generated-%' \gset
+SELECT coalesce(max(split_part(auth_subject, '-', 2)::int), 0) AS made FROM users WHERE auth_subject LIKE 'dev|generated-%' \gset
 
 -- Private sellers, about one for every 12 listings; some sell much more than others.
 CREATE TEMP TABLE people AS
@@ -1069,12 +1278,21 @@ SELECT id, 'dev|generated-' || number, 'gen.' || number || '@example.test', '+35
 FROM people;
 
 -- Businesses, about one for every 250 listings, each run by a seller of its own: car dealers,
--- property agencies, electronics shops, furniture shops, and employers.
+-- property agencies, electronics shops, furniture shops, and employers, each kind selling that
+-- share of its top-level category's listings.
+CREATE TEMP TABLE firm_kinds (n int, kind text, family text, share float8);
+INSERT INTO firm_kinds VALUES (1, 'auto', 'automjete', 0.35), (2, 'imobiliare', 'prona', 0.5), (3, 'tekno', 'elektronike', 0.25),
+                              (4, 'mobileri', 'shtepi-dhe-kopsht', 0.2), (5, 'pune', 'pune', 0.7);
+-- Of the kinds that sell where this run makes listings: all of them, or with only= one or none.
 CREATE TEMP TABLE firms AS
 SELECT g AS n, uuid_v7() AS id, uuid_v7() AS owner_id, :made + (SELECT count(*) FROM people) + g AS number,
-       (ARRAY['auto', 'imobiliare', 'tekno', 'mobileri', 'pune'])[1 + g % 5] AS family,
+       kinds.kind[1 + g % cardinality(kinds.kind)] AS family,
        NULL::text AS name
-FROM generate_series(1, greatest(5, :count / 250)) g;
+FROM (SELECT array_agg(k.kind ORDER BY k.n) AS kind
+      FROM firm_kinds k
+      WHERE k.family IN (SELECT f.family FROM shares s JOIN families f ON f.slug = s.slug)) kinds,
+     generate_series(1, greatest(5, :count / 250)) g
+WHERE kinds.kind IS NOT NULL;
 UPDATE firms SET name = CASE family
     WHEN 'auto' THEN 'Auto '
     WHEN 'imobiliare' THEN 'Imobiliare '
@@ -1102,15 +1320,9 @@ SELECT id, owner_id, 'OWNER' FROM firms;
 
 -- Who sells each: a firm of its kind for some, a private seller for the rest.
 CREATE TEMP TABLE sold_by AS
-SELECT w.id,
-       CASE WHEN random() < CASE WHEN w.family = 'automjete' THEN 0.35 WHEN w.family = 'prona' THEN 0.5
-                                 WHEN w.family = 'elektronike' THEN 0.25 WHEN w.family = 'shtepi-dhe-kopsht' THEN 0.2
-                                 WHEN w.family = 'pune' THEN 0.7 ELSE 0 END
-            THEN CASE w.family WHEN 'automjete' THEN 'auto' WHEN 'prona' THEN 'imobiliare' WHEN 'elektronike' THEN 'tekno'
-                               WHEN 'shtepi-dhe-kopsht' THEN 'mobileri' ELSE 'pune' END
-       END AS firm_family,
-       random() AS which
-FROM written w;
+SELECT w.id, CASE WHEN random() < coalesce(k.share, 0) THEN k.kind END AS firm_family, random() AS which
+FROM written w
+LEFT JOIN firm_kinds k ON k.family = w.family;
 
 -- Points on the map, approximate like real sellers' ones: up to 1.5 km from the town's centre.
 -- Where the centre is on the shore, they spread less far around a spot inland, so none land in
@@ -1160,21 +1372,22 @@ SELECT p.id, p.seller_user_id, p.seller_business_id, p.created_by, p.category_id
        round((p.origin_longitude + p.km * sin(p.angle) / (111.32 * cos(radians(p.origin_latitude))))::numeric, 6)
 FROM placed p;
 
--- Properties: each subcategory's kind (migration 0008), then options and numbers, then
--- multi-select options. A property code or option that doesn't exist fails the run here.
+-- Properties: each subcategory's kind (migration 0008), then options, numbers and ticked boxes,
+-- then multi-select options. A property code or option that doesn't exist fails the run here.
 INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_option_id)
 SELECT w.id, o.attribute_id, 'SELECT', o.id
 FROM written w
 JOIN categories c ON c.id = w.category_id
 JOIN attribute_options o ON o.id = c.replaces_option_id;
 
-INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_option_id, value_number)
+INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_option_id, value_number, value_boolean)
 SELECT w.id, a.id, a.data_type,
        CASE WHEN a.data_type = 'SELECT' THEN o.id END,
-       CASE WHEN a.data_type = 'NUMBER' THEN (property.value #>> '{}')::numeric END
+       CASE WHEN a.data_type = 'NUMBER' THEN (property.value #>> '{}')::numeric END,
+       CASE WHEN a.data_type = 'BOOLEAN' THEN (property.value #>> '{}')::boolean END
 FROM written w
 CROSS JOIN LATERAL jsonb_each(w.properties) AS property (code, value)
-JOIN attributes a ON a.code = property.code AND a.data_type IN ('SELECT', 'NUMBER')
+JOIN attributes a ON a.code = property.code AND a.data_type IN ('SELECT', 'NUMBER', 'BOOLEAN')
 LEFT JOIN attribute_options o ON o.attribute_id = a.id AND o.value_code = property.value #>> '{}';
 
 INSERT INTO listing_attribute_options (listing_id, attribute_id, option_id)
@@ -1195,6 +1408,17 @@ BEGIN
                WHERE NOT EXISTS (SELECT 1 FROM effective_category_attributes eca
                                  WHERE eca.category_id = w.category_id AND eca.attribute_id = a.id)) THEN
         RAISE EXCEPTION 'a generated listing has a property its category does not';
+    END IF;
+    -- And every option written one its category offers (category_options, migration 0021): a
+    -- phone's brand one of phones' brands.
+    IF EXISTS (SELECT 1
+               FROM written w
+               CROSS JOIN LATERAL jsonb_each(w.properties) AS property (code, value)
+               JOIN attributes a ON a.code = property.code AND a.data_type IN ('SELECT', 'MULTISELECT')
+               CROSS JOIN LATERAL jsonb_array_elements_text(CASE jsonb_typeof(property.value) WHEN 'array' THEN property.value
+                                                                 ELSE jsonb_build_array(property.value) END) AS chosen (value_code)
+               WHERE NOT EXISTS (SELECT 1 FROM category_options(w.category_id, a.id) o WHERE o.value_code = chosen.value_code)) THEN
+        RAISE EXCEPTION 'a generated listing has an option its category does not offer';
     END IF;
 END
 $$;

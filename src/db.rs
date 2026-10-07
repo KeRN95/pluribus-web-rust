@@ -171,8 +171,9 @@ pub struct AttributeOption {
 }
 
 /// The category's filterable properties, its own and inherited, in display order, each under the
-/// category's name for it (category_attributes.label) where it has one. Looked up by slug, so a
-/// page can load them alongside the categories.
+/// category's name for it (category_attributes.label) where it has one, with the options it offers
+/// (category_options: a phone's brands, not a camera's). Looked up by slug, so a page can load them
+/// alongside the categories.
 pub async fn filter_attributes(
     db: &PgPool,
     category_slug: &str,
@@ -187,7 +188,7 @@ pub async fn filter_attributes(
                            '[]') AS "options!: Json<Vec<AttributeOption>>"
            FROM effective_category_attributes eca
            JOIN attributes a ON a.id = eca.attribute_id
-           LEFT JOIN attribute_options o ON o.attribute_id = a.id AND o.active
+           LEFT JOIN LATERAL category_options(eca.category_id, a.id) o ON true
            WHERE eca.category_id = (SELECT id FROM categories WHERE slug = $1 AND active)
              AND eca.filterable
              AND a.data_type IN ('SELECT', 'MULTISELECT', 'NUMBER', 'BOOLEAN')
@@ -218,8 +219,8 @@ pub struct FormAttribute {
 }
 
 /// The properties a listing in this category can have, its own and inherited, in form order, under
-/// the category's name for them where it has one. Not the subcategory's kind (the old "type"
-/// property): the subcategory sets that one.
+/// the category's name for them where it has one, with the options it offers (category_options).
+/// Not the subcategory's kind (the old "type" property): the subcategory sets that one.
 pub async fn form_attributes(db: &PgPool, category_id: Uuid) -> sqlx::Result<Vec<FormAttribute>> {
     sqlx::query_as!(
         FormAttribute,
@@ -234,7 +235,7 @@ pub async fn form_attributes(db: &PgPool, category_id: Uuid) -> sqlx::Result<Vec
                            '[]') AS "options!: Json<Vec<AttributeOption>>"
            FROM effective_category_attributes eca
            JOIN attributes a ON a.id = eca.attribute_id
-           LEFT JOIN attribute_options o ON o.attribute_id = a.id AND o.active
+           LEFT JOIN LATERAL category_options(eca.category_id, a.id) o ON true
            WHERE eca.category_id = $1
              AND a.data_type IN ('SELECT', 'MULTISELECT', 'NUMBER', 'BOOLEAN', 'TEXT')
              AND NOT EXISTS (SELECT 1 FROM categories k JOIN attribute_options ko ON ko.id = k.replaces_option_id
@@ -2332,6 +2333,27 @@ pub async fn approve_option(db: &PgPool, id: Uuid, label: &str) -> sqlx::Result<
     if approved.is_none() {
         return Ok(Approval::NotPending);
     }
+    // A category that offers only some of the property's options (category_options: a phone's
+    // brands) offers this one too where it was typed in, after the others but before "Tjetër".
+    sqlx::query!(
+        "INSERT INTO category_attribute_options (category_id, option_id, sort_order)
+         SELECT DISTINCT l.category_id, o.id,
+                coalesce((SELECT max(s.sort_order) FROM category_attribute_options s
+                          JOIN attribute_options so ON so.id = s.option_id
+                          WHERE s.category_id = l.category_id AND so.attribute_id = o.attribute_id
+                            AND so.value_code <> 'OTHER'), 0) + 1
+         FROM attribute_options o
+         JOIN listing_attribute_values v ON v.value_option_id = o.id
+         JOIN listings l ON l.id = v.listing_id
+         WHERE o.id = $1
+           AND EXISTS (SELECT 1 FROM category_attribute_options s
+                       JOIN attribute_options so ON so.id = s.option_id
+                       WHERE s.category_id = l.category_id AND so.attribute_id = o.attribute_id)
+         ON CONFLICT DO NOTHING",
+        id,
+    )
+    .execute(&mut *tx)
+    .await?;
     // Search reads the names from search_extra (listing_search_extra), which has the old spelling,
     // and a car's title from generated_title.
     sqlx::query!(

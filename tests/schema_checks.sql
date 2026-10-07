@@ -492,6 +492,26 @@ SELECT pg_temp.check('the old "type" properties are no longer filters, the subca
                 JOIN categories c ON c.replaces_option_id = o.id
                 WHERE e.filterable));
 
+SELECT pg_temp.check('a category offers only options of properties it has: phones Huawei, not Canon; their parent every brand',
+    NOT EXISTS (SELECT 1 FROM category_attribute_options s
+                JOIN attribute_options o ON o.id = s.option_id
+                WHERE NOT EXISTS (SELECT 1 FROM effective_category_attributes e
+                                  WHERE e.category_id = s.category_id AND e.attribute_id = o.attribute_id))
+    AND EXISTS (SELECT 1 FROM categories c, attributes a, category_options(c.id, a.id) o
+                WHERE c.slug = 'telefona' AND a.code = 'electronics_brand' AND o.value_code = 'HUAWEI')
+    AND NOT EXISTS (SELECT 1 FROM categories c, attributes a, category_options(c.id, a.id) o
+                    WHERE c.slug = 'telefona' AND a.code = 'electronics_brand' AND o.value_code = 'CANON')
+    AND (SELECT count(*) FROM categories c, attributes a, category_options(c.id, a.id) o
+         WHERE c.slug = 'elektronike' AND a.code = 'electronics_brand')
+        = (SELECT count(*) FROM attribute_options o JOIN attributes a ON a.id = o.attribute_id
+           WHERE a.code = 'electronics_brand' AND o.active));
+
+SELECT pg_temp.check('storage is for phones, tablets and computers, not for TVs, cameras, headphones or consoles',
+    (SELECT array_agg(c.slug ORDER BY c.slug) FROM effective_category_attributes e
+     JOIN categories c ON c.id = e.category_id JOIN attributes a ON a.id = e.attribute_id
+     WHERE a.code = 'electronics_storage')
+        = ARRAY['kompjutere', 'laptope', 'tableta', 'telefona']::varchar[]);
+
 INSERT INTO category_attributes (category_id, attribute_id, filterable, show_in_card, sort_order)
 SELECT c.id, a.id, false, true, 99 FROM categories c, attributes a WHERE c.slug = 'apartamente' AND a.code = 'property_floor';
 
