@@ -615,7 +615,7 @@ async fn card_details_start_with_the_city(pool: PgPool) {
 #[sqlx::test(fixtures("listings"))]
 async fn a_card_links_to_its_listing_through_the_title(pool: PgPool) {
     let body = get(pool, "/").await.body;
-    // The title link is stretched over the whole card (see .card-link in app.css).
+    // The title link is stretched over the whole card (see .card-link in page.css).
     assert!(body.contains(
         r#"<h2 class="card-title"><a class="card-link" href="/listing/1001-volkswagen-golf-7-2016-nafte">"#
     ));
@@ -825,7 +825,7 @@ async fn big_cards_slide_through_every_photo(pool: PgPool) {
     .await
     .unwrap();
 
-    // Small cards unless the visitor chose big ones: a small card shows its first photo (app.css),
+    // Small cards unless the visitor chose big ones: a small card shows its first photo (page.css),
     // the copy fetched for a column of the grid.
     let small = get(pool.clone(), "/c/makina").await.body;
     assert!(small.contains(r#"<div class="browse" data-controller="filters cards""#));
@@ -2137,7 +2137,7 @@ async fn static_files_have_cache_headers(pool: PgPool) {
         cache_control("/static/vendor/turbo-8.0.23.js").await,
         "public, max-age=31536000, immutable"
     );
-    assert_eq!(cache_control("/static/css/app.css").await, "no-cache");
+    assert_eq!(cache_control("/static/css/base.css").await, "no-cache");
     assert_eq!(
         cache_control("/static/vendor/leaflet-1.9.4/leaflet.js").await,
         "public, max-age=31536000, immutable"
@@ -2165,14 +2165,20 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     let version = marketplace::web::asset_version();
     assert_eq!(version.len(), 8);
     let body = get(pool.clone(), "/").await.body;
-    assert!(body.contains(&format!(
-        r#"<link rel="stylesheet" href="/static/css/app.css?v={version}" data-turbo-track="reload">"#
-    )));
+    // The stylesheets in their order, which the cascade follows.
+    let sheets: Vec<usize> = marketplace::web::STYLESHEETS
+        .iter()
+        .map(|sheet| {
+            body.find(&format!(r#"<link rel="stylesheet" href="/static/css/{sheet}.css?v={version}" data-turbo-track="reload">"#))
+                .unwrap_or_else(|| panic!("{sheet}"))
+        })
+        .collect();
+    assert!(sheets.is_sorted(), "{sheets:?}");
     assert!(body.contains(&format!(
         r#"<script type="module" src="/static/js/application.js?v={version}" data-turbo-track="reload"></script>"#
     )));
     // The fingerprint only changes the URL; the file is served as before.
-    let css = get(pool, &format!("/static/css/app.css?v={version}")).await;
+    let css = get(pool, &format!("/static/css/browse.css?v={version}")).await;
     assert_eq!(css.status, StatusCode::OK);
     assert!(css.body.contains(".filters-card"));
 }

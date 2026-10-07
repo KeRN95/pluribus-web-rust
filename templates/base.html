@@ -13,13 +13,15 @@
     } catch {}
   </script>
   <meta name="view-transition" content="same-origin">
-  {#- Fetch the fonts, Geist and the logo's Merriweather, alongside the stylesheet rather than after
+  {#- Fetch the fonts, Geist and the logo's Merriweather, alongside the stylesheets rather than after
       it, so text and the logo rarely wait for them. -#}
   <link rel="preload" href="/static/vendor/fonts/geist-v5-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/vendor/fonts/merriweather-5.3.0-latin-700.woff2" as="font" type="font/woff2" crossorigin>
   {#- The fingerprint changes with the files; Turbo then reloads open pages in full, see
       web::asset_version. -#}
-  <link rel="stylesheet" href="/static/css/app.css?v={{ crate::web::asset_version() }}" data-turbo-track="reload">
+  {%- for sheet in crate::web::STYLESHEETS %}
+  <link rel="stylesheet" href="/static/css/{{ sheet }}.css?v={{ crate::web::asset_version() }}" data-turbo-track="reload">
+  {%- endfor %}
   <script type="importmap">
     {
       "imports": {

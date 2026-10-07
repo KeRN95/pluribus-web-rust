@@ -1,0 +1,336 @@
+/* The category and search pages: their heading and its menu, the filters, the row of round buttons.
+  After welcome.css. */
+
+/* Browse pages: filters beside the results */
+
+/* A category page's heading is the last of a breadcrumb: the categories above it on its line, as
+   big as it, quiet links each followed by a fainter "›", wrapping between them where the line is
+   too narrow; the count after them all, a little further off. The heading itself, a search's too,
+   is two sizes smaller than the page headings elsewhere and of medium weight, so that the line
+   doesn't weigh on the results. */
+.results-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .45rem; margin: 1.25rem 0 .25rem; }
+.results-header h1 { margin: 0; font-size: var(--text-xl); font-weight: var(--medium); }
+.results-header .result-count { margin-left: .55rem; }
+/* Over the listings, the order they come in ("Më të rejat"), as the welcome page's sections have
+   their headings. */
+.results-heading { margin: 1.25rem 0 .75rem; }
+/* The words searched in place of misspelt ones take a line of their own, under the heading. */
+.search-corrections { flex-basis: 100%; margin: 0; color: var(--muted); }
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .1rem .45rem;
+  color: color-mix(in srgb, var(--muted) 75%, var(--bg));
+  font-size: var(--text-xl);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+.breadcrumbs a { color: inherit; text-decoration: none; white-space: nowrap; }
+.breadcrumbs a:hover { color: var(--text); }
+.breadcrumbs span { color: color-mix(in srgb, var(--muted) 50%, var(--bg)); }
+
+/* The heading of a category page opens a menu of every category. */
+.category-switch { position: relative; }
+.category-switch summary { list-style: none; cursor: pointer; border-radius: 10px; }
+.category-switch summary::-webkit-details-marker { display: none; }
+.category-switch h1 { display: inline-flex; align-items: center; gap: .3rem; }
+.category-switch .chevron { flex: none; width: 16px; height: 16px; color: var(--muted); transition: transform .15s; }
+.category-switch[open] .chevron { transform: rotate(180deg); }
+.category-switch summary:hover .chevron { color: var(--text); }
+.category-menu {
+  position: absolute;
+  top: calc(100% + .4rem);
+  left: 0;
+  z-index: 20;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: min(70vh, 32rem);
+  overflow-y: auto;
+  padding: .375rem;
+  background: var(--surface);
+  border: 1px solid var(--menu-border);
+  border-radius: var(--radius);
+  box-shadow: var(--menu-shadow);
+  overscroll-behavior: contain;
+  transform-origin: top left;
+  animation: menu-in .14s ease-out;
+}
+/* Its rows are the in-page lists' (.picker-option); the top level stands out. A branch's name
+   takes the row up to its arrow and leads to the category; the arrow opens it. */
+.category-menu .picker-option { display: block; color: var(--text); text-decoration: none; }
+.category-menu .picker-option.is-current { display: flex; color: var(--on-button); }
+.category-menu > .picker-option,
+.category-menu > .menu-branch > .picker-branch { font-weight: var(--semibold); }
+.category-menu .picker-branch { display: flex; list-style: none; }
+.category-menu .picker-branch::-webkit-details-marker { display: none; }
+.category-menu .picker-branch a { flex: 1; min-width: 0; padding: .3rem 0; color: inherit; text-decoration: none; }
+.category-menu .menu-branch[open] > .picker-branch .picker-toggle { transform: rotate(90deg); }
+.result-count { margin: 0; color: var(--muted); }
+
+.browse { margin-top: 1rem; }
+
+.active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .3rem .55rem .3rem .8rem;
+  border-radius: 999px;
+  background: var(--badge);
+  font-size: var(--text-sm);
+  font-weight: var(--medium);
+  text-decoration: none;
+}
+
+.filter-chip svg { opacity: .65; }
+.filter-chip:hover svg { opacity: 1; }
+.clear-filters { padding: .3rem .4rem; color: var(--muted); font-size: var(--text-sm); }
+
+.filters-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.filters-header h2 { margin: 0; font-size: var(--text-xl); }
+
+.filter-form { display: grid; gap: 1.25rem; padding-top: 1rem; }
+.filter-group { display: grid; gap: .45rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+/* A filter's name as the listing form's: small, in the quiet grey, so that the choices stand out.
+   A legend floated is laid out as any other child, so every name has its group's gap under it. */
+.filter-label { padding: 0; color: var(--muted); font-size: var(--text-sm); font-weight: var(--semibold); letter-spacing: .01em; }
+fieldset.filter-group > .filter-label { float: left; width: 100%; }
+/* A filter's name starts where the text in its field does, past the field's border and padding,
+   rather than at its rounded edge, which makes the name look set off to the side. */
+.filter-form .filter-label { padding-left: calc(.7rem + 1px); }
+.check { display: flex; align-items: center; gap: .55rem; padding: .1rem 0; cursor: pointer; }
+.check input { flex: none; width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--button); }
+/* The filters' options, a box each rather than a tick, drawn as the listing form's options are,
+   like Claude's toggles, if boxier: the menus' hairline round the name on the fields' white;
+   picked, on the accent's tint, the hairline in the accent, as the chip it makes above the results
+   is. The name starts where the filter's does. A group's boxes wrap side by side under its name,
+   which takes a line of its own. The box is the whole target; the input is there for keyboards
+   and screen readers, its ring round the box. */
+.filter-options { display: flex; flex-wrap: wrap; gap: .35rem; }
+.filter-options > .filter-label { margin-bottom: .1rem; }
+.filter-form .check {
+  position: relative;
+  display: inline-flex;
+  justify-self: start; /* a yes-or-no filter's lone box keeps its width */
+  padding: .35rem .7rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 9px;
+  background: var(--input);
+  font-size: var(--text-sm);
+  line-height: 1.3;
+  transition: background-color .15s, border-color .15s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.filter-form .check input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.filter-form .check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+.filter-form .check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) {
+  .filter-form .check:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
+  .filter-form .check:has(input:checked):hover { border-color: var(--accent); }
+}
+/* Boxes with icons, a car's body types (Karroceria), on a line of their own: the car's side over
+   its name, the boxes as wide as each other: four to a line on a phone, however wide, and from a
+   tablet up as many as fit, all seven. */
+.filter-form .filter-icons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.filter-icons > .filter-label { grid-column: 1 / -1; }
+.filter-form .filter-icons .check {
+  flex-direction: column;
+  align-items: center;
+  justify-self: stretch;
+  border-radius: 12px;
+  gap: .2rem;
+  padding: .5rem .2rem .4rem;
+  font-size: var(--text-xs);
+  text-align: center;
+}
+.check-icon { flex: none; }
+.filter-form .check:has(input:checked) .check-icon { color: var(--accent); }
+@media (min-width: 720px) {
+  .filter-form .filter-icons { grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); }
+}
+.range { display: flex; align-items: center; gap: .4rem; color: var(--muted); }
+.range input { flex: 1; }
+.filter-form .range select { flex: none; width: auto; }
+/* The price's two ends on one track (price_range_controller.js), the currency beside it: the
+   stretch between them in the site's coral, the ends white and round with a soft shadow, big
+   enough for a finger. The two range inputs lie on top of each other and let every touch through
+   but their ends'; the prices show beside the name. */
+.price-filter .filter-label output { margin-left: .3rem; color: var(--text); letter-spacing: 0; }
+.price-slider { display: flex; align-items: center; gap: .75rem; }
+.price-slider .picker { flex: none; }
+.price-track { position: relative; flex: 1; height: 2.4rem; }
+.price-track::before,
+.price-fill { content: ""; position: absolute; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; }
+.price-track::before { left: 0; right: 0; background: var(--border-strong); }
+.price-fill { background: var(--button); }
+.price-track input[type="range"] {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  margin: -12px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: none;
+}
+.price-track input.is-top { z-index: 1; }
+.price-track input[type="range"]::-webkit-slider-runnable-track { height: 24px; background: none; }
+.price-track input[type="range"]::-moz-range-track { height: 24px; background: none; }
+.price-track input[type="range"]::-webkit-slider-thumb {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgb(0 0 0 / 12%);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.price-track input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgb(0 0 0 / 12%);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.price-track input[type="range"]:focus { outline: none; }
+.price-track input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--accent); }
+.price-track input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--accent); }
+.filter-actions { display: flex; align-items: center; gap: .75rem; }
+.filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
+
+/* The browse row: round buttons side by side, the search first, in the site's colour, then the
+   filters, the map, the order and the cards' size (--row tall and wide); the last column takes
+   what is left. Only one is open at a time (section:open). The search, the filters and the map
+   open over the results rather than pushing them down: a little under the row (--drop), as wide
+   as it, fading in as the menus do, the page dimmed under them (.browse-scrim); Escape or a tap on
+   the dim folds them again. The filters and the map come in cards drawn like Claude's, as the
+   listing form's own fields are: the menus' hairline and shadow on the surface, rounder corners;
+   they take at most what is left of the screen under the row (--top, measured as one opens:
+   filters_controller.js) and scroll inside if they need more. The row and what it opens stay over
+   the results and under the sticky header (z-index 10). The cards are no boxes of their own
+   (display: contents): their buttons are the row's, and the row places what they open. The
+   filters' form names its section with a heading for screen readers only, the button showing just
+   its icon. */
+.browse-tools {
+  --row: 3.4rem;
+  --drop: .75rem;
+  position: relative;
+  z-index: 9;
+  display: grid;
+  grid-template-columns: repeat(5, auto) minmax(0, 1fr);
+  gap: .5rem;
+  margin: 0 0 1rem;
+}
+.filters-card,
+.map-card { display: contents; }
+.filters,
+.map-card-body,
+.search-panel {
+  position: absolute;
+  top: calc(100% + var(--drop));
+  right: 0;
+  left: 0;
+  grid-column: 1 / -1;
+}
+.filters,
+.map-card-body {
+  max-height: calc(100dvh - var(--top, 12rem) - var(--drop) - 1rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  background: var(--surface);
+  border: 1px solid var(--menu-border);
+  border-radius: 16px;
+  box-shadow: var(--menu-shadow);
+  animation: menu-in .16s ease-out;
+}
+.filters { display: none; padding: 0 1rem 1rem; }
+.filters.is-open { display: block; }
+.filters-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The page under what the row opened, dimmed; the row and the header stay over it. */
+.browse-scrim { display: none; }
+.browse:has(.search-panel.is-open, .filters.is-open, .map-card:not(.map-hidden)) .browse-scrim {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  background: var(--scrim);
+  animation: fade-in .16s ease-out;
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .filters,
+  .map-card-body,
+  .browse-scrim { animation: none; }
+}
+/* The round buttons: only their icons, in the page's own colours, on the surface with the menus'
+   hairline, as the listing page's share button is; while what they open is open, on the accent's
+   tint; a press sinks them a little. The search is the site's coral, as the welcome page's is,
+   darker while its box is open. (Three classes, to win over .button and .button.secondary, which
+   come later.) */
+.browse-tools .button.round-button {
+  justify-content: center;
+  width: var(--row);
+  height: var(--row);
+  padding: 0;
+  border-color: var(--menu-border);
+  border-radius: 50%;
+  list-style: none;
+  transition: background-color .15s, border-color .15s, transform .1s;
+}
+.browse-tools .round-button::-webkit-details-marker { display: none; }
+.browse-tools .round-button:active { transform: scale(.97); }
+.browse-tools .button.round-button[aria-expanded="true"],
+.browse-tools .button.round-button[aria-pressed="true"],
+.sort-menu[open] > .button.round-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+.browse-tools .button.search-button { border-color: transparent; }
+.browse-tools .button.search-button[aria-expanded="true"] { border-color: transparent; background: var(--button-hover); }
+.browse-tools .round-button svg { width: 20px; height: 20px; }
+.round-button .pin-icon { margin: 0; color: inherit; }
+.search-button,
+.filters-open,
+.map-button,
+.cards-button { grid-row: 1; align-self: center; }
+/* The search box the round search button opens over the results, under the row and as wide as it
+   (above): the welcome page's pill, its suggestions under it. */
+.search-card { display: contents; }
+.search-panel { display: none; }
+.search-panel.is-open { display: block; animation: menu-in .16s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .search-panel.is-open { animation: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .browse-tools .button.round-button { transition: none; }
+  .browse-tools .round-button:active { transform: none; }
+}
+/* The form in two columns: a field takes a line of its own, unless it is a small one (filter-half:
+   a dropdown, a range, a few boxes), which shares its line with the next small one, Marka beside
+   Modeli, Viti beside Kilometrazhi, Karburanti beside Kambio. Wide, in four, a field of its own
+   taking two of them; without JavaScript, the button under them all, as wide as its words. */
+.filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: .75rem; align-items: start; }
+.filter-form > * { grid-column: 1 / -1; }
+.filter-form > .filter-half { grid-column: auto; }
+@media (min-width: 720px) {
+  .filter-actions .button { flex: none; padding-inline: 2rem; }
+}
+@media (min-width: 960px) {
+  .filter-form { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 1.5rem; }
+  .filter-form > * { grid-column: span 2; }
+  .filter-form > .filter-half { grid-column: span 1; }
+  .filter-form > .filter-icons,
+  .filter-form > noscript { grid-column: 1 / -1; }
+}

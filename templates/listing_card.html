@@ -1,11 +1,11 @@
-{#- The card's link is its title, stretched over the whole card (see .card-link in app.css), so
+{#- The card's link is its title, stretched over the whole card (see .card-link in page.css), so
     screen readers name the link by the title alone. The listing's point, when it has one, is
     there for the map page, which puts a dot on the map for each card. Its id, the listing's
     number, lets a page that refreshes in place (refresh.js) keep each listing's card as it is,
     its photo where it was slid to. -#}
 <article class="card" id="listing-{{ card.public_no }}">
   {#- The photo, darkening toward its bottom edge, with the price on it there; the title under it
-      (.card-media in app.css). A big card (the view button, cards_controller.js) has every photo
+      (.card-media in page.css). A big card (the view button, cards_controller.js) has every photo
       in a row to slide through, dots over them saying which shows and, under a pointer, arrows
       (slides_controller.js); a small one shows the first. -#}
   {%- let eager = loop.index <= page.eager %}
@@ -38,7 +38,7 @@
     {%- if !card.seller_name.is_empty() %}
     {#- Over a big card's photo, at its top left as the price is at its bottom: who sells it, their
         initial in a circle as on the listing page, and since when they are a user. A small card
-        leaves it out (app.css). -#}
+        leaves it out (page.css). -#}
     <p class="card-seller"><span class="avatar" aria-hidden="true">{{ card.seller_initial() }}</span><span class="card-seller-text"><span class="card-seller-name">{{ card.seller_name }}</span><span>{{ card.seller_since_text() }}</span></span></p>
     {%- endif %}
     <div class="card-head">

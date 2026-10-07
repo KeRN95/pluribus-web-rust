@@ -63,7 +63,7 @@ document.addEventListener("turbo:load", () => {
   for (const svg of document.querySelectorAll("svg.thinking")) svg.pauseAnimations();
 });
 
-// A tapped card keeps its border (app.css, .card.pressed) while its listing loads; the copy of the
+// A tapped card keeps its border (page.css, .card.pressed) while its listing loads; the copy of the
 // page Turbo keeps for going back loses it. Only its links open it: a big card's arrows step through
 // its photos. iOS only shows :active where a touch listener is.
 document.addEventListener("click", (event) => event.target.closest(".card a")?.closest(".card").classList.add("pressed"));

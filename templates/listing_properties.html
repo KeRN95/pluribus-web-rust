@@ -19,7 +19,7 @@
     </div>
     {%- else %}
     {#- Named inside the field, as in the rest of the form; the label is for screen readers. A
-        car's fields are tiles of one size, its main ones with an icon before the name (app.css). -#}
+        car's fields are tiles of one size, its main ones with an icon before the name (posting.css). -#}
     <label class="visually-hidden" for="{{ field.name }}">{{ field.label }}{% if let Some(unit) = field.unit %} ({{ unit }}){% endif %}</label>
     {%- if let Some(tile) = field.tile %}
     {%- if let Some(icon) = tile.icon %}

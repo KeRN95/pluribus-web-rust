@@ -1,0 +1,403 @@
+/* A listing's page: its photos, the seller's card, its details, the rows under it. Last. */
+
+/* Listing page */
+
+.listing { max-width: 760px; padding-top: 1.25rem; }
+/* Listings like it, under it: the browse pages' grid, as wide as the page, set apart by space
+   alone. */
+.related { margin-top: 2.5rem; }
+/* The seller's other listings say where all of them are at the end of their heading's line, or
+   under the heading where the line is too short for both. */
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; margin: 1.75rem 0 .75rem; }
+.section-head h2 { margin: 0; }
+.section-head a { font-size: var(--text-sm); font-weight: var(--semibold); text-underline-offset: .2em; }
+/* The seller's other listings in one row, and the welcome page's most seen (.most-viewed), each
+   card as wide as a column of the grid under them (two on a phone, as many as fit on wider
+   screens: the container queries follow its auto-fill),
+   which slides sideways a card at a time when there are more cards than columns; then the cards
+   narrow a little, so a quarter of the next one shows at the edge. The padding, which the margin
+   takes back, keeps a card's hover panel and focus ring clear of the sliding box's edges. */
+:is(.seller-listings, .most-viewed) { container-type: inline-size; }
+:is(.seller-listings, .most-viewed) .grid {
+  --across: 2;
+  --gaps: 1;
+  --gap: .75rem;
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - var(--gaps) * var(--gap)) / var(--across));
+  column-gap: var(--gap);
+  margin: -.5rem;
+  padding: .5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: .5rem;
+  scrollbar-width: thin;
+}
+:is(.seller-listings, .most-viewed) .card { scroll-snap-align: start; }
+@media (min-width: 720px) {
+  :is(.seller-listings, .most-viewed) .grid { --gap: 1rem; }
+}
+/* No bar under the row, on any screen: a finger slides it, the next card showing at its edge, and
+   a mouse drags it (drag_row_controller.js): a hand to grab it by, closed while it drags, no text
+   to select on the way, no snapping to pull it back to a card where it stops, and the card it was
+   grabbed by not looking pressed. */
+:is(.seller-listings, .most-viewed) .grid { scrollbar-width: none; }
+:is(.seller-listings, .most-viewed) .grid::-webkit-scrollbar { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  :is(.seller-listings, .most-viewed) .grid { scroll-snap-type: none; cursor: grab; user-select: none; }
+  :is(.seller-listings, .most-viewed) .grid.is-dragging,
+  :is(.seller-listings, .most-viewed) .grid.is-dragging * { cursor: grabbing; }
+  :is(.seller-listings, .most-viewed) .grid.is-dragging .card:active { outline: none; }
+}
+@container (width < 692px) {
+  :is(.seller-listings, .most-viewed) .grid:has(> .card:nth-child(3)) { --across: 2.25; --gaps: 2; }
+}
+@container (692px <= width < 928px) {
+  :is(.seller-listings, .most-viewed) .grid { --across: 3; --gaps: 2; }
+  :is(.seller-listings, .most-viewed) .grid:has(> .card:nth-child(4)) { --across: 3.25; --gaps: 3; }
+}
+@container (width >= 928px) {
+  :is(.seller-listings, .most-viewed) .grid { --across: 4; --gaps: 3; }
+  :is(.seller-listings, .most-viewed) .grid:has(> .card:nth-child(5)) { --across: 4.25; --gaps: 4; }
+}
+
+/* Wide screens: the photos across the page, and under them two columns: the listing on the left,
+   and on the right who sells it and how to reach them, in a card like the posting form's (the
+   menus' hairline on the surface), which stays in view as the page scrolls. The notice and the
+   category path span both too. */
+@media (min-width: 960px) {
+  .listing {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    grid-template-rows: auto auto auto auto auto 1fr;
+    grid-template-areas:
+      "notice notice"
+      "tags tags"
+      "media media"
+      "header side"
+      "details side"
+      "description side";
+    column-gap: 2.5rem;
+    align-items: start;
+    max-width: none;
+  }
+  .listing > .notice { grid-area: notice; }
+  .listing > .listing-tags { grid-area: tags; }
+  .listing > .listing-media { grid-area: media; }
+  .listing > .listing-header { grid-area: header; }
+  .listing > .listing-details { grid-area: details; }
+  .listing > .listing-description { grid-area: description; }
+  /* Across the page a photo's frame is wider than the photo, and no taller than most screens
+     leave room for: the photo whole in the middle, its blurred copy filling the sides. */
+  .listing-media .gallery-photo,
+  .listing-media .listing-photo { aspect-ratio: auto; height: min(70vh, 38rem); }
+  /* The card's top level with the title's, under the photo. */
+  .listing > .listing-contact {
+    grid-area: side;
+    position: sticky;
+    top: 5rem;
+    margin-top: .75rem;
+    padding: 1rem;
+    border: 1px solid var(--menu-border);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
+  }
+  .listing-contact .seller { margin: 0 -.6rem; }
+  /* The card is narrow: since when and how many listings may take two lines. */
+  .listing-contact .seller-summary { white-space: normal; }
+  /* Under the seller, over a hairline across the card, the buttons. */
+  .listing-contact .actions { margin: .75rem -1rem 0; padding: 1rem 1rem 0; border-top: 1px solid var(--menu-border); }
+}
+
+.listing-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 6 / 5;
+  border-radius: var(--radius);
+}
+
+/* A listing's photos. Several make a strip to swipe through, one at a time (scroll snapping), with
+   a counter in the corner, the site's dark colour behind it as on the cards' prices, and arrows on
+   screens with a mouse (gallery_controller.js). */
+.gallery { position: relative; }
+.listing-photos {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  border-radius: var(--radius);
+  /* Safari otherwise lets the blurred copies (below) out past the rounded corners. */
+  isolation: isolate;
+}
+.listing-photos::-webkit-scrollbar { display: none; }
+/* Each photo whole, never cut, in a 6:5 frame, a little taller than most photos. Where it doesn't
+   fill it, at a tall photo's sides or above and below a wide one, the photo shows again behind
+   it, blurred: its card-sized copy, larger than the frame, so that the blur's faded edges fall
+   outside. */
+.gallery-photo {
+  position: relative;
+  flex: 0 0 100%;
+  aspect-ratio: 6 / 5;
+  overflow: hidden;
+  background: var(--surface-muted);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+.gallery-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.gallery-photo .gallery-backdrop {
+  object-fit: cover;
+  filter: blur(24px) brightness(.9);
+  transform: scale(1.15);
+}
+.listing-photos:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.gallery-count {
+  position: absolute;
+  right: .7rem;
+  bottom: .7rem;
+  padding: .2rem .6rem;
+  border-radius: 999px;
+  background: rgb(38 38 36 / 60%);
+  color: #faf9f5;
+  font-size: var(--text-xs);
+  font-weight: var(--medium);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.gallery-arrow { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .gallery-arrow {
+    position: absolute;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(250 249 245 / 90%);
+    box-shadow: var(--shadow);
+    color: #262624;
+    cursor: pointer;
+    translate: 0 -50%;
+    transition: opacity .15s;
+  }
+  .gallery-previous { left: .7rem; }
+  .gallery-next { right: .7rem; }
+  .gallery-arrow:disabled { opacity: 0; pointer-events: none; }
+}
+/* Above the photo, the category's path as a category page's heading has it (.breadcrumbs), the
+   listing's own category last in the heading's colour and weight; the status after it. */
+.listing-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
+.listing-tags .badge { margin-left: 0; }
+.listing-trail a:last-child { color: var(--text); font-weight: var(--medium); }
+/* The price is the headline, the title under its size. */
+.listing-header h1 { margin: .75rem 0 .35rem; font-size: var(--text-2xl); }
+.listing-price { margin: 0; font-size: var(--text-3xl); line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
+/* What follows the price ("/muaj", "(i diskutueshëm)"), half its size. */
+.price-note { font-size: .5em; letter-spacing: normal; }
+/* Bubbles under the price, which open a card under them as the menus open theirs; a tap outside
+   or Escape closes it (dropdown_controller.js): what a square metre of a property on sale costs,
+   whose card says how it was worked out (area_price.html), and "Llogarit kredinë", whose card is
+   the loan calculator. A card's figures stand in rows, their sum under a line. */
+.bubble > summary {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .3rem .7rem; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); color: var(--text); font-size: var(--text-sm); font-weight: var(--semibold);
+  list-style: none; cursor: pointer; transition: background-color .15s;
+}
+.bubble > summary::-webkit-details-marker { display: none; }
+.bubble > summary:hover, .bubble[open] > summary { background: var(--surface-muted); }
+.bubble-card {
+  position: absolute;
+  top: calc(100% + .4rem);
+  left: 0;
+  z-index: 30;
+  padding: .8rem .9rem;
+  border: 1px solid var(--menu-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--menu-shadow);
+  font-size: var(--text-sm);
+  transform-origin: top left;
+  animation: menu-in .14s ease-out;
+}
+.bubble-title { margin: 0 0 .5rem; font-weight: var(--semibold); }
+.bubble-sum { display: grid; gap: .3rem; margin: 0; }
+.bubble-sum > div { display: flex; justify-content: space-between; gap: 1.5rem; }
+.bubble-sum dt { color: var(--muted); }
+.bubble-sum dd { margin: 0; font-variant-numeric: tabular-nums; }
+.bubble-total { padding-top: .4rem; border-top: 1px solid var(--border); font-weight: var(--semibold); }
+.bubble-total dt { color: var(--text); }
+.bubble-note { margin: .55rem 0 0; color: var(--muted); font-size: var(--text-xs); }
+@media (prefers-reduced-motion: reduce) {
+  .bubble-card { animation: none; }
+}
+/* What a square metre costs: its card under it, as wide as what it says. */
+.area-price { position: relative; width: fit-content; }
+.listing-header > .area-price { margin-top: .4rem; }
+.area-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw - 2rem)); }
+/* In a zone with an average, how the square metre compares with it, under the sum: a dot and the
+   words in the bubble's colour. */
+.area-price-verdict { display: flex; align-items: center; gap: .45rem; margin: .5rem 0 0; color: var(--tone); font-weight: var(--semibold); }
+.area-price-verdict::before { content: ""; flex: none; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
+/* In a zone with an average (zone_area_prices), the bubble takes the colour of how its square
+   metre compares: green 200 € or more under it, red as much over it, yellow in between
+   (ZONE_MARGIN_EUR, listings.rs). */
+.area-price.price-below { --tone: var(--below); --tone-bg: var(--below-bg); }
+.area-price.price-near { --tone: var(--near); --tone-bg: var(--near-bg); }
+.area-price.price-above { --tone: var(--above); --tone-bg: var(--above-bg); }
+.area-price:is(.price-below, .price-near, .price-above) > summary {
+  border-color: color-mix(in srgb, var(--tone) 30%, transparent);
+  background: var(--tone-bg);
+  color: var(--tone);
+}
+.area-price:is(.price-below, .price-near, .price-above) > summary:hover,
+.area-price:is(.price-below, .price-near, .price-above)[open] > summary { background: color-mix(in srgb, var(--tone) 12%, var(--tone-bg)); }
+/* The price with the loan calculator's bubble beside it. */
+.price-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
+/* With a price per square metre, the price takes a line of its own and the loan calculator's
+   bubble stands on the next, beside what a square metre costs. */
+.price-row.with-area { row-gap: .35rem; }
+.price-row.with-area > .listing-price { flex-basis: 100%; }
+/* The loan calculator's card: on a phone under the price's row and as wide as it, since its bubble
+   stands too near the middle of the screen for the card to fit beside either of the bubble's
+   edges; on wider screens under the bubble, as the square metre's card is. The three fields side
+   by side, the years' narrower so that the others' names ("Paradhënia (Lekë)", "Interesi vjetor
+   (%)") fit on a line; then the loan, its interest and the two together, and last the monthly
+   payment, larger. */
+.loan-card { width: min(26rem, 100%); }
+@media (min-width: 720px) {
+  .loan { position: relative; }
+  .loan-card { width: 24rem; }
+}
+.loan-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .6fr) minmax(0, 1fr); align-items: end; gap: .6rem; margin-bottom: .8rem; }
+.loan-monthly { align-items: baseline; }
+.loan-monthly dd { font-size: var(--text-lg); font-weight: var(--bold); letter-spacing: -.01em; }
+.loan-message { color: var(--text); }
+
+.badge { margin-left: .4rem; padding: .2rem .65rem; border-radius: 999px; background: var(--badge); font-size: var(--text-sm); font-weight: var(--semibold); }
+.actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .9rem 0 1.25rem; }
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  padding: .6rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--button);
+  color: var(--on-button);
+  font: inherit;
+  font-weight: var(--semibold);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .15s;
+}
+
+.button:hover { background: var(--button-hover); }
+.button.secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+.button.secondary:hover { background: var(--surface-muted); }
+
+/* The listing's actions drawn like Claude's: pills, a press sinks them a little; the main one, the
+   seller's number, filled in the site's colour, the rest on the surface with the menus'
+   hairline. */
+.actions .button { border-radius: 999px; transition: background-color .15s, transform .1s; }
+.actions .button:active { transform: scale(.97); }
+.actions .button.secondary { gap: .45rem; border-color: var(--menu-border); }
+/* The way to the seller's number: a phone in a coral circle (an envelope for an e-mail address).
+   Once tapped, the number takes its place, after the same icon, with a button beside it that
+   copies it (copy_controller.js). */
+.reveal-button { justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; border-radius: 50%; }
+.reveal-contact { gap: .45rem; }
+.contact-icon { flex: none; }
+.contact-revealed { display: flex; gap: .5rem; }
+/* The copy and share buttons: an icon in a circle on the surface, with the menus' hairline, as
+   tall as the coral one; a check for a moment once they copy (copy_controller.js,
+   share_controller.js). */
+.actions .button.icon-circle { justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; }
+.icon-circle .icon-copied,
+.icon-circle.is-copied .icon-copy,
+.icon-circle.is-copied .icon-link { display: none; }
+.icon-circle.is-copied .icon-copied { display: block; color: var(--accent); }
+@media (prefers-reduced-motion: reduce) {
+  .actions .button { transition: none; }
+  .actions .button:active { transform: none; }
+}
+
+/* The listing's details as pills, the menus' hairline on the surface, each as wide as what it
+   says, one after another: a detail's icon before its value, or its name, quiet, before it; a
+   car's options a pill each.
+   The groups (a name and its values) leave their pills to the line (display: contents). */
+.attributes { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; }
+.attribute-group { display: contents; }
+.attribute {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-width: 0;
+  margin: 0;
+  padding: .55rem 1rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-weight: var(--medium);
+}
+.attribute-icon { flex: none; color: var(--muted); }
+.attribute-label { color: var(--muted); font-weight: normal; }
+.description { margin: 0; font-size: var(--text-md); line-height: 1.7; white-space: pre-line; }
+/* A car's title as its seller wrote it, over the description. */
+.description-heading { margin: 0 0 .35rem; font-size: var(--text-lg); font-weight: var(--semibold); line-height: 1.35; }
+
+.site-footer {
+  padding: 2.5rem 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+@media (min-width: 720px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.75rem 1rem; }
+  h1 { font-size: var(--text-3xl); }
+  .listing-header h1 { font-size: var(--text-2xl); }
+  .listing-price { font-size: var(--text-3xl); }
+}
+
+/* Phones: everything smaller, since nearly all of it is sized in rem: 14px instead of 16px, and
+   13.5px on the narrowest. Form fields keep 16px text, because iPhones zoom into a focused field
+   with smaller text; they get less padding instead, so they don't look heavier than the rest. */
+@media (max-width: 719px) {
+  html { font-size: 87.5%; }
+  .vehicle-fields { --pad: .75rem; }
+
+  .search input,
+  .field input,
+  .field select,
+  .field textarea,
+  .filter-form input[type="text"],
+  .filter-form select,
+  .pending-form input,
+  .pending-form select,
+  .picker-button { font-size: 16px; }
+
+  .field input,
+  .field select,
+  .filter-form input[type="text"],
+  .filter-form select,
+  .pending-form input,
+  .pending-form select,
+  .picker-button { padding-top: .45rem; padding-bottom: .45rem; }
+}
+
+@media (max-width: 360px) {
+  html { font-size: 84.375%; }
+}

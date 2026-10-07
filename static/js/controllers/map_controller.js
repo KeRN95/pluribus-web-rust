@@ -95,7 +95,7 @@ export default class extends Controller {
     this.map.on("zoomend", () => this.drawPoints());
 
     // The point the results are for, which the map starts on. The colours of the circle and the
-    // dots come from app.css, so they follow the theme.
+    // dots come from map.css, so they follow the theme.
     const point = this.hasLatitudeValue && this.hasLongitudeValue
       ? L.latLng(this.latitudeValue, this.longitudeValue)
       : L.latLng(TIRANA);
@@ -110,7 +110,7 @@ export default class extends Controller {
     this.map.getPane("ring").append(this.ring);
     this.map.on("move zoom", () => this.placeRing());
     this.map.on("zoomanim", ({ zoom, center }) => this.placeRing({ zoom, center, animated: true }));
-    // The pin isn't on the map but over it, in the middle (app.css): the map moves, the circle
+    // The pin isn't on the map but over it, in the middle (map.css): the map moves, the circle
     // stays round it, and the pin lifts until the map stops.
     this.pin = Object.assign(document.createElement("div"), { className: "map-center", innerHTML: PIN });
     this.map.getContainer().append(this.pin);
@@ -355,7 +355,7 @@ export default class extends Controller {
 
   // The circle round the middle of the map, as wide as the distance at the middle's latitude and
   // the zoom: the map's, a pinch's in-between one too, or, as a zoom animates, the one it goes to,
-  // the circle growing or shrinking with the map (app.css). With its edge far past the map's
+  // the circle growing or shrinking with the map (map.css). With its edge far past the map's
   // corners it only needs to cover the map, however much bigger it would be.
   placeRing({ zoom = this.map.getZoom(), center = this.map.getCenter(), animated = false } = {}) {
     const size = this.map.getSize();

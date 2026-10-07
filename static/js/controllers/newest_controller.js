@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus";
 // is posted, no more than two a second (web/newest.rs), and Turbo puts it in front of the row
 // (<turbo-stream-source>). Here, as Turbo does: the cards come in one by one, at least PACE apart,
 // also when a proxy that held the stream back lets several through at once, each sliding in from
-// the edge (.is-new in app.css), and the row keeps the newest KEEP. While the row is slid along,
+// the edge (.is-new in welcome.css), and the row keeps the newest KEEP. While the row is slid along,
 // under a finger or still moving, they wait instead, so that nothing moves under the visitor: a
 // fade over the row's start says how many have come, and a tap on it goes back to the start,
 // where they come in. The stream's address moves on to the newest card in the row, for when Turbo

@@ -58,7 +58,7 @@ export default class extends Controller {
   }
 
   // What opens floats under the row and takes at most what is left of the screen under it
-  // (--top, app.css), so that its foot shows; it scrolls inside if it needs more.
+  // (--top, browse.css), so that its foot shows; it scrolls inside if it needs more.
   fit() {
     this.toolsTarget.style.setProperty("--top", `${Math.round(this.toolsTarget.getBoundingClientRect().bottom)}px`);
   }

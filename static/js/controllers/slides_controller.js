@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus";
 
-// A big card's photos, side by side in a row that scrolls a photo at a time (app.css, scroll snap):
+// A big card's photos, side by side in a row that scrolls a photo at a time (page.css, scroll snap):
 // a finger slides through them, and under a pointer the arrows step; the dots over the photo say
 // which one shows. A small card shows only its first photo, and none of this.
 

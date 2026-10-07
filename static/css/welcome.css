@@ -1,0 +1,458 @@
+/* The welcome page: the search and its suggestions, the in-page lists that stand in for selects
+  (pickers), the main categories' pills, the newest listings' row. After page.css. */
+
+/* Welcome page */
+
+/* The search and the categories, over the logo's creature (.welcome-backdrop), which stays inside
+   the section's own layer (isolation). */
+.welcome { position: relative; isolation: isolate; padding: 1.75rem 0 .5rem; }
+.lead { margin: 0 0 1.25rem; color: var(--muted); font-size: var(--text-lg); font-weight: var(--light); line-height: 1.45; }
+
+/* The welcome section: the search and the categories, straight on the page, no box of their own. */
+.welcome-card { padding: .5rem 0 0; }
+
+/* The logo's creature (thinking.svg), in the buttons' coral: a star of 13 soft tentacles that sway,
+   melts into a small, roundish amoeba, as an amoeba is when it is small, that wobbles and spins
+   quickly, and back, spinning all the while. Shapes and spin are SVG's own animation, which
+   Safari runs too; application.js stops them for visitors who ask for less motion. It is in the
+   logo (.logo) and behind the welcome page's search. */
+.thinking { flex: none; color: var(--button); }
+.amoeba { fill: currentColor; }
+/* Behind the search and the categories, the creature as tall as the section, its middle a fifth
+   of the way across (30% left of the middle), so faint (6%) that it is only just there, and taking
+   no taps. What goes past the section's side is cut off; on a phone the section runs to the
+   screen's edges for it, so it is cut off there and the page doesn't scroll sideways. */
+.welcome-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: .06;
+}
+.welcome-backdrop .thinking {
+  position: absolute;
+  top: 0;
+  left: 20%;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 1;
+  translate: -50% 0;
+}
+@media (max-width: 719px) {
+  .welcome-backdrop { right: -1rem; left: -1rem; }
+}
+
+/* The search, drawn like the message box in Claude's app: a pill on the surface with the menus'
+   hairline and a soft shadow, the words in it, and inside it at the end a round coral button
+   with a magnifier, like Claude's send button. While it is being typed in, its edge darkens and
+   its shadow deepens a little, as Claude's does, rather than a ring round it. The surface is at
+   95%, so that the creature behind it (.welcome-backdrop) shows through a little. */
+.welcome-form {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .35rem .35rem .35rem 1.4rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 5%);
+  transition: border-color .15s, box-shadow .15s;
+}
+.welcome-form:focus-within {
+  border-color: color-mix(in srgb, var(--text) 30%, transparent);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 9%);
+}
+.welcome-form input {
+  flex: 1;
+  min-width: 0;
+  padding: .35rem 0; /* no taller than the button, which sits as far from every edge */
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: max(16px, var(--text-lg)); /* a little bigger than other fields; 16px at least, or phones zoom in */
+  appearance: none;
+  outline: none;
+}
+.welcome-form input::placeholder { color: var(--muted); }
+/* No clearing cross: the pill keeps only its button, as Claude's box does. */
+.welcome-form input::-webkit-search-cancel-button { appearance: none; }
+.welcome-search {
+  width: 3rem;
+  height: 3rem;
+  background: var(--button);
+  color: var(--on-button);
+  transition: background-color .15s, transform .1s;
+}
+.welcome-search:hover { background: var(--button-hover); }
+.welcome-search:active { transform: scale(.94); }
+@media (prefers-reduced-motion: reduce) {
+  .welcome-search:active { transform: none; }
+}
+
+/* Phones: the section's own padding is smaller. */
+@media (max-width: 719px) {
+  .welcome-card { padding: .25rem 0 0; }
+}
+
+/* Suggestions under a search box as its words are typed (suggest_controller.js): a list like the
+   in-page dropdowns, as wide as the box, each row the words it searches and after them, quieter,
+   where; the row the arrow keys mark is shaded as one under the pointer is. */
+.search,
+.welcome-form { position: relative; }
+.suggestions {
+  position: absolute;
+  top: calc(100% + .4rem);
+  right: 0;
+  left: 0;
+  z-index: 30;
+  max-height: min(60vh, 26rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: .375rem;
+  border: 1px solid var(--menu-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--menu-shadow);
+  font-size: var(--text-md);
+  transform-origin: top;
+  animation: menu-in .14s ease-out;
+}
+.suggestions[hidden] { display: none; }
+.suggestion {
+  display: flex;
+  align-items: baseline;
+  gap: .4rem;
+  padding: .55rem .85rem;
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+}
+.suggestion:hover,
+.suggestion[aria-selected="true"] { background: var(--surface-muted); }
+.suggestion-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggestion-context { flex: none; color: var(--muted); font-size: var(--text-sm); }
+
+/* A select chosen from a list in the page (picker_controller.js) rather than the phone's own picker.
+   The select stays, unseen, where the button is, so a "required" note points there; the list opens
+   under the button like the category menu, the choice marked, groups under their headings. A
+   category list folds: each level indented further, a category's arrow turning as its
+   subcategories open. */
+.picker { position: relative; }
+.picker-native { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+/* Drawn once, in black, and painted in the text's colour through a mask: Claude's thin chevron
+   and its check. */
+:root {
+  --chevron-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+/* As Claude's: a thin chevron, which turns over while the list is open. */
+.picker-button {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  padding-right: 2.2rem;
+  appearance: none;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.picker-button::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: .75rem;
+  width: 1rem;
+  height: 1rem;
+  background: var(--muted);
+  -webkit-mask: var(--chevron-down) center / contain no-repeat;
+  mask: var(--chevron-down) center / contain no-repeat;
+  transform: translateY(-50%);
+  transition: transform .15s, background-color .15s;
+}
+.picker-button:hover::after { background: var(--text); }
+.picker-button[aria-expanded="true"]::after { transform: translateY(-50%) rotate(180deg); }
+.picker-button.picker-invalid { border-color: var(--danger); }
+.picker-list {
+  position: absolute;
+  top: calc(100% + .3rem);
+  right: 0;
+  z-index: 30;
+  /* As wide as the field, or wider for a narrow one (the welcome form's halves), growing from the
+     side nearer the middle of the screen (picker_controller.js): leftward unless .picker-start. */
+  width: max(100%, min(20rem, calc(100vw - 2rem)));
+  max-height: min(70vh, 30rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: .375rem;
+  border: 1px solid var(--menu-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--menu-shadow);
+  transform-origin: top;
+  animation: menu-in .14s ease-out;
+}
+.picker-list[hidden] { display: none; }
+:root {
+  --menu-border: color-mix(in srgb, var(--text) 12%, transparent);
+  --menu-shadow: 0 12px 28px -6px rgb(0 0 0 / 16%), 0 2px 6px rgb(0 0 0 / 5%);
+}
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(.98); }
+}
+.picker-list.picker-start { right: auto; left: 0; }
+.picker-heading { padding: .6rem .85rem .2rem; color: var(--muted); font-size: var(--text-xs); font-weight: var(--semibold); }
+/* Rows a finger finds easily, close enough to read as one list. */
+.picker-option { padding: .55rem .85rem; border-radius: 10px; cursor: pointer; }
+.picker-option:hover,
+.picker-option:focus { outline: none; background: var(--surface-muted); }
+.picker-option[data-value=""] { color: var(--muted); font-weight: var(--regular); }
+/* The choice in the site's own colour, as its buttons are. */
+.picker-option[aria-selected="true"] { background: var(--button); color: var(--on-button); font-weight: var(--medium); }
+.picker-option[aria-selected="true"]:hover,
+.picker-option[aria-selected="true"]:focus { background: var(--button-hover); }
+.picker-option[aria-selected="true"] .picker-toggle { color: inherit; }
+/* The same for the category menu's page: its row in the site's colour. */
+.picker-option.is-current { background: var(--button); color: var(--on-button); font-weight: var(--medium); }
+.picker-option.is-current:hover { background: var(--button-hover); }
+.picker-option.is-current .picker-toggle { color: inherit; }
+.picker-option[aria-selected="true"],
+.picker-option.is-current { display: flex; align-items: center; gap: .5rem; }
+.picker-option[aria-selected="true"]::after,
+.picker-option.is-current::after {
+  content: "";
+  flex: none;
+  order: 1;
+  width: 1rem;
+  height: 1rem;
+  margin-left: auto;
+  background: currentColor;
+  -webkit-mask: var(--check) center / contain no-repeat;
+  mask: var(--check) center / contain no-repeat;
+}
+.picker-option .picker-toggle { order: 2; }
+.picker-option[aria-selected="true"] .picker-toggle,
+.picker-option.is-current .picker-toggle { margin-left: -.1rem; }
+.picker-list[role="tree"] [aria-level="1"] { font-weight: var(--semibold); }
+.picker-branch { display: flex; align-items: center; gap: .5rem; padding-top: .25rem; padding-bottom: .25rem; }
+/* A category's subcategories, once open: a level further in, with a faint line in the gap to their
+   left, from under the category's name down to the last of them, so the eye keeps its place. */
+.picker-children { position: relative; margin-left: 1.5rem; }
+.picker-children::before {
+  content: "";
+  position: absolute;
+  top: .2rem;
+  bottom: .2rem;
+  left: -.55rem;
+  width: 1px;
+  background: var(--border);
+}
+/* The arrow takes a finger's tap of its own: the category's name picks it, where it can be picked. */
+.picker-toggle {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.5rem;
+  height: 2rem;
+  margin: 0 -.45rem 0 auto;
+  border-radius: 9px;
+  color: var(--muted);
+  transition: transform .15s;
+}
+.picker-toggle:hover { background: var(--border); color: var(--text); }
+.picker-branch[aria-expanded="true"] .picker-toggle { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) {
+  .picker-toggle,
+  .picker-button::after { transition: none; }
+  .picker-list,
+  .category-menu { animation: none; }
+}
+
+/* Where the select sat beside something, the button does: the currency next to the price, the
+   order next to Filtrat and Harta. */
+.amount .picker,
+.filter-form .range .picker { flex: none; }
+.amount .picker-button,
+.filter-form .range .picker-button { display: inline-block; width: auto; }
+.amount .picker-list,
+.filter-form .range .picker-list { width: max(100%, 8rem); }
+
+/* Read by screen readers, not shown. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* One column, as wide as the field however long what it holds: a picker's value, which doesn't
+   wrap, ends in "…" (.picker-button) rather than pushing the form wider than a phone. */
+.field { display: grid; grid-template-columns: minmax(0, 1fr); gap: .3rem; min-width: 0; }
+.field-label { color: var(--muted); font-size: var(--text-sm); font-weight: var(--semibold); letter-spacing: .01em; }
+
+/* The welcome page's categories, all of them at once, as pills like the listing page's details
+   (.attribute): the menus' hairline on the surface, each as wide as its name, one after another
+   and on to the next line; the icon before the name, in the muted colour. Under the pointer or a
+   finger a pill takes a warm shade and its icon the text's colour, and a press sinks it a
+   little. Their surfaces are at 95%, as the search's is, over the creature. */
+.shortcuts { display: flex; flex-wrap: wrap; gap: .55rem; margin: 1.25rem 0 0; }
+/* A little bigger than the details' pills, being the way into the site. */
+.shortcut {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .7rem 1.1rem .7rem 1rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  color: var(--text);
+  font-size: var(--text-md);
+  font-weight: var(--medium);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color .15s, transform .1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.shortcut-icon { flex: none; color: var(--muted); transition: color .15s; }
+.shortcut:active { background: color-mix(in srgb, var(--surface-muted) 95%, transparent); transform: scale(.97); }
+.shortcut:active .shortcut-icon { color: var(--text); }
+@media (hover: hover) {
+  .shortcut:hover { background: color-mix(in srgb, var(--surface-muted) 95%, transparent); }
+  .shortcut:hover .shortcut-icon { color: var(--text); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shortcut:active { transform: none; }
+}
+
+@media (min-width: 720px) {
+  .welcome { padding-top: 2.75rem; }
+  .welcome-card { padding: .75rem 0 0; }
+}
+
+/* The welcome page's newest listings, under its categories (home.html, web/newest.rs): the browse
+   pages' cards in one row that slides sideways a card at a time, as the seller's other listings
+   do under a listing (.seller-listings), but smaller than the cards under them, and their type
+   too: two and three quarters across on a phone, so that most of the next one shows at the edge,
+   four and a quarter on a tablet, and five and a quarter on a wide screen. A row of flex items
+   rather than a grid's columns, so that a card coming in at the front pushes the others along
+   (.is-new). The padding, which the margin takes back, keeps a card's hover panel and focus ring
+   clear of the sliding box's edges. No bar under it, on any screen: a finger slides it, and a
+   mouse drags it (newest_controller.js); the wheel scrolls the page. Hidden until it has a
+   card. */
+.newest { container-type: inline-size; }
+.newest:not(:has(.newest-card)) { display: none; }
+.newest h2 { display: flex; align-items: center; gap: .6rem; }
+/* Before the heading, a dot in the buttons' colour that pulses: the row is live. */
+.live-dot {
+  flex: none;
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  background: var(--button);
+  animation: live-pulse 2s ease-out infinite;
+}
+@keyframes live-pulse {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--button) 60%, transparent); }
+  to { box-shadow: 0 0 0 .5rem transparent; }
+}
+.newest-strip {
+  --across: 2.75;
+  --gaps: 2;
+  --gap: .75rem;
+  display: flex;
+  position: relative;
+  gap: var(--gap);
+  margin: -.5rem;
+  padding: .5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  overflow-anchor: none; /* newest_controller.js keeps the cards in view where they are */
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: .5rem;
+  scrollbar-width: none;
+}
+.newest-strip::-webkit-scrollbar { display: none; }
+.newest-strip > .card {
+  flex: none;
+  width: calc((100% - var(--gaps) * var(--gap)) / var(--across));
+  scroll-snap-align: start;
+}
+/* The title as small as the details line, and the price nearer the photo's corner. */
+.newest-strip .card-title { font-size: var(--text-xs); }
+.newest-strip .card-head { padding-top: .4rem; }
+.newest-strip .card-media .card-price { padding: 0 .55rem .45rem; }
+.newest-strip .card-summary { margin-top: .1rem; }
+.newest-strip .heart { padding: 0; }
+.newest-strip .heart-button { --circle: 1.2rem; --reach: .3rem; }
+.newest-strip .heart-button svg { width: 10px; height: 10px; }
+/* A card the stream brings to the front of the row at its start comes in from the edge: its
+   margin, a card and a gap wide to begin with, pulls it out of sight, and as the margin goes the
+   others move along; it fades in. */
+.newest-strip > .is-new { animation: newest-in .45s cubic-bezier(.2, .8, .2, 1); }
+@keyframes newest-in {
+  from {
+    margin-inline-start: calc((var(--gaps) * var(--gap) - 100%) / var(--across) - var(--gap));
+    opacity: 0;
+  }
+}
+@media (min-width: 720px) {
+  .newest-strip { --gap: 1rem; }
+}
+/* With a mouse, the row moves freely as the mouse drags it: snapping would pull it back to a card
+   at every step. A hand to grab it by, closed while it drags, and no text
+   to select on the way; nor does the card it was grabbed by look pressed. */
+@media (hover: hover) and (pointer: fine) {
+  .newest-strip { scroll-snap-type: none; cursor: grab; user-select: none; }
+  .newest-strip.is-dragging,
+  .newest-strip.is-dragging * { cursor: grabbing; }
+  .newest-strip.is-dragging .card:active { outline: none; }
+}
+@container (692px <= width < 928px) {
+  .newest-strip { --across: 4.25; --gaps: 4; }
+}
+@container (width >= 928px) {
+  .newest-strip { --across: 5.25; --gaps: 5; }
+}
+/* While the row is slid along and new listings wait (newest_controller.js): over its start, a fade
+   into the page, and in it a pill in the buttons' coral saying how many have come, which goes back
+   to the start, where they come in. The fade takes no taps; the pill does. */
+.newest-frame { position: relative; }
+.newest-waiting {
+  display: flex;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -.5rem;
+  z-index: 2;
+  align-items: center;
+  width: min(7rem, 40%);
+  padding-left: .5rem;
+  background: linear-gradient(to right, var(--bg) 25%, color-mix(in srgb, var(--bg) 70%, transparent) 60%, transparent);
+  pointer-events: none;
+  animation: waiting-in .25s ease-out;
+}
+.newest-waiting[hidden] { display: none; }
+@keyframes waiting-in { from { opacity: 0; } }
+.newest-waiting-button {
+  display: inline-flex;
+  align-items: center;
+  gap: .2rem;
+  padding: .35rem .7rem .35rem .45rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--button);
+  color: var(--on-button);
+  font-size: var(--text-xs);
+  font-weight: var(--semibold);
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+.newest-waiting-button:active { transform: scale(.96); }
+@media (hover: hover) {
+  .newest-waiting-button:hover { background: var(--button-hover); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot,
+  .newest-strip > .is-new,
+  .newest-waiting { animation: none; }
+}
