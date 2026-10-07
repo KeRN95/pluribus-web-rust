@@ -641,23 +641,36 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    ask for less motion. It is in the logo (.logo) and behind the welcome page's search. */
 .thinking { flex: none; color: var(--button); }
 .amoeba { fill: currentColor; }
-/* Behind the search and the categories, the creature as tall as the section and in its middle,
-   faint enough to be there without being in the way, and taking no taps. */
+/* Behind the search and the categories, the creature as tall as the section, its middle a fifth
+   of the way across (30% left of the middle), faint enough to be there without being in the way,
+   and taking no taps. What goes past the section's side is cut off; on a phone the section runs to
+   the screen's edges for it, so it is cut off there and the page doesn't scroll sideways. */
 .welcome-backdrop {
   position: absolute;
   inset: 0;
   z-index: -1;
-  display: grid;
-  place-items: center;
+  overflow: hidden;
   pointer-events: none;
   opacity: .12;
 }
-.welcome-backdrop .thinking { width: auto; height: 100%; max-width: 100%; aspect-ratio: 1; }
+.welcome-backdrop .thinking {
+  position: absolute;
+  top: 0;
+  left: 20%;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 1;
+  translate: -50% 0;
+}
+@media (max-width: 719px) {
+  .welcome-backdrop { right: -1rem; left: -1rem; }
+}
 
 /* The search, drawn like the message box in Claude's app: a pill on the surface with the menus'
    hairline and a soft shadow, the words in it, and inside it at the end a round coral button
    with a magnifier, like Claude's send button. While it is being typed in, its edge darkens and
-   its shadow deepens a little, as Claude's does, rather than a ring round it. */
+   its shadow deepens a little, as Claude's does, rather than a ring round it. The surface is at
+   95%, so that the creature behind it (.welcome-backdrop) shows through a little. */
 .welcome-form {
   display: flex;
   align-items: center;
@@ -665,7 +678,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   padding: .35rem .35rem .35rem 1.4rem;
   border: 1px solid var(--menu-border);
   border-radius: 999px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
   box-shadow: 0 4px 20px rgb(0 0 0 / 5%);
   transition: border-color .15s, box-shadow .15s;
 }
@@ -900,7 +913,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    (.attribute): the menus' hairline on the surface, each as wide as its name, one after another
    and on to the next line; the icon before the name, in the muted colour. Under the pointer or a
    finger a pill takes a warm shade and its icon the text's colour, and a press sinks it a
-   little. */
+   little. Their surfaces are at 95%, as the search's is, over the creature. */
 .shortcuts { display: flex; flex-wrap: wrap; gap: .55rem; margin: 1.25rem 0 0; }
 /* A little bigger than the details' pills, being the way into the site. */
 .shortcut {
@@ -910,7 +923,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   padding: .7rem 1.1rem .7rem 1rem;
   border: 1px solid var(--menu-border);
   border-radius: 999px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
   color: var(--text);
   font-size: var(--text-md);
   font-weight: var(--medium);
@@ -920,10 +933,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   -webkit-tap-highlight-color: transparent;
 }
 .shortcut-icon { flex: none; color: var(--muted); transition: color .15s; }
-.shortcut:active { background: var(--surface-muted); transform: scale(.97); }
+.shortcut:active { background: color-mix(in srgb, var(--surface-muted) 95%, transparent); transform: scale(.97); }
 .shortcut:active .shortcut-icon { color: var(--text); }
 @media (hover: hover) {
-  .shortcut:hover { background: var(--surface-muted); }
+  .shortcut:hover { background: color-mix(in srgb, var(--surface-muted) 95%, transparent); }
   .shortcut:hover .shortcut-icon { color: var(--text); }
 }
 @media (prefers-reduced-motion: reduce) {
