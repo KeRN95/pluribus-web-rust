@@ -1997,8 +1997,10 @@ async fn each_kind_of_thing_asks_for_what_fits_it(pool: PgPool) {
     let order = positions(&motorcycle, &[r#"for="prop_moto_make""#, r#"for="prop_moto_type""#, r#"for="prop_model_name""#,
                                          r#"for="prop_vehicle_year""#]);
     assert!(order.is_sorted(), "{order:?}");
-    // A car's: its main fields' tiles, then its papers, engine and history, its options last.
+    // A car's: its main fields' tiles, then its papers, engine and history, its options last; its
+    // other lists and numbers the main ones' size, without an icon.
     let car = form_fields(&pool, "makina").await;
+    assert_eq!(car.matches(r#"<div class="tile tile-plain">"#).count(), 9);
     let order = positions(&car, &[r#"for="prop_vehicle_color""#, r#"for="prop_vehicle_customs""#, r#"for="prop_vehicle_engine""#,
                                   r#"name="prop_vehicle_no_accident""#, r#"<span class="field-label">Opsionet</span>"#]);
     assert!(order.is_sorted(), "{order:?}");

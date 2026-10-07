@@ -19,11 +19,15 @@
     </div>
     {%- else %}
     {#- Named inside the field, as in the rest of the form; the label is for screen readers. A
-        car's main fields have an icon before the name (app.css). -#}
+        car's fields are tiles of one size, its main ones with an icon before the name (app.css). -#}
     <label class="visually-hidden" for="{{ field.name }}">{{ field.label }}{% if let Some(unit) = field.unit %} ({{ unit }}){% endif %}</label>
     {%- if let Some(tile) = field.tile %}
+    {%- if let Some(icon) = tile.icon %}
     <div class="tile">
-    <svg class="tile-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ tile.icon|safe }}</svg>
+    <svg class="tile-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>
+    {%- else %}
+    <div class="tile tile-plain">
+    {%- endif %}
     {%- endif %}
     {%- if field.kind == "select" %}
     <div class="picker" data-controller="picker">

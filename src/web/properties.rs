@@ -51,14 +51,16 @@ pub struct PropertyField {
     pub other_name: String,
     pub other_value: String,
     pub error: Option<String>,
-    /// One of a car's main fields, shown as a tile under an icon (TILES).
+    /// One of a car's fields, shown as a tile: its main ones under an icon (TILES), the others
+    /// beside them in the same size, without one.
     pub tile: Option<Tile>,
 }
 
-/// A field shown with an icon before its name: the icon, an SVG's inside.
+/// A car's field as a tile: the icon before its name, an SVG's inside, where it is one of the
+/// main ones.
 #[derive(Clone, Copy)]
 pub struct Tile {
-    pub icon: &'static str,
+    pub icon: Option<&'static str>,
 }
 
 /// A car's main fields, in their order, two to a line, each its icon before its name: the car's
@@ -235,8 +237,14 @@ pub fn fields(
     let has = |code: &str| attributes.iter().any(|attribute| attribute.code == code);
     if has("vehicle_make") && has("vehicle_year") {
         let rank = |field: &PropertyField| TILES.iter().position(|(code, _)| field.name == field_name(code));
+        // Its other lists and numbers are tiles too, without an icon, so that they line up with
+        // the main ones and are the same size.
         for field in &mut fields {
-            field.tile = rank(field).map(|at| Tile { icon: TILES[at].1 });
+            let plain = matches!(field.kind, "select" | "number");
+            field.tile = match rank(field) {
+                Some(at) => Some(Tile { icon: Some(TILES[at].1) }),
+                None => plain.then_some(Tile { icon: None }),
+            };
         }
         fields.sort_by_key(|field| rank(field).unwrap_or(TILES.len() + usize::from(field.kind == "multi")));
     }

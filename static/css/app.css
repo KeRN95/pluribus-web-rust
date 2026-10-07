@@ -1832,8 +1832,8 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   font-weight: var(--semibold);
 }
 .property-fields .field-wide { grid-column: 1 / -1; }
-/* A car's fields, two to a line: its main ones with their icon before their name or value, then
-   its options across. The text is a size smaller (14px) than the rest of the form's, so that
+/* A car's fields, two to a line: its main ones with their icon before their name or value, the
+   others without, then its options across. The text is a size smaller (14px) than the rest of the form's, so that
    "Mercedes-Benz" fits beside its icon on a 375px phone (with the card's padding a little
    smaller there). */
 .vehicle-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem .5rem; }
@@ -1845,6 +1845,8 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .tile .picker { height: 100%; }
 .vehicle-fields .tile .picker-button { height: 100%; padding: 0 1.6rem 0 calc(.45rem + 23px); font-size: 14px; line-height: calc(2.75rem - 2px); }
 .vehicle-fields .tile .picker-button::after { right: .45rem; }
+/* Those without an icon start their text where the form's other fields do. */
+.vehicle-fields .tile-plain .picker-button { padding-left: .7rem; }
 /* A typed one keeps 16px text, or iPhones zoom into it, and is drawn at 14/16 of its size to
    match the lists beside it: everything about it 16/14 larger, then scaled down. */
 .vehicle-fields .tile input {
@@ -1861,6 +1863,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   transform: scale(var(--s));
   transform-origin: 0 0;
 }
+.vehicle-fields .tile-plain input { padding-left: calc(.7rem / var(--s)); }
 /* Options as Claude's toggles: pills with a hairline, a + before each, which turns into the
    accent's check, on its tint, once chosen. The checkbox stays, out of sight but in reach of the
    keyboard; the pill shows its focus. */
