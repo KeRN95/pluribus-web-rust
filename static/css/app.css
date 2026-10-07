@@ -810,39 +810,45 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .filters-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .filters-header h2 { margin: 0; font-size: 1.2rem; }
 
-.filter-form { display: grid; gap: 1.1rem; padding-top: .75rem; }
-.filter-group { display: grid; gap: .35rem; min-width: 0; margin: 0; padding: 0; border: 0; }
-.filter-label { padding: 0; font-size: .9rem; font-weight: var(--semibold); }
+.filter-form { display: grid; gap: 1.25rem; padding-top: 1rem; }
+.filter-group { display: grid; gap: .45rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+/* A filter's name as the listing form's: small, in the quiet grey, so that the choices stand out.
+   A legend floated is laid out as any other child, so every name has its group's gap under it. */
+.filter-label { padding: 0; color: var(--muted); font-size: .85rem; font-weight: var(--semibold); letter-spacing: .01em; }
+fieldset.filter-group > .filter-label { float: left; width: 100%; }
 /* A filter's name starts where the text in its field does, past the field's border and padding,
    rather than at its rounded edge, which makes the name look set off to the side. */
 .filter-form .filter-label { padding-left: calc(.7rem + 1px); }
 .check { display: flex; align-items: center; gap: .55rem; padding: .1rem 0; cursor: pointer; }
 .check input { flex: none; width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--button); }
-/* The filters' options, a box each rather than a tick: an outline and the name, no colour;
-   picked, filled with the text's colour, the name in the page's. A group's boxes wrap side by
-   side under its name, which takes a line of its own (floated, a legend is laid out as any
-   other child). The box is the whole target; the input is there for keyboards and screen readers,
-   its ring round the box. */
+/* The filters' options, a box each rather than a tick, drawn as the listing form's options are,
+   like Claude's toggles, if boxier: the menus' hairline round the name on the fields' white;
+   picked, on the accent's tint, the hairline in the accent, as the chip it makes above the results
+   is. The name starts where the filter's does. A group's boxes wrap side by side under its name,
+   which takes a line of its own. The box is the whole target; the input is there for keyboards
+   and screen readers, its ring round the box. */
 .filter-options { display: flex; flex-wrap: wrap; gap: .35rem; }
-.filter-options > .filter-label { float: left; width: 100%; margin-bottom: -.1rem; }
+.filter-options > .filter-label { margin-bottom: .1rem; }
 .filter-form .check {
   position: relative;
   display: inline-flex;
   justify-self: start; /* a yes-or-no filter's lone box keeps its width */
-  padding: .3rem .6rem;
-  border: 1px solid var(--border-strong);
-  border-radius: 7px;
+  padding: .35rem .7rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 9px;
+  background: var(--input);
   font-size: .875rem;
   line-height: 1.3;
-  transition: background-color .15s, border-color .15s, color .15s;
+  transition: background-color .15s, border-color .15s;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
 .filter-form .check input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.filter-form .check:has(input:checked) { border-color: var(--text); background: var(--text); color: var(--bg); }
+.filter-form .check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
 .filter-form .check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (hover: hover) {
-  .filter-form .check:hover { border-color: var(--text); }
+  .filter-form .check:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
+  .filter-form .check:has(input:checked):hover { border-color: var(--accent); }
 }
 /* Boxes with icons, a car's body types (Karroceria), on a line of their own: the car's side over
    its name, the boxes as wide as each other: four to a line on a phone, however wide, and from a
@@ -853,12 +859,14 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   flex-direction: column;
   align-items: center;
   justify-self: stretch;
+  border-radius: 12px;
   gap: .2rem;
   padding: .5rem .2rem .4rem;
   font-size: .8rem;
   text-align: center;
 }
 .check-icon { flex: none; }
+.filter-form .check:has(input:checked) .check-icon { color: var(--accent); }
 @media (min-width: 720px) {
   .filter-form .filter-icons { grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); }
 }
@@ -869,7 +877,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    stretch between them in the site's coral, the ends white and round with a soft shadow, big
    enough for a finger. The two range inputs lie on top of each other and let every touch through
    but their ends'; the prices show beside the name. */
-.price-filter .filter-label output { margin-left: .25rem; color: var(--text); font-weight: var(--bold); }
+.price-filter .filter-label output { margin-left: .3rem; color: var(--text); letter-spacing: 0; }
 .price-slider { display: flex; align-items: center; gap: .75rem; }
 .price-slider .picker { flex: none; }
 .price-track { position: relative; flex: 1; height: 2.4rem; }
@@ -927,10 +935,21 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    (fading in as the menus do) and closes it; the options picked apply together, with the form's
    button. The header names the section, so the panel's own heading is there for screen readers
    only. */
-.filters-card { margin: 0 0 .5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.filters-card { margin: 0 0 .5rem; }
+/* The three cards drawn like Claude's, as the listing form's own fields are: the menus' hairline on
+   the surface, rounder corners and a shadow you barely see; open, a hairline across the card
+   between the header and what it opened. */
+.filters-card,
+.map-card,
+.sort-card {
+  background: var(--surface);
+  border: 1px solid var(--menu-border);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
+}
 .filters-card .map-card-icon { color: var(--text); }
 .filters-open[aria-expanded="false"] .map-card-chevron { transform: rotate(-90deg); }
-.filters { display: none; padding: 0 .9rem .9rem; }
+.filters { display: none; padding: 0 1rem 1rem; border-top: 1px solid var(--menu-border); }
 .filters.is-open { display: block; animation: menu-in .16s ease-out; }
 .filters-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) {
@@ -960,16 +979,16 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    folded down to its header, which opens it and folds it again. The order (Rendit) under it is a
    card like it, a <details>, its header in the summary. */
 .map-card,
-.sort-card { margin: 0 0 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.sort-card { margin: 0 0 1rem; }
 .map-card + .sort-card { margin-top: -.5rem; }
-.sort-card summary { list-style: none; border-radius: var(--radius); cursor: pointer; }
+.sort-card summary { list-style: none; border-radius: 15px; cursor: pointer; }
 .sort-card summary::-webkit-details-marker { display: none; }
 .sort-card .map-card-icon { color: var(--text); }
 .sort-card:not([open]) .map-card-chevron { transform: rotate(-90deg); }
 /* Open, the orders, as rows like the in-page dropdowns': the order now in the site's colour,
    ticked; a tap on another reloads the page in it. The radio itself is there for keyboards and
    screen readers only, its ring round the row. */
-.sort-options { display: grid; gap: .15rem; min-width: 0; margin: 0; padding: .1rem .5rem .6rem; border: 0; }
+.sort-options { display: grid; gap: .15rem; min-width: 0; margin: 0; padding: .5rem .5rem .6rem; border: 0; border-top: 1px solid var(--menu-border); }
 .sort-option:has(input:checked) { display: flex; align-items: center; gap: .5rem; background: var(--button); color: var(--on-button); font-weight: var(--medium); }
 .sort-option:has(input:checked):hover { background: var(--button-hover); }
 .sort-option:has(input:checked)::after {
@@ -985,7 +1004,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .sort-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .map-card-header {
   display: flex; align-items: center; gap: .7rem; width: 100%; padding: .7rem .9rem;
-  border: 0; border-radius: var(--radius); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+  border: 0; border-radius: 15px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer;
 }
 .map-card-header:hover { background: var(--surface-muted); }
 .map-card-icon {
@@ -994,10 +1013,11 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 }
 .map-card-icon .pin-icon { margin: 0; }
 .map-card-title { display: grid; flex: 1; min-width: 0; line-height: 1.3; }
+.map-card-title strong { font-weight: var(--semibold); }
 .map-card-title span { overflow: hidden; color: var(--muted); font-size: .85rem; white-space: nowrap; text-overflow: ellipsis; }
 .map-card-chevron { flex: none; color: var(--muted); transition: transform .15s; }
 .map-card.map-hidden .map-card-chevron { transform: rotate(-90deg); }
-.map-card-body { padding: .1rem .9rem .9rem; }
+.map-card-body { padding: .9rem 1rem 1rem; border-top: 1px solid var(--menu-border); }
 .map-card.map-hidden .map-card-body { display: none; }
 .map-card .map-form { margin-bottom: .75rem; }
 .map-card .map-canvas { border-radius: calc(var(--radius) - 4px); }
