@@ -1,2 +1,4 @@
 # sqlx checksums migration files byte for byte, so their line endings must be the same on every machine.
 migrations/*.sql text eol=lf
+# Shell scripts run in WSL and Docker, where a carriage return breaks them.
+*.sh text eol=lf

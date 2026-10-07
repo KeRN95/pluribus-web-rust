@@ -26,6 +26,14 @@ cargo run
 
 Then open http://127.0.0.1:3000. On Windows, use `127.0.0.1` rather than `localhost`: `localhost` tries IPv6 first, which adds about 200 ms to every request through WSL.
 
+To keep the release build running there instead, as the development site, deploy it with the script (from WSL): it builds it, keeps the one running as the previous, restarts it on `BIND_ADDR`, checks it answers, and puts the previous back if it doesn't. It stops on a migration git doesn't know yet, which the server would apply, and rebuilds from clean when the binary is older than the sources (a build folder shared with another checkout):
+
+```bash
+dev/deploy.sh
+```
+
+`dev/deploy.sh --rollback` puts the previous one back.
+
 To load the sample listings, from a bash shell. Their cover photos are free Unsplash photos, loaded from Unsplash's image CDN; the fixture credits each one.
 
 ```bash
