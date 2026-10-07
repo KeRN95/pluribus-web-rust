@@ -441,6 +441,13 @@ SELECT pg_temp.check('filler words are left out of a search, and "ose" means or'
     (SELECT 'golf tirane'::tsvector @@ query FROM search_query('golf në tiranë'))
     AND (SELECT 'golf'::tsvector @@ query AND 'audi'::tsvector @@ query FROM search_query('golf ose audi')));
 
+SELECT pg_temp.check('words that name a kind of listing leave the words, for the kind ("golf në shitje"), unless left out',
+    (SELECT 'golf'::tsvector @@ query AND NOT 'shitje'::tsvector @@ query AND kinds = '{SELL}'
+            AND 'shitje'::tsvector @@ kind_query
+     FROM search_query('golf në shitje'))
+    AND (SELECT query IS NULL AND kinds = '{RENT}' FROM search_query('me qira'))
+    AND (SELECT kinds = '{}' AND NOT 'shitje'::tsvector @@ query FROM search_query('golf -shitje')));
+
 DO $$ BEGIN
     PERFORM set_config('app.user_id', '11111111-1111-4111-8111-111111111111', true),
             set_config('app.status_reason', 'Sold to Bob', true);

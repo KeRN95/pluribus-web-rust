@@ -121,7 +121,8 @@ cargo test
 | `migrations/0021_electronics_properties.sql` | Electronics' own properties, subcategory by subcategory (a phone's model and battery, a laptop's processor, a TV's size and resolution...), and `category_attribute_options`: the options of a property each category offers, its own brands and storage sizes |
 | `migrations/0022_saved_listings.sql` | The listings a signed-in user keeps with the heart over their photo (`saved_listings`) |
 | `migrations/0023_more_properties.sql` | The properties every category lacked: a car's customs, plates, engine and power, a motorcycle's and a van's own, a tyre's size, a flat's bathrooms, condition and heating, a plot's permit, a job's contract, a service's areas, shoes' sizes, a pet's breed, a machine's hours...; what only some kinds of a category have moves down to them (a plot has no rooms, a bag no size), and central heating goes from a home's amenities to its kinds of heating |
-| `tests/` | Request tests (`web.rs`), the 82 schema checks (`schema_checks.sql`, also run by `schema.rs`) and sample data (`fixtures/`) |
+| `migrations/0024_search_kinds.sql` | Words that name a kind of listing (shitje, shitet, shes; qira, qera; blej) find the listings of that kind, as well as those that say them: "golf 7 në shitje" finds the Golfs for sale |
+| `tests/` | Request tests (`web.rs`), the 83 schema checks (`schema_checks.sql`, also run by `schema.rs`) and sample data (`fixtures/`) |
 | `dev/sample_listings.sql` | 305 extra sample listings for the development database (not used by the tests) |
 | `dev/generate_listings.sql` | Generates as many realistic listings as you ask for, with sellers and photos, for trying the site at scale; removes them again with `remove=1`, gives listings with only a cover more photos with `photos=1`, puts property listings from earlier versions of it in their zones with `zones=1`, and gives listings views with `views=1` |
 | `.sqlx/` | Cached query metadata, so the project builds without a database (set `SQLX_OFFLINE=true`) |
@@ -338,7 +339,8 @@ Do not store image/video blobs in PostgreSQL. Store them in an S3-compatible sto
 
 - PostgreSQL has no Albanian stemmer, so `sq_unaccent` is the `simple` configuration plus accent folding: "shtepi tirane" finds "Shtëpi me qira në Tiranë". Use the same configuration in queries.
 - Search forgives typos and finds a word's other forms (migration 0016): "golff" finds the Golfs, "makinat" the listings that say "makinë", "apartamente" the "Apartament". `search_query(words)` turns the words into the tsquery listings are matched against: the websearch syntax as before (`-word`, `"a phrase"`, `or`), each word of four letters or more widened, where it stands, to its other forms (the words listings use with the same rough stem, `sq_stem`: makina, makine, makinat, makinave → makin) and, when few listings use it or none do, to the common word it most likely misspells (`search_correction`: spelt alike by `pg_trgm`, used by more than three times as many listings) with that word's forms. A word many listings use is never corrected, so "audi" stays apart from "audio". It also returns the corrections, which the page names under its heading ("Shfaqen edhe rezultatet për „golf“."). The first eight words are widened; at most 100 characters of search words are taken.
-- A listing's category, those above it and its place are words of it too (`listing_search_extra`, migration 0017), so a search finds listings by them as by anything they say: "apartamente tirane" finds the flats in Tirana, "goma" what is under "Goma dhe disqe", "cars" the cars, "shkodra" and "shkoder" the listings in Shkodër (a town in -ër is kept with its article as well, as one ending off doesn't turn either into the other). As words rather than filters, they combine with the rest of a search: "makinë larëse" finds washing machines, which say "larëse", not cars, which only say "makinë". `search_query` leaves out filler words (në, me, për, dhe, e, i, të, një, nga, tek, që), which a listing would otherwise have to say as well: "apartament me qira në tiranë" searches apartament, qira and tiranë; a search of fillers only keeps them. "se" is no filler, for the iPhone SE. "ose" and "apo" mean or: "shtëpi ose vilë".
+- A listing's category, those above it and its place are words of it too (`listing_search_extra`, migration 0017), so a search finds listings by them as by anything they say: "apartamente tirane" finds the flats in Tirana, "goma" what is under "Goma dhe disqe", "cars" the cars, "shkodra" and "shkoder" the listings in Shkodër (a town in -ër is kept with its article as well, as one ending off doesn't turn either into the other). As words rather than filters, they combine with the rest of a search: "makinë larëse" finds washing machines, which say "larëse", not cars, which only say "makinë". `search_query` leaves out filler words (në, me, për, dhe, e, i, të, një, nga, tek, që), which a listing would otherwise have to say as well: "apartament me qira në tiranë" searches apartament and tiranë, among listings for rent (below); a search of fillers only keeps them. "se" is no filler, for the iPhone SE. "ose" and "apo" mean or: "shtëpi ose vilë".
+- A word that names a kind of listing finds the listings of that kind, as well as those that say it (`search_kind`, migration 0024): shitje, shitja, shitet, shes for sale, qira, qera for rent, blej for those who want to buy. Few cars for sale say "shitje", so "golf 7 në shitje" found nothing while every word had to be in a listing; now it finds the Golfs for sale, and "makina me qira" still finds a rental firm's listing that says "qira", whatever its kind. `search_query` returns such words apart from the rest (`kinds`, and `kind_query`, the words with their forms), and the listing queries take a listing of one of the kinds or one that matches `kind_query`; a word left out ("-shitje") stays a word left out.
 - The words listings use are the materialized view `search_words`, from `ts_stat` over the active listings' search vectors. The app rebuilds it at startup and every 15 minutes (`REFRESH MATERIALIZED VIEW CONCURRENTLY`, which searches go on through; about 2 s for 100,000 listings), so a new listing's words reach typo correction within a quarter of an hour, while the listing itself is searchable at once. `tests/fixtures/listings.sql` and `dev/sample_listings.sql` end by refreshing it, and so should anything else that loads listings with psql: `REFRESH MATERIALIZED VIEW search_words;`. The zones' averages a square metre (`zone_area_prices`) are rebuilt along with it; after loading listings with psql, rebuild them too: `REFRESH MATERIALIZED VIEW zone_area_prices;`.
 - Pages work a search out once, before their listing queries (`db::text_search`), and pass it to them as a parameter. Worked out inside them, it would be hidden from the planner, and a search that finds nothing would walk the whole newest-first index: 87 ms instead of 0.04 ms on 161,000 listings.
 - The search vector weights the title (A) above searchable attribute labels (B, from `listings.search_extra`) and the description (C), so `ts_rank` puts title matches first.
@@ -486,16 +488,19 @@ LIMIT 4;
 Work the search out first, forgiving typos and finding other forms of the words, along with the words it searched in place of misspelt ones:
 
 ```sql
-SELECT query::text, corrections FROM search_query(:words);   -- golff: 'golff' | 'golf', {golf}
+SELECT query::text, corrections, kinds, kind_query::text FROM search_query(:words);
+-- golff: 'golff' | 'golf', {golf}, {}, NULL
+-- golf në shitje: 'golf', {}, {SELL}, 'shitje' | 'shitjes'...
 ```
 
-Then pass the query in as a parameter, so the planner sees it:
+Then pass the query in as a parameter, so the planner sees it, with the kinds the words named (a word that names one finds listings of that kind, or that say it):
 
 ```sql
 SELECT l.id, l.title, l.sort_at
 FROM listings l
 WHERE l.status = 'ACTIVE'
   AND l.search_vector @@ :query::tsquery
+  AND (l.listing_type = ANY(:kinds) OR l.search_vector @@ :kind_query::tsquery)   -- where kinds were named
 ORDER BY l.sort_at DESC, l.id DESC
 LIMIT 30;
 ```

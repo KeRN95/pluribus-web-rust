@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT query::text AS \"query?\", corrections AS \"corrections!\", kinds AS \"kinds!\",\n                  kind_query::text AS \"kind_query?\"\n           FROM search_query($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "query?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "corrections!",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 2,
+        "name": "kinds!",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 3,
+        "name": "kind_query?",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "2f977db07a34b5d4c70b9aae7cd3c68c5d0c4b46629e0fee9007230361cc6c50"
+}

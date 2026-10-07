@@ -958,6 +958,34 @@ async fn search_matches_property_values(pool: PgPool) {
     assert!(!body.contains("Laptop Lenovo ThinkPad T14"));
 }
 
+/// The listings a search finds, by number.
+async fn found(pool: &PgPool, words: &str) -> Vec<i64> {
+    card_numbers(&html(pool.clone(), &format!("/search?q={words}")).await)
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn words_that_name_a_kind_of_listing_find_that_kind(pool: PgPool) {
+    // The Golf is for sale, though it doesn't say so: "në shitje", "shitet" and "shes" find it as
+    // "golf" does, "me qira" doesn't.
+    for words in ["golf+7+ne+shitje", "golf+7+n%C3%AB+shitje", "shitet+golf", "shes+golf+7"] {
+        assert_eq!(found(&pool, words).await, [1001], "{words}");
+    }
+    assert!(found(&pool, "golf+me+qira").await.is_empty());
+    // The flat is for rent, and "me qira" finds it; "në shitje" doesn't.
+    assert_eq!(found(&pool, "apartament+me+qira").await, [1003]);
+    assert!(found(&pool, "apartament+ne+shitje").await.is_empty());
+    // A listing that says such a word is found by it, whatever its kind: the Mercedes, for sale,
+    // can be rented too.
+    sqlx::query("UPDATE listings SET title = 'Mercedes-Benz C 220, 2018, edhe me qira' WHERE public_no = 1002")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(found(&pool, "mercedes+me+qira").await, [1002]);
+    // The kind alone finds every listing of it, and a kind left out stays out.
+    assert!(found(&pool, "me+qira").await.contains(&1003));
+    assert!(found(&pool, "golf+-shitje").await.contains(&1001));
+}
+
 #[sqlx::test(fixtures("listings"))]
 async fn search_forgives_typos_and_names_the_word_it_searched(pool: PgPool) {
     // No listing says "golff": the Golf is found, and the page says "golf" was searched too.
