@@ -418,6 +418,29 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
+async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
+    // Filtrat, Harta and Rendit stand in one row over the results, each a card folded to its
+    // header; opening one says so (section:open) and the others fold, so only one is open at a
+    // time.
+    let cars = html(pool, "/c/makina").await;
+    let order = positions(&cars, &[
+        r#"<div class="browse-tools">"#,
+        r#"<div class="filters-card">"#,
+        r#"<section class="map-card map-hidden""#,
+        r#"<div class="sort-card""#,
+        r#"<section class="results""#,
+    ]);
+    assert!(order.is_sorted());
+    for listener in ["filters#foldFor", "map#foldFor", "fold#foldFor"] {
+        assert!(cars.contains(&format!("section:open@document->{listener}")), "{listener}");
+    }
+    // The order's header is a button like the others', its list folded under it.
+    assert!(cars.contains(r#"<button type="button" class="map-card-header sort-open" aria-controls="sort-options" aria-expanded="false""#));
+    assert!(cars.contains(r#"<fieldset class="sort-options" id="sort-options" data-fold-target="panel">"#));
+    assert!(!cars.contains(r#"<details class="sort-card""#));
+}
+
+#[sqlx::test(fixtures("listings"))]
 async fn category_pages_keep_their_map_folded(pool: PgPool) {
     // Every category page has its map, in a card folded to its header; with no point, the
     // results are from everywhere. Nothing else opens it.
@@ -1357,8 +1380,8 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     assert!(gps[..parts].trim_end().ends_with(r#"<details class="menu-branch" open>"#));
     let prona = gps.find(r#"<summary class="picker-option picker-branch"><a href="/c/prona">Prona</a>"#).expect("Prona's branch");
     assert!(gps[..prona].trim_end().ends_with(r#"<details class="menu-branch">"#), "folded");
-    // Every branch closes; the other two </details> are the category menu's own and the order's.
-    assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - 2, "balanced");
+    // Every branch closes; the other </details> is the category menu's own.
+    assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - 1, "balanced");
 
     // The old address still works.
     assert_eq!(get(pool.clone(), "/c/pjese-kembimi").await.status, StatusCode::OK);

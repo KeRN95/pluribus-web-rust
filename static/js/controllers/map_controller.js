@@ -143,6 +143,13 @@ export default class extends Controller {
     this.toggleTarget.setAttribute("aria-expanded", String(!fold));
     const label = fold ? this.toggleTarget.dataset.showLabel : this.toggleTarget.dataset.hideLabel;
     if (label) this.toggleTarget.textContent = label;
+    // In its card, beside the filters and the order: only one of the three is open at a time.
+    if (!fold && this.lazyValue) this.dispatch("open", { target: this.toggleTarget, prefix: "section" });
+  }
+
+  // Another card opened.
+  foldFor(event) {
+    if (event.target !== this.toggleTarget && !this.element.classList.contains("map-hidden")) this.fold(true);
   }
 
   // While the slider moves: the distance beside it and the circle follow, and the map zooms in

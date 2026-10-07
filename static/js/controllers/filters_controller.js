@@ -1,7 +1,9 @@
 import { Controller } from "@hotwired/stimulus";
 
 // The filter panel: a card whose header, "Filtrat", opens and closes it, so several options can
-// be picked and then applied together with its own button.
+// be picked and then applied together with its own button. Of the cards beside it (the map, the
+// order) only one is open at a time: opening it says so (section:open), and another's opening
+// folds it (foldFor).
 export default class extends Controller {
   static targets = ["panel", "form", "toggle"];
 
@@ -13,6 +15,7 @@ export default class extends Controller {
   open() {
     this.panelTarget.classList.add("is-open");
     this.toggleTarget.setAttribute("aria-expanded", "true");
+    this.dispatch("open", { target: this.toggleTarget, prefix: "section" });
   }
 
   // Escape closes it too; the focus goes back to the button if it was in the section.
@@ -27,6 +30,11 @@ export default class extends Controller {
   reset() {
     this.panelTarget.classList.remove("is-open");
     this.toggleTarget.setAttribute("aria-expanded", "false");
+  }
+
+  // Another card opened.
+  foldFor(event) {
+    if (event.target !== this.toggleTarget) this.reset();
   }
 
   submit() {

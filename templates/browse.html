@@ -47,32 +47,32 @@
 </nav>
 {% endif %}
 
-{#- Narrower than a sidebar, the filters are a card like the map's: "Filtrat", its header, says
-    which filters are on and opens the form inside it, and closes it, with JavaScript; without it
-    they stay open. -#}
-<noscript><style>.filters { display: block; } .filters-open { display: none; }</style></noscript>
+{#- Filtrat, Harta and Rendit stand side by side, each a card folded to its header; the one opened
+    unfolds under the three, as wide as them all, and only one is open at a time: opening one says
+    so (section:open) and the others fold. Without JavaScript the filters and the orders stay
+    open, their headers gone, and the map, which needs it, is not there. -#}
+<noscript><style>.filters, .sort-options { display: block; } .filters-open, .sort-open, .map-card { display: none; }</style></noscript>
 <div class="browse" data-controller="filters"
-     data-action="keydown.esc@document->filters#close turbo:before-cache@document->filters#reset">
-  {#- On wide screens the card is only its panel, the sidebar (display: contents). -#}
-  <div class="filters-card">
-    <button type="button" class="map-card-header filters-open" aria-controls="filters" aria-expanded="false"
-            data-filters-target="toggle" data-action="filters#toggle">
-      <span class="map-card-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span>
-      <span class="map-card-title">
-        <strong>Filtrat</strong>
-        <span>{% if chips.is_empty() %}Asnjë filtër{% else %}{% for chip in chips.iter() %}{% if !loop.first %} · {% endif %}{{ chip.label }}{% endfor %}{% endif %}</span>
-      </span>
-      <svg class="map-card-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-    </button>
-    <aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">
-      <div class="filters-header">
-        <h2 id="filters-heading">Filtrat</h2>
-      </div>
-      {% include "filters.html" %}
-    </aside>
-  </div>
-
-  <section class="results" aria-label="Njoftimet">
+     data-action="keydown.esc@document->filters#close turbo:before-cache@document->filters#reset section:open@document->filters#foldFor">
+  <div class="browse-tools">
+    {#- "Filtrat", the filters' header, says which are on, and opens the form and closes it. -#}
+    <div class="filters-card">
+      <button type="button" class="map-card-header filters-open" aria-controls="filters" aria-expanded="false"
+              data-filters-target="toggle" data-action="filters#toggle">
+        <span class="map-card-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span>
+        <span class="map-card-title">
+          <strong>Filtrat</strong>
+          <span>{% if chips.is_empty() %}Asnjë filtër{% else %}{% for chip in chips.iter() %}{% if !loop.first %} · {% endif %}{{ chip.label }}{% endfor %}{% endif %}</span>
+        </span>
+        <svg class="map-card-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">
+        <div class="filters-header">
+          <h2 id="filters-heading">Filtrat</h2>
+        </div>
+        {% include "filters.html" %}
+      </aside>
+    </div>
 
     {#- The map, in a card that always comes folded to its header: "Harta", and how far around a
         point the results are, or "Kudo". The header opens it, and only then does the map load, its
@@ -81,7 +81,7 @@
         "Të gjitha" drops them, and the page reloads with its category and filters, the card
         folded again. -#}
     <section class="map-card map-hidden" data-controller="map" data-map-lazy-value="true"
-      data-action="turbo:frame-load->map#plot" aria-label="Harta"
+      data-action="turbo:frame-load->map#plot section:open@document->map#foldFor" aria-label="Harta"
       {%- if let Some(near) = filters.near %} data-map-latitude-value="{{ near.latitude }}" data-map-longitude-value="{{ near.longitude }}"{% endif %}>
       <button type="button" class="map-card-header" data-map-target="toggle" data-action="map#toggleMap"
               aria-controls="map-card-body" aria-expanded="false">
@@ -135,27 +135,31 @@
     </section>
 
     {#- The order, in a card like the map's: folded to its header, "Rendit" and the order now;
-        open, the orders as a list like the in-page dropdowns', the one now ticked. Picking one
-        sends the filter form (form="filter-form"), so the filters stay. -#}
+        open, the orders as a list like the in-page dropdowns', the one now ticked
+        (fold_controller.js). Picking one sends the filter form (form="filter-form"), so the
+        filters stay. -#}
     {%- let sorts = filters.sort_choices() %}
-    <details class="sort-card">
-      <summary>
-        <span class="map-card-header">
-          <span class="map-card-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5"/><path d="M17 20V4M13.5 7.5 17 4l3.5 3.5"/></svg></span>
-          <span class="map-card-title">
-            <strong>Rendit</strong>
-            <span>{% for choice in sorts.iter() %}{% if choice.selected %}{{ choice.label }}{% endif %}{% endfor %}</span>
-          </span>
-          <svg class="map-card-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    <div class="sort-card" data-controller="fold"
+         data-action="section:open@document->fold#foldFor turbo:before-cache@document->fold#close">
+      <button type="button" class="map-card-header sort-open" aria-controls="sort-options" aria-expanded="false"
+              data-fold-target="toggle" data-action="fold#toggle">
+        <span class="map-card-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5"/><path d="M17 20V4M13.5 7.5 17 4l3.5 3.5"/></svg></span>
+        <span class="map-card-title">
+          <strong>Rendit</strong>
+          <span>{% for choice in sorts.iter() %}{% if choice.selected %}{{ choice.label }}{% endif %}{% endfor %}</span>
         </span>
-      </summary>
-      <fieldset class="sort-options">
+        <svg class="map-card-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <fieldset class="sort-options" id="sort-options" data-fold-target="panel">
         <legend class="visually-hidden">Rendit</legend>
         {%- for choice in sorts.iter() %}
         <label class="picker-option sort-option"><input class="visually-hidden" type="radio" name="sort" value="{{ choice.value }}" form="filter-form" data-action="filters#submit"{% if choice.selected %} checked{% endif %}>{{ choice.label }}</label>
         {%- endfor %}
       </fieldset>
-    </details>
+    </div>
+  </div>
+
+  <section class="results" aria-label="Njoftimet">
 
     {% if !chips.is_empty() %}
     <ul class="active-filters" aria-label="Filtrat e zgjedhur">

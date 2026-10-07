@@ -930,30 +930,58 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .filter-actions { display: flex; align-items: center; gap: .75rem; }
 .filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
 
-/* The filters are a card like the map's under it, the three alike, folded to their headers, on
-   every screen. "Filtrat", the header, says which filters are on, opens the form inside the card
-   (fading in as the menus do) and closes it; the options picked apply together, with the form's
-   button. The header names the section, so the panel's own heading is there for screen readers
-   only. */
-.filters-card { margin: 0 0 .5rem; }
-/* The three cards drawn like Claude's, as the listing form's own fields are: the menus' hairline on
-   the surface, rounder corners and a shadow you barely see; open, a hairline across the card
-   between the header and what it opened. */
+/* Filtrat, Harta and Rendit side by side, each a card folded to its header, drawn like Claude's as
+   the listing form's own fields are: the menus' hairline on the surface, rounder corners and a
+   shadow you barely see. The one opened, only one at a time (section:open), its header on the
+   accent's tint, unfolds under the three, as wide as them all, in a card of the same kind, fading
+   in as the menus do. The cards are no boxes of their own (display: contents): their headers and
+   what they open are the row's. "Filtrat" says which filters are on and opens the form, whose
+   options apply together, with its button; the header names the section, so the panel's own
+   heading is there for screen readers only. */
+.browse-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin: 0 0 1rem; }
 .filters-card,
 .map-card,
-.sort-card {
+.sort-card { display: contents; }
+.browse-tools .map-card-header,
+.filters,
+.map-card-body,
+.sort-options {
   background: var(--surface);
   border: 1px solid var(--menu-border);
   border-radius: 16px;
   box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
 }
-.filters-card .map-card-icon { color: var(--text); }
-.filters-open[aria-expanded="false"] .map-card-chevron { transform: rotate(-90deg); }
-.filters { display: none; padding: 0 1rem 1rem; border-top: 1px solid var(--menu-border); }
-.filters.is-open { display: block; animation: menu-in .16s ease-out; }
+.browse-tools .map-card-header { grid-row: 1; align-self: stretch; }
+.browse-tools .map-card-header[aria-expanded="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+.filters,
+.map-card-body,
+.sort-options { grid-column: 1 / -1; animation: menu-in .16s ease-out; }
+.filters-card .map-card-icon,
+.sort-card .map-card-icon { color: var(--text); }
+.filters { display: none; padding: 0 1rem 1rem; }
+.filters.is-open { display: block; }
 .filters-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) {
-  .filters.is-open { animation: none; }
+  .filters,
+  .map-card-body,
+  .sort-options { animation: none; }
+}
+/* On a phone the three are narrow: each header has its icon and chevron above its name and what
+   it says, in two lines at most. */
+@media (max-width: 719px) {
+  .browse-tools .map-card-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "icon chevron" "title title";
+    align-content: start;
+    align-items: center;
+    gap: .5rem .25rem;
+    padding: .6rem .65rem .7rem;
+  }
+  .browse-tools .map-card-icon { grid-area: icon; }
+  .browse-tools .map-card-chevron { grid-area: chevron; }
+  .browse-tools .map-card-title { grid-area: title; }
+  .browse-tools .map-card-title span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; }
 }
 /* The form in two columns: a field takes a line of its own, unless it is a small one (filter-half:
    a dropdown, a range, a few boxes), which shares its line with the next small one, Marka beside
@@ -975,20 +1003,17 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 
 /* Map page, and the ways to it */
 
-/* The map on a category or search page, between the filters and the results: a card that comes
-   folded down to its header, which opens it and folds it again. The order (Rendit) under it is a
-   card like it, a <details>, its header in the summary. */
-.map-card,
-.sort-card { margin: 0 0 1rem; }
-.map-card + .sort-card { margin-top: -.5rem; }
-.sort-card summary { list-style: none; border-radius: 15px; cursor: pointer; }
-.sort-card summary::-webkit-details-marker { display: none; }
-.sort-card .map-card-icon { color: var(--text); }
-.sort-card:not([open]) .map-card-chevron { transform: rotate(-90deg); }
-/* Open, the orders, as rows like the in-page dropdowns': the order now in the site's colour,
-   ticked; a tap on another reloads the page in it. The radio itself is there for keyboards and
-   screen readers only, its ring round the row. */
-.sort-options { display: grid; gap: .15rem; min-width: 0; margin: 0; padding: .5rem .5rem .6rem; border: 0; border-top: 1px solid var(--menu-border); }
+/* The map on a category or search page, beside the filters and the order: a card that comes
+   folded down to its header, which opens it under the three and folds it again. The order
+   (Rendit) is a card like it (fold_controller.js). */
+/* Open, the orders, as rows like the in-page dropdowns', in columns on wider screens: the order
+   now in the site's colour, ticked; a tap on another reloads the page in it. The radio itself is
+   there for keyboards and screen readers only, its ring round the row. */
+.sort-options { display: grid; gap: .15rem; min-width: 0; margin: 0; padding: .5rem; }
+.sort-options:not(.is-open) { display: none; }
+@media (min-width: 720px) {
+  .sort-options { grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); }
+}
 .sort-option:has(input:checked) { display: flex; align-items: center; gap: .5rem; background: var(--button); color: var(--on-button); font-weight: var(--medium); }
 .sort-option:has(input:checked):hover { background: var(--button-hover); }
 .sort-option:has(input:checked)::after {
@@ -1016,8 +1041,8 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .map-card-title strong { font-weight: var(--semibold); }
 .map-card-title span { overflow: hidden; color: var(--muted); font-size: .85rem; white-space: nowrap; text-overflow: ellipsis; }
 .map-card-chevron { flex: none; color: var(--muted); transition: transform .15s; }
-.map-card.map-hidden .map-card-chevron { transform: rotate(-90deg); }
-.map-card-body { padding: .9rem 1rem 1rem; border-top: 1px solid var(--menu-border); }
+.map-card-header[aria-expanded="false"] .map-card-chevron { transform: rotate(-90deg); }
+.map-card-body { padding: .9rem 1rem 1rem; }
 .map-card.map-hidden .map-card-body { display: none; }
 .map-card .map-form { margin-bottom: .75rem; }
 .map-card .map-canvas { border-radius: calc(var(--radius) - 4px); }
