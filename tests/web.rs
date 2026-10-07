@@ -988,8 +988,22 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
 #[sqlx::test(fixtures("listings"))]
 async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     let car = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
-    assert!(car.contains(r#"data-controller="loan" data-loan-price-value="21500.00" data-loan-currency-value="€""#));
-    assert!(car.contains("Llogarit kredinë"));
+    // A bubble beside the price, like the price per square metre's, which opens the calculator in a
+    // card under it the same way: the down payment, the years and the interest, and what they come
+    // to, the monthly payment last.
+    let start = r#"<details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="21500.00" data-loan-currency-value="€">"#;
+    let loan = &car[car.find(start).expect("the loan calculator's bubble")..];
+    let loan = &loan[..loan.find("</details>").unwrap()];
+    assert!(loan[..loan.find("</summary>").unwrap()].contains("Llogarit kredinë"));
+    let card = positions(loan, &[
+        r#"<div class="bubble-card loan-card">"#,
+        r#"<input id="loan-down""#,
+        r#"<input id="loan-years""#,
+        r#"<input id="loan-rate""#,
+        "<dt>Kredia</dt>",
+        "<dt>Kësti mujor</dt>",
+    ]);
+    assert!(card.is_sorted(), "{card:?}");
     // Under 10 000 € or 1 000 000 Lekë it isn't worth a loan.
     for cheap in ["/listing/1001-volkswagen-golf-7-2016-nafte", "/listing/1005-iphone-13-128-gb-si-i-ri"] {
         assert!(!html(pool.clone(), cheap).await.contains("Llogarit kredinë"), "{cheap}");
@@ -1011,12 +1025,12 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     assert!(!rent.contains("Llogarit kredinë"));
     assert!(!rent.contains("price-per-area"));
     // A house on sale says under its price what a square metre costs, 185 000 € for 200 m², in a
-    // bubble before the loan calculator's button, which opens how it was worked out.
+    // bubble before the loan calculator's, which opens how it was worked out.
     let house = html(pool, "/listing/1004-shtepi-private-ne-shitje-ne-vlore").await;
     let row = &house[house.find(r#"<div class="price-row with-area">"#).expect("the price's row")..];
-    let row = &row[..row.find(r#"class="loan-button""#).unwrap()];
+    let row = &row[..row.find(r#"<details class="bubble loan""#).unwrap()];
     assert!(row.contains("<p class=\"listing-price\">185\u{a0}000\u{a0}€</p>"));
-    let bubble = &row[row.find(r#"<details class="area-price" data-controller="dropdown">"#).expect("the bubble")..];
+    let bubble = &row[row.find(r#"<details class="bubble area-price" data-controller="dropdown">"#).expect("the bubble")..];
     assert!(bubble[..bubble.find("</summary>").unwrap()].contains("925\u{a0}€/m²"));
     for line in ["<dd>185\u{a0}000\u{a0}€</dd>", "<dd>200\u{a0}m²</dd>", "<dd>925\u{a0}€/m²</dd>", "rrumbullakuar në euro."] {
         assert!(bubble.contains(line), "{line}");
@@ -1326,14 +1340,14 @@ async fn a_property_in_a_zone_compares_its_square_metre_with_the_zones(pool: PgP
     let page = |n: i64| format!("/listing/{n}-apartament-{}", n - 2000);
     // The bubble under the price, from its opening tag to its end.
     let bubble = |html: String| {
-        let start = html.find(r#"<details class="area-price"#).expect("the bubble");
+        let start = html.find(r#"<details class="bubble area-price"#).expect("the bubble");
         html[start..start + html[start..].find("</details>").unwrap()].to_string()
     };
 
     // 200 € a square metre under the average, or more: green, and the card says the average, by
     // how much, and what the average is worked out from.
     let cheap = bubble(html(pool.clone(), &page(2002)).await);
-    assert!(cheap.starts_with(r#"<details class="area-price price-below" data-controller="dropdown">"#), "{cheap}");
+    assert!(cheap.starts_with(r#"<details class="bubble area-price price-below" data-controller="dropdown">"#), "{cheap}");
     for line in [
         "<dd>800\u{a0}€/m²</dd>",
         "<dt>Mesatarja e zonës</dt><dd>1\u{a0}000\u{a0}€/m²</dd>",
@@ -1344,14 +1358,14 @@ async fn a_property_in_a_zone_compares_its_square_metre_with_the_zones(pool: PgP
     }
     // Less than 200 € from it either way: yellow.
     let near = bubble(html(pool.clone(), &page(2003)).await);
-    assert!(near.starts_with(r#"<details class="area-price price-near""#));
+    assert!(near.starts_with(r#"<details class="bubble area-price price-near""#));
     assert!(near.contains("Afër mesatares: 110\u{a0}€/m² më lirë"));
     let even = bubble(html(pool.clone(), &page(2004)).await);
-    assert!(even.starts_with(r#"<details class="area-price price-near""#));
+    assert!(even.starts_with(r#"<details class="bubble area-price price-near""#));
     assert!(even.contains("Njësoj si mesatarja"));
     // 200 € over it, or more: red.
     let dear = bubble(html(pool.clone(), &page(2010)).await);
-    assert!(dear.starts_with(r#"<details class="area-price price-above""#));
+    assert!(dear.starts_with(r#"<details class="bubble area-price price-above""#));
     assert!(dear.contains("Mbi mesataren: 200\u{a0}€/m² më shtrenjtë"));
 
     // A price in Lekë meets the average in Lekë: 1 000 € is 100 000 Lekë.
@@ -1366,14 +1380,14 @@ async fn a_property_in_a_zone_compares_its_square_metre_with_the_zones(pool: PgP
     // A starting price says too little to compare.
     sqlx::query("UPDATE listings SET price_type = 'FROM' WHERE public_no = 2010").execute(&pool).await.unwrap();
     let from = bubble(html(pool.clone(), &page(2010)).await);
-    assert!(from.starts_with(r#"<details class="area-price" data-controller="dropdown">"#), "{from}");
+    assert!(from.starts_with(r#"<details class="bubble area-price" data-controller="dropdown">"#), "{from}");
     assert!(!from.contains("Mesatarja"));
 
     // Fewer than five sales in the zone make no average.
     sqlx::query("DELETE FROM listings WHERE public_no BETWEEN 2001 AND 2008").execute(&pool).await.unwrap();
     marketplace::db::refresh_zone_prices(&pool).await.unwrap();
     let alone = bubble(html(pool.clone(), &page(2009)).await);
-    assert!(alone.starts_with(r#"<details class="area-price" data-controller="dropdown">"#), "{alone}");
+    assert!(alone.starts_with(r#"<details class="bubble area-price" data-controller="dropdown">"#), "{alone}");
 }
 
 #[sqlx::test]

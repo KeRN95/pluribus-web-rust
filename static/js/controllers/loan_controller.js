@@ -1,20 +1,18 @@
 import { Controller } from "@hotwired/stimulus";
 
-// The loan calculator beside a listing's price: the price less the down payment, paid back in
-// equal monthly payments over the years given at the yearly interest given (an annuity, as banks
-// lend). Worked out as the fields change; nothing goes to the server.
+// The loan calculator in the card "Llogarit kredinë" opens under a listing's price: the price less
+// the down payment, paid back in equal monthly payments over the years given at the yearly
+// interest given (an annuity, as banks lend), with the interest and what it all comes to. Worked
+// out at the start, for the fields' first values, and as they change; nothing goes to the server.
 
 const NBSP = " ";
 
 export default class extends Controller {
-  static targets = ["button", "panel", "down", "years", "rate", "monthly", "summary"];
+  static targets = ["down", "years", "rate", "loan", "interest", "total", "monthly", "message"];
   static values = { price: Number, currency: String };
 
-  toggle() {
-    const open = this.panelTarget.hidden;
-    this.panelTarget.hidden = !open;
-    this.buttonTarget.setAttribute("aria-expanded", String(open));
-    if (open) this.calculate();
+  connect() {
+    this.calculate();
   }
 
   calculate() {
@@ -24,10 +22,13 @@ export default class extends Controller {
     const loan = this.priceValue - down;
     const months = Math.round(years * 12);
     if (!(loan > 0) || !(months >= 1 && months <= 600) || !(rate >= 0 && rate <= 100)) {
-      this.monthlyTarget.textContent = "–";
-      this.summaryTarget.textContent = !(loan > 0) && down > 0
+      for (const sum of [this.loanTarget, this.interestTarget, this.totalTarget, this.monthlyTarget]) {
+        sum.textContent = "–";
+      }
+      this.messageTarget.textContent = !(loan > 0) && down > 0
         ? "Paradhënia e mbulon gjithë çmimin."
         : "Shkruaj vitet (1–50) dhe interesin.";
+      this.messageTarget.hidden = false;
       return;
     }
     const monthlyRate = rate / 100 / 12;
@@ -35,9 +36,11 @@ export default class extends Controller {
       ? loan / months
       : (loan * monthlyRate) / (1 - (1 + monthlyRate) ** -months);
     const total = monthly * months;
+    this.loanTarget.textContent = this.money(loan);
+    this.interestTarget.textContent = this.money(total - loan);
+    this.totalTarget.textContent = this.money(total);
     this.monthlyTarget.textContent = this.money(monthly);
-    this.summaryTarget.textContent =
-      `Kredia ${this.money(loan)} · gjithsej ${this.money(total)} · interesi ${this.money(total - loan)}`;
+    this.messageTarget.hidden = true;
   }
 
   // "1 234 €", whole amounts, like the prices on the site.

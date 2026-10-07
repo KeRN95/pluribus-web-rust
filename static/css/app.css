@@ -1691,13 +1691,12 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   .listing {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 22rem;
-    grid-template-rows: auto auto auto auto auto auto 1fr;
+    grid-template-rows: auto auto auto auto auto 1fr;
     grid-template-areas:
       "notice notice"
       "tags tags"
       "media side"
       "header side"
-      "loan side"
       "details side"
       "description side";
     column-gap: 2.5rem;
@@ -1708,7 +1707,6 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   .listing > .listing-tags { grid-area: tags; }
   .listing > .listing-media { grid-area: media; }
   .listing > .listing-header { grid-area: header; }
-  .listing > .loan { grid-area: loan; }
   .listing > .listing-details { grid-area: details; }
   .listing > .listing-description { grid-area: description; }
   .listing > .listing-contact {
@@ -1823,21 +1821,23 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .listing-price { margin: 0; font-size: var(--text-3xl); line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
 /* What follows the price ("/muaj", "(i diskutueshëm)"), half its size. */
 .price-note { font-size: .5em; letter-spacing: normal; }
-/* A property on sale: what a square metre costs, a bubble like the loan calculator's button, which
-   opens how it was worked out in a card under it, as the menus open theirs: the price, the area,
-   and the one over the other, its sum under a line. */
-.area-price { position: relative; width: fit-content; }
-.listing-header > .area-price { margin-top: .4rem; }
-.area-price > summary { list-style: none; }
-.area-price > summary::-webkit-details-marker { display: none; }
-.area-price-card {
+/* Bubbles under the price, which open a card under them as the menus open theirs; a tap outside
+   or Escape closes it (dropdown_controller.js): what a square metre of a property on sale costs,
+   whose card says how it was worked out (area_price.html), and "Llogarit kredinë", whose card is
+   the loan calculator. A card's figures stand in rows, their sum under a line. */
+.bubble > summary {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .3rem .7rem; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); color: var(--text); font-size: var(--text-sm); font-weight: var(--semibold);
+  list-style: none; cursor: pointer; transition: background-color .15s;
+}
+.bubble > summary::-webkit-details-marker { display: none; }
+.bubble > summary:hover, .bubble[open] > summary { background: var(--surface-muted); }
+.bubble-card {
   position: absolute;
   top: calc(100% + .4rem);
   left: 0;
   z-index: 30;
-  width: max-content;
-  min-width: 15rem;
-  max-width: min(20rem, calc(100vw - 2rem));
   padding: .8rem .9rem;
   border: 1px solid var(--menu-border);
   border-radius: var(--radius);
@@ -1847,36 +1847,25 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   transform-origin: top left;
   animation: menu-in .14s ease-out;
 }
-.area-price-title { margin: 0 0 .5rem; font-weight: var(--semibold); }
-.area-price-sum { display: grid; gap: .3rem; margin: 0; }
-.area-price-sum > div { display: flex; justify-content: space-between; gap: 1.5rem; }
-.area-price-sum dt { color: var(--muted); }
-.area-price-sum dd { margin: 0; font-variant-numeric: tabular-nums; }
-.area-price-total { padding-top: .4rem; border-top: 1px solid var(--border); font-weight: var(--semibold); }
-.area-price-total dt { color: var(--text); }
-.area-price-note { margin: .55rem 0 0; color: var(--muted); font-size: var(--text-xs); }
+.bubble-title { margin: 0 0 .5rem; font-weight: var(--semibold); }
+.bubble-sum { display: grid; gap: .3rem; margin: 0; }
+.bubble-sum > div { display: flex; justify-content: space-between; gap: 1.5rem; }
+.bubble-sum dt { color: var(--muted); }
+.bubble-sum dd { margin: 0; font-variant-numeric: tabular-nums; }
+.bubble-total { padding-top: .4rem; border-top: 1px solid var(--border); font-weight: var(--semibold); }
+.bubble-total dt { color: var(--text); }
+.bubble-note { margin: .55rem 0 0; color: var(--muted); font-size: var(--text-xs); }
+@media (prefers-reduced-motion: reduce) {
+  .bubble-card { animation: none; }
+}
+/* What a square metre costs: its card under it, as wide as what it says. */
+.area-price { position: relative; width: fit-content; }
+.listing-header > .area-price { margin-top: .4rem; }
+.area-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw - 2rem)); }
 /* In a zone with an average, how the square metre compares with it, under the sum: a dot and the
    words in the bubble's colour. */
 .area-price-verdict { display: flex; align-items: center; gap: .45rem; margin: .5rem 0 0; color: var(--tone); font-weight: var(--semibold); }
 .area-price-verdict::before { content: ""; flex: none; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
-@media (prefers-reduced-motion: reduce) {
-  .area-price-card { animation: none; }
-}
-/* The price with the loan calculator's button beside it; the calculator opens under the actions. */
-.price-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
-/* With a price per square metre, the price takes a line of its own and the loan calculator's
-   button stands on the next, beside what a square metre costs. */
-.price-row.with-area { row-gap: .35rem; }
-.price-row.with-area > .listing-price { flex-basis: 100%; }
-.loan-button,
-.area-price > summary {
-  display: inline-flex; align-items: center; gap: .35rem;
-  padding: .3rem .7rem; border: 1px solid var(--border); border-radius: 999px;
-  background: var(--surface); color: var(--text); font: inherit; font-size: var(--text-sm); font-weight: var(--semibold);
-  cursor: pointer; transition: background-color .15s;
-}
-.loan-button:hover, .loan-button[aria-expanded="true"],
-.area-price > summary:hover, .area-price[open] > summary { background: var(--surface-muted); }
 /* In a zone with an average (zone_area_prices), the bubble takes the colour of how its square
    metre compares: green 200 € or more under it, red as much over it, yellow in between
    (ZONE_MARGIN_EUR, listings.rs). */
@@ -1890,18 +1879,27 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 }
 .area-price:is(.price-below, .price-near, .price-above) > summary:hover,
 .area-price:is(.price-below, .price-near, .price-above)[open] > summary { background: color-mix(in srgb, var(--tone) 12%, var(--tone-bg)); }
-.loan {
-  max-width: 30rem; margin: -.25rem 0 1.25rem; padding: .9rem 1rem;
-  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+/* The price with the loan calculator's bubble beside it. */
+.price-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
+/* With a price per square metre, the price takes a line of its own and the loan calculator's
+   bubble stands on the next, beside what a square metre costs. */
+.price-row.with-area { row-gap: .35rem; }
+.price-row.with-area > .listing-price { flex-basis: 100%; }
+/* The loan calculator's card: on a phone under the price's row and as wide as it, since its bubble
+   stands too near the middle of the screen for the card to fit beside either of the bubble's
+   edges; on wider screens under the bubble, as the square metre's card is. The three fields side
+   by side, the years' narrower so that the others' names ("Paradhënia (Lekë)", "Interesi vjetor
+   (%)") fit on a line; then the loan, its interest and the two together, and last the monthly
+   payment, larger. */
+.loan-card { width: min(26rem, 100%); }
+@media (min-width: 720px) {
+  .loan { position: relative; }
+  .loan-card { width: 24rem; }
 }
-.loan[hidden] { display: none; }
-.loan-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
-/* Last in the card: the monthly payment, right after its name. */
-.loan-result { display: flex; align-items: baseline; gap: .6rem; margin: .75rem 0 0; padding-top: .7rem; border-top: 1px solid var(--border); }
-.loan-result span { color: var(--muted); font-weight: var(--semibold); }
-.loan-result strong { font-size: var(--text-xl); font-weight: var(--bold); letter-spacing: -.02em; }
-.loan-summary { margin: .8rem 0 0; font-size: var(--text-sm); }
-.loan-note { margin: .4rem 0 0; color: var(--muted); font-size: var(--text-xs); }
+.loan-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .6fr) minmax(0, 1fr); align-items: end; gap: .6rem; margin-bottom: .8rem; }
+.loan-monthly { align-items: baseline; }
+.loan-monthly dd { font-size: var(--text-lg); font-weight: var(--bold); letter-spacing: -.01em; }
+.loan-message { color: var(--text); }
 
 .badge { margin-left: .4rem; padding: .2rem .65rem; border-radius: 999px; background: var(--badge); font-size: var(--text-sm); font-weight: var(--semibold); }
 .actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .9rem 0 1.25rem; }
