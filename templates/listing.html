@@ -27,7 +27,8 @@
   {% else %}
   {#- Each photo whole in its frame, over a blurred copy of itself where it doesn't fill it. Several
       make a strip to swipe through one at a time, with a counter in its corner, and arrows for a
-      mouse (gallery_controller.js); the first two load at once. -#}
+      mouse (gallery_controller.js); the first two load at once, the first ahead of anything else
+      on the page (fetchpriority). -#}
   <div class="gallery"{% if photos.len() > 1 %} data-controller="gallery"{% endif %}>
     <div class="listing-photos"
       {%- if photos.len() > 1 %} data-gallery-target="track" tabindex="0" role="region" aria-label="Fotot e njoftimit"{% endif %}>
@@ -37,7 +38,8 @@
         <img src="{{ photo.url }}" alt="{{ listing.title }}{% if photos.len() > 1 %}, foto {{ loop.index }} nga {{ photos.len() }}{% endif %}"
           {%- if let Some(width) = photo.width_px %} width="{{ width }}"{% endif %}
           {%- if let Some(height) = photo.height_px %} height="{{ height }}"{% endif %}
-          {%- if loop.index > 2 %} loading="lazy"{% endif %}>
+          {%- if loop.index > 2 %} loading="lazy"{% endif %}
+          {%- if loop.first %} fetchpriority="high"{% endif %}>
       </div>
       {% endfor %}
     </div>

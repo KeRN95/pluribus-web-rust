@@ -2735,6 +2735,10 @@ async fn listings_get_photos(pool: PgPool) {
     }).collect();
     assert_eq!(photo_urls.len(), 2, "{page}");
     assert!(page.contains(r#"width="1600" height="1067""#));
+    // The first loads ahead of anything else on the page.
+    let first = &page[page.find(r#"<img src="/media/photos/"#).unwrap()..];
+    assert!(first[..first.find('>').unwrap()].contains(r#" fetchpriority="high""#), "{first}");
+    assert_eq!(page.matches("fetchpriority").count(), 1);
     // Each whole in its frame, over a blurred copy of itself: its small copy, a decoration.
     for url in &photo_urls {
         let backdrop = format!(r#"<img class="gallery-backdrop" src="{}" alt="">"#, url.replace(".jpg", "-card.jpg"));
