@@ -288,6 +288,10 @@ pub struct ListingCard {
     /// same order. A small card shows the first; a big one slides through them all.
     pub photos: Vec<String>,
     pub photos_full: Vec<String>,
+    /// The seller's name, and since when they are on the site, which a big card says over its
+    /// photo.
+    pub seller_name: String,
+    pub seller_since: OffsetDateTime,
     /// The category's card properties in order, e.g. ["2016", "148 000 km", "Naftë"].
     pub details: Vec<String>,
     /// The first property the listing page shows that the card doesn't and the title doesn't
@@ -663,6 +667,10 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
                           FROM listing_media m
                           WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'
                             AND coalesce(m.public_url, m.thumbnail_url) IS NOT NULL), '{}') AS photos_full,
+                coalesce((SELECT b.display_name FROM businesses b WHERE b.id = l.seller_business_id),
+                         (SELECT u.display_name FROM users u WHERE u.id = l.seller_user_id), '') AS seller_name,
+                coalesce((SELECT b.created_at FROM businesses b WHERE b.id = l.seller_business_id),
+                         (SELECT u.created_at FROM users u WHERE u.id = l.seller_user_id), l.created_at) AS seller_since,
                 l.sort_at,
                 coalesce(
                     (SELECT array_agg(card.value ORDER BY card.sort_order)

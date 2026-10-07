@@ -36,6 +36,12 @@ impl ListingCard {
         self.photos.iter().zip(&self.photos_full).map(|(small, full)| (small.as_str(), full.as_str()))
     }
 
+    /// "Në Marketplace që nga tetor 2026", under the seller's name over a big card's photo, as the
+    /// listing page says it.
+    pub fn seller_since_text(&self) -> String {
+        format!("Në Marketplace që nga {}", format::month_year(self.seller_since))
+    }
+
     /// The city at the start of the details line: the listing's municipality, or its location if
     /// that isn't in one. None when the search is in that city already.
     pub fn city_label(&self) -> Option<&str> {

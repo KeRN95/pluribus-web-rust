@@ -399,8 +399,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* A card's photos: in a small card the first alone. In a big one (the view button) every photo in
    a row that a finger slides through a photo at a time (slides_controller.js), over the title's
-   stretched link, each photo a link itself; over them the shade, the price over that, then the
-   dots, at the right, and under a pointer the arrows. The rest of the card a size bigger, the photo 4:3,
+   stretched link, each photo a link itself; over them the shades, the price and the seller over
+   those, then the dots, at the right, and under a pointer the arrows. The rest of the card a size bigger, the photo 4:3,
    one card a line, no wider than 40rem, in the middle. */
 .card-slides {
   display: flex;
@@ -428,9 +428,32 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .cards-big .card-slides::-webkit-scrollbar { display: none; }
 .cards-big .card-slide { scroll-snap-align: start; scroll-snap-stop: always; }
 .cards-big .card-slide + .card-slide { display: block; }
-.cards-big .card-media::after { z-index: 3; }
+.cards-big .card-media::after {
+  z-index: 3;
+  background:
+    radial-gradient(ellipse 85% 40% at 0% 0%, rgb(38 38 36 / 55%), rgb(38 38 36 / 25%) 55%, transparent),
+    radial-gradient(ellipse 85% 50% at 0% 100%, rgb(38 38 36 / 60%), rgb(38 38 36 / 30%) 55%, transparent);
+}
 .cards-big .card-media .card-price { z-index: 4; }
 .cards-big .card-media .card-price { padding: 0 1rem .75rem; font-size: var(--text-lg); }
+/* Its seller at the top left, as the price at the bottom: the name, and under it, smaller, since
+   when they are on the site, on a shade of their own; every touch goes through to the photo. */
+.card-seller { display: none; }
+.cards-big .card-seller {
+  display: grid;
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: start;
+  z-index: 4;
+  margin: 0;
+  padding: .8rem 1rem 0;
+  color: #f5f4ee;
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 55%), 0 0 6px rgb(0 0 0 / 25%);
+  pointer-events: none;
+}
+.card-seller-name { font-size: var(--text-sm); font-weight: var(--semibold); }
 .cards-big .card-head { padding-top: .7rem; }
 .cards-big .card-title { font-size: var(--text-md); }
 .cards-big .card-summary { font-size: var(--text-sm); }

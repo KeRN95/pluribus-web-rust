@@ -33,6 +33,11 @@
     </button>
     {%- endif %}
     {%- endif %}
+    {%- if !card.seller_name.is_empty() %}
+    {#- Over a big card's photo, at its top left as the price is at its bottom: who sells it, and
+        since when they are on the site. A small card leaves it out (app.css). -#}
+    <p class="card-seller"><span class="card-seller-name">{{ card.seller_name }}</span><span>{{ card.seller_since_text() }}</span></p>
+    {%- endif %}
     <div class="card-head">
       <h2 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h2>
     </div>
