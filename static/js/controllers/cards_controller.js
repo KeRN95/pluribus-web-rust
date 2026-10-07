@@ -15,7 +15,7 @@ export default class extends Controller {
     this.element.classList.toggle("cards-big", big);
     this.buttonTarget.setAttribute("aria-pressed", String(big));
     document.cookie = `${this.cookieValue}=${big ? "big" : "small"}; path=/; max-age=31536000; samesite=lax`;
-    for (const photo of this.element.querySelectorAll(".card-photo[sizes]")) {
+    for (const photo of this.element.querySelectorAll(".results .card-photo[sizes]")) {
       photo.sizes = big ? this.bigValue : this.smallValue;
     }
   }

@@ -61,18 +61,6 @@
 </nav>
 {%- endif %}
 
-{%- if let Some(page) = most_viewed %}
-{#- In every main category and a few big subcategories, with no filter on, their listings seen the
-    most this week, the most first, as the welcome page has them for every category
-    (db::most_viewed, views.rs): cards in
-    one row that slides sideways (.most-viewed), each saying how many times it was seen; before
-    the page's buttons, so that its own cards' size leaves them as they are. -#}
-<section class="most-viewed" aria-labelledby="most-viewed-heading">
-  <h2 id="most-viewed-heading">Më të klikuarat</h2>
-  {% include "listing_grid.html" %}
-</section>
-{%- endif %}
-
 {#- The search, the filters, the map, the order and the cards' size, round buttons side by side;
     the search, the filters and the map open over the results, under the row and as wide as it,
     the page dimmed under them, the orders in a menu; only one is open at a time: opening one says
@@ -216,7 +204,21 @@
   {#- Under what the row opened, the page dimmed (app.css); a tap on it folds that again. -#}
   <div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>
 
-  <section class="results" aria-label="Njoftimet">
+  {%- if let Some(page) = most_viewed %}
+  {#- In every main category and a few big subcategories, with no filter on, their listings seen the
+      most this week, the most first, as the welcome page has them for every category
+      (db::most_viewed, views.rs): cards in
+      one row that slides sideways (.most-viewed), each saying how many times it was seen; under the
+      page's buttons, and small whatever size the page's own cards are (.cards-big .results). -#}
+  <section class="most-viewed" data-controller="drag-row" aria-labelledby="most-viewed-heading">
+    <h2 id="most-viewed-heading">Më të klikuarat</h2>
+    {% include "listing_grid.html" %}
+  </section>
+  {%- endif %}
+
+  <section class="results" aria-labelledby="results-heading">
+    {#- The order the listings come in, as their heading: "Më të rejat", "Më të lirat"... -#}
+    <h2 class="results-heading" id="results-heading">{% for choice in sorts.iter() %}{% if choice.selected %}{{ choice.label }}{% endif %}{% endfor %}</h2>
 
     {% if !chips.is_empty() %}
     <ul class="active-filters" aria-label="Filtrat e zgjedhur">

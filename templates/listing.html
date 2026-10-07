@@ -212,7 +212,7 @@
 {#- The seller's other listings, newest first, when this isn't their only one (db::seller_listings):
     cards like the related ones under them, but in one row that slides sideways when they don't all
     fit (.seller-listings), and a link to all of them on the seller's profile when there are more. -#}
-<section class="related seller-listings" aria-labelledby="seller-heading">
+<section class="related seller-listings" data-controller="drag-row" aria-labelledby="seller-heading">
   <div class="section-head">
     <h2 id="seller-heading">Më shumë nga ky {% if listing.seller_is_business() %}biznes{% else %}përdorues{% endif %}</h2>
     {%- if seller_more %}

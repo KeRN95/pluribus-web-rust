@@ -42,7 +42,7 @@
 {#- The listings seen the most this week, the most first (db::most_viewed, views.rs): cards like
     the seller's other listings under a listing, in one row that slides sideways (.most-viewed),
     each saying how many times it was seen. -#}
-<section class="most-viewed" aria-labelledby="most-viewed-heading">
+<section class="most-viewed" data-controller="drag-row" aria-labelledby="most-viewed-heading">
   <h2 id="most-viewed-heading">Më të klikuarat</h2>
   {% include "listing_grid.html" %}
 </section>

@@ -574,34 +574,34 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .card-dots,
 .card-step { display: none; }
 
-.cards-big .grid { grid-template-columns: minmax(0, 1fr); max-width: 40rem; margin-inline: auto; row-gap: 2.75rem; }
+.cards-big .results .grid { grid-template-columns: minmax(0, 1fr); max-width: 40rem; margin-inline: auto; row-gap: 2.75rem; }
 @media (min-width: 960px) {
-  .cards-big .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; column-gap: 1.5rem; }
+  .cards-big .results .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; column-gap: 1.5rem; }
 }
-.cards-big .card-media::before { aspect-ratio: 4 / 3; }
-.cards-big .card-slides {
+.cards-big .results .card-media::before { aspect-ratio: 4 / 3; }
+.cards-big .results .card-slides {
   z-index: 2;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
 }
-.cards-big .card-slides::-webkit-scrollbar { display: none; }
-.cards-big .card-slide { scroll-snap-align: start; scroll-snap-stop: always; }
-.cards-big .card-slide + .card-slide { display: block; }
-.cards-big .card-media::after {
+.cards-big .results .card-slides::-webkit-scrollbar { display: none; }
+.cards-big .results .card-slide { scroll-snap-align: start; scroll-snap-stop: always; }
+.cards-big .results .card-slide + .card-slide { display: block; }
+.cards-big .results .card-media::after {
   z-index: 3;
   background:
     radial-gradient(ellipse 85% 40% at 0% 0%, rgb(38 38 36 / 55%), rgb(38 38 36 / 25%) 55%, transparent),
     radial-gradient(ellipse 85% 50% at 0% 100%, rgb(38 38 36 / 60%), rgb(38 38 36 / 30%) 55%, transparent);
 }
-.cards-big .card-media .card-price { z-index: 4; }
-.cards-big .card-media .card-price { padding: 0 1rem .75rem; font-size: var(--text-lg); }
+.cards-big .results .card-media .card-price { z-index: 4; }
+.cards-big .results .card-media .card-price { padding: 0 1rem .75rem; font-size: var(--text-lg); }
 /* Its seller at the top left, as the price at the bottom: their initial in a circle, as on the
    listing page, then the name and under it, smaller, since when they are a user, on a shade of
    their own; every touch goes through to the photo. */
 .card-seller { display: none; }
-.cards-big .card-seller {
+.cards-big .results .card-seller {
   display: flex;
   grid-area: 1 / 1;
   align-self: start;
@@ -620,10 +620,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .card-seller .avatar { box-shadow: 0 1px 3px rgb(0 0 0 / 30%); text-shadow: none; }
 .card-seller-text { display: grid; min-width: 0; }
 .card-seller-name { font-size: var(--text-sm); font-weight: var(--semibold); }
-.cards-big .card-head { padding-top: .7rem; }
-.cards-big .card-title { font-size: var(--text-md); }
-.cards-big .card-summary { font-size: var(--text-sm); }
-.cards-big .card-dots {
+.cards-big .results .card-head { padding-top: .7rem; }
+.cards-big .results .card-title { font-size: var(--text-md); }
+.cards-big .results .card-summary { font-size: var(--text-sm); }
+.cards-big .results .card-dots {
   display: flex;
   grid-area: 1 / 1;
   align-self: end;
@@ -636,7 +636,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .card-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgb(255 255 255 / 55%); box-shadow: 0 0 2px rgb(0 0 0 / 45%); transition: background-color .15s; }
 .card-dots .is-current { background: #fff; }
 @media (hover: hover) {
-  .cards-big .card-step {
+  .cards-big .results .card-step {
     display: grid;
     place-items: center;
     grid-area: 1 / 1;
@@ -657,17 +657,17 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   }
   /* The arrow takes a click a little way round its circle too, so that one just off it steps the
      photos rather than opening the listing. */
-  .cards-big .card-step { position: relative; }
-  .cards-big .card-step::after { content: ""; position: absolute; inset: -.6rem; border-radius: 50%; }
-  .cards-big .card:hover .card-step,
-  .cards-big .card-step:focus-visible { opacity: 1; }
+  .cards-big .results .card-step { position: relative; }
+  .cards-big .results .card-step::after { content: ""; position: absolute; inset: -.6rem; border-radius: 50%; }
+  .cards-big .results .card:hover .card-step,
+  .cards-big .results .card-step:focus-visible { opacity: 1; }
   .card-previous { justify-self: start; }
   .card-next { justify-self: end; }
 }
-.cards-big .card-step[hidden] { display: none; }
+.cards-big .results .card-step[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .card-dots span,
-  .cards-big .card-step { transition: none; }
+  .cards-big .results .card-step { transition: none; }
 }
 
 /* The location pin (templates/pin.svg), as before the city on cards: the same as on the welcome
@@ -1211,6 +1211,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .results-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .45rem; margin: 1.25rem 0 .25rem; }
 .results-header h1 { margin: 0; font-size: var(--text-xl); font-weight: var(--medium); }
 .results-header .result-count { margin-left: .55rem; }
+/* Over the listings, the order they come in ("Më të rejat"), as the welcome page's sections have
+   their headings. */
+.results-heading { margin: 1.25rem 0 .75rem; }
 /* The words searched in place of misspelt ones take a line of their own, under the heading. */
 .search-corrections { flex-basis: 100%; margin: 0; color: var(--muted); }
 .breadcrumbs {
@@ -2024,11 +2027,17 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 @media (min-width: 720px) {
   :is(.seller-listings, .most-viewed) .grid { --gap: 1rem; }
 }
-/* Phones and tablets slide the row with a finger, the next card showing at its edge: no bar. A
-   mouse keeps it, on a wide screen. */
-@media (max-width: 959px), (hover: none) {
-  :is(.seller-listings, .most-viewed) .grid { scrollbar-width: none; }
-  :is(.seller-listings, .most-viewed) .grid::-webkit-scrollbar { display: none; }
+/* No bar under the row, on any screen: a finger slides it, the next card showing at its edge, and
+   a mouse drags it (drag_row_controller.js): a hand to grab it by, closed while it drags, no text
+   to select on the way, no snapping to pull it back to a card where it stops, and the card it was
+   grabbed by not looking pressed. */
+:is(.seller-listings, .most-viewed) .grid { scrollbar-width: none; }
+:is(.seller-listings, .most-viewed) .grid::-webkit-scrollbar { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  :is(.seller-listings, .most-viewed) .grid { scroll-snap-type: none; cursor: grab; user-select: none; }
+  :is(.seller-listings, .most-viewed) .grid.is-dragging,
+  :is(.seller-listings, .most-viewed) .grid.is-dragging * { cursor: grabbing; }
+  :is(.seller-listings, .most-viewed) .grid.is-dragging .card:active { outline: none; }
 }
 @container (width < 692px) {
   :is(.seller-listings, .most-viewed) .grid:has(> .card:nth-child(3)) { --across: 2.25; --gaps: 2; }

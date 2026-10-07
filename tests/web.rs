@@ -3743,7 +3743,7 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
                      (1004, "203.0.113.1"), (1005, "203.0.113.1")] {
         assert_eq!(send_to(app.clone(), seen(no, ip, safari)).await.status, StatusCode::NO_CONTENT);
     }
-    // Each main category's page has its own, and each big subcategory's, the most seen first, over
+    // Each main category's page has its own, and each big subcategory's, the most seen first, under
     // the page's buttons...
     let row = |page: &str| {
         let mut numbers = card_numbers(section(page, "most-viewed-heading"));
@@ -3752,7 +3752,12 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
     };
     let vehicles = html(pool.clone(), "/c/automjete").await;
     assert_eq!(card_numbers(section(&vehicles, "most-viewed-heading")), [1002, 1001]);
-    assert!(vehicles.find("Më të klikuarat") < vehicles.find(r#"<div class="browse"#), "before the buttons");
+    let (buttons, seen, results) = (vehicles.find(r#"class="browse-tools""#), vehicles.find("Më të klikuarat"), vehicles.find(r#"class="results""#));
+    assert!(buttons < seen && seen < results, "under the buttons, over the results");
+    // The listings under it, headed by their order.
+    assert!(vehicles.contains(r#"<h2 class="results-heading" id="results-heading">Më të rejat</h2>"#));
+    let cheapest = html(pool.clone(), "/c/automjete?sort=price_asc").await;
+    assert!(cheapest.contains(r#"<h2 class="results-heading" id="results-heading">Më të lirat</h2>"#));
     assert_eq!(row(&html(pool.clone(), "/c/prona").await), [1003, 1004]);
     assert_eq!(row(&html(pool.clone(), "/c/elektronike").await), [1005]);
     assert_eq!(row(&html(pool.clone(), "/c/makina").await), [1001, 1002]);
