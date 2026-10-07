@@ -1017,12 +1017,13 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* The welcome page's newest listings, under its categories (home.html, web/newest.rs): the browse
    pages' cards in one row that slides sideways a card at a time, as the seller's other listings
    do under a listing (.seller-listings), but smaller than the cards under them, and their type
-   too: three and a quarter across on a phone, so that the next one shows at the edge, five and a
-   quarter on a tablet, and six and a quarter on a wide screen. A row of flex items rather than a
-   grid's columns, so that a card coming in at the front pushes the others along (.is-new). The
-   padding, which the margin takes back, keeps a card's hover panel and focus ring clear of the
-   sliding box's edges. No bar under it, on any screen: a finger slides it, and a mouse's wheel
-   turns it or the mouse drags it (newest_controller.js). Hidden until it has a card. */
+   too: two and three quarters across on a phone, so that most of the next one shows at the edge,
+   four and a quarter on a tablet, and five and a quarter on a wide screen. A row of flex items
+   rather than a grid's columns, so that a card coming in at the front pushes the others along
+   (.is-new). The padding, which the margin takes back, keeps a card's hover panel and focus ring
+   clear of the sliding box's edges. No bar under it, on any screen: a finger slides it, and a
+   mouse's wheel turns it or the mouse drags it (newest_controller.js). Hidden until it has a
+   card. */
 .newest { container-type: inline-size; }
 .newest:not(:has(.newest-card)) { display: none; }
 .newest h2 { display: flex; align-items: center; gap: .6rem; }
@@ -1040,8 +1041,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   to { box-shadow: 0 0 0 .5rem transparent; }
 }
 .newest-strip {
-  --across: 3.25;
-  --gaps: 3;
+  --across: 2.75;
+  --gaps: 2;
   --gap: .75rem;
   display: flex;
   position: relative;
@@ -1093,10 +1094,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .newest-strip.is-dragging .card:active { outline: none; }
 }
 @container (692px <= width < 928px) {
-  .newest-strip { --across: 5.25; --gaps: 5; }
+  .newest-strip { --across: 4.25; --gaps: 4; }
 }
 @container (width >= 928px) {
-  .newest-strip { --across: 6.25; --gaps: 6; }
+  .newest-strip { --across: 5.25; --gaps: 5; }
 }
 @media (prefers-reduced-motion: reduce) {
   .live-dot,
