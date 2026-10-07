@@ -1756,9 +1756,10 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   .seller-listings .grid:has(> .card:nth-child(5)) { --across: 4.25; --gaps: 4; }
 }
 
-/* Wide screens: two columns, the listing on the left and on the right who sells it and how to
-   reach them, in a card like the posting form's (the menus' hairline on the surface), which
-   stays in view as the page scrolls. The notice and the category path span both. */
+/* Wide screens: the photos across the page, and under them two columns: the listing on the left,
+   and on the right who sells it and how to reach them, in a card like the posting form's (the
+   menus' hairline on the surface), which stays in view as the page scrolls. The notice and the
+   category path span both too. */
 @media (min-width: 960px) {
   .listing {
     display: grid;
@@ -1767,7 +1768,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
     grid-template-areas:
       "notice notice"
       "tags tags"
-      "media side"
+      "media media"
       "header side"
       "details side"
       "description side";
@@ -1781,10 +1782,16 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   .listing > .listing-header { grid-area: header; }
   .listing > .listing-details { grid-area: details; }
   .listing > .listing-description { grid-area: description; }
+  /* Across the page a photo's frame is wider than the photo, and no taller than most screens
+     leave room for: the photo whole in the middle, its blurred copy filling the sides. */
+  .listing-media .gallery-photo,
+  .listing-media .listing-photo { aspect-ratio: auto; height: min(60vh, 32rem); }
+  /* The card's top level with the title's, under the photo. */
   .listing > .listing-contact {
     grid-area: side;
     position: sticky;
     top: 5rem;
+    margin-top: .75rem;
     padding: 1rem;
     border: 1px solid var(--menu-border);
     border-radius: 16px;
