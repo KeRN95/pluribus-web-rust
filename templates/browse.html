@@ -5,12 +5,14 @@
 {% block query %}{{ filters.q_value() }}{% endblock %}
 
 {% block content %}
-{% if !breadcrumbs.is_empty() %}
-<nav class="breadcrumbs" aria-label="Kategoritë sipër">
-  {% for crumb in breadcrumbs %}<a href="{{ crumb.url }}">{{ crumb.name }}</a><span aria-hidden="true">›</span>{% endfor %}
-</nav>
-{% endif %}
 <header class="results-header">
+  {%- if !breadcrumbs.is_empty() %}
+  {#- The categories above this one, on the heading's line: a breadcrumb whose last is the
+      heading. -#}
+  <nav class="breadcrumbs" aria-label="Kategoritë sipër">
+    {%- for crumb in breadcrumbs %}<a href="{{ crumb.url }}">{{ crumb.name }}</a><span aria-hidden="true">›</span>{% endfor -%}
+  </nav>
+  {%- endif %}
   {%- if category_menu.is_empty() %}
   <h1>{{ heading }}</h1>
   {%- else %}
