@@ -23,7 +23,8 @@ use crate::{
 pub struct ListingPage {
     pub cards: Vec<ListingCard>,
     pub next: Option<NextPage>,
-    /// Big cards, one a line, every photo to slide through, as the visitor chose (big_cards).
+    /// Big cards, one a line, every photo to slide through, as the visitor chose, or as the
+    /// category shows them by default (big_cards).
     pub big: bool,
     /// How many cards load their photo straight away, the first row's; the rest wait until they
     /// come near the screen (listing_card.html).
@@ -37,12 +38,31 @@ pub struct ListingPage {
 const SMALL_CARD_SIZES: &str = "(min-width: 720px) 260px, 50vw";
 const BIG_CARD_SIZES: &str = "(min-width: 960px) 535px, (min-width: 720px) 40rem, 100vw";
 
-/// The cookie the view button sets (cards_controller.js): "big" for big cards.
+/// The cookie the view button sets (cards_controller.js): "big" or "small".
 const CARDS_COOKIE: &str = "cards";
 
-/// Whether the visitor chose big cards.
-fn big_cards(headers: &HeaderMap) -> bool {
-    cookie(headers, CARDS_COOKIE).as_deref() == Some("big")
+/// The main categories whose pages, and those of the categories under them, show big cards until
+/// the visitor chooses small ones there: the photos say the most about a home. The choice made on
+/// them is kept apart ("cards-prona"), so that one made on other pages leaves them as they are.
+const BIG_CARDS_IN: [&str; 1] = ["prona"];
+
+/// The view button's cookie on a page of `category`, and whether its cards are big without one.
+fn cards_cookie(categories: &db::Categories, category: Option<&db::Category>) -> (String, bool) {
+    let main = category.map(|category| categories.ancestors(category).first().copied().unwrap_or(category));
+    match main.filter(|main| BIG_CARDS_IN.contains(&main.slug.as_str())) {
+        Some(main) => (format!("{CARDS_COOKIE}-{}", main.slug), true),
+        None => (CARDS_COOKIE.to_string(), false),
+    }
+}
+
+/// Whether the page shows big cards: as the visitor chose with `cookie`, or else as it does by
+/// default.
+fn big_cards(headers: &HeaderMap, cookie_name: &str, by_default: bool) -> bool {
+    match cookie(headers, cookie_name).as_deref() {
+        Some("big") => true,
+        Some("small") => false,
+        _ => by_default,
+    }
 }
 
 /// A lazily loaded `<turbo-frame>` that fetches the next page when it scrolls into view.
@@ -229,6 +249,8 @@ struct BrowsePage<'a> {
     found_in: Vec<FoundIn>,
     /// On a category page, the menu the heading opens to go to another category.
     category_menu: Vec<MenuItem>,
+    /// The cookie the view button sets on this page (cards_cookie).
+    cards_cookie: String,
     /// In a main category, or one of MOST_VIEWED_IN, with no filter on, its listings seen the most
     /// this week ("Më të klikuarat"), none before any are.
     most_viewed: Option<ListingPage>,
@@ -448,10 +470,13 @@ async fn browse(
         }
     };
 
+    // Big cards only in the grid: the map page's list stays small, beside the map.
+    let (cards_cookie, big_by_default) = cards_cookie(&categories, category);
+    let big = view == View::Grid && big_cards(&headers, &cards_cookie, big_by_default);
+
     if is_next_page_request(&headers) {
         let mut rows = db::listing_page(&state.db, &filter).await?;
         mark_city(&mut rows);
-        let big = big_cards(&headers) && view == View::Grid;
         return frame_response(filter.after, &ListingPage::new(rows, filter.sort, next_url).big(big));
     }
 
@@ -509,8 +534,7 @@ async fn browse(
         .collect();
     let count = format::listing_count(count, db::COUNT_LIMIT);
     mark_city(&mut rows);
-    // Big cards only in the grid: the map page's list stays small, beside the map.
-    let page = ListingPage::new(rows, filter.sort, next_url).big(big_cards(&headers) && view == View::Grid);
+    let page = ListingPage::new(rows, filter.sort, next_url).big(big);
     let more_points = points.len() as i64 > db::MAP_POINTS;
     points.truncate(db::MAP_POINTS as usize);
     if view == View::Map {
@@ -599,6 +623,7 @@ async fn browse(
         subcategories,
         found_in,
         category_menu,
+        cards_cookie,
         most_viewed,
         page,
         points,

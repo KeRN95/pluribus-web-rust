@@ -794,6 +794,25 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
+async fn prona_shows_big_cards_until_the_visitor_chooses_small_ones_there(pool: PgPool) {
+    let big = r#"<div class="browse cards-big" data-controller="filters cards""#;
+    let small = r#"<div class="browse" data-controller="filters cards""#;
+    // Prona and the categories under it: big cards, their own cookie for the view button...
+    let prona = get(pool.clone(), "/c/prona").await.body;
+    assert!(prona.contains(big) && prona.contains(r#"data-cards-cookie-value="cards-prona""#), "{prona}");
+    assert!(prona.contains(r#"aria-pressed="true" aria-label="Kartela të mëdha""#));
+    assert!(get(pool.clone(), "/c/apartamente").await.body.contains(big));
+    // ...which a choice on other pages leaves as they are; one made there doesn't.
+    assert!(get_with_cookie(pool.clone(), "/c/prona", "cards=small").await.body.contains(big));
+    assert!(get_with_cookie(pool.clone(), "/c/prona", "cards-prona=small").await.body.contains(small));
+    // Other categories: small cards, unless the visitor chose big ones.
+    let cars = get(pool.clone(), "/c/automjete").await.body;
+    assert!(cars.contains(small) && cars.contains(r#"data-cards-cookie-value="cards""#));
+    assert!(get_with_cookie(pool.clone(), "/c/automjete", "cards-prona=big").await.body.contains(small));
+    assert!(get_with_cookie(pool, "/c/automjete", "cards=big").await.body.contains(big));
+}
+
+#[sqlx::test(fixtures("listings"))]
 async fn big_cards_slide_through_every_photo(pool: PgPool) {
     // Two more photos for the Golf, after its cover.
     sqlx::query(

@@ -82,7 +82,7 @@
     row's buttons gone, and the map, which needs it, is not there. -#}
 <noscript><style>.search-panel, .filters { display: block; position: static; max-height: none; } .search-button, .filters-open, .map-card { display: none; }</style></noscript>
 <div class="browse{% if page.big %} cards-big{% endif %}" data-controller="filters cards"
-     data-cards-small-value="{{ page.small_sizes() }}" data-cards-big-value="{{ page.big_sizes() }}"
+     data-cards-small-value="{{ page.small_sizes() }}" data-cards-big-value="{{ page.big_sizes() }}" data-cards-cookie-value="{{ cards_cookie }}"
      data-action="keydown.esc@document->filters#foldAll turbo:before-cache@document->filters#reset section:open@document->filters#foldFor section:open@document->filters#fit turbo:before-morph-element->filters#keep turbo:before-morph-attribute->filters#keepAttribute">
   <div class="browse-tools" data-filters-target="tools">
     {#- Searching these listings: a round button that opens a search box under the row, as the
