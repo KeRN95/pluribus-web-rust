@@ -1010,11 +1010,14 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     assert!(rent.contains("<p class=\"listing-price\">450\u{a0}€<span class=\"price-note\">/muaj</span></p>"));
     assert!(!rent.contains("Llogarit kredinë"));
     assert!(!rent.contains("price-per-area"));
-    // A house on sale says under its price what a square metre costs: 185 000 € for 200 m².
+    // A house on sale says under its price what a square metre costs, 185 000 € for 200 m², and
+    // the loan calculator's button stands beside that rather than beside the price.
     let house = html(pool, "/listing/1004-shtepi-private-ne-shitje-ne-vlore").await;
-    assert!(house.contains(
-        "<p class=\"listing-price\">185\u{a0}000\u{a0}€<span class=\"price-per-area\">925\u{a0}€/m²</span></p>"
-    ));
+    let row = &house[house.find(r#"<div class="price-row with-area">"#).expect("the price's row")..];
+    let row = &row[..row.find("</div>").unwrap()];
+    assert!(row.contains("<p class=\"listing-price\">185\u{a0}000\u{a0}€</p>"));
+    let per_area = row.find("<p class=\"price-per-area\">925\u{a0}€/m²</p>").expect("the price per square metre");
+    assert!(per_area < row.find("Llogarit kredinë").unwrap());
 }
 
 #[sqlx::test(fixtures("listings"))]

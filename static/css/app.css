@@ -1804,10 +1804,15 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .listing-price { margin: 0; font-size: var(--text-3xl); line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
 /* What follows the price ("/muaj", "(i diskutueshëm)"), half its size. */
 .price-note { font-size: .5em; letter-spacing: normal; }
-/* A property on sale: what a square metre costs, on a line of its own under the price, quietly. */
-.price-per-area { display: block; margin-top: .3rem; color: var(--muted); font-size: var(--text-sm); font-weight: var(--medium); letter-spacing: normal; }
+/* A property on sale: what a square metre costs, under the price, quietly. */
+.price-per-area { margin: .3rem 0 0; color: var(--muted); font-size: var(--text-sm); font-weight: var(--medium); }
 /* The price with the loan calculator's button beside it; the calculator opens under the actions. */
 .price-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
+/* With a price per square metre, the price takes a line of its own and the loan calculator's
+   button stands on the next, beside what a square metre costs. */
+.price-row.with-area { row-gap: .35rem; }
+.price-row.with-area > .listing-price { flex-basis: 100%; }
+.price-row.with-area > .price-per-area { margin: 0; }
 .loan-button {
   display: inline-flex; align-items: center; gap: .35rem;
   padding: .3rem .7rem; border: 1px solid var(--border); border-radius: 999px;
