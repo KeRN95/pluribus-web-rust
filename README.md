@@ -24,7 +24,7 @@ cp .env.example .env
 cargo run
 ```
 
-Then open http://127.0.0.1:3000. On Windows, use `127.0.0.1` rather than `localhost`: `localhost` tries IPv6 first, which adds about 200 ms to every request through WSL.
+Then open http://127.0.0.1:3000. Every setting is in `.env` (see "Configuration" below); the copied values work locally as they are. On Windows, use `127.0.0.1` rather than `localhost`: `localhost` tries IPv6 first, which adds about 200 ms to every request through WSL.
 
 To keep the release build running there instead, as the development site, deploy it with the script (from WSL): it builds it, keeps the one running as the previous, restarts it on `BIND_ADDR`, checks it answers, and puts the previous back if it doesn't. It stops on a migration git doesn't know yet, which the server would apply, and rebuilds from clean when the binary is older than the sources (a build folder shared with another checkout):
 
@@ -78,6 +78,12 @@ docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v remove=1 -v 
 docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v count=150000 -v only=elektronike < dev/generate_listings.sql
 ```
 
+`views=1` makes nothing new but gives a twentieth of the active listings the script made two weeks of views (`listing_daily_stats`), most of them few and a few hundreds a day, so "Më të klikuarat" has rows to show before anyone has looked around; runs add up:
+
+```bash
+docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v views=1 < dev/generate_listings.sql
+```
+
 The tests need the database running; each test gets a fresh database of its own:
 
 ```bash
@@ -90,14 +96,41 @@ cargo test
 
 | Path | Contents |
 |---|---|
-| `src/main.rs` | Startup: configuration, database pool, migrations, HTTP server |
-| `src/web/` | Routes and page handlers: `browse.rs` (welcome, category, search and map pages), `account.rs` (signing in with a code), `post.rs` (posting and editing listings), `ai_fill.rs` (the listing form filled in by the AI), `properties.rs` (a category's properties in the listing form), `filters.rs` (filters read from the URL, the filter form), `listings.rs` (a listing's page), `suggestions.rs` (what the search boxes suggest as words are typed) |
-| `src/db/` | Database queries, a file for each part of the site (`categories.rs`, `properties.rs`, `listing_pages.rs`, `listing.rs`, `saved.rs`, `sign_in.rs`, `posting.rs`, `typed_in.rs`), all of them `db::` as before |
+| `src/main.rs` | Startup: `.env`, the log (`RUST_LOG`), the database pool (ten connections), the migrations, the rebuilding of the words search corrects typos from and of the zones' prices a square metre (at start and every 15 minutes), the HTTP server on `BIND_ADDR`, and a clean stop that first ends the newest listings' open streams |
+| `src/lib.rs` | The application: `AppState` (the database pool, the photo store, the moderators, the AI, the views gathered), `app()`, which `main` serves, and `app_with()` / `app_with_ai()`, which the tests build with photos in memory, a moderator of their own and views written at once |
+| `src/web/mod.rs` | The HTTP layer: every route (see "Routes"), errors and the 404 page, the `Cache-Control` of static files, the check that refuses forms posted from other sites, the fingerprint of the site's CSS and JavaScript (`asset_version`) and the stylesheets' order (`STYLESHEETS`) |
+| `src/web/browse.rs` | The welcome page and the browse pages (a category, a search, the map page), and sellers' profiles: grids of listings with filters, orders and infinite scroll, the subcategory pills, the "Më të klikuarat" rows |
+| `src/web/filters.rs` | A browse page's filters: read from the query string, turned into the listing query, and shown back as the filter form, the chips that remove them, the orders and the next page's URL |
+| `src/web/listings.rs` | A listing's page (its details and their icons, photos, price per square metre, loan, the seller's other listings and the related ones), the phone number's reveal, and the views it reports |
+| `src/web/newest.rs` | The stream of new listings for the welcome page's row: server-sent events, each a Turbo Stream with a listing's card |
+| `src/web/saved.rs` | The hearts: keeping a listing, the page of those kept (`/te-ruajturat`), and keeping one after signing in |
+| `src/web/post.rs` | Posting, editing, pausing, putting back and deleting listings, "Njoftimet e mia", and the limits that keep spam out |
+| `src/web/properties.rs` | A category's properties in the listing form (the fields, a car's tiles, the body types' drawings), and checking what a seller picked or typed |
+| `src/web/ai_fill.rs` | "Plotëso pjesën tjetër me AI": the listing form filled in by the AI, its answer checked against the form's own lists |
+| `src/web/photos.rs` | Photos on their way in (the posting form, their checks) and out (`/media/...`) |
+| `src/web/account.rs` | Signing in with a code, sessions, "Llogaria", and the limits on asking for and guessing codes |
+| `src/web/moderation.rs` | `/moderim`: the moderators approve the makes, models and brands sellers typed in, or merge them into listed ones |
+| `src/web/suggestions.rs` | What the search boxes suggest as words are typed |
+| `src/web/icons.rs` | Every line icon, each drawn once: the details' on a listing's page, the posting form's tiles, the eye of the view counts, the main categories' and the subcategories' |
+| `src/db/mod.rs` | Database access: the page size and count limit, and every query of the files below, re-exported, so each is `db::...` |
+| `src/db/categories.rs` | The categories and places (towns, their zones), as the pages and the forms list them |
+| `src/db/properties.rs` | Categories' properties: what the filters and the posting form offer, and what a listing says |
+| `src/db/listing_pages.rs` | Pages of listing cards: the browse pages' filters, orders and pages, counts, the rows under a listing, the most seen, the map's points |
+| `src/db/listing.rs` | One listing: its page, its photos and properties, and the contact it reveals |
+| `src/db/saved.rs` | The listings a signed-in user keeps |
+| `src/db/sign_in.rs` | Sign-in codes, sessions and users |
+| `src/db/posting.rs` | Posting and editing listings, pausing them and taking them down |
+| `src/db/typed_in.rs` | What sellers type in where a list lacks theirs ("Tjetër"), and how moderators approve or merge it |
+| `src/views.rs` | Listing views: counted as listing pages report them, gathered in memory and written into the day's statistics once a minute; and the most seen rows the pages show |
+| `src/media.rs` | Photos: checked, turned the right way up, resized and re-encoded, then kept in an S3-compatible store (Garage locally, Cloudflare R2 in production), or in memory without one |
 | `src/sender.rs` | Sending sign-in codes: e-mail by SMTP, phone numbers by WhatsApp (Meta's Cloud API); a channel not set up writes to the log |
 | `src/ai.rs` | Claude, Anthropic's AI, through its Messages API: what fills in the listing form (`web/ai_fill.rs`) |
 | `src/format.rs` | Albanian display formatting: prices, counts, dates, phone numbers |
-| `templates/` | Askama templates, compiled into the binary and checked at compile time |
-| `static/` | CSS, JavaScript and fonts; Turbo, Stimulus, Leaflet and the fonts (Geist, and Merriweather for the logo) live in `static/vendor/`, so there's no Node or npm |
+| `build.rs` | Rebuilds when a migration changes, so `sqlx::migrate!()` embeds the current files |
+| `templates/` | Askama templates, compiled into the binary and checked at compile time (see "Templates") |
+| `static/css/` | The site's styles: seven stylesheets, loaded in order (see "Stylesheets") |
+| `static/js/` | `application.js` and the Stimulus controllers (see "JavaScript") |
+| `static/vendor/` | Turbo, Stimulus, Leaflet and the fonts (Geist, and Merriweather for the logo), with their versions in their names, so there's no Node or npm |
 | `migrations/0001_marketplace_schema.sql` | Schema: tables, indexes, triggers |
 | `migrations/0002_marketplace_reference_data.sql` | Albania's 12 counties and 61 municipalities, categories in Albanian with English translations, a sample Cars attribute model, promotion products |
 | `migrations/0003_category_properties.sql` | Properties for every category, the kinds of listing each takes, exchange rates, and helpers for display and search |
@@ -115,18 +148,120 @@ cargo test
 | `migrations/0015_generated_titles.sql` | A car's title made from what it is (make, model, body type, colour), kept in `listings.generated_title` |
 | `migrations/0016_fuzzy_search.sql` | Search that forgives typos and finds a word's other forms: the words listings use (`search_words`), a rough Albanian stem (`sq_stem`), and `search_query()`, which widens a search's words with them |
 | `migrations/0017_search_categories_and_places.sql` | A listing's category, the categories above it and its place become words search finds it by; searches leave out filler words (në, me, për...), and "ose" and "apo" mean or |
-| `migrations/0019_zones.sql` | Zones: the parts of Tirana, Durrës and Vlorë people name (Blloku, Plazh, Lungomare...), places under their town, which property listings can say they are in |
 | `migrations/0018_category_order_indexes.sql` | A category's listings by price (cheapest or dearest first) and nearest a point first, read straight off indexes; `btree_gist`, for the category beside the place in one GiST index |
+| `migrations/0019_zones.sql` | Zones: the parts of Tirana, Durrës and Vlorë people name (Blloku, Plazh, Lungomare...), places under their town, which property listings can say they are in |
 | `migrations/0020_zone_area_prices.sql` | What a square metre costs in each zone, by category (`zone_area_prices`), which a property's price per square metre is compared with |
 | `migrations/0021_electronics_properties.sql` | Electronics' own properties, subcategory by subcategory (a phone's model and battery, a laptop's processor, a TV's size and resolution...), and `category_attribute_options`: the options of a property each category offers, its own brands and storage sizes |
 | `migrations/0022_saved_listings.sql` | The listings a signed-in user keeps with the heart over their photo (`saved_listings`) |
 | `migrations/0023_more_properties.sql` | The properties every category lacked: a car's customs, plates, engine and power, a motorcycle's and a van's own, a tyre's size, a flat's bathrooms, condition and heating, a plot's permit, a job's contract, a service's areas, shoes' sizes, a pet's breed, a machine's hours...; what only some kinds of a category have moves down to them (a plot has no rooms, a bag no size), and central heating goes from a home's amenities to its kinds of heating |
 | `migrations/0024_search_kinds.sql` | Words that name a kind of listing (shitje, shitet, shes; qira, qera; blej) find the listings of that kind, as well as those that say them: "golf 7 në shitje" finds the Golfs for sale |
-| `tests/` | Request tests (`web.rs`), the 83 schema checks (`schema_checks.sql`, also run by `schema.rs`) and sample data (`fixtures/`) |
+| `tests/web.rs` | 92 request tests: each sends requests to the app, with a database of its own, and checks the pages, redirects, cookies and what the database holds after |
+| `tests/schema.rs` | Runs `schema_checks.sql` against a freshly migrated database |
+| `tests/schema_checks.sql` | 83 checks of the schema's constraints and behaviour (35 checks, 36 statements that must fail, 12 that must succeed), in one transaction rolled back at the end |
+| `tests/fixtures/listings.sql` | The tests' sample listings, which can also be loaded into the development database |
+| `dev/deploy.sh` | Builds the release and (re)starts it on `BIND_ADDR`, keeping the previous one to go back to |
+| `dev/setup_garage.sh`, `dev/garage.toml` | The local photo store's one-time setup, and its configuration |
 | `dev/sample_listings.sql` | 305 extra sample listings for the development database (not used by the tests) |
 | `dev/generate_listings.sql` | Generates as many realistic listings as you ask for, with sellers and photos, for trying the site at scale; removes them again with `remove=1`, gives listings with only a cover more photos with `photos=1`, puts property listings from earlier versions of it in their zones with `zones=1`, and gives listings views with `views=1` |
+| `compose.yaml` | The development services: PostgreSQL 15 (port 5432) and Garage (port 3900) |
+| `.env.example` | Every setting, with values that work locally (see "Configuration") |
+| `Cargo.toml` | The crates the site uses (see "Dependencies") |
+| `.gitattributes` | LF line endings for migrations, which sqlx checksums byte by byte, and for shell scripts, which a carriage return breaks |
 | `.sqlx/` | Cached query metadata, so the project builds without a database (set `SQLX_OFFLINE=true`) |
 | `CHANGES.md` | What changed from the first version of the schema, and why |
+
+## Routes
+
+Every page and action, from `web::router`. Anything else is the 404 page. A form posted from another site is refused (the `Origin` check in `web/mod.rs`), and the forms that carry photos may be up to 64 MB; other requests up to 2 MB.
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/` | The welcome page: the search, the main categories, "Më të klikuarat", "Sapo u shtuan", then every listing, newest first; `?after=` is the next page (`browse::home`) |
+| GET | `/c/{slug}` | A category's page: its subcategories, the round buttons, "Më të klikuarat" (main categories and a few big subcategories, with no filter on), its listings, filtered by the query string (`browse::category`) |
+| GET | `/search` | A search, across every category or in the one `category` names, with the same filters (`browse::search`) |
+| GET | `/harta` | The map page: listings around a pin (`lat`, `lng`, `radius`), nearest first (`browse::map`) |
+| GET | `/sugjerime?q=…` | The search boxes' suggestions, as rows of links (`suggestions::suggestions`) |
+| GET | `/te-rejat?since=…` | The listings posted after the welcome page's newest, then each as it is posted, as server-sent events (`newest::stream`) |
+| GET | `/listing/{number}-{slug}` | A listing's page; an outdated slug redirects to the current one (`listings::show`) |
+| POST | `/listing/{number}/phone` | Reveals the seller's phone number or e-mail address, as a Turbo Stream, and counts it (`listings::reveal_phone`) |
+| POST | `/listing/{number}/pare` | A listing's page was shown, for the view counts (`listings::seen`) |
+| POST | `/listing/{number}/ruaj` | Keeps the listing for the signed-in user, or lets it go with `ruaj=0` (`saved::save`) |
+| GET, POST | `/shto` | The posting form, and publishing a listing, signed in or not (`post::new_listing`, `post::create_listing`) |
+| GET | `/shto/fushat?category=…` | A category's property fields, for the form's frame (`properties::fields_for_category`) |
+| POST | `/shto/ploteso` | What the AI made of the form's title, description and photos, as JSON (`ai_fill::fill`) |
+| GET, POST | `/listing/{number}/ndrysho` | Editing a listing, for its seller only (`post::edit_listing`, `post::update_listing`) |
+| POST | `/listing/{number}/caktivizo` | Pausing a listing (`post::pause_listing`) |
+| POST | `/listing/{number}/aktivizo` | Putting a paused listing back (`post::resume_listing`) |
+| POST | `/listing/{number}/fshi` | Deleting a listing (`post::delete_listing`) |
+| GET | `/njoftimet-e-mia` | "Njoftimet e mia": the signed-in seller's listings (`post::my_listings`) |
+| GET | `/te-ruajturat` | The listings the user keeps, the last kept first (`saved::page`) |
+| GET | `/te-ruajturat/numrat` | The numbers of those listings, as JSON, for the hearts (`saved::numbers`) |
+| GET | `/perdorues/{id}` | A private seller's profile and active listings (`browse::user_profile`) |
+| GET | `/biznes/{slug}` | A business's profile and active listings (`browse::business_profile`) |
+| GET | `/llogaria` | "Llogaria": signing in or creating an account, or, signed in, the account (`account::account_page`) |
+| POST | `/hyr` | Sends a sign-in code to a phone number or an e-mail address (`account::request_code`) |
+| GET, POST | `/hyr/kodi` | The page for the code, and checking it: signs in, and puts a listing posted before signing in up (`account::code_page`, `account::check_code`) |
+| POST | `/dil` | Signs out (`account::sign_out`) |
+| GET | `/moderim` | The moderators' page (`moderation::page`) |
+| POST | `/moderim/{id}/mirato` | Approves an option sellers typed in, its spelling put right (`moderation::approve`) |
+| POST | `/moderim/{id}/bashko` | Merges it into the listed one it is (`moderation::merge`) |
+| GET | `/media/{key}` | A stored photo, which browsers may keep for a year (`photos::serve`) |
+| GET | `/static/…` | The CSS, the JavaScript and the vendor files |
+| GET | `/healthz` | "ok" when the server and its database answer (`dev/deploy.sh` checks it) |
+
+## Configuration
+
+The server reads `.env` at start (`.env.example` has every setting, with values that work locally). A channel or service left out is turned off, and the log says so.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `DATABASE_URL` | none (required) | The PostgreSQL database; sqlx's compile-time checks read it too, unless `SQLX_OFFLINE=true` |
+| `BIND_ADDR` | `127.0.0.1:3000` | Where the server listens |
+| `RUST_LOG` | `marketplace=info,tower_http=info` | What the log says, by module (`.env.example` has `marketplace=debug`) |
+| `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `EMAIL_FROM` | none | Sign-in codes by e-mail, through any SMTP service; all four or none |
+| `SMTP_PORT` | `587` | 587 uses STARTTLS, 465 TLS |
+| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE` | none | Sign-in codes to phone numbers by WhatsApp: Meta's Cloud API, a system user's permanent token, and an approved authentication template with a "copy code" button |
+| `WHATSAPP_LANGUAGE` | `sq` | The template's language |
+| `WHATSAPP_API_VERSION` | `v21.0` | The Graph API's version |
+| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | none | The photo store (see "Photos"); without them photos are kept in memory, and lost when the server stops |
+| `S3_REGION` | `auto` | The store's region: `auto` for R2, `garage` for the local Garage |
+| `SIGN_IN_CODES_ON_SCREEN` | `false` | Test mode: the sign-in page shows the code instead of sending it, so anyone can sign in as any number; only for trying the site before a channel is set up |
+| `ANTHROPIC_API_KEY` | none | Turns on "Plotëso pjesën tjetër me AI" on the listing form |
+| `ANTHROPIC_MODEL` | `claude-haiku-4-5-20251001` | The model that fills in the form |
+| `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Where Anthropic's API is; the tests point it at a stand-in |
+| `MODERATORS` | none | The phone numbers and e-mail addresses, comma-separated, of those who may approve what sellers typed in, on `/moderim` |
+| `SQLX_OFFLINE` | unset | At build time: `true` builds from `.sqlx/` without a database |
+
+Without e-mail or WhatsApp set up, sign-in codes go to the server's log.
+
+## Dependencies
+
+No Node, no npm, no bundler: the browser's code is plain JavaScript modules, with Turbo, Stimulus and Leaflet in `static/vendor/`. The server's crates (`Cargo.toml`):
+
+| Crate | What it does here |
+|---|---|
+| `axum` (with `multipart`) | The web server and the router; `multipart` for the posting form's photos |
+| `tokio` | The async runtime: the server, the background refresh and the views' writing |
+| `tower-http` | Static files, request logs, gzip and Brotli compression |
+| `sqlx` | PostgreSQL: queries checked against the schema at compile time (`query!`), built at run time where filters are optional (`QueryBuilder`), and the migrations |
+| `askama` | Templates compiled into Rust and checked at compile time |
+| `serde`, `serde_json` | JSON: the AI's answers, the hearts' numbers, stored properties |
+| `rust_decimal` | Prices and properties' numbers, without a float's rounding |
+| `time` | Dates and times |
+| `uuid` | Ids (UUIDv7, sortable by when they were made) |
+| `image` | Decoding photos, turning them the right way up, resizing and re-encoding them |
+| `object_store` | The S3-compatible photo store |
+| `sha2` | Photos' checksums, and sign-in codes and session tokens stored hashed |
+| `base64` | Photos sent to the AI |
+| `lettre` | E-mail by SMTP |
+| `reqwest` | HTTP calls to WhatsApp's API and Anthropic's |
+| `rand` | Sign-in codes and session tokens |
+| `futures-util` | Streams: the newest listings' server-sent events |
+| `form_urlencoded` | Query strings |
+| `dotenvy` | Reading `.env` |
+| `anyhow` | Startup errors |
+| `tracing`, `tracing-subscriber` | The log |
+| `tower`, `http-body-util` (tests only) | Sending requests to the router and reading the answers |
 
 ## How the frontend works
 
@@ -170,6 +305,78 @@ cargo test
 - The site is called Pluribus. Its logo is a creature, spinning and changing shape (`thinking.svg`, also behind the welcome page's search), in the buttons' coral, with its right half behind the p of the name in lowercase, "pluribus", in [Merriweather](https://github.com/EbenSorkin/Merriweather4) Bold, a serif, in the text's colour, white on the dark theme and charcoal on the light one (`.logo`): the font's Latin subset (48 KB, from Fontsource 5.3.0) is in `static/vendor/fonts/` with its licence (`OFL-Merriweather.txt`), and `base.html` preloads it as it does Geist; Georgia stands in until it comes. Turbo keeps the logo from page to page (`data-turbo-permanent`), so the creature goes on moving rather than starting over, and it stands still for visitors who ask for less motion, as the welcome page's does (`application.js`). Titles and text say "Pluribus" ("Shto një njoftim | Pluribus", "Në Pluribus që nga tetor 2026"); the code, the crate and the database keep the name marketplace.
 - Phones get everything smaller: the root size drops from 16px to 14px below 720px (13.5px at 360px and under), and everything sized in `rem` follows. Form fields keep 16px text, because iPhones zoom into a focused field with smaller text, and get less padding instead.
 - Turbo, Stimulus, Leaflet and the fonts carry their version in the file name, so browsers may cache them for a year. The site's own CSS and JavaScript are sent with `Cache-Control: no-cache`: browsers keep them but check for changes on each use, so a deploy shows up immediately. Turbo, though, keeps the stylesheet and scripts of the first page a visitor opens while they click around, so their URLs carry a fingerprint of the files (`base.css?v=8d6d43be` and the rest, from `web::asset_version()`) and Turbo tracks those tags (`data-turbo-track="reload"`): after a deploy, an open page reloads in full on its next click instead of running on with the old files. The fingerprint is worked out once per server start, so restart the server after changing CSS or JavaScript.
+
+### Templates
+
+Askama templates in `templates/`, compiled into the binary, so a template change needs a build. `base.html` holds what every page shares; the rest extend it or are included in one another.
+
+| Template | What it renders |
+|---|---|
+| `base.html` | Every page's frame: the head (the theme set before the first paint, view transitions, the fonts preloaded, the seven stylesheets, the import map, `application.js`), the header with the logo and its creature, "+", the hearts, "Llogaria" and the theme toggle |
+| `home.html` | The welcome page: the search pill, the main categories' pills, "Më të klikuarat", "Sapo u shtuan" and the newest listings |
+| `browse.html` | A category or search page: the heading, its breadcrumb and category menu, the subcategory pills, the round buttons and what they open (the search, the filters, the map, the orders), "Më të klikuarat", the order's heading and the listings |
+| `filters.html` | The filter form, from the category's filterable properties |
+| `map.html`, `map_radius.html`, `map_town.html` | The map page and the map's controls: the distance around the pin, and a town to move it to |
+| `listing_grid.html` | A grid of listing cards, and the frame of the next page |
+| `listing_card.html` | A listing's card: its photos (one, or all on a big card), the price, the title, the details line, the heart, and its views on "Më të klikuarat" |
+| `listing_frame.html`, `next_page.html` | The next page of cards, which Turbo loads as the frame scrolls into view |
+| `newest_card.html`, `newest_stream.html` | A card of the newest listings' row, and the Turbo Stream that brings a new one |
+| `heart.html` | The heart over a listing's photo |
+| `listing.html` | A listing's page: the photos, the place and date, the views, the title, the price and its bubbles, the seller's card and buttons, the details, the description, the seller's other listings and the related ones |
+| `area_price.html` | A property's price per square metre, its card, and its zone's average |
+| `phone_stream.html` | The seller's number or address, revealed in place, with its copy button |
+| `listing_form.html` | The posting and edit form |
+| `listing_properties.html`, `listing_properties_frame.html` | A category's properties in the form, and the frame that brings them when the category changes |
+| `my_listings.html` | "Njoftimet e mia" |
+| `saved.html` | The listings the user keeps |
+| `profile.html` | A seller's profile |
+| `sign_in.html`, `sign_in_code.html` | Signing in: the contact, then the code |
+| `moderation.html` | The moderators' page |
+| `suggestions.html` | The search boxes' suggestions |
+| `not_found.html` | The 404 page |
+| `thinking.svg`, `pin.svg`, `phone.svg`, `mail.svg` | Drawings included where they are used: the logo's creature, the location pin, the phone and the envelope |
+
+### Stylesheets
+
+`static/css/`, seven files that `base.html` loads in this order (`web::STYLESHEETS`). The cascade follows it, so a rule meets the others where it would in one file. Colours, sizes and weights are custom properties in `base.css` (`--accent`, `--button`, `--text-sm`, `--semibold`...), with the dark theme's values beside the light theme's.
+
+| File | What it styles |
+|---|---|
+| `base.css` | The fonts, the colours of both themes, type sizes and weights, the page's base, the header and the logo |
+| `page.css` | The page's frame, the listing cards (small and big), their hearts and view counts, the subcategory pills' row, form fields |
+| `welcome.css` | The welcome page: the search pill and its suggestions, the in-page lists that stand in for selects (pickers), the main categories' pills (which a category page's subcategories wear too), the newest listings' row |
+| `browse.css` | Category and search pages: the heading and its menu, the filters, the price range, the round buttons and their panels, the order's heading |
+| `map.css` | The map, on its own page and over a browse page's results, the order's menu |
+| `posting.css` | Signing in, and the posting and edit forms: photos, a car's tiles, the AI's button |
+| `listing.css` | A listing's page: the gallery, the price's bubbles, the seller's card, the details' pills, the rows under it ("Më shumë nga ky përdorues", "Më të klikuarat"'s shared row style) |
+
+### JavaScript
+
+`static/js/application.js` starts Stimulus, registers the controllers below and holds the few behaviours every page shares: the view transitions skipped where the browser animated a back or forward itself, the photos of the page Turbo keeps for going back shown at once, a tapped card keeping its border while its listing loads, and a listing's page reporting its view. `controllers/refresh.js` is what the filters' and the map's controllers share: refreshing the page in place.
+
+| Controller | What it does |
+|---|---|
+| `ai_fill_controller.js` | "Plotëso pjesën tjetër me AI": sends the form's title, description and photos, and fills in the answer as a seller would |
+| `cards_controller.js` | Small or big cards, remembered in a cookie |
+| `copy_controller.js` | Copies the seller's number or address, a check for a moment |
+| `drag_row_controller.js` | A mouse drags the rows that slide sideways ("Më të klikuarat", the seller's other listings, "Sapo u shtuan"), flicking them on, the click that ends a drag opening no card |
+| `dropdown_controller.js` | A `<details>` menu closes on a tap outside or Escape; one of the browse row's, open one at a time |
+| `filters_controller.js` | The filters' card: applies them as they change, keeps what is open while the page refreshes, fits the card under the row |
+| `gallery_controller.js` | A listing's photos: the counter and the arrows |
+| `heart_controller.js` | The hearts: fills those of the listings kept, keeps one or lets it go at a tap |
+| `listing_form_controller.js` | The listing form follows its category: its kinds of listing, condition, currency and properties |
+| `loan_controller.js` | The loan calculator under a price |
+| `map_controller.js` | The map: its pin in the middle, the circle, the dots, the distance, "Vendndodhja ime" |
+| `narrow_controller.js` | A select that depends on another (a car's model on its make, a town's zones) offers only what fits |
+| `newest_controller.js` | The newest listings' row: new cards come in one by one, and wait while the row is slid along |
+| `panel_controller.js` | The browse row's search box, opened under the row |
+| `photos_controller.js` | The listing form's photos: picked a few at a time, previews, "Hiq", shrunk before sending |
+| `picker_controller.js` | A select chosen from a list in the page rather than the phone's own picker |
+| `price_range_controller.js` | The price filter's track with two ends |
+| `share_controller.js` | Shares a listing, or copies its link |
+| `slides_controller.js` | A big card's photos: the dots, the arrows' quick steps |
+| `suggest_controller.js` | The search boxes' suggestions as words are typed, and the keys that go through them |
+| `theme_controller.js` | The light or dark theme, remembered |
 
 ## Categories and their properties
 
