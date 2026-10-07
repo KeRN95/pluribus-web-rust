@@ -930,8 +930,8 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .filter-actions { display: flex; align-items: center; gap: .75rem; }
 .filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
 
-/* Filtrat, a card folded to its header, takes the row but for Harta and Rendit, round buttons at
-   its end. The card is drawn like Claude's, as the listing form's own fields are: the menus'
+/* Filtrat, a pill, takes the row but for Harta and Rendit, round buttons at its end, all three as
+   tall as each other. Drawn like Claude's, as the listing form's own fields are: the menus'
    hairline on the surface, rounder corners and a shadow you barely see. Only one of the three is
    open at a time (section:open); the filters and the map unfold under the row, as wide as it, in a
    card of the same kind, fading in as the menus do, and the opener is on the accent's tint. The
@@ -957,6 +957,19 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 }
 .browse-tools .map-card-header { grid-row: 1; align-self: stretch; min-width: 0; }
 .browse-tools .map-card-header[aria-expanded="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+/* Filtrat's header a pill, as tall as the round buttons beside it, the circle of its icon in its
+   rounded end as Claude's message box holds its buttons, and its name and what it says a size
+   smaller, to fit. */
+.browse-tools .filters-open {
+  align-self: center;
+  height: 3rem;
+  padding: 0 .9rem 0 calc(.5rem - 1px);
+  gap: .6rem;
+  border-radius: 999px;
+}
+.browse-tools .filters-open .map-card-title { line-height: 1.15; }
+.browse-tools .filters-open .map-card-title strong { font-size: .95rem; }
+.browse-tools .filters-open .map-card-title span { font-size: .8rem; }
 .filters,
 .map-card-body { grid-column: 1 / -1; animation: menu-in .16s ease-out; }
 .filters-card .map-card-icon { color: var(--text); }
@@ -973,8 +986,8 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
    win over .button and .button.secondary, which come later.) */
 .browse-tools .button.round-button {
   justify-content: center;
-  width: 2.85rem;
-  height: 2.85rem;
+  width: 3rem;
+  height: 3rem;
   padding: 0;
   border-color: var(--menu-border);
   border-radius: 50%;
