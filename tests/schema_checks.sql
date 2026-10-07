@@ -154,8 +154,9 @@ SELECT pg_temp.check('labels are Albanian with English translations',
 SELECT pg_temp.expect_error('an option that belongs to a different attribute (fuel = AUTOMATIC)',
 $$INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_option_id)
   SELECT '99999999-9999-4999-8999-999999999999', a.id, 'SELECT', o.id
-  FROM attributes a, attribute_options o
-  WHERE a.code = 'vehicle_fuel' AND o.value_code = 'AUTOMATIC'$$, '23503');
+  FROM attributes a, attribute_options o, attributes gearbox
+  WHERE a.code = 'vehicle_fuel' AND gearbox.code = 'vehicle_transmission'
+    AND o.attribute_id = gearbox.id AND o.value_code = 'AUTOMATIC'$$, '23503');
 
 SELECT pg_temp.expect_error('a value typed differently from its attribute (mileage as TEXT)',
 $$INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_text)
@@ -513,16 +514,32 @@ SELECT pg_temp.check('storage is for phones, tablets and computers, not for TVs,
         = ARRAY['kompjutere', 'laptope', 'tableta', 'telefona']::varchar[]);
 
 INSERT INTO category_attributes (category_id, attribute_id, filterable, show_in_card, sort_order)
-SELECT c.id, a.id, false, true, 99 FROM categories c, attributes a WHERE c.slug = 'apartamente' AND a.code = 'property_floor';
+SELECT c.id, a.id, false, true, 99 FROM categories c, attributes a WHERE c.slug = 'apartamente' AND a.code = 'property_area';
 
 SELECT pg_temp.check('a subcategory inherits its parent''s properties, and its own settings win',
-    (SELECT count(*) = 6 FROM effective_category_attributes e
+    (SELECT count(*) = 16 FROM effective_category_attributes e
      JOIN categories c ON c.id = e.category_id WHERE c.slug = 'apartamente')
     AND (SELECT NOT e.filterable AND e.show_in_card AND e.sort_order = 99
          FROM effective_category_attributes e
          JOIN categories c ON c.id = e.category_id
          JOIN attributes a ON a.id = e.attribute_id
-         WHERE c.slug = 'apartamente' AND a.code = 'property_floor'));
+         WHERE c.slug = 'apartamente' AND a.code = 'property_area'));
+
+SELECT pg_temp.check('rooms are a flat''s and a house''s, not a plot''s; clothes'' sizes a jacket''s and a dress''s, not a bag''s',
+    (SELECT array_agg(c.slug ORDER BY c.slug) FROM effective_category_attributes e
+     JOIN categories c ON c.id = e.category_id JOIN attributes a ON a.id = e.attribute_id
+     WHERE a.code = 'property_rooms')
+        = ARRAY['apartamente', 'vila-dhe-shtepi']::varchar[]
+    AND (SELECT array_agg(c.slug ORDER BY c.slug) FROM effective_category_attributes e
+         JOIN categories c ON c.id = e.category_id JOIN attributes a ON a.id = e.attribute_id
+         WHERE a.code = 'fashion_size')
+        = ARRAY['fustane', 'xhaketa-dhe-pallto']::varchar[]);
+
+SELECT pg_temp.check('central heating is a kind of heating, not one of a home''s amenities',
+    NOT EXISTS (SELECT 1 FROM attribute_options o JOIN attributes a ON a.id = o.attribute_id
+                WHERE a.code = 'property_features' AND o.value_code = 'HEATING')
+    AND EXISTS (SELECT 1 FROM categories c, attributes a, category_options(c.id, a.id) o
+                WHERE c.slug = 'apartamente' AND a.code = 'property_heating' AND o.label = 'Qendrore'));
 
 INSERT INTO category_attributes (category_id, attribute_id, searchable, filterable, sort_order)
 SELECT c.id, a.id, false, false, 5 FROM categories c, attributes a WHERE c.slug = 'automjete' AND a.code = 'vehicle_color';
@@ -542,7 +559,7 @@ SELECT pg_temp.check('three levels down, a kind of part inherits from its parent
          JOIN categories c ON c.id = e.category_id
          JOIN attributes a ON a.id = e.attribute_id
          WHERE c.slug = 'goma-dhe-disqe' AND a.code = 'vehicle_make')
-    AND (SELECT count(*) = 9 AND count(e.label) = 0 AND bool_or(a.code = 'vehicle_color' AND e.sort_order = 65)
+    AND (SELECT count(*) = 22 AND count(e.label) = 0 AND bool_or(a.code = 'vehicle_color' AND e.sort_order = 65)
          FROM effective_category_attributes e
          JOIN categories c ON c.id = e.category_id
          JOIN attributes a ON a.id = e.attribute_id

@@ -130,9 +130,9 @@ pub struct Field {
     pub unit: String,
     pub checked: bool,
     /// A small field, which takes half the form's width, beside the next small one: a dropdown, a
-    /// range, a few boxes (Marka beside Modeli, Viti beside Kilometrazhi, Karburanti beside
-    /// Kambio). The others take a line of their own, as does a small one left without another
-    /// beside it (Opsionet, after the colours; Filters::fields).
+    /// range, a few boxes (Marka beside Modeli, Viti beside Dogana, Karburanti beside Motorri).
+    /// The others take a line of their own, as does a small one left without another beside it (a
+    /// motorcycle's Marka, before the eight boxes of its Lloji; Filters::fields).
     pub half: bool,
     /// Its boxes have icons over the names, a car's side over each body type (Karroceria): they
     /// are bigger, and take a line of their own on every screen.

@@ -229,14 +229,16 @@ pub fn fields(
             }
         })
         .collect();
-    // A car's (a part's make and model aren't): its main fields under icons, in their order, then
-    // its options, then the rest.
-    if attributes.iter().any(|attribute| attribute.code == "vehicle_year") {
+    // A car's (a part's make and model aren't, nor a motorcycle's year and mileage, which come
+    // after its own make): its main fields under icons, in their order, then the rest, then its
+    // options, a long list.
+    let has = |code: &str| attributes.iter().any(|attribute| attribute.code == code);
+    if has("vehicle_make") && has("vehicle_year") {
         let rank = |field: &PropertyField| TILES.iter().position(|(code, _)| field.name == field_name(code));
         for field in &mut fields {
             field.tile = rank(field).map(|at| Tile { icon: TILES[at].1 });
         }
-        fields.sort_by_key(|field| rank(field).unwrap_or(TILES.len() + usize::from(field.kind != "multi")));
+        fields.sort_by_key(|field| rank(field).unwrap_or(TILES.len() + usize::from(field.kind == "multi")));
     }
     fields
 }

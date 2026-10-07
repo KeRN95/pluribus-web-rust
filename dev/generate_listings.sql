@@ -664,12 +664,13 @@ BEGIN
         CASE WHEN floor >= 3 AND random() < 0.85 THEN 'ELEVATOR' END,
         CASE WHEN random() < CASE kind WHEN 'HOUSE' THEN 0.7 ELSE 0.35 END AND kind NOT IN ('LAND', 'GARAGE') THEN 'PARKING' END,
         CASE WHEN kind IN ('APARTMENT', 'STUDIO') AND random() < 0.75 THEN 'BALCONY' END,
-        CASE WHEN kind NOT IN ('LAND', 'GARAGE') AND random() < 0.2 THEN 'HEATING' END,
         CASE WHEN coast AND kind NOT IN ('GARAGE', 'SHOP') AND random() < 0.4 THEN 'SEA_VIEW' END,
         CASE WHEN w.listing_type = 'SELL' AND random() < 0.85 THEN 'TITLE_DEED' END], NULL);
     w.properties := jsonb_strip_nulls(jsonb_build_object(
         'property_rooms', rooms, 'property_area', area, 'property_floor', floor,
-        'property_furnished', furnished, 'property_features', to_jsonb(features)));
+        'property_furnished', furnished, 'property_features', to_jsonb(features),
+        -- Central heating in a fifth of the buildings.
+        'property_heating', CASE WHEN kind NOT IN ('LAND', 'GARAGE') AND random() < 0.2 THEN 'CENTRAL' END));
 
     w.price := pg_temp.round_price(CASE w.listing_type
         WHEN 'SELL' THEN CASE kind

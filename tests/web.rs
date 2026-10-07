@@ -1188,7 +1188,7 @@ async fn filter_form_offers_the_category_properties(pool: PgPool) {
     assert!(cars.contains(r#"<input type="checkbox" name="vehicle_fuel" value="DIESEL">"#));
     assert!(cars.contains(r#"<optgroup label="Volkswagen" data-parent="VOLKSWAGEN">"#), "models are grouped by make");
     assert!(cars.contains("Gjendja"));
-    // A few boxes share their line with the next field (Karburanti, five, beside Kambio); more
+    // A few boxes share their line with the next field (Karburanti, five, beside Motorri); more
     // take one of their own, the colours' seven, as do the body types (Karroceria), whose boxes
     // have the car's side over each name.
     let fuel = cars.find(r#"<legend class="filter-label">Karburanti</legend>"#).unwrap();
@@ -1201,15 +1201,22 @@ async fn filter_form_offers_the_category_properties(pool: PgPool) {
     assert!(cars[..colour].trim_end().ends_with(r#"<fieldset class="filter-group filter-options">"#));
     assert!(cars.contains(r#"<input type="checkbox" name="vehicle_color" value="WHITE"> E bardhë</label>"#));
     assert!(!cars.contains(r#"<select id="filter-vehicle_color""#));
-    // A small field left without another beside it, after the colours, takes the line itself.
+    // The options, many boxes, take a line of their own too...
     let features = cars.find(r#"<legend class="filter-label">Opsionet</legend>"#).unwrap();
     assert!(cars[..features].trim_end().ends_with(r#"<fieldset class="filter-group filter-options">"#));
+    // ...as does a small field left without another beside it: a motorcycle's make, before the
+    // eight boxes of its kinds.
+    let motorcycles = get(pool.clone(), "/c/motocikleta").await.body;
+    let make = motorcycles.find(r#"<label class="filter-label" for="filter-moto_make">"#).expect("the make");
+    assert!(motorcycles[..make].trim_end().ends_with(r#"<div class="filter-group">"#));
 
     let property = get(pool.clone(), "/c/prona").await.body;
     assert!(property.contains("<h1>Prona<svg class=\"chevron\""));
-    assert!(property.contains(r#"value="R21""#));
     assert!(property.contains(r#"<input type="radio" name="type" value="RENT">"#));
     assert!(!property.contains("Gjendja"), "property has no condition");
+    // Rooms are a flat's and a house's, not every property's: a plot has none.
+    assert!(!property.contains(r#"name="property_rooms""#));
+    assert!(get(pool.clone(), "/c/apartamente").await.body.contains(r#"value="R21""#));
 
     // Kinds of electronics are subcategories now, not a filter.
     let electronics = get(pool.clone(), "/c/elektronike").await.body;
@@ -1938,6 +1945,90 @@ async fn electronics_subcategories_have_properties_of_their_own(pool: PgPool) {
                                      r#"<option value="OTHER">"#]);
     assert!(order.is_sorted(), "{order:?}");
     assert!(!get(pool.clone(), "/shto/fushat?category=televizore").await.body.contains("Fairphone"));
+}
+
+/// The listing form's fields for a category: the frame it loads when the category changes.
+async fn form_fields(pool: &PgPool, category: &str) -> String {
+    get(pool.clone(), &format!("/shto/fushat?category={category}")).await.body
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn each_kind_of_thing_asks_for_what_fits_it(pool: PgPool) {
+    let has = |fields: &str, name: &str| fields.contains(&format!(r#"name="prop_{name}""#));
+    // A flat: its rooms and bathrooms, floor, condition, heating, and what a tenant asks. Central
+    // heating is a kind of heating, not one of its amenities.
+    let flat = form_fields(&pool, "apartamente").await;
+    for name in ["property_rooms", "property_bathrooms", "property_floor", "property_condition", "property_heating", "rent_pets"] {
+        assert!(has(&flat, name), "{name}");
+    }
+    assert!(flat.contains(r#"<option value="CENTRAL">Qendrore</option>"#));
+    assert!(!flat.contains(r#"value="HEATING""#));
+    // A plot: what the land is for, its permit and its road; no rooms, floor or furnishing.
+    let plot = form_fields(&pool, "truall").await;
+    for name in ["land_type", "land_permit", "land_road"] {
+        assert!(has(&plot, name), "{name}");
+    }
+    for name in ["property_rooms", "property_floor", "property_furnished"] {
+        assert!(!has(&plot, name), "{name}");
+    }
+    // Shoes: their size, EU 20 to 48, and shoes' brands; a jacket clothes' sizes and children's;
+    // a bag no size.
+    let shoes = form_fields(&pool, "kepuce").await;
+    assert!(shoes.contains(r#"<option value="EU42">42</option>"#) && !has(&shoes, "fashion_size"));
+    assert!(shoes.contains(r#"<option value="NIKE">Nike</option>"#) && !shoes.contains(r#"<option value="ROLEX">"#));
+    let jackets = form_fields(&pool, "xhaketa-dhe-pallto").await;
+    assert!(has(&jackets, "fashion_size") && has(&jackets, "kids_size"));
+    let bags = form_fields(&pool, "canta").await;
+    assert!(has(&bags, "material") && !has(&bags, "fashion_size") && !has(&bags, "shoe_size"));
+    // A dog: its breed, of dogs' breeds, its age, sex and vaccines.
+    let dogs = form_fields(&pool, "qen").await;
+    for name in ["pet_breed", "pet_age", "pet_sex", "pet_vaccinated"] {
+        assert!(has(&dogs, name), "{name}");
+    }
+    assert!(dogs.contains(r#"<option value="LABRADOR">Labrador</option>"#) && !dogs.contains(r#"value="PERSIAN""#));
+    // A job: its contract, where it is done, the experience and languages it asks.
+    let job = form_fields(&pool, "pune-it").await;
+    for name in ["job_contract", "job_place", "job_experience", "job_languages"] {
+        assert!(has(&job, name), "{name}");
+    }
+    // A motorcycle's form starts with its own make, with none of a car's tiles: its year after.
+    let motorcycle = form_fields(&pool, "motocikleta").await;
+    assert!(!motorcycle.contains("tile"));
+    let order = positions(&motorcycle, &[r#"for="prop_moto_make""#, r#"for="prop_moto_type""#, r#"for="prop_model_name""#,
+                                         r#"for="prop_vehicle_year""#]);
+    assert!(order.is_sorted(), "{order:?}");
+    // A car's: its main fields' tiles, then its papers, engine and history, its options last.
+    let car = form_fields(&pool, "makina").await;
+    let order = positions(&car, &[r#"for="prop_vehicle_color""#, r#"for="prop_vehicle_customs""#, r#"for="prop_vehicle_engine""#,
+                                  r#"name="prop_vehicle_no_accident""#, r#"<span class="field-label">Opsionet</span>"#]);
+    assert!(order.is_sorted(), "{order:?}");
+
+    // Posted with them, a car says them on its page, and the filters find it by them.
+    let ana = new_seller(&pool, "+355691112233").await;
+    let started = started();
+    let mut fields = car_fields(("", ""), &started);
+    fields.extend_from_slice(&[
+        ("prop_vehicle_customs", "CLEARED"),
+        ("prop_vehicle_plates", "ALBANIAN"),
+        ("prop_vehicle_engine", "1598"),
+        ("prop_vehicle_power", "115"),
+        ("prop_vehicle_no_accident", "1"),
+    ]);
+    let posted = post_form(pool.clone(), "/shto", &fields, Some(&ana)).await;
+    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    let page = get(pool.clone(), &posted.location.unwrap()).await.body;
+    for value in [">E zhdoganuar</dd>", ">Shqiptare</dd>", "1\u{a0}598\u{a0}cm³</dd>", "115\u{a0}HP</dd>", r#"title="Pa aksident""#] {
+        assert!(page.contains(value), "{value}");
+    }
+    for (uri, found) in [
+        ("/c/makina?vehicle_customs=CLEARED", 1),
+        ("/c/makina?vehicle_customs=NOT_CLEARED", 0),
+        ("/c/makina?vehicle_engine_min=1500&vehicle_engine_max=2000", 1),
+        ("/c/makina?vehicle_power_min=150", 0),
+        ("/c/makina?vehicle_no_accident=1", 1),
+    ] {
+        assert_eq!(card_numbers(&html(pool.clone(), uri).await).len(), found, "{uri}");
+    }
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -2918,7 +3009,7 @@ async fn a_car_is_posted_with_its_make_model_and_year(pool: PgPool) {
     assert!(frame.starts_with(r#"<turbo-frame id="listing-properties">"#));
     assert!(frame.contains(r#"<input id="prop_vehicle_year" name="prop_vehicle_year" value="" inputmode="decimal" placeholder="Viti *" required>"#));
     // Its main fields with their icons, two to a line: make, model, year, fuel, gearbox, body,
-    // mileage and colour; then its options.
+    // mileage and colour; then the rest, and its options last.
     assert!(frame.contains(r#"<fieldset class="property-fields vehicle-fields">"#));
     // The box is named inside it, not in its border: for screen readers by its legend, out of
     // sight, for the eye by a header.
@@ -3303,7 +3394,7 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let pages = [
         ("/shto", 7),
-        ("/shto/fushat?category=makina", 6),
+        ("/shto/fushat?category=makina", 11),
         ("/search?q=golf", 3),
         ("/c/makina", 4),
         ("/harta", 2),
