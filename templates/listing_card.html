@@ -3,15 +3,36 @@
     there for the map page, which puts a dot on the map for each card. -#}
 <article class="card">
   {#- The photo, darkening toward its bottom edge, with the price on it there; the title under it
-      (.card-media in app.css). -#}
-  <div class="card-media">
-    {% if let Some(src) = card.cover_url %}
-    {#- The first row loads straight away; the rest wait until they scroll near the screen. -#}
-    <img class="card-photo" src="{{ src }}" alt="" width="480" height="360" decoding="async"
-      {%- if loop.index > 4 %} loading="lazy"{% endif %}>
-    {% else %}
+      (.card-media in app.css). A big card (the view button, cards_controller.js) has every photo
+      in a row to slide through, dots over them saying which shows and, under a pointer, arrows
+      (slides_controller.js); a small one shows the first. -#}
+  {%- let eager = loop.index <= 4 %}
+  <div class="card-media"{% if card.photos.len() > 1 %} data-controller="slides"{% endif %}>
+    {%- if card.photos.is_empty() %}
     <div class="card-photo placeholder" aria-hidden="true"></div>
-    {% endif %}
+    {%- else %}
+    {#- The first row's first photos load straight away; the rest wait until they come near the
+        screen. Each photo is a link to the listing too, since in a big card the photos lie over
+        the title's stretched link, to be slid through. -#}
+    <div class="card-slides"{% if card.photos.len() > 1 %} data-slides-target="track" data-action="scroll->slides#update"{% endif %}>
+      {%- for (small, full) in card.slides() %}
+      <a class="card-slide" href="{{ card.url() }}" tabindex="-1" aria-hidden="true"><img class="card-photo" src="{{ small }}"
+        srcset="{{ small }} 600w, {{ full }} 1600w" sizes="{{ page.sizes() }}" alt="" width="480" height="360" decoding="async"
+        {%- if !(eager && loop.first) %} loading="lazy"{% endif %}></a>
+      {%- endfor %}
+    </div>
+    {%- if card.photos.len() > 1 %}
+    <div class="card-dots" data-slides-target="dots" aria-hidden="true">
+      {%- for _ in card.photos.iter() %}<span{% if loop.first %} class="is-current"{% endif %}></span>{% endfor -%}
+    </div>
+    <button type="button" class="card-step card-previous" data-slides-target="previous" data-action="slides#previous" aria-label="Fotoja e mëparshme" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+    </button>
+    <button type="button" class="card-step card-next" data-slides-target="next" data-action="slides#next" aria-label="Fotoja tjetër" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </button>
+    {%- endif %}
+    {%- endif %}
     <div class="card-head">
       <h2 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h2>
     </div>

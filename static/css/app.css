@@ -397,6 +397,86 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   white-space: nowrap;
 }
 
+/* A card's photos: in a small card the first alone. In a big one (the view button) every photo in
+   a row that a finger slides through a photo at a time (slides_controller.js), over the title's
+   stretched link, each photo a link itself; the shade and the price over them, then the dots, at
+   the right, and under a pointer the arrows. The rest of the card a size bigger, the photo 4:3,
+   one card a line, no wider than 40rem, in the middle. */
+.card-slides {
+  display: flex;
+  grid-area: 1 / 1;
+  height: 0;
+  min-height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+.card-slide { display: block; flex: 0 0 100%; -webkit-tap-highlight-color: transparent; }
+.card-slide + .card-slide { display: none; }
+.card-slides .card-photo { height: 100%; }
+.card-dots,
+.card-step { display: none; }
+
+.cards-big .grid { grid-template-columns: minmax(0, 1fr); max-width: 40rem; margin-inline: auto; row-gap: 2rem; }
+.cards-big .card-media::before { aspect-ratio: 4 / 3; }
+.cards-big .card-slides {
+  z-index: 2;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.cards-big .card-slides::-webkit-scrollbar { display: none; }
+.cards-big .card-slide { scroll-snap-align: start; scroll-snap-stop: always; }
+.cards-big .card-slide + .card-slide { display: block; }
+.cards-big .card-media::after,
+.cards-big .card-media .card-price { z-index: 3; }
+.cards-big .card-media .card-price { padding: 0 1rem .75rem; font-size: var(--text-lg); }
+.cards-big .card-head { padding-top: .7rem; }
+.cards-big .card-title { font-size: var(--text-md); }
+.cards-big .card-summary { font-size: var(--text-sm); }
+.cards-big .card-dots {
+  display: flex;
+  grid-area: 1 / 1;
+  align-self: end;
+  justify-self: end;
+  z-index: 4;
+  gap: 5px;
+  padding: 0 1rem 1.05rem;
+  pointer-events: none;
+}
+.card-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgb(255 255 255 / 55%); box-shadow: 0 0 2px rgb(0 0 0 / 45%); transition: background-color .15s; }
+.card-dots .is-current { background: #fff; }
+@media (hover: hover) {
+  .cards-big .card-step {
+    display: grid;
+    place-items: center;
+    grid-area: 1 / 1;
+    align-self: center;
+    z-index: 4;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin: 0 .75rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 90%);
+    color: #1f1e1d;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .cards-big .card:hover .card-step,
+  .cards-big .card-step:focus-visible { opacity: 1; }
+  .card-previous { justify-self: start; }
+  .card-next { justify-self: end; }
+}
+.cards-big .card-step[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .card-dots span,
+  .cards-big .card-step { transition: none; }
+}
+
 /* The location pin (templates/pin.svg), as before the city on cards: the same as on the welcome
    page's city picker, in Lufthansa blue, or coral in the dark theme. Sized with the text. */
 .pin-icon {
@@ -1008,7 +1088,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
    there for screen readers only. */
 .browse-tools {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: .5rem;
   margin: 0 0 1rem;
 }
@@ -1064,10 +1144,12 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .browse-tools .round-button::-webkit-details-marker { display: none; }
 .browse-tools .round-button:active { transform: scale(.97); }
 .browse-tools .button.round-button[aria-expanded="true"],
+.browse-tools .button.round-button[aria-pressed="true"],
 .sort-menu[open] > .button.round-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
 .browse-tools .round-button svg { width: 20px; height: 20px; }
 .round-button .pin-icon { margin: 0; color: inherit; }
-.map-button { grid-row: 1; align-self: center; }
+.map-button,
+.cards-button { grid-row: 1; align-self: center; }
 @media (prefers-reduced-motion: reduce) {
   .browse-tools .button.round-button { transition: none; }
   .browse-tools .round-button:active { transform: none; }

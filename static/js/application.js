@@ -1,6 +1,7 @@
 // Turbo turns links and forms into fetch requests; Stimulus attaches small controllers to HTML.
 import "@hotwired/turbo";
 import { Application } from "@hotwired/stimulus";
+import CardsController from "controllers/cards_controller.js";
 import CopyController from "controllers/copy_controller.js";
 import DropdownController from "controllers/dropdown_controller.js";
 import FiltersController from "controllers/filters_controller.js";
@@ -13,10 +14,12 @@ import PickerController from "controllers/picker_controller.js";
 import PhotosController from "controllers/photos_controller.js";
 import PriceRangeController from "controllers/price_range_controller.js";
 import ShareController from "controllers/share_controller.js";
+import SlidesController from "controllers/slides_controller.js";
 import SuggestController from "controllers/suggest_controller.js";
 import ThemeController from "controllers/theme_controller.js";
 
 const application = Application.start();
+application.register("cards", CardsController);
 application.register("copy", CopyController);
 application.register("dropdown", DropdownController);
 application.register("filters", FiltersController);
@@ -29,6 +32,7 @@ application.register("picker", PickerController);
 application.register("photos", PhotosController);
 application.register("price-range", PriceRangeController);
 application.register("share", ShareController);
+application.register("slides", SlidesController);
 application.register("suggest", SuggestController);
 application.register("theme", ThemeController);
 
@@ -53,8 +57,9 @@ document.addEventListener("turbo:load", () => {
 });
 
 // A tapped card keeps its border (app.css, .card.pressed) while its listing loads; the copy of the
-// page Turbo keeps for going back loses it. iOS only shows :active where a touch listener is.
-document.addEventListener("click", (event) => event.target.closest(".card")?.classList.add("pressed"));
+// page Turbo keeps for going back loses it. Only its links open it: a big card's arrows step through
+// its photos. iOS only shows :active where a touch listener is.
+document.addEventListener("click", (event) => event.target.closest(".card a")?.closest(".card").classList.add("pressed"));
 document.addEventListener("turbo:before-cache", () => {
   for (const card of document.querySelectorAll(".card.pressed")) card.classList.remove("pressed");
 });

@@ -447,6 +447,49 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
+async fn big_cards_slide_through_every_photo(pool: PgPool) {
+    // Two more photos for the Golf, after its cover.
+    sqlx::query(
+        "INSERT INTO listing_media (listing_id, media_type, status, storage_key, public_url, thumbnail_url, sort_order)
+         SELECT l.id, 'IMAGE', 'READY', 'extra/' || n, 'https://example.com/full-' || n || '.jpg',
+                'https://example.com/card-' || n || '.jpg', n
+         FROM listings l, generate_series(1, 2) n WHERE l.public_no = 1001",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    // Small cards unless the visitor chose big ones: a small card shows its first photo (app.css),
+    // the copy fetched for a column of the grid.
+    let small = get(pool.clone(), "/c/makina").await.body;
+    assert!(small.contains(r#"<div class="browse" data-controller="filters cards""#));
+    assert!(small.contains(r#"aria-pressed="false" aria-label="Kartela të mëdha""#));
+    assert!(small.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
+
+    // Big ones, from the cookie the view button sets: every photo, the cover first, each with its
+    // full copy for the browser to pick, and the dots and arrows to slide through them.
+    let request = Request::get("/c/makina").header("cookie", "cards=big").body(Body::empty()).unwrap();
+    let big = send(pool.clone(), request).await.body;
+    assert!(big.contains(r#"<div class="browse cards-big" data-controller="filters cards""#));
+    assert!(big.contains(r#"aria-pressed="true" aria-label="Kartela të mëdha""#));
+    assert!(!big.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
+    assert_eq!(big.matches(r#"<div class="card-media" data-controller="slides">"#).count(), 1, "only the Golf has more than one");
+    let golf = &big[big.find(r#"<div class="card-media" data-controller="slides">"#).unwrap()..];
+    let golf = &golf[..golf.find("</article>").unwrap()];
+    assert!(golf.contains(r#"href="/listing/1001-volkswagen-golf-7-2016-nafte""#));
+    assert_eq!(golf.matches(r#"<a class="card-slide""#).count(), 3);
+    let cover = golf.find("photo-1591230740238").unwrap();
+    assert!(cover < golf.find("card-1.jpg").unwrap() && golf.find("card-1.jpg").unwrap() < golf.find("card-2.jpg").unwrap());
+    assert!(golf.contains(r#"srcset="https://example.com/card-2.jpg 600w, https://example.com/full-2.jpg 1600w" sizes="(min-width: 720px) 40rem, 100vw""#));
+    assert_eq!(golf.matches("<span").count(), 3, "a dot for each photo");
+    assert!(golf.contains(r#"aria-label="Fotoja tjetër" hidden>"#));
+
+    // The next pages come the same way, and the map page's list stays small.
+    let pinned = Request::get("/harta").header("cookie", "cards=big").body(Body::empty()).unwrap();
+    assert!(send(pool, pinned).await.body.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
+}
+
+#[sqlx::test(fixtures("listings"))]
 async fn category_pages_keep_their_map_folded(pool: PgPool) {
     // Every category page has its map, in a card folded to its header; with no point, the
     // results are from everywhere. Nothing else opens it.

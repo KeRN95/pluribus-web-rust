@@ -65,7 +65,8 @@
     is open at a time: opening one says so (section:open) and the others fold. Without JavaScript the filters stay open, their header
     gone, and the map, which needs it, is not there. -#}
 <noscript><style>.filters { display: block; } .filters-open, .map-card { display: none; }</style></noscript>
-<div class="browse" data-controller="filters"
+<div class="browse{% if page.big %} cards-big{% endif %}" data-controller="filters cards"
+     data-cards-small-value="{{ page.small_sizes() }}" data-cards-big-value="{{ page.big_sizes() }}"
      data-action="keydown.esc@document->filters#close turbo:before-cache@document->filters#reset section:open@document->filters#foldFor">
   <div class="browse-tools">
     {#- "Filtrat", the filters' header, says which are on (the map's point is the map's to say),
@@ -165,6 +166,14 @@
         {%- endfor %}
       </fieldset>
     </details>
+
+    {#- How the listings show: small cards, as many to a line as fit, or big ones, one a line, every
+        photo to slide through; pressed, big (cards_controller.js, which keeps the choice in a
+        cookie, so the pages after come the same way). -#}
+    <button type="button" class="button secondary round-button cards-button" data-cards-target="button" data-action="cards#toggle"
+            aria-pressed="{% if page.big %}true{% else %}false{% endif %}" aria-label="Kartela të mëdha" title="Kartela të mëdha">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="11.5" rx="2.5"/><path d="M4.5 18.5h15M4.5 21h9"/></svg>
+    </button>
   </div>
 
   <section class="results" aria-label="Njoftimet">

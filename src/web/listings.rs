@@ -30,6 +30,12 @@ impl ListingCard {
         format::price(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
     }
 
+    /// The photos a big card slides through, the cover first: each its card-sized copy and its
+    /// full one, for the browser to pick from (ListingPage::sizes). A small card shows the first.
+    pub fn slides(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.photos.iter().zip(&self.photos_full).map(|(small, full)| (small.as_str(), full.as_str()))
+    }
+
     /// The city at the start of the details line: the listing's municipality, or its location if
     /// that isn't in one. None when the search is in that city already.
     pub fn city_label(&self) -> Option<&str> {

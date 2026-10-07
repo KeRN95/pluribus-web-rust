@@ -9,7 +9,7 @@ use axum::{
 };
 
 use super::{
-    Result,
+    Result, cookie,
     filters::{Chip, Field, FieldKind, Filters, Params},
     is_next_page_request, not_found, render,
 };
@@ -23,6 +23,22 @@ use crate::{
 pub struct ListingPage {
     pub cards: Vec<ListingCard>,
     pub next: Option<NextPage>,
+    /// Big cards, one a line, every photo to slide through, as the visitor chose (big_cards).
+    pub big: bool,
+}
+
+/// How wide a card's photo shows, for the browser to pick the copy it fetches (srcset in
+/// listing_card.html): a column of the grid, or for a big card the line, no wider than 40rem (app.css,
+/// .cards-big). cards_controller.js switches between them as the view button switches the cards.
+const SMALL_CARD_SIZES: &str = "(min-width: 720px) 260px, 50vw";
+const BIG_CARD_SIZES: &str = "(min-width: 720px) 40rem, 100vw";
+
+/// The cookie the view button sets (cards_controller.js): "big" for big cards.
+const CARDS_COOKIE: &str = "cards";
+
+/// Whether the visitor chose big cards.
+fn big_cards(headers: &HeaderMap) -> bool {
+    cookie(headers, CARDS_COOKIE).as_deref() == Some("big")
 }
 
 /// A lazily loaded `<turbo-frame>` that fetches the next page when it scrolls into view.
@@ -40,7 +56,24 @@ impl ListingPage {
             let cursor = Cursor::after(sort, last);
             NextPage { frame_id: frame_id(&cursor), url: next_url(&cursor.encode()) }
         });
-        Self { cards: rows, next }
+        Self { cards: rows, next, big: false }
+    }
+
+    fn big(mut self, big: bool) -> Self {
+        self.big = big;
+        self
+    }
+
+    pub fn sizes(&self) -> &'static str {
+        if self.big { BIG_CARD_SIZES } else { SMALL_CARD_SIZES }
+    }
+
+    pub fn small_sizes(&self) -> &'static str {
+        SMALL_CARD_SIZES
+    }
+
+    pub fn big_sizes(&self) -> &'static str {
+        BIG_CARD_SIZES
     }
 }
 
@@ -384,7 +417,8 @@ async fn browse(
     if is_next_page_request(&headers) {
         let mut rows = db::listing_page(&state.db, &filter).await?;
         mark_city(&mut rows);
-        return frame_response(filter.after, &ListingPage::new(rows, filter.sort, next_url));
+        let big = big_cards(&headers) && view == View::Grid;
+        return frame_response(filter.after, &ListingPage::new(rows, filter.sort, next_url).big(big));
     }
 
     let (mut rows, count, mut points, found_in) = tokio::try_join!(
@@ -421,7 +455,8 @@ async fn browse(
         .collect();
     let count = format::listing_count(count, db::COUNT_LIMIT);
     mark_city(&mut rows);
-    let page = ListingPage::new(rows, filter.sort, next_url);
+    // Big cards only in the grid: the map page's list stays small, beside the map.
+    let page = ListingPage::new(rows, filter.sort, next_url).big(big_cards(&headers) && view == View::Grid);
     let more_points = points.len() as i64 > db::MAP_POINTS;
     points.truncate(db::MAP_POINTS as usize);
     if view == View::Map {

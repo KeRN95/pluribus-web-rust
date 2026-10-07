@@ -284,7 +284,10 @@ pub struct ListingCard {
     pub city: Option<String>,
     /// How far the listing is from the map pin, in metres, when the search has one.
     pub distance_m: Option<f64>,
-    pub cover_url: Option<String>,
+    /// The listing's photos, the cover first: their card-sized copies, and the full ones in the
+    /// same order. A small card shows the first; a big one slides through them all.
+    pub photos: Vec<String>,
+    pub photos_full: Vec<String>,
     /// The category's card properties in order, e.g. ["2016", "148 000 km", "Naftë"].
     pub details: Vec<String>,
     /// The first property the listing page shows that the card doesn't and the title doesn't
@@ -652,7 +655,15 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
                 loc.name AS location_name,
                 (SELECT t.name FROM locations t
                  WHERE t.id = location_municipality(l.location_id)) AS city,
-                m.thumbnail_url AS cover_url, l.sort_at,
+                coalesce((SELECT array_agg(coalesce(m.thumbnail_url, m.public_url) ORDER BY m.is_cover DESC, m.sort_order)
+                          FROM listing_media m
+                          WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'
+                            AND coalesce(m.public_url, m.thumbnail_url) IS NOT NULL), '{}') AS photos,
+                coalesce((SELECT array_agg(coalesce(m.public_url, m.thumbnail_url) ORDER BY m.is_cover DESC, m.sort_order)
+                          FROM listing_media m
+                          WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'
+                            AND coalesce(m.public_url, m.thumbnail_url) IS NOT NULL), '{}') AS photos_full,
+                l.sort_at,
                 coalesce(
                     (SELECT array_agg(card.value ORDER BY card.sort_order)
                                 FILTER (WHERE card.value IS NOT NULL)
@@ -692,8 +703,7 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
     query.push(
         " AS distance_m
          FROM listings l
-         LEFT JOIN locations loc ON loc.id = l.location_id
-         LEFT JOIN listing_media m ON m.listing_id = l.id AND m.is_cover AND m.status = 'READY'",
+         LEFT JOIN locations loc ON loc.id = l.location_id",
     );
     push_filters(&mut query, filter);
 
