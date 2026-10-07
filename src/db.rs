@@ -811,6 +811,30 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
     query.build_query_as().fetch_all(db).await
 }
 
+/// Where the newest active listings stand in the newest-first order (sort_at, then the id), the
+/// newest first: what the welcome page's row of the newest listings compares with what it saw
+/// before, to find those posted since (web/newest.rs).
+pub async fn newest_listing_keys(db: &PgPool, limit: i64) -> sqlx::Result<Vec<(OffsetDateTime, Uuid)>> {
+    sqlx::query_as(
+        "SELECT sort_at, id FROM listings WHERE status = 'ACTIVE' ORDER BY sort_at DESC, id DESC LIMIT $1",
+    )
+    .bind(limit)
+    .fetch_all(db)
+    .await
+}
+
+/// The cards of those of these listings that are active, the oldest first.
+pub async fn cards_by_id(db: &PgPool, ids: &[Uuid]) -> sqlx::Result<Vec<ListingCard>> {
+    let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
+    query.push(
+        "NULL::float8 AS distance_m
+         FROM (SELECT l.* FROM listings l WHERE l.status = 'ACTIVE' AND l.id = ANY(",
+    );
+    query.push_bind(ids.to_vec());
+    query.push(")) l LEFT JOIN locations loc ON loc.id = l.location_id ORDER BY l.sort_at, l.id");
+    query.build_query_as().fetch_all(db).await
+}
+
 /// How many of the seller's other listings a listing's page shows, over the related ones.
 pub const FROM_SELLER: i64 = 4;
 

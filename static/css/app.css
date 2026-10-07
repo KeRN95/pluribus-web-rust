@@ -956,6 +956,80 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .welcome-card { padding: .75rem 0 0; }
 }
 
+/* The welcome page's newest listings, under its categories (home.html, web/newest.rs): the browse
+   pages' cards in one row that slides sideways a card at a time, as the seller's other listings
+   do under a listing (.seller-listings): two and a quarter across on a phone, so that the next one
+   shows at the edge, then three and a quarter, and four and a quarter on a wide screen. A row of
+   flex items rather than a grid's columns, so that a card coming in at the front pushes the others
+   along (.is-new). The padding, which the margin takes back, keeps a card's hover panel and focus
+   ring clear of the sliding box's edges. Hidden until it has a card. */
+.newest { container-type: inline-size; }
+.newest:not(:has(.newest-card)) { display: none; }
+.newest h2 { display: flex; align-items: center; gap: .6rem; }
+/* Before the heading, a dot in the buttons' colour that pulses: the row is live. */
+.live-dot {
+  flex: none;
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  background: var(--button);
+  animation: live-pulse 2s ease-out infinite;
+}
+@keyframes live-pulse {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--button) 60%, transparent); }
+  to { box-shadow: 0 0 0 .5rem transparent; }
+}
+.newest-strip {
+  --across: 2.25;
+  --gaps: 2;
+  --gap: .75rem;
+  display: flex;
+  position: relative;
+  gap: var(--gap);
+  margin: -.5rem;
+  padding: .5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  overflow-anchor: none; /* newest_controller.js keeps the cards in view where they are */
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: .5rem;
+  scrollbar-width: thin;
+}
+.newest-strip > .card {
+  flex: none;
+  width: calc((100% - var(--gaps) * var(--gap)) / var(--across));
+  scroll-snap-align: start;
+}
+/* A card the stream brings to the front of the row at its start comes in from the edge: its
+   margin, a card and a gap wide to begin with, pulls it out of sight, and as the margin goes the
+   others move along; it fades in. */
+.newest-strip > .is-new { animation: newest-in .45s cubic-bezier(.2, .8, .2, 1); }
+@keyframes newest-in {
+  from {
+    margin-inline-start: calc((var(--gaps) * var(--gap) - 100%) / var(--across) - var(--gap));
+    opacity: 0;
+  }
+}
+@media (min-width: 720px) {
+  .newest-strip { --gap: 1rem; }
+}
+/* Phones and tablets slide the row with a finger: no bar. A mouse keeps it, on a wide screen. */
+@media (max-width: 959px), (hover: none) {
+  .newest-strip { scrollbar-width: none; }
+  .newest-strip::-webkit-scrollbar { display: none; }
+}
+@container (692px <= width < 928px) {
+  .newest-strip { --across: 3.25; --gaps: 3; }
+}
+@container (width >= 928px) {
+  .newest-strip { --across: 4.25; --gaps: 4; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot,
+  .newest-strip > .is-new { animation: none; }
+}
+
 /* Browse pages: filters beside the results */
 
 /* A category page's heading is the last of a breadcrumb: the categories above it on its line, as

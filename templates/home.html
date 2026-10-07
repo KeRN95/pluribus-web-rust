@@ -38,6 +38,24 @@
   </nav>
 </section>
 
+{#- The newest listings in a row that slides sideways, the newest first, which follows new ones
+    while the page is open: the server sends each as it is posted, no more than two a second, and
+    Turbo puts it in front (<turbo-stream-source>, web/newest.rs); the row keeps the newest ten
+    (newest_controller.js). It is hidden while there are none (app.css), and shows with the
+    first. -#}
+<section class="newest" data-controller="newest"
+         data-action="turbo:before-stream-render@document->newest#arrive turbo:before-cache@document->newest#settle"
+         aria-labelledby="newest-heading">
+  <h2 id="newest-heading"><span class="live-dot" aria-hidden="true"></span>Sapo u shtuan</h2>
+  <div class="newest-strip" id="newest-strip" data-newest-target="strip">
+    {%- for card in page.cards.iter().take(*strip) %}
+    {%- let eager = loop.index <= 2 %}
+    {% include "newest_card.html" %}
+    {%- endfor %}
+  </div>
+  <turbo-stream-source src="/te-rejat{% if let Some(since) = since %}?since={{ since }}{% endif %}" data-newest-target="source"></turbo-stream-source>
+</section>
+
 <section class="latest" aria-labelledby="latest-heading">
   <h2 id="latest-heading">Njoftimet më të reja</h2>
   {% include "listing_grid.html" %}

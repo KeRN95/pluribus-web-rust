@@ -6,6 +6,7 @@ mod browse;
 mod filters;
 mod listings;
 mod moderation;
+mod newest;
 mod photos;
 mod post;
 mod properties;
@@ -37,6 +38,8 @@ use tower_http::{
 
 use crate::{AppState, db};
 
+pub use newest::close_streams;
+
 /// The posting and edit forms carry photos: MAX_PHOTOS of them, which phones shrink before sending
 /// (photos_controller.js). Other requests keep axum's 2 MB.
 const FORM_WITH_PHOTOS_BYTES: usize = 64 * 1024 * 1024;
@@ -48,6 +51,7 @@ pub fn router(state: AppState) -> Router {
         .route("/c/{slug}", get(browse::category))
         .route("/search", get(browse::search))
         .route("/sugjerime", get(suggestions::suggestions))
+        .route("/te-rejat", get(newest::stream))
         .route("/harta", get(browse::map))
         .route("/listing/{key}", get(listings::show))
         .route("/listing/{public_no}/phone", post(listings::reveal_phone))

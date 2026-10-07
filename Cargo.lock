@@ -1319,6 +1319,7 @@ dependencies = [
  "base64 0.22.1",
  "dotenvy",
  "form_urlencoded",
+ "futures-util",
  "http-body-util",
  "image",
  "lettre",

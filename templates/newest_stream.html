@@ -1,0 +1,4 @@
+{#- A listing posted while the welcome page is open, for the front of its row of the newest
+    (home.html): a Turbo Stream, which the server sends as an event (web/newest.rs). -#}
+{%- let eager = false -%}
+<turbo-stream action="prepend" target="newest-strip"><template>{% include "newest_card.html" %}</template></turbo-stream>

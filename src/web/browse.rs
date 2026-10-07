@@ -11,7 +11,7 @@ use axum::{
 use super::{
     Result, cookie,
     filters::{Chip, Field, FieldKind, Filters, Params},
-    is_next_page_request, not_found, render,
+    is_next_page_request, newest, not_found, render,
 };
 use crate::{
     AppState,
@@ -149,9 +149,14 @@ pub struct Shortcut {
 struct HomePage {
     shortcuts: Vec<Shortcut>,
     page: ListingPage,
+    /// How many of the page's cards, the newest, the row of the newest listings shows.
+    strip: usize,
+    /// Where the row's stream of new listings starts: after the newest (none without listings).
+    since: Option<String>,
 }
 
-/// The welcome page asks what the visitor is looking for, then shows the newest listings.
+/// The welcome page asks what the visitor is looking for, then shows the newest listings: the
+/// newest in a row that follows new ones (web/newest.rs), then all of them, newest first.
 pub async fn home(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -177,7 +182,10 @@ pub async fn home(
             icon: SHORTCUTS.iter().find(|(slug, _)| *slug == category.slug).map_or(BOX, |(_, icon)| *icon),
         })
         .collect();
-    render(HomePage { shortcuts, page: ListingPage::new(rows, Sort::Newest, next_url) })
+    let page = ListingPage::new(rows, Sort::Newest, next_url);
+    let strip = page.cards.len().min(newest::STRIP);
+    let since = page.cards.first().map(ListingCard::newest_cursor);
+    render(HomePage { shortcuts, page, strip, since })
 }
 
 pub struct Link {
