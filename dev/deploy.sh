@@ -24,6 +24,10 @@ ADDR="${ADDR:-127.0.0.1:3000}"
 PORT="${ADDR##*:}"
 mkdir -p "$KEEP"
 
+# Puts the binary $1 in place as $2: a new file renamed over the old one, which a running server
+# keeps executing (copying over it fails: "Text file busy").
+put() { cp "$1" "$2.new" && mv -f "$2.new" "$2"; }
+
 # The process listening on the port, if any.
 listening() { ss -ltnp "sport = :$PORT" | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2; }
 
@@ -44,7 +48,7 @@ start() {
 
 if [ "${1:-}" = "--rollback" ]; then
     [ -x "$KEEP/previous" ] || { echo "No previous binary in $KEEP." >&2; exit 1; }
-    cp "$KEEP/previous" "$KEEP/marketplace"
+    put "$KEEP/previous" "$KEEP/marketplace"
     start "$KEEP/marketplace" && echo "Rolled back: the previous binary is on http://$ADDR." && exit 0
     echo "The previous binary doesn't answer either; see $LOG." >&2
     exit 1
@@ -69,15 +73,15 @@ fi
 
 # The running binary is the previous one now; the server runs from a copy, so a later build
 # doesn't change the file under it.
-[ -x "$KEEP/marketplace" ] && cp "$KEEP/marketplace" "$KEEP/previous"
-cp "$BINARY" "$KEEP/marketplace"
+[ -x "$KEEP/marketplace" ] && put "$KEEP/marketplace" "$KEEP/previous"
+put "$BINARY" "$KEEP/marketplace"
 if start "$KEEP/marketplace"; then
     echo "Deployed on http://$ADDR."
     exit 0
 fi
 echo "The new binary doesn't answer /healthz; the previous one goes back. See $LOG." >&2
 if [ -x "$KEEP/previous" ]; then
-    cp "$KEEP/previous" "$KEEP/marketplace"
+    put "$KEEP/previous" "$KEEP/marketplace"
     start "$KEEP/marketplace" || true
 fi
 exit 1
