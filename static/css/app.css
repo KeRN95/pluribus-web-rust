@@ -35,6 +35,7 @@
   --placeholder-from: #ece9df;
   --placeholder-to: #e2ded2;
   --shadow: 0 1px 2px rgb(31 30 29 / 5%), 0 4px 16px rgb(31 30 29 / 5%);
+  --scrim: rgb(31 30 29 / 20%); /* the page dimmed under what floats over it */
   --radius: 14px;
   --font: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   /* The sizes, every text's but a few fixed ones (form fields 16px at least on phones, which
@@ -80,6 +81,7 @@
   --placeholder-from: #34332f;
   --placeholder-to: #3c3b36;
   --shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  --scrim: rgb(0 0 0 / 40%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -103,6 +105,7 @@
     --placeholder-from: #34332f;
     --placeholder-to: #3c3b36;
     --shadow: 0 1px 2px rgb(0 0 0 / 30%);
+    --scrim: rgb(0 0 0 / 40%);
   }
 }
 
@@ -1103,14 +1106,22 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 
 /* The browse row: round buttons side by side, the search first, in the site's colour, then the
    filters, the map, the order and the cards' size (--row tall and wide); the last column takes
-   what is left. Only one is open at a time (section:open); the search, the filters and the map
-   unfold under the row, as wide as it, the filters and the map in cards drawn like Claude's, as the
-   listing form's own fields are: the menus' hairline on the surface, rounder corners and a shadow
-   you barely see, fading in as the menus do. The cards are no boxes of their own (display:
-   contents): their buttons and what they open are the row's. The filters' form names its section
-   with a heading for screen readers only, the button showing just its icon. */
+   what is left. Only one is open at a time (section:open). The search, the filters and the map
+   open over the results rather than pushing them down: a little under the row (--drop), as wide
+   as it, fading in as the menus do, the page dimmed under them (.browse-scrim); Escape or a tap on
+   the dim folds them again. The filters and the map come in cards drawn like Claude's, as the
+   listing form's own fields are: the menus' hairline and shadow on the surface, rounder corners;
+   they take at most what is left of the screen under the row (--top, measured as one opens:
+   filters_controller.js) and scroll inside if they need more. The row and what it opens stay over
+   the results and under the sticky header (z-index 10). The cards are no boxes of their own
+   (display: contents): their buttons are the row's, and the row places what they open. The
+   filters' form names its section with a heading for screen readers only, the button showing just
+   its icon. */
 .browse-tools {
   --row: 3.4rem;
+  --drop: .75rem;
+  position: relative;
+  z-index: 9;
   display: grid;
   grid-template-columns: repeat(5, auto) minmax(0, 1fr);
   gap: .5rem;
@@ -1119,20 +1130,56 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .filters-card,
 .map-card { display: contents; }
 .filters,
+.map-card-body,
+.search-panel {
+  position: absolute;
+  top: calc(100% + var(--drop));
+  right: 0;
+  left: 0;
+  grid-column: 1 / -1;
+}
+.filters,
 .map-card-body {
+  max-height: calc(100dvh - var(--top, 12rem) - var(--drop) - 1rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   background: var(--surface);
   border: 1px solid var(--menu-border);
   border-radius: 16px;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
+  box-shadow: var(--menu-shadow);
+  animation: menu-in .16s ease-out;
 }
-.filters,
-.map-card-body { grid-column: 1 / -1; animation: menu-in .16s ease-out; }
-.filters { display: none; padding: 0 1rem 1rem; }
+.filters { display: none; padding: 0 1rem; }
 .filters.is-open { display: block; }
 .filters-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The filters' button at the card's foot, where it stays while their options scroll under it. */
+.filters .filter-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: 0 -1rem;
+  padding: .75rem 1rem 1rem;
+  border-top: 1px solid var(--menu-border);
+  background: var(--surface);
+}
+/* The page under what the row opened, dimmed; the row and the header stay over it. */
+.browse-scrim { display: none; }
+.browse:has(.search-panel.is-open, .filters.is-open, .map-card:not(.map-hidden)) .browse-scrim {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  background: var(--scrim);
+  animation: fade-in .16s ease-out;
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
   .filters,
-  .map-card-body { animation: none; }
+  .map-card-body,
+  .browse-scrim { animation: none; }
 }
 /* The round buttons: only their icons, in the page's own colours, on the surface with the menus'
    hairline, as the listing page's share button is; while what they open is open, on the accent's
@@ -1162,10 +1209,10 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .filters-open,
 .map-button,
 .cards-button { grid-row: 1; align-self: center; }
-/* The search box the round search button opens, under the row, as wide as it: the welcome page's
-   pill, its suggestions under it. */
+/* The search box the round search button opens over the results, under the row and as wide as it
+   (above): the welcome page's pill, its suggestions under it. */
 .search-card { display: contents; }
-.search-panel { display: none; grid-column: 1 / -1; }
+.search-panel { display: none; }
 .search-panel.is-open { display: block; animation: menu-in .16s ease-out; }
 @media (prefers-reduced-motion: reduce) {
   .search-panel.is-open { animation: none; }
@@ -1201,7 +1248,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
    it. The radio itself is there for keyboards and screen readers only, its ring round the row. */
 .sort-options {
   position: absolute;
-  top: calc(100% + .4rem);
+  top: calc(100% + var(--drop));
   right: 0;
   z-index: 30;
   display: grid;
@@ -1230,12 +1277,14 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   mask: var(--check) center / contain no-repeat;
 }
 .sort-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* The map on a category or search page: a round button in the row (above) that opens it under the
-   row and folds it again. */
-.map-card-body { padding: .9rem 1rem 1rem; }
+/* The map on a category or search page: a round button in the row (above) that opens it over the
+   results, under the row, and folds it again. */
+/* A column, whose map gives up height, down to 10rem, so that the card fits in the room under the
+   row with its buttons. */
+.map-card-body { display: flex; flex-direction: column; padding: .9rem 1rem 1rem; }
 .map-card.map-hidden .map-card-body { display: none; }
 .map-card .map-form { margin-bottom: .75rem; }
-.map-card .map-canvas { border-radius: calc(var(--radius) - 4px); }
+.map-card .map-canvas { min-height: 10rem; border-radius: calc(var(--radius) - 4px); }
 /* Wide, the card is the page's width: its map is less tall, two wide and one tall. */
 @media (min-width: 960px) {
   .map-card .map-canvas { aspect-ratio: 2 / 1; }

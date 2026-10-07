@@ -423,20 +423,23 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
 async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     // The search, Filtrat, Harta and Rendit stand in one row over the results, round buttons, the
     // orders opening in a menu; opening one says so (section:open) and the others fold, so only
-    // one is open at a time. The search is in the site's colour.
+    // one is open at a time. The search is in the site's colour. What they open floats over the
+    // results, the page dimmed under it; Escape or a tap on the dim folds it again.
     let cars = html(pool.clone(), "/c/makina").await;
     let order = positions(&cars, &[
-        r#"<div class="browse-tools">"#,
+        r#"<div class="browse-tools" data-filters-target="tools">"#,
         r#"<div class="search-card" data-controller="panel""#,
         r#"<div class="filters-card">"#,
         r#"<section class="map-card map-hidden""#,
         r#"<details class="sort-menu" data-controller="dropdown""#,
+        r#"<div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>"#,
         r#"<section class="results""#,
     ]);
     assert!(order.is_sorted());
-    for listener in ["panel#foldFor", "filters#foldFor", "map#foldFor", "dropdown#foldFor"] {
+    for listener in ["panel#foldFor", "filters#foldFor", "map#foldFor", "dropdown#foldFor", "filters#fit"] {
         assert!(cars.contains(&format!("section:open@document->{listener}")), "{listener}");
     }
+    assert!(cars.contains("keydown.esc@document->filters#foldAll"));
     // The map's and the order's buttons have only their icons to see: their names and what they
     // are set to are for screen readers, and their tooltips; the orders' menu opens with no
     // JavaScript.
