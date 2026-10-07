@@ -1135,8 +1135,22 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   .map-center,
   .map-center::after { transition: none; }
 }
-/* The circle around it, and a dot for each listing. CSS beats the colours Leaflet sets as attributes. */
-.map-area { stroke: var(--location); fill: var(--location); }
+/* The circle round it (map_controller.js, placeRing): a ring in the location colour round a faint
+   wash of it, letting every touch through. As a zoom animates it grows or shrinks with the map,
+   as Leaflet's own layers do (leaflet.css). */
+.map-area {
+  position: absolute;
+  border: 2px solid var(--location);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--location) 8%, transparent);
+  pointer-events: none;
+}
+.map-area.is-animated {
+  transition-property: left, top, width, height;
+  transition-duration: .25s;
+  transition-timing-function: cubic-bezier(0, 0, .25, 1);
+}
+/* A dot for each listing. CSS beats the colours Leaflet sets as attributes. */
 .map-dot { stroke: #fff; fill: var(--accent); }
 /* Listings near each other while the map is zoomed out: one bubble with their count. Taps go
    through it to the map (map_controller.js). */

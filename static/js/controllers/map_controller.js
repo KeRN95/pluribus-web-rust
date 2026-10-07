@@ -17,6 +17,9 @@ const CELL = 40;
 // The distance slider goes from 0 to 100 and stands for 1 to MAX_RADIUS_KM km, slowly near the
 // pin and faster further out: km = MAX_RADIUS_KM ^ (position / 100). As in filters.rs.
 const MAX_RADIUS_KM = 50;
+// The equator's length in metres, which the map (Web Mercator) draws 256 pixels long at zoom 0 and
+// twice as long at each zoom after: at a latitude, a pixel is this times its cosine over 256 * 2^zoom.
+const EQUATOR = 40075016.686;
 const PIN = '<svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>';
 
 // Leaflet is only fetched on pages with a map, and only once: its script and its stylesheet.
@@ -92,14 +95,21 @@ export default class extends Controller {
     const point = this.hasLatitudeValue && this.hasLongitudeValue
       ? L.latLng(this.latitudeValue, this.longitudeValue)
       : L.latLng(TIRANA);
-    this.circle = L.circle(point, {
-      radius: this.radiusMeters, className: "map-area", weight: 2, fillOpacity: 0.08, interactive: false,
-    }).addTo(this.map);
+    // The circle round the middle, as far as the distance: in a pane of its own, over the tiles and
+    // under the dots (Leaflet's overlays are at 400), kept in the middle as the map moves and sized
+    // for its zoom (placeRing). Not Leaflet's own circle, which stays in the middle only by being
+    // moved on the map at every step: dragged far, it was cut off where the map had been until the
+    // map stopped, and while a pinch zoomed, Leaflet scaled it as well, so it grew or shrank twice
+    // as fast.
+    this.map.createPane("ring").style.zIndex = 350;
+    this.ring = Object.assign(document.createElement("div"), { className: "map-area" });
+    this.map.getPane("ring").append(this.ring);
+    this.map.on("move zoom", () => this.placeRing());
+    this.map.on("zoomanim", ({ zoom, center }) => this.placeRing({ zoom, center, animated: true }));
     // The pin isn't on the map but over it, in the middle (app.css): the map moves, the circle
-    // follows the middle, and the pin lifts until the map stops.
+    // stays round it, and the pin lifts until the map stops.
     this.pin = Object.assign(document.createElement("div"), { className: "map-center", innerHTML: PIN });
     this.map.getContainer().append(this.pin);
-    this.map.on("move", () => this.circle.setLatLng(this.map.getCenter()));
     this.map.on("movestart", () => this.pin.classList.add("is-moving"));
     this.map.on("moveend", () => this.pin.classList.remove("is-moving"));
 
@@ -110,7 +120,7 @@ export default class extends Controller {
 
   disconnect() {
     this.map?.remove();
-    this.map = this.pin = this.circle = this.starting = null;
+    this.map = this.pin = this.ring = this.starting = null;
   }
 
   // "Vendos hartën": the results follow the map's middle and the distance.
@@ -160,7 +170,7 @@ export default class extends Controller {
     this.radiusLabelTarget.textContent = `${km} km`;
     this.sliderTarget.setAttribute("aria-valuetext", `${km} km`);
     if (!this.map) return;
-    this.circle.setRadius(this.radiusMeters);
+    this.placeRing();
     this.fitCircle({ animate: false });
   }
 
@@ -287,6 +297,24 @@ export default class extends Controller {
       ? this.map.getBoundsZoom(point.toBounds(this.radiusMeters * 2), false, this.L.point(32, 32))
       : 11;
     this.map.setView(point, zoom, { animate });
+  }
+
+  // The circle round the middle of the map, as wide as the distance at the middle's latitude and
+  // the zoom: the map's, a pinch's in-between one too, or, as a zoom animates, the one it goes to,
+  // the circle growing or shrinking with the map (app.css). With its edge far past the map's
+  // corners it only needs to cover the map, however much bigger it would be.
+  placeRing({ zoom = this.map.getZoom(), center = this.map.getCenter(), animated = false } = {}) {
+    const size = this.map.getSize();
+    const middle = this.map.containerPointToLayerPoint(size.divideBy(2));
+    const metresPerPixel = (EQUATOR * Math.cos((center.lat * Math.PI) / 180)) / 2 ** (zoom + 8);
+    const radius = Math.min(this.radiusMeters / metresPerPixel, 2 * (size.x + size.y));
+    this.ring.classList.toggle("is-animated", animated);
+    Object.assign(this.ring.style, {
+      left: `${middle.x - radius}px`,
+      top: `${middle.y - radius}px`,
+      width: `${2 * radius}px`,
+      height: `${2 * radius}px`,
+    });
   }
 
   get radiusMeters() {
