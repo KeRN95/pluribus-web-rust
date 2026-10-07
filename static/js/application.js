@@ -18,6 +18,7 @@ import ShareController from "controllers/share_controller.js";
 import SlidesController from "controllers/slides_controller.js";
 import SuggestController from "controllers/suggest_controller.js";
 import ThemeController from "controllers/theme_controller.js";
+import { filledIn } from "controllers/refresh.js";
 
 const application = Application.start();
 application.register("cards", CardsController);
@@ -39,16 +40,12 @@ application.register("suggest", SuggestController);
 application.register("theme", ThemeController);
 
 // A GET form sends every field, filled in or not. Drop the empty ones before Turbo fetches the
-// page, so filter URLs stay short and shareable (/c/makina?vehicle_fuel=DIESEL rather than a
-// dozen empty parameters); the address bar shows the URL that was fetched. A currency means
-// nothing without a price, so it goes too. The server ignores empty values anyway, which keeps
-// the pages working without JavaScript.
+// page (filledIn, refresh.js), so filter URLs stay short and shareable; the address bar shows the
+// URL that was fetched.
 document.addEventListener("turbo:before-fetch-request", (event) => {
   const { url, fetchOptions } = event.detail;
   if (!(event.target instanceof HTMLFormElement) || fetchOptions.method?.toUpperCase() !== "GET") return;
-  const params = [...url.searchParams].filter(([, value]) => value.trim() !== "");
-  const hasPrice = params.some(([name]) => name === "price_min" || name === "price_max");
-  url.search = new URLSearchParams(params.filter(([name]) => hasPrice || name !== "currency")).toString();
+  url.search = filledIn(url.searchParams).toString();
 });
 
 // The welcome page's amoeba (thinking.svg) changes shape with SVG animation, which CSS can't stop;

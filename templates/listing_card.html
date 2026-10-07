@@ -1,7 +1,9 @@
 {#- The card's link is its title, stretched over the whole card (see .card-link in app.css), so
     screen readers name the link by the title alone. The listing's point, when it has one, is
-    there for the map page, which puts a dot on the map for each card. -#}
-<article class="card">
+    there for the map page, which puts a dot on the map for each card. Its id, the listing's
+    number, lets a page that refreshes in place (refresh.js) keep each listing's card as it is,
+    its photo where it was slid to. -#}
+<article class="card" id="listing-{{ card.public_no }}">
   {#- The photo, darkening toward its bottom edge, with the price on it there; the title under it
       (.card-media in app.css). A big card (the view button, cards_controller.js) has every photo
       in a row to slide through, dots over them saying which shows and, under a pointer, arrows

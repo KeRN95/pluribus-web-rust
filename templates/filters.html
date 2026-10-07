@@ -1,6 +1,8 @@
-{#- The filter form. Its fields come from the category's filterable properties (see filters.rs). -#}
+{#- The filter form. Its fields come from the category's filterable properties (see filters.rs).
+    They apply by themselves, a second after a change (filters_controller.js). -#}
 <form id="filter-form" class="filter-form" action="{{ filters.action() }}" method="get"
-      data-controller="narrow" data-filters-target="form">
+      data-controller="narrow" data-filters-target="form"
+      data-action="input->filters#changed change->filters#changed keydown.enter->filters#enter">
   {%- for (name, value) in filters.kept_fields() %}
   <input type="hidden" name="{{ name }}" value="{{ value }}">
   {%- endfor %}
@@ -107,8 +109,9 @@
   {% endmatch %}
   {% endfor %}
 
-  <div class="filter-actions">
+  {#- Without JavaScript, a button applies them. -#}
+  <noscript><div class="filter-actions">
     <button type="submit" class="button">Shfaq rezultatet</button>
     {% if !chips.is_empty() %}<a class="clear-filters" href="{{ clear_url }}">Pastro</a>{% endif %}
-  </div>
+  </div></noscript>
 </form>

@@ -15,8 +15,13 @@ export default class extends Controller {
         this.element.querySelector("summary")?.focus();
       }
     };
+    // While the page refreshes in place (refresh.js), an open menu stays open.
+    this.keepOpen = (event) => {
+      if (event.target === this.element && event.detail.attributeName === "open") event.preventDefault();
+    };
     document.addEventListener("click", this.closeOutside);
     document.addEventListener("keydown", this.closeOnEscape);
+    this.element.addEventListener("turbo:before-morph-attribute", this.keepOpen);
   }
 
   announce() {
@@ -36,5 +41,6 @@ export default class extends Controller {
   disconnect() {
     document.removeEventListener("click", this.closeOutside);
     document.removeEventListener("keydown", this.closeOnEscape);
+    this.element.removeEventListener("turbo:before-morph-attribute", this.keepOpen);
   }
 }

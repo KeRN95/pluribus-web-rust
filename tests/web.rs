@@ -440,6 +440,22 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         assert!(cars.contains(&format!("section:open@document->{listener}")), "{listener}");
     }
     assert!(cars.contains("keydown.esc@document->filters#foldAll"));
+    // The filters and the map apply by themselves a second after a change, the page refreshing in
+    // place, which keeps what is open as it is and each listing's card; only without JavaScript
+    // do the filters have a button.
+    assert!(cars.contains(r#"data-action="input->filters#changed change->filters#changed keydown.enter->filters#enter">"#));
+    assert!(cars.contains(r#"<noscript><div class="filter-actions">"#));
+    for keep in [
+        "turbo:before-morph-element->filters#keep",
+        "turbo:before-morph-attribute->filters#keepAttribute",
+        "turbo:before-morph-attribute->panel#keep",
+        "turbo:before-morph-element->map#keep",
+        "turbo:before-morph-attribute->map#keepOpen",
+        "turbo:morph@document->map#reloadPoints",
+    ] {
+        assert!(cars.contains(keep), "{keep}");
+    }
+    assert!(cars.contains(r#"<article class="card" id="listing-1001">"#));
     // The map's and the order's buttons have only their icons to see: their names and what they
     // are set to are for screen readers, and their tooltips; the orders' menu opens with no
     // JavaScript.
@@ -523,11 +539,11 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(!cars.contains(r#"data-url="/listing/1001-volkswagen-golf-7-2016-nafte""#));
     let dots = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&harta=1").await;
     assert!(dots.contains(r#"data-url="/listing/1001-volkswagen-golf-7-2016-nafte""#));
-    // Its form sets the point, keeping the filters; "Të gjitha" drops it.
+    // Its form sets the point, keeping the filters, by itself a second after the map moves: the
+    // card has no buttons, and the point's chip drops it.
     assert!(cars.contains(r#"<form class="map-form" action="/c/makina" method="get" data-map-target="form">"#));
     assert!(cars.contains(r#"<input type="hidden" name="vehicle_fuel" value="DIESEL">"#));
-    assert!(cars.contains(r#"<button type="button" class="button map-confirm" data-action="map#confirm">Vendos hartën</button>"#));
-    assert!(cars.contains(r#"<a class="button secondary map-everywhere" href="/c/makina?vehicle_fuel=DIESEL">Të gjitha</a>"#));
+    assert!(!cars.contains("map#confirm") && !cars.contains("map-everywhere"));
     // Beside "Vendndodhja ime", the towns, by county, each with its point, which the map moves
     // onto; the dropdown has no name, so it sends no town of its own.
     assert!(cars.contains(r#"<select aria-label="Qyteti" data-map-target="town" data-action="map#goToTown">"#));
@@ -554,8 +570,7 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     let map_form = &map_form[..map_form.find("</form>").unwrap()];
     assert!(map_form.contains(r#"<input type="hidden" name="sort" value="price_asc">"#));
     assert!(pinned.contains(r#"href="/c/prona?lat=41.32833&lng=19.81806&radius=5""#));
-    // "Të gjitha" and the point's chip both search everywhere again, keeping the rest.
-    assert!(pinned.contains(r#"<a class="button secondary map-everywhere" href="/c/makina?sort=price_asc">Të gjitha</a>"#));
+    // The point's chip searches everywhere again, keeping the rest.
     assert!(pinned.contains(r#"<a class="filter-chip" href="/c/makina?sort=price_asc" aria-label="Hiq filtrin Brenda 5 km nga pika">"#));
 }
 

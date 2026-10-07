@@ -28,4 +28,13 @@ export default class extends Controller {
   foldFor(event) {
     if (event.target !== this.toggleTarget) this.close();
   }
+
+  // While the page refreshes in place (refresh.js, after the filters or the map changed), an open
+  // box stays open.
+  keep(event) {
+    if (!this.panelTarget.classList.contains("is-open")) return;
+    const { attributeName } = event.detail;
+    if ((event.target === this.panelTarget && attributeName === "class")
+      || (event.target === this.toggleTarget && attributeName === "aria-expanded")) event.preventDefault();
+  }
 }

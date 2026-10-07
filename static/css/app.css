@@ -1150,19 +1150,9 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   box-shadow: var(--menu-shadow);
   animation: menu-in .16s ease-out;
 }
-.filters { display: none; padding: 0 1rem; }
+.filters { display: none; padding: 0 1rem 1rem; }
 .filters.is-open { display: block; }
 .filters-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-/* The filters' button at the card's foot, where it stays while their options scroll under it. */
-.filters .filter-actions {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  margin: 0 -1rem;
-  padding: .75rem 1rem 1rem;
-  border-top: 1px solid var(--menu-border);
-  background: var(--surface);
-}
 /* The page under what the row opened, dimmed; the row and the header stay over it. */
 .browse-scrim { display: none; }
 .browse:has(.search-panel.is-open, .filters.is-open, .map-card:not(.map-hidden)) .browse-scrim {
@@ -1224,7 +1214,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 /* The form in two columns: a field takes a line of its own, unless it is a small one (filter-half:
    a dropdown, a range, a few boxes), which shares its line with the next small one, Marka beside
    Modeli, Viti beside Kilometrazhi, Karburanti beside Kambio. Wide, in four, a field of its own
-   taking two of them; the button under them all, as wide as its words. */
+   taking two of them; without JavaScript, the button under them all, as wide as its words. */
 .filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: .75rem; align-items: start; }
 .filter-form > * { grid-column: 1 / -1; }
 .filter-form > .filter-half { grid-column: auto; }
@@ -1236,7 +1226,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   .filter-form > * { grid-column: span 2; }
   .filter-form > .filter-half { grid-column: span 1; }
   .filter-form > .filter-icons,
-  .filter-form > .filter-actions { grid-column: 1 / -1; }
+  .filter-form > noscript { grid-column: 1 / -1; }
 }
 
 /* Map page, and the ways to it */
@@ -1280,7 +1270,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 /* The map on a category or search page: a round button in the row (above) that opens it over the
    results, under the row, and folds it again. */
 /* A column, whose map gives up height, down to 10rem, so that the card fits in the room under the
-   row with its buttons. */
+   row. */
 .map-card-body { display: flex; flex-direction: column; padding: .9rem 1rem 1rem; }
 .map-card.map-hidden .map-card-body { display: none; }
 .map-card .map-form { margin-bottom: .75rem; }
@@ -1308,12 +1298,10 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .map-place { display: flex; flex: 1 1 18rem; align-items: center; gap: .5rem; min-width: 0; }
 .map-place .picker { flex: 1 1 9rem; min-width: 0; max-width: 16rem; }
 .map-toggle[hidden] { display: none; }
-/* Under the map, the button that sets its point, in the site's colour: the whole width on the map
-   page; in the card, beside "Të gjitha", which drops it, the two as wide. */
+/* Under the map on the map page, the button that sets its point, in the site's colour, the whole
+   width. */
 .map-confirm { justify-content: center; padding-block: .7rem; }
 .map-stage .map-confirm { width: 100%; margin-top: .75rem; }
-.map-actions { display: flex; gap: .5rem; margin-top: .75rem; }
-.map-actions .button { flex: 1 1 0; justify-content: center; padding-block: .7rem; }
 /* The map folded away ("Fshih hartën"): the results get the whole width. */
 .map-hidden .map-canvas,
 .map-hidden .map-confirm { display: none; }

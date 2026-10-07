@@ -1,12 +1,16 @@
 import { Controller } from "@hotwired/stimulus";
+import { refreshFor } from "controllers/refresh.js";
 
 // A map of the results, as Facebook's: its pin stays in the middle and the map moves under it,
 // on the point set before or Tirana's middle (filters.rs). The slider sets how far around it to
-// look, and "Vendos hartën" sends the map's middle and the distance. On the map page (/harta) that
+// look. On the map page (/harta) "Vendos hartën" sends the map's middle and the distance, which
 // reloads only the results panel. On a category or search page the map is in a card that always
-// comes folded, and loads, with its dots, only when it first opens (lazy); "Vendos hartën" reloads
-// the page there, which keeps the category and the filters, the card folded again. Each result
-// gets a dot on the map. Leaflet draws the map with OpenStreetMap's tiles.
+// comes folded, and loads, with its dots, only when it first opens (lazy); there the middle and
+// the distance apply by themselves, a second after the map is moved or the distance, the place or
+// the town changed (schedule): the page refreshes in place (refresh.js), which keeps the category
+// and the filters, the card open as it is and the map as Leaflet drew it (keep), its dots
+// following the new results (reloadPoints). Each result gets a dot on the map. Leaflet draws the
+// map with OpenStreetMap's tiles.
 
 const LEAFLET = "/static/vendor/leaflet-1.9.4";
 const TIRANA = [41.3275, 19.8187];
@@ -112,6 +116,14 @@ export default class extends Controller {
     this.map.getContainer().append(this.pin);
     this.map.on("movestart", () => this.pin.classList.add("is-moving"));
     this.map.on("moveend", () => this.pin.classList.remove("is-moving"));
+    // Moved by a finger or the mouse (the slider, a place and a town say so themselves; a zoom
+    // keeps the middle): in a card, the point follows a second after the map stops.
+    this.map.on("dragstart", () => { this.dragged = true; });
+    this.map.on("moveend", () => {
+      if (!this.dragged) return;
+      this.dragged = false;
+      this.schedule();
+    });
 
     this.fitCircle({ point });
     if (this.hasToggleTarget) this.toggleTarget.hidden = false;
@@ -119,11 +131,12 @@ export default class extends Controller {
   }
 
   disconnect() {
+    clearTimeout(this.timer);
     this.map?.remove();
     this.map = this.pin = this.ring = this.starting = null;
   }
 
-  // "Vendos hartën": the results follow the map's middle and the distance.
+  // The map page's "Vendos hartën": the results follow the map's middle and the distance.
   confirm() {
     if (this.map) this.send(this.map.getCenter());
   }
@@ -147,7 +160,9 @@ export default class extends Controller {
     this.fitView();
   }
 
+  // Folding the card applies at once a point or a distance still waiting.
   fold(fold) {
+    if (fold && this.timer) this.apply();
     this.element.classList.toggle("map-hidden", fold);
     if (!this.hasToggleTarget) return;
     this.toggleTarget.setAttribute("aria-expanded", String(!fold));
@@ -162,13 +177,33 @@ export default class extends Controller {
     if (event.target !== this.toggleTarget && !this.element.classList.contains("map-hidden")) this.fold(true);
   }
 
+  // While the page refreshes in place (refresh.js): the map stays as Leaflet drew it, and an open
+  // card stays open, its button saying so.
+  keep(event) {
+    if (event.target === this.canvasTarget) event.preventDefault();
+  }
+
+  keepOpen(event) {
+    if (this.element.classList.contains("map-hidden")) return;
+    const { attributeName } = event.detail;
+    if ((event.target === this.element && attributeName === "class")
+      || (event.target === this.toggleTarget && attributeName === "aria-expanded")) event.preventDefault();
+  }
+
+  // The page refreshed: the dots follow its results, if the map is there to show them.
+  reloadPoints() {
+    if (this.map && this.hasFrameTarget) this.frameTarget.src = this.frameTarget.dataset.src;
+  }
+
   // While the slider moves: the distance beside it and the circle follow, and the map zooms in
-  // and out with it, at once, to keep the circle whole. "Vendos hartën" sends it.
+  // and out with it, at once, to keep the circle whole. The map page's "Vendos hartën" sends it; in
+  // a card it applies by itself (schedule).
   radiusInput() {
     const km = Math.max(1, Math.round(MAX_RADIUS_KM ** (Number(this.sliderTarget.value) / 100)));
     this.radiusTarget.value = km;
     this.radiusLabelTarget.textContent = `${km} km`;
     this.sliderTarget.setAttribute("aria-valuetext", `${km} km`);
+    this.schedule();
     if (!this.map) return;
     this.placeRing();
     this.fitCircle({ animate: false });
@@ -180,7 +215,7 @@ export default class extends Controller {
   }
 
   // "Vendndodhja ime": the map moves to where the visitor is, if the browser may say, for
-  // "Vendos hartën" to send.
+  // "Vendos hartën" to send, or in a card to apply by itself.
   locate() {
     if (!this.map) return;
     if (!navigator.geolocation) {
@@ -192,6 +227,7 @@ export default class extends Controller {
       ({ coords }) => {
         this.statusTarget.textContent = "";
         this.fitCircle({ point: this.L.latLng(coords.latitude, coords.longitude) });
+        this.schedule();
       },
       () => { this.statusTarget.textContent = "Vendndodhja nuk u gjet. Lëviz hartën për ta vendosur pikën."; },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
@@ -204,6 +240,7 @@ export default class extends Controller {
     const option = this.townTarget.selectedOptions[0];
     if (!this.map || !option?.dataset.lat) return;
     this.fitCircle({ point: this.L.latLng(Number(option.dataset.lat), Number(option.dataset.lng)) });
+    this.schedule();
   }
 
   // The map page's category: the results follow, for the map as it is.
@@ -213,14 +250,34 @@ export default class extends Controller {
 
   // The form goes, with the map's middle as the point.
   send(point) {
-    if (point) {
-      this.latitudeTarget.value = point.lat.toFixed(5);
-      this.longitudeTarget.value = point.lng.toFixed(5);
-      // Kept on the element too, so a page Turbo caches shows this point when it comes back.
-      this.latitudeValue = point.lat;
-      this.longitudeValue = point.lng;
-    }
+    this.setPoint(point);
     this.formTarget.requestSubmit();
+  }
+
+  // In a card (lazy), the map's middle and the distance apply by themselves, a second after the
+  // last change.
+  schedule() {
+    if (!this.lazyValue) return;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.apply(), 1000);
+  }
+
+  // The page refreshes in place for the map's middle and the distance (refresh.js).
+  apply() {
+    clearTimeout(this.timer);
+    this.timer = null;
+    this.setPoint(this.map?.getCenter());
+    refreshFor(this.formTarget);
+  }
+
+  // The map's middle as the form's point; kept on the element too, so a page Turbo caches shows
+  // this point when it comes back.
+  setPoint(point) {
+    if (!point) return;
+    this.latitudeTarget.value = point.lat.toFixed(5);
+    this.longitudeTarget.value = point.lng.toFixed(5);
+    this.latitudeValue = point.lat;
+    this.longitudeValue = point.lng;
   }
 
   // The results on the map, read from the list the server sent (every result, not only the cards

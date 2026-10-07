@@ -62,19 +62,21 @@
     the search, the filters and the map open over the results, under the row and as wide as it,
     the page dimmed under them, the orders in a menu; only one is open at a time: opening one says
     so (section:open) and the others fold. Escape or a tap on the dim folds it again (foldAll), and
-    the filters and the map take at most what is left of the screen under the row (fit). Without
-    JavaScript the search and the filters stay open, in the page, their buttons gone, and the map,
-    which needs it, is not there. -#}
+    the filters and the map take at most what is left of the screen under the row (fit). The
+    filters and the map apply by themselves, a second after a change: the page refreshes in place
+    (refresh.js), and what is open stays as it is while it morphs (keep). Without JavaScript the
+    search and the filters stay open, in the page, the filters with a button to apply them, the
+    row's buttons gone, and the map, which needs it, is not there. -#}
 <noscript><style>.search-panel, .filters { display: block; position: static; max-height: none; } .search-button, .filters-open, .map-card { display: none; }</style></noscript>
 <div class="browse{% if page.big %} cards-big{% endif %}" data-controller="filters cards"
      data-cards-small-value="{{ page.small_sizes() }}" data-cards-big-value="{{ page.big_sizes() }}"
-     data-action="keydown.esc@document->filters#foldAll turbo:before-cache@document->filters#reset section:open@document->filters#foldFor section:open@document->filters#fit">
+     data-action="keydown.esc@document->filters#foldAll turbo:before-cache@document->filters#reset section:open@document->filters#foldFor section:open@document->filters#fit turbo:before-morph-element->filters#keep turbo:before-morph-attribute->filters#keepAttribute">
   <div class="browse-tools" data-filters-target="tools">
     {#- Searching these listings: a round button that opens a search box under the row, as the
         filters do (panel_controller.js), the words as they are typed suggesting searches
         (suggest_controller.js). Its words search the page's category, its filters kept. -#}
     <div class="search-card" data-controller="panel"
-         data-action="section:open@document->panel#foldFor turbo:before-cache@document->panel#close">
+         data-action="section:open@document->panel#foldFor turbo:before-cache@document->panel#close turbo:before-morph-attribute->panel#keep">
       <button type="button" class="button round-button search-button" aria-controls="search-panel" aria-expanded="false"
               aria-label="Kërko" title="Kërko" data-panel-target="toggle" data-action="panel#toggle">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -117,11 +119,11 @@
         the results are ("10 km"), or "Kudo", to screen readers and as its tooltip. It opens the
         map under the row, and folds it again; the map loads only then, its dots after
         (map_controller.js). Its pin stays in the middle, on the point set before or on
-        Tirana, and the map moves under it; "Vendos hartën" sets the point and the distance,
-        "Të gjitha" drops them, and the page reloads with its category and filters, the card
-        folded again. -#}
+        Tirana, and the map moves under it. A second after it is moved, or the distance, the
+        place or the town changed, they apply: the page refreshes in place with its category and
+        filters, the card open as it is, the dots following. The point's chip drops them. -#}
     <section class="map-card map-hidden" data-controller="map" data-map-lazy-value="true"
-      data-action="turbo:frame-load->map#plot section:open@document->map#foldFor" aria-label="Harta"
+      data-action="turbo:frame-load->map#plot section:open@document->map#foldFor turbo:before-morph-element->map#keep turbo:before-morph-attribute->map#keepOpen turbo:morph@document->map#reloadPoints" aria-label="Harta"
       {%- if let Some(near) = filters.near %} data-map-latitude-value="{{ near.latitude }}" data-map-longitude-value="{{ near.longitude }}"{% endif %}>
       <button type="button" class="button secondary round-button map-button" data-map-target="toggle" data-action="map#toggleMap"
               aria-controls="map-card-body" aria-expanded="false"
@@ -163,10 +165,6 @@
         </ul>
         {%- endif %}
       </turbo-frame>
-      <div class="map-actions">
-        <button type="button" class="button map-confirm" data-action="map#confirm">Vendos hartën</button>
-        <a class="button secondary map-everywhere" href="{{ filters.everywhere_url() }}">Të gjitha</a>
-      </div>
       </div>
     </section>
 

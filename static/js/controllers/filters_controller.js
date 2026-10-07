@@ -1,16 +1,23 @@
 import { Controller } from "@hotwired/stimulus";
+import { refreshFor } from "controllers/refresh.js";
 
-// The filter panel: a card the round "Filtrat" button opens over the results and closes, so
-// several options can be picked and then applied together with its own button. Of what the browse
-// row opens (the search, the filters, the map, the order) only one is open at a time: opening it
-// says so (section:open), and another's opening folds it (foldFor). Being the browse page's own,
-// it also folds whatever is open on Escape or a tap on the dim under it (foldAll), and fits what
-// opens into the screen (fit).
+// The filter panel: a card the round "Filtrat" button opens over the results and closes. Its
+// options apply by themselves, a second after the last change (changed): the page refreshes in
+// place for them (apply, refresh.js), the card left open as the visitor has it (keep), and the
+// results, their count and the chips follow under it; folding the card applies at once a change
+// still waiting. Of what the browse row opens (the search, the filters, the map, the order) only
+// one is open at a time: opening it says so (section:open), and another's opening folds it
+// (foldFor). Being the browse page's own, it also folds whatever is open on Escape or a tap on the
+// dim under it (foldAll), and fits what opens into the screen (fit).
 export default class extends Controller {
   static targets = ["panel", "form", "toggle", "tools", "scrim"];
 
+  disconnect() {
+    clearTimeout(this.timer);
+  }
+
   toggle() {
-    if (this.panelTarget.classList.contains("is-open")) this.reset();
+    if (this.isOpen) this.fold();
     else this.open();
   }
 
@@ -20,15 +27,24 @@ export default class extends Controller {
     this.dispatch("open", { target: this.toggleTarget, prefix: "section" });
   }
 
-  // Closes it without moving focus, e.g. before Turbo caches the page for the back button.
+  // Folds it, a change still waiting applying now.
+  fold() {
+    if (this.timer) this.apply();
+    this.reset();
+  }
+
+  // Folds it as it is, without moving the focus or applying, e.g. before Turbo caches the page for
+  // the back button.
   reset() {
+    clearTimeout(this.timer);
+    this.timer = null;
     this.panelTarget.classList.remove("is-open");
     this.toggleTarget.setAttribute("aria-expanded", "false");
   }
 
   // Another card opened.
   foldFor(event) {
-    if (event.target !== this.toggleTarget) this.reset();
+    if (event.target !== this.toggleTarget) this.fold();
   }
 
   // Escape, or a tap on the dim: whatever the row opened folds, as when another opens
@@ -48,7 +64,49 @@ export default class extends Controller {
     this.toolsTarget.style.setProperty("--top", `${Math.round(this.toolsTarget.getBoundingClientRect().bottom)}px`);
   }
 
+  // A change in the form, a box ticked or a field typed in: the results follow a second after the
+  // last one.
+  changed() {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.apply(), 1000);
+  }
+
+  // Enter in a typed field (a year, a distance) needn't wait.
+  enter(event) {
+    if (!event.target.matches('input[type="text"]')) return;
+    event.preventDefault();
+    this.apply();
+  }
+
+  apply() {
+    clearTimeout(this.timer);
+    this.timer = null;
+    refreshFor(this.formTarget);
+  }
+
+  // While the page morphs into the refreshed one: the open card stays as the visitor has it, its
+  // fields and all (a change made since goes on waiting), and its button says it is open; the row
+  // keeps its measure (--top); and a field in use elsewhere, the map's distance as it is dragged,
+  // keeps its value.
+  keep(event) {
+    if (event.target === this.panelTarget && this.isOpen) event.preventDefault();
+  }
+
+  keepAttribute(event) {
+    const { attributeName } = event.detail;
+    if ((event.target === this.toggleTarget && attributeName === "aria-expanded" && this.isOpen)
+      || (event.target === this.toolsTarget && attributeName === "style")
+      || (event.target === document.activeElement && (attributeName === "value" || attributeName === "checked"))) {
+      event.preventDefault();
+    }
+  }
+
+  // An order picked in Rendit's menu sends the form, and the page reloads in it.
   submit() {
     this.formTarget.requestSubmit();
+  }
+
+  get isOpen() {
+    return this.panelTarget.classList.contains("is-open");
   }
 }
