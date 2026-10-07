@@ -67,3 +67,14 @@ document.addEventListener("turbo:before-cache", () => {
   for (const card of document.querySelectorAll(".card.pressed")) card.classList.remove("pressed");
 });
 document.addEventListener("touchstart", () => {}, { passive: true });
+
+// Going back or forward, Turbo shows its copy of the page with the cross-fade base.html asks for
+// (view transitions). Where the browser has animated the change itself, as iOS does under a swipe
+// from the screen's edge, that would be a second change, from the page left to the page come back
+// to, and the page seems to jump: such a visit goes without it, as do those in browsers that can't
+// tell. The page shown brings the setting back with its head, as after a refresh (refresh.js).
+addEventListener("popstate", (event) => {
+  if (event.state?.turbo && (event.hasUAVisualTransition ?? true)) {
+    document.head.querySelector('meta[name="view-transition"]')?.remove();
+  }
+});
