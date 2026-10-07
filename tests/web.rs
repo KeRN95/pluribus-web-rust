@@ -186,6 +186,18 @@ fn card_numbers(html: &str) -> Vec<i64> {
         .collect()
 }
 
+/// The listing numbers of the cards on a page and on every page after it, as scrolling loads them.
+async fn every_page(pool: &PgPool, uri: &str) -> Vec<i64> {
+    let mut page = html(pool.clone(), uri).await;
+    let mut numbers = card_numbers(&page);
+    while let Some((frame_id, src)) = next_frame(&page) {
+        let request = Request::get(&src).header("turbo-frame", &frame_id).body(Body::empty()).unwrap();
+        page = send(pool.clone(), request).await.body.replace("&#38;", "&");
+        numbers.extend(card_numbers(&page));
+    }
+    numbers
+}
+
 /// Positions of the texts in the page, which must all be there.
 fn positions(html: &str, texts: &[&str]) -> Vec<usize> {
     texts.iter().map(|text| html.find(text).unwrap_or_else(|| panic!("missing {text}"))).collect()
@@ -998,6 +1010,58 @@ async fn outdated_slug_redirects_to_the_current_one(pool: PgPool) {
         response.location.as_deref(),
         Some("/listing/1001-volkswagen-golf-7-2016-nafte")
     );
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_parent_category_pages_in_order_across_its_subcategories(pool: PgPool) {
+    // Thirty more each in Makina and Motoçikleta, both under Automjete, their prices and their
+    // distances from Tirana's middle taking turns between the two. A page over Automjete reads
+    // each subcategory's first in order and merges them (db::push_ordered); page after page, the
+    // cards come as one ORDER BY over all of them would have them.
+    sqlx::query(
+        "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title,
+                               description, price_amount, price_normalized, currency, status,
+                               published_at, latitude, longitude)
+         SELECT '11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111111',
+                (SELECT id FROM categories WHERE slug = CASE WHEN g % 2 = 0 THEN 'makina' ELSE 'motocikleta' END),
+                'rradhe-' || g, 'Rradhë ' || g, '', 1000 + g * 37 % 60 * 10, 1000 + g * 37 % 60 * 10,
+                'EUR', 'ACTIVE', now() - g * interval '1 hour', 41.3275 + g * 0.001, 19.8187
+         FROM generate_series(1, 60) g",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let subtree = "WITH RECURSIVE tree AS (SELECT id FROM categories WHERE slug = 'automjete'
+                                          UNION ALL
+                                          SELECT c.id FROM categories c JOIN tree ON c.parent_id = tree.id)
+                   SELECT id FROM tree";
+    let distance = "(ll_to_earth(l.latitude::float8, l.longitude::float8) <-> ll_to_earth(41.3275, 19.8187))";
+    for (uri, condition, order) in [
+        ("/c/automjete", "true".to_string(), "l.sort_at DESC, l.id DESC".to_string()),
+        ("/c/automjete?sort=price_asc", "true".to_string(), "coalesce(l.price_normalized, 'Infinity'), l.id".to_string()),
+        (
+            "/c/automjete?sort=price_desc",
+            "true".to_string(),
+            "coalesce(l.price_normalized, '-Infinity') DESC, l.id DESC".to_string(),
+        ),
+        (
+            "/c/automjete?lat=41.3275&lng=19.8187&radius=50",
+            format!("l.latitude IS NOT NULL AND {distance} <= 50000"),
+            format!("{distance}, l.id"),
+        ),
+    ] {
+        let expected: Vec<i64> = sqlx::query_scalar(&format!(
+            "SELECT l.public_no FROM listings l
+             WHERE l.status = 'ACTIVE' AND l.category_id IN ({subtree}) AND {condition}
+             ORDER BY {order}"
+        ))
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert!(expected.len() > 2 * 24, "{uri}: more than two pages");
+        assert_eq!(every_page(&pool, uri).await, expected, "{uri}");
+    }
 }
 
 #[sqlx::test]

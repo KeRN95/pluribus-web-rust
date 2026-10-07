@@ -423,15 +423,18 @@ pub struct Near {
 }
 
 impl Near {
-    /// The distance between the pin and the listing, in metres. The listing's side is written
-    /// exactly as in the idx_listings_active_earth index, so "within" can use it.
+    /// The distance between the pin and the listing, in metres, straight through the earth (the
+    /// cube's <->), which differs from the way over its surface by less than 15 cm at the slider's
+    /// 50 km. The location indexes give listings nearest first by it (KNN): the listing's side
+    /// comes first, written exactly as in idx_listings_active_earth and
+    /// idx_listings_active_category_earth.
     fn push_distance(&self, query: &mut QueryBuilder<'_, Postgres>) {
         query
-            .push("earth_distance(ll_to_earth(")
+            .push("(ll_to_earth(l.latitude::float8, l.longitude::float8) <-> ll_to_earth(")
             .push_bind(self.latitude)
             .push(", ")
             .push_bind(self.longitude)
-            .push("), ll_to_earth(l.latitude::float8, l.longitude::float8))");
+            .push("))");
     }
 }
 
@@ -708,38 +711,11 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
             query.push("NULL::float8");
         }
     }
-    query.push(
-        " AS distance_m
-         FROM listings l
-         LEFT JOIN locations loc ON loc.id = l.location_id",
-    );
-    push_filters(&mut query, filter);
-
-    let (sort, near) = (filter.sort, filter.near.as_ref());
-    let (direction, comparison) = if sort.descending() { ("DESC", "<") } else { ("ASC", ">") };
-    if let Some(after) = filter.after {
-        query.push(" AND (");
-        sort.push_key(&mut query, near);
-        query.push(format_args!(", l.id) {comparison} ("));
-        match after {
-            Cursor::Newest { sort_at, id } => {
-                query.push_bind(sort_at).push(", ").push_bind(id);
-            }
-            Cursor::Price { price, id } => {
-                let missing = if sort.descending() { "-Infinity" } else { "Infinity" };
-                query.push("coalesce(").push_bind(price);
-                query.push(format_args!("::numeric, '{missing}'), ")).push_bind(id);
-            }
-            Cursor::Distance { meters, id } => {
-                query.push_bind(meters).push(", ").push_bind(id);
-            }
-        }
-        query.push(")");
-    }
-    query.push(" ORDER BY ");
-    sort.push_key(&mut query, near);
-    query.push(format_args!(" {direction}, l.id {direction} LIMIT "));
-    query.push_bind(PAGE_SIZE + 1);
+    query.push(" AS distance_m FROM ");
+    push_ordered(&mut query, filter, filter.after, false, PAGE_SIZE + 1);
+    query.push(" LEFT JOIN locations loc ON loc.id = l.location_id");
+    push_order(&mut query, filter.sort, filter.near.as_ref());
+    query.push(" LIMIT ").push_bind(PAGE_SIZE + 1);
     query.build_query_as().fetch_all(db).await
 }
 
@@ -787,19 +763,98 @@ pub async fn map_points(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec
         "SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.listing_type, l.price_amount,
                 l.currency::text AS currency, l.price_type,
                 l.latitude::float8 AS latitude, l.longitude::float8 AS longitude
-         FROM listings l",
+         FROM ",
     );
-    push_filters(&mut query, filter);
-    query.push(" AND l.latitude IS NOT NULL ORDER BY ");
-    filter.sort.push_key(&mut query, filter.near.as_ref());
-    let direction = if filter.sort.descending() { "DESC" } else { "ASC" };
-    query.push(format_args!(" {direction}, l.id {direction} LIMIT "));
-    query.push_bind(MAP_POINTS + 1);
+    push_ordered(&mut query, filter, None, true, MAP_POINTS + 1);
+    push_order(&mut query, filter.sort, filter.near.as_ref());
+    query.push(" LIMIT ").push_bind(MAP_POINTS + 1);
     query.build_query_as().fetch_all(db).await
+}
+
+/// The filter's matches in its order, the first `limit` (after the cursor, if one is given), as
+/// `l`: what a page of cards and the map's dots are read from; `located` keeps only listings with
+/// a point. By price or distance within categories, each category's own index gives its first
+/// `limit` in order (idx_listings_active_category_cheapest, _dearest, _earth), in a LATERAL scan
+/// per category, and those merge: `category_id = ANY(...)` can't use an index for the order, and
+/// an index of every category's listings would wade through the others' whenever they come
+/// first, the cheapest of all being neither cars nor flats. The newest first come from one scan,
+/// as ever: every category's newest are in one index (idx_listings_active_sort), the categories
+/// are big enough for it, and filtered, the one scan can share its work among Postgres's workers.
+fn push_ordered(
+    query: &mut QueryBuilder<'_, Postgres>,
+    filter: &ListingFilter,
+    after: Option<Cursor>,
+    located: bool,
+    limit: i64,
+) {
+    let by_category = filter.category_ids.as_ref().filter(|_| {
+        matches!((filter.sort, &filter.near), (Sort::PriceLow | Sort::PriceHigh, _) | (Sort::Nearest, Some(_)))
+    });
+    if let Some(ids) = by_category {
+        query.push("unnest(").push_bind(ids.clone()).push("::uuid[]) AS category(id) CROSS JOIN LATERAL ");
+    }
+    query.push("(SELECT l.* FROM listings l");
+    push_conditions(query, filter, by_category.is_some());
+    if located {
+        query.push(" AND l.latitude IS NOT NULL");
+    }
+    if let Some(after) = after {
+        push_after(query, filter.sort, filter.near.as_ref(), after);
+    }
+    match (filter.sort, filter.near.as_ref()) {
+        // By the distance alone, which a location index gives nearest first (KNN) only when it
+        // is the whole order: every listing as far as the last one comes too, and the id orders
+        // those outside (push_order), many sharing their town's point.
+        (Sort::Nearest, Some(near)) => {
+            query.push(" ORDER BY ");
+            near.push_distance(query);
+            query.push(" FETCH FIRST (").push_bind(limit).push(") ROWS WITH TIES) l");
+        }
+        _ => {
+            push_order(query, filter.sort, filter.near.as_ref());
+            query.push(" LIMIT ").push_bind(limit).push(") l");
+        }
+    }
+}
+
+/// Keyset pagination: only what comes after the cursor in the sort's order.
+fn push_after(query: &mut QueryBuilder<'_, Postgres>, sort: Sort, near: Option<&Near>, after: Cursor) {
+    let comparison = if sort.descending() { "<" } else { ">" };
+    query.push(" AND (");
+    sort.push_key(query, near);
+    query.push(format_args!(", l.id) {comparison} ("));
+    match after {
+        Cursor::Newest { sort_at, id } => {
+            query.push_bind(sort_at).push(", ").push_bind(id);
+        }
+        Cursor::Price { price, id } => {
+            let missing = if sort.descending() { "-Infinity" } else { "Infinity" };
+            query.push("coalesce(").push_bind(price);
+            query.push(format_args!("::numeric, '{missing}'), ")).push_bind(id);
+        }
+        Cursor::Distance { meters, id } => {
+            query.push_bind(meters).push(", ").push_bind(id);
+        }
+    }
+    query.push(")");
+}
+
+/// The sort's order, the id breaking ties.
+fn push_order(query: &mut QueryBuilder<'_, Postgres>, sort: Sort, near: Option<&Near>) {
+    let direction = if sort.descending() { "DESC" } else { "ASC" };
+    query.push(" ORDER BY ");
+    sort.push_key(query, near);
+    query.push(format_args!(" {direction}, l.id {direction}"));
 }
 
 /// The WHERE clause shared by a page of listings, their count and their dots on the map.
 fn push_filters(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilter) {
+    push_conditions(query, filter, false);
+}
+
+/// push_filters, the categories either listed or, `per_category`, the one a LATERAL scan is on
+/// (push_ordered).
+fn push_conditions(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilter, per_category: bool) {
     query.push(" WHERE l.status = 'ACTIVE'");
     match filter.seller {
         Some(Seller::User(id)) => {
@@ -811,7 +866,11 @@ fn push_filters(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilter) 
         None => {}
     }
     if let Some(ids) = &filter.category_ids {
-        query.push(" AND l.category_id = ANY(").push_bind(ids.clone()).push(")");
+        if per_category {
+            query.push(" AND l.category_id = category.id");
+        } else {
+            query.push(" AND l.category_id = ANY(").push_bind(ids.clone()).push(")");
+        }
     }
     if let Some(location_id) = filter.location_id {
         query
@@ -830,8 +889,8 @@ fn push_filters(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilter) 
             );
     }
     if let Some(near) = &filter.near {
-        // earth_box() finds the candidates in the index; earth_distance() keeps those truly
-        // within the radius (the box's corners reach further).
+        // earth_box() finds the candidates in the index; the distance keeps those truly within the
+        // radius (the box's corners reach further).
         query
             .push(" AND l.latitude IS NOT NULL AND earth_box(ll_to_earth(")
             .push_bind(near.latitude)
