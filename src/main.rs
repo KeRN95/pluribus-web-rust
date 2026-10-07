@@ -1,8 +1,12 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, time::Duration};
 
 use anyhow::Context;
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::EnvFilter;
+
+/// How often the words search corrects typos from are rebuilt (db::refresh_search_words). It takes
+/// a couple of seconds for 100 000 listings, and searches go on meanwhile.
+const SEARCH_WORDS_REFRESH: Duration = Duration::from_secs(15 * 60);
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -22,6 +26,21 @@ async fn main() -> anyhow::Result<()> {
         .context("could not connect to PostgreSQL")?;
 
     sqlx::migrate!().run(&db).await.context("could not run migrations")?;
+
+    // Search fixes typos and finds words' other forms from the words listings use, a list rebuilt
+    // now and then every SEARCH_WORDS_REFRESH, so that it follows the listings posted meanwhile.
+    tokio::spawn({
+        let db = db.clone();
+        async move {
+            let mut refresh = tokio::time::interval(SEARCH_WORDS_REFRESH);
+            loop {
+                refresh.tick().await;
+                if let Err(error) = marketplace::db::refresh_search_words(&db).await {
+                    tracing::warn!(%error, "could not refresh the words search corrects typos from");
+                }
+            }
+        }
+    });
 
     let addr: SocketAddr = std::env::var("BIND_ADDR")
         .unwrap_or_else(|_| "127.0.0.1:3000".to_string())

@@ -72,7 +72,8 @@ cargo test
 | `migrations/0013_car_makes_and_models.sql` | The makes and models sellers pick from: 42 makes common in Albania with their usual models; makes and models sellers had typed that are on the list join it |
 | `migrations/0014_options_name.sql` | A car's equipment (ABS, air conditioning...) is called "Opsionet" |
 | `migrations/0015_generated_titles.sql` | A car's title made from what it is (make, model, body type, colour), kept in `listings.generated_title` |
-| `tests/` | Request tests (`web.rs`), the 71 schema checks (`schema_checks.sql`, also run by `schema.rs`) and sample data (`fixtures/`) |
+| `migrations/0016_fuzzy_search.sql` | Search that forgives typos and finds a word's other forms: the words listings use (`search_words`), a rough Albanian stem (`sq_stem`), and `search_query()`, which widens a search's words with them |
+| `tests/` | Request tests (`web.rs`), the 77 schema checks (`schema_checks.sql`, also run by `schema.rs`) and sample data (`fixtures/`) |
 | `dev/sample_listings.sql` | 305 extra sample listings for the development database (not used by the tests) |
 | `.sqlx/` | Cached query metadata, so the project builds without a database (set `SQLX_OFFLINE=true`) |
 | `CHANGES.md` | What changed from the first version of the schema, and why |
@@ -85,7 +86,7 @@ cargo test
 - Small updates come back as Turbo Streams. For example, the phone button ("Shfaq numrin") swaps in the phone number and counts the reveal.
 - The little JavaScript there is lives in Stimulus controllers in `static/js/controllers/`, like the share button.
 - The welcome page (`/`) asks what the visitor is looking for, in words only, in a pill like the message box in Claude's app with a round coral search button inside it, and searches every category and town; the results' filters narrow them. Under it, pills like the listing page's details lead straight to every main category, all at once, each with its icon (`SHORTCUTS` in `browse.rs`; a main category added later gets a box until it has one); they take as many lines as they need.
-- Category pages (`/c/makina`) and search (`/search?q=golf`) share one handler and one filter form. Filters are ordinary query parameters (`/c/makina?vehicle_fuel=DIESEL&price_max=12000&sort=price_asc`), so any filtered page can be bookmarked, shared and indexed, and infinite scroll keeps them.
+- Category pages (`/c/makina`) and search (`/search?q=golf`) share one handler and one filter form. A search forgives typos and finds a word's other forms (see "Search can start in PostgreSQL"); when it searched a word in place of a misspelt one, a line under the heading names it: "Shfaqen edhe rezultatet për „golf“." Filters are ordinary query parameters (`/c/makina?vehicle_fuel=DIESEL&price_max=12000&sort=price_asc`), so any filtered page can be bookmarked, shared and indexed, and infinite scroll keeps them.
 - A listing card shows the photo, the title, the price, and a details line that always starts with the city: "Tiranë · 2016 · 148 000 km · Naftë". The details line takes one line and ends in "…" when longer. In a search limited to a city (`city=vlore`), the cards in that city leave the city out, since it says nothing new, and show instead the first property the listing page has that neither the card nor the title already gives (a phone's brand: "Apple · 128 GB"; for a "Volkswagen Golf 7", the body type). The city is the listing's municipality, found by `location_municipality()`, so a town or neighbourhood added later under a municipality shows the municipality.
 - A card is an `<article>` whose title link is stretched over the whole card with CSS (`.card-link::after`): a tap anywhere opens the listing, and screen readers name the link by its title. Under a mouse pointer, a rounded panel in the site's muted colour appears behind the card, a little larger than it (`.card::before`).
 - Filtrat, a pill, and Harta (the map) and Rendit (the order), round buttons as tall as it with only their icons in the page's own colours, as the listing page's share button is (their names and what they are set to, "10 km" or "Kudo", the order now, for screen readers and as their tooltips), stand side by side on every screen. The filters and the map open under the row, as wide as it, and the orders in a menu under their button, like the in-page dropdowns, closing on a tap outside or Escape (`dropdown_controller.js`); only one is open at a time: opening one says so (`section:open`) and the others fold. Filtrat says which filters are on but the map's point, which has its own chip. The filters' card is drawn like Claude's, as the posting form's own fields are (the menus' hairline, rounder corners, a shadow you barely see), and whichever is open has its opener on the accent's tint. "Filtrat" says which filters are on; their options are boxes like the posting form's toggles, picked on the accent's tint, under quiet grey names; the options picked apply together with its own button (`filters_controller.js`), and on wide screens its groups stand side by side; a make picked there narrows the models to its own at once, as in the posting form (`narrow_controller.js`). The price is one track with two ends, the lowest and the highest, which stop at each other (`price_range_controller.js`): its scale grows to the right, as the map's distance does, from 10 € to about a million (a hundred times as many Lekë), prices kept to two figures, and either end at its edge is no limit. A car's body types (Karroceria) take a line of their own, on every screen, each box with the car's side drawn over its name (`BODY_TYPES` in `properties.rs`). A listener in `application.js` drops empty fields from the URL before Turbo fetches it.
@@ -203,7 +204,7 @@ All tables live in the default `public` schema, next to the citext, pg_trgm, una
 To apply and check the schema with psql instead:
 
 ```bash
-psql -v ON_ERROR_STOP=1 --single-transaction -f migrations/0001_marketplace_schema.sql -f migrations/0002_marketplace_reference_data.sql -f migrations/0003_category_properties.sql -f migrations/0004_plate_codes.sql -f migrations/0005_map_search.sql -f migrations/0006_rename_patundshmeri_to_prona.sql -f migrations/0007_sign_in_codes.sql -f migrations/0008_subcategories.sql -f migrations/0009_seller_options.sql -f migrations/0010_post_before_sign_in.sql -f migrations/0011_paused_listings.sql -f migrations/0012_parts_and_accessories.sql -f migrations/0013_car_makes_and_models.sql -f migrations/0014_options_name.sql -f migrations/0015_generated_titles.sql
+psql -v ON_ERROR_STOP=1 --single-transaction -f migrations/0001_marketplace_schema.sql -f migrations/0002_marketplace_reference_data.sql -f migrations/0003_category_properties.sql -f migrations/0004_plate_codes.sql -f migrations/0005_map_search.sql -f migrations/0006_rename_patundshmeri_to_prona.sql -f migrations/0007_sign_in_codes.sql -f migrations/0008_subcategories.sql -f migrations/0009_seller_options.sql -f migrations/0010_post_before_sign_in.sql -f migrations/0011_paused_listings.sql -f migrations/0012_parts_and_accessories.sql -f migrations/0013_car_makes_and_models.sql -f migrations/0014_options_name.sql -f migrations/0015_generated_titles.sql -f migrations/0016_fuzzy_search.sql
 ```
 
 ```bash
@@ -266,11 +267,14 @@ Do not store image/video blobs in PostgreSQL. Store them in an S3-compatible sto
 ### 4. Search can start in PostgreSQL
 
 - PostgreSQL has no Albanian stemmer, so `sq_unaccent` is the `simple` configuration plus accent folding: "shtepi tirane" finds "Shtëpi me qira në Tiranë". Use the same configuration in queries.
+- Search forgives typos and finds a word's other forms (migration 0016): "golff" finds the Golfs, "makinat" the listings that say "makinë", "apartamente" the "Apartament". `search_query(words)` turns the words into the tsquery listings are matched against: the websearch syntax as before (`-word`, `"a phrase"`, `or`), each word of four letters or more widened, where it stands, to its other forms (the words listings use with the same rough stem, `sq_stem`: makina, makine, makinat, makinave → makin) and, when few listings use it or none do, to the common word it most likely misspells (`search_correction`: spelt alike by `pg_trgm`, used by more than three times as many listings) with that word's forms. A word many listings use is never corrected, so "audi" stays apart from "audio". It also returns the corrections, which the page names under its heading ("Shfaqen edhe rezultatet për „golf“."). The first eight words are widened; at most 100 characters of search words are taken.
+- The words listings use are the materialized view `search_words`, from `ts_stat` over the active listings' search vectors. The app rebuilds it at startup and every 15 minutes (`REFRESH MATERIALIZED VIEW CONCURRENTLY`, which searches go on through; about 2 s for 100,000 listings), so a new listing's words reach typo correction within a quarter of an hour, while the listing itself is searchable at once. `tests/fixtures/listings.sql` and `dev/sample_listings.sql` end by refreshing it, and so should anything else that loads listings with psql: `REFRESH MATERIALIZED VIEW search_words;`.
+- Pages work a search out once, before their listing queries (`db::text_search`), and pass it to them as a parameter. Worked out inside them, it would be hidden from the planner, and a search that finds nothing would walk the whole newest-first index: 87 ms instead of 0.04 ms on 161,000 listings.
 - The search vector weights the title (A) above searchable attribute labels (B, from `listings.search_extra`) and the description (C), so `ts_rank` puts title matches first.
 - `sort_at = greatest(published_at, bumped_at)` is the "newest first" key. A bump lifts a listing to the top, and newer listings then push it down. Featured listings get their own slot rather than being sorted into every page.
 - Browse and search indexes are partial (`WHERE status = 'ACTIVE'`). After a year most rows are expired or sold, and this keeps the hot indexes small.
 - Listings are priced in ALL and EUR. Filter and sort on `price_normalized`, never on `price_amount`. It holds the price in euros, computed with `price_in_eur(amount, currency)` from the `exchange_rates` table; price filters convert their bounds with the same function, so the two always agree. Free listings count as 0; "price on request" has no price and sorts last.
-- Trigram indexes on unaccented titles and location names support "did you mean" and autocomplete ("korce" finds Korçë).
+- Trigram indexes on unaccented titles and location names support autocomplete ("korce" finds Korçë).
 - Radius search ("within 10 km") uses the `cube` and `earthdistance` extensions rather than PostGIS. A listing's point is `listings.latitude`/`longitude`, and the partial GiST index `idx_listings_active_earth` covers the active listings that have one: a 5 km search around Tirana's centre takes about a millisecond (query below). Municipalities have points too, at their seats (from Wikidata, CC0).
 
 This is enough for an MVP and a fairly large site: each example query below ran in under 10 ms against 200,000 listings. When traffic grows, mirror active listings into OpenSearch/Elasticsearch, fed from `outbox_events` so the index never misses a change.
@@ -407,18 +411,24 @@ LIMIT 4;
 
 ### Text search
 
+Work the search out first, forgiving typos and finding other forms of the words, along with the words it searched in place of misspelt ones:
+
+```sql
+SELECT query::text, corrections FROM search_query(:words);   -- golff: 'golff' | 'golf', {golf}
+```
+
+Then pass the query in as a parameter, so the planner sees it:
+
 ```sql
 SELECT l.id, l.title, l.sort_at
 FROM listings l
 WHERE l.status = 'ACTIVE'
-  AND l.search_vector @@ websearch_to_tsquery('sq_unaccent', :query)
+  AND l.search_vector @@ :query::tsquery
 ORDER BY l.sort_at DESC, l.id DESC
 LIMIT 30;
 ```
 
-For best-match ordering, use `ORDER BY ts_rank(l.search_vector, websearch_to_tsquery('sq_unaccent', :query)) DESC`.
-
-Fuzzy title matching ("did you mean"): `WHERE l.status = 'ACTIVE' AND immutable_unaccent(l.title) % immutable_unaccent(:query)`.
+For best-match ordering, use `ORDER BY ts_rank(l.search_vector, :query::tsquery) DESC`. Searching the words exactly as typed is `websearch_to_tsquery('sq_unaccent', :words)`.
 
 ### Attribute filters
 

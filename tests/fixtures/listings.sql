@@ -183,3 +183,7 @@ JOIN listings l ON l.public_no = v.public_no;
 
 -- Continue numbering new listings after the fixed ones.
 SELECT setval(pg_get_serial_sequence('listings', 'public_no'), (SELECT max(public_no) FROM listings));
+
+-- Search fixes typos from the words listings use (migration 0016), a list the app rebuilds every
+-- quarter of an hour; rebuilt here, it has these listings' words at once.
+REFRESH MATERIALIZED VIEW search_words;

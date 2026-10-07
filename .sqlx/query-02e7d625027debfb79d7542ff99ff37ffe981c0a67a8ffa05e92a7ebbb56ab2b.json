@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT query::text AS \"query!\", corrections AS \"corrections!\" FROM search_query($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "query!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "corrections!",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "02e7d625027debfb79d7542ff99ff37ffe981c0a67a8ffa05e92a7ebbb56ab2b"
+}

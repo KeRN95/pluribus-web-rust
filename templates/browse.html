@@ -42,6 +42,10 @@
   </details>
   {%- endif %}
   <p class="result-count">{{ count }}</p>
+  {%- if !corrections.is_empty() %}
+  {#- Under the heading, the words searched in place of misspelt ones ("golff" finds the Golfs). -#}
+  <p class="search-corrections">Shfaqen edhe rezultatet për {{ corrections }}.</p>
+  {%- endif %}
 </header>
 {% if !subcategories.is_empty() %}
 <nav class="categories" aria-label="Nënkategoritë">

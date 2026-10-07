@@ -404,6 +404,38 @@ SELECT pg_temp.check('a title match outranks a description-only match for "golf"
 SELECT pg_temp.check('location autocomplete ignores accents ("kucov" finds Kuçovë)',
     (SELECT array_agg(name::text) FROM locations WHERE immutable_unaccent(name) ILIKE 'kucov%') = ARRAY['Kuçovë']);
 
+-- Search that forgives typos and finds other forms of a word (migration 0016) reads the words
+-- listings use, which a refresh brings up to date.
+REFRESH MATERIALIZED VIEW search_words;
+
+SELECT pg_temp.check('sq_stem gives a word''s forms one stem (makine, makina, makinat, makinave...)',
+    (SELECT count(DISTINCT sq_stem(w)) = 1 AND min(sq_stem(w)) = 'makin'
+     FROM unnest(ARRAY['makine', 'makina', 'makinat', 'makinave', 'makinen', 'makines']) AS w));
+
+SELECT pg_temp.check('sq_stem keeps short words whole (audi and audio, benz and benzine, Berat)',
+    sq_stem('audi') <> sq_stem('audio') AND sq_stem('benz') <> sq_stem('benzine') AND sq_stem('berat') = 'berat');
+
+SELECT pg_temp.check('"golff" finds the golf, and names "golf" as the word it searched',
+    (SELECT corrections = '{golf}'
+            AND EXISTS (SELECT 1 FROM listings
+                        WHERE id = '55555555-5555-4555-8555-555555555555' AND search_vector @@ query)
+     FROM search_query('golff')));
+
+SELECT pg_temp.check('"makinat" finds "Makinë" as another form of the word, not a correction',
+    (SELECT corrections = '{}'
+            AND EXISTS (SELECT 1 FROM listings
+                        WHERE id = '55555555-5555-4555-8555-555555555555' AND search_vector @@ query)
+     FROM search_query('makinat')));
+
+SELECT pg_temp.check('a word left out stays out, with its forms ("golff -nafte" leaves out the diesel golf)',
+    (SELECT NOT EXISTS (SELECT 1 FROM listings
+                        WHERE id = '55555555-5555-4555-8555-555555555555' AND search_vector @@ query)
+     FROM search_query('golff -nafte')));
+
+SELECT pg_temp.check('words listings use are searched as typed, and a search of no words finds nothing',
+    (SELECT corrections = '{}' FROM search_query('golf audi'))
+    AND (SELECT numnode(query) = 0 AND corrections = '{}' FROM search_query('+++')));
+
 DO $$ BEGIN
     PERFORM set_config('app.user_id', '11111111-1111-4111-8111-111111111111', true),
             set_config('app.status_reason', 'Sold to Bob', true);

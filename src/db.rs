@@ -433,7 +433,8 @@ pub struct ListingFilter {
     pub location_id: Option<Uuid>,
     /// A map pin: listings within its radius.
     pub near: Option<Near>,
-    pub query: Option<String>,
+    /// Words to search for, made by `text_search`.
+    pub search: Option<TextSearch>,
     pub listing_type: Option<String>,
     /// Any of these conditions (NEW, LIKE_NEW, USED, FOR_PARTS).
     pub conditions: Vec<String>,
@@ -441,6 +442,40 @@ pub struct ListingFilter {
     pub attributes: Vec<AttributeFilter>,
     pub sort: Sort,
     pub after: Option<Cursor>,
+}
+
+/// A visitor's words as a search, which forgives typos and finds other forms of a word: "golff"
+/// finds the Golfs, "makinat" the listings that say "makinë" (search_query, migration 0016).
+#[derive(Debug, Clone)]
+pub struct TextSearch {
+    /// The tsquery listings are matched against, as text.
+    query: String,
+    /// The words searched in place of misspelt ones ("golf" for "golff"), in the order typed.
+    pub corrections: Vec<String>,
+}
+
+/// The search for these words, or None without any. Pages work it out once, before the listing
+/// queries, and those take it as a parameter: worked out inside them, it would be hidden from the
+/// planner, and a search that finds nothing would walk the whole newest-first index.
+pub async fn text_search(db: &PgPool, words: Option<&str>) -> sqlx::Result<Option<TextSearch>> {
+    let Some(words) = words else {
+        return Ok(None);
+    };
+    let row = sqlx::query!(
+        r#"SELECT query::text AS "query!", corrections AS "corrections!" FROM search_query($1)"#,
+        words,
+    )
+    .fetch_one(db)
+    .await?;
+    Ok(Some(TextSearch { query: row.query, corrections: row.corrections }))
+}
+
+/// Rebuilds the list of words listings use, which search takes typos' corrections and words'
+/// other forms from, so that it follows the listings. Searches go on reading the old list
+/// meanwhile.
+pub async fn refresh_search_words(db: &PgPool) -> sqlx::Result<()> {
+    sqlx::query!("REFRESH MATERIALIZED VIEW CONCURRENTLY search_words").execute(db).await?;
+    Ok(())
 }
 
 /// Who sells a listing: a private seller (a user) or a business.
@@ -686,11 +721,8 @@ fn push_filters(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilter) 
         near.push_distance(query);
         query.push(" <= ").push_bind(near.radius_m);
     }
-    if let Some(text) = &filter.query {
-        query
-            .push(" AND l.search_vector @@ websearch_to_tsquery('sq_unaccent', ")
-            .push_bind(text.clone())
-            .push(")");
+    if let Some(search) = &filter.search {
+        query.push(" AND l.search_vector @@ ").push_bind(search.query.clone()).push("::tsquery");
     }
     if let Some(listing_type) = &filter.listing_type {
         query.push(" AND l.listing_type = ").push_bind(listing_type.clone());

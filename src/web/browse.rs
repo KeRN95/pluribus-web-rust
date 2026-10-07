@@ -147,6 +147,8 @@ pub struct Link {
 struct BrowsePage<'a> {
     heading: String,
     count: String,
+    /// The words searched in place of misspelt ones, quoted ("„golf“"), or empty.
+    corrections: String,
     filters: &'a Filters<'a>,
     fields: Vec<Field>,
     chips: Vec<Chip>,
@@ -238,8 +240,9 @@ async fn profile_page(
     let params = Params::parse(query.as_deref());
     let after = params.first("after").and_then(|value| Cursor::decode(Sort::Newest, value));
     // A search within this seller's listings, kept as the list scrolls on.
-    let words = params.first("q").map(|q| q.trim().chars().take(100).collect::<String>()).filter(|q| !q.is_empty());
-    let filter = ListingFilter { seller: Some(profile.seller), query: words.clone(), after, ..Default::default() };
+    let words = params.search_words();
+    let search = db::text_search(&state.db, words.as_deref()).await?;
+    let filter = ListingFilter { seller: Some(profile.seller), search, after, ..Default::default() };
     let next_url = |cursor: &str| match &words {
         Some(q) => format!("{path}?{}", form_urlencoded::Serializer::new(String::new()).append_pair("q", q).append_pair("after", cursor).finish()),
         None => format!("{path}?after={cursor}"),
@@ -323,7 +326,8 @@ async fn browse(
 ) -> Result<Response> {
     let params = Params::parse(query.as_deref());
     let category_slug = page_slug.as_deref().or(params.first("category"));
-    let (categories, cities, attributes) = tokio::try_join!(
+    let words = params.search_words();
+    let (categories, cities, attributes, search) = tokio::try_join!(
         db::categories(&state.db),
         db::cities(&state.db),
         async {
@@ -332,6 +336,7 @@ async fn browse(
                 None => Ok(Vec::new()),
             }
         },
+        db::text_search(&state.db, words.as_deref()),
     )?;
     let category = category_slug.and_then(|slug| categories.by_slug(slug));
     let path = match (&page_slug, category, view) {
@@ -349,7 +354,9 @@ async fn browse(
         &cities,
         &attributes,
     );
-    let filter = filters.listing_filter();
+    // The words searched in place of misspelt ones, which the heading's line names.
+    let corrections = search.as_ref().map(|search| format::quoted_list(&search.corrections)).unwrap_or_default();
+    let filter = filters.listing_filter(search);
     let next_url = |cursor: &str| filters.next_url(cursor);
 
     // In a search limited to a city, the cards in that city leave it out (ListingCard::city_label).
@@ -460,6 +467,7 @@ async fn browse(
     render(BrowsePage {
         heading,
         count,
+        corrections,
         fields: filters.fields(),
         chips: filters.chips(),
         clear_url: filters.clear_url(),

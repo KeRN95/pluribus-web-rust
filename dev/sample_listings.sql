@@ -2195,6 +2195,10 @@ SET latitude = round((p.lat + p.km * cos(p.angle) / 111.32)::numeric, 6),
 FROM points p
 WHERE p.id = l.id;
 
+-- Search fixes typos from the words listings use (migration 0016), a list the app rebuilds every
+-- quarter of an hour; rebuilt here, it has these listings' words at once.
+REFRESH MATERIALIZED VIEW search_words;
+
 COMMIT;
 
 -- Photo credits (Unsplash):

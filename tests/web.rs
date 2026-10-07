@@ -547,6 +547,34 @@ async fn search_matches_property_values(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
+async fn search_forgives_typos_and_names_the_word_it_searched(pool: PgPool) {
+    // No listing says "golff": the Golf is found, and the page says "golf" was searched too.
+    let misspelt = get(pool.clone(), "/search?q=golff").await.body;
+    assert_eq!(card_numbers(&misspelt), vec![1001]);
+    assert!(misspelt.contains(r#"<p class="search-corrections">Shfaqen edhe rezultatet për „golf“.</p>"#));
+    // A word listings use is searched as typed.
+    let typed = get(pool, "/search?q=golf").await.body;
+    assert!(typed.contains("Volkswagen Golf 7, 2016, naftë"));
+    assert!(!typed.contains("search-corrections"));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn search_finds_other_forms_of_a_word(pool: PgPool) {
+    // The flat's title says "Apartament" and the search the plural, "apartamente": the same word,
+    // which needs no note.
+    let body = get(pool, "/search?q=apartamente").await.body;
+    assert!(body.contains("Apartament 2+1 me qira në Tiranë"));
+    assert!(!body.contains("search-corrections"));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_word_left_out_stays_out_of_a_widened_search(pool: PgPool) {
+    // The Golf runs on diesel (naftë): leaving that out leaves the Golf out, typo or not.
+    let body = get(pool, "/search?q=golff+-naft%C3%AB").await.body;
+    assert!(card_numbers(&body).is_empty());
+}
+
+#[sqlx::test(fixtures("listings"))]
 async fn city_filter_keeps_to_that_city(pool: PgPool) {
     let body = get(pool, "/search?city=durres").await.body;
     assert!(body.contains("<h1>Njoftimet në Durrës</h1>"));
@@ -2396,6 +2424,8 @@ async fn a_profile_searches_its_sellers_listings(pool: PgPool) {
     assert_eq!(card_numbers(&found), vec![1001]);
     assert!(found.contains("1 njoftim për „golf“"));
     assert!(found.contains(r#"value="golf""#));
+    // Misspelt, it still finds the golf.
+    assert_eq!(card_numbers(&get(pool.clone(), &format!("{ana}?q=golff")).await.body), vec![1001]);
     let none = get(pool, &format!("{ana}?q=mercedes")).await.body;
     assert!(card_numbers(&none).is_empty() && none.contains("0 njoftime për „mercedes“"));
 }

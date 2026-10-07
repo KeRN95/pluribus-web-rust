@@ -84,6 +84,16 @@ pub fn listing_count(count: i64, limit: i64) -> String {
     }
 }
 
+/// Words in Albanian quotes, listed: "„golf“", "„golf“ dhe „mercedes“", "„a“, „b“ dhe „c“".
+pub fn quoted_list(words: &[String]) -> String {
+    let quoted: Vec<String> = words.iter().map(|word| format!("„{word}“")).collect();
+    match quoted.split_last() {
+        None => String::new(),
+        Some((last, [])) => last.clone(),
+        Some((last, rest)) => format!("{} dhe {last}", rest.join(", ")),
+    }
+}
+
 /// A distance from the map pin: "850 m", "2,4 km", "18 km".
 pub fn distance(meters: f64) -> String {
     if meters < 950.0 {
@@ -298,6 +308,15 @@ mod tests {
     fn masks_contacts() {
         assert_eq!(Contact::Phone("+355691234567".to_string()).masked(), "+355 69 *** **67");
         assert_eq!(Contact::Email("ana@example.com".to_string()).masked(), "a***@example.com");
+    }
+
+    #[test]
+    fn lists_words_in_quotes() {
+        let words = |list: &[&str]| list.iter().map(|word| word.to_string()).collect::<Vec<_>>();
+        assert_eq!(quoted_list(&[]), "");
+        assert_eq!(quoted_list(&words(&["golf"])), "„golf“");
+        assert_eq!(quoted_list(&words(&["golf", "mercedes"])), "„golf“ dhe „mercedes“");
+        assert_eq!(quoted_list(&words(&["golf", "mercedes", "volkswagen"])), "„golf“, „mercedes“ dhe „volkswagen“");
     }
 
     #[test]

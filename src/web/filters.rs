@@ -17,10 +17,14 @@ use super::properties;
 use crate::{
     db::{
         AttributeFilter, AttributeOption, Categories, Category, City, Cursor, FilterAttribute,
-        ListingFilter, Near, PriceRange, Sort,
+        ListingFilter, Near, PriceRange, Sort, TextSearch,
     },
     format,
 };
+
+/// The most characters of search words a page takes. Searches are a few words; each one widened
+/// costs the database a lookup or two.
+const SEARCH_CHARS: usize = 100;
 
 const CONDITIONS: [&str; 4] = ["NEW", "LIKE_NEW", "USED", "FOR_PARTS"];
 const CURRENCIES: [&str; 2] = ["EUR", "ALL"];
@@ -64,6 +68,11 @@ impl Params {
 
     pub fn first(&self, name: &str) -> Option<&str> {
         self.0.iter().find(|(n, _)| n == name).map(|(_, v)| v.as_str())
+    }
+
+    /// The search words (q), the first SEARCH_CHARS characters of them.
+    pub fn search_words(&self) -> Option<String> {
+        self.first("q").map(|q| q.chars().take(SEARCH_CHARS).collect())
     }
 
     fn all<'p>(&'p self, name: &'p str) -> impl Iterator<Item = &'p str> {
@@ -280,7 +289,7 @@ impl<'a> Filters<'a> {
             category_is_filter,
             categories,
             cities,
-            q: params.first("q").map(str::to_string),
+            q: params.search_words(),
             category,
             city: params.first("city").and_then(|slug| cities.iter().find(|c| c.slug == slug)),
             near,
@@ -298,13 +307,15 @@ impl<'a> Filters<'a> {
         }
     }
 
-    pub fn listing_filter(&self) -> ListingFilter {
+    /// The listing query for these filters, with `search`, the search for the words (q) that
+    /// db::text_search made.
+    pub fn listing_filter(&self, search: Option<TextSearch>) -> ListingFilter {
         let has_price = self.price_min.is_some() || self.price_max.is_some();
         ListingFilter {
             category_ids: self.category.map(|c| self.categories.subtree_ids(c.id)),
             location_id: self.city.map(|c| c.id),
             near: self.near,
-            query: self.q.clone(),
+            search,
             listing_type: self.listing_type.clone(),
             conditions: self.conditions.iter().map(|c| c.to_string()).collect(),
             price: has_price.then(|| PriceRange {
@@ -987,5 +998,13 @@ mod tests {
         assert_eq!(params.first("city"), Some("durres"));
         assert_eq!(params.all("vehicle_fuel").collect::<Vec<_>>(), ["DIESEL", "HYBRID"]);
         assert_eq!(params.first("sort"), None);
+    }
+
+    #[test]
+    fn takes_the_first_hundred_characters_of_the_search_words() {
+        let params = Params::parse(Some(&format!("q={}", "golf ".repeat(30))));
+        assert_eq!(params.search_words().map(|words| words.chars().count()), Some(SEARCH_CHARS));
+        assert_eq!(Params::parse(Some("q=shtëpi")).search_words().as_deref(), Some("shtëpi"));
+        assert_eq!(Params::parse(Some("q=")).search_words(), None);
     }
 }

@@ -748,6 +748,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .results-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .45rem; margin: 1.25rem 0 .25rem; }
 .results-header h1 { margin: 0; }
 .results-header .result-count { margin-left: .55rem; }
+/* The words searched in place of misspelt ones take a line of their own, under the heading. */
+.search-corrections { flex-basis: 100%; margin: 0; color: var(--muted); }
 .breadcrumbs {
   display: flex;
   flex-wrap: wrap;
