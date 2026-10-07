@@ -78,10 +78,11 @@
     </div>
   </div>
   {% when FieldKind::Checkboxes %}
-  <fieldset class="filter-group filter-options{% if field.half %} filter-half{% endif %}">
+  <fieldset class="filter-group filter-options{% if field.half %} filter-half{% endif %}{% if field.icons %} filter-icons{% endif %}">
     <legend class="filter-label">{{ field.label }}</legend>
     {% for choice in field.choices %}
-    <label class="check"><input type="checkbox" name="{{ field.name }}" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}> {{ choice.label }}</label>
+    <label class="check"><input type="checkbox" name="{{ field.name }}" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}>
+      {%- if let Some(icon) = field.icon(choice) %}<svg class="check-icon" width="48" height="24" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %} {{ choice.label }}</label>
     {% endfor %}
   </fieldset>
   {% when FieldKind::Range %}

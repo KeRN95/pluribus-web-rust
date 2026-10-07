@@ -13,6 +13,7 @@
 use rust_decimal::{Decimal, prelude::ToPrimitive};
 use uuid::Uuid;
 
+use super::properties;
 use crate::{
     db::{
         AttributeFilter, AttributeOption, Categories, Category, City, Cursor, FilterAttribute,
@@ -45,7 +46,8 @@ const PRICE_STEPS: u32 = 1000;
 const PRICE_DECADES: f64 = 5.0;
 
 /// A property's boxes share their line with the next field when there are at most this many;
-/// more take a line of their own (Karroceria's seven). See Field::half.
+/// more take a line of their own, as do boxes with icons, however few (Karroceria's seven). See
+/// Field::half.
 const HALF_LIMIT: usize = 5;
 
 /// The query string as name/value pairs, without empty values.
@@ -122,6 +124,16 @@ pub struct Field {
     /// range, a few boxes (Marka beside Modeli, Viti beside Kilometrazhi, Karburanti beside
     /// Kambio). The others take a line of their own.
     pub half: bool,
+    /// Its boxes have icons over the names, a car's side over each body type (Karroceria): they
+    /// are bigger, and take a line of their own on every screen.
+    pub icons: bool,
+}
+
+impl Field {
+    /// The icon over an option's name, where it has one (properties::option_icon).
+    pub fn icon(&self, choice: &Choice) -> Option<&'static str> {
+        properties::option_icon(&self.name, &choice.value)
+    }
 }
 
 #[derive(PartialEq, Eq)]
@@ -740,6 +752,7 @@ impl<'a> Property<'a> {
             unit: attribute.unit.clone().unwrap_or_default(),
             checked: self.checked,
             half: true,
+            icons: false,
         };
         if self.fits_to.is_some() {
             field.name = year_param(attribute);
@@ -789,7 +802,8 @@ impl<'a> Property<'a> {
                 if data_type == "MULTISELECT" || few {
                     field.kind = FieldKind::Checkboxes;
                     field.choices.extend(field.groups.drain(..).flat_map(|group| group.choices));
-                    field.half = field.choices.len() <= HALF_LIMIT;
+                    field.icons = field.choices.iter().any(|choice| field.icon(choice).is_some());
+                    field.half = field.choices.len() <= HALF_LIMIT && !field.icons;
                 }
             }
         }
