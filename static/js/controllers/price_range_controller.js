@@ -5,7 +5,7 @@ import { Controller } from "@hotwired/stimulus";
 // from 10 € (or a hundred times as many Lekë, the rate listings' prices are compared at), a step
 // worth more the further right, prices kept to two figures. Either end at its edge is no limit.
 // The hidden fields carry the prices, the label beside the name says them as their chip does
-// (filters.rs, range_label), and the blue stretch lies between the ends. As filters.rs.
+// (filters.rs, range_label), and the coral stretch lies between the ends. As filters.rs.
 const STEPS = 1000;
 const DECADES = 5;
 const BASE = { EUR: 10, ALL: 1000 };
@@ -36,7 +36,7 @@ export default class extends Controller {
     this.paint();
   }
 
-  // The blue stretch between the ends; the lower end on top once it is in the upper half, so
+  // The coral stretch between the ends; the lower end on top once it is in the upper half, so
   // that two ends at the right edge can still be parted.
   paint() {
     const from = Number(this.fromTarget.value);
