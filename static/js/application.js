@@ -66,6 +66,18 @@ document.addEventListener("click", (event) => event.target.closest(".card a")?.c
 document.addEventListener("turbo:before-cache", () => {
   for (const card of document.querySelectorAll(".card.pressed")) card.classList.remove("pressed");
 });
+
+// The copy of the page Turbo keeps for going back has new <img>s. Lazy and decoded aside, as the
+// cards' photos are, Safari paints them empty and fills them in a moment later, which shows after
+// a swipe back (the button's cross-fade hides it). Photos the page has already loaded go into the
+// copy to be shown at once, from the browser's cache; the page itself is leaving.
+document.addEventListener("turbo:before-cache", () => {
+  for (const img of document.querySelectorAll("img[loading='lazy'], img[decoding='async']")) {
+    if (!img.complete || !img.naturalWidth) continue;
+    img.removeAttribute("loading");
+    img.decoding = "sync";
+  }
+});
 document.addEventListener("touchstart", () => {}, { passive: true });
 
 // Going back or forward, Turbo shows its copy of the page with the cross-fade base.html asks for
