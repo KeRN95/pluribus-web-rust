@@ -4,6 +4,7 @@ mod account;
 mod ai_fill;
 mod browse;
 mod filters;
+mod icons;
 mod listings;
 mod moderation;
 mod newest;

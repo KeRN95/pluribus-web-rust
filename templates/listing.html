@@ -177,9 +177,10 @@
   {% if !details.is_empty() %}
   <section class="listing-details">
     <h2>Detajet</h2>
-    {#- Pills that fill each line: a detail's icon before its value where it has one, otherwise its
-        name, unless the value says it ("6 GB RAM"); several values (a car's options) a pill each,
-        with a check. The names are there for screen readers, and as tooltips. -#}
+    {#- Pills that fill each line: a detail's icon (icons.rs), then its name where its value doesn't
+        say what it is ("Kati 6", but "6 GB RAM", "Euro 6"), then its value; several values (a car's
+        options) a pill each, with a check. The names are there for screen readers, and as
+        tooltips. -#}
     <dl class="attributes">
       {% for detail in details %}
       <div class="attribute-group">
@@ -187,8 +188,8 @@
         {%- for value in detail.values %}
         <dd class="attribute" title="{{ detail.label }}">
           {%- if detail.multi %}<svg class="attribute-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
-          {%- else %}{% match detail.icon %}{% when Some(icon) %}<svg class="attribute-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>
-          {%- when None %}{% if detail.named_before(value) %}<span class="attribute-label" aria-hidden="true">{{ detail.label }}</span>{% endif %}{% endmatch %}{% endif -%}
+          {%- else %}{% if let Some(icon) = detail.icon %}<svg class="attribute-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}
+          {%- if detail.named_before(value) %}<span class="attribute-label" aria-hidden="true">{{ detail.label }}</span>{% endif %}{% endif -%}
           {{ value }}</dd>
         {%- endfor %}
       </div>

@@ -1489,7 +1489,8 @@ pub async fn listing_by_public_no(
 }
 
 /// Property labels and display values, single values and multi-select lists alike, in the order
-/// the listing's category defines. Only properties the category shows in details are included.
+/// the listing's category defines; a box ticked shows its name ("Me garanci"). Only properties the
+/// category shows in details are included.
 pub async fn listing_attributes(
     db: &PgPool,
     listing_id: Uuid,
@@ -1501,7 +1502,7 @@ pub async fn listing_attributes(
            FROM (
                SELECT a.code, coalesce(eca.label, a.name) AS label,
                       ARRAY[coalesce(o.label, v.value_text, format_attribute_number(v.value_number, a.unit),
-                                     CASE v.value_boolean WHEN true THEN 'Po' WHEN false THEN 'Jo' END,
+                                     CASE v.value_boolean WHEN true THEN coalesce(eca.label, a.name) WHEN false THEN 'Jo' END,
                                      to_char(v.value_date, 'DD.MM.YYYY'))] AS shown,
                       false AS multi,
                       eca.sort_order

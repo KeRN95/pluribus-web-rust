@@ -187,7 +187,7 @@ Links to a narrower category, the subcategory chips and the menu's entries under
 
 ### Properties
 
-Each category's properties are rows in the database, not code. A browse page builds its filters from the category's `filterable` properties, listing cards show the `show_in_card` ones after the city ("Tiranë · 2016 · 148 000 km · Naftë"), and the listing page shows the `show_in_details` ones. What `0003_category_properties.sql` sets up, and the migrations named after it; none of it is required but a car's make, model and year:
+Each category's properties are rows in the database, not code. A browse page builds its filters from the category's `filterable` properties, listing cards show the `show_in_card` ones after the city ("Tiranë · 2016 · 148 000 km · Naftë"), and the listing page shows the `show_in_details` ones, each with its icon, drawn as the welcome page's categories are (`web/icons.rs`): the category's own where it says more than the property's (a phone's brand is a phone, a dog's breed a dog), and the property's name beside it where the value alone wouldn't say what it is ("Kati 6", but "Euro 6"); a box ticked shows its name ("Pa aksident"). A new property needs its icon there, or a test fails. What `0003_category_properties.sql` sets up, and the migrations named after it; none of it is required but a car's make, model and year:
 
 | Category | Properties |
 |---|---|

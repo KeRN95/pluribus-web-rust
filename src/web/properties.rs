@@ -15,7 +15,7 @@ use time::OffsetDateTime;
 use super::{
     Result,
     filters::{Choice, Params, parse_number},
-    render,
+    icons, render,
 };
 use crate::{
     AppState,
@@ -65,34 +65,21 @@ pub struct Tile {
 
 /// A car's main fields, in their order, two to a line, each its icon before its name: the car's
 /// front, a name tag, a calendar, a fuel pump, a gear lever's H, the car's side, a speedometer and
-/// a paint palette.
+/// a paint palette (icons.rs, where the listing page takes them too).
 const TILES: [(&str, &str); 8] = [
-    ("vehicle_make", r#"<path d="M5 11l1.5-4a2 2 0 0 1 1.9-1.3h7.2a2 2 0 0 1 1.9 1.3L19 11"/><rect x="3" y="11" width="18" height="6.5" rx="2"/><path d="M6.5 17.5V20M17.5 17.5V20"/><circle cx="7.5" cy="14.2" r=".9"/><circle cx="16.5" cy="14.2" r=".9"/>"#),
-    ("vehicle_model", r#"<path d="M3.5 12.4V5A1.5 1.5 0 0 1 5 3.5h7.4a1.5 1.5 0 0 1 1.06.44l7 7a1.5 1.5 0 0 1 0 2.12l-7.4 7.4a1.5 1.5 0 0 1-2.12 0l-7-7a1.5 1.5 0 0 1-.44-1.06Z"/><circle cx="8.5" cy="8.5" r="1.3"/>"#),
-    ("vehicle_year", r#"<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>"#),
-    ("vehicle_fuel", r#"<path d="M4.5 20.5v-15a2 2 0 0 1 2-2h5.5a2 2 0 0 1 2 2v15M3 20.5h12.5"/><rect x="7" y="6.5" width="4.5" height="3.5" rx=".8"/><path d="M14 11h1.5a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 0 3 0V8.5l-2.5-3"/>"#),
-    ("vehicle_transmission", r#"<circle cx="6" cy="5.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><circle cx="18" cy="5.5" r="1.5"/><circle cx="6" cy="18.5" r="1.5"/><circle cx="12" cy="18.5" r="1.5"/><path d="M6 7v10M12 7v10M18 7v5H6"/>"#),
-    ("vehicle_body_type", r#"<path d="M5 16.5H3.5V13a1 1 0 0 1 .62-.92L6.5 11l2.2-3.3A1.5 1.5 0 0 1 9.95 7h4.7a1.5 1.5 0 0 1 1.17.56L18.5 11l1.4.42a1 1 0 0 1 .6.92v4.16H19M9 16.5h6"/><circle cx="7" cy="16.5" r="2"/><circle cx="17" cy="16.5" r="2"/>"#),
-    ("vehicle_mileage", r#"<path d="M4.2 17.5a9 9 0 1 1 15.6 0"/><path d="m12 14 3.5-4"/><circle cx="12" cy="14.5" r="1.4"/>"#),
-    ("vehicle_color", r#"<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2s-.5-.7-.5-1.2c0-1 .8-1.8 1.8-1.8h2.1a4.3 4.3 0 0 0 4.3-4.3C21 6.6 17 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/>"#),
+    ("vehicle_make", icons::CAR_FRONT),
+    ("vehicle_model", icons::NAME_TAG),
+    ("vehicle_year", icons::CALENDAR),
+    ("vehicle_fuel", icons::FUEL_PUMP),
+    ("vehicle_transmission", icons::GEAR_LEVER),
+    ("vehicle_body_type", icons::CAR_SIDE),
+    ("vehicle_mileage", icons::SPEEDOMETER),
+    ("vehicle_color", icons::PALETTE),
 ];
 
 /// What a car's title is made of (listing_generated_title, migration 0015): its listing page
 /// leaves them out of the details, since the title says them.
 pub const TITLE_CODES: [&str; 4] = ["vehicle_make", "vehicle_model", "vehicle_body_type", "vehicle_color"];
-
-/// Icons for what isn't a form's tile but has one on the listing page: a car's options (a list of
-/// checks), a property's zone (a pin).
-const MORE_ICONS: [(&str, &str); 2] = [
-    ("zone", r#"<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z"/><circle cx="12" cy="10" r="2.3"/>"#),
-    ("vehicle_features", r#"<path d="M10.5 6h10M10.5 12h10M10.5 18h10"/><path d="m3.5 6 1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5"/>"#),
-];
-
-/// The icon of a property, by its code, where it has one: the inside of a 24-unit SVG drawn in
-/// strokes.
-pub fn icon(code: &str) -> Option<&'static str> {
-    TILES.iter().chain(&MORE_ICONS).find(|(of, _)| *of == code).map(|(_, icon)| *icon)
-}
 
 /// A car's body types, each the car's side, facing right, its windows and its wheels, drawn in
 /// strokes in a box twice as wide as it is tall (48 by 24 units), every car on the same ground:

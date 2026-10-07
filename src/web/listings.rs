@@ -15,6 +15,7 @@ use super::{
     account::{ClientIp, cookie_header, current_user},
     browse::ListingPage,
     cookie, not_found,
+    icons::{self, Reads},
     post::POSTED_COOKIE,
     properties, render, render_stream,
 };
@@ -282,7 +283,8 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     )?;
     let views = (views > 0).then(|| format::number(Decimal::from(views)));
     let crumb = |name: &str, slug: &str| Crumb { name: name.to_string(), url: format!("/c/{slug}") };
-    let trail = match categories.by_slug(&listing.category_slug) {
+    let category = categories.by_slug(&listing.category_slug);
+    let trail = match category {
         Some(category) => categories
             .ancestors(category)
             .into_iter()
@@ -290,6 +292,14 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             .map(|category| crumb(&category.name, &category.slug))
             .collect(),
         None => vec![crumb(&listing.category_name, &listing.category_slug)],
+    };
+    // Its category and those above it, the nearest first, whose own icon a property can take.
+    let slugs: Vec<&str> = match category {
+        Some(category) => std::iter::once(category)
+            .chain(categories.ancestors(category).into_iter().rev())
+            .map(|category| category.slug.as_str())
+            .collect(),
+        None => vec![listing.category_slug.as_str()],
     };
     let own = match current_user(&state, &headers).await? {
         Some(user) => db::is_own_listing(&state.db, listing.id, user.id).await?,
@@ -304,16 +314,20 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let mut details: Vec<Detail> = attributes
         .into_iter()
         .filter(|attribute| !(titled && properties::TITLE_CODES.contains(&attribute.code.as_str())))
-        .map(|attribute| Detail {
-            icon: properties::icon(&attribute.code),
-            multi: attribute.multi,
-            label: attribute.label,
-            values: attribute.shown,
+        .map(|attribute| {
+            let look = icons::look(&slugs, &attribute.code);
+            Detail {
+                icon: look.map(|look| look.icon),
+                named: look.is_none_or(|look| look.reads == Reads::Named),
+                multi: attribute.multi,
+                label: attribute.label,
+                values: attribute.shown,
+            }
         })
         .collect();
     // A property's zone in its town comes first among its details.
     if let Some(zone) = &listing.zone {
-        let zone = Detail { label: "Zona".to_string(), values: vec![zone.clone()], icon: properties::icon("zone"), multi: false };
+        let zone = Detail { label: "Zona".to_string(), values: vec![zone.clone()], icon: Some(icons::PIN), named: false, multi: false };
         details.insert(0, zone);
     }
     // Said once: the cookie that says so (post.rs) goes with this answer.
@@ -363,19 +377,24 @@ pub struct ZonePrice {
     pub difference: Option<String>,
 }
 
-/// One of a listing's details, as pills: its icon before its value where it has one, otherwise
-/// its name; a pill for each of several values (a car's options), each with a check.
+/// One of a listing's details, as pills: its icon before its value (icons.rs), and its name too
+/// where the value doesn't say what it is; a pill for each of several values (a car's options),
+/// each with a check.
 pub struct Detail {
     pub label: String,
     pub values: Vec<String>,
     pub icon: Option<&'static str>,
+    /// Whether its name goes before its values: where it has no icon, or they don't read alone
+    /// beside it ("Kati 6", icons::Reads).
+    pub named: bool,
     pub multi: bool,
 }
 
 impl Detail {
-    /// Whether its name goes before `value`: not where the value says it, as "6 GB RAM" does RAM.
+    /// Whether its name goes before `value`: where it's named, unless the value says it, as
+    /// "6 GB RAM" does RAM, or is it, as a box ticked is ("Pa aksident", db::listing_attributes).
     pub fn named_before(&self, value: &str) -> bool {
-        !value.split_whitespace().any(|word| word.eq_ignore_ascii_case(&self.label))
+        self.named && value != self.label && !value.split_whitespace().any(|word| word.eq_ignore_ascii_case(&self.label))
     }
 }
 

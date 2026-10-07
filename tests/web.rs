@@ -1293,6 +1293,23 @@ async fn unknown_filter_values_are_ignored(pool: PgPool) {
 }
 
 #[sqlx::test(fixtures("listings"))]
+async fn every_detail_has_its_icon_its_categorys_where_that_says_more(pool: PgPool) {
+    // A phone's brand is drawn as a phone, as its category is; a flat's rooms and furnishing say
+    // what they are beside their icons, its floor after its name.
+    let phone = html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await;
+    assert!(phone.contains(concat!(
+        r#"<dd class="attribute" title="Marka"><svg class="attribute-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">"#,
+        r#"<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/>"#,
+    )));
+    let flat = html(pool.clone(), "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
+    let start = flat.find(r#"<dl class="attributes">"#).unwrap();
+    let details = &flat[start..start + flat[start..].find("</dl>").unwrap()];
+    assert_eq!(details.matches(r#"<dd class="attribute""#).count(), details.matches(r#"<svg class="attribute-icon""#).count());
+    assert!(details.contains("</svg>2+1</dd>") && details.contains("</svg>I mobiluar</dd>"));
+    assert!(details.contains(r#"</svg><span class="attribute-label" aria-hidden="true">Kati</span>4</dd>"#));
+}
+
+#[sqlx::test(fixtures("listings"))]
 async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     let response = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await;
     assert_eq!(response.status, StatusCode::OK);
@@ -1899,7 +1916,8 @@ async fn electronics_subcategories_have_properties_of_their_own(pool: PgPool) {
     assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
     let page = get(pool.clone(), &posted.location.unwrap()).await.body;
     // RAM's pill says "4 GB RAM", not "RAM 4 GB RAM".
-    for value in [">iPhone 13</dd>", r#"title="RAM">4 GB RAM</dd>"#, ">Blu</dd>", ">5G</dd>", ">eSIM</dd>",
+    assert!(!page.contains(r#"<span class="attribute-label" aria-hidden="true">RAM</span>"#));
+    for value in [">iPhone 13</dd>", "</svg>4 GB RAM</dd>", ">Blu</dd>", ">5G</dd>", ">eSIM</dd>",
                   ">Kutia origjinale</dd>", r#"title="Me garanci""#] {
         assert!(page.contains(value), "{value}");
     }
@@ -2015,6 +2033,7 @@ async fn each_kind_of_thing_asks_for_what_fits_it(pool: PgPool) {
         ("prop_vehicle_engine", "1598"),
         ("prop_vehicle_power", "115"),
         ("prop_vehicle_no_accident", "1"),
+        ("prop_vehicle_owners", "1"),
     ]);
     let posted = post_form(pool.clone(), "/shto", &fields, Some(&ana)).await;
     assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
@@ -2022,6 +2041,18 @@ async fn each_kind_of_thing_asks_for_what_fits_it(pool: PgPool) {
     for value in [">E zhdoganuar</dd>", ">Shqiptare</dd>", "1\u{a0}598\u{a0}cm³</dd>", "115\u{a0}HP</dd>", r#"title="Pa aksident""#] {
         assert!(page.contains(value), "{value}");
     }
+    // Each with its icon: a value that says what it is alone beside it, one that doesn't after
+    // its name; a box ticked says its name, not "Po".
+    let pill = |label: &str| {
+        let start = page.find(&format!(r#"<dd class="attribute" title="{label}">"#)).unwrap_or_else(|| panic!("{label}"));
+        page[start..start + page[start..].find("</dd>").unwrap()].to_string()
+    };
+    for label in ["Dogana", "Targat", "Motorri", "Fuqia", "Pronarë", "Pa aksident"] {
+        assert!(pill(label).contains(r#"<svg class="attribute-icon""#), "{label}");
+    }
+    assert!(pill("Dogana").ends_with("</svg>E zhdoganuar"));
+    assert!(pill("Pronarë").ends_with(r#"</svg><span class="attribute-label" aria-hidden="true">Pronarë</span>1"#));
+    assert!(pill("Pa aksident").ends_with("</svg>Pa aksident"));
     for (uri, found) in [
         ("/c/makina?vehicle_customs=CLEARED", 1),
         ("/c/makina?vehicle_customs=NOT_CLEARED", 0),
@@ -2704,8 +2735,10 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
         assert!(page.contains(&format!(">{label}</dt>")), "{label}");
         assert!(page.contains(&format!(">{value}</dd>")), "{value}");
     }
-    // The years have no icon: their names show, before them.
-    assert!(page.contains(r#"<span class="attribute-label" aria-hidden="true">Nga viti</span>2012</dd>"#));
+    // The years have a calendar, and their names before them; so do the make and model, which
+    // alone would read as the part's own.
+    assert!(page.contains(r#"</svg><span class="attribute-label" aria-hidden="true">Nga viti</span>2012</dd>"#));
+    assert!(page.contains(r#"</svg><span class="attribute-label" aria-hidden="true">Marka e automjetit</span>Volkswagen</dd>"#));
     // Its card gives the vehicle after the city; a search for the make finds it.
     let path = url.trim_start_matches("http://localhost");
     let parts = get(pool.clone(), "/c/pjese-dhe-aksesore").await.body;
