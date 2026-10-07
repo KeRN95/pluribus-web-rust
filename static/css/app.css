@@ -1657,6 +1657,11 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .listing { max-width: 760px; padding-top: 1.25rem; }
 /* Listings like it, under it: a line between, then the browse pages' grid, as wide as the page. */
 .related { margin-top: 2.5rem; border-top: 1px solid var(--border); }
+/* The seller's other listings say where all of them are at the end of their heading's line, or
+   under the heading where the line is too short for both. */
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; margin: 1.75rem 0 .75rem; }
+.section-head h2 { margin: 0; }
+.section-head a { font-size: var(--text-sm); font-weight: var(--semibold); text-underline-offset: .2em; }
 
 /* Wide screens: two columns, the listing on the left and on the right who sells it and how to
    reach them, in a card like the posting form's (the menus' hairline on the surface), which

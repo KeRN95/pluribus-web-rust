@@ -739,6 +739,32 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
     query.build_query_as().fetch_all(db).await
 }
 
+/// How many of the seller's other listings a listing's page shows, over the related ones.
+pub const FROM_SELLER: i64 = 4;
+
+/// The seller's other active listings, newest first as their profile lists them, for under a
+/// listing's page: at most `limit`.
+pub async fn seller_listings(db: &PgPool, listing_id: Uuid, limit: i64) -> sqlx::Result<Vec<ListingCard>> {
+    let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
+    query.push(
+        "NULL::float8 AS distance_m
+         FROM (
+             SELECT o.*
+             FROM listings t
+             JOIN listings o ON o.seller_user_id = t.seller_user_id OR o.seller_business_id = t.seller_business_id
+             WHERE t.id = ",
+    );
+    query.push_bind(listing_id);
+    query.push(
+        " AND o.status = 'ACTIVE' AND o.id <> t.id
+             ORDER BY o.sort_at DESC, o.id DESC
+             LIMIT ",
+    );
+    query.push_bind(limit);
+    query.push(") l LEFT JOIN locations loc ON loc.id = l.location_id ORDER BY l.sort_at DESC, l.id DESC");
+    query.build_query_as().fetch_all(db).await
+}
+
 /// How many related listings a listing's page shows under it.
 pub const RELATED: i64 = 8;
 

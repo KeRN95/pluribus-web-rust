@@ -138,6 +138,11 @@ impl ListingDetail {
         format::initial(&self.seller_name)
     }
 
+    /// A business sells it, not a private seller: its seller's profile is a business's.
+    pub fn seller_is_business(&self) -> bool {
+        self.seller_url.starts_with("/biznes/")
+    }
+
     /// "Në Marketplace që nga tetor 2026 · 12 njoftime".
     pub fn seller_summary(&self) -> String {
         format!(
@@ -185,6 +190,11 @@ struct ListingShow {
     own: bool,
     /// Posted just now without signing in: the page says it is up, and how to change it later.
     posted: bool,
+    /// The seller's other listings, over the related ones (db::seller_listings); None when this
+    /// is their only one. The page names them `page` too while it shows them.
+    seller_page: Option<ListingPage>,
+    /// The seller has more than those: a link leads to all of them.
+    seller_more: bool,
     /// Listings like it, under it (db::related_listings): `page`, the name listing_card.html
     /// reads its cards by.
     page: ListingPage,
@@ -203,11 +213,13 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     if key != canonical {
         return Ok(Redirect::permanent(&format!("/listing/{canonical}")).into_response());
     }
-    let (attributes, photos, contact, categories, related) = tokio::try_join!(
+    // One more of the seller's listings than the page shows says whether they have more.
+    let (attributes, photos, contact, categories, mut from_seller, related) = tokio::try_join!(
         db::listing_attributes(&state.db, listing.id, listing.category_id),
         db::listing_photos(&state.db, listing.id),
         db::visible_contact(&state.db, listing.id),
         db::categories(&state.db),
+        db::seller_listings(&state.db, listing.id, db::FROM_SELLER + 1),
         db::related_listings(&state.db, listing.id, db::RELATED),
     )?;
     let crumb = |name: &str, slug: &str| Crumb { name: name.to_string(), url: format!("/c/{slug}") };
@@ -247,8 +259,12 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     }
     // Said once: the cookie that says so (post.rs) goes with this answer.
     let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
+    let seller_more = from_seller.len() as i64 > db::FROM_SELLER;
+    from_seller.truncate(db::FROM_SELLER as usize);
+    let seller_page = (!from_seller.is_empty()).then(|| ListingPage::related(from_seller));
     let page = ListingPage::related(related);
-    let mut response = render(ListingShow { listing, trail, details, photos, reveal, own, posted, page })?;
+    let mut response =
+        render(ListingShow { listing, trail, details, photos, reveal, own, posted, seller_page, seller_more, page })?;
     if posted {
         response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));
     }

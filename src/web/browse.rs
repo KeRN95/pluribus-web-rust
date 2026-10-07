@@ -62,8 +62,9 @@ impl ListingPage {
         Self { cards: rows, next, big: false, eager: 4 }
     }
 
-    /// The related cards under a listing's page (db::related_listings): small, none of them loaded
-    /// before they come near the screen, as they come after the listing.
+    /// The cards under a listing's page, the seller's other listings and those like it
+    /// (db::seller_listings, db::related_listings): small, none of them loaded before they come
+    /// near the screen, as they come after the listing.
     pub fn related(cards: Vec<ListingCard>) -> Self {
         Self { cards, next: None, big: false, eager: 0 }
     }

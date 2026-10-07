@@ -186,6 +186,15 @@ fn card_numbers(html: &str) -> Vec<i64> {
         .collect()
 }
 
+/// A section of cards under a listing, named by its heading's id: from its opening tag to its end.
+fn section<'a>(html: &'a str, heading_id: &str) -> &'a str {
+    let start = html
+        .find(&format!(r#"<section class="related" aria-labelledby="{heading_id}">"#))
+        .unwrap_or_else(|| panic!("no section {heading_id}"));
+    let rest = &html[start..];
+    &rest[..rest.find("</section>").unwrap()]
+}
+
 /// The listing numbers of the cards on a page and on every page after it, as scrolling loads them.
 async fn every_page(pool: &PgPool, uri: &str) -> Vec<i64> {
     let mut page = html(pool.clone(), uri).await;
@@ -1128,6 +1137,71 @@ async fn a_listing_shows_listings_like_it(pool: PgPool) {
     // A listing alone in its category has nothing under it.
     let dog = html(pool, "/listing/1009-kelysh-labrador-3-muajsh").await;
     assert!(!dog.contains("related-heading"));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_listing_shows_more_from_its_seller(pool: PgPool) {
+    const GOLF: &str = "/listing/1001-volkswagen-golf-7-2016-nafte";
+    let number = |slug: &'static str| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>("SELECT public_no FROM listings WHERE slug = $1")
+                .bind(slug)
+                .fetch_one(&pool)
+                .await
+                .unwrap()
+        }
+    };
+
+    // Before the listings like Ana's Golf: her four others, newest first, and no link to all of
+    // them, as these are all.
+    let page = html(pool.clone(), GOLF).await;
+    let more = section(&page, "seller-heading");
+    assert!(more.contains(r#"<h2 id="seller-heading">Më shumë nga ky përdorues</h2>"#));
+    assert_eq!(card_numbers(more), vec![1005, 1010, 1012, 1007]);
+    assert!(!more.contains("Shiko të gjitha"));
+    let at = positions(&page, &[r#"id="seller-heading""#, r#"id="related-heading""#]);
+    assert!(at[0] < at[1], "her listings come before the ones like it");
+
+    // With two more of hers on the site and one sold: the newest four of her six others, and a
+    // link to all seven on her profile.
+    sqlx::query(
+        "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title, description,
+                               price_amount, price_normalized, currency, status, published_at, sold_at)
+         SELECT '11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111111',
+                (SELECT id FROM categories WHERE slug = 'te-tjera'), v.slug, v.slug, '', 1000, 8, 'ALL',
+                v.status, now() - v.age, CASE v.status WHEN 'SOLD' THEN now() END
+         FROM (VALUES ('llambe', 'ACTIVE', interval '10 minutes'),
+                      ('karrige', 'ACTIVE', interval '3 days'),
+                      ('tavoline', 'SOLD', interval '5 minutes')) AS v(slug, status, age)",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let page = html(pool.clone(), GOLF).await;
+    let more = section(&page, "seller-heading");
+    assert_eq!(card_numbers(more), vec![number("llambe").await, 1005, 1010, 1012]);
+    assert!(more.contains(r#"<a href="/perdorues/11111111-1111-4111-8111-111111111111">Shiko të gjitha (7)</a>"#));
+
+    // A business's other listings say it is a business; Dritan's own job isn't among them.
+    sqlx::query(
+        "INSERT INTO listings (seller_business_id, created_by_user_id, category_id, slug, title, description,
+                               price_amount, price_normalized, currency, status, published_at)
+         VALUES ('44444444-4444-4444-8444-444444444444', '33333333-3333-4333-8333-333333333333',
+                 (SELECT id FROM categories WHERE slug = 'makina'), 'bmw-320d', 'BMW 320d', '',
+                 18000, 18000, 'EUR', 'ACTIVE', now())",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let mercedes = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
+    let more = section(&mercedes, "seller-heading");
+    assert!(more.contains(r#"<h2 id="seller-heading">Më shumë nga ky biznes</h2>"#));
+    assert_eq!(card_numbers(more), vec![number("bmw-320d").await]);
+
+    // A seller with no other listing has no such section: the job is Dritan's only one.
+    let job = html(pool, "/listing/1008-kerkohet-kamarier-e-me-eksperience").await;
+    assert!(!job.contains("seller-heading"));
 }
 
 #[sqlx::test(fixtures("listings"))]
