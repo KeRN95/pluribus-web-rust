@@ -27,6 +27,8 @@ const COMPLETIONS: i64 = 3;
 const CATEGORIES: i64 = 2;
 const OPTIONS: i64 = 2;
 const TOWNS: usize = 2;
+/// The towns offered after words joined to a place ("apartamente në").
+const PLACE_TOWNS: i64 = 3;
 
 /// The words that join what is searched to a place, folded ("në" and "ne" alike): "apartamente në
 /// Tiranë", "makina te Durrësi", "shtëpi afër Vlorës". A town's row leaves the last of them out of
@@ -72,6 +74,15 @@ async fn suggest(db: &PgPool, typed: &str) -> Result<Vec<Suggestion>> {
         Some((before, last)) => (before.trim_end(), last),
         None => ("", words),
     };
+    // Words, then the word that joins them to a place ("apartamente në", typed "ne" as often): the
+    // towns those words have the most listings in, rather than words starting "ne". Words nothing
+    // is found for go on as any others.
+    if !before.is_empty() && PLACE_WORDS.contains(&format::fold(last).as_str()) {
+        let places = places_for(db, before).await?;
+        if !places.is_empty() {
+            return Ok(places);
+        }
+    }
     // The last word is being typed, unless a space follows it or it isn't a word of letters
     // ("golf 7", "2+1"): then the words are taken as they are.
     let start = format::fold(last);
@@ -160,6 +171,23 @@ async fn suggest(db: &PgPool, typed: &str) -> Result<Vec<Suggestion>> {
         context: String::new(),
     }));
     Ok(suggestions)
+}
+
+/// The towns where `words` have the most listings, each a row that searches them there:
+/// "apartamente · në Tiranë".
+async fn places_for(db: &PgPool, words: &str) -> Result<Vec<Suggestion>> {
+    let search = db::text_search(db, Some(words)).await?;
+    let filter = ListingFilter { search, ..Default::default() };
+    let (found_in, cities) = tokio::try_join!(db::listing_towns(db, &filter, PLACE_TOWNS), db::cities(db))?;
+    Ok(found_in
+        .into_iter()
+        .filter_map(|(id, _)| cities.iter().find(|city| city.id == id))
+        .map(|town| Suggestion {
+            label: words.to_string(),
+            context: format!("në {}", town.name),
+            url: url("/search", [("q".to_string(), words.to_string()), ("city".to_string(), town.slug.clone())]),
+        })
+        .collect())
 }
 
 /// The words before a town, without the one that joins them to it (PLACE_WORDS): "apartamente në"

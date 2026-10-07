@@ -953,6 +953,23 @@ pub async fn listing_categories(db: &PgPool, filter: &ListingFilter, limit: i64)
     query.build_query_as().fetch_all(db).await
 }
 
+/// The towns (municipalities) a search finds most in, a zone's listings counting in its town,
+/// counted among its newest COUNT_LIMIT + 1 matches, for the search box's suggestions ("apartamente
+/// në" → Tiranë, Durrës, Vlorë). The newest, not the first found as listing_categories counts:
+/// those come in the order rows lie in the table, and listings rewritten together, such as those
+/// moved into their zones, lie together at its end.
+pub async fn listing_towns(db: &PgPool, filter: &ListingFilter, limit: i64) -> sqlx::Result<Vec<(Uuid, i64)>> {
+    let mut query = QueryBuilder::<Postgres>::new(
+        "SELECT CASE WHEN loc.location_type = 'AREA' THEN loc.parent_id ELSE loc.id END AS town, count(*)
+         FROM (SELECT l.location_id FROM listings l",
+    );
+    push_filters(&mut query, filter);
+    query.push(" ORDER BY l.sort_at DESC, l.id DESC LIMIT ").push_bind(COUNT_LIMIT + 1);
+    query.push(") matches JOIN locations loc ON loc.id = matches.location_id GROUP BY 1 ORDER BY count(*) DESC, 1 LIMIT ");
+    query.push_bind(limit);
+    query.build_query_as().fetch_all(db).await
+}
+
 /// The most dots the map shows at once.
 pub const MAP_POINTS: i64 = 500;
 

@@ -802,6 +802,15 @@ async fn suggestions_finish_the_words_and_say_where_they_lead(pool: PgPool) {
     }
     let town_alone = html(pool.clone(), "/sugjerime?q=ne%20durr").await;
     assert!(town_alone.contains(r#"href="/search?city=durres""#) && town_alone.contains("Njoftimet në Durrës"), "{town_alone}");
+    // Words, then "në" (or "ne", or with a space after): the towns they are found in, a car in
+    // Tirana and one in Durrës, rather than words starting "ne".
+    for typed in ["makina%20ne", "makina%20n%C3%AB%20"] {
+        let places = html(pool.clone(), &format!("/sugjerime?q={typed}")).await;
+        for town in ["tirane", "durres"] {
+            assert!(places.contains(&format!(r#"href="/search?q=makina&city={town}""#)), "{typed}: {places}");
+        }
+        assert!(!places.contains("q=makina+n"), "{typed}: {places}");
+    }
     // A whole word misspelt: the word it most likely misspells.
     assert!(html(pool.clone(), "/sugjerime?q=mercedez").await.contains(r#"href="/search?q=mercedes""#));
     // A brand of the very name the words have: its row, which finds it alone, not the words
