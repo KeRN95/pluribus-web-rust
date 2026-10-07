@@ -53,6 +53,10 @@ impl Categories {
         self.0.iter().find(|c| c.slug == slug)
     }
 
+    pub fn by_id(&self, id: Uuid) -> Option<&Category> {
+        self.0.iter().find(|c| c.id == id)
+    }
+
     /// The category and all its descendants, so browsing a parent includes its subcategories.
     pub fn subtree_ids(&self, id: Uuid) -> Vec<Uuid> {
         let mut ids = vec![id];
@@ -478,6 +482,94 @@ pub async fn refresh_search_words(db: &PgPool) -> sqlx::Result<()> {
     Ok(())
 }
 
+/// What a word being typed may become: the words listings use that start with `start`, the most
+/// used first and one of each stem ("apart" gives "apartament", not "apartamente" too). `start`
+/// is folded (format::fold) and letters only.
+pub async fn words_starting_with(db: &PgPool, start: &str, limit: i64) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar!(
+        r#"SELECT word AS "word!"
+           FROM (SELECT DISTINCT ON (stem) word, listings
+                 FROM search_words
+                 WHERE word LIKE $1 || '%'
+                 ORDER BY stem, listings DESC, word) words
+           ORDER BY listings DESC, word
+           LIMIT $2"#,
+        start,
+        limit,
+    )
+    .fetch_all(db)
+    .await
+}
+
+/// The common word a folded word most likely misspells, when it seems misspelt ("golff": "golf").
+pub async fn spelling(db: &PgPool, word: &str) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar!(r#"SELECT search_correction($1) AS "word""#, word).fetch_one(db).await
+}
+
+/// A make, model or brand, from the lists sellers can add to (attributes.allow_other), that a
+/// search names.
+#[derive(Debug)]
+pub struct NamedOption {
+    /// "Volkswagen Golf": a model with its make.
+    pub name: String,
+    /// The category most of the active listings with it are in.
+    pub category_slug: String,
+    pub category_name: String,
+    /// The filters that find them there, as query-string pairs: vehicle_make=VOLKSWAGEN and
+    /// vehicle_model=VOLKSWAGEN_GOLF.
+    pub filters: Vec<(String, String)>,
+}
+
+/// The makes, models and brands whose names have a word starting with each of `starts` (folded),
+/// that active listings have, the most used first.
+pub async fn named_options(db: &PgPool, starts: &[String], limit: i64) -> sqlx::Result<Vec<NamedOption>> {
+    let rows = sqlx::query!(
+        r#"WITH named AS MATERIALIZED (
+               SELECT o.id, o.attribute_id, concat_ws(' ', p.label, o.label) AS name,
+                      CASE WHEN p.id IS NULL THEN jsonb_build_array(jsonb_build_array(a.code, o.value_code))
+                           ELSE jsonb_build_array(jsonb_build_array(pa.code, p.value_code),
+                                                  jsonb_build_array(a.code, o.value_code))
+                      END AS filters
+               FROM attribute_options o
+               JOIN attributes a ON a.id = o.attribute_id AND a.allow_other
+               LEFT JOIN attribute_options p ON p.id = o.parent_option_id
+               LEFT JOIN attributes pa ON pa.id = p.attribute_id
+               WHERE o.active
+                 AND NOT EXISTS (SELECT 1 FROM unnest($1::text[]) AS s (start)
+                                 WHERE lower(immutable_unaccent(concat_ws(' ', p.label, o.label)))
+                                       !~ ('(^|[^a-z0-9])' || s.start))
+           )
+           SELECT named.name AS "name!", c.slug AS "category_slug!", c.name AS "category_name!",
+                  named.filters AS "filters!: Json<Vec<(String, String)>>"
+           FROM named
+           CROSS JOIN LATERAL (
+               SELECT l.category_id, count(*) AS listings
+               FROM listing_attribute_values v
+               JOIN listings l ON l.id = v.listing_id AND l.status = 'ACTIVE'
+               WHERE v.attribute_id = named.attribute_id AND v.value_option_id = named.id
+               GROUP BY l.category_id
+               ORDER BY listings DESC, l.category_id
+               LIMIT 1
+           ) used
+           JOIN categories c ON c.id = used.category_id
+           ORDER BY used.listings DESC, named.name
+           LIMIT $2"#,
+        starts,
+        limit,
+    )
+    .fetch_all(db)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| NamedOption {
+            name: row.name,
+            category_slug: row.category_slug,
+            category_name: row.category_name,
+            filters: row.filters.0,
+        })
+        .collect())
+}
+
 /// Who sells a listing: a private seller (a user) or a business.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Seller {
@@ -639,6 +731,18 @@ pub async fn listing_count(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<
     push_filters(&mut query, filter);
     query.push(" LIMIT ").push_bind(COUNT_LIMIT + 1).push(") matches");
     query.build_query_scalar().fetch_one(db).await
+}
+
+/// The categories the listings matching the filter are in, with how many each, the most first:
+/// at most `limit` of them, counted as listing_count counts, among at most COUNT_LIMIT + 1
+/// listings.
+pub async fn listing_categories(db: &PgPool, filter: &ListingFilter, limit: i64) -> sqlx::Result<Vec<(Uuid, i64)>> {
+    let mut query =
+        QueryBuilder::<Postgres>::new("SELECT category_id, count(*) FROM (SELECT l.category_id FROM listings l");
+    push_filters(&mut query, filter);
+    query.push(" LIMIT ").push_bind(COUNT_LIMIT + 1);
+    query.push(") matches GROUP BY category_id ORDER BY count(*) DESC, category_id LIMIT ").push_bind(limit);
+    query.build_query_as().fetch_all(db).await
 }
 
 /// The most dots the map shows at once.

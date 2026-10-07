@@ -203,9 +203,11 @@ async fn home_page_lists_categories(pool: PgPool) {
 async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     let body = get(pool, "/").await.body;
     assert!(body.contains("Çfarë po kërkon?"));
-    // Words only: no city, no category; the results' filters narrow them.
-    assert!(body.contains(r#"<form class="welcome-form" action="/search" method="get" role="search">"#));
+    // Words only: no city, no category; the results' filters narrow them. Suggestions open under
+    // the words as they are typed.
+    assert!(body.contains(r#"<form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest""#));
     assert!(body.contains(r#"<input id="welcome-q" type="search" name="q""#));
+    assert!(body.contains(r#"<div class="suggestions" id="welcome-suggestions" role="listbox""#));
     // The search button is a magnifier inside the field's pill, as in Claude's app.
     assert!(body.contains(r#"<button type="submit" class="icon-button welcome-search" aria-label="Kërko""#));
     assert!(!body.contains(r#"name="city""#) && !body.contains(r#"name="category""#));
@@ -572,6 +574,62 @@ async fn a_word_left_out_stays_out_of_a_widened_search(pool: PgPool) {
     // The Golf runs on diesel (naftë): leaving that out leaves the Golf out, typo or not.
     let body = get(pool, "/search?q=golff+-naft%C3%AB").await.body;
     assert!(card_numbers(&body).is_empty());
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn search_finds_listings_by_their_category_and_town(pool: PgPool) {
+    // The laptop says neither "elektronikë" nor "Shkodër": its category and its town do, and the
+    // town is found with its article too ("Shkodra").
+    assert_eq!(card_numbers(&get(pool.clone(), "/search?q=elektronike+shkoder").await.body), vec![1006]);
+    assert_eq!(card_numbers(&get(pool, "/search?q=laptop+shkodra").await.body), vec![1006]);
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn filler_words_needn_t_be_in_a_listing(pool: PgPool) {
+    // The Mercedes is in Durrës, but nothing it says has "në".
+    assert_eq!(card_numbers(&get(pool, "/search?q=mercedes+n%C3%AB+durr%C3%ABs").await.body), vec![1002]);
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_search_across_categories_names_the_categories_it_found(pool: PgPool) {
+    // Each chip narrows the search to its category, where that category's filters are.
+    let found = html(pool.clone(), "/search?q=golf").await;
+    assert!(found.contains(r#"<a class="chip" href="/c/makina?q=golf">Makina <span class="chip-count">1</span></a>"#));
+    // Tirana's listings are in three categories.
+    let tirana = html(pool.clone(), "/search?q=tirane").await;
+    for category in ["makina", "apartamente", "telefona"] {
+        assert!(tirana.contains(&format!(r#"<a class="chip" href="/c/{category}?q=tirane">"#)), "{category}");
+    }
+    // A category's page has its subcategories instead.
+    assert!(!html(pool, "/c/makina?q=golf").await.contains("chip-count"));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn suggestions_finish_the_words_and_say_where_they_lead(pool: PgPool) {
+    // The word finished as the listings have it, then the category it is found in, then the make
+    // and model it names.
+    let rows = html(pool.clone(), "/sugjerime?q=gol").await;
+    let at = positions(&rows, &[
+        r#"href="/search?q=golf""#,
+        r#"href="/c/makina?q=golf""#,
+        r#"href="/c/makina?vehicle_make=VOLKSWAGEN&vehicle_model=VOLKSWAGEN_GOLF""#,
+    ]);
+    assert!(at.windows(2).all(|pair| pair[0] < pair[1]), "{rows}");
+    assert!(rows.contains(r#"<span class="suggestion-label">Volkswagen Golf</span>"#));
+    // A town the last word starts: on its own, all its listings; after other words, those there.
+    let town = html(pool.clone(), "/sugjerime?q=durr").await;
+    assert!(town.contains(r#"href="/search?city=durres""#) && town.contains("Njoftimet në Durrës"), "{town}");
+    let there = html(pool.clone(), "/sugjerime?q=golf%20durr").await;
+    assert!(there.contains(r#"href="/search?q=golf&city=durres""#) && there.contains("në Durrës"), "{there}");
+    // A whole word misspelt: the word it most likely misspells.
+    assert!(html(pool.clone(), "/sugjerime?q=mercedez").await.contains(r#"href="/search?q=mercedes""#));
+    // A brand of the very name the words have: its row, which finds it alone, not the words
+    // searched in its category too.
+    let brand = html(pool.clone(), "/sugjerime?q=apple").await;
+    assert!(brand.contains(r#"href="/c/telefona?electronics_brand=APPLE""#), "{brand}");
+    assert!(!brand.contains(r#"href="/c/telefona?q=apple""#), "{brand}");
+    // Too little to go on.
+    assert!(!get(pool, "/sugjerime?q=g").await.body.contains("suggestion"));
 }
 
 #[sqlx::test(fixtures("listings"))]

@@ -252,6 +252,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   white-space: nowrap;
   transition: background-color .15s, border-color .15s;
 }
+/* How many listings a search found in a category, after its name, quieter. */
+.chip-count { margin-left: .2rem; color: var(--muted); font-weight: var(--regular); }
 
 /* Two columns on every phone; as many as fit on wider screens. The cards have no box, so the
    space between rows, clearly more than inside a card, is what keeps each one together. */
@@ -548,6 +550,44 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 @media (max-width: 719px) {
   .welcome-card { padding: .25rem 0 0; }
 }
+
+/* Suggestions under a search box as its words are typed (suggest_controller.js): a list like the
+   in-page dropdowns, as wide as the box, each row the words it searches and after them, quieter,
+   where; the row the arrow keys mark is shaded as one under the pointer is. */
+.search,
+.welcome-form { position: relative; }
+.suggestions {
+  position: absolute;
+  top: calc(100% + .4rem);
+  right: 0;
+  left: 0;
+  z-index: 30;
+  max-height: min(60vh, 26rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: .375rem;
+  border: 1px solid var(--menu-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--menu-shadow);
+  font-size: 1rem;
+  transform-origin: top;
+  animation: menu-in .14s ease-out;
+}
+.suggestions[hidden] { display: none; }
+.suggestion {
+  display: flex;
+  align-items: baseline;
+  gap: .4rem;
+  padding: .55rem .85rem;
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+}
+.suggestion:hover,
+.suggestion[aria-selected="true"] { background: var(--surface-muted); }
+.suggestion-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggestion-context { flex: none; color: var(--muted); font-size: .9em; }
 
 /* A select chosen from a list in the page (picker_controller.js) rather than the phone's own picker.
    The select stays, unseen, where the button is, so a "required" note points there; the list opens

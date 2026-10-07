@@ -52,6 +52,13 @@
   {% for subcategory in subcategories %}<a class="chip" href="{{ subcategory.url }}">{{ subcategory.name }}</a>{% endfor %}
 </nav>
 {% endif %}
+{%- if !found_in.is_empty() %}
+{#- A search across every category: the categories it found listings in, the most first, with how
+    many, each narrowing it to that category, whose filters it then offers. -#}
+<nav class="categories" aria-label="Kategoritë e njoftimeve të gjetura">
+  {% for category in found_in %}<a class="chip" href="{{ category.url }}">{{ category.name }}{% if !category.count.is_empty() %} <span class="chip-count">{{ category.count }}</span>{% endif %}</a>{% endfor %}
+</nav>
+{%- endif %}
 
 {#- Filtrat, a pill, and Harta and Rendit, round buttons, stand side by side, as tall as each other;
     the filters and the map open under the row, as wide as it, the orders in a menu, and only one

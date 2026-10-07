@@ -13,6 +13,7 @@ import PickerController from "controllers/picker_controller.js";
 import PhotosController from "controllers/photos_controller.js";
 import PriceRangeController from "controllers/price_range_controller.js";
 import ShareController from "controllers/share_controller.js";
+import SuggestController from "controllers/suggest_controller.js";
 import ThemeController from "controllers/theme_controller.js";
 
 const application = Application.start();
@@ -28,6 +29,7 @@ application.register("picker", PickerController);
 application.register("photos", PhotosController);
 application.register("price-range", PriceRangeController);
 application.register("share", ShareController);
+application.register("suggest", SuggestController);
 application.register("theme", ThemeController);
 
 // A GET form sends every field, filled in or not. Drop the empty ones before Turbo fetches the

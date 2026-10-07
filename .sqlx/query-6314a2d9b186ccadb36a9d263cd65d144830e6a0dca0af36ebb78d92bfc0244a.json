@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT word AS \"word!\"\n           FROM (SELECT DISTINCT ON (stem) word, listings\n                 FROM search_words\n                 WHERE word LIKE $1 || '%'\n                 ORDER BY stem, listings DESC, word) words\n           ORDER BY listings DESC, word\n           LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "word!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "6314a2d9b186ccadb36a9d263cd65d144830e6a0dca0af36ebb78d92bfc0244a"
+}

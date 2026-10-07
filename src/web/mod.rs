@@ -8,6 +8,7 @@ mod moderation;
 mod photos;
 mod post;
 mod properties;
+mod suggestions;
 
 use std::{
     hash::{DefaultHasher, Hash, Hasher},
@@ -45,6 +46,7 @@ pub fn router(state: AppState) -> Router {
         .route("/", get(browse::home))
         .route("/c/{slug}", get(browse::category))
         .route("/search", get(browse::search))
+        .route("/sugjerime", get(suggestions::suggestions))
         .route("/harta", get(browse::map))
         .route("/listing/{key}", get(listings::show))
         .route("/listing/{public_no}/phone", post(listings::reveal_phone))

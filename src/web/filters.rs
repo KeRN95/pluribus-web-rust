@@ -24,7 +24,7 @@ use crate::{
 
 /// The most characters of search words a page takes. Searches are a few words; each one widened
 /// costs the database a lookup or two.
-const SEARCH_CHARS: usize = 100;
+pub const SEARCH_CHARS: usize = 100;
 
 const CONDITIONS: [&str; 4] = ["NEW", "LIKE_NEW", "USED", "FOR_PARTS"];
 const CURRENCIES: [&str; 2] = ["EUR", "ALL"];
@@ -908,7 +908,7 @@ pub fn category_choices(categories: &Categories, selected: Option<&str>) -> Vec<
     choices
 }
 
-fn url(path: &str, pairs: impl IntoIterator<Item = (String, String)>) -> String {
+pub fn url(path: &str, pairs: impl IntoIterator<Item = (String, String)>) -> String {
     let query = form_urlencoded::Serializer::new(String::new()).extend_pairs(pairs).finish();
     if query.is_empty() { path.to_string() } else { format!("{path}?{query}") }
 }

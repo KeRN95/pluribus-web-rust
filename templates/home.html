@@ -21,12 +21,16 @@
       the message box in Claude's app: a pill with the words in it and, inside it at the end, a
       round coral button with a magnifier that searches. The text inside says what the field is
       for; its label stays for screen readers. -#}
-  <form class="welcome-form" action="/search" method="get" role="search">
+  <form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest"
+        data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
     <label class="visually-hidden" for="welcome-q">Kërko</label>
-    <input id="welcome-q" type="search" name="q" placeholder="Kërko p.sh. Golf 7, apartament 2+1" autocomplete="off" enterkeyhint="search">
+    <input id="welcome-q" type="search" name="q" placeholder="Kërko p.sh. Golf 7, apartament 2+1" autocomplete="off" enterkeyhint="search"
+           data-suggest-target="input" data-action="input->suggest#typed focus->suggest#focused keydown->suggest#key">
     <button type="submit" class="icon-button welcome-search" aria-label="Kërko" title="Kërko">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     </button>
+    {#- Suggestions open under the pill as its words are typed (suggest_controller.js). -#}
+    <div class="suggestions" id="welcome-suggestions" role="listbox" aria-label="Sugjerime" data-suggest-target="list" hidden></div>
   </form>
   </div>
 

@@ -1,0 +1,11 @@
+{#- The rows under a search box as its words are typed (web/suggestions.rs), which
+    suggest_controller.js puts in its list: links the arrow keys go through while the box keeps
+    the focus, so none takes a tab stop of its own. -#}
+{%- for suggestion in suggestions %}
+<a class="suggestion" role="option" href="{{ suggestion.url }}" tabindex="-1">
+  <span class="suggestion-label">{{ suggestion.label }}</span>
+  {%- if !suggestion.context.is_empty() %}
+  <span class="suggestion-context">{{ suggestion.context }}</span>
+  {%- endif %}
+</a>
+{%- endfor %}

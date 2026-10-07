@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH named AS MATERIALIZED (\n               SELECT o.id, o.attribute_id, concat_ws(' ', p.label, o.label) AS name,\n                      CASE WHEN p.id IS NULL THEN jsonb_build_array(jsonb_build_array(a.code, o.value_code))\n                           ELSE jsonb_build_array(jsonb_build_array(pa.code, p.value_code),\n                                                  jsonb_build_array(a.code, o.value_code))\n                      END AS filters\n               FROM attribute_options o\n               JOIN attributes a ON a.id = o.attribute_id AND a.allow_other\n               LEFT JOIN attribute_options p ON p.id = o.parent_option_id\n               LEFT JOIN attributes pa ON pa.id = p.attribute_id\n               WHERE o.active\n                 AND NOT EXISTS (SELECT 1 FROM unnest($1::text[]) AS s (start)\n                                 WHERE lower(immutable_unaccent(concat_ws(' ', p.label, o.label)))\n                                       !~ ('(^|[^a-z0-9])' || s.start))\n           )\n           SELECT named.name AS \"name!\", c.slug AS \"category_slug!\", c.name AS \"category_name!\",\n                  named.filters AS \"filters!: Json<Vec<(String, String)>>\"\n           FROM named\n           CROSS JOIN LATERAL (\n               SELECT l.category_id, count(*) AS listings\n               FROM listing_attribute_values v\n               JOIN listings l ON l.id = v.listing_id AND l.status = 'ACTIVE'\n               WHERE v.attribute_id = named.attribute_id AND v.value_option_id = named.id\n               GROUP BY l.category_id\n               ORDER BY listings DESC, l.category_id\n               LIMIT 1\n           ) used\n           JOIN categories c ON c.id = used.category_id\n           ORDER BY used.listings DESC, named.name\n           LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "category_slug!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "category_name!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "filters!: Json<Vec<(String, String)>>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "aab0024d9fa29fa636aa4ecc6e80f78bfc16f6e3370a4e7b381b60052d4a92b2"
+}

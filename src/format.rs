@@ -258,18 +258,7 @@ impl Contact {
 /// The URL slug for a title: "Shtëpi 2+1 në Durrës!" becomes "shtepi-2-1-ne-durres".
 pub fn slug(title: &str) -> String {
     let mut slug = String::new();
-    for c in title.to_lowercase().chars() {
-        let c = match c {
-            'ë' | 'é' | 'è' | 'ê' => 'e',
-            'ç' | 'ć' | 'č' => 'c',
-            'á' | 'à' | 'â' | 'ä' => 'a',
-            'ó' | 'ò' | 'ô' | 'ö' => 'o',
-            'ú' | 'ù' | 'û' | 'ü' => 'u',
-            'í' | 'ì' | 'î' | 'ï' => 'i',
-            'š' => 's',
-            'ž' => 'z',
-            c => c,
-        };
+    for c in fold(title).chars() {
         if c.is_ascii_alphanumeric() {
             slug.push(c);
         } else if !slug.is_empty() && !slug.ends_with('-') {
@@ -281,6 +270,25 @@ pub fn slug(title: &str) -> String {
         slug.pop();
     }
     if slug.is_empty() { "njoftim".to_string() } else { slug }
+}
+
+/// Text as search compares it, in lower case and without accents: "Durrës" becomes "durres", as
+/// the search index keeps it.
+pub fn fold(text: &str) -> String {
+    text.to_lowercase()
+        .chars()
+        .map(|c| match c {
+            'ë' | 'é' | 'è' | 'ê' => 'e',
+            'ç' | 'ć' | 'č' => 'c',
+            'á' | 'à' | 'â' | 'ä' => 'a',
+            'ó' | 'ò' | 'ô' | 'ö' => 'o',
+            'ú' | 'ù' | 'û' | 'ü' => 'u',
+            'í' | 'ì' | 'î' | 'ï' => 'i',
+            'š' => 's',
+            'ž' => 'z',
+            c => c,
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -317,6 +325,11 @@ mod tests {
         assert_eq!(quoted_list(&words(&["golf"])), "„golf“");
         assert_eq!(quoted_list(&words(&["golf", "mercedes"])), "„golf“ dhe „mercedes“");
         assert_eq!(quoted_list(&words(&["golf", "mercedes", "volkswagen"])), "„golf“, „mercedes“ dhe „volkswagen“");
+    }
+
+    #[test]
+    fn folds_text_as_search_compares_it() {
+        assert_eq!(fold("Shtëpi në Durrës, Korçë"), "shtepi ne durres, korce");
     }
 
     #[test]

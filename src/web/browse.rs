@@ -142,6 +142,17 @@ pub struct Link {
     pub url: String,
 }
 
+/// The most categories a search across every category names, where its listings are.
+const FOUND_IN: i64 = 6;
+
+/// A category a search across every category found listings in, which narrows the search to it:
+/// its name, and how many it found there, unless too many were found to count.
+pub struct FoundIn {
+    pub name: String,
+    pub url: String,
+    pub count: String,
+}
+
 #[derive(Template)]
 #[template(path = "browse.html")]
 struct BrowsePage<'a> {
@@ -155,6 +166,8 @@ struct BrowsePage<'a> {
     clear_url: String,
     breadcrumbs: Vec<Link>,
     subcategories: Vec<Link>,
+    /// On a search across every category, the categories its listings are in, the most first.
+    found_in: Vec<FoundIn>,
     /// On a category page, the menu the heading opens to go to another category.
     category_menu: Vec<MenuItem>,
     page: ListingPage,
@@ -374,7 +387,7 @@ async fn browse(
         return frame_response(filter.after, &ListingPage::new(rows, filter.sort, next_url));
     }
 
-    let (mut rows, count, mut points) = tokio::try_join!(
+    let (mut rows, count, mut points, found_in) = tokio::try_join!(
         db::listing_page(&state.db, &filter),
         db::listing_count(&state.db, &filter),
         async {
@@ -384,7 +397,28 @@ async fn browse(
                 Ok(Vec::new())
             }
         },
+        async {
+            // A search across every category: the categories its listings are in.
+            match (view, category, &filter.search) {
+                (View::Grid, None, Some(_)) => db::listing_categories(&state.db, &filter, FOUND_IN).await,
+                _ => Ok(Vec::new()),
+            }
+        },
     )?;
+    // Counted among at most COUNT_LIMIT + 1 listings, as the count is: past that, numbers would
+    // mislead, and the names go alone.
+    let counted = count <= db::COUNT_LIMIT;
+    let found_in = found_in
+        .into_iter()
+        .filter_map(|(id, listings)| {
+            let category = categories.by_id(id)?;
+            Some(FoundIn {
+                name: category.name.clone(),
+                url: filters.category_url(category),
+                count: if counted { listings.to_string() } else { String::new() },
+            })
+        })
+        .collect();
     let count = format::listing_count(count, db::COUNT_LIMIT);
     mark_city(&mut rows);
     let page = ListingPage::new(rows, filter.sort, next_url);
@@ -474,6 +508,7 @@ async fn browse(
         filters: &filters,
         breadcrumbs,
         subcategories,
+        found_in,
         category_menu,
         page,
         points,

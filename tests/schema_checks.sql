@@ -436,6 +436,10 @@ SELECT pg_temp.check('words listings use are searched as typed, and a search of 
     (SELECT corrections = '{}' FROM search_query('golf audi'))
     AND (SELECT numnode(query) = 0 AND corrections = '{}' FROM search_query('+++')));
 
+SELECT pg_temp.check('filler words are left out of a search, and "ose" means or',
+    (SELECT 'golf tirane'::tsvector @@ query FROM search_query('golf në tiranë'))
+    AND (SELECT 'golf'::tsvector @@ query AND 'audi'::tsvector @@ query FROM search_query('golf ose audi')));
+
 DO $$ BEGIN
     PERFORM set_config('app.user_id', '11111111-1111-4111-8111-111111111111', true),
             set_config('app.status_reason', 'Sold to Bob', true);
@@ -545,8 +549,9 @@ SELECT pg_temp.check('numbers with a unit are grouped with a decimal comma; year
     AND format_attribute_number(1.6, 'l') = E'1,6 l'
     AND format_attribute_number(2016, NULL) = '2016');
 
-SELECT pg_temp.check('listing_search_extra lists searchable values in the category''s order',
-    listing_search_extra('55555555-5555-4555-8555-555555555555') = 'Volkswagen Golf 2016 Manuale');
+SELECT pg_temp.check('listing_search_extra lists searchable values in the category''s order, then the names of its categories and its town',
+    listing_search_extra('55555555-5555-4555-8555-555555555555')
+    = 'Volkswagen Golf 2016 Manuale Makina Cars Automjete Vehicles Tiranë');
 
 \echo '--- number plate codes'
 
