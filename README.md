@@ -101,7 +101,7 @@ cargo test
 | `src/web/mod.rs` | The HTTP layer: every route (see "Routes"), errors and the 404 page, the `Cache-Control` of static files, the check that refuses forms posted from other sites, the fingerprint of the site's CSS and JavaScript (`asset_version`) and the stylesheets' order (`STYLESHEETS`) |
 | `src/web/browse.rs` | The welcome page and the browse pages (a category, a search, the map page), and sellers' profiles: grids of listings with filters, orders and infinite scroll, the subcategory pills, the "Më të klikuarat" rows |
 | `src/web/filters.rs` | A browse page's filters: read from the query string, turned into the listing query, and shown back as the filter form, the chips that remove them, the orders and the next page's URL |
-| `src/web/listings.rs` | A listing's page (its details and their icons, photos, price per square metre, loan, the seller's other listings and the related ones), the phone number's reveal, and the views it reports |
+| `src/web/listings.rs` | A listing's page (its details and their icons, photos, price per square metre, loan, the seller's other listings and the related ones), what it tells link previews and Google (`listing_meta`), the phone number's reveal, and the views it reports |
 | `src/web/newest.rs` | The stream of new listings for the welcome page's row: server-sent events, each a Turbo Stream with a listing's card |
 | `src/web/saved.rs` | The hearts: keeping a listing, the page of those kept (`/te-ruajturat`), and keeping one after signing in |
 | `src/web/post.rs` | Posting, editing, pausing, putting back and deleting listings, "Njoftimet e mia", and the limits that keep spam out |
@@ -112,6 +112,7 @@ cargo test
 | `src/web/moderation.rs` | `/moderim`: the moderators approve the makes, models and brands sellers typed in, or merge them into listed ones |
 | `src/web/suggestions.rs` | What the search boxes suggest as words are typed |
 | `src/web/icons.rs` | Every line icon, each drawn once: the details' on a listing's page, the posting form's tiles, the eye of the view counts, the main categories' and the subcategories' |
+| `src/web/seo.rs` | What search engines and link previews read: each page's description, canonical address and Open Graph tags (`PageMeta`, which `meta.html` writes), the site's own description and picture, `robots.txt` and the sitemaps |
 | `src/db/mod.rs` | Database access: the page size and count limit, and every query of the files below, re-exported, so each is `db::...` |
 | `src/db/categories.rs` | The categories and places (towns, their zones), as the pages and the forms list them |
 | `src/db/properties.rs` | Categories' properties: what the filters and the posting form offer, and what a listing says |
@@ -121,6 +122,7 @@ cargo test
 | `src/db/sign_in.rs` | Sign-in codes, sessions and users |
 | `src/db/posting.rs` | Posting and editing listings, pausing them and taking them down |
 | `src/db/typed_in.rs` | What sellers type in where a list lacks theirs ("Tjetër"), and how moderators approve or merge it |
+| `src/db/sitemap.rs` | What the sitemaps list: the active listings by their numbers, and the businesses with listings |
 | `src/views.rs` | Listing views: counted as listing pages report them, gathered in memory and written into the day's statistics once a minute; and the most seen rows the pages show |
 | `src/media.rs` | Photos: checked, turned the right way up, resized and re-encoded (WebP in three sizes, a JPEG, and a tiny copy for the pages), then kept in an S3-compatible store (Garage locally, Cloudflare R2 in production), or in memory without one; the address pages give for them (`MEDIA_URL`) |
 | `src/sender.rs` | Sending sign-in codes: e-mail by SMTP, phone numbers by WhatsApp (Meta's Cloud API); a channel not set up writes to the log |
@@ -130,6 +132,7 @@ cargo test
 | `templates/` | Askama templates, compiled into the binary and checked at compile time (see "Templates") |
 | `static/css/` | The site's styles: seven stylesheets, loaded in order (see "Stylesheets") |
 | `static/js/` | `application.js` and the Stimulus controllers (see "JavaScript") |
+| `static/img/` | `pluribus.png`, the site's picture in link previews of the pages without a photo of their own: the logo's creature and name on the ivory, 1200 × 630 |
 | `static/vendor/` | Turbo, Stimulus, Leaflet and the fonts (Geist, and Merriweather for the logo), with their versions in their names, so there's no Node or npm |
 | `migrations/0001_marketplace_schema.sql` | Schema: tables, indexes, triggers |
 | `migrations/0002_marketplace_reference_data.sql` | Albania's 12 counties and 61 municipalities, categories in Albanian with English translations, a sample Cars attribute model, promotion products |
@@ -156,7 +159,7 @@ cargo test
 | `migrations/0023_more_properties.sql` | The properties every category lacked: a car's customs, plates, engine and power, a motorcycle's and a van's own, a tyre's size, a flat's bathrooms, condition and heating, a plot's permit, a job's contract, a service's areas, shoes' sizes, a pet's breed, a machine's hours...; what only some kinds of a category have moves down to them (a plot has no rooms, a bag no size), and central heating goes from a home's amenities to its kinds of heating |
 | `migrations/0024_search_kinds.sql` | Words that name a kind of listing (shitje, shitet, shes; qira, qera; blej) find the listings of that kind, as well as those that say them: "golf 7 në shitje" finds the Golfs for sale |
 | `migrations/0025_photo_copies.sql` | Photos kept as WebP: beside the full and card-sized copies, a middle-sized one (`middle_url`), a JPEG of the full one (`jpeg_url`) and a tiny copy for the pages (`placeholder`) |
-| `tests/web.rs` | 92 request tests: each sends requests to the app, with a database of its own, and checks the pages, redirects, cookies and what the database holds after |
+| `tests/web.rs` | 95 request tests: each sends requests to the app, with a database of its own, and checks the pages, redirects, cookies and what the database holds after |
 | `tests/schema.rs` | Runs `schema_checks.sql` against a freshly migrated database |
 | `tests/schema_checks.sql` | 83 checks of the schema's constraints and behaviour (35 checks, 36 statements that must fail, 12 that must succeed), in one transaction rolled back at the end |
 | `tests/fixtures/listings.sql` | The tests' sample listings, which can also be loaded into the development database |
@@ -209,6 +212,9 @@ Every page and action, from `web::router`. Anything else is the 404 page. A form
 | GET | `/media/{key}` | A stored photo, WebP or JPEG, which browsers may keep for a year (`photos::serve`); unless a CDN serves them (`MEDIA_URL`) |
 | GET | `/static/…` | The CSS, the JavaScript and the vendor files |
 | GET | `/healthz` | "ok" when the server and its database answer (`dev/deploy.sh` checks it) |
+| GET | `/robots.txt` | Where crawlers may go: anywhere but a visitor's own pages (signing in, "Llogaria", "Njoftimet e mia", the kept listings, the moderators' page, the forms) and the ones only scripts ask for; and where the sitemaps are (`seo::robots`) |
+| GET | `/sitemap.xml` | The sitemaps: the pages', and the listings', one for every 50 000 listing numbers (`seo::sitemap_index`) |
+| GET | `/sitemaps/{name}` | `faqet.xml`: the welcome page, every category's and the businesses' with listings; `njoftimet-{n}.xml`: the active listings numbered from n × 50 000 on, each with the day it last changed (`seo::sitemap`) |
 
 ## Configuration
 
@@ -219,6 +225,7 @@ The server reads `.env` at start (`.env.example` has every setting, with values 
 | `DATABASE_URL` | none (required) | The PostgreSQL database; sqlx's compile-time checks read it too, unless `SQLX_OFFLINE=true` |
 | `BIND_ADDR` | `127.0.0.1:3000` | Where the server listens |
 | `RUST_LOG` | `marketplace=info,tower_http=info` | What the log says, by module (`.env.example` has `marketplace=debug`) |
+| `PUBLIC_URL` | the address each request came to | The site's address (`https://pluribus.al`), which the links it gives of itself start with: canonical addresses, link previews' addresses and photos, the sitemaps and `robots.txt`. Unset, a request's `Host`, over https when the proxy in front says so (`X-Forwarded-Proto`), as Cloudflare's tunnel does |
 | `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `EMAIL_FROM` | none | Sign-in codes by e-mail, through any SMTP service; all four or none |
 | `SMTP_PORT` | `587` | 587 uses STARTTLS, 465 TLS |
 | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE` | none | Sign-in codes to phone numbers by WhatsApp: Meta's Cloud API, a system user's permanent token, and an approved authentication template with a "copy code" button |
@@ -270,6 +277,8 @@ No Node, no npm, no bundler: the browser's code is plain JavaScript modules, wit
 ## How the frontend works
 
 - Every page is plain HTML rendered by the server, so it loads fast and search engines index it as it is.
+- Every page says what it is in its head (`web/seo.rs`, `meta.html`): to search engines, a description and its canonical address; to the apps that preview a shared link (WhatsApp, Facebook, Messenger, X, Telegram, iMessage...), the Open Graph tags they show it with. A listing's preview has its title and price ("Mercedes-Benz C 220, 2018, automatike · 21 500 € (i diskutueshëm)"), where it is, what kind of listing and in what condition followed by the start of its description ("Durrës · Në shitje · E përdorur — Importuar nga Gjermania..."), and its first photo; a category's, its name, how many listings it has and its first listing's photo; a seller's profile, their name, since when they are on the site and how many listings they have. The welcome page, and any page without a photo of its own, show the site's picture (`static/img/pluribus.png`: the logo's creature and name on the ivory, 1200 × 630, the name small enough to stay whole where an app crops the picture square). A listing with a price also gives it as `product:price` tags, and one on sale tells Google what it sells, as schema.org data: a Product and its Offer, with the price, the currency, the condition, whether it is still for sale (in stock, reserved, sold) and the seller, a person or an organization.
+- A category page's canonical address keeps its filters but not its order, its page or the map's dots, so `/c/makina?sort=price_asc` counts as `/c/makina` and `/c/makina?vehicle_fuel=DIESEL` as a page of its own. A search's results (`/search`, the map page, a category's or a seller's searched with words) and a sold listing ask search engines to leave them out of their results (`noindex, follow`) but to follow their links to the listings. `/robots.txt` keeps crawlers out of a visitor's own pages and names `/sitemap.xml`, which lists the pages' sitemap (the welcome page, every category's, and the businesses' with listings) and the listings', one for every 50 000 listing numbers (Google reads at most 50 000 addresses from one), each listing with the day it last changed. Every address they give starts with `PUBLIC_URL` (see "Configuration") or, without it, the address the request came to.
 - Turbo fetches pages and form responses in the background and swaps them in without a full reload. It also prefetches links on hover.
 - Listing pages load the next page as the visitor scrolls near the end. A `<turbo-frame loading="lazy">` points at the next page, and the server answers that request with just the frame.
 - Small updates come back as Turbo Streams. For example, the phone button ("Shfaq numrin") swaps in the phone number and counts the reveal.
@@ -317,6 +326,7 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 | Template | What it renders |
 |---|---|
 | `base.html` | Every page's frame: the head (the theme set before the first paint, view transitions, the fonts preloaded, the seven stylesheets, the import map, `application.js`), the header with the logo and its creature, "+", the hearts, "Llogaria" and the theme toggle |
+| `meta.html` | What a page says about itself in its head (`web::seo::PageMeta`): its description and canonical address, `noindex` on a search's results and a sold listing, the Open Graph tags of link previews, a listing's price and its schema.org data; the pages without it have `base.html`'s description of the site |
 | `home.html` | The welcome page: the search pill, the main categories' pills, "Më të klikuarat", "Sapo u shtuan" and the newest listings |
 | `browse.html` | A category or search page: the heading, its breadcrumb and category menu, the subcategory pills, the round buttons and what they open (the search, the filters, the map, the orders), "Më të klikuarat", the order's heading and the listings |
 | `filters.html` | The filter form, from the category's filterable properties |

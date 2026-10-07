@@ -19,6 +19,7 @@ use super::{
     photos,
     post::POSTED_COOKIE,
     properties, render, render_stream,
+    seo::{self, PageMeta},
 };
 use crate::{
     AppState,
@@ -316,6 +317,82 @@ struct ListingShow {
     /// Listings like it, under it (db::related_listings): `page`, the name listing_card.html
     /// reads its cards by.
     page: ListingPage,
+    meta: PageMeta,
+}
+
+/// What a listing's page says about itself (seo.rs). Its preview: the title and the price, where
+/// it is, what kind of listing and in what condition, the start of the description, and its first
+/// photo. With a price, the price for the product:price tags, and on sale, a schema.org Product
+/// and its Offer for Google: the price, the currency, the condition, whether it is still for sale,
+/// and the seller. A sold listing is not for search engines to list, though its page stays for
+/// those who have its link; a reserved one still is, as it may yet be for sale again.
+fn listing_meta(origin: &str, listing: &ListingDetail, photos: &[Photo]) -> PageMeta {
+    let price = format::price(listing.price_amount, &listing.currency, &listing.price_type, &listing.listing_type);
+    let mut about: Vec<&str> = Vec::new();
+    if let Some(place) = &listing.location_name {
+        about.push(place);
+    }
+    about.push(format::listing_type(&listing.listing_type));
+    if let Some(condition) = &listing.condition {
+        about.push(format::condition(condition));
+    }
+    let about = about.join(" · ");
+    let description = match seo::excerpt(&listing.description, 200usize.saturating_sub(about.chars().count() + 3)) {
+        text if text.is_empty() => about,
+        text => format!("{about} — {text}"),
+    };
+    let url = seo::absolute(origin, &listing.url());
+    let mut meta = PageMeta::new(origin, format!("{} · {price}", listing.title), description, url.clone());
+    if let Some(photo) = photos.first() {
+        meta = meta.with_image(origin, &photo.url, listing.title.clone());
+    }
+    meta.noindex = listing.status == "SOLD";
+    let priced = matches!(listing.price_type.as_str(), "FIXED" | "NEGOTIABLE" | "FROM");
+    let Some(amount) = listing.price_amount.filter(|_| priced) else {
+        return meta;
+    };
+    let amount = amount.normalize().to_string();
+    meta.price = Some((amount.clone(), listing.currency.clone()));
+    if listing.listing_type == "SELL" {
+        meta.kind = "product";
+        let availability = match listing.status.as_str() {
+            "ACTIVE" => "InStock",
+            "SOLD" => "SoldOut",
+            "RESERVED" => "LimitedAvailability",
+            _ => "OutOfStock",
+        };
+        let mut offer = serde_json::json!({
+            "@type": "Offer",
+            "price": amount,
+            "priceCurrency": listing.currency,
+            "availability": format!("https://schema.org/{availability}"),
+            "url": url,
+            "seller": {
+                "@type": if listing.seller_is_business() { "Organization" } else { "Person" },
+                "name": listing.seller_name,
+            },
+        });
+        if let Some(condition) = listing.condition.as_deref() {
+            let condition = match condition {
+                "NEW" => "NewCondition",
+                "FOR_PARTS" => "DamagedCondition",
+                _ => "UsedCondition",
+            };
+            offer["itemCondition"] = format!("https://schema.org/{condition}").into();
+        }
+        let product = serde_json::json!({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": listing.title,
+            "description": seo::excerpt(&listing.description, 500),
+            "image": photos.iter().map(|photo| seo::absolute(origin, &photo.url)).collect::<Vec<_>>(),
+            "category": listing.category_name,
+            "url": url,
+            "offers": offer,
+        });
+        meta.json_ld = Some(seo::json_ld(&product));
+    }
+    meta
 }
 
 /// URLs look like /listing/1042-vw-golf-7: the number identifies the listing, and the slug is
@@ -396,8 +473,9 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     from_seller.truncate(db::FROM_SELLER as usize);
     let seller_page = (!from_seller.is_empty()).then(|| ListingPage::related(from_seller));
     let page = ListingPage::related(related);
+    let meta = listing_meta(&seo::origin(&headers), &listing, &photos);
     let mut response =
-        render(ListingShow { listing, trail, details, photos, reveal, own, posted, seller_page, seller_more, page, views })?;
+        render(ListingShow { listing, trail, details, photos, reveal, own, posted, seller_page, seller_more, page, views, meta })?;
     if posted {
         response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));
     }

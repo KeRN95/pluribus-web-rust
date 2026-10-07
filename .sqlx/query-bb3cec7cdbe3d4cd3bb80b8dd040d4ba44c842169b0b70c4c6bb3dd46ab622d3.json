@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT b.slug\n         FROM businesses b\n         WHERE EXISTS (SELECT 1 FROM listings l WHERE l.seller_business_id = b.id AND l.status = 'ACTIVE')\n         ORDER BY b.slug",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slug",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "bb3cec7cdbe3d4cd3bb80b8dd040d4ba44c842169b0b70c4c6bb3dd46ab622d3"
+}

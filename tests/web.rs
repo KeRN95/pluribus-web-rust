@@ -3827,3 +3827,168 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
     assert!(!html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL").await.contains("Më të klikuarat"));
     assert!(!html(pool, "/c/makina?q=golf").await.contains("Më të klikuarat"));
 }
+
+/// A request as one comes through the tunnel: to the site's name, over https.
+fn from_the_site(uri: &str) -> Request<Body> {
+    Request::get(uri)
+        .header(header::HOST, "pluribus.test")
+        .header("x-forwarded-proto", "https")
+        .body(Body::empty())
+        .unwrap()
+}
+
+/// The address the site's links start with (web/seo.rs): PUBLIC_URL when .env sets it, or the one
+/// a request from_the_site came to.
+fn site() -> String {
+    std::env::var("PUBLIC_URL")
+        .ok()
+        .map(|url| url.trim().trim_end_matches('/').to_string())
+        .filter(|url| !url.is_empty())
+        .unwrap_or_else(|| "https://pluribus.test".to_string())
+}
+
+/// What the page's meta tag with this property (Open Graph's) or name says.
+fn meta_tag<'a>(html: &'a str, name: &str) -> Option<&'a str> {
+    ["property", "name"].iter().find_map(|attribute| {
+        let tag = format!(r#"<meta {attribute}="{name}" content=""#);
+        let start = html.find(&tag)? + tag.len();
+        Some(&html[start..start + html[start..].find('"')?])
+    })
+}
+
+/// The schema.org data the page gives search engines, if any.
+fn json_ld(html: &str) -> Option<Value> {
+    let tag = r#"<script type="application/ld+json">"#;
+    let start = html.find(tag)? + tag.len();
+    Some(serde_json::from_str(&html[start..start + html[start..].find("</script>")?]).unwrap())
+}
+
+/// The addresses a sitemap lists, in its order.
+fn locations(xml: &str) -> Vec<String> {
+    xml.split("<loc>").skip(1).map(|rest| rest[..rest.find("</loc>").unwrap()].to_string()).collect()
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_shared_listing_shows_its_title_price_and_photo(pool: PgPool) {
+    let url = format!("{}/listing/1002-mercedes-benz-c-220-2018-automatike", site());
+    let page = send(pool.clone(), from_the_site("/listing/1002-mercedes-benz-c-220-2018-automatike")).await.body.replace("&#38;", "&");
+    // What WhatsApp, Facebook and the rest show of a link to it: the title and the price; where it
+    // is, what kind of listing, in what condition, and its description; its first photo.
+    assert_eq!(meta_tag(&page, "og:title"), Some("Mercedes-Benz C 220, 2018, automatike · 21\u{a0}500\u{a0}€ (i diskutueshëm)"));
+    let description = "Durrës · Në shitje · E përdorur — Importuar nga Gjermania, me servis të plotë. Garanci 6 muaj.";
+    assert_eq!(meta_tag(&page, "og:description"), Some(description));
+    assert_eq!(meta_tag(&page, "description"), Some(description));
+    let photo = "https://images.unsplash.com/photo-1624085568108-36410cfe4d24?auto=format&fit=crop&w=1200&h=900&q=75";
+    assert_eq!(meta_tag(&page, "og:image"), Some(photo));
+    assert_eq!(meta_tag(&page, "og:type"), Some("product"));
+    assert_eq!(meta_tag(&page, "og:url"), Some(url.as_str()));
+    assert_eq!(meta_tag(&page, "product:price:amount"), Some("21500"));
+    assert_eq!(meta_tag(&page, "product:price:currency"), Some("EUR"));
+    assert!(page.contains(&format!(r#"<link rel="canonical" href="{url}">"#)));
+    assert!(!page.contains("noindex"));
+    // To Google, a product and its offer.
+    let product = json_ld(&page).expect("no schema.org data");
+    assert_eq!(product["@type"], "Product");
+    assert_eq!(product["name"], "Mercedes-Benz C 220, 2018, automatike");
+    assert_eq!(product["image"], json!([photo]));
+    assert_eq!(
+        product["offers"],
+        json!({
+            "@type": "Offer",
+            "price": "21500",
+            "priceCurrency": "EUR",
+            "availability": "https://schema.org/InStock",
+            "itemCondition": "https://schema.org/UsedCondition",
+            "url": url,
+            "seller": {"@type": "Organization", "name": "Auto Durrësi"},
+        })
+    );
+
+    // Sold, it says so, and asks search engines to leave it out.
+    sqlx::query("UPDATE listings SET status = 'SOLD', sold_at = now() WHERE public_no = 1002").execute(&pool).await.unwrap();
+    let sold = send(pool.clone(), from_the_site("/listing/1002-mercedes-benz-c-220-2018-automatike")).await.body;
+    assert!(sold.contains(r#"<meta name="robots" content="noindex, follow">"#));
+    assert_eq!(json_ld(&sold).unwrap()["offers"]["availability"], "https://schema.org/SoldOut");
+
+    // A flat to rent has its price, and nothing on sale to tell Google of.
+    let flat = send(pool, from_the_site("/listing/1003-apartament-2-1-me-qira-ne-tirane")).await.body;
+    assert_eq!(meta_tag(&flat, "og:title"), Some("Apartament 2+1 me qira në Tiranë · 450\u{a0}€/muaj"));
+    assert_eq!(meta_tag(&flat, "og:type"), Some("website"));
+    assert_eq!(meta_tag(&flat, "product:price:amount"), Some("450"));
+    assert!(json_ld(&flat).is_none());
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_category_is_found_by_its_filters_and_a_search_not_at_all(pool: PgPool) {
+    let site = site();
+    // A category's page has one address, however it is ordered, and its first listing's photo.
+    let cars = send(pool.clone(), from_the_site("/c/makina?sort=price_asc")).await.body.replace("&#38;", "&");
+    assert!(cars.contains(&format!(r#"<link rel="canonical" href="{site}/c/makina">"#)), "{cars}");
+    assert_eq!(meta_tag(&cars, "og:title"), Some("Makina"));
+    assert_eq!(meta_tag(&cars, "og:description"), Some("Makina: 2 njoftime në Pluribus, me foto, çmime dhe vendndodhje."));
+    let golf = "https://images.unsplash.com/photo-1591230740238-e9a71182b67c?auto=format&fit=crop&w=1200&h=900&q=75";
+    assert_eq!(meta_tag(&cars, "og:image"), Some(golf));
+    assert!(!cars.contains("noindex"));
+    // A filter is part of the address: the diesel cars are a page of their own.
+    let diesel = send(pool.clone(), from_the_site("/c/makina?vehicle_fuel=DIESEL&sort=price_asc")).await.body.replace("&#38;", "&");
+    assert!(diesel.contains(&format!(r#"<link rel="canonical" href="{site}/c/makina?vehicle_fuel=DIESEL">"#)));
+
+    // A search's results are for visitors, not for search engines' results; nor is a search
+    // among a seller's listings.
+    for search in ["/search?q=golf", "/c/makina?q=golf", "/biznes/auto-durresi?q=mercedes"] {
+        let page = send(pool.clone(), from_the_site(search)).await.body;
+        assert!(page.contains(r#"<meta name="robots" content="noindex, follow">"#), "{search}");
+    }
+    let business = send(pool.clone(), from_the_site("/biznes/auto-durresi")).await.body;
+    assert!(!business.contains("noindex"));
+    assert!(business.contains(&format!(r#"<link rel="canonical" href="{site}/biznes/auto-durresi">"#)));
+
+    // The welcome page: what the site is, and its own picture.
+    let home = send(pool.clone(), from_the_site("/")).await.body;
+    assert_eq!(meta_tag(&home, "og:url"), Some(format!("{site}/").as_str()));
+    assert_eq!(meta_tag(&home, "og:image"), Some(format!("{site}/static/img/pluribus.png").as_str()));
+    assert!(meta_tag(&home, "og:description").unwrap().starts_with("Pluribus: njoftime në gjithë Shqipërinë."));
+    // The picture is there.
+    let picture = get(pool.clone(), "/static/img/pluribus.png").await;
+    assert_eq!((picture.status, picture.content_type.as_deref()), (StatusCode::OK, Some("image/png")));
+    // A page with nothing of its own to say says what the site is.
+    let account = html(pool, "/llogaria").await;
+    assert!(account.contains(r#"<meta name="description" content="Pluribus: njoftime në gjithë Shqipërinë."#));
+    assert!(meta_tag(&account, "og:title").is_none());
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn search_engines_find_the_listings_and_the_categories_by_the_sitemaps(pool: PgPool) {
+    let site = site();
+    // robots.txt keeps crawlers out of a visitor's own pages, and says where the sitemaps are.
+    let robots = send(pool.clone(), from_the_site("/robots.txt")).await;
+    assert_eq!(robots.content_type.as_deref(), Some("text/plain; charset=utf-8"));
+    for page in ["/hyr", "/njoftimet-e-mia", "/te-ruajturat", "/shto", "/listing/*/ndrysho"] {
+        assert!(robots.body.contains(&format!("\nDisallow: {page}\n")), "{page}");
+    }
+    assert!(robots.body.ends_with(&format!("\nSitemap: {site}/sitemap.xml\n")));
+
+    // The sitemap names the pages' sitemap, and as many of the listings' as their numbers need.
+    let index = send(pool.clone(), from_the_site("/sitemap.xml")).await;
+    assert_eq!(index.content_type.as_deref(), Some("application/xml; charset=utf-8"));
+    assert_eq!(locations(&index.body), [format!("{site}/sitemaps/faqet.xml"), format!("{site}/sitemaps/njoftimet-0.xml")]);
+    // The pages': the welcome page, every category's and the businesses' with listings.
+    let pages = locations(&send(pool.clone(), from_the_site("/sitemaps/faqet.xml")).await.body);
+    for page in ["/", "/c/automjete", "/c/makina", "/c/apartamente", "/biznes/auto-durresi"] {
+        assert!(pages.contains(&format!("{site}{page}")), "{page}");
+    }
+    // The listings', each with the day it last changed; one sold is no longer there.
+    sqlx::query("UPDATE listings SET status = 'SOLD', sold_at = now() WHERE public_no = 1001").execute(&pool).await.unwrap();
+    let listings = send(pool.clone(), from_the_site("/sitemaps/njoftimet-0.xml")).await.body;
+    assert_eq!(locations(&listings).len(), 11);
+    assert!(!listings.contains("/listing/1001-"));
+    let changed: String =
+        sqlx::query_scalar("SELECT to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') FROM listings WHERE public_no = 1002")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    let mercedes = format!("<url><loc>{site}/listing/1002-mercedes-benz-c-220-2018-automatike</loc><lastmod>{changed}</lastmod></url>");
+    assert!(listings.contains(&mercedes), "{listings}");
+    assert_eq!(get(pool, "/sitemaps/te-tjera.xml").await.status, StatusCode::NOT_FOUND);
+}
+

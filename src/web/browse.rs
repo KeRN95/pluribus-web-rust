@@ -12,6 +12,7 @@ use super::{
     Result, cookie,
     filters::{Chip, Field, FieldKind, Filters, Params},
     icons, is_next_page_request, newest, not_found, render,
+    seo::{self, PageMeta},
 };
 use crate::{
     AppState,
@@ -145,6 +146,7 @@ struct HomePage {
     since: Option<String>,
     /// The listings seen the most this week ("Më të klikuarat"), none before any are.
     most_viewed: Option<ListingPage>,
+    meta: PageMeta,
 }
 
 /// The welcome page asks what the visitor is looking for, then shows the newest listings in a row
@@ -182,7 +184,9 @@ pub async fn home(
     let strip = page.cards.len().min(newest::STRIP);
     let since = page.cards.first().map(ListingCard::newest_cursor);
     let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::related(most_viewed));
-    render(HomePage { shortcuts, page, strip, since, most_viewed })
+    let origin = seo::origin(&headers);
+    let meta = PageMeta::new(&origin, "Pluribus: njoftime në gjithë Shqipërinë", seo::SITE_DESCRIPTION, format!("{origin}/"));
+    render(HomePage { shortcuts, page, strip, since, most_viewed, meta })
 }
 
 pub struct Link {
@@ -235,6 +239,7 @@ struct BrowsePage<'a> {
     /// With the map's dots asked for (harta=1), a dot for each result, up to db::MAP_POINTS.
     points: Vec<db::MapPoint>,
     more_points: bool,
+    meta: PageMeta,
 }
 
 /// A category in the category menu.
@@ -275,6 +280,7 @@ struct ProfilePage {
     query: Option<String>,
     found: String,
     page: ListingPage,
+    meta: PageMeta,
 }
 
 pub async fn user_profile(
@@ -330,13 +336,29 @@ async fn profile_page(
         Some(_) => format::listing_count(db::listing_count(&state.db, &filter).await?, db::COUNT_LIMIT),
         None => String::new(),
     };
+    // What the page says about itself (seo.rs); a search among the seller's listings is not for
+    // search engines to list.
+    let origin = seo::origin(headers);
+    let since = format::month_year(profile.since);
+    let count = format::listing_count(profile.listings, i64::MAX);
+    let mut meta = PageMeta::new(
+        &origin,
+        profile.name.clone(),
+        format!("{} në Pluribus që nga {since}: {count}.", profile.name),
+        seo::canonical(&origin, &path, query.as_deref()),
+    );
+    if let Some((card, photo)) = page.cards.iter().find_map(|card| Some((card, card.photos_full.first()?))) {
+        meta = meta.with_image(&origin, photo, card.title.clone());
+    }
+    meta.noindex = words.is_some();
     render(ProfilePage {
+        meta,
         path,
         query: words,
         found,
         initial: format::initial(&profile.name),
-        since: format::month_year(profile.since),
-        count: format::listing_count(profile.listings, i64::MAX),
+        since,
+        count,
         business: matches!(profile.seller, db::Seller::Business(_)),
         name: profile.name,
         page,
@@ -419,6 +441,7 @@ async fn browse(
         (None, _, View::Grid) => "/search".to_string(),
         (None, _, View::Map) => "/harta".to_string(),
     };
+    let canonical_path = path.clone();
     let filters = Filters::new(
         &params,
         path,
@@ -586,7 +609,20 @@ async fn browse(
         }
         _ => Vec::new(),
     };
+    // What the page says about itself (seo.rs), its first listing's photo for the preview; a
+    // search's results are not for search engines to list, a category's page is, with its filters.
+    let origin = seo::origin(&headers);
+    let description = match (category, &filters.q) {
+        (Some(_), None) => format!("{heading}: {count} në Pluribus, me foto, çmime dhe vendndodhje."),
+        _ => format!("{heading}: {count} në Pluribus."),
+    };
+    let mut meta = PageMeta::new(&origin, heading.clone(), description, seo::canonical(&origin, &canonical_path, query.as_deref()));
+    if let Some((card, photo)) = page.cards.iter().find_map(|card| Some((card, card.photos_full.first()?))) {
+        meta = meta.with_image(&origin, photo, card.title.clone());
+    }
+    meta.noindex = page_slug.is_none() || filters.q.is_some();
     render(BrowsePage {
+        meta,
         heading,
         count,
         corrections,

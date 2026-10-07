@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>{% block title %}Pluribus{% endblock %}</title>
+  {%- block meta %}
+  {#- A page that says nothing of its own (meta.html): the site's description. #}
+  <meta name="description" content="{{ crate::web::seo::SITE_DESCRIPTION }}">
+  {%- endblock %}
   <script>
     // Apply a saved theme before the first paint, so the page never flashes the wrong one.
     try {

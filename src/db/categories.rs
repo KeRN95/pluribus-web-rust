@@ -20,6 +20,11 @@ pub struct Category {
 pub struct Categories(Vec<Category>);
 
 impl Categories {
+    /// Every category, in their order.
+    pub fn iter(&self) -> impl Iterator<Item = &Category> {
+        self.0.iter()
+    }
+
     pub fn top_level(&self) -> impl Iterator<Item = &Category> {
         self.0.iter().filter(|c| c.parent_id.is_none())
     }

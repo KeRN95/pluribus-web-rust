@@ -2,6 +2,8 @@
 
 {% block title %}{{ heading }} | Pluribus{% endblock %}
 
+{% block meta %}{% include "meta.html" %}{% endblock %}
+
 {% block content %}
 <header class="results-header">
   {%- if !breadcrumbs.is_empty() %}

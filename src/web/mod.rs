@@ -12,6 +12,7 @@ mod photos;
 mod post;
 mod properties;
 mod saved;
+mod seo;
 mod suggestions;
 
 use std::{
@@ -80,6 +81,9 @@ pub fn router(state: AppState) -> Router {
         .route("/hyr/kodi", get(account::code_page).post(account::check_code))
         .route("/dil", post(account::sign_out))
         .route("/healthz", get(health))
+        .route("/robots.txt", get(seo::robots))
+        .route("/sitemap.xml", get(seo::sitemap_index))
+        .route("/sitemaps/{name}", get(seo::sitemap))
         .nest_service("/static", ServeDir::new("static"))
         .fallback(not_found)
         .layer(middleware::from_fn(same_site_posts))

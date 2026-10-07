@@ -1,0 +1,26 @@
+{#- What a page says about itself (web/seo.rs, PageMeta): to search engines, its description,
+    its canonical address and, for a search's results and a sold listing, that they are not to be
+    listed; to the apps that preview a shared link (WhatsApp, Facebook, X...), its title,
+    description and photo (Open Graph); for a listing with a price, the price, and what it sells
+    as schema.org data. #}
+  <meta name="description" content="{{ meta.description }}">
+  <link rel="canonical" href="{{ meta.url }}">
+  {%- if meta.noindex %}
+  <meta name="robots" content="noindex, follow">
+  {%- endif %}
+  <meta property="og:site_name" content="Pluribus">
+  <meta property="og:locale" content="sq_AL">
+  <meta property="og:type" content="{{ meta.kind }}">
+  <meta property="og:title" content="{{ meta.title }}">
+  <meta property="og:description" content="{{ meta.description }}">
+  <meta property="og:url" content="{{ meta.url }}">
+  <meta property="og:image" content="{{ meta.image }}">
+  <meta property="og:image:alt" content="{{ meta.image_alt }}">
+  {%- if let Some((amount, currency)) = meta.price %}
+  <meta property="product:price:amount" content="{{ amount }}">
+  <meta property="product:price:currency" content="{{ currency }}">
+  {%- endif %}
+  <meta name="twitter:card" content="summary_large_image">
+  {%- if let Some(json) = meta.json_ld %}
+  <script type="application/ld+json">{{ json|safe }}</script>
+  {%- endif %}

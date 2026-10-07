@@ -22,6 +22,7 @@ mod listing_pages;
 mod saved;
 mod listing;
 mod sign_in;
+mod sitemap;
 mod posting;
 mod typed_in;
 
@@ -31,6 +32,7 @@ pub use listing_pages::*;
 pub use saved::*;
 pub use listing::*;
 pub use sign_in::*;
+pub use sitemap::*;
 pub use posting::*;
 pub use typed_in::*;
 

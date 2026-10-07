@@ -2,6 +2,8 @@
 
 {% block title %}{{ name }} | Pluribus{% endblock %}
 
+{% block meta %}{% include "meta.html" %}{% endblock %}
+
 {% block content %}
 {#- A seller's public profile: who they are and their active listings, newest first. -#}
 <header class="profile-header">
