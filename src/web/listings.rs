@@ -103,10 +103,10 @@ impl ListingDetail {
         format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).1
     }
 
-    /// A property on sale with a price and an area, what a square metre of it costs, in its own
-    /// currency and to the whole euro or lek, under the price: "925 €/m²", "nga …" when the price
-    /// is a starting one. Rents, wanted ads and "price on request" have none.
-    pub fn price_per_area(&self) -> Option<String> {
+    /// A property on sale with a price and an area: what a square metre of it costs, in its own
+    /// currency and to the whole euro or lek, with what it was worked out from, for the bubble
+    /// under the price and the card it opens. Rents, wanted ads and "price on request" have none.
+    pub fn area_price(&self) -> Option<AreaPrice> {
         let priced = matches!(self.price_type.as_str(), "FIXED" | "NEGOTIABLE" | "FROM");
         let (amount, area) = (self.price_amount?, self.area_m2?);
         if self.listing_type != "SELL" || !priced || area <= Decimal::ZERO {
@@ -114,7 +114,12 @@ impl ListingDetail {
         }
         let per_area = (amount / area).round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero);
         let from = if self.price_type == "FROM" { "nga " } else { "" };
-        Some(format!("{from}{}/m²", format::money(per_area, &self.currency)))
+        Some(AreaPrice {
+            per_area: format!("{from}{}/m²", format::money(per_area, &self.currency)),
+            price: format!("{from}{}", format::money(amount, &self.currency)),
+            area: format!("{}\u{a0}m²", format::number(area)),
+            rounded_to: if self.currency == "ALL" { "lek" } else { "euro" },
+        })
     }
 
     /// The price a loan calculator starts from: only for things on sale with a price of their own
@@ -269,6 +274,18 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));
     }
     Ok(response)
+}
+
+/// What a square metre of a property on sale costs, and what it was worked out from.
+pub struct AreaPrice {
+    /// "925 €/m²", or "nga 925 €/m²" for a starting price.
+    pub per_area: String,
+    /// The price it was worked out from: "185 000 €".
+    pub price: String,
+    /// The area: "200 m²".
+    pub area: String,
+    /// What the result is rounded to: "euro" or "lek".
+    pub rounded_to: &'static str,
 }
 
 /// One of a listing's details, as pills: its icon before its value where it has one, otherwise

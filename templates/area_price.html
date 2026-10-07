@@ -1,0 +1,18 @@
+{#- What a square metre of a property on sale costs (ListingDetail::area_price): a bubble like
+    "Llogarit kredinë", which opens how it was worked out in a card under it, the price, the area,
+    and the one over the other, rounded; a tap outside or Escape closes it (dropdown_controller.js). -#}
+<details class="area-price" data-controller="dropdown">
+  <summary title="Si llogaritet">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M8.5 15.5 15.5 8.5M11 8.5h4.5V13"/></svg>
+    {{ area.per_area }}
+  </summary>
+  <div class="area-price-card">
+    <p class="area-price-title">Si llogaritet</p>
+    <dl class="area-price-sum">
+      <div><dt>Çmimi</dt><dd>{{ area.price }}</dd></div>
+      <div><dt>Sipërfaqja</dt><dd>{{ area.area }}</dd></div>
+      <div class="area-price-total"><dt>Për m²</dt><dd>{{ area.per_area }}</dd></div>
+    </dl>
+    <p class="area-price-note">Çmimi pjesëtuar me sipërfaqen, rrumbullakuar në {{ area.rounded_to }}.</p>
+  </div>
+</details>

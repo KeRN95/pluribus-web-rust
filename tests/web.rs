@@ -1010,14 +1010,17 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     assert!(rent.contains("<p class=\"listing-price\">450\u{a0}€<span class=\"price-note\">/muaj</span></p>"));
     assert!(!rent.contains("Llogarit kredinë"));
     assert!(!rent.contains("price-per-area"));
-    // A house on sale says under its price what a square metre costs, 185 000 € for 200 m², and
-    // the loan calculator's button stands beside that rather than beside the price.
+    // A house on sale says under its price what a square metre costs, 185 000 € for 200 m², in a
+    // bubble before the loan calculator's button, which opens how it was worked out.
     let house = html(pool, "/listing/1004-shtepi-private-ne-shitje-ne-vlore").await;
     let row = &house[house.find(r#"<div class="price-row with-area">"#).expect("the price's row")..];
-    let row = &row[..row.find("</div>").unwrap()];
+    let row = &row[..row.find(r#"class="loan-button""#).unwrap()];
     assert!(row.contains("<p class=\"listing-price\">185\u{a0}000\u{a0}€</p>"));
-    let per_area = row.find("<p class=\"price-per-area\">925\u{a0}€/m²</p>").expect("the price per square metre");
-    assert!(per_area < row.find("Llogarit kredinë").unwrap());
+    let bubble = &row[row.find(r#"<details class="area-price" data-controller="dropdown">"#).expect("the bubble")..];
+    assert!(bubble[..bubble.find("</summary>").unwrap()].contains("925\u{a0}€/m²"));
+    for line in ["<dd>185\u{a0}000\u{a0}€</dd>", "<dd>200\u{a0}m²</dd>", "<dd>925\u{a0}€/m²</dd>", "rrumbullakuar në euro."] {
+        assert!(bubble.contains(line), "{line}");
+    }
 }
 
 #[sqlx::test(fixtures("listings"))]
