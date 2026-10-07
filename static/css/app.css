@@ -785,10 +785,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* A category page's heading is the last of a breadcrumb: the categories above it on its line, as
    big as it, quiet links each followed by a fainter "›", wrapping between them where the line is
    too narrow; the count after them all, a little further off. The heading itself, a search's too,
-   is a size smaller than the page headings elsewhere and of medium weight, so that the line
+   is two sizes smaller than the page headings elsewhere and of medium weight, so that the line
    doesn't weigh on the results. */
 .results-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .45rem; margin: 1.25rem 0 .25rem; }
-.results-header h1 { margin: 0; font-size: 1.5rem; font-weight: var(--medium); }
+.results-header h1 { margin: 0; font-size: 1.25rem; font-weight: var(--medium); }
 .results-header .result-count { margin-left: .55rem; }
 /* The words searched in place of misspelt ones take a line of their own, under the heading. */
 .search-corrections { flex-basis: 100%; margin: 0; color: var(--muted); }
@@ -798,7 +798,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   align-items: baseline;
   gap: .1rem .45rem;
   color: color-mix(in srgb, var(--muted) 75%, var(--bg));
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   line-height: 1.15;
   letter-spacing: -0.015em;
 }
@@ -811,7 +811,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .category-switch summary { list-style: none; cursor: pointer; border-radius: 10px; }
 .category-switch summary::-webkit-details-marker { display: none; }
 .category-switch h1 { display: inline-flex; align-items: center; gap: .3rem; }
-.category-switch .chevron { flex: none; width: 18px; height: 18px; color: var(--muted); transition: transform .15s; }
+.category-switch .chevron { flex: none; width: 16px; height: 16px; color: var(--muted); transition: transform .15s; }
 .category-switch[open] .chevron { transform: rotate(180deg); }
 .category-switch summary:hover .chevron { color: var(--text); }
 .category-menu {
