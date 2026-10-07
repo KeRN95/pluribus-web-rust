@@ -1,5 +1,5 @@
 // Turbo turns links and forms into fetch requests; Stimulus attaches small controllers to HTML.
-import "@hotwired/turbo";
+import { FetchMethod, FetchRequest } from "@hotwired/turbo";
 import { Application } from "@hotwired/stimulus";
 import AiFillController from "controllers/ai_fill_controller.js";
 import CardsController from "controllers/cards_controller.js";
@@ -81,6 +81,55 @@ document.addEventListener("turbo:before-cache", () => {
   }
 });
 document.addEventListener("touchstart", () => {}, { passive: true });
+
+// Under a mouse, Turbo fetches a link ahead as the pointer rests on it (prefetch on hover), so that
+// a click finds the page there; on a phone there is no hovering, and the page is fetched only as
+// the finger lifts. So a listing's link starts fetching the moment a finger touches it, and the
+// visit the tap then makes takes that response, as it takes Turbo's own (turbo:before-fetch-request,
+// fetchRequest); a finger that moves, scrolling, drops it. A page fetched ahead counts no view: it
+// counts once it shows (below).
+let touched = null;
+let touching = false;
+// What Turbo tells a request as it goes, which a page fetched ahead has no use for.
+const ahead = {
+  prepareRequest(request) {
+    request.headers["X-Sec-Purpose"] = "prefetch";
+  },
+  requestStarted() {},
+  requestPreventedHandlingResponse() {},
+  requestSucceededWithResponse() {},
+  requestFailedWithResponse() {},
+  requestErrored() {},
+  requestFinished() {},
+};
+const fresh = () => touched && Date.now() - touched.at < 10_000;
+document.addEventListener("touchstart", (event) => {
+  const link = event.touches.length === 1 && event.target.closest?.('a[href^="/listing/"]:not([target]):not([data-turbo="false"])');
+  if (!link) return;
+  const url = new URL(link.href);
+  if (fresh() && touched.url === url.href) return;
+  touched?.request.cancel();
+  const request = new FetchRequest(ahead, FetchMethod.get, url, new URLSearchParams(), link);
+  request.fetchOptions.priority = "high";
+  // Its own turbo:before-fetch-request goes by as it starts.
+  touching = true;
+  request.perform().catch(() => {});
+  touching = false;
+  const { clientX: x, clientY: y } = event.touches[0];
+  touched = { url: url.href, request, at: Date.now(), x, y };
+}, { passive: true });
+document.addEventListener("touchmove", (event) => {
+  const touch = event.touches[0];
+  if (!touched || !touch || Math.hypot(touch.clientX - touched.x, touch.clientY - touched.y) < 10) return;
+  touched.request.cancel();
+  touched = null;
+}, { passive: true });
+document.addEventListener("turbo:before-fetch-request", (event) => {
+  if (touching || !touched) return;
+  const { url, fetchOptions } = event.detail;
+  if (fresh() && fetchOptions.method === "GET" && url.href === touched.url) event.detail.fetchRequest = touched.request;
+  touched = null;
+}, true);
 
 // A listing's page, once Turbo shows it, says it was seen (listings.rs, seen), for the welcome
 // page's "Më të klikuarat": not when Turbo only fetched it ahead, under the pointer.
