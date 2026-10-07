@@ -8,8 +8,8 @@ import { Controller } from "@hotwired/stimulus";
 // under a finger or still moving, they wait instead, so that nothing moves under the visitor: a
 // fade over the row's start says how many have come, and a tap on it goes back to the start,
 // where they come in. The stream's address moves on to the newest card in the row, for when Turbo
-// shows the page again from its cache. A mouse moves the row too: its wheel turns it, and it drags
-// it as a finger slides it.
+// shows the page again from its cache. A mouse drags the row too, as a finger slides it; its wheel
+// scrolls the page, as anywhere else, and a trackpad's sideways swipe slides the row.
 const KEEP = 30;
 const PACE = 500;
 // How far a pressed mouse moves before it drags the row, rather than clicking a card.
@@ -28,8 +28,7 @@ export default class extends Controller {
   // A finger or the mouse is down on the row; the row is moving.
   touching = false;
   moving = false;
-  // Where the wheel is taking the row while it turns, and the mouse while it is pressed on it.
-  goal = null;
+  // The mouse while it is pressed on the row.
   hold = null;
 
   disconnect() {
@@ -126,22 +125,6 @@ export default class extends Controller {
     }, STILL);
   }
 
-  // A mouse's wheel turns the row sideways, smoothly, while it has further to go that way; at its
-  // ends the page scrolls on. Sideways wheels and trackpads scroll it as they always do.
-  wheel(event) {
-    if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
-    const strip = this.stripTarget;
-    const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 40 : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? strip.clientWidth : 1;
-    const from = this.goal ?? strip.scrollLeft;
-    const goal = Math.max(0, Math.min(strip.scrollWidth - strip.clientWidth, from + event.deltaY * unit));
-    if (Math.abs(goal - from) < 1) return;
-    event.preventDefault();
-    this.goal = goal;
-    strip.scrollTo({ left: goal, behavior: this.smooth });
-    clearTimeout(this.wheelStop);
-    this.wheelStop = setTimeout(() => { this.goal = null; }, 300);
-  }
-
   // A finger or the mouse down on the row: cards wait until it is off again. A mouse pressed on the
   // row drags it along once it has moved DRAG_FROM; let go, the row carries on a little the way it
   // was going, and the click that ends the drag opens no card.
@@ -158,7 +141,6 @@ export default class extends Controller {
     if (!hold.dragging) {
       if (Math.abs(moved) < DRAG_FROM) return;
       hold.dragging = true;
-      this.goal = null;
       this.stripTarget.setPointerCapture(hold.id);
       this.stripTarget.classList.add("is-dragging");
     }

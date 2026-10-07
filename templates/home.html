@@ -60,7 +60,7 @@
   <h2 id="newest-heading"><span class="live-dot" aria-hidden="true"></span>Sapo u shtuan</h2>
   <div class="newest-frame">
     <div class="newest-strip" id="newest-strip" data-newest-target="strip"
-         data-action="scroll->newest#scrolled wheel->newest#wheel:!passive pointerdown->newest#grab pointermove->newest#drag pointerup@window->newest#drop pointercancel@window->newest#drop dragstart->newest#cancel click->newest#swallow:capture">
+         data-action="scroll->newest#scrolled pointerdown->newest#grab pointermove->newest#drag pointerup@window->newest#drop pointercancel@window->newest#drop dragstart->newest#cancel click->newest#swallow:capture">
       {%- for card in page.cards.iter().take(*strip) %}
       {%- let eager = loop.index <= 2 %}
       {% include "newest_card.html" %}
