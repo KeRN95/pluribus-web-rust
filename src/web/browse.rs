@@ -229,8 +229,8 @@ struct BrowsePage<'a> {
     found_in: Vec<FoundIn>,
     /// On a category page, the menu the heading opens to go to another category.
     category_menu: Vec<MenuItem>,
-    /// In a category of MOST_VIEWED_IN with no filter on, its listings seen the most this week
-    /// ("Më të klikuarat"), none before any are.
+    /// In a main category, or one of MOST_VIEWED_IN, with no filter on, its listings seen the most
+    /// this week ("Më të klikuarat"), none before any are.
     most_viewed: Option<ListingPage>,
     page: ListingPage,
     /// With the map's dots asked for (harta=1), a dot for each result, up to db::MAP_POINTS.
@@ -364,9 +364,10 @@ enum View {
     Map,
 }
 
-/// The categories whose pages show their own "Më të klikuarat", as the welcome page does for every
-/// category: the listings seen the most this week in the category and those under it.
-const MOST_VIEWED_IN: [&str; 4] = ["automjete", "makina", "apartamente", "vila-dhe-shtepi"];
+/// Every main category's page shows its own "Më të klikuarat", as the welcome page does for every
+/// category: the listings seen the most this week in the category and those under it. So do these
+/// big subcategories' pages.
+const MOST_VIEWED_IN: [&str; 3] = ["makina", "apartamente", "vila-dhe-shtepi"];
 
 /// /c/{slug}: a category and its subcategories.
 pub async fn category(
@@ -454,11 +455,14 @@ async fn browse(
         return frame_response(filter.after, &ListingPage::new(rows, filter.sort, next_url).big(big));
     }
 
-    // In a category of MOST_VIEWED_IN, with no words and no filter on, the most seen in it: they
-    // take no notice of filters, so they would only be in the way of the listings asked for.
+    // In a main category, or one of MOST_VIEWED_IN, with no words and no filter on, the most seen
+    // in it: they take no notice of filters, so they would only be in the way of the listings
+    // asked for.
     let most_viewed_in = match (&page_slug, category, view) {
         (Some(_), Some(category), View::Grid)
-            if MOST_VIEWED_IN.contains(&category.slug.as_str()) && filters.q.is_none() && filters.chips().is_empty() =>
+            if (category.parent_id.is_none() || MOST_VIEWED_IN.contains(&category.slug.as_str()))
+                && filters.q.is_none()
+                && filters.chips().is_empty() =>
         {
             Some((category.id, categories.subtree_ids(category.id)))
         }

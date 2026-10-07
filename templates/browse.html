@@ -59,8 +59,9 @@
 {%- endif %}
 
 {%- if let Some(page) = most_viewed %}
-{#- In a few big categories, with no filter on, their listings seen the most this week, the most
-    first, as the welcome page has them for every category (db::most_viewed, views.rs): cards in
+{#- In every main category and a few big subcategories, with no filter on, their listings seen the
+    most this week, the most first, as the welcome page has them for every category
+    (db::most_viewed, views.rs): cards in
     one row that slides sideways (.most-viewed), each saying how many times it was seen; before
     the page's buttons, so that its own cards' size leaves them as they are. -#}
 <section class="most-viewed" aria-labelledby="most-viewed-heading">
