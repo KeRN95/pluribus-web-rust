@@ -620,6 +620,195 @@ const TOWER: &str = r#"<rect x="7" y="2.5" width="10" height="19" rx="1.5"/><pat
 /// A door.
 const DOOR: &str = r#"<path d="M5.5 21V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v17"/><path d="M3.5 21h17"/><path d="M14.5 12h.01"/>"#;
 
+// ---------------------------------------------------------------- categories
+
+/// An eye: how many times a listing was seen (listing_card.html, listing.html).
+pub const EYE: &str = r#"<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>"#;
+
+/// Other things, and a category without an icon of its own yet: a box.
+const BOX: &str = r#"<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5"/><path d="M12 12v9"/>"#;
+
+/// A car, from the side.
+const CAR: &str = r#"<path d="M5.5 11 7 7a2 2 0 0 1 1.9-1.4h6.2A2 2 0 0 1 17 7l1.5 4"/><path d="M5.2 16.5H4a1 1 0 0 1-1-1V13a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2.5a1 1 0 0 1-1 1h-1.2"/><path d="M9.8 16.5h4.4"/><circle cx="7.5" cy="16.5" r="2.2"/><circle cx="16.5" cy="16.5" r="2.2"/>"#;
+
+/// A phone.
+const HANDSET: &str = r#"<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18h3"/>"#;
+
+/// A briefcase.
+const BRIEFCASE: &str = r#"<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M3 12.5h18"/>"#;
+
+/// A hammer.
+const HAMMER: &str = r#"<path d="m4.5 19.5 9-9"/><rect x="11" y="3.8" width="10" height="5.2" rx="1.3" transform="rotate(45 16 6.4)"/>"#;
+
+/// A T-shirt.
+const T_SHIRT: &str = r#"<path d="M8.5 3.5 3.5 6l-1.5 4.5 3.5 1.5v8.5h13V12l3.5-1.5-1.5-4.5-5-2.5a3.5 3.5 0 0 1-7 0z"/>"#;
+
+/// A tennis ball.
+const TENNIS_BALL: &str = r#"<circle cx="12" cy="12" r="8.5"/><path d="M5.8 6.2a8.5 8.5 0 0 1 0 11.6M18.2 6.2a8.5 8.5 0 0 0 0 11.6"/>"#;
+
+/// A factory.
+const FACTORY: &str = r#"<path d="M3 20.5V10l5 3v-3l5 3v-3l5 3V4.5h3v16z"/><path d="M7 17h2M11.5 17h2M16 17h2"/>"#;
+
+/// A wrench.
+const WRENCH: &str = r#"<path d="M15.2 4.3a4.6 4.6 0 0 0-5.4 6l-6.2 6.2a2 2 0 1 0 2.9 2.9l6.2-6.2a4.6 4.6 0 0 0 6-5.4l-2.9 2.9-2.6-.4-.4-2.6z"/>"#;
+
+/// A nut.
+const NUT: &str = r#"<path d="M12 3 19.8 7.5v9L12 21l-7.8-4.5v-9z"/><circle cx="12" cy="12" r="3.5"/>"#;
+
+/// A loudspeaker.
+const LOUDSPEAKER: &str = r#"<rect x="5.5" y="2.5" width="13" height="19" rx="2.5"/><circle cx="12" cy="14.5" r="3.5"/><circle cx="12" cy="7" r="1.2"/>"#;
+
+/// A navigation arrow.
+const NAVIGATION_ARROW: &str = r#"<path d="M12 3.5 19 20l-7-3.8L5 20z"/>"#;
+
+/// A racing flag.
+const RACING_FLAG: &str = r#"<path d="M5 21V3.5"/><path d="M5 4h12.5l-2.5 4.5 2.5 4.5H5"/>"#;
+
+/// A mat with its grooves.
+const MAT: &str = r#"<rect x="5.5" y="3" width="13" height="18" rx="3"/><path d="M9 7v10M12 7v10M15 7v10"/>"#;
+
+/// A trailer: its box, wheel and drawbar.
+const TRAILER: &str = r#"<path d="M2.5 15.5v-7a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v7z"/><path d="M15.5 13.5h6"/><circle cx="9" cy="17.5" r="2"/>"#;
+
+/// Two blocks of flats.
+const FLATS: &str = r#"<path d="M3.5 21V8.5l6-3V21"/><path d="M9.5 21V3.5h11V21"/><path d="M2.5 21h19"/><path d="M13 7.5h1M17 7.5h1M13 11.5h1M17 11.5h1M13 15.5h1M17 15.5h1M6 12h1M6 16h1"/>"#;
+
+/// A house with a chimney and a door.
+const VILLA: &str = r#"<path d="M3 11 12 4l9 7"/><path d="M5 9.5V20h14V9.5"/><path d="M15.5 6.5V4h2v4"/><rect x="9.5" y="14" width="5" height="6"/>"#;
+
+/// A shop front under its awning.
+const SHOP: &str = r#"<path d="M3.5 9.5 5 4h14l1.5 5.5"/><path d="M3.5 9.5a2.8 2.8 0 0 0 5.7 0 2.8 2.8 0 0 0 5.6 0 2.8 2.8 0 0 0 5.7 0"/><path d="M5 12v8.5h14V12"/><path d="M10 20.5v-5h4v5"/>"#;
+
+/// A plot of land, a flag in it.
+const PLOT: &str = r#"<path d="M2.5 17.5 7 11h10l4.5 6.5z"/><path d="M12 11V4.5"/><path d="M12 4.5h4.5l-1.2 1.75 1.2 1.75H12"/>"#;
+
+/// A garage and its door.
+const GARAGE: &str = r#"<path d="M3 20.5V9l9-5.5L21 9v11.5"/><path d="M7 20.5v-8h10v8"/><path d="M7 15h10M7 17.8h10"/>"#;
+
+/// A hard hat.
+const HARD_HAT: &str = r#"<path d="M2.5 18h19"/><path d="M5 18v-2.5a7 7 0 0 1 14 0V18"/><path d="M9.5 9.3V6.5h5v2.8"/><path d="M12 6.5V13"/>"#;
+
+/// Code brackets.
+const CODE: &str = r#"<path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4.5l-4 15"/>"#;
+
+/// A price tag.
+const PRICE_TAG: &str = r#"<path d="M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8.5 8.5a1.5 1.5 0 0 1 0 2.1l-6.9 6.9a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.4"/>"#;
+
+/// A steering wheel.
+const STEERING_WHEEL: &str = r#"<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2"/><path d="M3.8 10.5c3.5-1 12.9-1 16.4 0M10.2 13.5 7 19.5M13.8 13.5l3.2 6"/>"#;
+
+/// A headset and its microphone.
+const HEADSET: &str = r#"<path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="2.5" y="12.5" width="4" height="6" rx="1.5"/><rect x="17.5" y="12.5" width="4" height="6" rx="1.5"/><path d="M19.5 18.5a3 3 0 0 1-3 3H13"/>"#;
+
+/// A screwdriver.
+const SCREWDRIVER: &str = r#"<rect x="13.5" y="2.6" width="4.5" height="8.5" rx="1.5" transform="rotate(45 15.75 6.85)"/><path d="m12.6 11.4-8 8"/>"#;
+
+/// A broom.
+const BROOM: &str = r#"<path d="M14 3.5 10.5 12"/><path d="M6.5 12h8l2 8.5h-12z"/><path d="M9 16.5l-.5 4M12 16.5v4M15 16.5l.5 4"/>"#;
+
+/// A video camera.
+const VIDEO_CAMERA: &str = r#"<rect x="2.5" y="6.5" width="13" height="11" rx="2"/><path d="m15.5 10.5 6-3.5v10l-6-3.5"/>"#;
+
+/// A paint roller.
+const PAINT_ROLLER: &str = r#"<rect x="3.5" y="3.5" width="14" height="5" rx="1.5"/><path d="M17.5 6h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-7.5v3"/><rect x="10.5" y="14" width="3" height="7" rx="1"/>"#;
+
+/// The welcome page's main categories, one icon each, for its shortcuts under the search
+/// (browse.rs); a main category added later gets BOX until it has one of its own.
+const MAIN_CATEGORIES: [(&str, &str); 11] = [
+    ("automjete", CAR),
+    ("prona", HOUSE),
+    ("elektronike", HANDSET),
+    ("shtepi-dhe-kopsht", SOFA),
+    ("pune", BRIEFCASE),
+    ("sherbime", HAMMER),
+    ("veshje-dhe-aksesore", T_SHIRT),
+    ("sport-dhe-hobi", TENNIS_BALL),
+    ("kafshe-shtepiake", PAW),
+    ("makineri-dhe-biznes", FACTORY),
+    ("te-tjera", BOX),
+];
+
+/// Subcategories' icons, for their pills under a category page's heading (browse.rs): a subcategory
+/// without one shows its name alone.
+const SUBCATEGORIES: [(&str, &str); 66] = [
+    ("makina", CAR_FRONT),
+    ("motocikleta", MOTORBIKE),
+    ("automjete-tregtare", TRUCK),
+    ("pjese-dhe-aksesore", WRENCH),
+    ("pjese-kembimi", NUT),
+    ("goma-dhe-disqe", TYRE),
+    ("audio-dhe-video", LOUDSPEAKER),
+    ("gps-dhe-navigatore", NAVIGATION_ARROW),
+    ("styling-dhe-pajisje-sportive", RACING_FLAG),
+    ("tapete-makine", MAT),
+    ("rimorkio", TRAILER),
+    ("mbushes-per-makina-elektrike", BOLT),
+    ("pjese-te-tjera", BOX),
+    ("apartamente", FLATS),
+    ("garsoniera", BED),
+    ("vila-dhe-shtepi", VILLA),
+    ("dyqane", SHOP),
+    ("zyra", OFFICE),
+    ("truall", PLOT),
+    ("garazhe", GARAGE),
+    ("telefona", PHONE),
+    ("laptope", LAPTOP),
+    ("kompjutere", SCREEN),
+    ("tableta", TABLET),
+    ("televizore", TV),
+    ("konsola-lojerash", GAMEPAD),
+    ("aparate-fotografike", CAMERA),
+    ("audio-dhe-kufje", HEADPHONES),
+    ("mobilje", CHAIR),
+    ("elektroshtepiake", WASHING_MACHINE),
+    ("kopsht", SPROUT),
+    ("dekor", LAMP),
+    ("pune-turizem", FORK_AND_KNIFE),
+    ("pune-ndertim", HARD_HAT),
+    ("pune-shendetesi", MEDICAL_CROSS),
+    ("pune-it", CODE),
+    ("pune-shitje", PRICE_TAG),
+    ("pune-transport", STEERING_WHEEL),
+    ("pune-call-center", HEADSET),
+    ("riparime", SCREWDRIVER),
+    ("transport-dhe-transferime", BUS),
+    ("pastrim", BROOM),
+    ("mesime", OPEN_BOOK),
+    ("foto-dhe-video", VIDEO_CAMERA),
+    ("ndertim-dhe-lyerje", PAINT_ROLLER),
+    ("xhaketa-dhe-pallto", JACKET),
+    ("kepuce", TRAINER),
+    ("fustane", DRESS),
+    ("canta", HANDBAG),
+    ("ora", WRISTWATCH),
+    ("aksesore", SUNGLASSES),
+    ("bicikleta", BICYCLE),
+    ("fitnes", DUMBBELL),
+    ("instrumente-muzikore", NOTES),
+    ("kamping-dhe-peshkim", TENT),
+    ("sporte-dimerore", SNOWFLAKE),
+    ("sport-te-tjera", BOX),
+    ("qen", DOG),
+    ("mace", CAT),
+    ("zogj", BIRD),
+    ("peshq", FISH),
+    ("aksesore-per-kafshe", BONE),
+    ("makineri-ndertimi", EXCAVATOR),
+    ("makineri-bujqesore", TRACTOR),
+    ("energji-dhe-gjeneratore", SOLAR_PANEL),
+    ("makineri-industriale", COG),
+];
+
+/// A main category's icon, by its slug: BOX for one without its own.
+pub fn main_category(slug: &str) -> &'static str {
+    MAIN_CATEGORIES.iter().find(|(of, _)| *of == slug).map_or(BOX, |(_, icon)| *icon)
+}
+
+/// A subcategory's icon, by its slug, where it has one.
+pub fn subcategory(slug: &str) -> Option<&'static str> {
+    SUBCATEGORIES.iter().find(|(of, _)| *of == slug).map(|(_, icon)| *icon)
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
