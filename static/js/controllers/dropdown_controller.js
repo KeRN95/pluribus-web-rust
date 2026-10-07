@@ -1,7 +1,9 @@
 import { Controller } from "@hotwired/stimulus";
 
-// A <details> menu (the category page's heading) closes again on a tap outside it or on Escape,
-// the way menus do; opening and choosing need no JavaScript.
+// A <details> menu (the category page's heading, the order) closes again on a tap outside it or
+// on Escape, the way menus do; opening and choosing need no JavaScript. The order's is one of the
+// three beside each other that are open one at a time, as the filters and the map are: opened, it
+// says so (announce, section:open), and another opening closes it (foldFor).
 export default class extends Controller {
   connect() {
     this.closeOutside = (event) => {
@@ -15,6 +17,20 @@ export default class extends Controller {
     };
     document.addEventListener("click", this.closeOutside);
     document.addEventListener("keydown", this.closeOnEscape);
+  }
+
+  announce() {
+    if (this.element.open) this.dispatch("open", { prefix: "section" });
+  }
+
+  // Another card opened.
+  foldFor(event) {
+    if (event.target !== this.element) this.close();
+  }
+
+  // Also before Turbo caches the page for the back button, which shows it closed.
+  close() {
+    this.element.open = false;
   }
 
   disconnect() {

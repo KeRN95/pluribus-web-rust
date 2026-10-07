@@ -930,8 +930,8 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .filter-actions { display: flex; align-items: center; gap: .75rem; }
 .filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
 
-/* Filtrat, Harta and Rendit side by side, each a card folded to its header: Rendit a button with
-   only its icon, about square, and Filtrat and Harta sharing the rest. Drawn like Claude's, as the
+/* Filtrat and Harta side by side, each a card folded to its header, sharing the row with Rendit,
+   a round button at its end whose orders open in a menu under it. Drawn like Claude's, as the
    listing form's own fields are: the menus' hairline on the surface, rounder corners and a shadow
    you barely see. The one opened, only one at a time (section:open), its header on the accent's
    tint, unfolds under the three, as wide as them all, in a card of the same kind, fading in as
@@ -946,32 +946,26 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   margin: 0 0 1rem;
 }
 .filters-card,
-.map-card,
-.sort-card { display: contents; }
+.map-card { display: contents; }
 .browse-tools .map-card-header,
 .filters,
-.map-card-body,
-.sort-options {
+.map-card-body {
   background: var(--surface);
   border: 1px solid var(--menu-border);
   border-radius: 16px;
   box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
 }
 .browse-tools .map-card-header { grid-row: 1; align-self: stretch; min-width: 0; }
-.browse-tools .sort-open { justify-content: center; }
 .browse-tools .map-card-header[aria-expanded="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
 .filters,
-.map-card-body,
-.sort-options { grid-column: 1 / -1; animation: menu-in .16s ease-out; }
-.filters-card .map-card-icon,
-.sort-card .map-card-icon { color: var(--text); }
+.map-card-body { grid-column: 1 / -1; animation: menu-in .16s ease-out; }
+.filters-card .map-card-icon { color: var(--text); }
 .filters { display: none; padding: 0 1rem 1rem; }
 .filters.is-open { display: block; }
 .filters-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) {
   .filters,
-  .map-card-body,
-  .sort-options { animation: none; }
+  .map-card-body { animation: none; }
 }
 /* On a phone, three to a line, the headers are a little tighter and leave their chevrons out: the
    open one's tint says which it is. On the narrowest, tighter still, with smaller icons. */
@@ -1004,15 +998,47 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 /* Map page, and the ways to it */
 
 /* The map on a category or search page, beside the filters and the order: a card that comes
-   folded down to its header, which opens it under the three and folds it again. The order
-   (Rendit) is a card like it (fold_controller.js). */
-/* Open, the orders, as rows like the in-page dropdowns', in columns on wider screens: the order
-   now in the site's colour, ticked; a tap on another reloads the page in it. The radio itself is
-   there for keyboards and screen readers only, its ring round the row. */
-.sort-options { display: grid; gap: .15rem; min-width: 0; margin: 0; padding: .5rem; }
-.sort-options:not(.is-open) { display: none; }
-@media (min-width: 720px) {
-  .sort-options { grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); }
+   folded down to its header, which opens it under them and folds it again. */
+/* The order (Rendit): a round coral button, as the listing page's phone is, the arrows in it,
+   darker while its menu is open; a press sinks it a little. (Under .sort-menu, to win over
+   .button, which comes later.) */
+.sort-menu { position: relative; grid-row: 1; align-self: center; }
+.sort-menu > .sort-button {
+  justify-content: center;
+  width: 2.85rem;
+  height: 2.85rem;
+  padding: 0;
+  border-radius: 50%;
+  list-style: none;
+  transition: background-color .15s, transform .1s;
+}
+.sort-menu > .sort-button::-webkit-details-marker { display: none; }
+.sort-menu > .sort-button:active { transform: scale(.97); }
+.sort-menu[open] > .sort-button { background: var(--button-hover); }
+@media (prefers-reduced-motion: reduce) {
+  .sort-menu > .sort-button { transition: none; }
+  .sort-menu > .sort-button:active { transform: none; }
+}
+/* Its menu, as the in-page dropdowns' are, under it and growing leftward from its right edge: the
+   orders as rows, the one now in the site's colour, ticked; a tap on another reloads the page in
+   it. The radio itself is there for keyboards and screen readers only, its ring round the row. */
+.sort-options {
+  position: absolute;
+  top: calc(100% + .4rem);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: .15rem;
+  width: max-content;
+  min-width: 12rem;
+  margin: 0;
+  padding: .375rem;
+  border: 1px solid var(--menu-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--menu-shadow);
+  transform-origin: top right;
+  animation: menu-in .14s ease-out;
 }
 .sort-option:has(input:checked) { display: flex; align-items: center; gap: .5rem; background: var(--button); color: var(--on-button); font-weight: var(--medium); }
 .sort-option:has(input:checked):hover { background: var(--button-hover); }

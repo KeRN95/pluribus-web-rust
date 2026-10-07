@@ -419,28 +419,27 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
-    // Filtrat, Harta and Rendit stand in one row over the results, each a card folded to its
-    // header; opening one says so (section:open) and the others fold, so only one is open at a
-    // time.
+    // Filtrat, Harta and Rendit stand in one row over the results, Filtrat and Harta cards folded
+    // to their headers and Rendit a round button whose orders open in a menu; opening one says so
+    // (section:open) and the others fold, so only one is open at a time.
     let cars = html(pool, "/c/makina").await;
     let order = positions(&cars, &[
         r#"<div class="browse-tools">"#,
         r#"<div class="filters-card">"#,
         r#"<section class="map-card map-hidden""#,
-        r#"<div class="sort-card""#,
+        r#"<details class="sort-menu" data-controller="dropdown""#,
         r#"<section class="results""#,
     ]);
     assert!(order.is_sorted());
-    for listener in ["filters#foldFor", "map#foldFor", "fold#foldFor"] {
+    for listener in ["filters#foldFor", "map#foldFor", "dropdown#foldFor"] {
         assert!(cars.contains(&format!("section:open@document->{listener}")), "{listener}");
     }
-    // The order's header is a button like the others', its list folded under it, with only its
-    // icon to see: its name and the order now are for screen readers, and its tooltip.
-    assert!(cars.contains(r#"<button type="button" class="map-card-header sort-open" aria-controls="sort-options" aria-expanded="false""#));
-    assert!(cars.contains(r#"title="Rendit: Më të rejat""#));
-    assert!(cars.contains(r#"<span class="map-card-title visually-hidden">"#));
-    assert!(cars.contains(r#"<fieldset class="sort-options" id="sort-options" data-fold-target="panel">"#));
-    assert!(!cars.contains(r#"<details class="sort-card""#));
+    // The order's button has only its icon to see: its name and the order now are for screen
+    // readers, and its tooltip; its menu opens with no JavaScript.
+    assert!(cars.contains(r#"<summary class="button sort-button" aria-label="Rendit: Më të rejat" title="Rendit: Më të rejat">"#));
+    assert!(cars.contains("toggle->dropdown#announce"));
+    let menu = &cars[cars.find(r#"<details class="sort-menu""#).unwrap()..];
+    assert!(menu[..menu.find("</details>").unwrap()].contains(r#"<fieldset class="sort-options">"#));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -1386,8 +1385,8 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     assert!(gps[..parts].trim_end().ends_with(r#"<details class="menu-branch" open>"#));
     let prona = gps.find(r#"<summary class="picker-option picker-branch"><a href="/c/prona">Prona</a>"#).expect("Prona's branch");
     assert!(gps[..prona].trim_end().ends_with(r#"<details class="menu-branch">"#), "folded");
-    // Every branch closes; the other </details> is the category menu's own.
-    assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - 1, "balanced");
+    // Every branch closes; the other two </details> are the category menu's own and the order's.
+    assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - 2, "balanced");
 
     // The old address still works.
     assert_eq!(get(pool.clone(), "/c/pjese-kembimi").await.status, StatusCode::OK);
