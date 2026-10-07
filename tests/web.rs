@@ -297,7 +297,11 @@ async fn home_page_lists_categories(pool: PgPool) {
 #[sqlx::test(fixtures("listings"))]
 async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     let body = get(pool, "/").await.body;
-    assert!(body.contains("Çfarë po kërkon?"));
+    // The question is for screen readers alone, with no line under it; behind the search and the
+    // categories, the logo's creature.
+    assert!(body.contains(r#"<h1 class="visually-hidden">Çfarë po kërkon?</h1>"#));
+    assert!(!body.contains("Shkruaj atë që të duhet"));
+    assert!(body.contains(r#"<div class="welcome-backdrop" aria-hidden="true"><svg class="thinking""#));
     // Words only: no city, no category; the results' filters narrow them. Suggestions open under
     // the words as they are typed.
     assert!(body.contains(r#"<form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest""#));

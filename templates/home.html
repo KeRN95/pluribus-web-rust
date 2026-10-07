@@ -2,17 +2,12 @@
 
 {% block content %}
 <section class="welcome">
-  {#- The question, and the field that answers it, together. -#}
+  {#- The question, for screen readers: on the page the search and the categories ask it. Behind
+      them, the logo's creature, large and faint, moving as it does in the logo (thinking.svg,
+      .welcome-backdrop). -#}
+  <h1 class="visually-hidden">Çfarë po kërkon?</h1>
+  <div class="welcome-backdrop" aria-hidden="true">{% include "thinking.svg" %}</div>
   <div class="welcome-card">
-  <div class="welcome-intro">
-    {#- A star of soft tentacles that turns into an amoeba and back as it spins, a nod to Claude's
-        thinking spark (thinking.svg, app.css). -#}
-    {% include "thinking.svg" %}
-    <div>
-      <h1>Çfarë po kërkon?</h1>
-      <p class="lead">Shkruaj atë që të duhet, ose zgjidh një kategori më poshtë.</p>
-    </div>
-  </div>
 
   {#- Words only, searched in every category and town; the results' filters narrow them. Drawn like
       the message box in Claude's app: a pill with the words in it and, inside it at the end, a

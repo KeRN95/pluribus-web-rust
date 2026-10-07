@@ -627,41 +627,32 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* Welcome page */
 
-.welcome { padding: 1.75rem 0 .5rem; }
-.welcome h1 { margin: 0 0 .3rem; color: color-mix(in srgb, var(--text) 50%, var(--muted)); font-size: var(--text-2xl); line-height: 1.15; letter-spacing: -0.02em; }
+/* The search and the categories, over the logo's creature (.welcome-backdrop), which stays inside
+   the section's own layer (isolation). */
+.welcome { position: relative; isolation: isolate; padding: 1.75rem 0 .5rem; }
 .lead { margin: 0 0 1.25rem; color: var(--muted); font-size: var(--text-lg); font-weight: var(--light); line-height: 1.45; }
 
-/* The welcome section: the question and its fields, straight on the page, no box of their own. */
+/* The welcome section: the search and the categories, straight on the page, no box of their own. */
 .welcome-card { padding: .5rem 0 0; }
-.welcome-card .lead { margin-bottom: 0; font-size: var(--text-md); }
 
-/* The question with a creature before it, in the button colour (thinking.svg), as tall as the
-   question and the line under it together and level with them, the two starting at the same place
-   beside it. Its size is worked out from theirs: the question's line (its size, --title, by its
-   line height, 1.15), the space under it (.3rem), and the lines under that (--lead-lines of 1.45rem
-   each), which on a phone are kept to two, evened out, and wider fit on one.
-   The creature is a star of 13 soft tentacles that sway, melts into an amoeba that wobbles and
-   spins quickly, and back, spinning all the while. Shapes and spin are SVG's own animation, which
-   Safari runs too; application.js stops them for visitors who ask for less motion. */
-.welcome-intro {
-  --title: var(--text-2xl);
-  --lead-lines: 2;
-  display: flex;
-  align-items: center;
-  gap: .8rem;
-  margin-bottom: 1.6rem;
-}
-.welcome-intro > div { min-width: 0; }
-.welcome-intro h1 { font-size: var(--title); }
-.welcome-intro .lead { max-width: 20em; text-wrap: balance; }
-.thinking {
-  --size: calc(var(--title) * 1.15 + .3rem + var(--lead-lines) * 1.45rem);
-  flex: none;
-  width: var(--size);
-  height: var(--size);
-  color: var(--button);
-}
+/* The logo's creature (thinking.svg), in the buttons' coral: a star of 13 soft tentacles that sway,
+   melts into an amoeba that wobbles and spins quickly, and back, spinning all the while. Shapes and
+   spin are SVG's own animation, which Safari runs too; application.js stops them for visitors who
+   ask for less motion. It is in the logo (.logo) and behind the welcome page's search. */
+.thinking { flex: none; color: var(--button); }
 .amoeba { fill: currentColor; }
+/* Behind the search and the categories, the creature as tall as the section and in its middle,
+   faint enough to be there without being in the way, and taking no taps. */
+.welcome-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: .12;
+}
+.welcome-backdrop .thinking { width: auto; height: 100%; max-width: 100%; aspect-ratio: 1; }
 
 /* The search, drawn like the message box in Claude's app: a pill on the surface with the menus'
    hairline and a soft shadow, the words in it, and inside it at the end a round coral button
@@ -941,8 +932,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 @media (min-width: 720px) {
   .welcome { padding-top: 2.75rem; }
-  .welcome-intro { --title: var(--text-3xl); --lead-lines: 1; }
-  .welcome-intro .lead { max-width: none; }
   .welcome-card { padding: .75rem 0 0; }
 }
 
