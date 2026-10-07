@@ -956,7 +956,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    quarter on a tablet, and six and a quarter on a wide screen. A row of flex items rather than a
    grid's columns, so that a card coming in at the front pushes the others along (.is-new). The
    padding, which the margin takes back, keeps a card's hover panel and focus ring clear of the
-   sliding box's edges. Hidden until it has a card. */
+   sliding box's edges. No bar under it, on any screen: a finger slides it, and a mouse's wheel
+   turns it or the mouse drags it (newest_controller.js). Hidden until it has a card. */
 .newest { container-type: inline-size; }
 .newest:not(:has(.newest-card)) { display: none; }
 .newest h2 { display: flex; align-items: center; gap: .6rem; }
@@ -988,8 +989,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   overflow-anchor: none; /* newest_controller.js keeps the cards in view where they are */
   scroll-snap-type: x mandatory;
   scroll-padding-inline: .5rem;
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
+.newest-strip::-webkit-scrollbar { display: none; }
 .newest-strip > .card {
   flex: none;
   width: calc((100% - var(--gaps) * var(--gap)) / var(--across));
@@ -1013,10 +1015,14 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 @media (min-width: 720px) {
   .newest-strip { --gap: 1rem; }
 }
-/* Phones and tablets slide the row with a finger: no bar. A mouse keeps it, on a wide screen. */
-@media (max-width: 959px), (hover: none) {
-  .newest-strip { scrollbar-width: none; }
-  .newest-strip::-webkit-scrollbar { display: none; }
+/* With a mouse, the row moves freely as the wheel turns it or the mouse drags it: snapping would
+   pull it back to a card at every step. A hand to grab it by, closed while it drags, and no text
+   to select on the way; nor does the card it was grabbed by look pressed. */
+@media (hover: hover) and (pointer: fine) {
+  .newest-strip { scroll-snap-type: none; cursor: grab; user-select: none; }
+  .newest-strip.is-dragging,
+  .newest-strip.is-dragging * { cursor: grabbing; }
+  .newest-strip.is-dragging .card:active { outline: none; }
 }
 @container (692px <= width < 928px) {
   .newest-strip { --across: 5.25; --gaps: 5; }
