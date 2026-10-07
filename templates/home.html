@@ -38,6 +38,16 @@
   </nav>
 </section>
 
+{%- if let Some(page) = most_viewed %}
+{#- The listings seen the most this week, the most first (db::most_viewed, views.rs): cards like
+    the seller's other listings under a listing, in one row that slides sideways (.most-viewed),
+    each saying how many times it was seen. -#}
+<section class="most-viewed" aria-labelledby="most-viewed-heading">
+  <h2 id="most-viewed-heading">Më të klikuarat</h2>
+  {% include "listing_grid.html" %}
+</section>
+{%- endif %}
+
 {#- The newest listings in a row that slides sideways, the newest first, which follows new ones
     while the page is open: the server sends each as it is posted, no more than two a second, and
     Turbo puts it in front (<turbo-stream-source>, web/newest.rs); from the ten it starts with, the

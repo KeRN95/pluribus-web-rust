@@ -82,6 +82,13 @@ document.addEventListener("turbo:before-cache", () => {
 });
 document.addEventListener("touchstart", () => {}, { passive: true });
 
+// A listing's page, once Turbo shows it, says it was seen (listings.rs, seen), for the welcome
+// page's "Më të klikuarat": not when Turbo only fetched it ahead, under the pointer.
+document.addEventListener("turbo:load", () => {
+  const url = document.querySelector("[data-seen-url]")?.dataset.seenUrl;
+  if (url) navigator.sendBeacon(url);
+});
+
 // Going back or forward, Turbo shows its copy of the page with the cross-fade base.html asks for
 // (view transitions). Where the browser has animated the change itself, as iOS does under a swipe
 // from the screen's edge, that would be a second change, from the page left to the page come back

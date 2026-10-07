@@ -56,6 +56,7 @@ pub fn router(state: AppState) -> Router {
         .route("/harta", get(browse::map))
         .route("/listing/{key}", get(listings::show))
         .route("/listing/{public_no}/phone", post(listings::reveal_phone))
+        .route("/listing/{public_no}/pare", post(listings::seen))
         .route("/listing/{public_no}/ruaj", post(saved::save))
         .route("/shto", get(post::new_listing).post(post::create_listing).layer(with_photos()))
         .route("/listing/{public_no}/ndrysho", get(post::edit_listing).post(post::update_listing).layer(with_photos()))

@@ -22,6 +22,10 @@
 -- (migrations/0019_zones.sql). zones=1 makes nothing, but moves the ones earlier versions of this
 -- script left in the town into their zones:
 --   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v zones=1 < dev/generate_listings.sql
+-- views=1 makes nothing, but gives a twentieth of the active listings it made views over the last
+-- two weeks (listing_daily_stats), a few of them many, as the site counts them (src/views.rs), for
+-- the welcome page's "Më të klikuarat"; runs add up:
+--   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v views=1 < dev/generate_listings.sql
 --
 -- All of it is fictional: the sellers (dev|generated-…, …@example.test, phone numbers
 -- +355 69 1xx xxxx, businesses' +355 68 1xx xxxx), what they sell, and for how much. The photos
@@ -42,6 +46,29 @@
 \if :{?zones}
 \else
 \set zones false
+\endif
+\if :{?views}
+\else
+\set views false
+\endif
+
+\if :views
+-- Each listing a number of views a day, most of them few and a few hundreds, a little more or less
+-- from day to day and fewer the longer ago; those under one a day get none.
+INSERT INTO listing_daily_stats (listing_id, stat_date, detail_views)
+SELECT seen.id, current_date - day, round(seen.daily * (0.6 + 0.8 * random()) * (1 - day / 20.0))::bigint
+FROM (SELECT l.id, 300 * power(random(), 6) AS daily
+      FROM listings l
+      JOIN users u ON u.id = l.created_by_user_id
+      WHERE u.auth_subject LIKE 'dev|generated-%' AND l.status = 'ACTIVE' AND random() < 0.05) seen
+CROSS JOIN generate_series(0, 13) AS day
+WHERE seen.daily >= 1
+ON CONFLICT (listing_id, stat_date)
+DO UPDATE SET detail_views = listing_daily_stats.detail_views + EXCLUDED.detail_views;
+SELECT format('Gave %s listings views.', count(DISTINCT listing_id)) AS done
+FROM listing_daily_stats WHERE stat_date = current_date AND detail_views > 0 \gset
+\echo :done
+\quit
 \endif
 
 \if :remove

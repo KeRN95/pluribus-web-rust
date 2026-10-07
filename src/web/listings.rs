@@ -1,18 +1,18 @@
-//! A listing's page and its phone number reveal.
+//! A listing's page, its phone number reveal, and its views.
 
 use std::cmp::Ordering;
 
 use askama::Template;
 use axum::{
     extract::{Path, State},
-    http::{HeaderMap, header},
+    http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Redirect, Response},
 };
 use rust_decimal::{Decimal, RoundingStrategy};
 
 use super::{
     Result,
-    account::{cookie_header, current_user},
+    account::{ClientIp, cookie_header, current_user},
     browse::ListingPage,
     cookie, not_found,
     post::POSTED_COOKIE,
@@ -27,6 +27,11 @@ use crate::{
 impl ListingCard {
     pub fn url(&self) -> String {
         format!("/listing/{}-{}", self.public_no, self.slug)
+    }
+
+    /// "1 234": how many times its page was seen this week, for "Më të klikuarat".
+    pub fn views_display(&self) -> Option<String> {
+        self.views.map(|views| format::number(Decimal::from(views)))
     }
 
     pub fn price_display(&self) -> String {
@@ -410,6 +415,28 @@ struct PhoneStream {
     display: String,
     /// What the copy button copies: the number as a phone dials it, or the address.
     copy: String,
+}
+
+/// POST /listing/{public_no}/pare: the listing's page was shown to a visitor (application.js says
+/// so as Turbo shows it, so that a page fetched ahead under the pointer, and never opened, doesn't
+/// count, nor do bots that run no scripts), for "Më të klikuarat" (views.rs). Its seller seeing it
+/// doesn't count either: their page doesn't ask. Visitors are told apart by their address and
+/// browser, and whatever says it is a bot is left out.
+pub async fn seen(
+    State(state): State<AppState>,
+    Path(public_no): Path<i64>,
+    ClientIp(ip): ClientIp,
+    headers: HeaderMap,
+) -> Result<StatusCode> {
+    let agent = headers.get(header::USER_AGENT).and_then(|value| value.to_str().ok()).unwrap_or_default();
+    let lower = agent.to_ascii_lowercase();
+    if agent.is_empty() || ["bot", "spider", "crawl", "slurp"].iter().any(|word| lower.contains(word)) {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+    let visitor = format!("{}
+{agent}", ip.unwrap_or_default());
+    state.views.record(&state.db, public_no, &visitor).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Swaps the button for the seller's number (a tap calls it) or e-mail address.

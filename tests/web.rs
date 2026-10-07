@@ -3501,3 +3501,58 @@ async fn a_profile_searches_its_sellers_listings(pool: PgPool) {
     let none = get(pool, &format!("{ana}?q=mercedes")).await.body;
     assert!(card_numbers(&none).is_empty() && none.contains("0 njoftime për „mercedes“"));
 }
+
+/// What a listing's page sends once it shows (application.js): it was seen, from this address and
+/// browser.
+fn seen(no: i64, ip: &str, agent: &str) -> Request<Body> {
+    Request::post(format!("/listing/{no}/pare"))
+        .header("x-forwarded-for", ip)
+        .header(header::USER_AGENT, agent)
+        .body(Body::empty())
+        .unwrap()
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
+    // Seen by nobody yet: no row.
+    assert!(!html(pool.clone(), "/").await.contains("Më të klikuarat"));
+
+    // A listing's page asks to count the view, but not its seller's.
+    let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
+    assert!(page.contains(r#"data-seen-url="/listing/1001/pare""#));
+    let ana = new_seller(&pool, "+355691112233").await;
+    let no = post_listing(&pool, &ana).await;
+    let own = get_with_cookie(pool.clone(), &format!("/listing/{no}-samsung-galaxy-s21-128-gb"), &ana).await.body;
+    assert!(own.contains("Ndrysho") && !own.contains("data-seen-url"));
+
+    // 1002 seen by three visitors, one of them twice, which counts once; 1001 by two; a bot's
+    // visit and a number no listing has count for nothing.
+    let app = app(pool.clone());
+    let safari = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Safari/604.1";
+    for (no, ip) in [(1002, "203.0.113.1"), (1002, "203.0.113.1"), (1002, "203.0.113.2"), (1002, "203.0.113.3"),
+                     (1001, "203.0.113.1"), (1001, "203.0.113.2"), (999_999, "203.0.113.1")] {
+        assert_eq!(send_to(app.clone(), seen(no, ip, safari)).await.status, StatusCode::NO_CONTENT);
+    }
+    send_to(app.clone(), seen(1003, "203.0.113.4", "Mozilla/5.0 (compatible; Googlebot/2.1)")).await;
+    let views = |no: i64| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, Option<i64>>(
+                "SELECT sum(s.detail_views)::bigint FROM listing_daily_stats s JOIN listings l ON l.id = s.listing_id WHERE l.public_no = $1",
+            )
+            .bind(no)
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+        }
+    };
+    assert_eq!((views(1002).await, views(1001).await, views(1003).await), (Some(3), Some(2), None));
+
+    // The row, over the newest, the most seen first, each saying how many times it was seen, and
+    // none that nobody saw.
+    let home = html(pool.clone(), "/").await;
+    let row = &home[home.find("Më të klikuarat").unwrap()..home.find(r#"id="newest-heading""#).unwrap()];
+    assert_eq!(card_numbers(row), vec![1002, 1001]);
+    assert!(row.contains(r#"title="3 shikime këtë javë""#) && row.contains(r#"title="2 shikime këtë javë""#), "{row}");
+    assert!(!home[home.find(r#"id="latest-heading""#).unwrap()..].contains("card-views"));
+}

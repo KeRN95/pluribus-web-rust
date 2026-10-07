@@ -3,7 +3,8 @@
 {% block title %}{{ listing.title }} | Pluribus{% endblock %}
 
 {% block content %}
-<article class="listing">
+{#- Shown to anyone but its seller, the page says so (application.js), for "Më të klikuarat". -#}
+<article class="listing"{% if !own %} data-seen-url="/listing/{{ listing.public_no }}/pare"{% endif %}>
   {%- if posted %}
   {#- Posted just now without signing in (post.rs): changing it later takes signing in. -#}
   <p class="notice" role="status">Njoftimi yt u publikua. Për ta ndryshuar ose fshirë më vonë, <a href="/njoftimet-e-mia">hyr</a> me numrin ose email-in që shkruajte.</p>

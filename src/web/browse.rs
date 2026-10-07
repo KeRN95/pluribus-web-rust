@@ -154,10 +154,13 @@ struct HomePage {
     strip: usize,
     /// Where the row's stream of new listings starts: after the newest (none without listings).
     since: Option<String>,
+    /// The listings seen the most this week ("Më të klikuarat"), none before any are.
+    most_viewed: Option<ListingPage>,
 }
 
-/// The welcome page asks what the visitor is looking for, then shows the newest listings: the
-/// newest in a row that follows new ones (web/newest.rs), then all of them, newest first.
+/// The welcome page asks what the visitor is looking for, then shows the newest listings in a row
+/// that follows new ones (web/newest.rs), the most seen this week in another (db::most_viewed),
+/// then all of them, newest first.
 pub async fn home(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -172,8 +175,11 @@ pub async fn home(
         return frame_response(after, &ListingPage::new(rows, Sort::Newest, next_url));
     }
 
-    let (rows, categories) =
-        tokio::try_join!(db::listing_page(&state.db, &filter), db::categories(&state.db))?;
+    let (rows, categories, most_viewed) = tokio::try_join!(
+        db::listing_page(&state.db, &filter),
+        db::categories(&state.db),
+        state.views.most_viewed(&state.db),
+    )?;
     // Every main category, in its order, with its icon.
     let shortcuts = categories
         .top_level()
@@ -186,7 +192,8 @@ pub async fn home(
     let page = ListingPage::new(rows, Sort::Newest, next_url);
     let strip = page.cards.len().min(newest::STRIP);
     let since = page.cards.first().map(ListingCard::newest_cursor);
-    render(HomePage { shortcuts, page, strip, since })
+    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::related(most_viewed));
+    render(HomePage { shortcuts, page, strip, since, most_viewed })
 }
 
 pub struct Link {

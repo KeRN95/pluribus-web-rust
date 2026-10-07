@@ -6,13 +6,14 @@ pub mod db;
 pub mod format;
 pub mod media;
 pub mod sender;
+pub mod views;
 pub mod web;
 
 use std::sync::Arc;
 
 use sqlx::PgPool;
 
-use crate::{ai::Ai, db::SessionUser, format::Contact, media::Media};
+use crate::{ai::Ai, db::SessionUser, format::Contact, media::Media, views::Views};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -24,6 +25,8 @@ pub struct AppState {
     /// The AI that fills in the listing form from what a seller wrote (web/ai_fill.rs); None
     /// without ANTHROPIC_API_KEY, and then the form has no "Plotëso pjesën tjetër me AI".
     pub ai: Option<Ai>,
+    /// The listings' pages seen, gathered for the day's statistics (views.rs).
+    pub views: Views,
 }
 
 /// The people who may approve the makes, models and brands sellers type in when a list lacks
@@ -54,13 +57,15 @@ impl Moderators {
 }
 
 /// The application's router. `main` serves it, with photos in the store .env names, its
-/// moderators, and the AI if .env has a key for it.
+/// moderators, the AI if .env has a key for it, and the views written every minute.
 pub fn app(db: PgPool) -> axum::Router {
     let ai = Ai::from_env();
     if ai.is_none() {
         tracing::info!("ANTHROPIC_API_KEY isn't set: the listing form has no AI to fill it in");
     }
-    app_with_ai(db, Media::from_env(), Moderators::from_env(), ai)
+    let views = Views::buffered(views::FLUSH_EVERY);
+    views.flush_now_and_then(db.clone());
+    web::router(AppState { db, media: Media::from_env(), moderators: Moderators::from_env(), ai, views })
 }
 
 /// The router with photos kept in `media` and these moderators: the integration tests keep their
@@ -70,6 +75,7 @@ pub fn app_with(db: PgPool, media: Media, moderators: Moderators) -> axum::Route
 }
 
 /// The same with an AI to fill in the listing form: the tests' stands in for Anthropic's API.
+/// Views are written as they come.
 pub fn app_with_ai(db: PgPool, media: Media, moderators: Moderators, ai: Option<Ai>) -> axum::Router {
-    web::router(AppState { db, media, moderators, ai })
+    web::router(AppState { db, media, moderators, ai, views: Views::immediate() })
 }

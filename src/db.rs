@@ -346,7 +346,7 @@ pub async fn listing_property_values(db: &PgPool, listing_id: Uuid) -> sqlx::Res
 
 // ---------------------------------------------------------------- listing pages
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct ListingCard {
     pub id: Uuid,
     pub public_no: i64,
@@ -382,6 +382,10 @@ pub struct ListingCard {
     /// Set when the search is limited to the listing's own city, which the card then leaves out.
     #[sqlx(skip)]
     pub city_known: bool,
+    /// How many times its page was seen this week, on the cards of "Më të klikuarat" alone
+    /// (most_viewed), which show it over the photo.
+    #[sqlx(default)]
+    pub views: Option<i64>,
 }
 
 /// The orders a listing page can be sorted in.
@@ -918,6 +922,62 @@ pub async fn seller_listings(db: &PgPool, listing_id: Uuid, limit: i64) -> sqlx:
     query.push_bind(limit);
     query.push(") l LEFT JOIN locations loc ON loc.id = l.location_id ORDER BY l.sort_at DESC, l.id DESC");
     query.build_query_as().fetch_all(db).await
+}
+
+/// How many listings the welcome page's "Më të klikuarat" shows, and over how many days their
+/// views count.
+pub const MOST_VIEWED: i64 = 12;
+pub const MOST_VIEWED_DAYS: i32 = 7;
+
+/// The active listings whose pages were seen the most over the last `days` days, today's counting
+/// (views.rs), the most first: at most `limit`. Listings no longer on the site make room for the
+/// next ones, from four times as many.
+pub async fn most_viewed(db: &PgPool, days: i32, limit: i64) -> sqlx::Result<Vec<ListingCard>> {
+    let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
+    query.push(
+        "l.views::bigint AS views, NULL::float8 AS distance_m
+         FROM (
+             SELECT l.*, top.views
+             FROM (SELECT listing_id, sum(detail_views) AS views
+                   FROM listing_daily_stats
+                   WHERE stat_date > current_date - ",
+    );
+    query.push_bind(days);
+    query.push(
+        " AND detail_views > 0
+                   GROUP BY listing_id
+                   ORDER BY views DESC
+                   LIMIT ",
+    );
+    query.push_bind(limit * 4);
+    query.push(
+        ") top
+             JOIN listings l ON l.id = top.listing_id
+             WHERE l.status = 'ACTIVE'
+             ORDER BY top.views DESC, l.id DESC
+             LIMIT ",
+    );
+    query.push_bind(limit);
+    query.push(") l LEFT JOIN locations loc ON loc.id = l.location_id ORDER BY l.views DESC, l.id DESC");
+    query.build_query_as().fetch_all(db).await
+}
+
+/// Adds views to today's statistics: the listings' numbers, and how many times each was seen
+/// (views.rs, which gathers them). Numbers no listing has are left out.
+pub async fn add_views(db: &PgPool, numbers: &[i64], views: &[i64]) -> sqlx::Result<()> {
+    sqlx::query(
+        "INSERT INTO listing_daily_stats (listing_id, stat_date, detail_views)
+         SELECT l.id, current_date, v.views
+         FROM unnest($1::bigint[], $2::bigint[]) AS v (public_no, views)
+         JOIN listings l ON l.public_no = v.public_no
+         ON CONFLICT (listing_id, stat_date)
+         DO UPDATE SET detail_views = listing_daily_stats.detail_views + EXCLUDED.detail_views",
+    )
+    .bind(numbers)
+    .bind(views)
+    .execute(db)
+    .await?;
+    Ok(())
 }
 
 /// How many related listings a listing's page shows under it.

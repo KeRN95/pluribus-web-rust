@@ -47,6 +47,11 @@
     <p class="card-price">{{ card.price_display() }}</p>
     {%- let heart_number = card.public_no %}
     {% include "heart.html" %}
+    {%- if let Some(views) = card.views_display() %}
+    {#- On "Më të klikuarat", how many times its page was seen this week: an eye and the number on
+        a dark pill like the heart's circle, at the photo's top left. -#}
+    <p class="card-views" title="{{ views }} shikime këtë javë"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg><span class="visually-hidden">Shikime këtë javë: </span>{{ views }}</p>
+    {%- endif %}
   </div>
   {#- The details line, which starts with a location pin and the city, then the distance from the
       map pin when there is one: "Tiranë · 2,4 km · 2016 · Naftë". One line, ending in "…" when

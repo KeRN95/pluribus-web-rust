@@ -457,6 +457,30 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 @media (hover: hover) {
   .heart-button:hover::before { background: rgb(38 38 36 / 65%); }
 }
+/* On "Më të klikuarat", how many times a listing's page was seen this week: an eye and the
+   number, white on a soft dark pill like the heart's circle, in the photo's top left corner. */
+.card-views {
+  display: flex;
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: start;
+  z-index: 6;
+  align-items: center;
+  gap: .3rem;
+  margin: .45rem;
+  padding: .2rem .55rem .2rem .45rem;
+  border-radius: 999px;
+  background: rgb(38 38 36 / 45%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: var(--semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  pointer-events: none;
+}
+.card-views svg { flex: none; }
 .listing-media .heart { position: absolute; top: .3rem; right: .3rem; z-index: 2; }
 .listing-media .heart-button { --circle: 2rem; --reach: .3rem; }
 .listing-media .heart-button svg { width: 17px; height: 17px; }
@@ -1946,13 +1970,14 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; margin: 1.75rem 0 .75rem; }
 .section-head h2 { margin: 0; }
 .section-head a { font-size: var(--text-sm); font-weight: var(--semibold); text-underline-offset: .2em; }
-/* The seller's other listings in one row, each card as wide as a column of the grid under them
-   (two on a phone, as many as fit on wider screens: the container queries follow its auto-fill),
+/* The seller's other listings in one row, and the welcome page's most seen (.most-viewed), each
+   card as wide as a column of the grid under them (two on a phone, as many as fit on wider
+   screens: the container queries follow its auto-fill),
    which slides sideways a card at a time when there are more cards than columns; then the cards
    narrow a little, so a quarter of the next one shows at the edge. The padding, which the margin
    takes back, keeps a card's hover panel and focus ring clear of the sliding box's edges. */
-.seller-listings { container-type: inline-size; }
-.seller-listings .grid {
+:is(.seller-listings, .most-viewed) { container-type: inline-size; }
+:is(.seller-listings, .most-viewed) .grid {
   --across: 2;
   --gaps: 1;
   --gap: .75rem;
@@ -1969,26 +1994,26 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   scroll-padding-inline: .5rem;
   scrollbar-width: thin;
 }
-.seller-listings .card { scroll-snap-align: start; }
+:is(.seller-listings, .most-viewed) .card { scroll-snap-align: start; }
 @media (min-width: 720px) {
-  .seller-listings .grid { --gap: 1rem; }
+  :is(.seller-listings, .most-viewed) .grid { --gap: 1rem; }
 }
 /* Phones and tablets slide the row with a finger, the next card showing at its edge: no bar. A
    mouse keeps it, on a wide screen. */
 @media (max-width: 959px), (hover: none) {
-  .seller-listings .grid { scrollbar-width: none; }
-  .seller-listings .grid::-webkit-scrollbar { display: none; }
+  :is(.seller-listings, .most-viewed) .grid { scrollbar-width: none; }
+  :is(.seller-listings, .most-viewed) .grid::-webkit-scrollbar { display: none; }
 }
 @container (width < 692px) {
-  .seller-listings .grid:has(> .card:nth-child(3)) { --across: 2.25; --gaps: 2; }
+  :is(.seller-listings, .most-viewed) .grid:has(> .card:nth-child(3)) { --across: 2.25; --gaps: 2; }
 }
 @container (692px <= width < 928px) {
-  .seller-listings .grid { --across: 3; --gaps: 2; }
-  .seller-listings .grid:has(> .card:nth-child(4)) { --across: 3.25; --gaps: 3; }
+  :is(.seller-listings, .most-viewed) .grid { --across: 3; --gaps: 2; }
+  :is(.seller-listings, .most-viewed) .grid:has(> .card:nth-child(4)) { --across: 3.25; --gaps: 3; }
 }
 @container (width >= 928px) {
-  .seller-listings .grid { --across: 4; --gaps: 3; }
-  .seller-listings .grid:has(> .card:nth-child(5)) { --across: 4.25; --gaps: 4; }
+  :is(.seller-listings, .most-viewed) .grid { --across: 4; --gaps: 3; }
+  :is(.seller-listings, .most-viewed) .grid:has(> .card:nth-child(5)) { --across: 4.25; --gaps: 4; }
 }
 
 /* Wide screens: the photos across the page, and under them two columns: the listing on the left,
