@@ -970,19 +970,19 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 }
 .browse-tools .map-card-header { grid-row: 1; align-self: stretch; min-width: 0; }
 .browse-tools .map-card-header[aria-expanded="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
-/* Filtrat's header a pill, as tall as the round buttons beside it, the circle of its icon in its
-   rounded end as Claude's message box holds its buttons, and its name and what it says a size
-   smaller, to fit. */
+/* Filtrat's header a pill, as tall as the round buttons beside it (--row), the circle of its icon
+   in its rounded end as Claude's message box holds its buttons. */
+.browse-tools { --row: 3.4rem; }
 .browse-tools .filters-open {
   align-self: center;
-  height: 3rem;
-  padding: 0 .9rem 0 calc(.5rem - 1px);
-  gap: .6rem;
+  height: var(--row);
+  padding: 0 1rem 0 calc((var(--row) - 2.25rem) / 2 - 1px);
+  gap: .65rem;
   border-radius: 999px;
 }
-.browse-tools .filters-open .map-card-title { line-height: 1.15; }
-.browse-tools .filters-open .map-card-title strong { font-size: .95rem; }
-.browse-tools .filters-open .map-card-title span { font-size: .8rem; }
+.browse-tools .filters-open .map-card-icon { width: 2.25rem; height: 2.25rem; }
+.browse-tools .filters-open .map-card-icon svg { width: 20px; height: 20px; }
+.browse-tools .filters-open .map-card-title { line-height: 1.2; }
 .filters,
 .map-card-body { grid-column: 1 / -1; animation: menu-in .16s ease-out; }
 .filters-card .map-card-icon { color: var(--text); }
@@ -999,8 +999,8 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
    win over .button and .button.secondary, which come later.) */
 .browse-tools .button.round-button {
   justify-content: center;
-  width: 3rem;
-  height: 3rem;
+  width: var(--row);
+  height: var(--row);
   padding: 0;
   border-color: var(--menu-border);
   border-radius: 50%;
@@ -1011,7 +1011,8 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .browse-tools .round-button:active { transform: scale(.97); }
 .browse-tools .button.round-button[aria-expanded="true"],
 .sort-menu[open] > .button.round-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
-.round-button .pin-icon { width: 18px; height: 18px; margin: 0; color: inherit; }
+.browse-tools .round-button svg { width: 20px; height: 20px; }
+.round-button .pin-icon { margin: 0; color: inherit; }
 .map-button { grid-row: 1; align-self: center; }
 @media (prefers-reduced-motion: reduce) {
   .browse-tools .button.round-button { transition: none; }
