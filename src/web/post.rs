@@ -28,7 +28,7 @@ use crate::{
     AppState,
     db::{
         self, Categories, Category, City, FormAttribute, ListingAction, ListingProperty, MyListing, NewListing,
-        OwnListing, OwnPhoto, SessionUser,
+        OwnListing, OwnPhoto, SessionUser, Zone,
     },
     format::{self, Contact},
     media::MAX_PHOTOS,
@@ -48,6 +48,14 @@ const PRICE_TYPES: [(&str, &str); 4] = [
 const CONDITIONS: [&str; 4] = ["NEW", "LIKE_NEW", "USED", "FOR_PARTS"];
 const LISTING_TYPES: [&str; 6] = ["SELL", "BUY", "RENT", "WANTED_RENT", "SERVICE", "JOB"];
 
+/// The category whose listings can say their zone in the town (Blloku, Tiranë), and its
+/// subcategories': property.
+const ZONED: &str = "prona";
+
+fn zoned(categories: &Categories, category: &Category) -> bool {
+    category.slug == ZONED || categories.ancestors(category).iter().any(|above| above.slug == ZONED)
+}
+
 /// What the form sent, kept as typed so the form can show it again next to its errors.
 #[derive(Default)]
 pub struct ListingForm {
@@ -60,6 +68,8 @@ pub struct ListingForm {
     currency: String,
     price_type: String,
     city: String,
+    /// A property's zone in the town, a zone's slug; empty for none.
+    zone: String,
     name: String,
     /// Posting without being signed in: the phone number or e-mail address to post with.
     contact: String,
@@ -90,6 +100,7 @@ impl ListingForm {
                 "currency" => &mut form.currency,
                 "price_type" => &mut form.price_type,
                 "city" => &mut form.city,
+                "zone" => &mut form.zone,
                 "name" => &mut form.name,
                 "contact" => &mut form.contact,
                 "website" => &mut form.website,
@@ -121,6 +132,7 @@ impl ListingForm {
             currency: listing.currency,
             price_type: listing.price_type,
             city: listing.city.unwrap_or_default(),
+            zone: listing.zone.unwrap_or_default(),
             name: listing.contact_name.unwrap_or_default(),
             contact: String::new(),
             website: String::new(),
@@ -145,6 +157,16 @@ pub struct CategoryOption {
     types: String,
     uses_condition: bool,
     currency: String,
+    /// Its listings can say their zone in the town.
+    zoned: bool,
+}
+
+/// A town's zones in the form's "Zona" select, under the town, which narrow_controller.js shows
+/// alone once the town is chosen.
+pub struct ZoneGroup {
+    city: String,
+    label: String,
+    choices: Vec<Choice>,
 }
 
 /// The form, for a new listing or for editing one.
@@ -160,6 +182,10 @@ struct ListingFormPage {
     signed_in_as: Option<String>,
     category_groups: Vec<CategoryGroup>,
     cities: Vec<ChoiceGroup>,
+    /// Every town's zones, for those that have known ones.
+    zones: Vec<ZoneGroup>,
+    /// "Zona" shows: a property in a town with zones (listing_form_controller.js follows).
+    zone_shown: bool,
     types: Vec<Choice>,
     conditions: Vec<Choice>,
     price_types: Vec<Choice>,
@@ -221,6 +247,7 @@ fn page(
         types: category.listing_types.join(","),
         uses_condition: category.uses_condition,
         currency: category.default_currency.clone(),
+        zoned: zoned(categories, category),
     };
     let mut category_groups = Vec::new();
     for top in categories.top_level() {
@@ -233,6 +260,25 @@ fn page(
         "" => categories.by_slug(&form.category).map_or("EUR", |c| c.default_currency.as_str()),
         chosen => chosen,
     };
+    let zones: Vec<ZoneGroup> = cities
+        .iter()
+        .filter(|city| !city.zones.is_empty())
+        .map(|city| ZoneGroup {
+            city: city.slug.clone(),
+            label: city.name.clone(),
+            choices: city
+                .zones
+                .iter()
+                .map(|zone| Choice {
+                    value: zone.slug.clone(),
+                    label: zone.name.clone(),
+                    selected: city.slug == form.city && zone.slug == form.zone,
+                })
+                .collect(),
+        })
+        .collect();
+    let zone_shown = categories.by_slug(&form.category).is_some_and(|category| zoned(categories, category))
+        && zones.iter().any(|group| group.city == form.city);
     let (heading, action, submit_label, cancel_url) = match purpose {
         Purpose::New => ("Shto një njoftim", "/shto".to_string(), "Publiko njoftimin", None),
         Purpose::Edit { public_no, slug } => (
@@ -250,6 +296,8 @@ fn page(
         signed_in_as: user.map(signed_in_as),
         category_groups,
         cities: filters::city_groups(cities, Some(form.city.as_str())),
+        zones,
+        zone_shown,
         types: choices(LISTING_TYPES.iter().map(|code| (*code, format::listing_type(code))), &form.listing_type),
         conditions: choices(CONDITIONS.iter().map(|code| (*code, format::condition(code))), &form.condition),
         price_types: choices(PRICE_TYPES.into_iter(), if form.price_type.is_empty() { "FIXED" } else { &form.price_type }),
@@ -334,6 +382,7 @@ struct Checked<'a> {
     price: Option<Decimal>,
     currency: &'static str,
     city: &'a City,
+    zone: Option<&'a Zone>,
     name: &'a str,
 }
 
@@ -362,7 +411,7 @@ impl<'a> Checked<'a> {
         NewListing {
             user_id: poster.id,
             category_id: self.category.id,
-            location_id: self.city.id,
+            location_id: self.zone.map_or(self.city.id, |zone| zone.id),
             title: self.title,
             slug,
             description: self.description,
@@ -450,6 +499,18 @@ fn check<'a>(
     if city.is_none() {
         fail(errors, "city", "Zgjidh qytetin.");
     }
+    // A property may say its zone in the town; another town's is a mistake. Other listings have
+    // none.
+    let zone = match (category, city) {
+        (Some(category), Some(city)) if !form.zone.is_empty() && zoned(categories, category) => {
+            let zone = city.zones.iter().find(|zone| zone.slug == form.zone);
+            if zone.is_none() {
+                fail(errors, "zone", "Zgjidh një zonë të qytetit.");
+            }
+            zone
+        }
+        _ => None,
+    };
     let name = form.name.trim();
     if name.chars().count() > 60 {
         fail(errors, "name", "Emri mund të ketë deri në 60 shkronja.");
@@ -465,6 +526,7 @@ fn check<'a>(
         price,
         currency,
         city: city?,
+        zone,
         name,
     })
 }

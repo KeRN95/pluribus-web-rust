@@ -114,6 +114,17 @@ pub struct City {
     /// the map's town dropdown moves it.
     pub latitude: f64,
     pub longitude: f64,
+    /// The parts of the town people name (Blloku), which a property listing can say it is in;
+    /// none for most towns (migration 0019).
+    pub zones: Json<Vec<Zone>>,
+}
+
+/// A zone in a town, a place under its municipality (location_type 'AREA').
+#[derive(Debug, Clone, Deserialize)]
+pub struct Zone {
+    pub id: Uuid,
+    pub name: String,
+    pub slug: String,
 }
 
 /// Grouped by county, each county's main town first.
@@ -121,7 +132,10 @@ pub async fn cities(db: &PgPool) -> sqlx::Result<Vec<City>> {
     sqlx::query_as!(
         City,
         r#"SELECT m.id, m.name, m.slug, county.name AS county,
-                m.latitude::float8 AS "latitude!", m.longitude::float8 AS "longitude!"
+                m.latitude::float8 AS "latitude!", m.longitude::float8 AS "longitude!",
+                coalesce((SELECT json_agg(json_build_object('id', z.id, 'name', z.name, 'slug', z.slug) ORDER BY z.name)
+                          FROM locations z
+                          WHERE z.parent_id = m.id AND z.location_type = 'AREA' AND z.active), '[]') AS "zones!: Json<Vec<Zone>>"
          FROM locations m
          JOIN locations county ON county.id = m.parent_id
          WHERE m.location_type = 'MUNICIPALITY' AND m.active
@@ -282,6 +296,8 @@ pub struct ListingCard {
     pub location_name: Option<String>,
     /// The name of the municipality the listing is in.
     pub city: Option<String>,
+    /// The zone in it the listing says it is in (Blloku), if any.
+    pub zone: Option<String>,
     /// How far the listing is from the map pin, in metres, when the search has one.
     pub distance_m: Option<f64>,
     /// The listing's photos, the cover first: their card-sized copies, and the full ones in the
@@ -660,6 +676,7 @@ const CARD_COLUMNS: &str = "WITH card_attributes AS MATERIALIZED (
          SELECT l.id, l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.listing_type, l.price_amount,
                 l.currency::text AS currency, l.price_type, l.price_normalized,
                 loc.name AS location_name,
+                CASE WHEN loc.location_type = 'AREA' THEN loc.name END AS zone,
                 (SELECT t.name FROM locations t
                  WHERE t.id = location_municipality(l.location_id)) AS city,
                 coalesce((SELECT array_agg(coalesce(m.thumbnail_url, m.public_url) ORDER BY m.is_cover DESC, m.sort_order)
@@ -1114,7 +1131,10 @@ pub struct ListingDetail {
     pub category_id: Uuid,
     pub category_name: String,
     pub category_slug: String,
+    /// Its place: the town, or the zone and the town ("Blloku, Tiranë").
     pub location_name: Option<String>,
+    /// The zone in the town it is in, for a property that says one.
+    pub zone: Option<String>,
     pub published_at: Option<OffsetDateTime>,
     /// The seller: a business's name, or the private seller's, with their profile's address.
     pub seller_name: String,
@@ -1156,7 +1176,11 @@ pub async fn listing_by_public_no(
                    JOIN attributes a ON a.id = v.attribute_id
                    WHERE v.listing_id = l.id AND a.code = 'property_area') AS "area_m2?",
                   c.id AS category_id, c.name AS category_name, c.slug AS category_slug,
-                  loc.name AS "location_name?", l.published_at,
+                  CASE WHEN loc.location_type = 'AREA'
+                       THEN loc.name || ', ' || (SELECT town.name FROM locations town WHERE town.id = location_municipality(loc.id))
+                       ELSE loc.name END AS "location_name?",
+                  CASE WHEN loc.location_type = 'AREA' THEN loc.name END AS "zone?",
+                  l.published_at,
                   coalesce(b.display_name, u.display_name) AS "seller_name!",
                   CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || u.id END AS "seller_url!",
                   coalesce(b.created_at, u.created_at) AS "seller_since!",
@@ -1836,8 +1860,8 @@ async fn save_properties(
     Ok(())
 }
 
-/// Saves a listing at its town's point on the map, with the seller's contact, published at once
-/// or as a draft (`publish`), and returns its id and number.
+/// Saves a listing at its place's point on the map (its town's, for a zone without one), with the
+/// seller's contact, published at once or as a draft (`publish`), and returns its id and number.
 pub async fn create_listing(db: &PgPool, listing: &NewListing<'_>) -> sqlx::Result<(Uuid, i64)> {
     let mut tx = db.begin().await?;
     let row = sqlx::query!(
@@ -1845,9 +1869,11 @@ pub async fn create_listing(db: &PgPool, listing: &NewListing<'_>) -> sqlx::Resu
                                description, listing_type, condition, price_amount, currency, price_type,
                                price_normalized, latitude, longitude, status, published_at)
          SELECT $1, $1, $2, loc.id, $4, $5, $6, $7, $8, $9, $10::text::currency_code, $11,
-                price_in_eur($9, $10::text::currency_code), loc.latitude, loc.longitude,
+                price_in_eur($9, $10::text::currency_code),
+                coalesce(loc.latitude, town.latitude), coalesce(loc.longitude, town.longitude),
                 CASE WHEN $12 THEN 'ACTIVE' ELSE 'DRAFT' END, CASE WHEN $12 THEN now() END
          FROM locations loc
+         LEFT JOIN locations town ON town.id = location_municipality(loc.id)
          WHERE loc.id = $3
          RETURNING id, public_no",
         listing.user_id,
@@ -1903,6 +1929,8 @@ pub struct OwnListing {
     pub price_type: String,
     /// The municipality's slug: the form picks towns, and a listing may sit in a smaller place.
     pub city: Option<String>,
+    /// The zone's slug, when it sits in one (Blloku in Tiranë).
+    pub zone: Option<String>,
     pub contact_name: Option<String>,
 }
 
@@ -1912,6 +1940,7 @@ pub async fn own_listing(db: &PgPool, public_no: i64, user_id: Uuid) -> sqlx::Re
         r#"SELECT l.id, l.public_no, l.slug, c.slug AS category, l.listing_type, l.condition, l.title, l.description,
                   l.price_amount, l.currency::text AS "currency!", l.price_type,
                   (SELECT m.slug FROM locations m WHERE m.id = location_municipality(l.location_id)) AS city,
+                  (SELECT z.slug FROM locations z WHERE z.id = l.location_id AND z.location_type = 'AREA') AS zone,
                   lc.contact_name
            FROM listings l
            JOIN categories c ON c.id = l.category_id
@@ -1933,10 +1962,11 @@ pub async fn update_listing(db: &PgPool, public_no: i64, listing: &NewListing<'_
          SET category_id = $3, slug = $5, title = $6, description = $7, listing_type = $8, condition = $9,
              price_amount = $10, currency = $11::text::currency_code, price_type = $12,
              price_normalized = price_in_eur($10, $11::text::currency_code),
-             latitude = CASE WHEN l.location_id = $4 THEN l.latitude ELSE loc.latitude END,
-             longitude = CASE WHEN l.location_id = $4 THEN l.longitude ELSE loc.longitude END,
+             latitude = CASE WHEN l.location_id = $4 THEN l.latitude ELSE coalesce(loc.latitude, town.latitude) END,
+             longitude = CASE WHEN l.location_id = $4 THEN l.longitude ELSE coalesce(loc.longitude, town.longitude) END,
              location_id = $4
          FROM locations loc
+         LEFT JOIN locations town ON town.id = location_municipality(loc.id)
          WHERE loc.id = $4 AND l.public_no = $1 AND l.created_by_user_id = $2 AND l.status IN ('ACTIVE', 'RESERVED')
          RETURNING l.id",
         public_no,

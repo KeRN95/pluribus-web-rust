@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT l.id, l.public_no, l.slug, c.slug AS category, l.listing_type, l.condition, l.title, l.description,\n                  l.price_amount, l.currency::text AS \"currency!\", l.price_type,\n                  (SELECT m.slug FROM locations m WHERE m.id = location_municipality(l.location_id)) AS city,\n                  lc.contact_name\n           FROM listings l\n           JOIN categories c ON c.id = l.category_id\n           LEFT JOIN listing_contacts lc ON lc.listing_id = l.id\n           WHERE l.public_no = $1 AND l.created_by_user_id = $2 AND l.status IN ('ACTIVE', 'RESERVED')",
+  "query": "SELECT l.id, l.public_no, l.slug, c.slug AS category, l.listing_type, l.condition, l.title, l.description,\n                  l.price_amount, l.currency::text AS \"currency!\", l.price_type,\n                  (SELECT m.slug FROM locations m WHERE m.id = location_municipality(l.location_id)) AS city,\n                  (SELECT z.slug FROM locations z WHERE z.id = l.location_id AND z.location_type = 'AREA') AS zone,\n                  lc.contact_name\n           FROM listings l\n           JOIN categories c ON c.id = l.category_id\n           LEFT JOIN listing_contacts lc ON lc.listing_id = l.id\n           WHERE l.public_no = $1 AND l.created_by_user_id = $2 AND l.status IN ('ACTIVE', 'RESERVED')",
   "describe": {
     "columns": [
       {
@@ -65,6 +65,11 @@
       },
       {
         "ordinal": 12,
+        "name": "zone",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 13,
         "name": "contact_name",
         "type_info": "Varchar"
       }
@@ -88,8 +93,9 @@
       null,
       false,
       null,
+      null,
       true
     ]
   },
-  "hash": "918b6fee807de8d2fece128b8dd88102eee343e589a724e58ee99cbf6659b28a"
+  "hash": "971c01ebd0d14365e216b307ed82713e6beedbdca2707659bc3e6d616136243a"
 }

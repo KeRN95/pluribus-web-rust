@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT m.id, m.name, m.slug, county.name AS county,\n                m.latitude::float8 AS \"latitude!\", m.longitude::float8 AS \"longitude!\",\n                coalesce((SELECT json_agg(json_build_object('id', z.id, 'name', z.name, 'slug', z.slug) ORDER BY z.name)\n                          FROM locations z\n                          WHERE z.parent_id = m.id AND z.location_type = 'AREA' AND z.active), '[]') AS \"zones!: Json<Vec<Zone>>\"\n         FROM locations m\n         JOIN locations county ON county.id = m.parent_id\n         WHERE m.location_type = 'MUNICIPALITY' AND m.active\n         ORDER BY county.name, m.slug <> county.slug, m.name",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "slug",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "county",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "latitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "longitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "zones!: Json<Vec<Zone>>",
+        "type_info": "Json"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "a49e227a7196bcddb8c1742934dd99df0f842e5f3a1129d0dc9bb1088f16ebdb"
+}

@@ -56,6 +56,16 @@ impl ListingCard {
         self.city.as_deref().or(self.location_name.as_deref())
     }
 
+    /// The place at the start of the details line: the zone and the town ("Blloku, Tiranë"), the
+    /// town alone, or the zone alone when the search is in that town already (city_label).
+    pub fn place_label(&self) -> Option<String> {
+        match (&self.zone, self.city_label()) {
+            (Some(zone), Some(city)) => Some(format!("{zone}, {city}")),
+            (Some(zone), None) => Some(zone.clone()),
+            (None, city) => city.map(str::to_string),
+        }
+    }
+
     /// What follows the city on the details line: the distance from the map pin, when there is
     /// one, then the category's card properties. Without the city, one more property goes in
     /// first, so the line still says something new: "Apple · 128 GB" rather than "Vlorë · 128 GB".
@@ -220,7 +230,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     });
     // A car's title says its make, model, body type and colour: its details leave them out.
     let titled = listing.heading.is_some();
-    let details: Vec<Detail> = attributes
+    let mut details: Vec<Detail> = attributes
         .into_iter()
         .filter(|attribute| !(titled && properties::TITLE_CODES.contains(&attribute.code.as_str())))
         .map(|attribute| Detail {
@@ -230,6 +240,11 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             values: attribute.shown,
         })
         .collect();
+    // A property's zone in its town comes first among its details.
+    if let Some(zone) = &listing.zone {
+        let zone = Detail { label: "Zona".to_string(), values: vec![zone.clone()], icon: properties::icon("zone"), multi: false };
+        details.insert(0, zone);
+    }
     // Said once: the cookie that says so (post.rs) goes with this answer.
     let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
     let page = ListingPage::related(related);

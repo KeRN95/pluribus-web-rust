@@ -34,7 +34,7 @@
         {%- for group in category_groups %}
         {%- if let Some(label) = group.label %}<optgroup label="{{ label }}">{% endif %}
         {%- for category in group.options %}
-        <option value="{{ category.value }}" data-types="{{ category.types }}" data-currency="{{ category.currency }}"{% if category.uses_condition %} data-condition{% endif %}{% if category.selected %} selected{% endif %}>{{ category.label }}</option>
+        <option value="{{ category.value }}" data-types="{{ category.types }}" data-currency="{{ category.currency }}"{% if category.uses_condition %} data-condition{% endif %}{% if category.zoned %} data-zoned{% endif %}{% if category.selected %} selected{% endif %}>{{ category.label }}</option>
         {%- endfor %}
         {%- if group.label.is_some() %}</optgroup>{% endif %}
         {%- endfor %}
@@ -132,7 +132,7 @@
       <div class="field">
         <label class="visually-hidden" for="city">Qyteti</label>
         <div class="picker" data-controller="picker">
-        <select id="city" name="city" required>
+        <select id="city" name="city" required data-listing-form-target="city" data-action="listing-form#zoneShown">
           <option value="">Qyteti</option>
           {% for group in cities %}
           <optgroup label="{{ group.label }}">
@@ -142,6 +142,22 @@
         </select>
         </div>
         {% if let Some(error) = self.error("city") %}<p class="field-error">{{ error }}</p>{% endif %}
+      </div>
+      {#- A property's zone in its town ("Blloku"), where the town has known ones: only the chosen
+          town's (narrow_controller.js), and only for property (listing_form_controller.js). -#}
+      <div class="field" data-listing-form-target="zoneField"{% if !zone_shown %} hidden{% endif %}>
+        <label class="visually-hidden" for="zone">Zona</label>
+        <div class="picker" data-controller="picker">
+        <select id="zone" name="zone" data-depends-on="city" data-listing-form-target="zone">
+          <option value="">Zona (s'është e detyrueshme)</option>
+          {% for group in zones %}
+          <optgroup label="{{ group.label }}" data-parent="{{ group.city }}">
+            {% for zone in group.choices %}<option value="{{ zone.value }}"{% if zone.selected %} selected{% endif %}>{{ zone.label }}</option>{% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+        </div>
+        {% if let Some(error) = self.error("zone") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
       <div class="field">
         <label class="visually-hidden" for="name">Emri</label>

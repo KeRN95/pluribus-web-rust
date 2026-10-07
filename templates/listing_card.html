@@ -52,7 +52,7 @@
   <div class="card-body">
     <p class="card-summary">
       {%- let rest = card.details_line() -%}
-      {%- if let Some(city) = card.city_label() -%}
+      {%- if let Some(city) = card.place_label() -%}
       {% include "pin.svg" %}{{ city }}{% if !rest.is_empty() %} · {% endif %}
       {%- endif -%}
       {{- rest -}}

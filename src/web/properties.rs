@@ -80,8 +80,9 @@ const TILES: [(&str, &str); 8] = [
 pub const TITLE_CODES: [&str; 4] = ["vehicle_make", "vehicle_model", "vehicle_body_type", "vehicle_color"];
 
 /// Icons for what isn't a form's tile but has one on the listing page: a car's options (a list of
-/// checks).
-const MORE_ICONS: [(&str, &str); 1] = [
+/// checks), a property's zone (a pin).
+const MORE_ICONS: [(&str, &str); 2] = [
+    ("zone", r#"<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z"/><circle cx="12" cy="10" r="2.3"/>"#),
     ("vehicle_features", r#"<path d="M10.5 6h10M10.5 12h10M10.5 18h10"/><path d="m3.5 6 1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5"/>"#),
 ];
 

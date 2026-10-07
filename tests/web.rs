@@ -1130,6 +1130,87 @@ async fn a_listing_shows_listings_like_it(pool: PgPool) {
     assert!(!dog.contains("related-heading"));
 }
 
+#[sqlx::test(fixtures("listings"))]
+async fn a_property_says_its_zone(pool: PgPool) {
+    // A seller new today: the fixtures' have posted their five for the day.
+    let seller = new_seller(&pool, "+355692223344").await;
+    let started = started();
+    let fields = |category: &'static str, city: &'static str, zone: &'static str, title: &'static str| {
+        let mut fields = listing_fields(("city", city), &started);
+        for field in &mut fields {
+            match field.0 {
+                "category" => field.1 = category,
+                "title" => field.1 = title,
+                _ => {}
+            }
+        }
+        fields.retain(|field| field.0 != "condition");
+        fields.push(("zone", zone));
+        fields.push(("prop_property_area", "90"));
+        fields
+    };
+
+    // The form offers Tirana's zones under Tirana, for property only.
+    let form = get_with_cookie(pool.clone(), "/shto", &seller).await.body;
+    assert!(form.contains(r#"<optgroup label="Tiranë" data-parent="tirane">"#));
+    assert!(form.contains(r#"<option value="blloku">Blloku</option>"#));
+    let option = |slug: &str| {
+        let start = form.find(&format!(r#"<option value="{slug}""#)).unwrap();
+        form[start..start + form[start..].find('>').unwrap()].to_string()
+    };
+    assert!(option("apartamente").contains("data-zoned"));
+    assert!(!option("telefona").contains("data-zoned"));
+
+    // Another town's zone is a mistake.
+    let durres = post_form(pool.clone(), "/shto", &fields("apartamente", "tirane", "plazh", "Apartament 2+1 me ashensor"), Some(&seller)).await;
+    assert_eq!(durres.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(durres.body.contains("Zgjidh një zonë të qytetit."));
+
+    // In Blloku: the listing sits there, at Tirana's point on the map.
+    let posted = post_form(pool.clone(), "/shto", &fields("apartamente", "tirane", "blloku", "Apartament 2+1 me ashensor"), Some(&seller)).await;
+    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    let (number, zone, at_tirana): (i64, String, bool) = sqlx::query_as(
+        "SELECT l.public_no, loc.name, l.latitude = town.latitude AND l.longitude = town.longitude
+         FROM listings l JOIN locations loc ON loc.id = l.location_id
+         JOIN locations town ON town.slug = 'tirane' AND town.location_type = 'MUNICIPALITY'
+         WHERE l.title = 'Apartament 2+1 me ashensor'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(zone, "Blloku");
+    assert!(at_tirana);
+
+    // Its page says so, in its place and first among its details; its card too, and filtering by
+    // Tirana or searching for Blloku finds it.
+    let page = html(pool.clone(), &format!("/listing/{number}-apartament-2-1-me-ashensor")).await;
+    assert!(page.contains("Blloku, Tiranë · "));
+    let details = &page[page.find(r#"<dl class="attributes">"#).unwrap()..];
+    assert!(details.find(r#"title="Zona""#).unwrap() < details.find("Sipërfaqja").unwrap());
+    let card = format!(r#"href="/listing/{number}-apartament-2-1-me-ashensor""#);
+    let flats = html(pool.clone(), "/c/apartamente").await;
+    assert!(flats.contains(&card) && flats.contains("Blloku, Tiranë"));
+    let in_tirana = html(pool.clone(), "/c/apartamente?city=tirane").await;
+    assert!(in_tirana.contains(&card));
+    assert!(html(pool.clone(), "/search?q=blloku").await.contains(&card));
+
+    // The edit form has it chosen.
+    let edit = get_with_cookie(pool.clone(), &format!("/listing/{number}/ndrysho"), &seller).await.body;
+    assert!(edit.contains(r#"<option value="blloku" selected>Blloku</option>"#));
+
+    // A phone has no zone: it sits in the town.
+    let phone = post_form(pool.clone(), "/shto", &fields("telefona", "tirane", "blloku", "Samsung Galaxy S21, 128 GB"), Some(&seller)).await;
+    assert_eq!(phone.status, StatusCode::SEE_OTHER, "{}", phone.body);
+    let place: String = sqlx::query_scalar(
+        "SELECT loc.location_type FROM listings l JOIN locations loc ON loc.id = l.location_id
+         WHERE l.title = 'Samsung Galaxy S21, 128 GB'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(place, "MUNICIPALITY");
+}
+
 #[sqlx::test]
 async fn unknown_pages_are_404(pool: PgPool) {
     for uri in ["/listing/999999-nothing", "/c/does-not-exist", "/nowhere"] {
@@ -2472,7 +2553,7 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     let folding = r#"<div class="picker" data-controller="picker" data-picker-tree-value="true">"#;
     let ana = new_seller(&pool, "+355691112233").await;
     let pages = [
-        ("/shto", 6),
+        ("/shto", 7),
         ("/shto/fushat?category=makina", 6),
         ("/search?q=golf", 3),
         ("/c/makina", 4),
