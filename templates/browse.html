@@ -58,6 +58,17 @@
 </nav>
 {%- endif %}
 
+{%- if let Some(page) = most_viewed %}
+{#- In a few big categories, with no filter on, their listings seen the most this week, the most
+    first, as the welcome page has them for every category (db::most_viewed, views.rs): cards in
+    one row that slides sideways (.most-viewed), each saying how many times it was seen; before
+    the page's buttons, so that its own cards' size leaves them as they are. -#}
+<section class="most-viewed" aria-labelledby="most-viewed-heading">
+  <h2 id="most-viewed-heading">Më të klikuarat</h2>
+  {% include "listing_grid.html" %}
+</section>
+{%- endif %}
+
 {#- The search, the filters, the map, the order and the cards' size, round buttons side by side;
     the search, the filters and the map open over the results, under the row and as wide as it,
     the page dimmed under them, the orders in a menu; only one is open at a time: opening one says

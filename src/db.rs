@@ -930,22 +930,33 @@ pub const MOST_VIEWED: i64 = 12;
 pub const MOST_VIEWED_DAYS: i32 = 7;
 
 /// The active listings whose pages were seen the most over the last `days` days, today's counting
-/// (views.rs), the most first: at most `limit`. Listings no longer on the site make room for the
-/// next ones, from four times as many.
-pub async fn most_viewed(db: &PgPool, days: i32, limit: i64) -> sqlx::Result<Vec<ListingCard>> {
+/// (views.rs), the most first: at most `limit`; in these categories alone, when `categories` names
+/// them. Listings no longer on the site make room for the next ones, from four times as many.
+pub async fn most_viewed(
+    db: &PgPool,
+    categories: Option<&[Uuid]>,
+    days: i32,
+    limit: i64,
+) -> sqlx::Result<Vec<ListingCard>> {
     let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
     query.push(
         "l.views::bigint AS views, NULL::float8 AS distance_m
          FROM (
              SELECT l.*, top.views
-             FROM (SELECT listing_id, sum(detail_views) AS views
-                   FROM listing_daily_stats
-                   WHERE stat_date > current_date - ",
+             FROM (SELECT s.listing_id, sum(s.detail_views) AS views
+                   FROM listing_daily_stats s",
     );
+    if let Some(categories) = categories {
+        query
+            .push(" JOIN listings c ON c.id = s.listing_id AND c.category_id = ANY(")
+            .push_bind(categories.to_vec())
+            .push(")");
+    }
+    query.push(" WHERE s.stat_date > current_date - ");
     query.push_bind(days);
     query.push(
-        " AND detail_views > 0
-                   GROUP BY listing_id
+        " AND s.detail_views > 0
+                   GROUP BY s.listing_id
                    ORDER BY views DESC
                    LIMIT ",
     );

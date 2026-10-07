@@ -15,6 +15,7 @@ use std::{
 };
 
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::db::{self, ListingCard};
 
@@ -32,8 +33,12 @@ struct Inner {
     every: Duration,
     pending: Mutex<Pending>,
     /// The most seen listings, and when they were read.
-    most_viewed: Mutex<Option<(Instant, Vec<ListingCard>)>>,
+    most_viewed: Mutex<MostViewed>,
 }
+
+/// The most seen listings, and when they were read: in every category (None), and in each category
+/// that shows its own (by its id).
+type MostViewed = HashMap<Option<Uuid>, (Instant, Vec<ListingCard>)>;
 
 #[derive(Default)]
 struct Pending {
@@ -99,18 +104,21 @@ impl Views {
         Ok(())
     }
 
-    /// The listings seen the most this week (db::most_viewed), read again once they are older than
+    /// The listings seen the most this week (db::most_viewed), in every category, or in one and
+    /// those under it (`category`: its id, and all of theirs); read again once they are older than
     /// the views written since.
-    pub async fn most_viewed(&self, db: &PgPool) -> sqlx::Result<Vec<ListingCard>> {
+    pub async fn most_viewed(&self, db: &PgPool, category: Option<(Uuid, &[Uuid])>) -> sqlx::Result<Vec<ListingCard>> {
         let every = self.0.every;
-        if let Some((at, cards)) = &*self.0.most_viewed.lock().expect("the views' lock") {
+        let key = category.map(|(id, _)| id);
+        if let Some((at, cards)) = self.0.most_viewed.lock().expect("the views' lock").get(&key) {
             if at.elapsed() < every {
                 return Ok(cards.clone());
             }
         }
-        let cards = db::most_viewed(db, db::MOST_VIEWED_DAYS, db::MOST_VIEWED).await?;
+        let ids = category.map(|(_, ids)| ids);
+        let cards = db::most_viewed(db, ids, db::MOST_VIEWED_DAYS, db::MOST_VIEWED).await?;
         if !every.is_zero() {
-            *self.0.most_viewed.lock().expect("the views' lock") = Some((Instant::now(), cards.clone()));
+            self.0.most_viewed.lock().expect("the views' lock").insert(key, (Instant::now(), cards.clone()));
         }
         Ok(cards)
     }

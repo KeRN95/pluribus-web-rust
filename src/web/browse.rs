@@ -178,7 +178,7 @@ pub async fn home(
     let (rows, categories, most_viewed) = tokio::try_join!(
         db::listing_page(&state.db, &filter),
         db::categories(&state.db),
-        state.views.most_viewed(&state.db),
+        state.views.most_viewed(&state.db, None),
     )?;
     // Every main category, in its order, with its icon.
     let shortcuts = categories
@@ -229,6 +229,9 @@ struct BrowsePage<'a> {
     found_in: Vec<FoundIn>,
     /// On a category page, the menu the heading opens to go to another category.
     category_menu: Vec<MenuItem>,
+    /// In a category of MOST_VIEWED_IN with no filter on, its listings seen the most this week
+    /// ("Më të klikuarat"), none before any are.
+    most_viewed: Option<ListingPage>,
     page: ListingPage,
     /// With the map's dots asked for (harta=1), a dot for each result, up to db::MAP_POINTS.
     points: Vec<db::MapPoint>,
@@ -361,6 +364,10 @@ enum View {
     Map,
 }
 
+/// The categories whose pages show their own "Më të klikuarat", as the welcome page does for every
+/// category: the listings seen the most this week in the category and those under it.
+const MOST_VIEWED_IN: [&str; 4] = ["automjete", "makina", "apartamente", "vila-dhe-shtepi"];
+
 /// /c/{slug}: a category and its subcategories.
 pub async fn category(
     State(state): State<AppState>,
@@ -447,7 +454,17 @@ async fn browse(
         return frame_response(filter.after, &ListingPage::new(rows, filter.sort, next_url).big(big));
     }
 
-    let (mut rows, count, mut points, found_in) = tokio::try_join!(
+    // In a category of MOST_VIEWED_IN, with no words and no filter on, the most seen in it: they
+    // take no notice of filters, so they would only be in the way of the listings asked for.
+    let most_viewed_in = match (&page_slug, category, view) {
+        (Some(_), Some(category), View::Grid)
+            if MOST_VIEWED_IN.contains(&category.slug.as_str()) && filters.q.is_none() && filters.chips().is_empty() =>
+        {
+            Some((category.id, categories.subtree_ids(category.id)))
+        }
+        _ => None,
+    };
+    let (mut rows, count, mut points, found_in, most_viewed) = tokio::try_join!(
         db::listing_page(&state.db, &filter),
         db::listing_count(&state.db, &filter),
         async {
@@ -464,7 +481,14 @@ async fn browse(
                 _ => Ok(Vec::new()),
             }
         },
+        async {
+            match &most_viewed_in {
+                Some((id, ids)) => state.views.most_viewed(&state.db, Some((*id, ids))).await,
+                None => Ok(Vec::new()),
+            }
+        },
     )?;
+    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::related(most_viewed));
     // Counted among at most COUNT_LIMIT + 1 listings, as the count is: past that, numbers would
     // mislead, and the names go alone.
     let counted = count <= db::COUNT_LIMIT;
@@ -571,6 +595,7 @@ async fn browse(
         subcategories,
         found_in,
         category_menu,
+        most_viewed,
         page,
         points,
         more_points,

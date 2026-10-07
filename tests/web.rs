@@ -3563,3 +3563,37 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     let unseen = get(pool.clone(), "/listing/1003-apartament-2-1-me-qira-ne-tirane").await.body;
     assert!(unseen.contains("listing-meta") && !unseen.contains("listing-views"));
 }
+
+#[sqlx::test(fixtures("listings"))]
+async fn the_big_categories_have_their_own_most_seen(pool: PgPool) {
+    // The apartment and the house in their own subcategories of Prona.
+    for (slug, no) in [("apartamente", 1003), ("vila-dhe-shtepi", 1004)] {
+        sqlx::query("UPDATE listings SET category_id = (SELECT id FROM categories WHERE slug = $1) WHERE public_no = $2")
+            .bind(slug)
+            .bind(no)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+    // The Mercedes seen by two visitors, the Golf, the apartment, the house and the iPhone by one.
+    let app = app(pool.clone());
+    let safari = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Safari/604.1";
+    for (no, ip) in [(1002, "203.0.113.1"), (1002, "203.0.113.2"), (1001, "203.0.113.1"), (1003, "203.0.113.1"),
+                     (1004, "203.0.113.1"), (1005, "203.0.113.1")] {
+        assert_eq!(send_to(app.clone(), seen(no, ip, safari)).await.status, StatusCode::NO_CONTENT);
+    }
+    // Each big category's page has its own, the most seen first, over the page's buttons...
+    let row = |page: &str| card_numbers(section(page, "most-viewed-heading"));
+    let vehicles = html(pool.clone(), "/c/automjete").await;
+    assert_eq!(row(&vehicles), [1002, 1001]);
+    assert!(vehicles.find("Më të klikuarat") < vehicles.find(r#"<div class="browse"#), "before the buttons");
+    assert_eq!(row(&html(pool.clone(), "/c/makina").await), [1002, 1001]);
+    assert_eq!(row(&html(pool.clone(), "/c/apartamente").await), [1003]);
+    assert_eq!(row(&html(pool.clone(), "/c/vila-dhe-shtepi").await), [1004]);
+    // ...but no other category's, nor one with a filter or words on, which it would take no
+    // notice of.
+    assert!(!html(pool.clone(), "/c/elektronike").await.contains("Më të klikuarat"));
+    assert!(!html(pool.clone(), "/c/prona").await.contains("Më të klikuarat"));
+    assert!(!html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL").await.contains("Më të klikuarat"));
+    assert!(!html(pool, "/c/makina?q=golf").await.contains("Më të klikuarat"));
+}
