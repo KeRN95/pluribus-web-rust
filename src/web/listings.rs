@@ -36,10 +36,14 @@ impl ListingCard {
         self.photos.iter().zip(&self.photos_full).map(|(small, full)| (small.as_str(), full.as_str()))
     }
 
-    /// "Në Marketplace që nga tetor 2026", under the seller's name over a big card's photo, as the
-    /// listing page says it.
+    /// "Përdorues që nga tetor 2026", under the seller's name over a big card's photo.
     pub fn seller_since_text(&self) -> String {
-        format!("Në Marketplace që nga {}", format::month_year(self.seller_since))
+        format!("Përdorues që nga {}", format::month_year(self.seller_since))
+    }
+
+    /// The seller's initial, in a circle before their name, as on the listing page.
+    pub fn seller_initial(&self) -> String {
+        format::initial(&self.seller_name)
     }
 
     /// The city at the start of the details line: the listing's municipality, or its location if

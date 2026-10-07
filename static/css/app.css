@@ -436,23 +436,28 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 }
 .cards-big .card-media .card-price { z-index: 4; }
 .cards-big .card-media .card-price { padding: 0 1rem .75rem; font-size: var(--text-lg); }
-/* Its seller at the top left, as the price at the bottom: the name, and under it, smaller, since
-   when they are on the site, on a shade of their own; every touch goes through to the photo. */
+/* Its seller at the top left, as the price at the bottom: their initial in a circle, as on the
+   listing page, then the name and under it, smaller, since when they are a user, on a shade of
+   their own; every touch goes through to the photo. */
 .card-seller { display: none; }
 .cards-big .card-seller {
-  display: grid;
+  display: flex;
   grid-area: 1 / 1;
   align-self: start;
   justify-self: start;
+  align-items: center;
+  gap: .55rem;
   z-index: 4;
   margin: 0;
-  padding: .8rem 1rem 0;
+  padding: .75rem 1rem 0 .85rem;
   color: #f5f4ee;
   font-size: var(--text-xs);
   line-height: 1.35;
   text-shadow: 0 1px 2px rgb(0 0 0 / 55%), 0 0 6px rgb(0 0 0 / 25%);
   pointer-events: none;
 }
+.card-seller .avatar { box-shadow: 0 1px 3px rgb(0 0 0 / 30%); text-shadow: none; }
+.card-seller-text { display: grid; min-width: 0; }
 .card-seller-name { font-size: var(--text-sm); font-weight: var(--semibold); }
 .cards-big .card-head { padding-top: .7rem; }
 .cards-big .card-title { font-size: var(--text-md); }
