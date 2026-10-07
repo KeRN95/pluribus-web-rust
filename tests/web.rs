@@ -675,16 +675,21 @@ async fn filter_form_offers_the_category_properties(pool: PgPool) {
     assert!(cars.contains(r#"<optgroup label="Volkswagen" data-parent="VOLKSWAGEN">"#), "models are grouped by make");
     assert!(cars.contains("Gjendja"));
     // A few boxes share their line with the next field (Karburanti, five, beside Kambio); more
-    // take one of their own, as do the body types (Karroceria), whose boxes have the car's side
-    // over each name. A colour is a dropdown, however few.
+    // take one of their own, the colours' seven, as do the body types (Karroceria), whose boxes
+    // have the car's side over each name.
     let fuel = cars.find(r#"<legend class="filter-label">Karburanti</legend>"#).unwrap();
     assert!(cars[..fuel].trim_end().ends_with(r#"<fieldset class="filter-group filter-options filter-half">"#));
     let body = cars.find(r#"<legend class="filter-label">Karroceria</legend>"#).unwrap();
     assert!(cars[..body].trim_end().ends_with(r#"<fieldset class="filter-group filter-options filter-icons">"#));
     assert!(cars.contains(r#"<input type="checkbox" name="vehicle_body_type" value="WAGON"><svg class="check-icon""#));
     assert_eq!(cars.matches(r#"<svg class="check-icon""#).count(), 7, "one for each body type, none for the others");
-    assert!(cars.contains(r#"<select id="filter-vehicle_color" name="vehicle_color">"#));
-    assert!(!cars.contains(r#"<input type="checkbox" name="vehicle_color""#));
+    let colour = cars.find(r#"<legend class="filter-label">Ngjyra</legend>"#).unwrap();
+    assert!(cars[..colour].trim_end().ends_with(r#"<fieldset class="filter-group filter-options">"#));
+    assert!(cars.contains(r#"<input type="checkbox" name="vehicle_color" value="WHITE"> E bardhë</label>"#));
+    assert!(!cars.contains(r#"<select id="filter-vehicle_color""#));
+    // A small field left without another beside it, after the colours, takes the line itself.
+    let features = cars.find(r#"<legend class="filter-label">Opsionet</legend>"#).unwrap();
+    assert!(cars[..features].trim_end().ends_with(r#"<fieldset class="filter-group filter-options">"#));
 
     let property = get(pool.clone(), "/c/prona").await.body;
     assert!(property.contains("<h1>Prona<svg class=\"chevron\""));
@@ -2177,7 +2182,7 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
         ("/shto", 6),
         ("/shto/fushat?category=makina", 6),
         ("/search?q=golf", 3),
-        ("/c/makina", 5),
+        ("/c/makina", 4),
         ("/harta", 2),
     ];
     for (uri, selects) in pages {
