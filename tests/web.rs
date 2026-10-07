@@ -996,10 +996,16 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
         assert_eq!(page.contains("Llogarit kredinë"), offered, "{price}");
     }
     // A rent is paid monthly already.
-    let rent = html(pool, "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
-    // The month follows the price, smaller.
+    let rent = html(pool.clone(), "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
+    // The month follows the price, smaller; a rent says nothing of square metres.
     assert!(rent.contains("<p class=\"listing-price\">450\u{a0}€<span class=\"price-note\">/muaj</span></p>"));
     assert!(!rent.contains("Llogarit kredinë"));
+    assert!(!rent.contains("price-per-area"));
+    // A house on sale says under its price what a square metre costs: 185 000 € for 200 m².
+    let house = html(pool, "/listing/1004-shtepi-private-ne-shitje-ne-vlore").await;
+    assert!(house.contains(
+        "<p class=\"listing-price\">185\u{a0}000\u{a0}€<span class=\"price-per-area\">925\u{a0}€/m²</span></p>"
+    ));
 }
 
 #[sqlx::test(fixtures("listings"))]

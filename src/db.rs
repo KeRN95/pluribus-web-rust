@@ -1109,6 +1109,8 @@ pub struct ListingDetail {
     pub price_amount: Option<Decimal>,
     pub currency: String,
     pub price_type: String,
+    /// A property's area in square metres (property_area), for its price per square metre.
+    pub area_m2: Option<Decimal>,
     pub category_id: Uuid,
     pub category_name: String,
     pub category_slug: String,
@@ -1150,6 +1152,9 @@ pub async fn listing_by_public_no(
                   CASE WHEN l.generated_title IS NOT NULL THEN l.title END AS heading,
                   l.description, l.status, l.listing_type,
                   l.condition, l.price_amount, l.currency::text AS "currency!", l.price_type,
+                  (SELECT v.value_number FROM listing_attribute_values v
+                   JOIN attributes a ON a.id = v.attribute_id
+                   WHERE v.listing_id = l.id AND a.code = 'property_area') AS "area_m2?",
                   c.id AS category_id, c.name AS category_name, c.slug AS category_slug,
                   loc.name AS "location_name?", l.published_at,
                   coalesce(b.display_name, u.display_name) AS "seller_name!",

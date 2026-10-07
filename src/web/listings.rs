@@ -6,7 +6,7 @@ use axum::{
     http::{HeaderMap, header},
     response::{IntoResponse, Redirect, Response},
 };
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 
 use super::{
     Result,
@@ -91,6 +91,20 @@ impl ListingDetail {
     /// "/muaj", " (i diskutueshëm)", or empty.
     pub fn price_note(&self) -> String {
         format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).1
+    }
+
+    /// A property on sale with a price and an area, what a square metre of it costs, in its own
+    /// currency and to the whole euro or lek, under the price: "925 €/m²", "nga …" when the price
+    /// is a starting one. Rents, wanted ads and "price on request" have none.
+    pub fn price_per_area(&self) -> Option<String> {
+        let priced = matches!(self.price_type.as_str(), "FIXED" | "NEGOTIABLE" | "FROM");
+        let (amount, area) = (self.price_amount?, self.area_m2?);
+        if self.listing_type != "SELL" || !priced || area <= Decimal::ZERO {
+            return None;
+        }
+        let per_area = (amount / area).round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero);
+        let from = if self.price_type == "FROM" { "nga " } else { "" };
+        Some(format!("{from}{}/m²", format::money(per_area, &self.currency)))
     }
 
     /// The price a loan calculator starts from: only for things on sale with a price of their own
