@@ -57,6 +57,8 @@
     {% if let Some(date) = listing.published_display() %}Publikuar më <strong>{{ date }}</strong> · {% endif %}
     Nr. {{ listing.public_no }}
   </p>
+  {%- let heart_number = listing.public_no %}
+  {% include "heart.html" %}
   </div>
 
   <header class="listing-header">

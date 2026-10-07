@@ -10,6 +10,7 @@ mod newest;
 mod photos;
 mod post;
 mod properties;
+mod saved;
 mod suggestions;
 
 use std::{
@@ -55,12 +56,15 @@ pub fn router(state: AppState) -> Router {
         .route("/harta", get(browse::map))
         .route("/listing/{key}", get(listings::show))
         .route("/listing/{public_no}/phone", post(listings::reveal_phone))
+        .route("/listing/{public_no}/ruaj", post(saved::save))
         .route("/shto", get(post::new_listing).post(post::create_listing).layer(with_photos()))
         .route("/listing/{public_no}/ndrysho", get(post::edit_listing).post(post::update_listing).layer(with_photos()))
         .route("/media/{*key}", get(photos::serve))
         .route("/shto/fushat", get(properties::fields_for_category))
         .route("/shto/ploteso", post(ai_fill::fill).layer(with_photos()))
         .route("/njoftimet-e-mia", get(post::my_listings))
+        .route("/te-ruajturat", get(saved::page))
+        .route("/te-ruajturat/numrat", get(saved::numbers))
         .route("/moderim", get(moderation::page))
         .route("/moderim/{id}/mirato", post(moderation::approve))
         .route("/moderim/{id}/bashko", post(moderation::merge))

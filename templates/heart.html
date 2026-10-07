@@ -1,0 +1,10 @@
+{#- The heart over a listing's photo, at its top right corner (.heart in app.css): it keeps the
+    listing for a signed-in user, or lets it go (saved.rs). heart_controller.js shows whether it is
+    kept, filled in the buttons' coral, and keeps it or lets it go at a tap without leaving the
+    page; without JavaScript, the form keeps it. -#}
+<form class="heart" method="post" action="/listing/{{ heart_number }}/ruaj" data-controller="heart" data-heart-number-value="{{ heart_number }}" data-action="heart#toggle">
+  <input type="hidden" name="ruaj" value="1">
+  <button type="submit" class="heart-button" aria-pressed="false" aria-label="Ruaje" title="Ruaje">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13.1A4.9 4.9 0 0 1 11.5 6.2l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/></svg>
+  </button>
+</form>

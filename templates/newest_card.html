@@ -16,6 +16,8 @@
       <h3 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h3>
     </div>
     <p class="card-price">{{ card.price_display() }}</p>
+    {%- let heart_number = card.public_no %}
+    {% include "heart.html" %}
   </div>
   <div class="card-body">
     <p class="card-summary">

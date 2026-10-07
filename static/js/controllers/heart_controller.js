@@ -1,0 +1,82 @@
+import { Controller } from "@hotwired/stimulus";
+import { visit } from "@hotwired/turbo";
+
+// The heart over a listing's photo (heart.html). Which listings the visitor keeps comes from the
+// server with each page (GET /te-ruajturat/numrat), for every heart on it and those that come later
+// (the next page as it scrolls, the newest listings' row); until it comes, a heart shows what was
+// known before. A tap keeps the listing or lets it go at once, every heart for it on the page with
+// it, and tells the server (POST /listing/N/ruaj), one tap after the other; should that fail, the
+// hearts go back. Someone not signed in goes to sign in, and comes back with the listing kept.
+let kept = new Set();
+let asking = null;
+
+function ask() {
+  asking ??= fetch("/te-ruajturat/numrat", { headers: { Accept: "application/json" }, cache: "no-store" })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((numbers) => {
+      if (!numbers) return;
+      kept = new Set(numbers);
+      for (const heart of document.querySelectorAll(".heart[data-heart-number-value]")) {
+        show(heart, kept.has(Number(heart.dataset.heartNumberValue)));
+      }
+    })
+    .catch(() => {})
+    .finally(() => { asking = null; });
+}
+
+// Each page asks again: the visitor may have signed in or out, or kept listings elsewhere.
+document.addEventListener("turbo:load", ask);
+
+function show(heart, on) {
+  heart.querySelector(".heart-button")?.setAttribute("aria-pressed", on ? "true" : "false");
+  const field = heart.querySelector('input[name="ruaj"]');
+  if (field) field.value = on ? "0" : "1";
+}
+
+export default class extends Controller {
+  static values = { number: Number };
+
+  connect() {
+    show(this.element, kept.has(this.numberValue));
+  }
+
+  toggle(event) {
+    event.preventDefault();
+    const number = this.numberValue;
+    const keep = !kept.has(number);
+    this.mark(number, keep);
+    if (keep) this.beat();
+    const send = () => this.send(number, keep);
+    this.sending = (this.sending ?? Promise.resolve()).then(send, send);
+  }
+
+  async send(number, keep) {
+    try {
+      const response = await fetch(this.element.action, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: new URLSearchParams({ ruaj: keep ? "1" : "0" }),
+      });
+      if (response.ok) return;
+      this.mark(number, !keep);
+      if (response.status === 401) visit("/llogaria");
+    } catch {
+      this.mark(number, !keep);
+    }
+  }
+
+  // Every heart for the listing on the page.
+  mark(number, keep) {
+    if (keep) kept.add(number);
+    else kept.delete(number);
+    for (const heart of document.querySelectorAll(`.heart[data-heart-number-value="${number}"]`)) show(heart, keep);
+  }
+
+  beat() {
+    const button = this.element.querySelector(".heart-button");
+    button.classList.remove("is-beating");
+    void button.offsetWidth;
+    button.classList.add("is-beating");
+    button.addEventListener("animationend", () => button.classList.remove("is-beating"), { once: true });
+  }
+}

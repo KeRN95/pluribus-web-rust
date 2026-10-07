@@ -471,6 +471,106 @@ async fn the_rows_stream_ends_every_few_seconds_and_goes_on_from_the_last_listin
     assert_eq!(events.iter().map(|(data, _)| card_numbers(data)[0]).collect::<Vec<_>>(), [1003]);
 }
 
+/// The heart over listing `number`'s photo.
+fn heart(number: i64) -> String {
+    format!(r#"<form class="heart" method="post" action="/listing/{number}/ruaj" data-controller="heart" data-heart-number-value="{number}""#)
+}
+
+/// Taps the heart of listing `number` as heart_controller.js does: `keep` "1" or "0".
+fn tap_heart(number: &str, keep: &str, cookie: Option<&str>) -> Request<Body> {
+    let mut request = Request::post(format!("/listing/{number}/ruaj"))
+        .header(header::ACCEPT, "application/json")
+        .header(header::HOST, "localhost")
+        .header(header::REFERER, "http://localhost/c/automjete?vehicle_fuel=DIESEL")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded");
+    if let Some(cookie) = cookie {
+        request = request.header(header::COOKIE, cookie);
+    }
+    request.body(Body::from(format!("ruaj={keep}"))).unwrap()
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn every_listing_has_a_heart_over_its_photo(pool: PgPool) {
+    // On every card, the newest listings' row's too, and on the listing's page; the top bar leads to
+    // the listings kept.
+    let home = get(pool.clone(), "/").await.body;
+    assert_eq!(home.matches(r#"<form class="heart""#).count(), home.matches(r#"<article class="card"#).count());
+    assert!(home.contains(r#"<a class="icon-button saved-button" href="/te-ruajturat" aria-label="Të ruajturat""#));
+    let cars = get(pool.clone(), "/c/automjete").await.body;
+    assert!(cars.contains(&heart(1001)));
+    assert_eq!(cars.matches(r#"<form class="heart""#).count(), cars.matches(r#"<article class="card"#).count());
+    let listing = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
+    assert!(listing.contains(&heart(1001)));
+    assert!(listing.contains(r#"<button type="submit" class="heart-button" aria-pressed="false" aria-label="Ruaje""#));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_heart_keeps_a_listing_for_a_signed_in_user(pool: PgPool) {
+    let session = new_seller(&pool, "+355690000011").await;
+    let kept = |pool: PgPool| {
+        let session = session.clone();
+        async move {
+            let mut numbers: Vec<i64> =
+                serde_json::from_str(&get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body).unwrap();
+            numbers.sort();
+            numbers
+        }
+    };
+    for number in ["1001", "1001", "1005"] {
+        assert_eq!(send(pool.clone(), tap_heart(number, "1", Some(&session))).await.status, StatusCode::NO_CONTENT);
+    }
+    assert_eq!(kept(pool.clone()).await, [1001, 1005]);
+    // Found again on their page, the last kept first.
+    let page = get_with_cookie(pool.clone(), "/te-ruajturat", &session).await.body;
+    assert!(page.contains("<h1>Të ruajturat</h1>"));
+    assert_eq!(card_numbers(&page), [1005, 1001]);
+    // Let go.
+    assert_eq!(send(pool.clone(), tap_heart("1005", "0", Some(&session))).await.status, StatusCode::NO_CONTENT);
+    assert_eq!(kept(pool.clone()).await, [1001]);
+    assert_eq!(card_numbers(&get_with_cookie(pool.clone(), "/te-ruajturat", &session).await.body), [1001]);
+    // No such listing.
+    assert_eq!(send(pool.clone(), tap_heart("999999", "1", Some(&session))).await.status, StatusCode::NOT_FOUND);
+    // Without JavaScript, the form keeps the listing and goes back to its page.
+    let request = Request::post("/listing/1003/ruaj")
+        .header(header::HOST, "localhost")
+        .header(header::REFERER, "http://localhost/c/automjete")
+        .header(header::COOKIE, &session)
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .body(Body::from("ruaj=1"))
+        .unwrap();
+    assert_eq!(send(pool.clone(), request).await.location.as_deref(), Some("/c/automjete"));
+    assert_eq!(kept(pool.clone()).await, [1001, 1003]);
+    // Nobody signed in keeps nothing, and their page says how to.
+    assert_eq!(get(pool.clone(), "/te-ruajturat/numrat").await.body, "[]");
+    let page = get(pool, "/te-ruajturat").await.body;
+    assert!(page.contains(r#"<a class="button" href="/llogaria">Hyr</a>"#) && card_numbers(&page).is_empty());
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_heart_tapped_before_signing_in_keeps_the_listing_once_signed_in(pool: PgPool) {
+    // Not signed in: the heart says so, and the listing and the page wait in cookies.
+    let tapped = send(pool.clone(), tap_heart("1001", "1", None)).await;
+    assert_eq!(tapped.status, StatusCode::UNAUTHORIZED);
+    let waiting = format!("ruaj={}; kthehu={}", tapped.cookie("ruaj").unwrap(), tapped.cookie("kthehu").unwrap());
+    assert_eq!(waiting, "ruaj=1001; kthehu=/c/automjete?vehicle_fuel=DIESEL");
+
+    let sent = post_form(pool.clone(), "/hyr", &[("contact", "069 123 4567"), ("started", &started())], None).await;
+    let login = format!("login={}", sent.cookie("login").unwrap());
+    sqlx::query(
+        "UPDATE login_codes SET code_hash = sha256(convert_to(contact || ':123456', 'UTF8'))
+         WHERE contact = '+355691234567'",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let signed = post_form(pool.clone(), "/hyr/kodi", &[("code", "123456")], Some(&format!("{login}; {waiting}"))).await;
+    // Signed in: back to the page, with the listing kept, and the cookies gone.
+    assert_eq!(signed.location.as_deref(), Some("/c/automjete?vehicle_fuel=DIESEL"));
+    assert_eq!((signed.cookie("ruaj"), signed.cookie("kthehu")), (Some(""), Some("")));
+    let session = format!("session={}", signed.cookie("session").unwrap());
+    assert_eq!(get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body, "[1001]");
+}
+
 #[sqlx::test(fixtures("listings"))]
 async fn category_page_includes_subcategories(pool: PgPool) {
     // Automjete has no listings of its own; the cars sit in its Makina subcategory.

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Të ruajturat | Pluribus{% endblock %}
+
+{% block content %}
+{#- The listings the visitor keeps, the last kept first, as the browse pages show listings, each
+    with its heart filled; one let go stays until the page is opened again, to be kept again
+    (saved.rs). -#}
+<section class="saved">
+  <h1>Të ruajturat</h1>
+  {%- if !signed_in %}
+  <p class="lead">Hyr në llogari për të ruajtur njoftimet që të pëlqejnë, me zemrën mbi foton e tyre, dhe për t'i gjetur këtu.</p>
+  <p><a class="button" href="/llogaria">Hyr</a></p>
+  {%- else if page.cards.is_empty() %}
+  <p class="empty">Ende s'ke ruajtur asnjë njoftim. Prek zemrën mbi foton e një njoftimi për ta ruajtur këtu.</p>
+  {%- else %}
+  {% include "listing_grid.html" %}
+  {%- endif %}
+</section>
+{% endblock %}

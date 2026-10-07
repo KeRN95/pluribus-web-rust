@@ -23,7 +23,7 @@ use sha2::{Digest, Sha256};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use super::{Result, cookie, render};
+use super::{Result, cookie, render, saved};
 use crate::{
     AppState,
     db::{self, CodeCheck, CodePurpose, SessionUser},
@@ -350,8 +350,11 @@ pub async fn check_code(
                 Some(listing) => db::publish_draft(&state.db, listing, account.id).await?,
                 None => None,
             };
-            let to = published.unwrap_or_else(|| "/njoftimet-e-mia".to_string());
-            Ok(redirect_with_cookies(&to, vec![session, login]))
+            // A heart tapped before signing in (saved.rs): the listing is kept now, and the page it
+            // was tapped on is where the visitor goes back to.
+            let (back, done) = saved::after_sign_in(&state, &headers, account.id).await?;
+            let to = published.or(back).unwrap_or_else(|| "/njoftimet-e-mia".to_string());
+            Ok(redirect_with_cookies(&to, [vec![session, login], done].concat()))
         }
         CodeCheck::Wrong(left) => unprocessable(CodePage {
             sent_via: Contact::parse(&pending.contact).map_or("", |contact| sent_via(&contact)),

@@ -45,6 +45,8 @@
       <h2 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h2>
     </div>
     <p class="card-price">{{ card.price_display() }}</p>
+    {%- let heart_number = card.public_no %}
+    {% include "heart.html" %}
   </div>
   {#- The details line, which starts with a location pin and the city, then the distance from the
       map pin when there is one: "Tiranë · 2,4 km · 2016 · Naftë". One line, ending in "…" when
