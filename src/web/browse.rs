@@ -16,7 +16,7 @@ use super::{
 use crate::{
     AppState,
     db::{self, Cursor, ListingCard, ListingFilter, Sort},
-    format,
+    format, views,
 };
 
 /// One page of listing cards, plus where the next page starts.
@@ -251,8 +251,8 @@ struct BrowsePage<'a> {
     category_menu: Vec<MenuItem>,
     /// The cookie the view button sets on this page (cards_cookie).
     cards_cookie: String,
-    /// In a main category, or one of MOST_VIEWED_IN, with no filter on, its listings seen the most
-    /// this week ("Më të klikuarat"), none before any are.
+    /// In a category whose page shows its own most seen (views::has_own_most_viewed), with no
+    /// filter on, its listings seen the most this week ("Më të klikuarat"), none before any are.
     most_viewed: Option<ListingPage>,
     page: ListingPage,
     /// With the map's dots asked for (harta=1), a dot for each result, up to db::MAP_POINTS.
@@ -386,11 +386,6 @@ enum View {
     Map,
 }
 
-/// Every main category's page shows its own "Më të klikuarat", as the welcome page does for every
-/// category: the listings seen the most this week in the category and those under it. So do these
-/// big subcategories' pages.
-const MOST_VIEWED_IN: [&str; 3] = ["makina", "apartamente", "vila-dhe-shtepi"];
-
 /// /c/{slug}: a category and its subcategories.
 pub async fn category(
     State(state): State<AppState>,
@@ -480,14 +475,13 @@ async fn browse(
         return frame_response(filter.after, &ListingPage::new(rows, filter.sort, next_url).big(big));
     }
 
-    // In a main category, or one of MOST_VIEWED_IN, with no words and no filter on, the most seen
-    // in it: they take no notice of filters, so they would only be in the way of the listings
-    // asked for.
+    // Every main category's page, and those of a few big subcategories, show their own most seen,
+    // as the welcome page does for every category: the listings seen the most this week in the
+    // category and those under it (views::has_own_most_viewed); with no words and no filter on,
+    // as they take no notice of them, and would only be in the way of the listings asked for.
     let most_viewed_in = match (&page_slug, category, view) {
         (Some(_), Some(category), View::Grid)
-            if (category.parent_id.is_none() || MOST_VIEWED_IN.contains(&category.slug.as_str()))
-                && filters.q.is_none()
-                && filters.chips().is_empty() =>
+            if views::has_own_most_viewed(category) && filters.q.is_none() && filters.chips().is_empty() =>
         {
             Some((category.id, categories.subtree_ids(category.id)))
         }
