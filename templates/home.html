@@ -40,8 +40,8 @@
 
 {#- The newest listings in a row that slides sideways, the newest first, which follows new ones
     while the page is open: the server sends each as it is posted, no more than two a second, and
-    Turbo puts it in front (<turbo-stream-source>, web/newest.rs); the row keeps the newest ten
-    (newest_controller.js). While the row is slid along, the new ones wait, and a fade over its
+    Turbo puts it in front (<turbo-stream-source>, web/newest.rs); from the ten it starts with, the
+    row grows to the newest thirty (newest_controller.js). While the row is slid along, the new ones wait, and a fade over its
     start says how many; a tap on it goes back to the start, where they come in. The row is hidden
     while there are none (app.css), and shows with the first. -#}
 <section class="newest" data-controller="newest"

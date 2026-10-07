@@ -10,7 +10,7 @@ import { Controller } from "@hotwired/stimulus";
 // where they come in. The stream's address moves on to the newest card in the row, for when Turbo
 // shows the page again from its cache. A mouse moves the row too: its wheel turns it, and it drags
 // it as a finger slides it.
-const KEEP = 10;
+const KEEP = 30;
 const PACE = 500;
 // How far a pressed mouse moves before it drags the row, rather than clicking a card.
 const DRAG_FROM = 5;

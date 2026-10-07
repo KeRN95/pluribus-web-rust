@@ -26,7 +26,8 @@ use crate::{
     db::{self, Cursor, ListingCard, Sort},
 };
 
-/// How many listings the row shows: the newest, at first and as new ones come.
+/// How many listings the row starts with, the newest, and how many of the newest a stream looks
+/// at; as new ones come, the page lets the row grow to thirty (newest_controller.js, KEEP).
 pub const STRIP: usize = 10;
 
 /// How often a stream looks for listings posted since it last looked.
