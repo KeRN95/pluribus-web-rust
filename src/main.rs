@@ -4,9 +4,10 @@ use anyhow::Context;
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::EnvFilter;
 
-/// How often the words search corrects typos from are rebuilt (db::refresh_search_words). It takes
-/// a couple of seconds for 100 000 listings, and searches go on meanwhile.
-const SEARCH_WORDS_REFRESH: Duration = Duration::from_secs(15 * 60);
+/// How often the words search corrects typos from (db::refresh_search_words) and what a square
+/// metre costs in each zone (db::refresh_zone_prices) are rebuilt. The words take a couple of
+/// seconds for 100 000 listings, and searches go on meanwhile.
+const REFRESH_EVERY: Duration = Duration::from_secs(15 * 60);
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -27,16 +28,21 @@ async fn main() -> anyhow::Result<()> {
 
     sqlx::migrate!().run(&db).await.context("could not run migrations")?;
 
-    // Search fixes typos and finds words' other forms from the words listings use, a list rebuilt
-    // now and then every SEARCH_WORDS_REFRESH, so that it follows the listings posted meanwhile.
+    // Search fixes typos and finds words' other forms from the words listings use, and a
+    // property's page compares its price per square metre with its zone's: figures over all the
+    // listings, rebuilt now and then every REFRESH_EVERY, so that they follow the listings posted
+    // meanwhile.
     tokio::spawn({
         let db = db.clone();
         async move {
-            let mut refresh = tokio::time::interval(SEARCH_WORDS_REFRESH);
+            let mut refresh = tokio::time::interval(REFRESH_EVERY);
             loop {
                 refresh.tick().await;
                 if let Err(error) = marketplace::db::refresh_search_words(&db).await {
                     tracing::warn!(%error, "could not refresh the words search corrects typos from");
+                }
+                if let Err(error) = marketplace::db::refresh_zone_prices(&db).await {
+                    tracing::warn!(%error, "could not refresh what a square metre costs in each zone");
                 }
             }
         }

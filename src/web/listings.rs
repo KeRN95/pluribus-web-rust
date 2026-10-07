@@ -1,5 +1,7 @@
 //! A listing's page and its phone number reveal.
 
+use std::cmp::Ordering;
+
 use askama::Template;
 use axum::{
     extract::{Path, State},
@@ -88,6 +90,11 @@ impl MapPoint {
     }
 }
 
+/// How far a property's price per square metre may be from its zone's average, in euros, and still
+/// count as about it (yellow): further under it, it is cheap for the zone (green), further over it,
+/// dear (red).
+const ZONE_MARGIN_EUR: i64 = 200;
+
 impl ListingDetail {
     pub fn url(&self) -> String {
         format!("/listing/{}-{}", self.public_no, self.slug)
@@ -119,6 +126,44 @@ impl ListingDetail {
             price: format!("{from}{}", format::money(amount, &self.currency)),
             area: format!("{}\u{a0}m²", format::number(area)),
             rounded_to: if self.currency == "ALL" { "lek" } else { "euro" },
+            zone: self.zone_price(per_area),
+        })
+    }
+
+    /// How `per_area`, the price per square metre as the bubble shows it, compares with what one
+    /// costs in the listing's zone on average, where its zone has an average: within
+    /// ZONE_MARGIN_EUR of it either way is about the same. The two are compared rounded, as the card
+    /// shows them, so that its figures add up. A starting price ("nga") says too little to compare.
+    fn zone_price(&self, per_area: Decimal) -> Option<ZonePrice> {
+        let zone = self.zone.as_ref()?;
+        let (average_eur, listings) = (self.zone_average_eur?, self.zone_listings?);
+        let rate = self.eur_rate.filter(|rate| *rate > Decimal::ZERO)?;
+        if self.price_type == "FROM" {
+            return None;
+        }
+        let average = (average_eur / rate).round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero);
+        let difference = per_area - average;
+        let margin = Decimal::from(ZONE_MARGIN_EUR);
+        let (tone, verdict) = match difference * rate {
+            eur if eur <= -margin => ("price-below", "Nën mesataren"),
+            eur if eur >= margin => ("price-above", "Mbi mesataren"),
+            _ if difference.is_zero() => ("price-near", "Njësoj si mesatarja"),
+            _ => ("price-near", "Afër mesatares"),
+        };
+        let gap = format::money(difference.abs(), &self.currency);
+        let difference = match difference.cmp(&Decimal::ZERO) {
+            Ordering::Less => Some(format!("{gap}/m² më lirë")),
+            Ordering::Greater => Some(format!("{gap}/m² më shtrenjtë")),
+            Ordering::Equal => None,
+        };
+        Some(ZonePrice {
+            zone: zone.clone(),
+            category: self.category_name.clone(),
+            average: format!("{}/m²", format::money(average, &self.currency)),
+            listings: format::listing_count(listings, i64::MAX),
+            tone,
+            verdict,
+            difference,
         })
     }
 
@@ -286,6 +331,27 @@ pub struct AreaPrice {
     pub area: String,
     /// What the result is rounded to: "euro" or "lek".
     pub rounded_to: &'static str,
+    /// How it compares with its zone's average, where its zone has one.
+    pub zone: Option<ZonePrice>,
+}
+
+/// A property's price per square metre against its zone's average (zone_area_prices).
+pub struct ZonePrice {
+    /// The zone's name, "Blloku", and the listing's category's, "Apartamente".
+    pub zone: String,
+    pub category: String,
+    /// The average, in the listing's currency, rounded as the price per square metre is:
+    /// "1 000 €/m²".
+    pub average: String,
+    /// How many sales it is worked out from: "124 njoftime".
+    pub listings: String,
+    /// The bubble's class: "price-below" (green), "price-near" (yellow) or "price-above" (red).
+    pub tone: &'static str,
+    /// What that means: "Nën mesataren", "Afër mesatares", "Mbi mesataren", or "Njësoj si
+    /// mesatarja" when the two are the same.
+    pub verdict: &'static str,
+    /// By how much: "300 €/m² më lirë", "300 €/m² më shtrenjtë"; None when the same.
+    pub difference: Option<String>,
 }
 
 /// One of a listing's details, as pills: its icon before its value where it has one, otherwise

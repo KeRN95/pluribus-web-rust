@@ -14,6 +14,10 @@
 -- version of this script, dev/sample_listings.sql or tests/fixtures/listings.sql) more of their
 -- category's photos; listings people made on the site keep theirs:
 --   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v photos=1 < dev/generate_listings.sql
+-- A property listing stands in the zone of its town its title names, where the town has zones
+-- (migrations/0019_zones.sql). zones=1 makes nothing, but moves the ones earlier versions of this
+-- script left in the town into their zones:
+--   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v zones=1 < dev/generate_listings.sql
 --
 -- All of it is fictional: the sellers (dev|generated-…, …@example.test, phone numbers
 -- +355 69 1xx xxxx, businesses' +355 68 1xx xxxx), what they sell, and for how much. The photos
@@ -31,6 +35,10 @@
 \else
 \set photos false
 \endif
+\if :{?zones}
+\else
+\set zones false
+\endif
 
 \if :remove
 BEGIN;
@@ -38,6 +46,7 @@ DELETE FROM listings WHERE created_by_user_id IN (SELECT id FROM users WHERE aut
 DELETE FROM businesses WHERE slug LIKE 'gen-%';
 DELETE FROM users WHERE auth_subject LIKE 'dev|generated-%';
 REFRESH MATERIALIZED VIEW search_words;
+REFRESH MATERIALIZED VIEW zone_area_prices;
 COMMIT;
 \echo 'Removed the generated listings, their sellers and businesses.'
 \quit
@@ -248,6 +257,45 @@ FROM galleries g
 CROSS JOIN generate_series(g.first, g.photos - 1) AS n
 WHERE NOT EXISTS (SELECT 1 FROM photos p WHERE p.category = g.category);
 $$;
+
+-- The zone of its town a property's title names, "…, Blloku, Tiranë" (migrations/0019_zones.sql),
+-- if any: the place the listing is in. The names earlier versions of this script spelled otherwise
+-- than the zones count too.
+CREATE FUNCTION pg_temp.zone_of(title text, town uuid) RETURNS uuid LANGUAGE sql STABLE
+RETURN (SELECT z.id
+        FROM locations z
+        LEFT JOIN (VALUES ('lunder', 'Lunder'), ('xhamlliku', 'Xhamllik')) AS spelled (slug, name) ON spelled.slug = z.slug
+        WHERE z.parent_id = town AND z.location_type = 'AREA'
+          AND (title LIKE '%, ' || z.name || ', %' OR title LIKE '%, ' || spelled.name || ', %')
+        ORDER BY length(z.name) DESC
+        LIMIT 1);
+
+\if :zones
+-- Property listings this script made before it put them in their zones, which stand in their
+-- town, move to the zone their title names, and search finds them by it. Listings people made on
+-- the site stay where they are.
+CREATE TEMP TABLE zoned AS
+SELECT l.id, pg_temp.zone_of(l.title, l.location_id) AS zone_id
+FROM listings l
+JOIN users u ON u.id = l.created_by_user_id
+JOIN categories c ON c.id = l.category_id
+JOIN categories family ON family.id = coalesce(c.parent_id, c.id)
+WHERE u.auth_subject LIKE 'dev|generated-%' AND family.slug = 'prona';
+DELETE FROM zoned WHERE zone_id IS NULL;
+
+UPDATE listings l SET location_id = z.zone_id FROM zoned z WHERE z.id = l.id;
+UPDATE listings SET search_extra = listing_search_extra(id) WHERE id IN (SELECT id FROM zoned);
+REFRESH MATERIALIZED VIEW zone_area_prices;
+
+COMMIT;
+
+-- The two updates wrote the listings again: vacuuming frees their old versions' space.
+VACUUM (ANALYZE) listings;
+
+SELECT format('Put %s listings in their zones.', count(*)) AS done FROM zoned \gset
+\echo :done
+\quit
+\endif
 
 \if :photos
 -- Listings with only a cover, as this script made them before it gave more, and as
@@ -507,7 +555,7 @@ DECLARE
     place text := pg_temp.pick(CASE town_slug
         WHEN 'tirane' THEN ARRAY['Blloku', 'Komuna e Parisit', 'Don Bosko', 'Ali Demi', 'Fresku', 'Kombinat', 'Laprakë',
                                  'Selitë', 'Yzberisht', 'Astir', '21 Dhjetori', 'Rruga e Kavajës', 'Myslym Shyri',
-                                 'Pazari i Ri', 'Sauk', 'Lunder', 'Kodra e Diellit', 'Unaza e Re', 'Tirana e Re', 'Xhamllik']
+                                 'Pazari i Ri', 'Sauk', 'Lundër', 'Kodra e Diellit', 'Unaza e Re', 'Tirana e Re', 'Xhamlliku']
         WHEN 'durres' THEN ARRAY['Plazh', 'Shkëmbi i Kavajës', 'Currila', 'Qendër', 'Ish-Kënetë', 'Golem']
         WHEN 'vlore' THEN ARRAY['Lungomare', 'Uji i Ftohtë', 'Skelë', 'Qendër', 'Radhimë']
         WHEN 'sarande' THEN ARRAY['Qendër', 'Kodër', 'Shirokë']
@@ -1095,7 +1143,9 @@ LEFT JOIN people ON s.firm_family IS NULL
 INSERT INTO listings (id, seller_user_id, seller_business_id, created_by_user_id, category_id, location_id,
                       slug, title, description, listing_type, condition, price_amount, currency, price_type,
                       price_normalized, status, published_at, sold_at, bumped_at, featured_until, latitude, longitude)
-SELECT p.id, p.seller_user_id, p.seller_business_id, p.created_by, p.category_id, p.town_id,
+SELECT p.id, p.seller_user_id, p.seller_business_id, p.created_by, p.category_id,
+       -- A property in the zone its title names, where its town has zones.
+       coalesce(CASE WHEN p.family = 'prona' THEN pg_temp.zone_of(p.title, p.town_id) END, p.town_id),
        coalesce(nullif(left(btrim(regexp_replace(lower(immutable_unaccent(p.title)), '[^a-z0-9]+', '-', 'g'), '-'), 80), ''), 'njoftim'),
        p.title, p.description, p.listing_type, p.condition, p.price, p.currency, p.price_type,
        CASE p.price_type WHEN 'FREE' THEN 0 WHEN 'ON_REQUEST' THEN NULL ELSE price_in_eur(p.price, p.currency) END,
@@ -1168,6 +1218,7 @@ UPDATE listings SET search_extra = listing_search_extra(id), generated_title = l
 WHERE id IN (SELECT id FROM written);
 
 REFRESH MATERIALIZED VIEW search_words;
+REFRESH MATERIALIZED VIEW zone_area_prices;
 
 COMMIT;
 

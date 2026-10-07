@@ -1291,6 +1291,91 @@ async fn a_property_says_its_zone(pool: PgPool) {
     assert_eq!(place, "MUNICIPALITY");
 }
 
+#[sqlx::test(fixtures("listings"))]
+async fn a_property_in_a_zone_compares_its_square_metre_with_the_zones(pool: PgPool) {
+    // Eleven flats on sale in Blloku, 100 m² each: ten from 700 to 1 200 € a square metre, and one
+    // at 5 000 € as a mistyped price would have it. The zone's average leaves out the cheapest and
+    // the dearest tenth, so the mistake doesn't pull it: it is 1 000 €/m².
+    sqlx::query(
+        "INSERT INTO listings (public_no, seller_user_id, created_by_user_id, category_id, location_id, slug,
+                               title, description, listing_type, price_amount, price_normalized, currency,
+                               price_type, status, published_at)
+         OVERRIDING SYSTEM VALUE
+         SELECT 2000 + n, '11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111111',
+                (SELECT id FROM categories WHERE slug = 'apartamente'),
+                (SELECT id FROM locations WHERE slug = 'blloku' AND location_type = 'AREA'),
+                'apartament-' || n, 'Apartament ' || n, 'Apartament në Bllok.', 'SELL',
+                price, price, 'EUR', 'FIXED', 'ACTIVE', now()
+         FROM (VALUES (1, 70000), (2, 80000), (3, 89000), (4, 100000), (5, 100000), (6, 100000),
+                      (7, 100000), (8, 100000), (9, 111000), (10, 120000), (11, 500000)) AS v (n, price)",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_number)
+         SELECT l.id, a.id, a.data_type, 100
+         FROM listings l JOIN attributes a ON a.code = 'property_area'
+         WHERE l.public_no BETWEEN 2001 AND 2011",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    marketplace::db::refresh_zone_prices(&pool).await.unwrap();
+
+    let page = |n: i64| format!("/listing/{n}-apartament-{}", n - 2000);
+    // The bubble under the price, from its opening tag to its end.
+    let bubble = |html: String| {
+        let start = html.find(r#"<details class="area-price"#).expect("the bubble");
+        html[start..start + html[start..].find("</details>").unwrap()].to_string()
+    };
+
+    // 200 € a square metre under the average, or more: green, and the card says the average, by
+    // how much, and what the average is worked out from.
+    let cheap = bubble(html(pool.clone(), &page(2002)).await);
+    assert!(cheap.starts_with(r#"<details class="area-price price-below" data-controller="dropdown">"#), "{cheap}");
+    for line in [
+        "<dd>800\u{a0}€/m²</dd>",
+        "<dt>Mesatarja e zonës</dt><dd>1\u{a0}000\u{a0}€/m²</dd>",
+        "Nën mesataren: 200\u{a0}€/m² më lirë",
+        "Mesatarja: 11 njoftime në shitje në Blloku (Apartamente), pa çmimet më të ulëta e më të larta.",
+    ] {
+        assert!(cheap.contains(line), "{line}");
+    }
+    // Less than 200 € from it either way: yellow.
+    let near = bubble(html(pool.clone(), &page(2003)).await);
+    assert!(near.starts_with(r#"<details class="area-price price-near""#));
+    assert!(near.contains("Afër mesatares: 110\u{a0}€/m² më lirë"));
+    let even = bubble(html(pool.clone(), &page(2004)).await);
+    assert!(even.starts_with(r#"<details class="area-price price-near""#));
+    assert!(even.contains("Njësoj si mesatarja"));
+    // 200 € over it, or more: red.
+    let dear = bubble(html(pool.clone(), &page(2010)).await);
+    assert!(dear.starts_with(r#"<details class="area-price price-above""#));
+    assert!(dear.contains("Mbi mesataren: 200\u{a0}€/m² më shtrenjtë"));
+
+    // A price in Lekë meets the average in Lekë: 1 000 € is 100 000 Lekë.
+    sqlx::query("UPDATE listings SET price_amount = 10000000, currency = 'ALL' WHERE public_no = 2004")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let in_lek = bubble(html(pool.clone(), &page(2004)).await);
+    assert!(in_lek.contains("<dt>Mesatarja e zonës</dt><dd>100\u{a0}000\u{a0}Lekë/m²</dd>"), "{in_lek}");
+    assert!(in_lek.contains("Njësoj si mesatarja"));
+
+    // A starting price says too little to compare.
+    sqlx::query("UPDATE listings SET price_type = 'FROM' WHERE public_no = 2010").execute(&pool).await.unwrap();
+    let from = bubble(html(pool.clone(), &page(2010)).await);
+    assert!(from.starts_with(r#"<details class="area-price" data-controller="dropdown">"#), "{from}");
+    assert!(!from.contains("Mesatarja"));
+
+    // Fewer than five sales in the zone make no average.
+    sqlx::query("DELETE FROM listings WHERE public_no BETWEEN 2001 AND 2008").execute(&pool).await.unwrap();
+    marketplace::db::refresh_zone_prices(&pool).await.unwrap();
+    let alone = bubble(html(pool.clone(), &page(2009)).await);
+    assert!(alone.starts_with(r#"<details class="area-price" data-controller="dropdown">"#), "{alone}");
+}
+
 #[sqlx::test]
 async fn unknown_pages_are_404(pool: PgPool) {
     for uri in ["/listing/999999-nothing", "/c/does-not-exist", "/nowhere"] {

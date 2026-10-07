@@ -508,6 +508,14 @@ pub async fn refresh_search_words(db: &PgPool) -> sqlx::Result<()> {
     Ok(())
 }
 
+/// Rebuilds what a square metre costs in each zone, by category (zone_area_prices), which a
+/// property's page compares its own price per square metre with, so that it follows the listings.
+/// Pages go on reading the old figures meanwhile.
+pub async fn refresh_zone_prices(db: &PgPool) -> sqlx::Result<()> {
+    sqlx::query!("REFRESH MATERIALIZED VIEW CONCURRENTLY zone_area_prices").execute(db).await?;
+    Ok(())
+}
+
 /// What a word being typed may become: the words listings use that start with `start`, the most
 /// used first and one of each stem ("apart" gives "apartament", not "apartamente" too). `start`
 /// is folded (format::fold) and letters only.
@@ -1161,6 +1169,14 @@ pub struct ListingDetail {
     pub location_name: Option<String>,
     /// The zone in the town it is in, for a property that says one.
     pub zone: Option<String>,
+    /// What a square metre costs in its zone on average, in euros, among the zone's sales in its
+    /// category (zone_area_prices), and how many sales that is; None outside a zone, or where too
+    /// few listings make an average.
+    pub zone_average_eur: Option<Decimal>,
+    pub zone_listings: Option<i64>,
+    /// What a unit of its currency is worth in euros (exchange_rates): the zone's average is in
+    /// euros.
+    pub eur_rate: Option<Decimal>,
     pub published_at: Option<OffsetDateTime>,
     /// The seller: a business's name, or the private seller's, with their profile's address.
     pub seller_name: String,
@@ -1206,6 +1222,8 @@ pub async fn listing_by_public_no(
                        THEN loc.name || ', ' || (SELECT town.name FROM locations town WHERE town.id = location_municipality(loc.id))
                        ELSE loc.name END AS "location_name?",
                   CASE WHEN loc.location_type = 'AREA' THEN loc.name END AS "zone?",
+                  zone_price.average_eur AS "zone_average_eur?", zone_price.listings AS "zone_listings?",
+                  (SELECT r.eur_rate FROM exchange_rates r WHERE r.currency = l.currency) AS "eur_rate?",
                   l.published_at,
                   coalesce(b.display_name, u.display_name) AS "seller_name!",
                   CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || u.id END AS "seller_url!",
@@ -1216,6 +1234,7 @@ pub async fn listing_by_public_no(
            FROM listings l
            JOIN categories c ON c.id = l.category_id
            LEFT JOIN locations loc ON loc.id = l.location_id
+           LEFT JOIN zone_area_prices zone_price ON zone_price.zone_id = l.location_id AND zone_price.category_id = l.category_id
            LEFT JOIN users u ON u.id = l.seller_user_id
            LEFT JOIN businesses b ON b.id = l.seller_business_id
            WHERE l.public_no = $1 AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD')"#,

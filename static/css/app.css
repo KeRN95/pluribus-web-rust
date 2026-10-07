@@ -32,6 +32,13 @@
   --badge: #f6e1d3;
   --location: #05164d;          /* Lufthansa blue; Claude's coral in the dark theme */
   --danger: #b42318;
+  /* A property's square metre against its zone's average: under it, about it, over it. */
+  --below: #1b6e37;
+  --below-bg: #e2f3e6;
+  --near: #7a5900;
+  --near-bg: #fbefc6;
+  --above: #b42318;
+  --above-bg: #fbe5e1;
   --placeholder-from: #ece9df;
   --placeholder-to: #e2ded2;
   --shadow: 0 1px 2px rgb(31 30 29 / 5%), 0 4px 16px rgb(31 30 29 / 5%);
@@ -78,6 +85,12 @@
   --badge: #4a382e;
   --location: #d97757;
   --danger: #f97066;
+  --below: #7fd498;
+  --below-bg: #26402f;
+  --near: #f0c75a;
+  --near-bg: #463b1f;
+  --above: #fb8a80;
+  --above-bg: #4b2c2a;
   --placeholder-from: #34332f;
   --placeholder-to: #3c3b36;
   --shadow: 0 1px 2px rgb(0 0 0 / 30%);
@@ -102,6 +115,12 @@
     --badge: #4a382e;
     --location: #d97757;
     --danger: #f97066;
+    --below: #7fd498;
+    --below-bg: #26402f;
+    --near: #f0c75a;
+    --near-bg: #463b1f;
+    --above: #fb8a80;
+    --above-bg: #4b2c2a;
     --placeholder-from: #34332f;
     --placeholder-to: #3c3b36;
     --shadow: 0 1px 2px rgb(0 0 0 / 30%);
@@ -1836,6 +1855,10 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .area-price-total { padding-top: .4rem; border-top: 1px solid var(--border); font-weight: var(--semibold); }
 .area-price-total dt { color: var(--text); }
 .area-price-note { margin: .55rem 0 0; color: var(--muted); font-size: var(--text-xs); }
+/* In a zone with an average, how the square metre compares with it, under the sum: a dot and the
+   words in the bubble's colour. */
+.area-price-verdict { display: flex; align-items: center; gap: .45rem; margin: .5rem 0 0; color: var(--tone); font-weight: var(--semibold); }
+.area-price-verdict::before { content: ""; flex: none; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
 @media (prefers-reduced-motion: reduce) {
   .area-price-card { animation: none; }
 }
@@ -1854,6 +1877,19 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 }
 .loan-button:hover, .loan-button[aria-expanded="true"],
 .area-price > summary:hover, .area-price[open] > summary { background: var(--surface-muted); }
+/* In a zone with an average (zone_area_prices), the bubble takes the colour of how its square
+   metre compares: green 200 € or more under it, red as much over it, yellow in between
+   (ZONE_MARGIN_EUR, listings.rs). */
+.area-price.price-below { --tone: var(--below); --tone-bg: var(--below-bg); }
+.area-price.price-near { --tone: var(--near); --tone-bg: var(--near-bg); }
+.area-price.price-above { --tone: var(--above); --tone-bg: var(--above-bg); }
+.area-price:is(.price-below, .price-near, .price-above) > summary {
+  border-color: color-mix(in srgb, var(--tone) 30%, transparent);
+  background: var(--tone-bg);
+  color: var(--tone);
+}
+.area-price:is(.price-below, .price-near, .price-above) > summary:hover,
+.area-price:is(.price-below, .price-near, .price-above)[open] > summary { background: color-mix(in srgb, var(--tone) 12%, var(--tone-bg)); }
 .loan {
   max-width: 30rem; margin: -.25rem 0 1.25rem; padding: .9rem 1rem;
   border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
