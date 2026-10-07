@@ -1704,11 +1704,12 @@ async fn electronics_subcategories_have_properties_of_their_own(pool: PgPool) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn the_site_is_called_pluribus(pool: PgPool) {
-    // The logo is the welcome page's creature, still, and the name in lowercase, in a typeface of
-    // its own that comes with the page; the pages' titles and the footer say the name.
+    // The logo is the welcome page's creature, moving, and the name in lowercase, in a typeface of
+    // its own that comes with the page; it stays from page to page. The pages' titles and the
+    // footer say the name.
     let home = html(pool.clone(), "/").await;
-    assert!(home.contains(r#"<a class="logo" href="/"><svg class="logo-mark""#));
-    assert!(home.contains(r#"</svg><span class="logo-word">pluribus</span></a>"#));
+    assert!(home.contains(r#"<a class="logo" id="logo" href="/" data-turbo-permanent><svg class="thinking""#));
+    assert!(home.contains(r#"<span class="logo-word">pluribus</span></a>"#));
     assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
     assert!(home.contains(
         r#"<link rel="preload" href="/static/vendor/fonts/merriweather-5.3.0-latin-700.woff2" as="font" type="font/woff2" crossorigin>"#

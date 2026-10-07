@@ -36,9 +36,10 @@
     <div class="header-inner">
       {#- The search is the welcome page's pill, and on the browse pages the round button before
           the filters. -#}
-      {#- The logo: the welcome page's creature (thinking.svg) holding still as its star, and the
-          name in lowercase. -#}
-      <a class="logo" href="/">{% include "logo_mark.svg" %}<span class="logo-word">pluribus</span></a>
+      {#- The logo: the welcome page's creature (thinking.svg), half of it behind the name's p, and
+          the name in lowercase. Turbo keeps it from page to page (data-turbo-permanent), so the
+          creature goes on moving rather than starting over with each page. -#}
+      <a class="logo" id="logo" href="/" data-turbo-permanent>{% include "thinking.svg" %}<span class="logo-word">pluribus</span></a>
       <a class="icon-button post-button" href="/shto" aria-label="Shto njoftim" title="Shto njoftim">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       </a>
