@@ -608,6 +608,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
     opacity: 0;
     transition: opacity .15s;
   }
+  /* The arrow takes a click a little way round its circle too, so that one just off it steps the
+     photos rather than opening the listing. */
+  .cards-big .card-step { position: relative; }
+  .cards-big .card-step::after { content: ""; position: absolute; inset: -.6rem; border-radius: 50%; }
   .cards-big .card:hover .card-step,
   .cards-big .card-step:focus-visible { opacity: 1; }
   .card-previous { justify-self: start; }
