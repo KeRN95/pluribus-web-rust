@@ -825,7 +825,7 @@ async fn big_cards_slide_through_every_photo(pool: PgPool) {
     assert_eq!(golf.matches(r#"<a class="card-slide""#).count(), 3);
     let cover = golf.find("photo-1591230740238").unwrap();
     assert!(cover < golf.find("card-1.jpg").unwrap() && golf.find("card-1.jpg").unwrap() < golf.find("card-2.jpg").unwrap());
-    assert!(golf.contains(r#"srcset="https://example.com/card-2.jpg 600w, https://example.com/full-2.jpg 1600w" sizes="(min-width: 720px) 40rem, 100vw""#));
+    assert!(golf.contains(r#"srcset="https://example.com/card-2.jpg 600w, https://example.com/full-2.jpg 1600w" sizes="(min-width: 960px) 535px, (min-width: 720px) 40rem, 100vw""#));
     assert_eq!(golf.matches(r#"<span class="is-current"></span><span></span><span></span>"#).count(), 1, "a dot for each photo");
     // Over the photo's top left, who sells it, their initial in a circle, and since when they are
     // a user.

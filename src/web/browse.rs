@@ -31,10 +31,11 @@ pub struct ListingPage {
 }
 
 /// How wide a card's photo shows, for the browser to pick the copy it fetches (srcset in
-/// listing_card.html): a column of the grid, or for a big card the line, no wider than 40rem (app.css,
-/// .cards-big). cards_controller.js switches between them as the view button switches the cards.
+/// listing_card.html): a column of the grid, or for a big card the line, no wider than 40rem, and
+/// half the page's 1100px on a wide screen (app.css, .cards-big). cards_controller.js switches
+/// between them as the view button switches the cards.
 const SMALL_CARD_SIZES: &str = "(min-width: 720px) 260px, 50vw";
-const BIG_CARD_SIZES: &str = "(min-width: 720px) 40rem, 100vw";
+const BIG_CARD_SIZES: &str = "(min-width: 960px) 535px, (min-width: 720px) 40rem, 100vw";
 
 /// The cookie the view button sets (cards_controller.js): "big" for big cards.
 const CARDS_COOKIE: &str = "cards";

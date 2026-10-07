@@ -511,7 +511,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    a row that a finger slides through a photo at a time (slides_controller.js), over the title's
    stretched link, each photo a link itself; over them the shades, the price and the seller over
    those, then the dots, at the right, and under a pointer the arrows. The rest of the card a size bigger, the photo 4:3,
-   one card a line, no wider than 40rem, in the middle. */
+   one card a line, no wider than 40rem, in the middle; on a wide screen two a line, across the
+   page. */
 .card-slides {
   display: flex;
   grid-area: 1 / 1;
@@ -527,6 +528,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .card-step { display: none; }
 
 .cards-big .grid { grid-template-columns: minmax(0, 1fr); max-width: 40rem; margin-inline: auto; row-gap: 2.75rem; }
+@media (min-width: 960px) {
+  .cards-big .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; column-gap: 1.5rem; }
+}
 .cards-big .card-media::before { aspect-ratio: 4 / 3; }
 .cards-big .card-slides {
   z-index: 2;
