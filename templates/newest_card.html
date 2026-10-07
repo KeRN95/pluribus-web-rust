@@ -1,9 +1,9 @@
 {#- A card of the welcome page's row of the newest listings (home.html), there from the start or
     sent as the listing is posted (newest_stream.html): small, as in the grids (listing_card.html),
-    with its first photo only. Its id is the listing's number, so that Turbo, given a card for the
-    same listing again (bumped), moves it to the front rather than showing it twice; data-cursor,
-    where it stands in the order, is where the stream goes on from when Turbo shows the page again
-    from its cache (newest_controller.js). -#}
+    with its first photo only, and the town without the pin before it. Its id is the listing's
+    number, so that Turbo, given a card for the same listing again (bumped), moves it to the front
+    rather than showing it twice; data-cursor, where it stands in the order, is where the stream
+    goes on from when Turbo shows the page again from its cache (newest_controller.js). -#}
 <article class="card newest-card" id="newest-{{ card.public_no }}" data-cursor="{{ card.newest_cursor() }}">
   <div class="card-media">
     {%- if let Some(photo) = card.photos.first() %}
@@ -23,7 +23,7 @@
     <p class="card-summary">
       {%- let rest = card.details_line() -%}
       {%- if let Some(city) = card.place_label() -%}
-      {% include "pin.svg" %}{{ city }}{% if !rest.is_empty() %} · {% endif %}
+      {{ city }}{% if !rest.is_empty() %} · {% endif %}
       {%- endif -%}
       {{- rest -}}
     </p>
