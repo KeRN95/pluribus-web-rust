@@ -842,9 +842,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .filter-form .check:hover { border-color: var(--text); }
 }
 /* Boxes with icons, a car's body types (Karroceria), on a line of their own: the car's side over
-   its name, the boxes as wide as each other and as many to a line as fit, four on a phone, all
-   seven from a tablet up. */
-.filter-form .filter-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr)); }
+   its name, the boxes as wide as each other: four to a line on a phone, however wide, and from a
+   tablet up as many as fit, all seven. */
+.filter-form .filter-icons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .filter-icons > .filter-label { grid-column: 1 / -1; }
 .filter-form .filter-icons .check {
   flex-direction: column;
