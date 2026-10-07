@@ -35,7 +35,8 @@ const DEFAULT_RADIUS_KM: u32 = 10;
 /// Square). On the map page it is the point the results are for; elsewhere a map only starts there.
 const TIRANA: (f64, f64) = (41.3275, 19.8187);
 
-/// Properties with at most this many options are offered as boxes, longer lists as a dropdown.
+/// Properties with at most this many options are offered as checkboxes, longer lists as a
+/// dropdown; and a colour always as a dropdown, which reads better than boxes of its names.
 const CHECKBOX_LIMIT: usize = 8;
 
 /// The price's slider (price_range_controller.js, which works the same out): PRICE_STEPS positions
@@ -45,8 +46,8 @@ const PRICE_STEPS: u32 = 1000;
 const PRICE_DECADES: f64 = 5.0;
 
 /// A property's boxes share their line with the next field when there are at most this many;
-/// more take a line of their own, as do boxes with icons, however few (Karroceria's seven, Ngjyra's
-/// seven). See Field::half.
+/// more take a line of their own, as do boxes with icons, however few (Karroceria's seven). See
+/// Field::half.
 const HALF_LIMIT: usize = 5;
 
 /// The query string as name/value pairs, without empty values.
@@ -121,11 +122,10 @@ pub struct Field {
     pub checked: bool,
     /// A small field, which takes half the form's width, beside the next small one: a dropdown, a
     /// range, a few boxes (Marka beside Modeli, Viti beside Kilometrazhi, Karburanti beside
-    /// Kambio). The others take a line of their own, as does a small one left without another
-    /// beside it (Opsionet, after the colours; Filters::fields).
+    /// Kambio). The others take a line of their own.
     pub half: bool,
-    /// Its boxes have icons over the names, a car's side over each body type (Karroceria), a dot of
-    /// each colour (Ngjyra): they are bigger, and take a line of their own on every screen.
+    /// Its boxes have icons over the names, a car's side over each body type (Karroceria): they
+    /// are bigger, and take a line of their own on every screen.
     pub icons: bool,
 }
 
@@ -674,15 +674,7 @@ impl<'a> Filters<'a> {
     }
 
     pub fn fields(&self) -> Vec<Field> {
-        let mut fields: Vec<Field> = self.properties.iter().map(|property| property.field(&self.properties)).collect();
-        // Small fields stand two to a line: one left over, alone, takes the whole line rather than
-        // half of it beside nothing.
-        for run in fields.chunk_by_mut(|one, next| one.half == next.half) {
-            if run[0].half && run.len() % 2 == 1 {
-                run[run.len() - 1].half = false;
-            }
-        }
-        fields
+        self.properties.iter().map(|property| property.field(&self.properties)).collect()
     }
 }
 
@@ -804,7 +796,9 @@ impl<'a> Property<'a> {
                         }
                     }
                 }
-                let few = parent.is_none() && attribute.options.len() <= CHECKBOX_LIMIT;
+                let few = parent.is_none()
+                    && attribute.options.len() <= CHECKBOX_LIMIT
+                    && !attribute.code.ends_with("_color");
                 if data_type == "MULTISELECT" || few {
                     field.kind = FieldKind::Checkboxes;
                     field.choices.extend(field.groups.drain(..).flat_map(|group| group.choices));
