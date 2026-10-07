@@ -1,0 +1,310 @@
+//! One listing: its page, its photos and properties, and the contact it reveals.
+
+use super::*;
+
+#[derive(Debug)]
+pub struct ListingDetail {
+    pub id: Uuid,
+    pub public_no: i64,
+    pub slug: String,
+    /// What the page calls it: a car's title made from what it is (generated_title), or the
+    /// seller's.
+    pub title: String,
+    /// The seller's own title, when the page shows a made one: it heads the description.
+    pub heading: Option<String>,
+    pub description: String,
+    pub status: String,
+    pub listing_type: String,
+    pub condition: Option<String>,
+    pub price_amount: Option<Decimal>,
+    pub currency: String,
+    pub price_type: String,
+    /// A property's area in square metres (property_area), for its price per square metre.
+    pub area_m2: Option<Decimal>,
+    pub category_id: Uuid,
+    pub category_name: String,
+    pub category_slug: String,
+    /// Its place: the town, or the zone and the town ("Blloku, Tiranë").
+    pub location_name: Option<String>,
+    /// The zone in the town it is in, for a property that says one.
+    pub zone: Option<String>,
+    /// What a square metre costs in its zone on average, in euros, among the zone's sales in its
+    /// category (zone_area_prices), and how many sales that is; None outside a zone, or where too
+    /// few listings make an average.
+    pub zone_average_eur: Option<Decimal>,
+    pub zone_listings: Option<i64>,
+    /// What a unit of its currency is worth in euros (exchange_rates): the zone's average is in
+    /// euros.
+    pub eur_rate: Option<Decimal>,
+    pub published_at: Option<OffsetDateTime>,
+    /// The seller: a business's name, or the private seller's, with their profile's address.
+    pub seller_name: String,
+    pub seller_url: String,
+    pub seller_since: OffsetDateTime,
+    pub seller_listings: i64,
+}
+
+#[derive(Debug)]
+pub struct AttributeValue {
+    pub code: String,
+    pub label: String,
+    /// Its value as the page shows it; a multi-select's options, each on its own.
+    pub shown: Vec<String>,
+    pub multi: bool,
+}
+
+#[derive(Debug)]
+pub struct Photo {
+    pub url: String,
+    /// Its card-sized copy, which the listing page blurs to fill the frame around the photo.
+    pub card_url: String,
+    pub width_px: Option<i32>,
+    pub height_px: Option<i32>,
+}
+
+/// Sold and reserved listings stay viewable, so shared links keep working.
+pub async fn listing_by_public_no(
+    db: &PgPool,
+    public_no: i64,
+) -> sqlx::Result<Option<ListingDetail>> {
+    sqlx::query_as!(
+        ListingDetail,
+        r#"SELECT l.id, l.public_no, l.slug, coalesce(l.generated_title, l.title) AS "title!",
+                  CASE WHEN l.generated_title IS NOT NULL THEN l.title END AS heading,
+                  l.description, l.status, l.listing_type,
+                  l.condition, l.price_amount, l.currency::text AS "currency!", l.price_type,
+                  (SELECT v.value_number FROM listing_attribute_values v
+                   JOIN attributes a ON a.id = v.attribute_id
+                   WHERE v.listing_id = l.id AND a.code = 'property_area') AS "area_m2?",
+                  c.id AS category_id, c.name AS category_name, c.slug AS category_slug,
+                  CASE WHEN loc.location_type = 'AREA'
+                       THEN loc.name || ', ' || (SELECT town.name FROM locations town WHERE town.id = location_municipality(loc.id))
+                       ELSE loc.name END AS "location_name?",
+                  CASE WHEN loc.location_type = 'AREA' THEN loc.name END AS "zone?",
+                  zone_price.average_eur AS "zone_average_eur?", zone_price.listings AS "zone_listings?",
+                  (SELECT r.eur_rate FROM exchange_rates r WHERE r.currency = l.currency) AS "eur_rate?",
+                  l.published_at,
+                  coalesce(b.display_name, u.display_name) AS "seller_name!",
+                  CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || u.id END AS "seller_url!",
+                  coalesce(b.created_at, u.created_at) AS "seller_since!",
+                  (SELECT count(*) FROM listings o
+                   WHERE o.status = 'ACTIVE'
+                     AND (o.seller_business_id = l.seller_business_id OR o.seller_user_id = l.seller_user_id)) AS "seller_listings!"
+           FROM listings l
+           JOIN categories c ON c.id = l.category_id
+           LEFT JOIN locations loc ON loc.id = l.location_id
+           LEFT JOIN zone_area_prices zone_price ON zone_price.zone_id = l.location_id AND zone_price.category_id = l.category_id
+           LEFT JOIN users u ON u.id = l.seller_user_id
+           LEFT JOIN businesses b ON b.id = l.seller_business_id
+           WHERE l.public_no = $1 AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD')"#,
+        public_no
+    )
+    .fetch_optional(db)
+    .await
+}
+
+/// Property labels and display values, single values and multi-select lists alike, in the order
+/// the listing's category defines; a box ticked shows its name ("Me garanci"). Only properties the
+/// category shows in details are included.
+pub async fn listing_attributes(
+    db: &PgPool,
+    listing_id: Uuid,
+    category_id: Uuid,
+) -> sqlx::Result<Vec<AttributeValue>> {
+    sqlx::query_as!(
+        AttributeValue,
+        r#"SELECT code AS "code!", label AS "label!", shown AS "shown!", multi AS "multi!"
+           FROM (
+               SELECT a.code, coalesce(eca.label, a.name) AS label,
+                      ARRAY[coalesce(o.label, v.value_text, format_attribute_number(v.value_number, a.unit),
+                                     CASE v.value_boolean WHEN true THEN coalesce(eca.label, a.name) WHEN false THEN 'Jo' END,
+                                     to_char(v.value_date, 'DD.MM.YYYY'))] AS shown,
+                      false AS multi,
+                      eca.sort_order
+               FROM listing_attribute_values v
+               JOIN attributes a ON a.id = v.attribute_id
+               JOIN effective_category_attributes eca
+                 ON eca.category_id = $2 AND eca.attribute_id = v.attribute_id AND eca.show_in_details
+               LEFT JOIN attribute_options o ON o.id = v.value_option_id
+               WHERE v.listing_id = $1
+               UNION ALL
+               SELECT a.code, coalesce(eca.label, a.name), array_agg(o.label ORDER BY o.sort_order), true,
+                      eca.sort_order
+               FROM listing_attribute_options lo
+               JOIN attributes a ON a.id = lo.attribute_id
+               JOIN effective_category_attributes eca
+                 ON eca.category_id = $2 AND eca.attribute_id = lo.attribute_id AND eca.show_in_details
+               JOIN attribute_options o ON o.id = lo.option_id
+               WHERE lo.listing_id = $1
+               GROUP BY a.id, a.code, a.name, eca.label, eca.sort_order
+           ) attrs
+           ORDER BY sort_order, label"#,
+        listing_id,
+        category_id
+    )
+    .fetch_all(db)
+    .await
+}
+
+pub async fn listing_photos(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Vec<Photo>> {
+    sqlx::query_as!(
+        Photo,
+        r#"SELECT coalesce(public_url, thumbnail_url) AS "url!", coalesce(thumbnail_url, public_url) AS "card_url!",
+                  width_px, height_px
+           FROM listing_media
+           WHERE listing_id = $1 AND status = 'READY' AND media_type = 'IMAGE'
+             AND coalesce(public_url, thumbnail_url) IS NOT NULL
+           ORDER BY is_cover DESC, sort_order"#,
+        listing_id
+    )
+    .fetch_all(db)
+    .await
+}
+
+/// A photo stored for a listing (media.rs): its key in the store, where the site serves it and its
+/// card-sized copy, and what the full one weighs.
+pub struct NewPhoto {
+    pub storage_key: String,
+    pub url: String,
+    pub card_url: String,
+    pub size_bytes: i64,
+    pub width: i32,
+    pub height: i32,
+    pub sha256: Vec<u8>,
+}
+
+/// Adds photos after the listing's others, in order; the first photo a listing gets is its cover.
+pub async fn add_listing_photos(db: &PgPool, listing_id: Uuid, photos: &[NewPhoto]) -> sqlx::Result<()> {
+    if photos.is_empty() {
+        return Ok(());
+    }
+    let mut tx = db.begin().await?;
+    let last = sqlx::query!(
+        r#"SELECT coalesce(max(sort_order), -1) AS "last!", coalesce(bool_or(is_cover), false) AS "has_cover!"
+           FROM listing_media WHERE listing_id = $1"#,
+        listing_id,
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    for (i, photo) in photos.iter().enumerate() {
+        sqlx::query!(
+            "INSERT INTO listing_media (listing_id, media_type, status, storage_key, public_url, thumbnail_url,
+                                        mime_type, size_bytes, width_px, height_px, sha256, sort_order, is_cover)
+             VALUES ($1, 'IMAGE', 'READY', $2, $3, $4, 'image/jpeg', $5, $6, $7, $8, $9, $10)",
+            listing_id,
+            photo.storage_key,
+            photo.url,
+            photo.card_url,
+            photo.size_bytes,
+            photo.width,
+            photo.height,
+            photo.sha256,
+            last.last + 1 + i as i32,
+            !last.has_cover && i == 0,
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await
+}
+
+/// A photo on the edit form, which its seller can remove.
+pub struct OwnPhoto {
+    pub id: Uuid,
+    pub card_url: String,
+}
+
+/// The listing's photos, the cover first.
+pub async fn own_listing_photos(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Vec<OwnPhoto>> {
+    sqlx::query_as!(
+        OwnPhoto,
+        r#"SELECT id, coalesce(thumbnail_url, public_url) AS "card_url!"
+           FROM listing_media
+           WHERE listing_id = $1 AND media_type = 'IMAGE' AND coalesce(thumbnail_url, public_url) IS NOT NULL
+           ORDER BY is_cover DESC, sort_order"#,
+        listing_id,
+    )
+    .fetch_all(db)
+    .await
+}
+
+/// Removes some of the listing's photos; returns their keys in the store, to delete the files.
+/// When the cover goes, the first photo left takes its place.
+pub async fn remove_listing_photos(db: &PgPool, listing_id: Uuid, ids: &[Uuid]) -> sqlx::Result<Vec<String>> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut tx = db.begin().await?;
+    let keys = sqlx::query_scalar!(
+        "DELETE FROM listing_media WHERE listing_id = $1 AND id = ANY($2) RETURNING storage_key",
+        listing_id,
+        ids,
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+    sqlx::query!(
+        "UPDATE listing_media SET is_cover = true
+         WHERE id = (SELECT id FROM listing_media WHERE listing_id = $1 ORDER BY sort_order LIMIT 1)
+           AND NOT EXISTS (SELECT 1 FROM listing_media WHERE listing_id = $1 AND is_cover)",
+        listing_id,
+    )
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(keys)
+}
+
+/// How a buyer reaches the seller: the phone number, or, for sellers who signed up with an e-mail
+/// address, that address.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SellerContact {
+    Phone(String),
+    Email(String),
+}
+
+/// What the listing's page offers to reveal, by the same rule as `reveal_contact`, so the button
+/// never shows where nothing can be revealed (a sold listing, say). The value itself stays out
+/// of the page until the visitor asks for it.
+pub async fn visible_contact(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Option<SellerContact>> {
+    let row = sqlx::query!(
+        r#"SELECT CASE WHEN c.show_phone THEN c.phone_e164::text END AS phone,
+                  CASE WHEN c.show_email THEN c.email::text END AS email
+           FROM listings l
+           JOIN listing_contacts c ON c.listing_id = l.id
+           WHERE l.id = $1 AND l.status IN ('ACTIVE', 'RESERVED')"#,
+        listing_id
+    )
+    .fetch_optional(db)
+    .await?;
+    Ok(row.and_then(|row| match (row.phone, row.email) {
+        (Some(phone), _) => Some(SellerContact::Phone(phone)),
+        (None, Some(email)) => Some(SellerContact::Email(email)),
+        (None, None) => None,
+    }))
+}
+
+/// The listing's phone number, or its e-mail address if it has no number to show. Each reveal
+/// is counted in today's statistics.
+pub async fn reveal_contact(db: &PgPool, public_no: i64) -> sqlx::Result<Option<SellerContact>> {
+    let Some(id) = sqlx::query_scalar!("SELECT id FROM listings WHERE public_no = $1", public_no)
+        .fetch_optional(db)
+        .await?
+    else {
+        return Ok(None);
+    };
+    let Some(contact) = visible_contact(db, id).await? else {
+        return Ok(None);
+    };
+    // Fine at launch volumes; buffer these counters once traffic grows (README, "Analytics").
+    sqlx::query!(
+        "INSERT INTO listing_daily_stats (listing_id, stat_date, phone_reveals)
+         VALUES ($1, current_date, 1)
+         ON CONFLICT (listing_id, stat_date)
+         DO UPDATE SET phone_reveals = listing_daily_stats.phone_reveals + 1",
+        id
+    )
+    .execute(db)
+    .await?;
+
+    Ok(Some(contact))
+}

@@ -84,7 +84,7 @@ cargo test
 |---|---|
 | `src/main.rs` | Startup: configuration, database pool, migrations, HTTP server |
 | `src/web/` | Routes and page handlers: `browse.rs` (welcome, category, search and map pages), `account.rs` (signing in with a code), `post.rs` (posting and editing listings), `ai_fill.rs` (the listing form filled in by the AI), `properties.rs` (a category's properties in the listing form), `filters.rs` (filters read from the URL, the filter form), `listings.rs` (a listing's page), `suggestions.rs` (what the search boxes suggest as words are typed) |
-| `src/db.rs` | Database queries |
+| `src/db/` | Database queries, a file for each part of the site (`categories.rs`, `properties.rs`, `listing_pages.rs`, `listing.rs`, `saved.rs`, `sign_in.rs`, `posting.rs`, `typed_in.rs`), all of them `db::` as before |
 | `src/sender.rs` | Sending sign-in codes: e-mail by SMTP, phone numbers by WhatsApp (Meta's Cloud API); a channel not set up writes to the log |
 | `src/ai.rs` | Claude, Anthropic's AI, through its Messages API: what fills in the listing form (`web/ai_fill.rs`) |
 | `src/format.rs` | Albanian display formatting: prices, counts, dates, phone numbers |
