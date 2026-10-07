@@ -1107,9 +1107,51 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 @container (width >= 928px) {
   .newest-strip { --across: 5.25; --gaps: 5; }
 }
+/* While the row is slid along and new listings wait (newest_controller.js): over its start, a fade
+   into the page, and in it a pill in the buttons' coral saying how many have come, which goes back
+   to the start, where they come in. The fade takes no taps; the pill does. */
+.newest-frame { position: relative; }
+.newest-waiting {
+  display: flex;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -.5rem;
+  z-index: 2;
+  align-items: center;
+  width: min(7rem, 40%);
+  padding-left: .5rem;
+  background: linear-gradient(to right, var(--bg) 25%, color-mix(in srgb, var(--bg) 70%, transparent) 60%, transparent);
+  pointer-events: none;
+  animation: waiting-in .25s ease-out;
+}
+.newest-waiting[hidden] { display: none; }
+@keyframes waiting-in { from { opacity: 0; } }
+.newest-waiting-button {
+  display: inline-flex;
+  align-items: center;
+  gap: .2rem;
+  padding: .35rem .7rem .35rem .45rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--button);
+  color: var(--on-button);
+  font-size: var(--text-xs);
+  font-weight: var(--semibold);
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+.newest-waiting-button:active { transform: scale(.96); }
+@media (hover: hover) {
+  .newest-waiting-button:hover { background: var(--button-hover); }
+}
 @media (prefers-reduced-motion: reduce) {
   .live-dot,
-  .newest-strip > .is-new { animation: none; }
+  .newest-strip > .is-new,
+  .newest-waiting { animation: none; }
 }
 
 /* Browse pages: filters beside the results */

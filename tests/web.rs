@@ -417,6 +417,8 @@ async fn the_welcome_page_has_the_newest_listings_in_a_row_that_follows_new_ones
     let since = newest_cursor(&pool).await;
     assert!(row.contains(&format!(r#"data-cursor="{since}""#)), "{row}");
     assert!(row.contains(&format!(r#"<turbo-stream-source src="/te-rejat?since={since}""#)), "{row}");
+    // While the row is slid along, a fade over its start says how many new ones wait: none yet.
+    assert!(row.contains(r#"<div class="newest-waiting" data-newest-target="waiting" hidden>"#), "{row}");
 }
 
 #[sqlx::test(fixtures("listings"))]

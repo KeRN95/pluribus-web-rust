@@ -41,18 +41,27 @@
 {#- The newest listings in a row that slides sideways, the newest first, which follows new ones
     while the page is open: the server sends each as it is posted, no more than two a second, and
     Turbo puts it in front (<turbo-stream-source>, web/newest.rs); the row keeps the newest ten
-    (newest_controller.js). It is hidden while there are none (app.css), and shows with the
-    first. -#}
+    (newest_controller.js). While the row is slid along, the new ones wait, and a fade over its
+    start says how many; a tap on it goes back to the start, where they come in. The row is hidden
+    while there are none (app.css), and shows with the first. -#}
 <section class="newest" data-controller="newest"
          data-action="turbo:before-stream-render@document->newest#arrive turbo:before-cache@document->newest#settle"
          aria-labelledby="newest-heading">
   <h2 id="newest-heading"><span class="live-dot" aria-hidden="true"></span>Sapo u shtuan</h2>
-  <div class="newest-strip" id="newest-strip" data-newest-target="strip"
-       data-action="wheel->newest#wheel:!passive pointerdown->newest#grab pointermove->newest#drag pointerup->newest#drop pointercancel->newest#drop dragstart->newest#cancel click->newest#swallow:capture">
-    {%- for card in page.cards.iter().take(*strip) %}
-    {%- let eager = loop.index <= 2 %}
-    {% include "newest_card.html" %}
-    {%- endfor %}
+  <div class="newest-frame">
+    <div class="newest-strip" id="newest-strip" data-newest-target="strip"
+         data-action="scroll->newest#scrolled wheel->newest#wheel:!passive pointerdown->newest#grab pointermove->newest#drag pointerup@window->newest#drop pointercancel@window->newest#drop dragstart->newest#cancel click->newest#swallow:capture">
+      {%- for card in page.cards.iter().take(*strip) %}
+      {%- let eager = loop.index <= 2 %}
+      {% include "newest_card.html" %}
+      {%- endfor %}
+    </div>
+    <div class="newest-waiting" data-newest-target="waiting" hidden>
+      <button type="button" class="newest-waiting-button" data-action="newest#backToStart">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+        <span data-newest-target="count"></span>
+      </button>
+    </div>
   </div>
   <turbo-stream-source src="/te-rejat{% if let Some(since) = since %}?since={{ since }}{% endif %}" data-newest-target="source"></turbo-stream-source>
 </section>
