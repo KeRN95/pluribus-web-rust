@@ -416,7 +416,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .card-dots,
 .card-step { display: none; }
 
-.cards-big .grid { grid-template-columns: minmax(0, 1fr); max-width: 40rem; margin-inline: auto; row-gap: 2rem; }
+.cards-big .grid { grid-template-columns: minmax(0, 1fr); max-width: 40rem; margin-inline: auto; row-gap: 2.75rem; }
 .cards-big .card-media::before { aspect-ratio: 4 / 3; }
 .cards-big .card-slides {
   z-index: 2;
