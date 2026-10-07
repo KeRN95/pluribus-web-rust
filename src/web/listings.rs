@@ -11,6 +11,7 @@ use rust_decimal::Decimal;
 use super::{
     Result,
     account::{cookie_header, current_user},
+    browse::ListingPage,
     cookie, not_found,
     post::POSTED_COOKIE,
     properties, render, render_stream,
@@ -160,6 +161,9 @@ struct ListingShow {
     own: bool,
     /// Posted just now without signing in: the page says it is up, and how to change it later.
     posted: bool,
+    /// Listings like it, under it (db::related_listings): `page`, the name listing_card.html
+    /// reads its cards by.
+    page: ListingPage,
 }
 
 /// URLs look like /listing/1042-vw-golf-7: the number identifies the listing, and the slug is
@@ -175,11 +179,12 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     if key != canonical {
         return Ok(Redirect::permanent(&format!("/listing/{canonical}")).into_response());
     }
-    let (attributes, photos, contact, categories) = tokio::try_join!(
+    let (attributes, photos, contact, categories, related) = tokio::try_join!(
         db::listing_attributes(&state.db, listing.id, listing.category_id),
         db::listing_photos(&state.db, listing.id),
         db::visible_contact(&state.db, listing.id),
         db::categories(&state.db),
+        db::related_listings(&state.db, listing.id, db::RELATED),
     )?;
     let crumb = |name: &str, slug: &str| Crumb { name: name.to_string(), url: format!("/c/{slug}") };
     let trail = match categories.by_slug(&listing.category_slug) {
@@ -213,7 +218,8 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         .collect();
     // Said once: the cookie that says so (post.rs) goes with this answer.
     let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
-    let mut response = render(ListingShow { listing, trail, details, photos, reveal, own, posted })?;
+    let page = ListingPage::related(related);
+    let mut response = render(ListingShow { listing, trail, details, photos, reveal, own, posted, page })?;
     if posted {
         response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));
     }

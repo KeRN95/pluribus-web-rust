@@ -25,6 +25,9 @@ pub struct ListingPage {
     pub next: Option<NextPage>,
     /// Big cards, one a line, every photo to slide through, as the visitor chose (big_cards).
     pub big: bool,
+    /// How many cards load their photo straight away, the first row's; the rest wait until they
+    /// come near the screen (listing_card.html).
+    pub eager: usize,
 }
 
 /// How wide a card's photo shows, for the browser to pick the copy it fetches (srcset in
@@ -56,7 +59,13 @@ impl ListingPage {
             let cursor = Cursor::after(sort, last);
             NextPage { frame_id: frame_id(&cursor), url: next_url(&cursor.encode()) }
         });
-        Self { cards: rows, next, big: false }
+        Self { cards: rows, next, big: false, eager: 4 }
+    }
+
+    /// The related cards under a listing's page (db::related_listings): small, none of them loaded
+    /// before they come near the screen, as they come after the listing.
+    pub fn related(cards: Vec<ListingCard>) -> Self {
+        Self { cards, next: None, big: false, eager: 0 }
     }
 
     fn big(mut self, big: bool) -> Self {

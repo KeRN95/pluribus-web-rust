@@ -1655,6 +1655,8 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 /* Listing page */
 
 .listing { max-width: 760px; padding-top: 1.25rem; }
+/* Listings like it, under it: a line between, then the browse pages' grid, as wide as the page. */
+.related { margin-top: 2.5rem; border-top: 1px solid var(--border); }
 
 /* Wide screens: two columns, the listing on the left and on the right who sells it and how to
    reach them, in a card like the posting form's (the menus' hairline on the surface), which

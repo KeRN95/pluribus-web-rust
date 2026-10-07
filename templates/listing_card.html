@@ -8,7 +8,7 @@
       (.card-media in app.css). A big card (the view button, cards_controller.js) has every photo
       in a row to slide through, dots over them saying which shows and, under a pointer, arrows
       (slides_controller.js); a small one shows the first. -#}
-  {%- let eager = loop.index <= 4 %}
+  {%- let eager = loop.index <= page.eager %}
   <div class="card-media"{% if card.photos.len() > 1 %} data-controller="slides"{% endif %}>
     {%- if card.photos.is_empty() %}
     <div class="card-photo placeholder" aria-hidden="true"></div>

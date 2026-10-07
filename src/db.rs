@@ -644,10 +644,10 @@ pub enum AttributeFilter {
     Fits { from_attribute_id: Uuid, to_attribute_id: Uuid, year: Decimal },
 }
 
-/// One page of active listings in the filter's order, with at most PAGE_SIZE + 1 rows.
-pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec<ListingCard>> {
-    let mut query = QueryBuilder::<Postgres>::new(
-        "WITH card_attributes AS MATERIALIZED (
+/// What a card shows (ListingCard) of each listing a query reads as `l`, but for its distance_m,
+/// which the query says before FROM: the WITH clause and select list shared by a page of cards and
+/// a listing's related ones.
+const CARD_COLUMNS: &str = "WITH card_attributes AS MATERIALIZED (
              SELECT category_id, attribute_id, sort_order
              FROM effective_category_attributes
              WHERE show_in_card
@@ -703,8 +703,11 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
                    AND strpos(lower(coalesce(l.generated_title, l.title)), lower(spare.value)) = 0
                  ORDER BY spare.sort_order
                  LIMIT 1) AS spare_detail,
-                ",
-    );
+                ";
+
+/// One page of active listings in the filter's order, with at most PAGE_SIZE + 1 rows.
+pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec<ListingCard>> {
+    let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
     match &filter.near {
         Some(near) => near.push_distance(&mut query),
         None => {
@@ -716,6 +719,103 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
     query.push(" LEFT JOIN locations loc ON loc.id = l.location_id");
     push_order(&mut query, filter.sort, filter.near.as_ref());
     query.push(" LIMIT ").push_bind(PAGE_SIZE + 1);
+    query.build_query_as().fetch_all(db).await
+}
+
+/// How many related listings a listing's page shows under it.
+pub const RELATED: i64 = 8;
+
+/// Listings like this one, for under its page: from other sellers, at most two from any one, the
+/// most alike first. As the big sites do it, on a small scale: a few hundred candidates come
+/// cheaply off the category's indexes (the closest in price either way, the nearest, the newest,
+/// and those sharing a narrow choice, such as the model), and a score ranks them: the choices
+/// shared (a model, picked under its make, three; any other, a make, a fuel, a colour, a half, so
+/// that many small likenesses don't outweigh the price), the price (three at the same, none at
+/// half or double), the place (two at the same, none 50 km away) and how new it is (one today,
+/// none two months on).
+pub async fn related_listings(db: &PgPool, listing_id: Uuid, limit: i64) -> sqlx::Result<Vec<ListingCard>> {
+    let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
+    query.push(
+        "NULL::float8 AS distance_m
+         FROM (
+             WITH target AS MATERIALIZED (
+                 SELECT id, category_id, price_normalized, coalesce(seller_business_id, seller_user_id) AS seller,
+                        CASE WHEN latitude IS NOT NULL THEN ll_to_earth(latitude::float8, longitude::float8) END AS place
+                 FROM listings
+                 WHERE id = ",
+    );
+    query.push_bind(listing_id);
+    query.push(
+        "),
+             choices AS MATERIALIZED (
+                 SELECT v.attribute_id, v.value_option_id, o.parent_option_id IS NOT NULL AS narrow
+                 FROM target t
+                 JOIN listing_attribute_values v ON v.listing_id = t.id
+                 JOIN attribute_options o ON o.id = v.value_option_id
+             ),
+             candidates AS (
+                 SELECT c.id FROM target t CROSS JOIN LATERAL (
+                     SELECT l.id FROM listings l
+                     WHERE l.status = 'ACTIVE' AND l.category_id = t.category_id
+                       AND coalesce(l.price_normalized, 'Infinity') <= coalesce(t.price_normalized, 'Infinity')
+                     ORDER BY coalesce(l.price_normalized, 'Infinity') DESC, l.id DESC
+                     LIMIT 40) c
+                 UNION
+                 SELECT c.id FROM target t CROSS JOIN LATERAL (
+                     SELECT l.id FROM listings l
+                     WHERE l.status = 'ACTIVE' AND l.category_id = t.category_id
+                       AND coalesce(l.price_normalized, 'Infinity') >= coalesce(t.price_normalized, 'Infinity')
+                     ORDER BY coalesce(l.price_normalized, 'Infinity'), l.id
+                     LIMIT 40) c
+                 UNION
+                 SELECT c.id FROM target t CROSS JOIN LATERAL (
+                     SELECT l.id FROM listings l
+                     WHERE t.place IS NOT NULL AND l.status = 'ACTIVE' AND l.category_id = t.category_id
+                       AND l.latitude IS NOT NULL
+                     ORDER BY ll_to_earth(l.latitude::float8, l.longitude::float8) <-> t.place
+                     LIMIT 40) c
+                 UNION
+                 SELECT c.id FROM target t CROSS JOIN LATERAL (
+                     SELECT l.id FROM listings l
+                     WHERE l.status = 'ACTIVE' AND l.category_id = t.category_id
+                     ORDER BY l.sort_at DESC, l.id DESC
+                     LIMIT 40) c
+                 UNION
+                 SELECT c.listing_id FROM target t JOIN choices ch ON ch.narrow CROSS JOIN LATERAL (
+                     SELECT v.listing_id FROM listing_attribute_values v
+                     JOIN listings l ON l.id = v.listing_id
+                     WHERE v.attribute_id = ch.attribute_id AND v.value_option_id = ch.value_option_id
+                       AND l.status = 'ACTIVE' AND l.category_id = t.category_id
+                     LIMIT 40) c
+             ),
+             scored AS (
+                 SELECT l.*, coalesce(l.seller_business_id, l.seller_user_id) AS related_seller,
+                        (SELECT coalesce(sum(CASE WHEN ch.narrow THEN 3 ELSE 0.5 END), 0)
+                         FROM listing_attribute_values v
+                         JOIN choices ch ON ch.attribute_id = v.attribute_id AND ch.value_option_id = v.value_option_id
+                         WHERE v.listing_id = l.id)
+                        + 3 * CASE WHEN l.price_normalized > 0 AND t.price_normalized > 0
+                                   THEN greatest(0, 1 - abs(ln(l.price_normalized / t.price_normalized)) / ln(2))
+                                   ELSE 0 END
+                        + 2 * CASE WHEN l.latitude IS NOT NULL AND t.place IS NOT NULL
+                                   THEN greatest(0, 1 - (ll_to_earth(l.latitude::float8, l.longitude::float8) <-> t.place) / 50000)
+                                   ELSE 0 END
+                        + greatest(0, 1 - extract(epoch FROM now() - l.sort_at) / 5184000) AS related_score
+                 FROM candidates c
+                 JOIN listings l ON l.id = c.id
+                 CROSS JOIN target t
+                 WHERE l.id <> t.id AND coalesce(l.seller_business_id, l.seller_user_id) IS DISTINCT FROM t.seller
+             )
+             SELECT * FROM (
+                 SELECT s.*, row_number() OVER (PARTITION BY s.related_seller ORDER BY s.related_score DESC, s.id) AS seller_rank
+                 FROM scored s
+             ) ranked
+             WHERE seller_rank <= 2
+             ORDER BY related_score DESC, id
+             LIMIT ",
+    );
+    query.push_bind(limit);
+    query.push(") l LEFT JOIN locations loc ON loc.id = l.location_id ORDER BY l.related_score DESC, l.id");
     query.build_query_as().fetch_all(db).await
 }
 

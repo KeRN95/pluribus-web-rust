@@ -1064,6 +1064,66 @@ async fn a_parent_category_pages_in_order_across_its_subcategories(pool: PgPool)
     }
 }
 
+#[sqlx::test(fixtures("listings"))]
+async fn a_listing_shows_listings_like_it(pool: PgPool) {
+    // Three more Golfs from Besnik at about the Golf's price, Ana's own second Golf, and an Audi
+    // from Dritan, all in Makina in Tirana.
+    sqlx::query(
+        "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title, description,
+                               price_amount, price_normalized, currency, status, published_at,
+                               latitude, longitude)
+         SELECT v.seller::uuid, v.seller::uuid, (SELECT id FROM categories WHERE slug = 'makina'),
+                v.slug, v.title, '', v.price, v.price, 'EUR', 'ACTIVE', now() - interval '1 hour',
+                41.3275, 19.8187
+         FROM (VALUES
+             ('22222222-2222-4222-8222-222222222222', 'golf-a', 'Golf A', 9400),
+             ('22222222-2222-4222-8222-222222222222', 'golf-b', 'Golf B', 9700),
+             ('22222222-2222-4222-8222-222222222222', 'golf-c', 'Golf C', 9900),
+             ('11111111-1111-4111-8111-111111111111', 'golf-d', 'Golf D', 9500),
+             ('33333333-3333-4333-8333-333333333333', 'audi-a3', 'Audi A3', 9600)
+         ) AS v(seller, slug, title, price)",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_option_id)
+         SELECT l.id, a.id, a.data_type, o.id
+         FROM listings l
+         CROSS JOIN (VALUES ('vehicle_make', 'VOLKSWAGEN'), ('vehicle_model', 'VOLKSWAGEN_GOLF')) AS v(code, value_code)
+         JOIN attributes a ON a.code = v.code
+         JOIN attribute_options o ON o.attribute_id = a.id AND o.value_code = v.value_code
+         WHERE l.slug LIKE 'golf-_'",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let number = |slug: &'static str| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>("SELECT public_no FROM listings WHERE slug = $1")
+                .bind(slug)
+                .fetch_one(&pool)
+                .await
+                .unwrap()
+        }
+    };
+    let (golf_a, golf_b, audi) = (number("golf-a").await, number("golf-b").await, number("audi-a3").await);
+
+    // Under the Golf: the other sellers' cars, the same model first, the closest in price before;
+    // two of Besnik's three Golfs, none of Ana's own, not the Golf itself, and no flats. The
+    // Mercedes comes last: it shares only the fuel, costs twice as much, and is in Durrës.
+    let page = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
+    let related = &page[page.find(r#"<section class="related" aria-labelledby="related-heading">"#).expect("related")..];
+    let related = &related[..related.find("</section>").unwrap()];
+    assert!(related.contains(r#"<h2 id="related-heading">Njoftime të ngjashme</h2>"#));
+    assert_eq!(card_numbers(related), vec![golf_a, golf_b, audi, 1002]);
+
+    // A listing alone in its category has nothing under it.
+    let dog = html(pool, "/listing/1009-kelysh-labrador-3-muajsh").await;
+    assert!(!dog.contains("related-heading"));
+}
+
 #[sqlx::test]
 async fn unknown_pages_are_404(pool: PgPool) {
     for uri in ["/listing/999999-nothing", "/c/does-not-exist", "/nowhere"] {
