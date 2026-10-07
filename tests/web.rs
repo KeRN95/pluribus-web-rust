@@ -793,6 +793,15 @@ async fn suggestions_finish_the_words_and_say_where_they_lead(pool: PgPool) {
     assert!(town.contains(r#"href="/search?city=durres""#) && town.contains("Njoftimet në Durrës"), "{town}");
     let there = html(pool.clone(), "/sugjerime?q=golf%20durr").await;
     assert!(there.contains(r#"href="/search?q=golf&city=durres""#) && there.contains("në Durrës"), "{there}");
+    // The word that joins the words to the town, "në" with its ë or without, is the town's to say:
+    // the row searches the words alone, there; with no other words, it is all the town's listings.
+    for typed in ["golf%20ne%20durr", "golf%20n%C3%AB%20durr", "golf%20te%20durr"] {
+        let there = html(pool.clone(), &format!("/sugjerime?q={typed}")).await;
+        assert!(there.contains(r#"href="/search?q=golf&city=durres""#), "{typed}: {there}");
+        assert!(there.contains(r#"<span class="suggestion-label">golf</span>"#), "{typed}: {there}");
+    }
+    let town_alone = html(pool.clone(), "/sugjerime?q=ne%20durr").await;
+    assert!(town_alone.contains(r#"href="/search?city=durres""#) && town_alone.contains("Njoftimet në Durrës"), "{town_alone}");
     // A whole word misspelt: the word it most likely misspells.
     assert!(html(pool.clone(), "/sugjerime?q=mercedez").await.contains(r#"href="/search?q=mercedes""#));
     // A brand of the very name the words have: its row, which finds it alone, not the words

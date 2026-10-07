@@ -28,6 +28,11 @@ const CATEGORIES: i64 = 2;
 const OPTIONS: i64 = 2;
 const TOWNS: usize = 2;
 
+/// The words that join what is searched to a place, folded ("në" and "ne" alike): "apartamente në
+/// Tiranë", "makina te Durrësi", "shtëpi afër Vlorës". A town's row leaves the last of them out of
+/// its search, since its filter says where.
+const PLACE_WORDS: [&str; 8] = ["ne", "te", "tek", "nga", "per", "prane", "afer", "rreth"];
+
 /// A row of suggestions: what it searches for, and after it, quieter, where.
 pub struct Suggestion {
     pub label: String,
@@ -135,16 +140,18 @@ async fn suggest(db: &PgPool, typed: &str) -> Result<Vec<Suggestion>> {
         context: format!("në {}", option.category_name),
         url: url(&format!("/c/{}", option.category_slug), option.filters),
     }));
-    suggestions.extend(towns.into_iter().map(|town| match before.is_empty() {
+    // "apartamente në tir": apartamente, in Tirana; "në tir": all of Tirana's listings.
+    let wanted = without_place_word(before);
+    suggestions.extend(towns.into_iter().map(|town| match wanted.is_empty() {
         true => Suggestion {
             label: format!("Njoftimet në {}", town.name),
             context: String::new(),
             url: url("/search", [("city".to_string(), town.slug.clone())]),
         },
         false => Suggestion {
-            label: before.to_string(),
+            label: wanted.to_string(),
             context: format!("në {}", town.name),
-            url: url("/search", [("q".to_string(), before.to_string()), ("city".to_string(), town.slug.clone())]),
+            url: url("/search", [("q".to_string(), wanted.to_string()), ("city".to_string(), town.slug.clone())]),
         },
     }));
     suggestions.extend(completions.map(|completion| Suggestion {
@@ -153,6 +160,16 @@ async fn suggest(db: &PgPool, typed: &str) -> Result<Vec<Suggestion>> {
         context: String::new(),
     }));
     Ok(suggestions)
+}
+
+/// The words before a town, without the one that joins them to it (PLACE_WORDS): "apartamente në"
+/// and "apartamente ne" are "apartamente", and "në" alone is nothing.
+fn without_place_word(before: &str) -> &str {
+    let (rest, last) = before.rsplit_once(char::is_whitespace).unwrap_or(("", before));
+    match PLACE_WORDS.contains(&format::fold(last).as_str()) {
+        true => rest.trim_end(),
+        false => before,
+    }
 }
 
 /// A search for the words, in every category.
