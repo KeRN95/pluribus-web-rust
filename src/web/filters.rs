@@ -454,6 +454,12 @@ impl<'a> Filters<'a> {
     /// What the map's form on a category or search page carries along hidden: everything but the
     /// pin and its radius, which are its own fields. A picked order stays; otherwise a pin makes it
     /// nearest first.
+    /// What the search box in the browse row carries along hidden: the page as it is, its filters,
+    /// the map's point and the order, so that its words narrow it.
+    pub fn search_form_fields(&self) -> Vec<(String, String)> {
+        self.pairs().into_iter().filter(|(name, _)| !matches!(name.as_str(), "q" | "after")).collect()
+    }
+
     pub fn map_form_fields(&self) -> Vec<(String, String)> {
         self.pairs()
             .into_iter()

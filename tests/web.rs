@@ -424,16 +424,17 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     // Filtrat, Harta and Rendit stand in one row over the results, Filtrat a card folded to its
     // header, Harta and Rendit round buttons, the orders opening in a menu; opening one says so
     // (section:open) and the others fold, so only one is open at a time.
-    let cars = html(pool, "/c/makina").await;
+    let cars = html(pool.clone(), "/c/makina").await;
     let order = positions(&cars, &[
         r#"<div class="browse-tools">"#,
+        r#"<div class="search-card" data-controller="panel""#,
         r#"<div class="filters-card">"#,
         r#"<section class="map-card map-hidden""#,
         r#"<details class="sort-menu" data-controller="dropdown""#,
         r#"<section class="results""#,
     ]);
     assert!(order.is_sorted());
-    for listener in ["filters#foldFor", "map#foldFor", "dropdown#foldFor"] {
+    for listener in ["panel#foldFor", "filters#foldFor", "map#foldFor", "dropdown#foldFor"] {
         assert!(cars.contains(&format!("section:open@document->{listener}")), "{listener}");
     }
     // The map's and the order's buttons have only their icons to see: their names and what they
@@ -444,6 +445,17 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     assert!(cars.contains("toggle->dropdown#announce"));
     let menu = &cars[cars.find(r#"<details class="sort-menu""#).unwrap()..];
     assert!(menu[..menu.find("</details>").unwrap()].contains(r#"<fieldset class="sort-options">"#));
+
+    // The top bar has no search: the row starts with a round button that opens one under it,
+    // which searches the page's category and keeps its filters.
+    let header = &cars[..cars.find("</header>").unwrap()];
+    assert!(!header.contains(r#"name="q""#));
+    let fuel = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&sort=price_asc").await;
+    let search = &fuel[fuel.find(r#"<form class="search" action="/c/makina""#).expect("the row's search")..];
+    let search = &search[..search.find("</form>").unwrap()];
+    assert!(search.contains(r#"<input type="hidden" name="vehicle_fuel" value="DIESEL">"#));
+    assert!(search.contains(r#"<input type="hidden" name="sort" value="price_asc">"#));
+    assert!(search.contains(r#"<input type="search" name="q" value="""#));
 }
 
 #[sqlx::test(fixtures("listings"))]
