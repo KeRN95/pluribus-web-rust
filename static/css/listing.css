@@ -136,8 +136,9 @@
 .listing-photos::-webkit-scrollbar { display: none; }
 /* Each photo whole, never cut, in a 6:5 frame, a little taller than most photos. Where it doesn't
    fill it, at a tall photo's sides or above and below a wide one, the photo shows again behind
-   it, blurred: its card-sized copy, larger than the frame, so that the blur's faded edges fall
-   outside. */
+   it, blurred: its tiny copy (the card-sized one for photos kept before there were any), larger
+   than the frame, so that the blur's faded edges fall outside. It is in the page, so it shows
+   at once, and fills the frame until the photo has loaded. */
 .gallery-photo {
   position: relative;
   flex: 0 0 100%;

@@ -7,7 +7,7 @@ import { Controller } from "@hotwired/stimulus";
 // doesn't send megabytes over mobile data. The server checks and re-encodes every photo all the
 // same (media.rs); without this script the input sends what was picked last, as it is.
 
-const MAX_SIDE = 2000; // px; the server keeps 1600
+const MAX_SIDE = 1600; // px, as the server keeps them (media.rs)
 const QUALITY = 0.85;
 
 export default class extends Controller {

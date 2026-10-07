@@ -70,7 +70,8 @@
    positioned, so the title's link still stretches over the whole card (.card-link). */
 .card-media { display: grid; grid-template-columns: minmax(0, 1fr); }
 .card-media::before { content: ""; grid-area: 1 / 1; aspect-ratio: 1; }
-/* height 0 with min-height 100%: the photo takes the row's height without setting it. */
+/* height 0 with min-height 100%: the photo takes the row's height without setting it. Until it has
+   loaded, its tiny copy fills its place, when it has one (listing_card.html). */
 .card-photo {
   display: block;
   grid-area: 1 / 1;
@@ -79,6 +80,8 @@
   min-height: 100%;
   object-fit: cover;
   border-radius: var(--radius);
+  background-position: center;
+  background-size: cover;
 }
 .placeholder { background: linear-gradient(135deg, var(--placeholder-from), var(--placeholder-to)); }
 

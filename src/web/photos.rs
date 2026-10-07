@@ -15,8 +15,14 @@ use super::{Result, not_found};
 use crate::{
     AppState,
     db::NewPhoto,
-    media::{self, MAX_PHOTOS, MAX_UPLOAD_BYTES, Media, Processed},
+    media::{self, CARD_SIDE, MAX_PHOTOS, MAX_UPLOAD_BYTES, MIDDLE_SIDE, Media, Processed},
 };
+
+/// What each of a photo's files adds to its name (photos/ and 32 hex digits): the full WebP, whose
+/// key listing_media keeps, the middle one, the card's, and the JPEG. Photos kept before WebP
+/// (migration 0025) were a JPEG, whose key it kept, and a JPEG for the card.
+const COPIES: [&str; 4] = [".webp", "-middle.webp", "-card.webp", ".jpg"];
+const EARLIER_CARD: &str = "-card.jpg";
 
 /// The posting and edit forms: their fields, and the photos chosen, if any. The forms are sent
 /// as multipart (enctype in listing_form.html); a plain form, with no photos, is read too.
@@ -92,17 +98,32 @@ pub async fn process(photos: Vec<Bytes>) -> Result<std::result::Result<Vec<Proce
     Ok(processed.map_err(|_| "Një nga fotot nuk u lexua. Zgjidh foto JPG, PNG ose WebP."))
 }
 
-/// Puts both sizes of each in the store, under new names, and says where they are served.
+/// Puts each one's files in the store, under a new name, and says where they are served.
 pub async fn store(media: &Media, processed: Vec<Processed>) -> Result<Vec<NewPhoto>> {
     let mut stored = Vec::with_capacity(processed.len());
     for photo in processed {
         let name = format!("photos/{:032x}", rand::random::<u128>());
-        let (full_key, card_key) = (format!("{name}.jpg"), format!("{name}-card.jpg"));
+        let [full_key, middle_key, card_key, jpeg_key] = COPIES.map(|copy| format!("{name}{copy}"));
         let size_bytes = photo.full.len() as i64;
-        tokio::try_join!(media.put(&full_key, photo.full), media.put(&card_key, photo.card))?;
+        let middle_url = photo.middle.is_some().then(|| media.url(&middle_key));
+        let middle = async {
+            match photo.middle {
+                Some(bytes) => media.put(&middle_key, bytes).await,
+                None => Ok(()),
+            }
+        };
+        tokio::try_join!(
+            media.put(&full_key, photo.full),
+            middle,
+            media.put(&card_key, photo.card),
+            media.put(&jpeg_key, photo.jpeg),
+        )?;
         stored.push(NewPhoto {
-            url: format!("/media/{full_key}"),
-            card_url: format!("/media/{card_key}"),
+            url: media.url(&full_key),
+            middle_url,
+            card_url: media.url(&card_key),
+            jpeg_url: media.url(&jpeg_key),
+            placeholder: photo.placeholder,
             storage_key: full_key,
             size_bytes,
             width: photo.width as i32,
@@ -113,17 +134,36 @@ pub async fn store(media: &Media, processed: Vec<Processed>) -> Result<Vec<NewPh
     Ok(stored)
 }
 
-/// Deletes the files of photos taken off a listing, both sizes. A file left behind only takes
-/// space, so a failure is logged rather than shown.
+/// Deletes the files of photos taken off a listing, every copy, those of photos kept before WebP
+/// included. A file left behind only takes space, so a failure is logged rather than shown.
 pub async fn delete(media: &Media, keys: &[String]) {
     for key in keys {
-        let card = key.strip_suffix(".jpg").map(|name| format!("{name}-card.jpg"));
-        for key in std::iter::once(key.clone()).chain(card) {
-            if let Err(error) = media.delete(&key).await {
+        let files: Vec<String> = match key.strip_suffix(".webp").or_else(|| key.strip_suffix(".jpg")) {
+            Some(name) => COPIES.iter().chain([&EARLIER_CARD]).map(|copy| format!("{name}{copy}")).collect(),
+            None => vec![key.clone()],
+        };
+        for file in files {
+            if let Err(error) = media.delete(&file).await {
                 tracing::warn!(%error, "a removed photo's file stays in the store");
             }
         }
     }
+}
+
+/// A WebP photo's copies for a srcset, the card's, the middle one and the full one, each with its
+/// longer side as its width: photos are made by it, and it is about what a tall photo needs too,
+/// shown whole on a listing page or cut square on a card. `side` is the full copy's longer side;
+/// a copy no smaller than it isn't there, or is left out.
+pub fn srcset(card: &str, middle: Option<&str>, full: &str, side: u32) -> String {
+    let mut copies = Vec::with_capacity(3);
+    if side > CARD_SIDE {
+        copies.push(format!("{card} {CARD_SIDE}w"));
+    }
+    if let Some(middle) = middle.filter(|_| side > MIDDLE_SIDE) {
+        copies.push(format!("{middle} {MIDDLE_SIDE}w"));
+    }
+    copies.push(format!("{full} {side}w"));
+    copies.join(", ")
 }
 
 /// /media/photos/...: a stored photo. Names never change, so browsers may keep them for a year.
@@ -134,7 +174,7 @@ pub async fn serve(State(state): State<AppState>, Path(key): Path<String>) -> Re
     };
     let mut response = bytes.into_response();
     let headers = response.headers_mut();
-    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/jpeg"));
-    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("public, max-age=31536000, immutable"));
+    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(media::content_type(&key)));
+    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static(media::CACHE_FOR_A_YEAR));
     Ok(response)
 }

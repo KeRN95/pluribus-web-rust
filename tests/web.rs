@@ -2899,24 +2899,38 @@ async fn listings_get_photos(pool: PgPool) {
     let url = posted.location.expect("posted");
     let no = url.trim_start_matches("/listing/").split('-').next().unwrap().to_string();
 
-    // The listing shows both, the first as its cover, and serves them: the full one 1600 px wide.
+    // The listing shows both, the first as its cover, and serves them: the full one 1600 px wide,
+    // as a JPEG for browsers without WebP and link previews.
     let page = get(pool.clone(), &url).await.body;
     let photo_urls: Vec<&str> = page.match_indices(r#"<img src="/media/photos/"#).map(|(at, _)| {
         let start = at + r#"<img src=""#.len();
         &page[start..start + page[start..].find('"').unwrap()]
     }).collect();
     assert_eq!(photo_urls.len(), 2, "{page}");
+    assert!(photo_urls.iter().all(|url| url.ends_with(".jpg")), "{photo_urls:?}");
     assert!(page.contains(r#"width="1600" height="1067""#));
     // The first loads ahead of anything else on the page.
     let first = &page[page.find(r#"<img src="/media/photos/"#).unwrap()..];
     assert!(first[..first.find('>').unwrap()].contains(r#" fetchpriority="high""#), "{first}");
     assert_eq!(page.matches("fetchpriority").count(), 1);
-    // Each whole in its frame, over a blurred copy of itself: its small copy, a decoration.
-    for url in &photo_urls {
-        let backdrop = format!(r#"<img class="gallery-backdrop" src="{}" alt="">"#, url.replace(".jpg", "-card.jpg"));
-        let at = page.find(&backdrop).expect("the blurred copy") + backdrop.len();
-        assert!(page[at..].trim_start().starts_with(&format!(r#"<img src="{url}""#)));
+    // Each is kept as WebP in three sizes, which the browser picks between; the second, 800 px
+    // wide, in two.
+    let (big, small) = (photo_urls[0].trim_end_matches(".jpg"), photo_urls[1].trim_end_matches(".jpg"));
+    let sources = [
+        format!(r#"<picture><source type="image/webp" srcset="{big}-card.webp 600w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="(min-width: 1100px) 1068px,"#),
+        format!(r#"<picture><source type="image/webp" srcset="{small}-card.webp 600w, {small}.webp 800w" sizes="#),
+    ];
+    for (url, source) in photo_urls.iter().zip(&sources) {
+        // Whole in its frame, over a blurred copy of itself: its tiny copy, in the page, a
+        // decoration; then its copies, and the JPEG.
+        let at = page.find(source.as_str()).expect(source);
+        let backdrop = page[..at].rfind(r#"<img class="gallery-backdrop" src="data:image/webp;base64,"#).expect("the blurred copy");
+        let between = &page[backdrop..at];
+        assert!(between.trim_end().ends_with(r#" alt="">"#), "{between}");
+        let img = &page[at..];
+        assert!(img[img.find("<img").unwrap()..].starts_with(&format!(r#"<img src="{url}""#)));
     }
+    assert_eq!(page.matches("</picture>").count(), 2);
     // Two make a strip to swipe through, one at a time, with a counter and arrows.
     assert!(page.contains(r#"<div class="gallery" data-controller="gallery">"#));
     assert!(page.contains(r#"data-gallery-target="track" tabindex="0" role="region" aria-label="Fotot e njoftimit""#));
@@ -2926,10 +2940,17 @@ async fn listings_get_photos(pool: PgPool) {
     let photo = get(pool.clone(), photo_urls[0]).await;
     assert_eq!(photo.status, StatusCode::OK);
     assert_eq!(photo.content_type.as_deref(), Some("image/jpeg"));
+    for copy in ["", "-middle", "-card"] {
+        let webp = get(pool.clone(), &format!("{big}{copy}.webp")).await;
+        assert_eq!(webp.content_type.as_deref(), Some("image/webp"), "{copy}");
+        assert!(webp.body.starts_with("RIFF") && webp.body.chars().take(16).collect::<String>().contains("WEBP"));
+    }
 
-    // The card uses the small copy of the cover.
+    // The card offers the cover's copies too, and shows its tiny one until it has loaded.
     let cards = get(pool.clone(), "/search?q=Galaxy").await.body;
-    assert!(cards.contains(&photo_urls[0].replace(".jpg", "-card.jpg")));
+    assert!(cards.contains(&format!(r#"<source type="image/webp" srcset="{big}-card.webp 600w, {big}-middle.webp 1200w, {big}.webp 1600w""#)));
+    assert!(cards.contains(&format!(r#"<img class="card-photo" src="{big}.jpg""#)));
+    assert!(cards.contains(r#"style="background-image: url(data:image/webp;base64,"#));
 
     // Editing: the photos are on the form; one removed, and the other becomes the cover.
     let edit = format!("/listing/{no}/ndrysho");
@@ -2947,7 +2968,10 @@ async fn listings_get_photos(pool: PgPool) {
     // One is just the photo: nothing to swipe or count.
     assert!(page.contains(r#"<div class="gallery">"#));
     assert!(!page.contains("data-controller=\"gallery\"") && !page.contains("gallery-count") && !page.contains(", foto 1 nga"));
-    assert_eq!(get(pool.clone(), photo_urls[0]).await.status, StatusCode::NOT_FOUND);
+    // The removed one's files are gone, every copy.
+    for file in [photo_urls[0].to_string(), format!("{big}.webp"), format!("{big}-middle.webp"), format!("{big}-card.webp")] {
+        assert_eq!(get(pool.clone(), &file).await.status, StatusCode::NOT_FOUND, "{file}");
+    }
     let covers: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM listing_media m JOIN listings l ON l.id = m.listing_id WHERE l.public_no = $1::bigint AND m.is_cover",
     )

@@ -55,9 +55,18 @@ pub struct AttributeValue {
 
 #[derive(Debug)]
 pub struct Photo {
+    /// The full photo as every browser and link preview shows it: a photo kept as WebP (since
+    /// migration 0025) has a JPEG copy for them; others are a JPEG already, or from elsewhere.
     pub url: String,
-    /// Its card-sized copy, which the listing page blurs to fill the frame around the photo.
+    /// Its card-sized copy, which the listing page blurs to fill the frame around a photo kept
+    /// before WebP.
     pub card_url: String,
+    /// A photo kept as WebP: the full copy and the middle one (none for a photo no bigger), which
+    /// the browser picks between with the card's (srcset), and the tiny one as a data: URI, which
+    /// the page blurs behind it.
+    pub webp_url: Option<String>,
+    pub middle_url: Option<String>,
+    pub placeholder: Option<String>,
     pub width_px: Option<i32>,
     pub height_px: Option<i32>,
 }
@@ -149,7 +158,8 @@ pub async fn listing_attributes(
 pub async fn listing_photos(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Vec<Photo>> {
     sqlx::query_as!(
         Photo,
-        r#"SELECT coalesce(public_url, thumbnail_url) AS "url!", coalesce(thumbnail_url, public_url) AS "card_url!",
+        r#"SELECT coalesce(jpeg_url, public_url, thumbnail_url) AS "url!", coalesce(thumbnail_url, public_url) AS "card_url!",
+                  CASE WHEN mime_type = 'image/webp' THEN public_url END AS "webp_url?", middle_url, placeholder,
                   width_px, height_px
            FROM listing_media
            WHERE listing_id = $1 AND status = 'READY' AND media_type = 'IMAGE'
@@ -161,12 +171,16 @@ pub async fn listing_photos(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Vec<P
     .await
 }
 
-/// A photo stored for a listing (media.rs): its key in the store, where the site serves it and its
-/// card-sized copy, and what the full one weighs.
+/// A photo stored for a listing (media.rs): its key in the store, the addresses of its copies (the
+/// full WebP, the middle one if any, the card's, the JPEG), its tiny copy, and what the full one
+/// weighs.
 pub struct NewPhoto {
     pub storage_key: String,
     pub url: String,
+    pub middle_url: Option<String>,
     pub card_url: String,
+    pub jpeg_url: String,
+    pub placeholder: String,
     pub size_bytes: i64,
     pub width: i32,
     pub height: i32,
@@ -188,13 +202,17 @@ pub async fn add_listing_photos(db: &PgPool, listing_id: Uuid, photos: &[NewPhot
     .await?;
     for (i, photo) in photos.iter().enumerate() {
         sqlx::query!(
-            "INSERT INTO listing_media (listing_id, media_type, status, storage_key, public_url, thumbnail_url,
-                                        mime_type, size_bytes, width_px, height_px, sha256, sort_order, is_cover)
-             VALUES ($1, 'IMAGE', 'READY', $2, $3, $4, 'image/jpeg', $5, $6, $7, $8, $9, $10)",
+            "INSERT INTO listing_media (listing_id, media_type, status, storage_key, public_url, middle_url,
+                                        thumbnail_url, jpeg_url, placeholder, mime_type, size_bytes, width_px,
+                                        height_px, sha256, sort_order, is_cover)
+             VALUES ($1, 'IMAGE', 'READY', $2, $3, $4, $5, $6, $7, 'image/webp', $8, $9, $10, $11, $12, $13)",
             listing_id,
             photo.storage_key,
             photo.url,
+            photo.middle_url,
             photo.card_url,
+            photo.jpeg_url,
+            photo.placeholder,
             photo.size_bytes,
             photo.width,
             photo.height,

@@ -15,12 +15,18 @@
     {%- else %}
     {#- The first row's first photos load straight away; the rest wait until they come near the
         screen. Each photo is a link to the listing too, since in a big card the photos lie over
-        the title's stretched link, to be slid through. -#}
+        the title's stretched link, to be slid through. A photo kept as WebP offers its three
+        copies in a picture, with its JPEG for browsers without WebP, and the first shows its tiny
+        copy until it has loaded. -#}
     <div class="card-slides"{% if card.photos.len() > 1 %} data-slides-target="track" data-action="scroll->slides#update"{% endif %}>
-      {%- for (small, full) in card.slides() %}
-      <a class="card-slide" href="{{ card.url() }}" tabindex="-1" aria-hidden="true"><img class="card-photo" src="{{ small }}"
-        srcset="{{ small }} 600w, {{ full }} 1600w" sizes="{{ page.sizes() }}" alt="" width="480" height="360" decoding="async"
-        {%- if !(eager && loop.first) %} loading="lazy"{% endif %}></a>
+      {%- for slide in card.slides() %}
+      <a class="card-slide" href="{{ card.url() }}" tabindex="-1" aria-hidden="true">
+        {%- if let Some(webp) = slide.webp %}<picture><source type="image/webp" srcset="{{ webp }}" sizes="{{ page.sizes() }}">{% endif -%}
+        <img class="card-photo" src="{{ slide.src }}"
+        {%- if let Some(srcset) = slide.srcset %} srcset="{{ srcset }}" sizes="{{ page.sizes() }}"{% endif %} alt="" width="480" height="360" decoding="async"
+        {%- if loop.first %}{% if let Some(placeholder) = slide.placeholder %} style="background-image: url({{ placeholder }})"{% endif %}{% endif %}
+        {%- if !(eager && loop.first) %} loading="lazy"{% endif %}>
+        {%- if slide.webp.is_some() %}</picture>{% endif %}</a>
       {%- endfor %}
     </div>
     {%- if card.photos.len() > 1 %}

@@ -25,21 +25,28 @@
   {% if photos.is_empty() %}
   <div class="listing-photo placeholder" aria-hidden="true"></div>
   {% else %}
-  {#- Each photo whole in its frame, over a blurred copy of itself where it doesn't fill it. Several
-      make a strip to swipe through one at a time, with a counter in its corner, and arrows for a
-      mouse (gallery_controller.js); the first two load at once, the first ahead of anything else
-      on the page (fetchpriority). -#}
+  {#- Each photo whole in its frame, over a blurred copy of itself where it doesn't fill it: its tiny
+      copy, which is in the page and so shows at once, until the photo has loaded too (a photo kept
+      before there were any has its card-sized copy blurred). A photo kept as WebP offers its three
+      copies in a picture, for the browser to pick the one the screen needs (GALLERY_SIZES), with
+      its JPEG for browsers without WebP. Several make a strip to swipe through one at a time, with
+      a counter in its corner, and arrows for a mouse (gallery_controller.js); the first two load
+      at once, the first ahead of anything else on the page (fetchpriority). -#}
   <div class="gallery"{% if photos.len() > 1 %} data-controller="gallery"{% endif %}>
     <div class="listing-photos"
       {%- if photos.len() > 1 %} data-gallery-target="track" tabindex="0" role="region" aria-label="Fotot e njoftimit"{% endif %}>
       {% for photo in photos %}
       <div class="gallery-photo">
-        <img class="gallery-backdrop" src="{{ photo.card_url }}" alt=""{% if loop.index > 2 %} loading="lazy"{% endif %}>
+        <img class="gallery-backdrop" src="{{ photo.backdrop() }}" alt=""{% if photo.placeholder.is_none() && loop.index > 2 %} loading="lazy"{% endif %}>
+        {%- if let Some(webp) = photo.webp_srcset() %}
+        <picture><source type="image/webp" srcset="{{ webp }}" sizes="{{ GALLERY_SIZES }}">
+        {%- endif %}
         <img src="{{ photo.url }}" alt="{{ listing.title }}{% if photos.len() > 1 %}, foto {{ loop.index }} nga {{ photos.len() }}{% endif %}"
           {%- if let Some(width) = photo.width_px %} width="{{ width }}"{% endif %}
           {%- if let Some(height) = photo.height_px %} height="{{ height }}"{% endif %}
           {%- if loop.index > 2 %} loading="lazy"{% endif %}
           {%- if loop.first %} fetchpriority="high"{% endif %}>
+        {%- if photo.webp_url.is_some() %}</picture>{% endif %}
       </div>
       {% endfor %}
     </div>

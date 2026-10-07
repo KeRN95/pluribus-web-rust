@@ -16,6 +16,7 @@ use super::{
     browse::ListingPage,
     cookie, not_found,
     icons::{self, Reads},
+    photos,
     post::POSTED_COOKIE,
     properties, render, render_stream,
 };
@@ -23,7 +24,43 @@ use crate::{
     AppState,
     db::{self, ListingCard, ListingDetail, MapPoint, Photo, SellerContact},
     format,
+    media::{CARD_SIDE, FULL_SIDE},
 };
+
+/// How wide a listing's photos show, for the browser to pick a copy of each (Photo::webp_srcset):
+/// as wide as the page on a wide screen (listing.css), up to 760px on others.
+pub const GALLERY_SIZES: &str =
+    "(min-width: 1100px) 1068px, (min-width: 960px) calc(100vw - 2rem), (min-width: 792px) 760px, calc(100vw - 2rem)";
+
+/// A photo on a card, with the copies the browser may pick from.
+pub struct Slide<'a> {
+    /// Its card-sized copy, WebP for a photo kept as WebP.
+    pub small: &'a str,
+    /// What the img shows where the browser picks nothing else: a WebP photo's JPEG, for browsers
+    /// without WebP, which the others never fetch; else the card-sized copy.
+    pub src: &'a str,
+    /// The img's srcset, for a photo kept before WebP: the card-sized copy and the full one.
+    pub srcset: Option<String>,
+    /// The WebP copies' srcset (photos::srcset), for the picture's source.
+    pub webp: Option<String>,
+    /// Its tiny copy as a data: URI, behind it while it loads.
+    pub placeholder: Option<&'a str>,
+}
+
+impl Photo {
+    /// A WebP photo's copies for the browser to pick from (GALLERY_SIZES).
+    pub fn webp_srcset(&self) -> Option<String> {
+        let full = self.webp_url.as_deref()?;
+        let side = self.width_px.zip(self.height_px).map_or(FULL_SIDE, |(width, height)| width.max(height) as u32);
+        Some(photos::srcset(&self.card_url, self.middle_url.as_deref(), full, side))
+    }
+
+    /// What the frame shows blurred around the photo, and behind it while it loads: its tiny copy,
+    /// or for a photo kept before there were any, its card-sized one.
+    pub fn backdrop(&self) -> &str {
+        self.placeholder.as_deref().unwrap_or(&self.card_url)
+    }
+}
 
 impl ListingCard {
     pub fn url(&self) -> String {
@@ -39,10 +76,33 @@ impl ListingCard {
         format::price(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
     }
 
-    /// The photos a big card slides through, the cover first: each its card-sized copy and its
-    /// full one, for the browser to pick from (ListingPage::sizes). A small card shows the first.
-    pub fn slides(&self) -> impl Iterator<Item = (&str, &str)> {
-        self.photos.iter().zip(&self.photos_full).map(|(small, full)| (small.as_str(), full.as_str()))
+    /// The photos a big card slides through, the cover first, each with its copies for the
+    /// browser to pick from (ListingPage::sizes): a WebP photo's three, or the card-sized copy and
+    /// the full one of a photo kept before. A small card shows the first.
+    pub fn slides(&self) -> impl Iterator<Item = Slide<'_>> {
+        self.photos.iter().zip(&self.photos_full).enumerate().map(|(i, (small, full))| {
+            match self.photos_webp.get(i).and_then(Option::as_ref) {
+                Some(webp) => Slide {
+                    small,
+                    src: full,
+                    srcset: None,
+                    webp: Some(photos::srcset(
+                        &webp.card,
+                        webp.middle.as_deref(),
+                        &webp.full,
+                        webp.side.map_or(FULL_SIDE, |side| side as u32),
+                    )),
+                    placeholder: webp.placeholder.as_deref(),
+                },
+                None => Slide {
+                    small,
+                    src: small,
+                    srcset: Some(format!("{small} {CARD_SIDE}w, {full} {FULL_SIDE}w")),
+                    webp: None,
+                    placeholder: None,
+                },
+            }
+        })
     }
 
     /// "Përdorues që nga tetor 2026", under the seller's name over a big card's photo.

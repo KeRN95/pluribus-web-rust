@@ -22,9 +22,14 @@ pub struct ListingCard {
     /// How far the listing is from the map pin, in metres, when the search has one.
     pub distance_m: Option<f64>,
     /// The listing's photos, the cover first: their card-sized copies, and the full ones in the
-    /// same order. A small card shows the first; a big one slides through them all.
+    /// same order, as every browser and link preview shows them (a photo kept as WebP has a JPEG
+    /// copy for them). A small card shows the first; a big one slides through them all.
     pub photos: Vec<String>,
     pub photos_full: Vec<String>,
+    /// In the same order, the WebP copies of each photo kept as WebP (since migration 0025), for
+    /// the browser to pick from; None for a photo kept before, as JPEG, or from elsewhere.
+    #[sqlx(json)]
+    pub photos_webp: Vec<Option<WebpCopies>>,
     /// The seller's name, and since when they are on the site, which a big card says over its
     /// photo.
     pub seller_name: String,
@@ -43,6 +48,17 @@ pub struct ListingCard {
     /// (most_viewed), which show it over the photo.
     #[sqlx(default)]
     pub views: Option<i64>,
+}
+
+/// A photo's WebP copies (media.rs), as a card has them: the card's, the middle one (none for a
+/// photo no bigger), the full one and its longer side, and the tiny one as a data: URI.
+#[derive(Debug, Clone, Deserialize)]
+pub struct WebpCopies {
+    pub card: String,
+    pub middle: Option<String>,
+    pub full: String,
+    pub side: Option<i32>,
+    pub placeholder: Option<String>,
 }
 
 /// The orders a listing page can be sorted in.
@@ -425,10 +441,18 @@ pub(super) const CARD_COLUMNS: &str = "WITH card_attributes AS MATERIALIZED (
                           FROM listing_media m
                           WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'
                             AND coalesce(m.public_url, m.thumbnail_url) IS NOT NULL), '{}') AS photos,
-                coalesce((SELECT array_agg(coalesce(m.public_url, m.thumbnail_url) ORDER BY m.is_cover DESC, m.sort_order)
+                coalesce((SELECT array_agg(coalesce(m.jpeg_url, m.public_url, m.thumbnail_url) ORDER BY m.is_cover DESC, m.sort_order)
                           FROM listing_media m
                           WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'
                             AND coalesce(m.public_url, m.thumbnail_url) IS NOT NULL), '{}') AS photos_full,
+                coalesce((SELECT json_agg(CASE WHEN m.mime_type = 'image/webp' THEN
+                                     json_build_object('card', coalesce(m.thumbnail_url, m.public_url), 'middle', m.middle_url,
+                                                       'full', m.public_url, 'side', greatest(m.width_px, m.height_px),
+                                                       'placeholder', m.placeholder)
+                                 END ORDER BY m.is_cover DESC, m.sort_order)
+                          FROM listing_media m
+                          WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'
+                            AND coalesce(m.public_url, m.thumbnail_url) IS NOT NULL), '[]') AS photos_webp,
                 coalesce((SELECT b.display_name FROM businesses b WHERE b.id = l.seller_business_id),
                          (SELECT u.display_name FROM users u WHERE u.id = l.seller_user_id), '') AS seller_name,
                 coalesce((SELECT b.created_at FROM businesses b WHERE b.id = l.seller_business_id),

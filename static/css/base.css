@@ -189,6 +189,10 @@ h2 { margin: 1.75rem 0 .75rem; font-size: var(--text-xl); line-height: 1.25; }
 /* Frames only group content for Turbo; their cards stay items of the surrounding grid. */
 turbo-frame { display: contents; }
 
+/* A photo's picture only offers its copies (WebP, with a JPEG for browsers without it); the img in
+   it is what the page lays out. */
+picture { display: contents; }
+
 /* Except a next-page frame that hasn't loaded yet: browsers only report an element as scrolled
    into view if it has a box, and Turbo waits for that before loading the page. */
 turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -1; text-align: center; }
