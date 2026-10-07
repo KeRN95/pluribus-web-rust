@@ -399,8 +399,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* A card's photos: in a small card the first alone. In a big one (the view button) every photo in
    a row that a finger slides through a photo at a time (slides_controller.js), over the title's
-   stretched link, each photo a link itself; the shade and the price over them, then the dots, at
-   the right, and under a pointer the arrows. The rest of the card a size bigger, the photo 4:3,
+   stretched link, each photo a link itself; over them the shade, the price over that, then the
+   dots, at the right, and under a pointer the arrows. The rest of the card a size bigger, the photo 4:3,
    one card a line, no wider than 40rem, in the middle. */
 .card-slides {
   display: flex;
@@ -428,8 +428,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .cards-big .card-slides::-webkit-scrollbar { display: none; }
 .cards-big .card-slide { scroll-snap-align: start; scroll-snap-stop: always; }
 .cards-big .card-slide + .card-slide { display: block; }
-.cards-big .card-media::after,
-.cards-big .card-media .card-price { z-index: 3; }
+.cards-big .card-media::after { z-index: 3; }
+.cards-big .card-media .card-price { z-index: 4; }
 .cards-big .card-media .card-price { padding: 0 1rem .75rem; font-size: var(--text-lg); }
 .cards-big .card-head { padding-top: .7rem; }
 .cards-big .card-title { font-size: var(--text-md); }
@@ -439,7 +439,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   grid-area: 1 / 1;
   align-self: end;
   justify-self: end;
-  z-index: 4;
+  z-index: 5;
   gap: 5px;
   padding: 0 1rem 1.05rem;
   pointer-events: none;
@@ -452,7 +452,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
     place-items: center;
     grid-area: 1 / 1;
     align-self: center;
-    z-index: 4;
+    z-index: 5;
     width: 2.25rem;
     height: 2.25rem;
     margin: 0 .75rem;
