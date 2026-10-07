@@ -14,6 +14,20 @@
   {%- else if page.cards.is_empty() %}
   <p class="empty">Ende s'ke ruajtur asnjë njoftim. Prek zemrën mbi foton e një njoftimi për ta ruajtur këtu.</p>
   {%- else %}
+  {%- if !drops.is_empty() %}
+  {#- The listings kept whose price dropped since the visitor last looked (db::price_drops): from
+      what to what. Once shown, the page says so (data-seen-url, application.js): they are seen, up
+      to the latest of them, and the header's heart loses its dot. -#}
+  <div class="notice price-drops" data-seen-url="{{ self.seen_url() }}">
+    <p class="price-drops-title">Çmime më të ulëta te njoftimet që ke ruajtur</p>
+    <ul>
+      {%- for drop in drops %}
+      {%- let (was, now) = drop.prices() %}
+      <li><a href="{{ drop.url() }}">{{ drop.title }}</a>: nga <del>{{ was }}</del> në {{ now }}</li>
+      {%- endfor %}
+    </ul>
+  </div>
+  {%- endif %}
   {% include "listing_grid.html" %}
   {%- endif %}
 </section>

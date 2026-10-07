@@ -134,7 +134,8 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
 }, true);
 
 // A listing's page, once Turbo shows it, says it was seen (listings.rs, seen), for the welcome
-// page's "Më të klikuarat": not when Turbo only fetched it ahead, under the pointer.
+// page's "Më të klikuarat"; the kept listings' page, that the price drops it shows were seen
+// (saved.rs, seen): not when Turbo only fetched them ahead, under the pointer.
 document.addEventListener("turbo:load", () => {
   const url = document.querySelector("[data-seen-url]")?.dataset.seenUrl;
   if (url) navigator.sendBeacon(url);

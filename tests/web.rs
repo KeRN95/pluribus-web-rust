@@ -512,8 +512,8 @@ async fn a_heart_keeps_a_listing_for_a_signed_in_user(pool: PgPool) {
     let kept = |pool: PgPool| {
         let session = session.clone();
         async move {
-            let mut numbers: Vec<i64> =
-                serde_json::from_str(&get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body).unwrap();
+            let answer: Value = serde_json::from_str(&get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body).unwrap();
+            let mut numbers: Vec<i64> = serde_json::from_value(answer["numbers"].clone()).unwrap();
             numbers.sort();
             numbers
         }
@@ -543,7 +543,7 @@ async fn a_heart_keeps_a_listing_for_a_signed_in_user(pool: PgPool) {
     assert_eq!(send(pool.clone(), request).await.location.as_deref(), Some("/c/automjete"));
     assert_eq!(kept(pool.clone()).await, [1001, 1003]);
     // Nobody signed in keeps nothing, and their page says how to.
-    assert_eq!(get(pool.clone(), "/te-ruajturat/numrat").await.body, "[]");
+    assert_eq!(get(pool.clone(), "/te-ruajturat/numrat").await.body, r#"{"numbers":[],"price_drops":0}"#);
     let page = get(pool, "/te-ruajturat").await.body;
     assert!(page.contains(r#"<a class="button" href="/llogaria">Hyr</a>"#) && card_numbers(&page).is_empty());
 }
@@ -570,7 +570,7 @@ async fn a_heart_tapped_before_signing_in_keeps_the_listing_once_signed_in(pool:
     assert_eq!(signed.location.as_deref(), Some("/c/automjete?vehicle_fuel=DIESEL"));
     assert_eq!((signed.cookie("ruaj"), signed.cookie("kthehu")), (Some(""), Some("")));
     let session = format!("session={}", signed.cookie("session").unwrap());
-    assert_eq!(get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body, "[1001]");
+    assert_eq!(get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body, r#"{"numbers":[1001],"price_drops":0}"#);
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -4058,3 +4058,132 @@ async fn a_seller_sees_what_each_listing_drew(pool: PgPool) {
     assert!(his.contains(r#"<dd class="my-stat-week">Asnjë këtë javë</dd>"#));
 }
 
+/// A listing's card on the page, from its opening tag to its end.
+fn card_of(html: &str, number: i64) -> String {
+    let start = html.find(&format!(r#"<article class="card" id="listing-{number}">"#)).unwrap_or_else(|| panic!("no card {number}"));
+    let rest = &html[start..];
+    rest[..rest.find("</article>").unwrap()].to_string()
+}
+
+/// Sets a listing's price, as its seller's edit does, which listing_price_history records.
+async fn set_price(pool: &PgPool, number: i64, amount: &str) {
+    sqlx::query("UPDATE listings SET price_amount = $2::numeric WHERE public_no = $1")
+        .bind(number)
+        .bind(amount)
+        .execute(pool)
+        .await
+        .unwrap();
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
+    // The Golf, from 9 500 € to 9 000 €: 5% less, before its price on its card, and after it on its
+    // page, with what it was struck through.
+    set_price(&pool, 1001, "9000").await;
+    let golf = card_of(&html(pool.clone(), "/c/makina").await, 1001);
+    let badge = "<p class=\"card-price\"><span class=\"card-drop\" title=\"Çmimi ra nga 9\u{a0}500\u{a0}€\"><span class=\"visually-hidden\">Çmimi ra nga 9\u{a0}500\u{a0}€, </span>−5%</span> 9\u{a0}000\u{a0}€</p>";
+    assert!(golf.contains(badge), "{golf}");
+    let page = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
+    let was = "<span class=\"price-was\"><span class=\"visually-hidden\">Çmimi ishte </span><del>9\u{a0}500\u{a0}€</del> <span class=\"price-drop\">−5%</span></span>";
+    assert!(page.contains(was), "{page}");
+
+    // Dearer for a while and then back under that, the Mercedes is no cheaper than it was at its
+    // lowest of the month, 21 500 €; at 20 000 €, it is, by 7%.
+    set_price(&pool, 1002, "30000").await;
+    set_price(&pool, 1002, "25000").await;
+    assert!(!card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("card-drop"));
+    set_price(&pool, 1002, "20000").await;
+    assert!(card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("−7%</span> 20\u{a0}000\u{a0}€"));
+
+    // Less than 1% is no drop: the iPhone, from 55 000 to 54 700 Lekë. Nor is a price in another
+    // currency: the bike, from 25 000 Lekë to 200 €.
+    set_price(&pool, 1005, "54700").await;
+    assert!(!card_of(&html(pool.clone(), "/c/elektronike").await, 1005).contains("card-drop"));
+    sqlx::query("UPDATE listings SET price_amount = 200, currency = 'EUR' WHERE public_no = 1010").execute(&pool).await.unwrap();
+    assert!(!card_of(&html(pool.clone(), "/c/sport-dhe-hobi").await, 1010).contains("card-drop"));
+
+    // A month on, the Golf's drop is just its price.
+    sqlx::query(
+        "UPDATE listing_price_history SET changed_at = changed_at - interval '31 days'
+         WHERE listing_id = (SELECT id FROM listings WHERE public_no = 1001)",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert!(!card_of(&html(pool.clone(), "/c/makina").await, 1001).contains("card-drop"));
+    assert!(!html(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await.contains("price-was"));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn those_who_keep_a_listing_hear_when_its_price_drops(pool: PgPool) {
+    // Ana's phone, at 32 000 Lekë, kept by Besnik, and by Dritan, who turned price drop alerts off.
+    let ana = new_seller(&pool, "+355691112233").await;
+    let no = post_listing(&pool, &ana).await;
+    let besnik = session_for(&pool, "22222222-2222-4222-8222-222222222222").await;
+    let dritan = session_for(&pool, "33333333-3333-4333-8333-333333333333").await;
+    for keeper in [&besnik, &dritan] {
+        assert_eq!(send(pool.clone(), tap_heart(&no, "1", Some(keeper))).await.status, StatusCode::NO_CONTENT);
+    }
+    sqlx::query("INSERT INTO notification_preferences (user_id, price_drop_alerts) VALUES ('33333333-3333-4333-8333-333333333333', false)")
+        .execute(&pool)
+        .await
+        .unwrap();
+    // How many drops the header's heart says someone hasn't seen (heart_controller.js).
+    let unseen = |session: &str| {
+        let (pool, session) = (pool.clone(), session.to_string());
+        async move {
+            let answer: Value = serde_json::from_str(&get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body).unwrap();
+            answer["price_drops"].as_i64().unwrap()
+        }
+    };
+    let started = started();
+    let edit = |field: (&'static str, &'static str)| {
+        let (pool, ana, started, no) = (pool.clone(), ana.clone(), started.clone(), no.clone());
+        async move {
+            let saved = post_form(pool, &format!("/listing/{no}/ndrysho"), &listing_fields(field, &started), Some(&ana)).await;
+            assert_eq!(saved.status, StatusCode::SEE_OTHER);
+        }
+    };
+    // Shown, the page says so (application.js) at the address it names: up to its latest drop.
+    let saw = |page: &str, session: &str| {
+        let start = page.find(r#"data-seen-url=""#).expect("no data-seen-url") + 15;
+        let url = page[start..start + page[start..].find('"').unwrap()].to_string();
+        let pool = pool.clone();
+        let request = Request::post(url).header(header::COOKIE, session).body(Body::empty()).unwrap();
+        async move { assert_eq!(send(pool, request).await.status, StatusCode::NO_CONTENT) }
+    };
+
+    // An edit that leaves the price is nothing to hear.
+    edit(("title", "Samsung Galaxy S21, 128 GB, me kuti")).await;
+    assert_eq!(unseen(&besnik).await, 0);
+    // Lowered to 29 000 Lekë: Besnik hears, Dritan doesn't, nor its seller.
+    edit(("price", "29 000")).await;
+    assert_eq!((unseen(&besnik).await, unseen(&dritan).await, unseen(&ana).await), (1, 0, 0));
+    // His page says so over the cards, from what to what, and asks to be told when it is shown.
+    let page = get_with_cookie(pool.clone(), "/te-ruajturat", &besnik).await.body;
+    assert!(page.contains(r#"<div class="notice price-drops" data-seen-url="/te-ruajturat/pare?deri="#), "{page}");
+    let drop = format!(
+        "<li><a href=\"/listing/{no}-samsung-galaxy-s21-128-gb\">Samsung Galaxy S21, 128 GB</a>: nga <del>32\u{a0}000\u{a0}Lekë</del> në 29\u{a0}000\u{a0}Lekë</li>"
+    );
+    assert!(page.contains(&drop), "{page}");
+    assert!(!get_with_cookie(pool.clone(), "/te-ruajturat", &dritan).await.body.contains("price-drops"));
+    // Fetched, the page changes nothing; shown, the drop is seen.
+    assert_eq!(unseen(&besnik).await, 1);
+    saw(&page, &besnik).await;
+    assert_eq!(unseen(&besnik).await, 0);
+    assert!(!get_with_cookie(pool.clone(), "/te-ruajturat", &besnik).await.body.contains("price-drops"));
+
+    // Lowered twice more before he looks again: one notice, from what it was when he last saw it.
+    edit(("price", "27 000")).await;
+    edit(("price", "25 000")).await;
+    assert_eq!(unseen(&besnik).await, 1);
+    let page = get_with_cookie(pool.clone(), "/te-ruajturat", &besnik).await.body;
+    assert!(page.contains("nga <del>29\u{a0}000\u{a0}Lekë</del> në 25\u{a0}000\u{a0}Lekë</li>"), "{page}");
+    // A drop after the page was made isn't seen with it, as when the browser shows its copy again.
+    edit(("price", "24 000")).await;
+    saw(&page, &besnik).await;
+    assert_eq!(unseen(&besnik).await, 1);
+    // Let go, the listing's drops are none of his business.
+    assert_eq!(send(pool.clone(), tap_heart(&no, "0", Some(&besnik))).await.status, StatusCode::NO_CONTENT);
+    assert_eq!(unseen(&besnik).await, 0);
+}

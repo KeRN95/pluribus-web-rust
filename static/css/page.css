@@ -229,6 +229,20 @@
   white-space: nowrap;
 }
 
+/* A price that dropped lately (listing_card.html): by how much, before it, white on green as a
+   pill on the photo, whichever the theme. */
+.card-drop {
+  display: inline-block;
+  margin-right: .1rem;
+  padding: 0 .4rem;
+  border-radius: 999px;
+  background: #1b6e37;
+  color: #fff;
+  font-weight: var(--bold);
+  line-height: 1.45;
+  text-shadow: none;
+}
+
 /* One line; a price too long for the card ends in "…". */
 .card-price {
   margin: 0;
@@ -403,6 +417,11 @@
 .listing-meta strong { font-weight: var(--semibold); }
 .more { display: inline-block; padding: 1rem; color: var(--muted); }
 .empty { color: var(--muted); }
+/* On /te-ruajturat, over the cards: the kept listings whose price dropped since the visitor last
+   looked, each from what to what (saved.html). */
+.price-drops-title { margin: 0; font-weight: var(--semibold); }
+.price-drops ul { margin: .35rem 0 0; padding-left: 1.1rem; }
+.price-drops a { color: inherit; font-weight: var(--medium); }
 
 /* Form fields */
 

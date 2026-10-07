@@ -16,6 +16,35 @@ pub const PAGE_SIZE: i64 = 24;
 /// more than the exact number is worth.
 pub const COUNT_LIMIT: i64 = 1_000;
 
+/// SQL for the price a listing read as `l` dropped from, as a scalar subquery: the lowest it was
+/// over the 30 days before its price last changed, when that change, in the last 30 days, made it
+/// at least 1% lower in the same currency; NULL otherwise, or when the listing is no longer up or
+/// isn't on sale, for rent or a service. From listing_price_history, which a trigger fills as
+/// prices change (migration 0001). The lowest of the 30 days rather than the last, so a price
+/// raised for a while and lowered back is no drop. Cards (CARD_COLUMNS), a listing's page and the
+/// notifications to those who keep it (price_drops.rs) all read it from here.
+macro_rules! price_was {
+    () => {
+        "(SELECT min(h.price_amount)
+          FROM (SELECT p.changed_at
+                FROM listing_price_history p
+                WHERE p.listing_id = l.id
+                ORDER BY p.changed_at DESC
+                LIMIT 1) cur
+          JOIN listing_price_history h
+            ON h.listing_id = l.id AND h.changed_at < cur.changed_at
+           AND h.changed_at >= coalesce((SELECT max(b.changed_at)
+                                         FROM listing_price_history b
+                                         WHERE b.listing_id = l.id AND b.changed_at <= cur.changed_at - interval '30 days'),
+                                        '-infinity')
+          WHERE cur.changed_at > now() - interval '30 days'
+            AND l.status IN ('ACTIVE', 'RESERVED') AND l.listing_type IN ('SELL', 'RENT', 'SERVICE')
+            AND l.price_type IN ('FIXED', 'NEGOTIABLE', 'FROM')
+            AND h.currency = l.currency AND h.price_type IN ('FIXED', 'NEGOTIABLE', 'FROM') AND h.price_amount IS NOT NULL
+          HAVING l.price_amount <= min(h.price_amount) * 0.99)"
+    };
+}
+
 mod categories;
 mod properties;
 mod listing_pages;
@@ -24,6 +53,7 @@ mod listing;
 mod sign_in;
 mod sitemap;
 mod posting;
+mod price_drops;
 mod typed_in;
 
 pub use categories::*;
@@ -34,6 +64,7 @@ pub use listing::*;
 pub use sign_in::*;
 pub use sitemap::*;
 pub use posting::*;
+pub use price_drops::*;
 pub use typed_in::*;
 
 #[cfg(test)]

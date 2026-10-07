@@ -206,6 +206,18 @@
 .listing-price { margin: 0; font-size: var(--text-3xl); line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
 /* What follows the price ("/muaj", "(i diskutueshëm)"), half its size. */
 .price-note { font-size: .5em; letter-spacing: normal; }
+/* A price that dropped lately (price_drop.html): what it was, struck through, quietly, and by how
+   much in a green pill, as the zone's bubble says a square metre is cheap for it. */
+.price-was {
+  margin-left: .6rem;
+  color: var(--muted);
+  font-size: .45em;
+  font-weight: var(--medium);
+  letter-spacing: normal;
+  white-space: nowrap;
+  vertical-align: .3em;
+}
+.price-drop { margin-left: .25rem; padding: .1rem .5rem; border-radius: 999px; background: var(--below-bg); color: var(--below); font-weight: var(--bold); }
 /* Bubbles under the price, which open a card under them as the menus open theirs; a tap outside
    or Escape closes it (dropdown_controller.js): what a square metre of a property on sale costs,
    whose card says how it was worked out (area_price.html), and "Llogarit kredinë", whose card is

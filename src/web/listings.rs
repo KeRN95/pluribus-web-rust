@@ -8,7 +8,7 @@ use axum::{
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Redirect, Response},
 };
-use rust_decimal::{Decimal, RoundingStrategy};
+use rust_decimal::{Decimal, RoundingStrategy, prelude::ToPrimitive};
 
 use super::{
     Result,
@@ -75,6 +75,11 @@ impl ListingCard {
 
     pub fn price_display(&self) -> String {
         format::price(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
+    }
+
+    /// By how much its price dropped lately, and from what (price_drop), for the badge beside it.
+    pub fn price_drop(&self) -> Option<(i64, String)> {
+        price_drop(self.price_was, self.price_amount, &self.currency)
     }
 
     /// The photos a big card slides through, the cover first, each with its copies for the
@@ -318,6 +323,8 @@ struct ListingShow {
     /// reads its cards by.
     page: ListingPage,
     meta: PageMeta,
+    /// By how much its price dropped lately, and from what (price_drop): beside the price.
+    price_drop: Option<(i64, String)>,
 }
 
 /// What a listing's page says about itself (seo.rs). Its preview: the title and the price, where
@@ -395,6 +402,14 @@ fn listing_meta(origin: &str, listing: &ListingDetail, photos: &[Photo]) -> Page
     meta
 }
 
+/// By how much a price dropped from `was` (db's price_was!), in whole percent, at least 1, and
+/// `was` as the site writes a price: (7, "10 000 €").
+pub fn price_drop(was: Option<Decimal>, price: Option<Decimal>, currency: &str) -> Option<(i64, String)> {
+    let (was, price) = (was?, price?);
+    let percent = ((was - price) / was * Decimal::ONE_HUNDRED).round().to_i64()?;
+    Some((percent.max(1), format::money(was, currency)))
+}
+
 /// URLs look like /listing/1042-vw-golf-7: the number identifies the listing, and the slug is
 /// cosmetic, so an outdated slug redirects to the current one.
 pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): Path<String>) -> Result<Response> {
@@ -409,7 +424,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         return Ok(Redirect::permanent(&format!("/listing/{canonical}")).into_response());
     }
     // One more of the seller's listings than the page shows says whether they have more.
-    let (attributes, photos, contact, categories, mut from_seller, related, views) = tokio::try_join!(
+    let (attributes, photos, contact, categories, mut from_seller, related, views, price_was) = tokio::try_join!(
         db::listing_attributes(&state.db, listing.id, listing.category_id),
         db::listing_photos(&state.db, listing.id),
         db::visible_contact(&state.db, listing.id),
@@ -417,7 +432,9 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         db::seller_listings(&state.db, listing.id, db::FROM_SELLER + 1),
         db::related_listings(&state.db, listing.id, db::RELATED),
         db::listing_views(&state.db, listing.id),
+        db::price_was(&state.db, listing.id),
     )?;
+    let price_drop = price_drop(price_was, listing.price_amount, &listing.currency);
     let views = (views > 0).then(|| format::number(Decimal::from(views)));
     let crumb = |name: &str, slug: &str| Crumb { name: name.to_string(), url: format!("/c/{slug}") };
     let category = categories.by_slug(&listing.category_slug);
@@ -475,7 +492,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let page = ListingPage::related(related);
     let meta = listing_meta(&seo::origin(&headers), &listing, &photos);
     let mut response =
-        render(ListingShow { listing, trail, details, photos, reveal, own, posted, seller_page, seller_more, page, views, meta })?;
+        render(ListingShow { listing, trail, details, photos, reveal, own, posted, seller_page, seller_more, page, views, meta, price_drop })?;
     if posted {
         response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));
     }

@@ -48,6 +48,10 @@ pub struct ListingCard {
     /// (most_viewed), which show it over the photo.
     #[sqlx(default)]
     pub views: Option<i64>,
+    /// The price it dropped from, when it did lately (price_was! in mod.rs): the card says by how
+    /// much beside its price.
+    #[sqlx(default)]
+    pub price_was: Option<Decimal>,
 }
 
 /// A photo's WebP copies (media.rs), as a card has them: the card's, the middle one (none for a
@@ -421,7 +425,7 @@ pub enum AttributeFilter {
 /// What a card shows (ListingCard) of each listing a query reads as `l`, but for its distance_m,
 /// which the query says before FROM: the WITH clause and select list shared by a page of cards and
 /// a listing's related ones.
-pub(super) const CARD_COLUMNS: &str = "WITH card_attributes AS MATERIALIZED (
+pub(super) const CARD_COLUMNS: &str = concat!("WITH card_attributes AS MATERIALIZED (
              SELECT category_id, attribute_id, sort_order
              FROM effective_category_attributes
              WHERE show_in_card
@@ -486,7 +490,8 @@ pub(super) const CARD_COLUMNS: &str = "WITH card_attributes AS MATERIALIZED (
                    AND strpos(lower(coalesce(l.generated_title, l.title)), lower(spare.value)) = 0
                  ORDER BY spare.sort_order
                  LIMIT 1) AS spare_detail,
-                ";
+                ", price_was!(), " AS price_was,
+                ");
 
 /// One page of active listings in the filter's order, with at most PAGE_SIZE + 1 rows.
 pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec<ListingCard>> {

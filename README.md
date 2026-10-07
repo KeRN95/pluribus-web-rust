@@ -84,6 +84,12 @@ docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v count=150000
 docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v views=1 < dev/generate_listings.sql
 ```
 
+`drops=1` makes nothing new but makes a twentieth of the active listings the script made with a price (on sale, for rent or a service) 8 to 25% cheaper, rounded as people round prices, as if their sellers had lowered them, so the cards and pages have price drops to show (the price history's trigger records them); runs add up. Those who keep a listing hear only of the drops its seller makes on the site:
+
+```bash
+docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v drops=1 < dev/generate_listings.sql
+```
+
 The tests need the database running; each test gets a fresh database of its own:
 
 ```bash
@@ -103,7 +109,7 @@ cargo test
 | `src/web/filters.rs` | A browse page's filters: read from the query string, turned into the listing query, and shown back as the filter form, the chips that remove them, the orders and the next page's URL |
 | `src/web/listings.rs` | A listing's page (its details and their icons, photos, price per square metre, loan, the seller's other listings and the related ones), what it tells link previews and Google (`listing_meta`), the phone number's reveal, and the views it reports |
 | `src/web/newest.rs` | The stream of new listings for the welcome page's row: server-sent events, each a Turbo Stream with a listing's card |
-| `src/web/saved.rs` | The hearts: keeping a listing, the page of those kept (`/te-ruajturat`), and keeping one after signing in |
+| `src/web/saved.rs` | The hearts: keeping a listing, the page of those kept (`/te-ruajturat`) with the price drops not seen yet, keeping one after signing in, and the header heart's dot |
 | `src/web/post.rs` | Posting, editing, pausing, putting back and deleting listings, "Njoftimet e mia" with what each listing drew (views, contacts, saves), and the limits that keep spam out |
 | `src/web/properties.rs` | A category's properties in the listing form (the fields, a car's tiles, the body types' drawings), and checking what a seller picked or typed |
 | `src/web/ai_fill.rs` | "Plotëso pjesën tjetër me AI": the listing form filled in by the AI, its answer checked against the form's own lists |
@@ -113,12 +119,13 @@ cargo test
 | `src/web/suggestions.rs` | What the search boxes suggest as words are typed |
 | `src/web/icons.rs` | Every line icon, each drawn once: the details' on a listing's page, the posting form's tiles, the eye of the view counts, the heart and the handset (the hearts, the phone button, the sellers' stats), the main categories' and the subcategories' |
 | `src/web/seo.rs` | What search engines and link previews read: each page's description, canonical address and Open Graph tags (`PageMeta`, which `meta.html` writes), the site's own description and picture, `robots.txt` and the sitemaps |
-| `src/db/mod.rs` | Database access: the page size and count limit, and every query of the files below, re-exported, so each is `db::...` |
+| `src/db/mod.rs` | Database access: the page size and count limit, `price_was!` (the SQL for the price a listing dropped from, which cards, a listing's page and the notifications share), and every query of the files below, re-exported, so each is `db::...` |
 | `src/db/categories.rs` | The categories and places (towns, their zones), as the pages and the forms list them |
 | `src/db/properties.rs` | Categories' properties: what the filters and the posting form offer, and what a listing says |
 | `src/db/listing_pages.rs` | Pages of listing cards: the browse pages' filters, orders and pages, counts, the rows under a listing, the most seen, the map's points |
 | `src/db/listing.rs` | One listing: its page, its photos and properties, and the contact it reveals |
 | `src/db/saved.rs` | The listings a signed-in user keeps |
+| `src/db/price_drops.rs` | Price drops: what a listing's price dropped from, for its page; the notifications to those who keep it when its seller lowers it (`notify_price_drop`); those not seen yet, and seeing them |
 | `src/db/sign_in.rs` | Sign-in codes, sessions and users |
 | `src/db/posting.rs` | Posting and editing listings, pausing them and taking them down; a seller's listings with what each drew (`ListingStats`: its views, how many times its contact was shown, how many keep it, all along and over the last seven days) |
 | `src/db/typed_in.rs` | What sellers type in where a list lacks theirs ("Tjetër"), and how moderators approve or merge it |
@@ -159,14 +166,14 @@ cargo test
 | `migrations/0023_more_properties.sql` | The properties every category lacked: a car's customs, plates, engine and power, a motorcycle's and a van's own, a tyre's size, a flat's bathrooms, condition and heating, a plot's permit, a job's contract, a service's areas, shoes' sizes, a pet's breed, a machine's hours...; what only some kinds of a category have moves down to them (a plot has no rooms, a bag no size), and central heating goes from a home's amenities to its kinds of heating |
 | `migrations/0024_search_kinds.sql` | Words that name a kind of listing (shitje, shitet, shes; qira, qera; blej) find the listings of that kind, as well as those that say them: "golf 7 në shitje" finds the Golfs for sale |
 | `migrations/0025_photo_copies.sql` | Photos kept as WebP: beside the full and card-sized copies, a middle-sized one (`middle_url`), a JPEG of the full one (`jpeg_url`) and a tiny copy for the pages (`placeholder`) |
-| `tests/web.rs` | 96 request tests: each sends requests to the app, with a database of its own, and checks the pages, redirects, cookies and what the database holds after |
+| `tests/web.rs` | 98 request tests: each sends requests to the app, with a database of its own, and checks the pages, redirects, cookies and what the database holds after |
 | `tests/schema.rs` | Runs `schema_checks.sql` against a freshly migrated database |
 | `tests/schema_checks.sql` | 83 checks of the schema's constraints and behaviour (35 checks, 36 statements that must fail, 12 that must succeed), in one transaction rolled back at the end |
 | `tests/fixtures/listings.sql` | The tests' sample listings, which can also be loaded into the development database |
 | `dev/deploy.sh` | Builds the release and (re)starts it on `BIND_ADDR`, keeping the previous one to go back to |
 | `dev/setup_garage.sh`, `dev/garage.toml` | The local photo store's one-time setup, and its configuration |
 | `dev/sample_listings.sql` | 305 extra sample listings for the development database (not used by the tests) |
-| `dev/generate_listings.sql` | Generates as many realistic listings as you ask for, with sellers and photos, for trying the site at scale; removes them again with `remove=1`, gives listings with only a cover more photos with `photos=1`, puts property listings from earlier versions of it in their zones with `zones=1`, and gives listings views with `views=1` |
+| `dev/generate_listings.sql` | Generates as many realistic listings as you ask for, with sellers and photos, for trying the site at scale; removes them again with `remove=1`, gives listings with only a cover more photos with `photos=1`, puts property listings from earlier versions of it in their zones with `zones=1`, gives listings views with `views=1`, and lowers some of their prices with `drops=1` |
 | `compose.yaml` | The development services: PostgreSQL 15 (port 5432) and Garage (port 3900) |
 | `.env.example` | Every setting, with values that work locally (see "Configuration") |
 | `Cargo.toml` | The crates the site uses (see "Dependencies") |
@@ -198,8 +205,9 @@ Every page and action, from `web::router`. Anything else is the 404 page. A form
 | POST | `/listing/{number}/aktivizo` | Putting a paused listing back (`post::resume_listing`) |
 | POST | `/listing/{number}/fshi` | Deleting a listing (`post::delete_listing`) |
 | GET | `/njoftimet-e-mia` | "Njoftimet e mia": the signed-in seller's listings, with what they drew, all together and each (`post::my_listings`) |
-| GET | `/te-ruajturat` | The listings the user keeps, the last kept first (`saved::page`) |
-| GET | `/te-ruajturat/numrat` | The numbers of those listings, as JSON, for the hearts (`saved::numbers`) |
+| GET | `/te-ruajturat` | The listings the user keeps, the last kept first, under those whose price dropped since they last looked (`saved::page`) |
+| GET | `/te-ruajturat/numrat` | For the hearts, as JSON: the numbers of those listings, and how many dropped their price unseen, for the header heart's dot: `{"numbers": [1001, 1005], "price_drops": 1}` (`saved::numbers`) |
+| POST | `/te-ruajturat/pare?deri=…` | `/te-ruajturat` was shown with its price drops: they are seen, up to the latest it showed, by its notification's id (`saved::seen`) |
 | GET | `/perdorues/{id}` | A private seller's profile and active listings (`browse::user_profile`) |
 | GET | `/biznes/{slug}` | A business's profile and active listings (`browse::business_profile`) |
 | GET | `/llogaria` | "Llogaria": signing in or creating an account, or, signed in, the account (`account::account_page`) |
@@ -291,6 +299,8 @@ No Node, no npm, no bundler: the browser's code is plain JavaScript modules, wit
 - Under the categories, the welcome page shows the ten newest listings in one row that slides sideways (`.newest-strip`, `newest_card.html`; a finger slides it and a mouse drags it, the wheel scrolling the page as anywhere else, with no scrollbar under it), and follows new ones for as long as it is open: it asks `/te-rejat` for them (`<turbo-stream-source>`, `web/newest.rs`), which looks every second for listings posted or bumped since and sends each one, no more than two a second, as a server-sent event: a Turbo Stream that puts its card in front of the row. Each response ends after four seconds, and EventSource connects again a second later, going on from the last listing it got (Last-Event-ID), as it does when the connection drops: where nothing stands in between, a listing comes the moment it is posted, and a proxy that holds every response back until it ends, as Cloudflare's quick tunnels do, passes it on a few seconds late rather than never. `newest_controller.js` brings the cards in at least half a second apart, also when several come at once, makes room for each at the row's start, and lets the row grow from ten to the newest thirty. While the row is slid along, under a finger or still moving, new ones wait rather than move it: a fade over its start says how many have come, and a tap on it goes back to the start, where they come in.
 - Over the newest, "Më të klikuarat" shows the twelve active listings whose pages were seen the most over the last seven days, the most first, in one row that slides sideways as the seller's other listings do under a listing (`.most-viewed`), each with an eye and how many times it was seen at its photo's top left, on a dark pill like the heart's circle (`.card-views`), and nothing before any were seen (`db::most_viewed`). A listing's page says it was seen once Turbo shows it (`application.js`, `POST /listing/{no}/pare`), so a page Turbo fetches ahead under the pointer and never opens doesn't count, nor do bots that run no scripts or say they are bots, nor its seller; a visitor (their address and browser) counts once per listing per half hour. The views gather in memory and go into `listing_daily_stats.detail_views` once a minute in one statement (`views.rs`, as "Analytics are aggregated" asks), and the row is read again as often. `dev/generate_listings.sql` with `views=1` gives the listings it made two weeks of views.
 - A heart over a listing's photo, at its top right corner, on every card and on the listing's own page, keeps the listing for a signed-in user (`saved_listings`, `web/saved.rs`, `heart.html`). `heart_controller.js` asks the server with each page which listings the visitor keeps (`/te-ruajturat/numrat`) and fills their hearts in the buttons' coral; a tap keeps a listing or lets it go at once (`POST /listing/{number}/ruaj`), every heart for it on the page with it. Someone not signed in goes to sign in first, and comes back to the page with the listing kept: the listing and the page wait in cookies (`ruaj`, `kthehu`), which signing in reads (`saved::after_sign_in`). The heart in the top bar leads to `/te-ruajturat`, the listings kept, the last first.
+- A price lowered lately says so (`price_was!` in `db/mod.rs`, from `listing_price_history`, which a trigger fills as prices change): a card puts by how much before its price, in a green pill on its photo ("−12% 5 000 €", its tooltip and screen readers saying from what), and a listing's page what it was after its price, struck through, with the pill ("5 400 € ~~6 900 €~~ −22%", `price_drop.html`). A price counts as dropped when its last change, in the last 30 days, made it at least 1% lower, in the same currency, than the lowest it was over the 30 days before: so a price raised for a while and lowered back is no drop, and it shows by how much under that lowest. Only listings on sale, for rent or a service, with a price (fixed, negotiable or "from") and still up; a month after, a drop is just the price.
+- Those who keep a listing hear when its seller lowers its price (`db::notify_price_drop`, run in the edit's transaction): each gets a notification (`notifications`, type `PRICE_DROP`, with what it was and what it is), in place of one about it they haven't seen yet, keeping that one's "was", the price they last saw; not the seller, nor anyone who turned price drop alerts off (`notification_preferences.price_drop_alerts`, on unless a row says otherwise). The heart in the top bar gets a coral dot while they have drops unseen, and says how many to screen readers ("Të ruajturat: 1 me çmim më të ulët"; `heart_controller.js`, from `/te-ruajturat/numrat`), and `/te-ruajturat` lists them over the cards, each from what to what ("Çmime më të ulëta te njoftimet që ke ruajtur"). Once that page is shown, it says so (`data-seen-url`, the beacon `application.js` sends for a listing's views, to `/te-ruajturat/pare`), not when Turbo only fetched it ahead under the pointer, and the drops are seen up to the latest it showed (`?deri=`, the notification's UUIDv7 id), so a copy of the page the browser shows again from its cache doesn't see a drop that came after: the dot goes. Drops of a listing let go, or no longer up, are left out. E-mail or push notices could follow from the same rows.
 - The pages of every main category, and of a few big subcategories (`MOST_VIEWED_IN` in `views.rs`: Makina, Apartamente, Vila dhe shtëpi), have their own "Më të klikuarat", as the welcome page has it for every category: the listings seen the most this week in the category and those under it, under the page's buttons and over its listings, small cards whichever size the listings' are, while no filter or words are on (they would take no notice of them). The rows are read in the background, so that no page waits for them (`Views::most_viewed`): all of them as the server starts, then every minute, after the views are written, those that pages asked for in the last ten minutes; a row no page asked for in a while is read as it is asked for, if older than five minutes.
 - Category pages (`/c/makina`) and search (`/search?q=golf`) share one handler and one filter form. A search forgives typos and finds a word's other forms (see "Search can start in PostgreSQL"); when it searched a word in place of a misspelt one, a line under the heading names it: "Shfaqen edhe rezultatet për „golf“." A search across every category names, as chips under its heading, the categories it found listings in, the most first, with how many ("Makina 17"; the names alone once more than 1 000 are found): each narrows the search to its category, whose filters it then offers (`db::listing_categories`). Filters are ordinary query parameters (`/c/makina?vehicle_fuel=DIESEL&price_max=12000&sort=price_asc`), so any filtered page can be bookmarked, shared and indexed, and infinite scroll keeps them.
 - A listing card shows the photo, the title, the price, and a details line that always starts with the city: "Tiranë · 2016 · 148 000 km · Naftë". The details line takes one line and ends in "…" when longer. In a search limited to a city (`city=vlore`), the cards in that city leave the city out, since it says nothing new, and show instead the first property the listing page has that neither the card nor the title already gives (a phone's brand: "Apple · 128 GB"; for a "Volkswagen Golf 7", the body type). The city is the listing's municipality, found by `location_municipality()`, so a town or neighbourhood added later under a municipality shows the municipality.
@@ -333,7 +343,7 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 | `filters.html` | The filter form, from the category's filterable properties |
 | `map.html`, `map_radius.html`, `map_town.html` | The map page and the map's controls: the distance around the pin, and a town to move it to |
 | `listing_grid.html` | A grid of listing cards, and the frame of the next page |
-| `listing_card.html` | A listing's card: its photos (one, or all on a big card), the price, the title, the details line, the heart, and its views on "Më të klikuarat" |
+| `listing_card.html` | A listing's card: its photos (one, or all on a big card), the price, by how much it dropped lately, the title, the details line, the heart, and its views on "Më të klikuarat" |
 | `listing_frame.html`, `next_page.html` | The next page of cards, which Turbo loads as the frame scrolls into view |
 | `newest_card.html`, `newest_stream.html` | A card of the newest listings' row, and the Turbo Stream that brings a new one |
 | `heart.html` | The heart over a listing's photo |
@@ -343,7 +353,8 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 | `listing_form.html` | The posting and edit form |
 | `listing_properties.html`, `listing_properties_frame.html` | A category's properties in the form, and the frame that brings them when the category changes |
 | `my_listings.html` | "Njoftimet e mia": what the listings drew, all together (views, contacts, saves, each with the last seven days' under it), then each listing with its price, its own counts and its buttons |
-| `saved.html` | The listings the user keeps |
+| `saved.html` | The listings the user keeps, under those whose price dropped since they last looked, from what to what |
+| `price_drop.html` | After a listing's price, when it dropped lately: what it was, struck through, and by how much |
 | `profile.html` | A seller's profile |
 | `sign_in.html`, `sign_in_code.html` | Signing in: the contact, then the code |
 | `moderation.html` | The moderators' page |
@@ -378,7 +389,7 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 | `dropdown_controller.js` | A `<details>` menu closes on a tap outside or Escape; one of the browse row's, open one at a time |
 | `filters_controller.js` | The filters' card: applies them as they change, keeps what is open while the page refreshes, fits the card under the row |
 | `gallery_controller.js` | A listing's photos: the counter and the arrows |
-| `heart_controller.js` | The hearts: fills those of the listings kept, keeps one or lets it go at a tap |
+| `heart_controller.js` | The hearts: fills those of the listings kept, keeps one or lets it go at a tap; puts the dot on the header's heart while kept listings dropped their price unseen |
 | `listing_form_controller.js` | The listing form follows its category: its kinds of listing, condition, currency and properties |
 | `loan_controller.js` | The loan calculator under a price |
 | `map_controller.js` | The map: its pin in the middle, the circle, the dots, the distance, "Vendndodhja ime" |

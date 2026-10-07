@@ -26,6 +26,12 @@
 -- two weeks (listing_daily_stats), a few of them many, as the site counts them (src/views.rs), for
 -- the welcome page's "Më të klikuarat"; runs add up:
 --   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v views=1 < dev/generate_listings.sql
+-- drops=1 makes nothing, but makes a twentieth of the active listings it made with a price, on
+-- sale, for rent or a service, 8 to 25% cheaper, as if their sellers had lowered them: the price
+-- history records it (its trigger), and their cards and pages say by how much (price_was! in
+-- src/db/mod.rs); runs add up. Those who keep a listing hear only of the drops its seller makes on
+-- the site (src/db/price_drops.rs):
+--   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v drops=1 < dev/generate_listings.sql
 --
 -- All of it is fictional: the sellers (dev|generated-…, …@example.test, phone numbers
 -- +355 69 1xx xxxx, businesses' +355 68 1xx xxxx), what they sell, and for how much. The photos
@@ -50,6 +56,38 @@
 \if :{?views}
 \else
 \set views false
+\endif
+\if :{?drops}
+\else
+\set drops false
+\endif
+
+\if :drops
+-- Each a price 8 to 25% lower, rounded as people round prices, to the hundred from a thousand up and
+-- to the ten from a hundred; one rounding left less than 1% lower is left as it was.
+WITH picked AS (
+    SELECT l.id, l.currency, l.price_amount AS was, l.price_amount * (0.75 + 0.17 * random())::numeric AS cheaper
+    FROM listings l
+    JOIN users u ON u.id = l.created_by_user_id
+    WHERE u.auth_subject LIKE 'dev|generated-%' AND l.status = 'ACTIVE'
+      AND l.listing_type IN ('SELL', 'RENT', 'SERVICE') AND l.price_type IN ('FIXED', 'NEGOTIABLE', 'FROM')
+      AND l.price_amount IS NOT NULL AND random() < 0.05
+),
+cut AS (
+    SELECT id, currency, was,
+           CASE WHEN cheaper >= 1000 THEN round(cheaper, -2) WHEN cheaper >= 100 THEN round(cheaper, -1) ELSE round(cheaper) END AS amount
+    FROM picked
+),
+lowered AS (
+    UPDATE listings l
+    SET price_amount = cut.amount, price_normalized = price_in_eur(cut.amount, cut.currency)
+    FROM cut
+    WHERE l.id = cut.id AND cut.amount > 0 AND cut.amount <= cut.was * 0.99
+    RETURNING l.id
+)
+SELECT format('Lowered the prices of %s listings.', count(*)) AS done FROM lowered \gset
+\echo :done
+\quit
 \endif
 
 \if :views

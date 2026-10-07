@@ -7,21 +7,36 @@ import { visit } from "@hotwired/turbo";
 // known before. A tap keeps the listing or lets it go at once, every heart for it on the page with
 // it, and tells the server (POST /listing/N/ruaj), one tap after the other; should that fail, the
 // hearts go back. Someone not signed in goes to sign in, and comes back with the listing kept.
+// The same answer says how many kept listings dropped their price unseen, for the header's heart.
 let kept = new Set();
 let asking = null;
 
 function ask() {
   asking ??= fetch("/te-ruajturat/numrat", { headers: { Accept: "application/json" }, cache: "no-store" })
     .then((response) => (response.ok ? response.json() : null))
-    .then((numbers) => {
-      if (!numbers) return;
-      kept = new Set(numbers);
+    .then((answer) => {
+      if (!answer) return;
+      kept = new Set(answer.numbers);
       for (const heart of document.querySelectorAll(".heart[data-heart-number-value]")) {
         show(heart, kept.has(Number(heart.dataset.heartNumberValue)));
       }
+      showDrops(answer.price_drops);
     })
     .catch(() => {})
     .finally(() => { asking = null; });
+}
+
+// The header's heart (base.html) has a dot while listings the visitor keeps dropped their price
+// since they last looked at /te-ruajturat, and says how many to screen readers; not on that page,
+// which shows them (saved.html) and so has them seen.
+function showDrops(count) {
+  const button = document.querySelector(".saved-button");
+  if (!button) return;
+  const news = count > 0 && !document.querySelector(".price-drops");
+  const label = news ? `Të ruajturat: ${count} me çmim më të ulët` : "Të ruajturat";
+  button.classList.toggle("has-drops", news);
+  button.setAttribute("aria-label", label);
+  button.title = label;
 }
 
 // Each page asks again: the visitor may have signed in or out, or kept listings elsewhere.

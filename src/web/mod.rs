@@ -68,6 +68,7 @@ pub fn router(state: AppState) -> Router {
         .route("/njoftimet-e-mia", get(post::my_listings))
         .route("/te-ruajturat", get(saved::page))
         .route("/te-ruajturat/numrat", get(saved::numbers))
+        .route("/te-ruajturat/pare", post(saved::seen))
         .route("/moderim", get(moderation::page))
         .route("/moderim/{id}/mirato", post(moderation::approve))
         .route("/moderim/{id}/bashko", post(moderation::merge))

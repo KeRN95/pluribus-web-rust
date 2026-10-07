@@ -50,7 +50,9 @@
     <div class="card-head">
       <h2 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h2>
     </div>
-    <p class="card-price">{{ card.price_display() }}</p>
+    {#- The price; one that dropped lately says by how much first, in a green pill (page.css), and
+        from what in its tooltip and to screen readers. -#}
+    <p class="card-price">{% if let Some((percent, was)) = card.price_drop() %}<span class="card-drop" title="Çmimi ra nga {{ was }}"><span class="visually-hidden">Çmimi ra nga {{ was }}, </span>−{{ percent }}%</span> {% endif %}{{ card.price_display() }}</p>
     {%- let heart_number = card.public_no %}
     {% include "heart.html" %}
     {%- if let Some(views) = card.views_display() %}

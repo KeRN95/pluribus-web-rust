@@ -322,6 +322,7 @@ pub async fn update_listing(db: &PgPool, public_no: i64, listing: &NewListing<'_
     )
         .execute(&mut *tx)
         .await?;
+    notify_price_drop(&mut tx, id).await?;
     tx.commit().await?;
     Ok(true)
 }
