@@ -1,4 +1,4 @@
-/* Warm and quiet: ivory and charcoal with a terracotta accent, soft rounded surfaces, and one
+/* Warm and quiet: ivory and charcoal with a neon blue accent, soft rounded surfaces, and one
    typeface, Geist, for everything but the logo: headings, prices and text differ only in weight
    and colour. The logo is the name, "pluribus", in Merriweather. */
 
@@ -40,12 +40,12 @@
   --muted: #6e6d66;
   --border: #e4e1d7;
   --border-strong: #cfcbbf;
-  --accent: #c96442;            /* logo and focus rings */
-  --button: #d97757;            /* Claude's coral, as in the dark theme */
-  --button-hover: #c96442;
+  --accent: #1a46e5;            /* logo and focus rings */
+  --button: #1a46e5;            /* neon blue; lighter in the dark theme, to stand out there */
+  --button-hover: #153bc4;
   --on-button: #ffffff;
-  --badge: #f6e1d3;
-  --location: #05164d;          /* Lufthansa blue; Claude's coral in the dark theme */
+  --badge: #e0e7ff;
+  --location: #05164d;          /* Lufthansa blue; the neon blue in the dark theme */
   --danger: #b42318;
   /* A property's square metre against its zone's average: under it, about it, over it. */
   --below: #1b6e37;
@@ -93,12 +93,12 @@
   --muted: #b3b0a5;
   --border: #3f3e3a;
   --border-strong: #57554f;
-  --accent: #d97757;
-  --button: #d97757;
-  --button-hover: #e38a6c;
+  --accent: #7ca3ff;
+  --button: #7ca3ff;
+  --button-hover: #9cbaff;
   --on-button: #1f1e1d;
-  --badge: #4a382e;
-  --location: #d97757;
+  --badge: #283152;
+  --location: #7ca3ff;
   --danger: #f97066;
   --below: #7fd498;
   --below-bg: #26402f;
@@ -123,12 +123,12 @@
     --muted: #b3b0a5;
     --border: #3f3e3a;
     --border-strong: #57554f;
-    --accent: #d97757;
-    --button: #d97757;
-    --button-hover: #e38a6c;
+    --accent: #7ca3ff;
+    --button: #7ca3ff;
+    --button-hover: #9cbaff;
     --on-button: #1f1e1d;
-    --badge: #4a382e;
-    --location: #d97757;
+    --badge: #283152;
+    --location: #7ca3ff;
     --danger: #f97066;
     --below: #7fd498;
     --below-bg: #26402f;
@@ -203,11 +203,11 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   padding: .65rem 1rem;
 }
 
-/* The logo: the welcome page's creature, in the buttons' coral, spinning and changing shape as it
-   does there (thinking.svg, .thinking), with its right half behind the name's p, the name in
-   lowercase in Merriweather Bold (above) in the text's colour: white on the dark theme, and
-   charcoal on the light one, where white would vanish into the ivory. A size up from the text's
-   headings, since a lowercase word stands lower and shorter. */
+/* The logo: the welcome page's creature, in the buttons' blue and glowing faintly in it, spinning
+   and changing shape as it does there (thinking.svg, .thinking), with its right half behind the
+   name's p, the name in lowercase in Merriweather Bold (above) in the text's colour: white on the
+   dark theme, and charcoal on the light one, where white would vanish into the ivory. A size up
+   from the text's headings, since a lowercase word stands lower and shorter. */
 .logo {
   display: inline-flex;
   align-items: center;
@@ -219,7 +219,13 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   line-height: 1;
   text-decoration: none;
 }
-.logo .thinking { width: 1.4em; height: 1.4em; margin-right: -.7em; }
+.logo .thinking {
+  width: 1.4em;
+  height: 1.4em;
+  margin-right: -.7em;
+  /* The glow: a blur of its own colour, which follows its shape as it moves. */
+  filter: drop-shadow(0 0 .12em color-mix(in srgb, var(--button) 55%, transparent));
+}
 /* Over the creature: the p hides the half of it that it overlaps. */
 .logo-word { position: relative; }
 
@@ -551,7 +557,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 }
 
 /* The location pin (templates/pin.svg), as before the city on cards: the same as on the welcome
-   page's city picker, in Lufthansa blue, or coral in the dark theme. Sized with the text. */
+   page's city picker, in Lufthansa blue, or the neon blue in the dark theme. Sized with the
+   text. */
 .pin-icon {
   width: 1.1em;
   height: 1.1em;
@@ -635,7 +642,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* The welcome section: the search and the categories, straight on the page, no box of their own. */
 .welcome-card { padding: .5rem 0 0; }
 
-/* The logo's creature (thinking.svg), in the buttons' coral: a star of 13 soft tentacles that sway,
+/* The logo's creature (thinking.svg), in the buttons' blue: a star of 13 soft tentacles that sway,
    melts into a small, roundish amoeba, as an amoeba is when it is small, that wobbles and spins
    quickly, and back, spinning all the while. Shapes and spin are SVG's own animation, which
    Safari runs too; application.js stops them for visitors who ask for less motion. It is in the
@@ -668,7 +675,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 }
 
 /* The search, drawn like the message box in Claude's app: a pill on the surface with the menus'
-   hairline and a soft shadow, the words in it, and inside it at the end a round coral button
+   hairline and a soft shadow, the words in it, and inside it at the end a round blue button
    with a magnifier, like Claude's send button. While it is being typed in, its edge darkens and
    its shadow deepens a little, as Claude's does, rather than a ring round it. The surface is at
    95%, so that the creature behind it (.welcome-backdrop) shows through a little. */
@@ -1099,7 +1106,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .range input { flex: 1; }
 .filter-form .range select { flex: none; width: auto; }
 /* The price's two ends on one track (price_range_controller.js), the currency beside it: the
-   stretch between them in the site's coral, the ends white and round with a soft shadow, big
+   stretch between them in the site's blue, the ends white and round with a soft shadow, big
    enough for a finger. The two range inputs lie on top of each other and let every touch through
    but their ends'; the prices show beside the name. */
 .price-filter .filter-label output { margin-left: .3rem; color: var(--text); letter-spacing: 0; }
@@ -1224,7 +1231,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 }
 /* The round buttons: only their icons, in the page's own colours, on the surface with the menus'
    hairline, as the listing page's share button is; while what they open is open, on the accent's
-   tint; a press sinks them a little. The search is the site's coral, as the welcome page's is,
+   tint; a press sinks them a little. The search is the site's blue, as the welcome page's is,
    darker while its box is open. (Three classes, to win over .button and .button.secondary, which
    come later.) */
 .browse-tools .button.round-button {
@@ -1378,8 +1385,8 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .map-results .result-count { margin: 0 0 .75rem; }
 .map-note { margin: -.5rem 0 .75rem; color: var(--muted); font-size: var(--text-sm); }
 
-/* The pin, in the location colour: Lufthansa blue, or coral in the dark theme. It stands fixed in
-   the middle of the map, its tip on it, and the map moves under it, as on Facebook's
+/* The pin, in the location colour: Lufthansa blue, or the neon blue in the dark theme. It stands
+   fixed in the middle of the map, its tip on it, and the map moves under it, as on Facebook's
    (map_controller.js): it lifts a little while the map moves and sets down when it stops, its
    shadow staying on the spot. Over the tiles, the circle and the dots; under the popups, which
    Leaflet puts at 700; it lets every touch through to the map. */
@@ -2035,7 +2042,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .actions .button { border-radius: 999px; transition: background-color .15s, transform .1s; }
 .actions .button:active { transform: scale(.97); }
 .actions .button.secondary { gap: .45rem; border-color: var(--menu-border); }
-/* The way to the seller's number: a phone in a coral circle (an envelope for an e-mail address).
+/* The way to the seller's number: a phone in a blue circle (an envelope for an e-mail address).
    Once tapped, the number takes its place, after the same icon, with a button beside it that
    copies it (copy_controller.js). */
 .reveal-button { justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; border-radius: 50%; }
@@ -2043,7 +2050,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .contact-icon { flex: none; }
 .contact-revealed { display: flex; gap: .5rem; }
 /* The copy and share buttons: an icon in a circle on the surface, with the menus' hairline, as
-   tall as the coral one; a check for a moment once they copy (copy_controller.js,
+   tall as the blue one; a check for a moment once they copy (copy_controller.js,
    share_controller.js). */
 .actions .button.icon-circle { justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; }
 .icon-circle .icon-copied,

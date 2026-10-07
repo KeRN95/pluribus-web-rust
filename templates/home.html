@@ -11,7 +11,7 @@
 
   {#- Words only, searched in every category and town; the results' filters narrow them. Drawn like
       the message box in Claude's app: a pill with the words in it and, inside it at the end, a
-      round coral button with a magnifier that searches. The text inside says what the field is
+      round blue button with a magnifier that searches. The text inside says what the field is
       for; its label stays for screen readers. -#}
   <form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest"
         data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
