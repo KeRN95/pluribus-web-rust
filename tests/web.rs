@@ -189,7 +189,7 @@ fn card_numbers(html: &str) -> Vec<i64> {
 /// A section of cards under a listing, named by its heading's id: from its opening tag to its end.
 fn section<'a>(html: &'a str, heading_id: &str) -> &'a str {
     let start = html
-        .find(&format!(r#"<section class="related" aria-labelledby="{heading_id}">"#))
+        .find(&format!(r#"aria-labelledby="{heading_id}">"#))
         .unwrap_or_else(|| panic!("no section {heading_id}"));
     let rest = &html[start..];
     &rest[..rest.find("</section>").unwrap()]

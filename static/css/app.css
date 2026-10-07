@@ -1676,13 +1676,58 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 /* Listing page */
 
 .listing { max-width: 760px; padding-top: 1.25rem; }
-/* Listings like it, under it: a line between, then the browse pages' grid, as wide as the page. */
-.related { margin-top: 2.5rem; border-top: 1px solid var(--border); }
+/* Listings like it, under it: the browse pages' grid, as wide as the page, set apart by space
+   alone. */
+.related { margin-top: 2.5rem; }
 /* The seller's other listings say where all of them are at the end of their heading's line, or
    under the heading where the line is too short for both. */
 .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; margin: 1.75rem 0 .75rem; }
 .section-head h2 { margin: 0; }
 .section-head a { font-size: var(--text-sm); font-weight: var(--semibold); text-underline-offset: .2em; }
+/* The seller's other listings in one row, each card as wide as a column of the grid under them
+   (two on a phone, as many as fit on wider screens: the container queries follow its auto-fill),
+   which slides sideways a card at a time when there are more cards than columns; then the cards
+   narrow a little, so a quarter of the next one shows at the edge. The padding, which the margin
+   takes back, keeps a card's hover panel and focus ring clear of the sliding box's edges. */
+.seller-listings { container-type: inline-size; }
+.seller-listings .grid {
+  --across: 2;
+  --gaps: 1;
+  --gap: .75rem;
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - var(--gaps) * var(--gap)) / var(--across));
+  column-gap: var(--gap);
+  margin: -.5rem;
+  padding: .5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: .5rem;
+  scrollbar-width: thin;
+}
+.seller-listings .card { scroll-snap-align: start; }
+@media (min-width: 720px) {
+  .seller-listings .grid { --gap: 1rem; }
+}
+/* Phones and tablets slide the row with a finger, the next card showing at its edge: no bar. A
+   mouse keeps it, on a wide screen. */
+@media (max-width: 959px), (hover: none) {
+  .seller-listings .grid { scrollbar-width: none; }
+  .seller-listings .grid::-webkit-scrollbar { display: none; }
+}
+@container (width < 692px) {
+  .seller-listings .grid:has(> .card:nth-child(3)) { --across: 2.25; --gaps: 2; }
+}
+@container (692px <= width < 928px) {
+  .seller-listings .grid { --across: 3; --gaps: 2; }
+  .seller-listings .grid:has(> .card:nth-child(4)) { --across: 3.25; --gaps: 3; }
+}
+@container (width >= 928px) {
+  .seller-listings .grid { --across: 4; --gaps: 3; }
+  .seller-listings .grid:has(> .card:nth-child(5)) { --across: 4.25; --gaps: 4; }
+}
 
 /* Wide screens: two columns, the listing on the left and on the right who sells it and how to
    reach them, in a card like the posting form's (the menus' hairline on the surface), which
