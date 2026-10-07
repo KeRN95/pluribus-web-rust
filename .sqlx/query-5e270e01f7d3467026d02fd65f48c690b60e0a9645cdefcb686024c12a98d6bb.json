@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS \"title!\", l.status, l.listing_type,\n                  l.price_amount, l.currency::text AS \"currency!\", l.price_type,\n                  coalesce(seen.views, 0)::bigint AS \"views!\", coalesce(seen.views_week, 0)::bigint AS \"views_week!\",\n                  coalesce(seen.contacts, 0)::bigint AS \"contacts!\",\n                  coalesce(seen.contacts_week, 0)::bigint AS \"contacts_week!\",\n                  kept.saves AS \"saves!\", kept.saves_week AS \"saves_week!\"\n           FROM listings l\n           LEFT JOIN LATERAL (\n               SELECT sum(s.detail_views) AS views,\n                      sum(s.detail_views) FILTER (WHERE s.stat_date > current_date - 7) AS views_week,\n                      sum(s.phone_reveals) AS contacts,\n                      sum(s.phone_reveals) FILTER (WHERE s.stat_date > current_date - 7) AS contacts_week\n               FROM listing_daily_stats s\n               WHERE s.listing_id = l.id\n           ) seen ON true\n           CROSS JOIN LATERAL (\n               SELECT count(*) AS saves, count(*) FILTER (WHERE k.saved_at > now() - interval '7 days') AS saves_week\n               FROM saved_listings k\n               WHERE k.listing_id = l.id\n           ) kept\n           WHERE l.created_by_user_id = $1 AND l.status <> 'DELETED'\n           ORDER BY l.created_at DESC, l.public_no DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "public_no",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "slug",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "title!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "listing_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "price_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 6,
+        "name": "currency!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "price_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "views!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "views_week!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 10,
+        "name": "contacts!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 11,
+        "name": "contacts_week!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 12,
+        "name": "saves!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "saves_week!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      false,
+      false,
+      true,
+      null,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "5e270e01f7d3467026d02fd65f48c690b60e0a9645cdefcb686024c12a98d6bb"
+}

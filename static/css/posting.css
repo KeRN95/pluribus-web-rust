@@ -36,6 +36,28 @@
 .my-listing-text { display: grid; flex: 1; gap: .15rem; min-width: 0; }
 .my-listing-title { overflow: hidden; color: var(--text); font-weight: var(--semibold); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
 .my-listing-meta { color: var(--muted); font-size: var(--text-sm); }
+/* What the listings drew (my_listings.html): all of them together in three tiles side by side,
+   each its icon and name, the count, and the last seven days' under it; and each listing's own on
+   a line under its price, by the same icons. */
+.my-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; margin: 0 0 .5rem; }
+.my-stat {
+  display: grid;
+  align-content: start;
+  gap: .15rem;
+  padding: .7rem .9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.my-stat dt { display: flex; align-items: center; gap: .35rem; color: var(--muted); font-size: var(--text-sm); }
+.my-stat dd { margin: 0; }
+.my-stat-count { font-size: var(--text-xl); font-weight: var(--bold); font-variant-numeric: tabular-nums; }
+.my-stat-week { color: var(--muted); font-size: var(--text-xs); }
+.my-stats-note { margin: 0 0 1.25rem; color: var(--muted); font-size: var(--text-xs); }
+.my-listing-stats { display: flex; flex-wrap: wrap; gap: .2rem .9rem; color: var(--muted); font-size: var(--text-sm); }
+.my-listing-stats > span { display: inline-flex; align-items: center; gap: .3rem; }
+.my-stat svg,
+.my-listing-stats svg { flex: none; }
 /* Each listing's buttons; on phones they go under its title. */
 .my-listing-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
 .my-listing-actions form { display: contents; }

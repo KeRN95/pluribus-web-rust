@@ -752,6 +752,8 @@ pub async fn update_listing(
 struct MyListingsPage {
     signed_in_as: String,
     listings: Vec<MyListing>,
+    /// What they drew, all of them together.
+    totals: db::ListingStats,
     /// For a moderator, how many typed options wait on /moderim.
     pending: Option<i64>,
 }
@@ -831,5 +833,40 @@ pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap) -> R
         true => Some(db::pending_option_count(&state.db).await?),
         false => None,
     };
-    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, pending })
+    let totals = listings.iter().map(|listing| listing.stats).sum();
+    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending })
+}
+
+/// What a listing drew, or all of a seller's listings together, as "Njoftimet e mia" says it.
+impl db::ListingStats {
+    /// A listing's views, for the tooltip over their count: "1 234 shikime, 56 këtë javë".
+    pub fn views_title(&self) -> String {
+        let views = match self.views {
+            1 => "1 shikim".to_string(),
+            views => format!("{} shikime", format::count(views)),
+        };
+        format!("{views}, {} këtë javë", format::count(self.views_week))
+    }
+
+    /// "12 kontakte, 3 këtë javë": how many times the number or address was shown.
+    pub fn contacts_title(&self) -> String {
+        let contacts = match self.contacts {
+            1 => "1 kontakt".to_string(),
+            contacts => format!("{} kontakte", format::count(contacts)),
+        };
+        format!("{contacts}, {} këtë javë", format::count(self.contacts_week))
+    }
+
+    /// "5 ruajtje, 1 këtë javë".
+    pub fn saves_title(&self) -> String {
+        format!("{} ruajtje, {} këtë javë", format::count(self.saves), format::count(self.saves_week))
+    }
+}
+
+/// The last seven days' under a total: "+56 këtë javë", or "Asnjë këtë javë".
+pub fn this_week(count: impl std::borrow::Borrow<i64>) -> String {
+    match *count.borrow() {
+        0 => "Asnjë këtë javë".to_string(),
+        count => format!("+{} këtë javë", format::count(count)),
+    }
 }

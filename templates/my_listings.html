@@ -2,6 +2,11 @@
 
 {% block title %}Njoftimet e mia | Pluribus{% endblock %}
 
+{#- A stat's icon (icons.rs), in the text's colour. #}
+{%- macro stat_icon(icon) -%}
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>
+{%- endmacro %}
+
 {% block content %}
 <section class="account">
   <h1>Njoftimet e mia</h1>
@@ -14,6 +19,27 @@
   {% if listings.is_empty() %}
   <p class="empty">Nuk ke publikuar asnjë njoftim ende.</p>
   {% else %}
+  {#- What the listings drew, all of them together (db::ListingStats): how many times their pages
+      were seen, the seller's number or address was shown, and how many keep them, each with the
+      last seven days' under it. Each listing has its own under its price, by the same icons. -#}
+  <dl class="my-stats">
+    <div class="my-stat" title="{{ totals.views_title() }}">
+      <dt>{% call stat_icon(crate::web::icons::EYE) %}Shikime</dt>
+      <dd class="my-stat-count">{{ crate::format::count(totals.views) }}</dd>
+      <dd class="my-stat-week">{{ crate::web::post::this_week(totals.views_week) }}</dd>
+    </div>
+    <div class="my-stat" title="{{ totals.contacts_title() }}">
+      <dt>{% call stat_icon(crate::web::icons::CALL) %}Kontakte</dt>
+      <dd class="my-stat-count">{{ crate::format::count(totals.contacts) }}</dd>
+      <dd class="my-stat-week">{{ crate::web::post::this_week(totals.contacts_week) }}</dd>
+    </div>
+    <div class="my-stat" title="{{ totals.saves_title() }}">
+      <dt>{% call stat_icon(crate::web::icons::HEART) %}Ruajtje</dt>
+      <dd class="my-stat-count">{{ crate::format::count(totals.saves) }}</dd>
+      <dd class="my-stat-week">{{ crate::web::post::this_week(totals.saves_week) }}</dd>
+    </div>
+  </dl>
+  <p class="my-stats-note">Kontakte: sa herë dikush pa numrin ose email-in tënd.</p>
   <ul class="my-listings">
     {% for listing in listings %}
     <li class="my-listing">
@@ -21,6 +47,11 @@
         <a class="my-listing-title" href="{{ listing.url() }}">{{ listing.title }}</a>
         <span class="my-listing-meta">
           {{ listing.price_display() }}{% if let Some(label) = listing.status_label() %} · <span class="badge">{{ label }}</span>{% endif %}
+        </span>
+        <span class="my-listing-stats">
+          <span title="{{ listing.stats.views_title() }}">{% call stat_icon(crate::web::icons::EYE) %}<span class="visually-hidden">Shikime: </span>{{ crate::format::count(listing.stats.views) }}</span>
+          <span title="{{ listing.stats.contacts_title() }}">{% call stat_icon(crate::web::icons::CALL) %}<span class="visually-hidden">Kontakte: </span>{{ crate::format::count(listing.stats.contacts) }}</span>
+          <span title="{{ listing.stats.saves_title() }}">{% call stat_icon(crate::web::icons::HEART) %}<span class="visually-hidden">Ruajtje: </span>{{ crate::format::count(listing.stats.saves) }}</span>
         </span>
       </div>
       {#- Edit; take down for a while or put back; delete, after the browser asks to be sure

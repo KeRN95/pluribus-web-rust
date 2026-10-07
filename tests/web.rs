@@ -3992,3 +3992,69 @@ async fn search_engines_find_the_listings_and_the_categories_by_the_sitemaps(poo
     assert_eq!(get(pool, "/sitemaps/te-tjera.xml").await.status, StatusCode::NOT_FOUND);
 }
 
+#[sqlx::test(fixtures("listings"))]
+async fn a_seller_sees_what_each_listing_drew(pool: PgPool) {
+    // Ana's Golf, seen 3 times today and 1 200 times a fortnight ago, its number shown twice today
+    // and once then; her iPhone seen once today; Besnik's flat seen 50 times today.
+    sqlx::query(
+        "INSERT INTO listing_daily_stats (listing_id, stat_date, detail_views, phone_reveals)
+         SELECT l.id, current_date - d.days, d.views, d.reveals
+         FROM listings l
+         JOIN (VALUES (1001, 0, 3, 2), (1001, 14, 1200, 1), (1005, 0, 1, 0), (1003, 0, 50, 0))
+              AS d (public_no, days, views, reveals) ON d.public_no = l.public_no",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    // The Golf kept by Besnik yesterday and by Dritan a month ago, the iPhone by Besnik today.
+    sqlx::query(
+        "INSERT INTO saved_listings (user_id, listing_id, saved_at)
+         SELECT k.user_id, l.id, now() - k.ago
+         FROM listings l
+         JOIN (VALUES ('22222222-2222-4222-8222-222222222222'::uuid, 1001, interval '1 day'),
+                      ('33333333-3333-4333-8333-333333333333'::uuid, 1001, interval '30 days'),
+                      ('22222222-2222-4222-8222-222222222222'::uuid, 1005, interval '0 days'))
+              AS k (user_id, public_no, ago) ON k.public_no = l.public_no",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let ana = session_for(&pool, "11111111-1111-4111-8111-111111111111").await;
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
+    // All her listings together, and the last seven days' under each count; Besnik's flat isn't hers.
+    let totals = &mine[mine.find(r#"<dl class="my-stats">"#).unwrap()..mine.find("</dl>").unwrap()];
+    let tiles: Vec<(&str, &str)> = totals
+        .split(r#"<dd class="my-stat-count">"#)
+        .skip(1)
+        .map(|tile| {
+            let count = &tile[..tile.find("</dd>").unwrap()];
+            let week = tile.split(r#"<dd class="my-stat-week">"#).nth(1).unwrap();
+            (count, &week[..week.find("</dd>").unwrap()])
+        })
+        .collect();
+    assert_eq!(tiles, [("1\u{a0}204", "+4 këtë javë"), ("3", "+2 këtë javë"), ("3", "+2 këtë javë")]);
+
+    // Each listing's own, under its price.
+    let row = |number: &str| {
+        let start = mine.find(&format!(r#"href="/listing/{number}-"#)).unwrap();
+        let rest = &mine[start..];
+        rest[..rest.find("</li>").unwrap()].to_string()
+    };
+    let golf = row("1001");
+    assert!(golf.contains("<span title=\"1\u{a0}203 shikime, 3 këtë javë\">"), "{golf}");
+    assert!(golf.contains("Shikime: </span>1\u{a0}203</span>"));
+    assert!(golf.contains(r#"<span title="3 kontakte, 2 këtë javë">"#) && golf.contains("Kontakte: </span>3</span>"));
+    assert!(golf.contains(r#"<span title="2 ruajtje, 1 këtë javë">"#) && golf.contains("Ruajtje: </span>2</span>"));
+    let phone = row("1005");
+    assert!(phone.contains(r#"<span title="1 shikim, 1 këtë javë">"#), "{phone}");
+    let sofa = row("1007");
+    assert!(sofa.contains(r#"<span title="0 shikime, 0 këtë javë">"#) && sofa.contains("Shikime: </span>0</span>"));
+
+    // A week with nothing says so.
+    let besnik = session_for(&pool, "22222222-2222-4222-8222-222222222222").await;
+    let his = get_with_cookie(pool, "/njoftimet-e-mia", &besnik).await.body;
+    assert!(his.contains(r#"<dd class="my-stat-week">+50 këtë javë</dd>"#));
+    assert!(his.contains(r#"<dd class="my-stat-week">Asnjë këtë javë</dd>"#));
+}
+

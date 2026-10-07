@@ -622,8 +622,16 @@ const DOOR: &str = r#"<path d="M5.5 21V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v17"/><pa
 
 // ---------------------------------------------------------------- categories
 
-/// An eye: how many times a listing was seen (listing_card.html, listing.html).
+/// An eye: how many times a listing was seen (listing_card.html, listing.html, my_listings.html).
 pub const EYE: &str = r#"<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>"#;
+
+/// A heart: the listings a visitor keeps (the header's button in base.html, heart.html over a
+/// listing's photo), and how many keep a seller's listing (my_listings.html).
+pub const HEART: &str = r#"<path d="M12 20.3 4.6 13.1A4.9 4.9 0 0 1 11.5 6.2l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/>"#;
+
+/// A telephone's handset, for a call: the button that shows a seller's number (phone.svg), and how
+/// many times it was shown (my_listings.html).
+pub const CALL: &str = r#"<path d="M5 4h3.2l1.6 4.2-2.1 1.4a11 11 0 0 0 6.7 6.7l1.4-2.1 4.2 1.6V19a2 2 0 0 1-2.2 2A17 17 0 0 1 3 6.2 2 2 0 0 1 5 4Z"/>"#;
 
 /// Other things, and a category without an icon of its own yet: a box.
 const BOX: &str = r#"<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5"/><path d="M12 12v9"/>"#;

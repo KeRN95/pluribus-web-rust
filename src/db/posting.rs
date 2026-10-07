@@ -395,21 +395,86 @@ pub struct MyListing {
     pub price_amount: Option<Decimal>,
     pub currency: String,
     pub price_type: String,
+    pub stats: ListingStats,
 }
 
-/// The user's listings, newest first, deleted ones left out.
+/// What listings drew, since they were posted and over the last seven days (`_week`): how many
+/// times their pages were seen (views.rs, which writes the last minute's a minute later), their
+/// seller's number or address was shown ("Shfaq numrin"), and how many keep them (saved_listings;
+/// in the week, those kept in it).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ListingStats {
+    pub views: i64,
+    pub views_week: i64,
+    pub contacts: i64,
+    pub contacts_week: i64,
+    pub saves: i64,
+    pub saves_week: i64,
+}
+
+impl std::iter::Sum for ListingStats {
+    fn sum<I: Iterator<Item = Self>>(stats: I) -> Self {
+        stats.fold(Self::default(), |all, one| Self {
+            views: all.views + one.views,
+            views_week: all.views_week + one.views_week,
+            contacts: all.contacts + one.contacts,
+            contacts_week: all.contacts_week + one.contacts_week,
+            saves: all.saves + one.saves,
+            saves_week: all.saves_week + one.saves_week,
+        })
+    }
+}
+
+/// The user's listings, newest first, deleted ones left out, each with what it drew.
 pub async fn my_listings(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<MyListing>> {
-    sqlx::query_as!(
-        MyListing,
-        r#"SELECT public_no, slug, coalesce(generated_title, title) AS "title!", status, listing_type, price_amount,
-                  currency::text AS "currency!", price_type
-           FROM listings
-           WHERE created_by_user_id = $1 AND status <> 'DELETED'
-           ORDER BY created_at DESC, public_no DESC"#,
+    let rows = sqlx::query!(
+        r#"SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS "title!", l.status, l.listing_type,
+                  l.price_amount, l.currency::text AS "currency!", l.price_type,
+                  coalesce(seen.views, 0)::bigint AS "views!", coalesce(seen.views_week, 0)::bigint AS "views_week!",
+                  coalesce(seen.contacts, 0)::bigint AS "contacts!",
+                  coalesce(seen.contacts_week, 0)::bigint AS "contacts_week!",
+                  kept.saves AS "saves!", kept.saves_week AS "saves_week!"
+           FROM listings l
+           LEFT JOIN LATERAL (
+               SELECT sum(s.detail_views) AS views,
+                      sum(s.detail_views) FILTER (WHERE s.stat_date > current_date - 7) AS views_week,
+                      sum(s.phone_reveals) AS contacts,
+                      sum(s.phone_reveals) FILTER (WHERE s.stat_date > current_date - 7) AS contacts_week
+               FROM listing_daily_stats s
+               WHERE s.listing_id = l.id
+           ) seen ON true
+           CROSS JOIN LATERAL (
+               SELECT count(*) AS saves, count(*) FILTER (WHERE k.saved_at > now() - interval '7 days') AS saves_week
+               FROM saved_listings k
+               WHERE k.listing_id = l.id
+           ) kept
+           WHERE l.created_by_user_id = $1 AND l.status <> 'DELETED'
+           ORDER BY l.created_at DESC, l.public_no DESC"#,
         user_id,
     )
     .fetch_all(db)
-    .await
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| MyListing {
+            public_no: row.public_no,
+            slug: row.slug,
+            title: row.title,
+            status: row.status,
+            listing_type: row.listing_type,
+            price_amount: row.price_amount,
+            currency: row.currency,
+            price_type: row.price_type,
+            stats: ListingStats {
+                views: row.views,
+                views_week: row.views_week,
+                contacts: row.contacts,
+                contacts_week: row.contacts_week,
+                saves: row.saves,
+                saves_week: row.saves_week,
+            },
+        })
+        .collect())
 }
 
 pub async fn ping(db: &PgPool) -> sqlx::Result<()> {

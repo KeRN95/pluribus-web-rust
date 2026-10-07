@@ -76,6 +76,11 @@ pub fn number(amount: Decimal) -> String {
 }
 
 /// "1 njoftim", "24 njoftime"; counts that reached `limit` show as "1 000+ njoftime".
+/// A count, its thousands separated by no-break spaces: "1 234". Templates pass it by reference.
+pub fn count(count: impl std::borrow::Borrow<i64>) -> String {
+    number(Decimal::from(*count.borrow()))
+}
+
 pub fn listing_count(count: i64, limit: i64) -> String {
     match count {
         1 => "1 njoftim".to_string(),
