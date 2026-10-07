@@ -419,8 +419,8 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
-    // Filtrat, Harta and Rendit stand in one row over the results, Filtrat and Harta cards folded
-    // to their headers and Rendit a round button whose orders open in a menu; opening one says so
+    // Filtrat, Harta and Rendit stand in one row over the results, Filtrat a card folded to its
+    // header, Harta and Rendit round buttons, the orders opening in a menu; opening one says so
     // (section:open) and the others fold, so only one is open at a time.
     let cars = html(pool, "/c/makina").await;
     let order = positions(&cars, &[
@@ -434,9 +434,11 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     for listener in ["filters#foldFor", "map#foldFor", "dropdown#foldFor"] {
         assert!(cars.contains(&format!("section:open@document->{listener}")), "{listener}");
     }
-    // The order's button has only its icon to see: its name and the order now are for screen
-    // readers, and its tooltip; its menu opens with no JavaScript.
-    assert!(cars.contains(r#"<summary class="button sort-button" aria-label="Rendit: Më të rejat" title="Rendit: Më të rejat">"#));
+    // The map's and the order's buttons have only their icons to see: their names and what they
+    // are set to are for screen readers, and their tooltips; the orders' menu opens with no
+    // JavaScript.
+    assert!(cars.contains(r#"<button type="button" class="button secondary round-button map-button" data-map-target="toggle""#));
+    assert!(cars.contains(r#"<summary class="button secondary round-button sort-button" aria-label="Rendit: Më të rejat" title="Rendit: Më të rejat">"#));
     assert!(cars.contains("toggle->dropdown#announce"));
     let menu = &cars[cars.find(r#"<details class="sort-menu""#).unwrap()..];
     assert!(menu[..menu.find("</details>").unwrap()].contains(r#"<fieldset class="sort-options">"#));
@@ -448,8 +450,8 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     // results are from everywhere. Nothing else opens it.
     let cars = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL").await;
     assert!(cars.contains(r#"<section class="map-card map-hidden" data-controller="map" data-map-lazy-value="true""#));
-    assert!(cars.contains(r#"aria-controls="map-card-body" aria-expanded="false">"#));
-    assert!(cars.contains("<span>Kudo</span>"));
+    assert!(cars.contains(r#"aria-controls="map-card-body" aria-expanded="false""#));
+    assert!(cars.contains(r#"aria-label="Harta: Kudo" title="Harta: Kudo""#));
     assert!(!cars.contains("map-open") && !cars.contains("Brenda 10 km nga pika"));
     // Its dots come when it first opens: the same page with harta=1, whose frame has them.
     assert!(cars.contains(r#"<turbo-frame id="map-points" data-map-target="frame" data-src="/c/makina?vehicle_fuel=DIESEL&harta=1">"#));
@@ -472,8 +474,9 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(pinned.contains("<h1>Makina"));
     assert!(pinned.contains(r#"<section class="map-card map-hidden""#));
     assert!(pinned.contains(r#"data-map-latitude-value="41.32833""#));
-    // The map's card says how far; the filters' leaves the point to it.
-    assert!(pinned.contains("<span>5 km</span>"));
+    // The map's button says how far, to screen readers and as its tooltip; the filters' summary
+    // leaves the point to it, and to its chip.
+    assert!(pinned.contains(r#"aria-label="Harta: 5 km""#));
     let filtrat = &pinned[pinned.find("<strong>Filtrat</strong>").unwrap()..];
     assert!(filtrat[..filtrat.find("</span>").unwrap()].ends_with("<span>Asnjë filtër"));
     // The distance is a slider; 5 km stands at 41 of 100 (50 ^ 0.41 = 5).

@@ -930,18 +930,18 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .filter-actions { display: flex; align-items: center; gap: .75rem; }
 .filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
 
-/* Filtrat and Harta side by side, each a card folded to its header, sharing the row with Rendit,
-   a round button at its end whose orders open in a menu under it. Drawn like Claude's, as the
-   listing form's own fields are: the menus' hairline on the surface, rounder corners and a shadow
-   you barely see. The one opened, only one at a time (section:open), its header on the accent's
-   tint, unfolds under the three, as wide as them all, in a card of the same kind, fading in as
-   the menus do. The cards are no boxes of their own (display: contents): their headers and what
+/* Filtrat, a card folded to its header, takes the row but for Harta and Rendit, round buttons at
+   its end. The card is drawn like Claude's, as the listing form's own fields are: the menus'
+   hairline on the surface, rounder corners and a shadow you barely see. Only one of the three is
+   open at a time (section:open); the filters and the map unfold under the row, as wide as it, in a
+   card of the same kind, fading in as the menus do, and the opener is on the accent's tint. The
+   two cards are no boxes of their own (display: contents): their headers, or buttons, and what
    they open are the row's. "Filtrat" says which filters are on and opens the form, whose options
    apply together, with its button; the header names the section, so the panel's own heading is
    there for screen readers only. */
 .browse-tools {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: .5rem;
   margin: 0 0 1rem;
 }
@@ -967,15 +967,29 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   .filters,
   .map-card-body { animation: none; }
 }
-/* On a phone, three to a line, the headers are a little tighter and leave their chevrons out: the
-   open one's tint says which it is. On the narrowest, tighter still, with smaller icons. */
-@media (max-width: 719px) {
-  .browse-tools .map-card-header { gap: .6rem; padding: .6rem .75rem; }
-  .browse-tools .map-card-chevron { display: none; }
+/* Harta and Rendit: round buttons with only their icons, in the page's own colours, on the surface
+   with the menus' hairline, as the listing page's share button is; while what they open is open,
+   on the accent's tint, as Filtrat's header is; a press sinks them a little. (Three classes, to
+   win over .button and .button.secondary, which come later.) */
+.browse-tools .button.round-button {
+  justify-content: center;
+  width: 2.85rem;
+  height: 2.85rem;
+  padding: 0;
+  border-color: var(--menu-border);
+  border-radius: 50%;
+  list-style: none;
+  transition: background-color .15s, border-color .15s, transform .1s;
 }
-@media (max-width: 360px) {
-  .browse-tools .map-card-header { gap: .5rem; padding-inline: .6rem; }
-  .browse-tools .map-card-icon { width: 1.75rem; height: 1.75rem; }
+.browse-tools .round-button::-webkit-details-marker { display: none; }
+.browse-tools .round-button:active { transform: scale(.97); }
+.browse-tools .button.round-button[aria-expanded="true"],
+.sort-menu[open] > .button.round-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+.round-button .pin-icon { width: 18px; height: 18px; margin: 0; color: inherit; }
+.map-button { grid-row: 1; align-self: center; }
+@media (prefers-reduced-motion: reduce) {
+  .browse-tools .button.round-button { transition: none; }
+  .browse-tools .round-button:active { transform: none; }
 }
 /* The form in two columns: a field takes a line of its own, unless it is a small one (filter-half:
    a dropdown, a range, a few boxes), which shares its line with the next small one, Marka beside
@@ -997,28 +1011,10 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 
 /* Map page, and the ways to it */
 
-/* The map on a category or search page, beside the filters and the order: a card that comes
-   folded down to its header, which opens it under them and folds it again. */
-/* The order (Rendit): a round coral button, as the listing page's phone is, the arrows in it,
-   darker while its menu is open; a press sinks it a little. (Under .sort-menu, to win over
-   .button, which comes later.) */
+/* The map on a category or search page, beside the filters and the order: a round button (above)
+   that opens it under them and folds it again. */
+/* The order (Rendit): a round button like the map's, its orders in a menu under it. */
 .sort-menu { position: relative; grid-row: 1; align-self: center; }
-.sort-menu > .sort-button {
-  justify-content: center;
-  width: 2.85rem;
-  height: 2.85rem;
-  padding: 0;
-  border-radius: 50%;
-  list-style: none;
-  transition: background-color .15s, transform .1s;
-}
-.sort-menu > .sort-button::-webkit-details-marker { display: none; }
-.sort-menu > .sort-button:active { transform: scale(.97); }
-.sort-menu[open] > .sort-button { background: var(--button-hover); }
-@media (prefers-reduced-motion: reduce) {
-  .sort-menu > .sort-button { transition: none; }
-  .sort-menu > .sort-button:active { transform: none; }
-}
 /* Its menu, as the in-page dropdowns' are, under it and growing leftward from its right edge: the
    orders as rows, the one now in the site's colour, ticked; a tap on another reloads the page in
    it. The radio itself is there for keyboards and screen readers only, its ring round the row. */

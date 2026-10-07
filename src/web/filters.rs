@@ -528,7 +528,8 @@ impl<'a> Filters<'a> {
     }
 
     /// What the filters' card says under "Filtrat": the filters on, as their chips say them, but
-    /// the map's point, which the map's card beside it says; empty with none.
+    /// the map's point, which is the map's button's beside it (its tooltip) and has its own chip;
+    /// empty with none.
     pub fn summary(&self) -> String {
         let point = self.point_label();
         let labels: Vec<String> =
