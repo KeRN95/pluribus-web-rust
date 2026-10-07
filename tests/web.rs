@@ -470,7 +470,10 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(pinned.contains("<h1>Makina"));
     assert!(pinned.contains(r#"<section class="map-card map-hidden""#));
     assert!(pinned.contains(r#"data-map-latitude-value="41.32833""#));
-    assert!(pinned.contains("<span>Brenda 5 km nga pika</span>"));
+    // The map's card says how far; the filters' leaves the point to it.
+    assert!(pinned.contains("<span>5 km</span>"));
+    let filtrat = &pinned[pinned.find("<strong>Filtrat</strong>").unwrap()..];
+    assert!(filtrat[..filtrat.find("</span>").unwrap()].ends_with("<span>Asnjë filtër"));
     // The distance is a slider; 5 km stands at 41 of 100 (50 ^ 0.41 = 5).
     assert!(pinned.contains(r#"<output data-map-target="radiusLabel">5 km</output>"#));
     assert!(pinned.contains(r#"<input id="map-radius" type="range" min="0" max="100" step="1" value="41""#));

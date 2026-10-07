@@ -474,9 +474,8 @@ impl<'a> Filters<'a> {
         if let Some(city) = self.city {
             chip(city.name.clone(), self.url_without(|name, _| name == "city"));
         }
-        // Not on the map page, whose map is the pin.
-        if self.near.is_some() && self.path != "/harta" {
-            chip(format!("Brenda {} km nga pika", self.radius_km), self.everywhere_url());
+        if let Some(label) = self.point_label() {
+            chip(label, self.everywhere_url());
         }
         if let Some(listing_type) = &self.listing_type {
             chip(format::listing_type(listing_type).to_string(), self.url_without(|name, _| name == "type"));
@@ -520,6 +519,21 @@ impl<'a> Filters<'a> {
             }
         }
         chips
+    }
+
+    /// The map's point, as its chip says it, "Brenda 10 km nga pika"; not on the map page, whose
+    /// map is the pin.
+    fn point_label(&self) -> Option<String> {
+        (self.near.is_some() && self.path != "/harta").then(|| format!("Brenda {} km nga pika", self.radius_km))
+    }
+
+    /// What the filters' card says under "Filtrat": the filters on, as their chips say them, but
+    /// the map's point, which the map's card beside it says; empty with none.
+    pub fn summary(&self) -> String {
+        let point = self.point_label();
+        let labels: Vec<String> =
+            self.chips().into_iter().map(|chip| chip.label).filter(|label| Some(label) != point.as_ref()).collect();
+        labels.join(" · ")
     }
 
     // ------------------------------------------------------------ the form
