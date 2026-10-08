@@ -4583,11 +4583,11 @@ async fn set_price(pool: &PgPool, number: i64, amount: &str) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
-    // The Golf, from 9 500 € to 9 000 €: 5% less, before its price on its card, and after it on its
-    // page, with what it was struck through.
+    // The Golf, from 9 500 € to 9 000 €: 5% less, after its price with what it was struck
+    // through, on its card as on its page.
     set_price(&pool, 1001, "9000").await;
     let golf = card_of(&html(pool.clone(), "/c/makina").await, 1001);
-    let badge = "<p class=\"card-price\"><span class=\"card-drop\" title=\"Çmimi ra nga 9\u{a0}500\u{a0}€\"><span class=\"visually-hidden\">Çmimi ra nga 9\u{a0}500\u{a0}€, </span>−5%</span> 9\u{a0}000\u{a0}€</p>";
+    let badge = "<p class=\"card-price\"><span class=\"card-amount\">9\u{a0}000\u{a0}€</span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>9\u{a0}500\u{a0}€</del><span class=\"card-drop\">−5%</span></p>";
     assert!(golf.contains(badge), "{golf}");
     let page = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
     let was = "<span class=\"price-was\"><span class=\"visually-hidden\">Çmimi ishte </span><del>9\u{a0}500\u{a0}€</del> <span class=\"price-drop\">−5%</span></span>";
@@ -4599,7 +4599,7 @@ async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
     set_price(&pool, 1002, "25000").await;
     assert!(!card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("card-drop"));
     set_price(&pool, 1002, "20000").await;
-    assert!(card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("−7%</span> 20\u{a0}000\u{a0}€"));
+    assert!(card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("20\u{a0}000\u{a0}€ (i diskutueshëm)</span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>21\u{a0}500\u{a0}€</del><span class=\"card-drop\">−7%</span>"));
 
     // Less than 1% is no drop: the iPhone, from 55 000 to 54 700 Lekë. Nor is a price in another
     // currency: the bike, from 25 000 Lekë to 200 €.

@@ -231,11 +231,23 @@
   white-space: nowrap;
 }
 
-/* A price that dropped lately (listing_card.html): by how much, before it, white on green as a
-   pill on the photo, whichever the theme. */
+/* A price that dropped lately (listing_card.html), as the listing's page has it: after it, what
+   it was, struck through, a touch smaller and fainter, then by how much, white on green as a pill
+   on the photo, whichever the theme. Where the line is short, what it was gives way first,
+   ending in "…", then the price; the pill always shows. */
+.card-amount { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.card-was {
+  flex: 0 100 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: .85em;
+  font-weight: var(--medium);
+  opacity: .8;
+  text-overflow: ellipsis;
+}
 .card-drop {
+  flex: none;
   display: inline-block;
-  margin-right: .1rem;
   padding: 0 .4rem;
   border-radius: 999px;
   background: #1b6e37;
@@ -247,6 +259,9 @@
 
 /* One line; a price too long for the card ends in "…". */
 .card-price {
+  display: flex;
+  align-items: baseline;
+  gap: .4rem;
   margin: 0;
   overflow: hidden;
   color: var(--accent);
@@ -429,6 +444,9 @@
   font-weight: var(--bold);
   text-shadow: none;
 }
+/* Off the photo, the old price is the muted text's and the pill the listing page's green. */
+.cards-list .results .card-was { color: var(--muted); opacity: 1; }
+.cards-list .results .card-drop { background: var(--below-bg); color: var(--below); }
 .cards-list .results .card-head { grid-area: 2 / 2; padding: .2rem 0 0; }
 .cards-list .results .card-title {
   display: -webkit-box;

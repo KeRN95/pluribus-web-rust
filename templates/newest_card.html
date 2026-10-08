@@ -20,7 +20,7 @@
     <div class="card-head">
       <h3 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h3>
     </div>
-    <p class="card-price">{{ card.price_display() }}</p>
+    <p class="card-price"><span class="card-amount">{{ card.price_display() }}</span></p>
     {%- let heart_number = card.public_no %}
     {% include "heart.html" %}
   </div>
