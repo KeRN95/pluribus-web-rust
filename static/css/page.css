@@ -456,8 +456,9 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
 }
-/* The start of the description under the title, muted, three lines at most, ending in "…" when
-   it has more: the card opens the listing for the rest. Only in the list. */
+/* The start of the description under the title, muted and a touch smaller than the details
+   line, three lines at most, ending in "…" when it has more: the card opens the listing for
+   the rest. Only in the list. */
 .card-description { display: none; }
 .cards-list .results .card-description {
   display: -webkit-box;
@@ -467,15 +468,15 @@
   padding: .3rem 0 0;
   overflow: hidden;
   color: var(--muted);
-  font-size: var(--text-xs);
-  line-height: 1.5;
+  font-size: calc(var(--text-xs) * .93);
+  line-height: 1.45;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   line-clamp: 3;
 }
 @media (min-width: 720px) {
-  .cards-list .results .card-description { font-size: var(--text-sm); }
+  .cards-list .results .card-description { font-size: var(--text-xs); }
 }
 .cards-list .results .card-media .heart { grid-area: 1 / 3 / 3 / 4; margin: -.45rem -.45rem 0 0; padding: 0; }
 .cards-list .results .heart-button { --circle: 2rem; --reach: .3rem; color: var(--text); }
