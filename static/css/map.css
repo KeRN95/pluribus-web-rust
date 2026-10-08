@@ -3,17 +3,16 @@
 
 /* Map page, and the ways to it */
 
-/* The order (Rendit): a pill like the map's, saying the order now, which gives up width as the
-   map's does (browse.css); its orders in a menu under it. */
-.sort-menu { position: relative; flex: 0 1 auto; min-width: 0; }
-.sort-menu > .sort-button { max-width: 100%; }
-/* Its menu, as the in-page dropdowns' are, under it and growing leftward from its right edge: the
+/* The order (Rendit): a small pill under the browse row, saying the order now (browse.css); its
+   orders in a menu under it. */
+.sort-menu { position: relative; }
+/* Its menu, as the in-page dropdowns' are, under it and growing rightward from its left edge: the
    orders as rows, the one now in the site's colour, ticked; a tap on another reloads the page in
    it. The radio itself is there for keyboards and screen readers only, its ring round the row. */
 .sort-options {
   position: absolute;
-  top: calc(100% + var(--drop));
-  right: 0;
+  top: calc(100% + .4rem);
+  left: 0;
   z-index: 30;
   display: grid;
   gap: .15rem;
@@ -25,7 +24,7 @@
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--menu-shadow);
-  transform-origin: top right;
+  transform-origin: top left;
   animation: menu-in .14s ease-out;
 }
 .sort-option:has(input:checked) { display: flex; align-items: center; gap: .5rem; background: var(--button); color: var(--on-button); font-weight: var(--medium); }
