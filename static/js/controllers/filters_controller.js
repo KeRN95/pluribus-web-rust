@@ -16,7 +16,6 @@ import { forgetTown } from "controllers/place_controller.js";
 // time: opening it says so (section:open), and another's opening folds it (foldFor). Being the
 // browse page's own, it also folds whatever is open on Escape, a tap on the dim under it (foldAll)
 // or a tap on the row beside its buttons (foldFromRow), and fits what opens into the screen (fit).
-// On a wide screen the card is a sidebar beside the results, from under the row down (place).
 const WIDE = "(min-width: 1024px)";
 
 export default class extends Controller {
@@ -24,14 +23,10 @@ export default class extends Controller {
 
   connect() {
     this.counted();
-    this.place();
-    this.placed = () => this.place();
-    addEventListener("resize", this.placed);
   }
 
   disconnect() {
     clearTimeout(this.timer);
-    removeEventListener("resize", this.placed);
   }
 
   toggle() {
@@ -93,13 +88,6 @@ export default class extends Controller {
   // (--top, browse.css), so that its foot shows; it scrolls inside if it needs more.
   fit() {
     this.element.style.setProperty("--top", `${Math.round(this.toolsTarget.getBoundingClientRect().bottom)}px`);
-  }
-
-  // Where the row ends on the page (--under-row): on a wide screen the sidebar starts there, under
-  // the search and the map's buttons, whatever stands above the row (browse.css). Measured as the
-  // page shows and refreshes, and as the screen changes.
-  place() {
-    this.element.style.setProperty("--under-row", `${Math.round(this.toolsTarget.getBoundingClientRect().bottom + scrollY)}px`);
   }
 
   // A change in the form, a box ticked or a field left: the results follow at once, once the

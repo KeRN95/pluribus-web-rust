@@ -86,7 +86,7 @@
 <div class="browse{% if page.big %} cards-big{% endif %}" data-controller="filters cards place"
      data-cards-small-value="{{ page.small_sizes() }}" data-cards-big-value="{{ page.big_sizes() }}" data-cards-cookie-value="{{ cards_cookie }}"
      data-place-town-value="{{ filters.town_slug() }}"
-     data-action="keydown.esc@document->filters#foldAll turbo:before-cache@document->filters#reset section:open@document->filters#foldFor section:open@document->filters#fit turbo:before-morph-element->filters#keep turbo:before-morph-attribute->filters#keepAttribute turbo:morph@document->filters#counted turbo:morph@document->filters#place">
+     data-action="keydown.esc@document->filters#foldAll turbo:before-cache@document->filters#reset section:open@document->filters#foldFor section:open@document->filters#fit turbo:before-morph-element->filters#keep turbo:before-morph-attribute->filters#keepAttribute turbo:morph@document->filters#counted">
   <div class="browse-tools" data-filters-target="tools" data-action="click->filters#foldFromRow">
     {#- Searching these listings: a round button that opens a search box under the row, as the
         filters do (panel_controller.js), the words as they are typed suggesting searches
