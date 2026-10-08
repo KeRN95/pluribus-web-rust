@@ -800,13 +800,13 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     assert!(cars.contains(r#"<span class="button-label">Filtrat</span>"#) && !cars.contains("button-count"));
     assert!(cars.contains(r#"<button type="button" class="button round-button search-button""#));
     // A category page's heading says the order, its words opening the orders; no pill for it.
-    assert!(cars.contains(r#"<summary class="heading-sort-button" title="Rendit">më të reja<svg"#));
+    assert!(cars.contains(r#"<summary class="heading-sort-button" title="Rendit">më të reja</summary>"#));
     assert!(cars.contains("</details> në Makina</div>"));
     assert!(!cars.contains("small-pill sort-button"));
     let row = &cars[cars.find(r#"<div class="browse-tools""#).unwrap()..cars.find(r#"<div class="results-head">"#).unwrap()];
     assert!(!row.contains("cards-button"));
     let cheap = html(pool.clone(), "/c/makina?sort=price_asc").await;
-    assert!(cheap.contains(r#"title="Rendit">më të lira<svg"#) && cheap.contains("</details> në Makina</div>"));
+    assert!(cheap.contains(r#"title="Rendit">më të lira</summary>"#) && cheap.contains("</details> në Makina</div>"));
     assert!(cars.contains("toggle->dropdown#announce"));
     let menu = &cars[cars.find(r#"<details class="sort-menu heading-sort""#).unwrap()..];
     assert!(menu[..menu.find("</details>").unwrap()].contains(r#"<fieldset class="sort-options">"#));
@@ -2483,9 +2483,9 @@ async fn the_site_is_called_pluribus(pool: PgPool) {
     assert!(home.contains(r#"<span class="logo-word">pluribus</span></a>"#));
     assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
     assert!(home.contains(
-        r#"<link rel="preload" href="/static/vendor/fonts/satoshi-700.woff2" as="font" type="font/woff2" crossorigin>"#
+        r#"<link rel="preload" href="/static/vendor/fonts/inter-5.3.0-latin-wght.woff2" as="font" type="font/woff2" crossorigin>"#
     ));
-    let font = get(pool.clone(), "/static/vendor/fonts/satoshi-700.woff2").await;
+    let font = get(pool.clone(), "/static/vendor/fonts/inter-5.3.0-latin-wght.woff2").await;
     assert_eq!(font.status, StatusCode::OK);
     let listing = html(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await;
     assert!(listing.contains(" | Pluribus</title>") && !listing.contains("Marketplace"), "{listing}");
@@ -2594,7 +2594,7 @@ async fn static_files_have_cache_headers(pool: PgPool) {
         "public, max-age=31536000, immutable"
     );
 
-    for uri in ["/static/vendor/fonts/geist-v5-latin.woff2", "/static/vendor/fonts/satoshi-700.woff2"] {
+    for uri in ["/static/vendor/fonts/geist-v5-latin.woff2", "/static/vendor/fonts/inter-5.3.0-latin-wght.woff2"] {
         let font = app(pool.clone())
             .oneshot(
                 Request::get(uri)
@@ -4325,11 +4325,11 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
     assert!(buttons < seen && seen < results, "under the buttons, over the results");
     // The listings under it, headed by what they are: their order, the category and, when one is
     // chosen, their kind; a search across the categories keeps the order alone, for screen readers.
-    assert!(vehicles.contains(r#"title="Rendit">më të reja<svg"#) && vehicles.contains("</details> në Automjete</div>"));
+    assert!(vehicles.contains(r#"title="Rendit">më të reja</summary>"#) && vehicles.contains("</details> në Automjete</div>"));
     let cheapest = html(pool.clone(), "/c/automjete?sort=price_asc").await;
-    assert!(cheapest.contains(r#"title="Rendit">më të lira<svg"#) && cheapest.contains("</details> në Automjete</div>"));
+    assert!(cheapest.contains(r#"title="Rendit">më të lira</summary>"#) && cheapest.contains("</details> në Automjete</div>"));
     let rented = html(pool.clone(), "/c/prona?type=RENT").await;
-    assert!(rented.contains(r#"title="Rendit">më të reja<svg"#) && rented.contains("</details> në Prona me qira</div>"));
+    assert!(rented.contains(r#"title="Rendit">më të reja</summary>"#) && rented.contains("</details> në Prona me qira</div>"));
     let search = html(pool.clone(), "/search?q=golf").await;
     assert!(search.contains(r#"<h2 class="results-heading visually-hidden" id="results-heading">Më të rejat</h2>"#));
     assert_eq!(row(&html(pool.clone(), "/c/prona").await), [1003, 1004]);
