@@ -4576,21 +4576,19 @@ fn card_of(html: &str, number: i64) -> String {
 
 #[sqlx::test(fixtures("listings"))]
 async fn a_card_carries_the_start_of_its_description(pool: PgPool) {
-    // The Golf's whole description, short enough, under its title, for the list to show; its
-    // button waits for the page to find it longer than three lines.
+    // The Golf's whole description, short enough, under its title, for the list to show.
     let golf = card_of(&html(pool.clone(), "/c/makina").await, 1001);
     let description = positions(&golf, &[
         r#"<h2 class="card-title">"#,
-        r#"<div class="card-description" data-controller="excerpt">"#,
-        r#"<p class="card-description-text" data-excerpt-target="text">Makina është në gjendje shumë të mirë, e mirëmbajtur rregullisht. Kambio manuale, 148 000 km.</p>"#,
-        r#"<button type="button" class="card-more" data-excerpt-target="button" data-action="excerpt#expand" hidden>më shumë</button>"#,
+        r#"<p class="card-description">Makina është në gjendje shumë të mirë, e mirëmbajtur rregullisht. Kambio manuale, 148 000 km.</p>"#,
     ]);
     assert!(description.is_sorted(), "{golf}");
     // A long one, its lines run together, is cut at a word near 400 characters, ending in "…".
     let long = format!("Shumë e mirë.\n\n{}", "fjalë ".repeat(120));
     sqlx::query("UPDATE listings SET description = $2 WHERE public_no = $1").bind(1001_i64).bind(&long).execute(&pool).await.unwrap();
     let golf = card_of(&html(pool.clone(), "/c/makina").await, 1001);
-    let text = &golf[golf.find(r#"data-excerpt-target="text">"#).unwrap() + 27..];
+    let open = r#"<p class="card-description">"#;
+    let text = &golf[golf.find(open).unwrap() + open.len()..];
     let text = &text[..text.find("</p>").unwrap()];
     assert!(text.starts_with("Shumë e mirë. fjalë fjalë") && text.ends_with("fjalë…"), "{text}");
     assert!(text.chars().count() <= 401, "{}", text.chars().count());
