@@ -371,8 +371,9 @@
   width: calc((100% - var(--gaps) * var(--gap)) / var(--across));
   scroll-snap-align: start;
 }
-/* The title as small as the details line, and the price nearer the photo's corner. */
-.newest-strip .card-title { font-size: var(--text-xs); }
+/* The title a size under the grid's, still a step over the details line, and the price nearer the
+   photo's corner. */
+.newest-strip .card-title { font-size: var(--text-sm); }
 .newest-strip .card-head { padding-top: .4rem; }
 .newest-strip .card-media .card-price { padding: 0 .55rem .45rem; }
 .newest-strip .card-summary { margin-top: .1rem; }

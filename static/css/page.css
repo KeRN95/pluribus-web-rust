@@ -217,11 +217,13 @@
 /* Under the photo, the details line. The body fills the rest of the card. */
 .card-body { display: flex; flex: 1; flex-direction: column; padding: 0 .15rem .35rem; }
 
-/* One line, ending in "…" when longer; screen readers still get the whole title. */
+/* One line, ending in "…" when longer; screen readers still get the whole title. A step over the
+   details line under it (.95rem: 13.3px on a phone against its 11.2), so that the town there
+   doesn't read nearly as large as the title. */
 .card-title {
   margin: 0;
   overflow: hidden;
-  font-size: var(--text-sm);
+  font-size: .95rem;
   font-weight: var(--semibold);
   letter-spacing: -.015em;
   line-height: 1.3;
@@ -267,6 +269,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Its pin the size of its letters, rather than a little over, so that it doesn't draw the eye
+   from the title. */
+.card-summary .pin-icon { width: 1em; height: 1em; vertical-align: -.15em; }
 
 /* A card's photos: in a small card the first alone. In a big one (the view button) every photo in
    a row that a finger slides through a photo at a time (slides_controller.js), over the title's
