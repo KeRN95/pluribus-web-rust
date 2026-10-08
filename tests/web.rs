@@ -2483,9 +2483,9 @@ async fn the_site_is_called_pluribus(pool: PgPool) {
     assert!(home.contains(r#"<span class="logo-word">pluribus</span></a>"#));
     assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
     assert!(home.contains(
-        r#"<link rel="preload" href="/static/vendor/fonts/cormorant-5.3.0-latin-wght.woff2" as="font" type="font/woff2" crossorigin>"#
+        r#"<link rel="preload" href="/static/vendor/fonts/satoshi-700.woff2" as="font" type="font/woff2" crossorigin>"#
     ));
-    let font = get(pool.clone(), "/static/vendor/fonts/cormorant-5.3.0-latin-wght.woff2").await;
+    let font = get(pool.clone(), "/static/vendor/fonts/satoshi-700.woff2").await;
     assert_eq!(font.status, StatusCode::OK);
     let listing = html(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await;
     assert!(listing.contains(" | Pluribus</title>") && !listing.contains("Marketplace"), "{listing}");
@@ -2594,7 +2594,7 @@ async fn static_files_have_cache_headers(pool: PgPool) {
         "public, max-age=31536000, immutable"
     );
 
-    for uri in ["/static/vendor/fonts/geist-v5-latin.woff2", "/static/vendor/fonts/cormorant-5.3.0-latin-wght.woff2"] {
+    for uri in ["/static/vendor/fonts/geist-v5-latin.woff2", "/static/vendor/fonts/satoshi-700.woff2"] {
         let font = app(pool.clone())
             .oneshot(
                 Request::get(uri)

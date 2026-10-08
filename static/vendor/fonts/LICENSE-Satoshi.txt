@@ -1,0 +1,5 @@
+Satoshi, by Indian Type Foundry (https://www.indiantypefoundry.com), from Fontshare
+(https://www.fontshare.com/fonts/satoshi), is free for personal and commercial use, self-hosting
+included, under the ITF Free Font License: https://www.fontshare.com/licenses/itf-ffl
+It is not under the SIL Open Font License; read the licence for what it allows before redistributing
+the font file on its own.
