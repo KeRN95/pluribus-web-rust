@@ -69,25 +69,32 @@
 .conversation-back { margin: 1rem 0 0; font-size: var(--text-sm); }
 .conversation-back a { color: var(--muted); text-decoration: none; }
 .conversation-back a:hover { color: var(--text); }
-.conversation-head { display: grid; gap: .75rem; margin: .5rem 0 1.25rem; }
-.conversation-with { display: flex; align-items: center; gap: .6rem; margin: 0; font-size: var(--text-xl); }
-.conversation-listing {
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  padding: .55rem;
-  border: 1px solid var(--menu-border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: inherit;
-  text-decoration: none;
-}
-.conversation-listing:hover { background: var(--surface-muted); }
+/* The conversation's head: the listing leads, its photo beside its title, the heading, on up to
+   two lines, and its price under it, all one link to it; who with is a detail under that, their
+   initial in a small circle and their name, quieter. Without a listing, who with is the heading. */
+.conversation-head { display: grid; gap: .6rem; margin: .5rem 0 1.25rem; }
+.conversation-listing { display: flex; align-items: center; gap: .8rem; color: inherit; text-decoration: none; }
 .conversation-listing img,
 .conversation-listing .placeholder { flex: none; width: 3.5rem; height: 3.5rem; border-radius: 10px; object-fit: cover; }
-.conversation-listing-text { display: grid; min-width: 0; }
-.conversation-title { overflow: hidden; font-weight: var(--medium); text-overflow: ellipsis; white-space: nowrap; }
-.conversation-price { color: var(--muted); font-size: var(--text-sm); }
+.conversation-listing-text { display: grid; gap: .1rem; min-width: 0; }
+.conversation-title {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-lg);
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+@media (hover: hover) {
+  .conversation-listing:hover .conversation-title { text-decoration: underline; text-underline-offset: .15em; }
+}
+.conversation-price { color: var(--muted); font-size: var(--text-sm); font-weight: var(--semibold); }
+.conversation-with { display: flex; align-items: center; gap: .45rem; margin: 0; color: var(--muted); font-size: var(--text-sm); font-weight: var(--medium); }
+.conversation-with .avatar { width: 1.6rem; height: 1.6rem; font-size: .75rem; }
+h1.conversation-with { color: var(--text); font-size: var(--text-xl); }
+h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--text-md); }
 
 /* The messages: the other side's on the left on the surface, the visitor's on the right in the
    coral's tint, each rounded but for its corner on its own side, with when under it. Line breaks

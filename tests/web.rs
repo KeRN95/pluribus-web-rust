@@ -4774,6 +4774,9 @@ async fn a_buyer_writes_to_a_seller_who_answers(pool: PgPool) {
     let page = get_with_cookie(pool.clone(), "/listing/1001/mesazh", &buyer).await;
     assert_eq!(page.status, StatusCode::OK);
     assert!(page.body.contains(r#"<turbo-frame id="conversation" data-turbo-action="advance">"#));
+    // The listing leads, its title the heading; who with is a detail under it.
+    let head = positions(&page.body, &[r#"<h1 class="conversation-title">"#, r#"<span class="conversation-price">"#, r#"<p class="conversation-with"><span class="avatar" aria-hidden="true">A</span>Ana</p>"#]);
+    assert!(head.is_sorted(), "{head:?}");
     assert!(page.body.contains("Ana") && page.body.contains("Volkswagen Golf") && page.body.contains("Cili është çmimi i fundit?"));
     assert_eq!(get_with_cookie(pool.clone(), "/listing/1001/mesazh", &ana).await.location.as_deref(), Some(listing));
 

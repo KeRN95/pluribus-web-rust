@@ -15,20 +15,23 @@
   {%- if let Some(id) = id %} data-conversation-newer-url-value="/mesazhet/{{ id }}/te-rejat" data-conversation-read-url-value="/mesazhet/{{ id }}/lexuar"{% endif %}>
   <p class="conversation-back"><a href="/mesazhet" data-turbo-frame="_top">‹ Mesazhet</a></p>
   <header class="conversation-head">
-    <h1 class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span>{{ other_name }}</h1>
     {%- if let Some(listing) = listing %}
-    {#- The listing: its photo, its title and its price, leading to it. -#}
+    {#- The listing leads, its title the heading, beside its photo and over its price, leading to
+        it; who with is a detail under it. -#}
     <a class="conversation-listing" href="{{ listing.url }}" data-turbo-frame="_top">
       {%- if let Some(photo) = listing.photo %}
       <img src="{{ photo }}" alt="" width="56" height="56">
       {%- else %}
       <span class="placeholder" aria-hidden="true"></span>
       {%- endif %}
-      <span class="conversation-listing-text">
-        <span class="conversation-title">{{ listing.title }}</span>
+      <div class="conversation-listing-text">
+        <h1 class="conversation-title">{{ listing.title }}</h1>
         <span class="conversation-price">{{ listing.price }}</span>
-      </span>
+      </div>
     </a>
+    <p class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span>{{ other_name }}</p>
+    {%- else %}
+    <h1 class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span>{{ other_name }}</h1>
     {%- endif %}
   </header>
 
