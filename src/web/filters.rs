@@ -36,15 +36,11 @@ pub const SEARCH_CHARS: usize = 100;
 const CONDITIONS: [&str; 4] = ["NEW", "LIKE_NEW", "USED", "FOR_PARTS"];
 const CURRENCIES: [&str; 2] = ["EUR", "ALL"];
 
-/// How far around the map pin to look, in whole kilometres: anything from 1 to 50 in a link, the
-/// slider's steps (RADIUS_STEPS_KM) in the map's form.
+/// How far around the map pin to look, in whole kilometres, 1 to 50: in the map's form, what its
+/// circle covers at the map's zoom (map_controller.js).
 const MIN_RADIUS_KM: u32 = 1;
 const MAX_RADIUS_KM: u32 = 50;
 const DEFAULT_RADIUS_KM: u32 = 10;
-
-/// The distances the map's slider stops at (map_radius.html, map_controller.js): a neighbourhood,
-/// a town, its surroundings, a county.
-pub const RADIUS_STEPS_KM: [u32; 6] = [1, 2, 5, 10, 25, 50];
 
 /// The towns offered as pills under the browse row, after "Gjithë Shqipëria" and "Afër meje":
 /// those with the most listings (2026-10-08). The others are in the filters' Qyteti; one picked
@@ -950,16 +946,6 @@ impl<'a> Filters<'a> {
                 selected: sort == self.sort,
             })
             .collect()
-    }
-
-    /// Where the distance slider stands for the radius: the step nearest it (RADIUS_STEPS_KM), 0
-    /// to 5; map_controller.js turns a position back into kilometres.
-    pub fn radius_position(&self) -> usize {
-        RADIUS_STEPS_KM
-            .iter()
-            .enumerate()
-            .min_by_key(|(_, km)| km.abs_diff(self.radius_km))
-            .map_or(3, |(position, _)| position)
     }
 
     /// The category's filters, those shown at once first (Field::primary), each in its order: a

@@ -3,26 +3,36 @@ import { refreshFor } from "controllers/refresh.js";
 import { locate } from "controllers/locate.js";
 
 // A map of the results, as Facebook's: its pin stays in the middle and the map moves under it,
-// on the point set before, the town picked, or Tirana's middle (filters.rs, map_start). The slider
-// sets how far around it to look, in steps. On the map page (/harta) "Vendos hartën" sends the
-// map's middle and the distance, which reloads only the results panel. On a category or search
-// page the map is in a card that always comes folded, and loads, with its dots, only when it first
-// opens (lazy); there the circle round the pin shows only once a point is set (ring), the map
-// saying how to set one until then, and the middle and the distance apply as soon as they change,
-// when the map stops after a drag, the distance is let go, or a place or a town is picked
-// (pointChanged), in place of a town: the page refreshes in place (refresh.js), which keeps the
-// category and the filters, the card open as it is and the map as Leaflet drew it (keep), its dots
-// following the new results (reloadPoints). Each result gets a dot on the map: those within the
-// circle once it is set. Leaflet draws the map with OpenStreetMap's tiles.
+// on the point set before, the town picked, or Tirana's middle (filters.rs, map_start). Round the
+// pin, a circle that stays the same size in the middle of the map whatever the zoom: how far
+// around the pin to look is what it covers, so zooming in makes the distance smaller and zooming
+// out bigger, from 1 to 50 km in whole kilometres, said over the map as it changes (the zoom, once
+// it stops, settling on the one whose circle covers exactly that), and the zoom goes no further
+// either way. On the map page (/harta) "Vendos hartën" sends the map's middle and the distance,
+// which reloads only the results panel. On a category or search page the map is in a card that
+// always comes folded, and loads, with its dots, only when it first opens (lazy); there the circle
+// round the pin shows only once a point is set (ring), the map saying how to set one until then,
+// and the middle and the distance apply as soon as they change, when the map stops after a drag
+// or a zoom, or a place or a town is picked (pointChanged), in place of a town: the page refreshes
+// in place (refresh.js), which keeps the category and the filters, the card open as it is and the
+// map as Leaflet drew it (keep), its dots following the new results (reloadPoints). Each result
+// gets a dot on the map: those within the circle once it is set. Leaflet draws the map with
+// OpenStreetMap's tiles.
 
 const LEAFLET = "/static/vendor/leaflet-1.9.4";
 const TIRANA = [41.3275, 19.8187];
-// From this zoom on (streets readable) results show one by one and open on a tap; further out
-// they are grouped by squares of the screen, CELL pixels a side, and taps go to the map.
+// From this zoom on (streets readable), or from the closest the circle allows if that is further
+// out, results show one by one and open on a tap; further out they are grouped by squares of the
+// screen, CELL pixels a side, and taps go to the map.
 const CLOSE_ZOOM = 15;
 const CELL = 40;
-// The distances the slider stops at, one a position. As in filters.rs (RADIUS_STEPS_KM).
-const RADIUS_STEPS_KM = [1, 2, 5, 10, 25, 50];
+// The circle's radius as a share of the map's smaller side, and the distances it may cover, in
+// kilometres: as in filters.rs (MAX_RADIUS_KM).
+const RING = 0.38;
+const MIN_KM = 1;
+const MAX_KM = 50;
+// How long the zoom stays still before the distance follows it, in milliseconds.
+const SETTLE_MS = 400;
 // The equator's length in metres, which the map (Web Mercator) draws 256 pixels long at zoom 0 and
 // twice as long at each zoom after: at a latitude, a pixel is this times its cosine over 256 * 2^zoom.
 const EQUATOR = 40075016.686;
@@ -46,7 +56,7 @@ function loadLeaflet() {
 
 export default class extends Controller {
   static targets = [
-    "canvas", "form", "latitude", "longitude", "radius", "slider", "radiusLabel", "status", "results", "points", "toggle",
+    "canvas", "form", "latitude", "longitude", "radius", "radiusLabel", "status", "results", "points", "toggle",
     "frame", "town",
   ];
   // lazy: the map loads when its card is first opened (category and search pages). ring: a point
@@ -85,10 +95,14 @@ export default class extends Controller {
     // A page restored from Turbo's cache still holds the old map's markup.
     this.canvasTarget.replaceChildren();
     // A pinch, a double tap and the + and − buttons zoom around the middle, so the pin stays on
-    // its place; the mouse wheel scrolls the page, which goes on below the map. A flick glides
-    // on a little, not across the Balkans (Leaflet's own top speed has no end).
+    // its place; the mouse wheel scrolls the page, which goes on below the map. Any zoom, not only
+    // whole ones, as the distance follows it: a tap on + or − is half a zoom, the distance about
+    // 1.4 times smaller or bigger, and a pinch stops at the closest and the furthest the circle
+    // may cover (fit). A flick glides on a little, not across the Balkans (Leaflet's own top speed
+    // has no end).
     this.map = L.map(this.canvasTarget, {
       scrollWheelZoom: false, touchZoom: "center", doubleClickZoom: "center", inertiaMaxSpeed: 1500,
+      zoomSnap: 0, zoomDelta: 0.5, bounceAtZoomLimits: false,
     });
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
@@ -102,26 +116,29 @@ export default class extends Controller {
     const point = this.hasLatitudeValue && this.hasLongitudeValue
       ? L.latLng(this.latitudeValue, this.longitudeValue)
       : L.latLng(TIRANA);
-    // The circle round the middle, as far as the distance: in a pane of its own, over the tiles and
-    // under the dots (Leaflet's overlays are at 400), kept in the middle as the map moves and sized
-    // for its zoom (placeRing). Not Leaflet's own circle, which stays in the middle only by being
-    // moved on the map at every step: dragged far, it was cut off where the map had been until the
-    // map stopped, and while a pinch zoomed, Leaflet scaled it as well, so it grew or shrank twice
-    // as fast.
+    // The circle round the middle, the same size whatever the zoom: in a pane of its own, over the
+    // tiles and under the dots (Leaflet's overlays are at 400), kept in the middle as the map moves
+    // (placeRing). Not Leaflet's own circle, which is a size on the ground rather than on the
+    // screen, and stays in the middle only by being moved on the map at every step.
     this.map.createPane("ring").style.zIndex = 350;
     this.ring = Object.assign(document.createElement("div"), { className: "map-area", hidden: !this.ringValue });
     this.map.getPane("ring").append(this.ring);
-    if (!this.ringValue) this.statusTarget.textContent = "Lëviz hartën ose zgjidh një qytet: kërkohet përreth pikës.";
-    this.map.on("move zoom", () => this.placeRing());
-    this.map.on("zoomanim", ({ zoom, center }) => this.placeRing({ zoom, center, animated: true }));
+    if (!this.ringValue) this.statusTarget.textContent = "Lëviz ose zmadho hartën për të kërkuar përreth pikës.";
+    this.map.on("move zoom viewreset", () => this.placeRing());
+    // The distance follows the zoom: as a pinch goes, and as the + and − start theirs; once it
+    // stops, the map settles on it (zoomed). A map whose box changed (a phone turned) keeps it.
+    this.map.on("zoom", () => this.showDistance(this.map.getZoom()));
+    this.map.on("zoomanim", ({ zoom }) => this.showDistance(zoom));
+    this.map.on("zoomend", () => this.zoomed());
+    this.map.on("resize", () => this.fit({ animate: false }));
     // The pin isn't on the map but over it, in the middle (map.css): the map moves, the circle
     // stays round it, and the pin lifts until the map stops.
     this.pin = Object.assign(document.createElement("div"), { className: "map-center", innerHTML: PIN });
     this.map.getContainer().append(this.pin);
     this.map.on("movestart", () => this.pin.classList.add("is-moving"));
     this.map.on("moveend", () => this.pin.classList.remove("is-moving"));
-    // Moved by a finger or the mouse (the slider, a place and a town say so themselves; a zoom
-    // keeps the middle): in a card, the point follows once the map stops.
+    // Moved by a finger or the mouse (a place and a town say so themselves; a zoom keeps the
+    // middle, and says so on its own, zoomed): in a card, the point follows once the map stops.
     this.map.on("dragstart", () => { this.dragged = true; });
     this.map.on("moveend", () => {
       if (!this.dragged) return;
@@ -129,12 +146,13 @@ export default class extends Controller {
       this.pointChanged();
     });
 
-    this.fitCircle({ point });
+    this.fit({ point, animate: false });
     if (this.hasToggleTarget) this.toggleTarget.hidden = false;
     this.plot();
   }
 
   disconnect() {
+    clearTimeout(this.settling);
     this.map?.remove();
     this.map = this.pin = this.ring = this.starting = null;
   }
@@ -160,7 +178,7 @@ export default class extends Controller {
     }
     // Leaflet measures its box; it had none while hidden.
     this.map.invalidateSize();
-    this.fitView();
+    this.fit({ animate: false });
   }
 
   fold(fold) {
@@ -196,25 +214,30 @@ export default class extends Controller {
     if (this.map && this.hasFrameTarget) this.frameTarget.src = this.frameTarget.dataset.src;
   }
 
-  // While the slider moves: the distance beside it and the circle follow, and the map zooms in
-  // and out with it, at once, to keep the circle whole. The map page's "Vendos hartën" sends it; in
-  // a card it applies when let go (radiusChanged).
-  radiusInput() {
-    const position = Math.min(RADIUS_STEPS_KM.length - 1, Math.max(0, Math.round(Number(this.sliderTarget.value))));
-    const km = RADIUS_STEPS_KM[position];
-    this.radiusTarget.value = km;
-    this.radiusLabelTarget.textContent = `${km} km`;
-    this.sliderTarget.setAttribute("aria-valuetext", `${km} km`);
-    if (!this.map) return;
-    this.placeRing();
-    this.fitCircle({ animate: false });
+  // A zoom stopped: once the map has been still a moment (SETTLE_MS, so that taps on + or − in a
+  // row make one change), the distance is what the circle covers, in whole kilometres, and the map
+  // settles on the zoom whose circle covers exactly that, at once (an animation would swallow a tap
+  // that came during it). Changed by a pinch, a tap or a button, in a card the results follow
+  // (pointChanged), and on the map page "Vendos hartën" sends it; the map's own zooms (fit, and
+  // the settling) keep the distance, so they change nothing.
+  zoomed() {
+    clearTimeout(this.settling);
+    this.settling = setTimeout(() => this.settle(), SETTLE_MS);
   }
 
-  // Let go (or moved by the keyboard): the same, for the last position; in a card, the results
-  // follow.
-  radiusChanged() {
-    this.radiusInput();
+  settle() {
+    if (!this.measured) return;
+    const km = this.distanceAt(this.map.getZoom());
+    this.showDistance(this.map.getZoom());
+    if (km === this.km) return;
+    this.radiusTarget.value = km;
+    this.map.setZoom(this.zoomFor(km), { animate: false });
     this.pointChanged();
+  }
+
+  // The distance the circle covers at a zoom, said beside its name as it changes.
+  showDistance(zoom) {
+    if (this.measured) this.radiusLabelTarget.textContent = `${this.distanceAt(zoom)} km`;
   }
 
   // "Vendndodhja ime": the map moves to where the visitor is, if the browser may say, for
@@ -226,7 +249,7 @@ export default class extends Controller {
       const { latitude, longitude } = await locate();
       this.statusTarget.textContent = "";
       const point = this.L.latLng(latitude, longitude);
-      this.fitCircle({ point });
+      this.fit({ point });
       this.pointChanged(point);
     } catch (error) {
       this.statusTarget.textContent = error.message;
@@ -239,7 +262,7 @@ export default class extends Controller {
     const option = this.townTarget.selectedOptions[0];
     if (!this.map || !option?.dataset.lat) return;
     const point = this.L.latLng(Number(option.dataset.lat), Number(option.dataset.lng));
-    this.fitCircle({ point });
+    this.fit({ point });
     this.pointChanged(point);
   }
 
@@ -298,14 +321,15 @@ export default class extends Controller {
     this.drawPoints();
   }
 
-  // Close up (streets readable), a dot for each result, and a tap on one opens it. Further out,
-  // results near each other are one numbered bubble and a lone one a small dot; neither takes
-  // taps, so they don't get in the way of moving the map. Redrawn on every zoom.
+  // Close up (streets readable, or as close as the circle goes), a dot for each result, and a tap
+  // on one opens it. Further out, results near each other are one numbered bubble and a lone one
+  // a small dot; neither takes taps, so they don't get in the way of moving the map. Redrawn on
+  // every zoom.
   drawPoints() {
     if (!this.map || !this.points) return;
     this.dots.clearLayers();
     const zoom = this.map.getZoom();
-    if (zoom >= CLOSE_ZOOM) {
+    if (zoom >= Math.min(CLOSE_ZOOM, this.map.getMaxZoom() - 0.01)) {
       for (const point of this.points) {
         const popup = document.createElement("a");
         popup.className = "map-popup";
@@ -343,32 +367,29 @@ export default class extends Controller {
     }
   }
 
-  fitView() {
-    this.fitCircle();
+  // The map on a point, the middle unless another is given, at the zoom whose circle covers the
+  // distance set, between those of 1 km and 50 km, the closest and the furthest it may go (set
+  // as options, not with setMinZoom and setMaxZoom, which would zoom to them on the way). A map
+  // folded away has no size to measure the circle by: it fits again when it opens (toggleMap).
+  fit({ point = this.map.getCenter(), animate = true } = {}) {
+    if (!this.measured) {
+      if (!this.placed) this.map.setView(point, 11, { animate: false });
+      this.placed = true;
+      return;
+    }
+    this.placed = true;
+    this.map.options.minZoom = this.zoomFor(MAX_KM, point.lat);
+    this.map.options.maxZoom = this.zoomFor(MIN_KM, point.lat);
+    this.map.fire("zoomlevelschange");
+    this.map.setView(point, this.zoomFor(this.km, point.lat), { animate });
   }
 
-  // The map on a point, the middle unless another is given, zoomed to show its circle whole with a
-  // little room around it. Only the zoom is worked out from the circle: fitBounds would centre on
-  // the middle of its box, which Mercator puts a little north of the point (some 170 m for 50 km),
-  // and the pin would creep north as the slider moves. A map folded away has no size to fit; it
-  // fits again when it opens (toggleMap).
-  fitCircle({ point = this.map.getCenter(), animate = true } = {}) {
-    const zoom = this.map.getSize().x
-      ? this.map.getBoundsZoom(point.toBounds(this.radiusMeters * 2), false, this.L.point(32, 32))
-      : 11;
-    this.map.setView(point, zoom, { animate });
-  }
-
-  // The circle round the middle of the map, as wide as the distance at the middle's latitude and
-  // the zoom: the map's, a pinch's in-between one too, or, as a zoom animates, the one it goes to,
-  // the circle growing or shrinking with the map (map.css). With its edge far past the map's
-  // corners it only needs to cover the map, however much bigger it would be.
-  placeRing({ zoom = this.map.getZoom(), center = this.map.getCenter(), animated = false } = {}) {
-    const size = this.map.getSize();
-    const middle = this.map.containerPointToLayerPoint(size.divideBy(2));
-    const metresPerPixel = (EQUATOR * Math.cos((center.lat * Math.PI) / 180)) / 2 ** (zoom + 8);
-    const radius = Math.min(this.radiusMeters / metresPerPixel, 2 * (size.x + size.y));
-    this.ring.classList.toggle("is-animated", animated);
+  // The circle round the middle of the map, the same size whatever the zoom: RING of the map's
+  // smaller side, kept in the middle as the map moves.
+  placeRing() {
+    if (!this.ring || !this.measured) return;
+    const middle = this.map.containerPointToLayerPoint(this.map.getSize().divideBy(2));
+    const radius = this.ringPixels;
     Object.assign(this.ring.style, {
       left: `${middle.x - radius}px`,
       top: `${middle.y - radius}px`,
@@ -377,7 +398,29 @@ export default class extends Controller {
     });
   }
 
-  get radiusMeters() {
-    return Number(this.radiusTarget.value) * 1000;
+  // The zoom at which the circle covers `km` round a latitude (the map's middle's unless another
+  // is given): its radius in pixels times the metres a pixel stands for there.
+  zoomFor(km, lat = this.map.getCenter().lat) {
+    return Math.log2((this.ringPixels * EQUATOR * Math.cos((lat * Math.PI) / 180)) / (256 * km * 1000));
+  }
+
+  // The whole kilometres the circle covers at a zoom, 1 to 50.
+  distanceAt(zoom) {
+    const metres = (this.ringPixels * EQUATOR * Math.cos((this.map.getCenter().lat * Math.PI) / 180)) / (256 * 2 ** zoom);
+    return Math.min(MAX_KM, Math.max(MIN_KM, Math.round(metres / 1000)));
+  }
+
+  get ringPixels() {
+    const size = this.map.getSize();
+    return RING * Math.min(size.x, size.y);
+  }
+
+  // The map has a box to measure (not a folded card's).
+  get measured() {
+    return Boolean(this.map?.getSize().x);
+  }
+
+  get km() {
+    return Number(this.radiusTarget.value);
   }
 }

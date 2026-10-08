@@ -907,14 +907,14 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(pinned.contains(r#"class="button secondary round-button labelled map-button is-set""#));
     assert!(pinned.contains(r#"data-map-ring-value="true""#));
     assert!(pinned.contains(r#"aria-label="Filtrat: Asnjë filtër""#));
-    // The distance is a slider that stops at 1, 2, 5, 10, 25 and 50 km, each named under it: 5 km
-    // is the third.
-    assert!(pinned.contains(r#"<output data-map-target="radiusLabel">5 km</output>"#));
-    assert!(pinned.contains(r#"<input id="map-radius" type="range" min="0" max="5" step="1" value="2""#));
-    assert!(pinned.contains(r#"<span style="--i: 0">1</span><span style="--i: 1">2</span><span style="--i: 2">5</span>"#));
-    // A distance between them, from an older link, stands at the step nearest it.
+    // The distance is what the circle covers at the map's zoom (map_controller.js), said beside its
+    // name and carried by the radius field: no slider.
+    assert!(pinned.contains(r#"<p class="field-label">Largësia <output data-map-target="radiusLabel">5 km</output></p>"#));
+    assert!(pinned.contains(r#"<input type="hidden" name="radius" value="5" data-map-target="radius">"#));
+    assert!(!pinned.contains(r#"id="map-radius""#) && !pinned.contains("map-radius-steps"));
+    // Any whole distance from a link, the zoom showing it as it is.
     let seven = html(pool.clone(), "/c/makina?lat=41.32833&lng=19.81806&radius=7").await;
-    assert!(seven.contains(r#"<input id="map-radius" type="range" min="0" max="5" step="1" value="2""#));
+    assert!(seven.contains(r#"<output data-map-target="radiusLabel">7 km</output>"#));
     for (name, value) in [("lat", "41.32833"), ("lng", "19.81806"), ("radius", "5")] {
         assert!(pinned.contains(&format!(r#"<input type="hidden" name="{name}" value="{value}">"#)), "{name}");
     }

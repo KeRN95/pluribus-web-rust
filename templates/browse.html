@@ -125,9 +125,10 @@
     {#- The map: its pin and what it is set to, the town ("Durrës"), the point as its nearest town
         and the distance ("Tiranë · 10 km"), or "Harta". It opens the map under the row, and folds
         it again; the map loads only then, its dots after (map_controller.js). It starts on the
-        point, or on the town, or on Tirana, its circle there only once a point is set (ring).
-        As soon as it stops after a drag, or the distance is let go, or a place or a town is
-        picked, the point applies, in place of a town: the page refreshes in place with its
+        point, or on the town, or on Tirana, its circle there only once a point is set (ring),
+        the same size whatever the zoom, which sets the distance it covers. As soon as it stops
+        after a drag or a zoom, or a place or a town is picked, the point applies, in place of a
+        town: the page refreshes in place with its
         category and filters, the card open as it is, the dots following. The point's chip, and
         "Gjithë Shqipëria", drop it. -#}
     <section class="map-card map-hidden" data-controller="map" data-map-lazy-value="true" data-map-ring-value="{{ filters.has_pin() }}"

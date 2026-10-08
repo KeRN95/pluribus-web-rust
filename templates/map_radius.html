@@ -1,13 +1,9 @@
-{#- How far around the pin to look: a slider that stops at 1, 2, 5, 10, 25 and 50 km (filters.rs,
-    RADIUS_STEPS_KM), named under it; map_controller.js puts the km of its position in the radius
-    field, and the form goes when the slider is let go. -#}
+{#- How far around the pin to look: what the map's circle covers, which stays the same size in its
+    middle whatever the zoom, so the zoom sets it (in, nearer; out, further), 1 to 50 km in whole
+    kilometres (map_controller.js), said beside its name as it changes; the radius field carries
+    it. -#}
 <div class="field map-radius">
-  <label class="field-label" for="map-radius">Largësia <output data-map-target="radiusLabel">{{ filters.radius_km }} km</output></label>
+  <p class="field-label">Largësia <output data-map-target="radiusLabel">{{ filters.radius_km }} km</output></p>
   <input type="hidden" name="radius" value="{{ filters.radius_km }}" data-map-target="radius">
-  <input id="map-radius" type="range" min="0" max="5" step="1" value="{{ filters.radius_position() }}"
-         aria-valuetext="{{ filters.radius_km }} km" data-map-target="slider"
-         data-action="input->map#radiusInput change->map#radiusChanged">
-  <div class="map-radius-steps" aria-hidden="true">
-    {%- for km in crate::web::filters::RADIUS_STEPS_KM %}<span style="--i: {{ loop.index0 }}">{{ km }}</span>{% endfor -%}
-  </div>
+  <p class="map-radius-hint">Zmadho hartën për më afër, zvogëloje për më larg.</p>
 </div>
