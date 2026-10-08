@@ -166,15 +166,17 @@
 }
 .link-button:hover { color: var(--danger); }
 
-/* A listing's message sheet (listing.html, message_sheet_controller.js): from under the message
-   button to the screen's bottom (--top), across it, on the page's own colour like the conversation
+/* A listing's message sheet (listing.html, message_sheet_controller.js): the screen's lower half,
+   across it, sliding up from its bottom in a blink, on the page's own colour like the conversation
    page, its top corners rounded and a shadow over the page above. The conversation scrolls inside
    it, as wide as on its own page, with "Mbyll" at its right edge and its box to write in at the
-   sheet's foot; its way back to the inbox stays on its own page. The page under it holds still while it is open. */
+   sheet's foot; its way back to the inbox stays on its own page. The page under it holds still
+   while it is open. */
 .listing-page { display: contents; }
 .message-sheet {
   position: fixed;
-  inset: var(--top, 4rem) 0 0;
+  inset: 50vh 0 0;
+  inset: 50dvh 0 0;
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -182,10 +184,10 @@
   border-radius: 18px 18px 0 0;
   background: var(--bg);
   box-shadow: 0 -10px 30px rgb(0 0 0 / 14%);
-  animation: sheet-in .2s ease-out;
+  animation: sheet-in .12s ease-out;
 }
 .message-sheet[hidden] { display: none; }
-@keyframes sheet-in { from { opacity: 0; transform: translateY(24px); } }
+@keyframes sheet-in { from { transform: translateY(100%); } }
 @media (prefers-reduced-motion: reduce) {
   .message-sheet { animation: none; }
 }

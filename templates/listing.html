@@ -332,8 +332,8 @@
 </section>
 {%- endif %}
 {%- if sheet %}
-{#- The message sheet: a message button opens it under itself, the page scrolled to bring the
-    button near the top, and it takes the rest of the screen below (message_sheet_controller.js).
+{#- The message sheet: a message button opens it, sliding up from the screen's bottom to its
+    middle (message_sheet_controller.js, messages.css).
     The button loads the conversation into its frame: the page that starts one, or the one
     already going on (conversation.html, whose frame has the same name), and writing, sending
     and blocking go on in it without leaving the listing; its messages scroll inside it. -#}
