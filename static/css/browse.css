@@ -13,7 +13,8 @@
    "‹", a way up, and the page's own, filled as the row's buttons are when set, the heading at the
    pill's size with a chevron, which shows the other categories at its level as pills after it;
    under them, when it has any, its subcategories as pills like the welcome page's (welcome.css,
-   .shortcut). */
+   .shortcut). A listing's page has the first two (listing.html, .listing-path), its category's
+   pill a link. */
 .category-pills { display: flex; flex-direction: column; align-items: flex-start; gap: .5rem; margin: 1.25rem 0 0; }
 .category-path { display: flex; flex-wrap: wrap; align-items: center; align-self: stretch; gap: .4rem; }
 /* The subcategories as close under the small pills as their own rows are to each other: one
@@ -36,21 +37,6 @@
   background: var(--badge);
 }
 .category-path h1 { margin: 0; font: inherit; line-height: inherit; }
-/* A listing page's trail (listing.html, .listing-trail): the categories above it, quiet links each
-   followed by a fainter "›". */
-.breadcrumbs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: .1rem .45rem;
-  color: color-mix(in srgb, var(--muted) 75%, var(--bg));
-  font-size: var(--text-xl);
-  line-height: 1.15;
-  letter-spacing: -0.015em;
-}
-.breadcrumbs a { color: inherit; text-decoration: none; white-space: nowrap; }
-.breadcrumbs a:hover { color: var(--text); }
-.breadcrumbs span { color: color-mix(in srgb, var(--muted) 50%, var(--bg)); }
 
 /* The selected pill shows the other categories at its level as pills after it, on its line, and
    hides them again. They stand after its <details> (.category-level), whose box gives way to them

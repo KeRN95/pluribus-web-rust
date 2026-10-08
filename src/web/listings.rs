@@ -13,7 +13,7 @@ use rust_decimal::{Decimal, RoundingStrategy, prelude::ToPrimitive};
 use super::{
     Result,
     account::{ClientIp, cookie_header, current_user},
-    browse::{ListingPage, verified_label},
+    browse::{ListingPage, Subcategory, category_icon, verified_label},
     cookie, not_found,
     icons::{self, Reads},
     photos,
@@ -313,9 +313,10 @@ impl ListingDetail {
 #[template(path = "listing.html")]
 struct ListingShow {
     listing: ListingDetail,
-    /// Its category and those above it, from the top: Automjete, Pjesë dhe aksesorë, GPS dhe
-    /// navigatorë.
-    trail: Vec<Crumb>,
+    /// Its category, as a category page's own pill is (browse.html): a link to that page.
+    category: Subcategory,
+    /// The category above its own, the pill before it: a way up. None for a main category.
+    parent: Option<Subcategory>,
     details: Vec<Detail>,
     photos: Vec<Photo>,
     /// The reveal button's label, when the seller's phone number or e-mail can be shown.
@@ -466,16 +467,17 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     )?;
     let price_drop = price_drop(price_was, listing.price_amount, &listing.currency);
     let views = (views > 0).then(|| format::number(Decimal::from(views)));
-    let crumb = |name: &str, slug: &str| Crumb { name: name.to_string(), url: format!("/c/{slug}") };
     let category = categories.by_slug(&listing.category_slug);
-    let trail = match category {
-        Some(category) => categories
-            .ancestors(category)
-            .into_iter()
-            .chain([category])
-            .map(|category| crumb(&category.name, &category.slug))
-            .collect(),
-        None => vec![crumb(&listing.category_name, &listing.category_slug)],
+    // Its category and the one above it as pills, as a category page's head has them.
+    let pill = |category: &db::Category| Subcategory {
+        name: category.name.clone(),
+        url: format!("/c/{}", category.slug),
+        icon: category_icon(category),
+    };
+    let parent = category.and_then(|category| category.parent_id).and_then(|id| categories.by_id(id)).map(pill);
+    let category_pill = match category {
+        Some(category) => pill(category),
+        None => Subcategory { name: listing.category_name.clone(), url: format!("/c/{}", listing.category_slug), icon: None },
     };
     // Its category and those above it, the nearest first, whose own icon a property can take.
     let slugs: Vec<&str> = match category {
@@ -538,7 +540,8 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         render(ListingShow {
             signed_in: user.is_some(),
             listing,
-            trail,
+            category: category_pill,
+            parent,
             details,
             photos,
             reveal,
@@ -638,12 +641,6 @@ impl Reveal {
             Reveal::Email => "Kopjo email-in",
         }
     }
-}
-
-/// A category on the way to a listing's own.
-pub struct Crumb {
-    pub name: String,
-    pub url: String,
 }
 
 #[derive(Template)]

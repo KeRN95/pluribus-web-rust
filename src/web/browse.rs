@@ -203,7 +203,7 @@ pub async fn home(
 
 /// A category's icon, as its pill has it (icons.rs): a main category's own, a subcategory's where
 /// it has one.
-fn category_icon(category: &db::Category) -> Option<&'static str> {
+pub fn category_icon(category: &db::Category) -> Option<&'static str> {
     match category.parent_id {
         None => Some(icons::main_category(&category.slug)),
         Some(_) => icons::subcategory(&category.slug),
@@ -211,7 +211,8 @@ fn category_icon(category: &db::Category) -> Option<&'static str> {
 }
 
 /// A category as a pill like the welcome page's main categories: its icon, where it has one, then
-/// its name. A category page's subcategories, the category above it, and those beside it.
+/// its name. A category page's subcategories, the category above it, and those beside it; a
+/// listing's page has its category and the one above it.
 pub struct Subcategory {
     pub name: String,
     pub url: String,

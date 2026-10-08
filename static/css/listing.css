@@ -193,11 +193,11 @@
   .gallery-next { right: .7rem; }
   .gallery-arrow:disabled { opacity: 0; pointer-events: none; }
 }
-/* Above the photo, the category's path as a category page's heading has it (.breadcrumbs), the
-   listing's own category last in the heading's colour and weight; the status after it. */
+/* Above the photo, the category's pills as a category page's head has them (browse.css,
+   .category-path); the status after them. */
 .listing-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
 .listing-tags .badge { margin-left: 0; }
-.listing-trail a:last-child { color: var(--text); font-weight: var(--medium); }
+.listing-path { align-self: auto; }
 /* The price is the headline: on a phone a little over the title's size (24.5px), from a tablet up
    a size over it (--text-3xl, below), the title under it either way. */
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: var(--text-2xl); }
@@ -384,11 +384,9 @@
 }
 .attribute-icon { flex: none; color: var(--muted); }
 .attribute-label { color: var(--muted); font-weight: normal; }
-/* A phone: the top of the page not all large type. The path to the category at the text's size
-   rather than a heading's, quieter than the title under the photo, and the details' pills a
-   little smaller (13px, their icons 16px), so more of them share a line. */
+/* A phone: the details' pills a little smaller (13px, their icons 16px), so more of them share a
+   line. */
 @media (max-width: 719px) {
-  .listing-trail { font-size: var(--text-md); }
   .attributes { gap: .4rem; }
   .attribute { gap: .4rem; padding: .45rem .8rem; font-size: .93rem; }
   .attribute-icon { width: 16px; height: 16px; }
