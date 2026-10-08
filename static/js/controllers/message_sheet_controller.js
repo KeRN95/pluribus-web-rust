@@ -7,7 +7,9 @@ import { Controller } from "@hotwired/stimulus";
 // it. "Mbyll", Escape, or Turbo caching the page closes it, empties the frame (its conversation
 // stops asking for new messages) and gives the focus back to the button, for a keyboard. A
 // response that isn't a conversation (the sign-in page, once the session ran out) opens as a page
-// of its own. A tap or a click leaves the button without the focus, and so without a ring.
+// of its own. A tap or a click leaves the button without the focus, and so without a ring. Its
+// bar at the top, dragged down past a quarter of its height or flicked down, closes it too,
+// sliding the rest of the way; let go sooner, it goes back up.
 export default class extends Controller {
   static targets = ["sheet", "body", "frame"];
 
@@ -30,6 +32,47 @@ export default class extends Controller {
     event.preventDefault();
     this.close();
     event.detail.visit(event.detail.response);
+  }
+
+  grab(event) {
+    this.dragFrom = event.clientY;
+    this.dragged = 0;
+    this.lastY = event.clientY;
+    this.lastAt = event.timeStamp;
+    this.speed = 0;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    this.sheetTarget.classList.add("is-dragging");
+  }
+
+  drag(event) {
+    if (this.dragFrom == null) return;
+    this.dragged = Math.max(0, event.clientY - this.dragFrom);
+    const elapsed = event.timeStamp - this.lastAt;
+    if (elapsed > 0) this.speed = (event.clientY - this.lastY) / elapsed;
+    this.lastY = event.clientY;
+    this.lastAt = event.timeStamp;
+    this.sheetTarget.style.transform = `translateY(${this.dragged}px)`;
+  }
+
+  release() {
+    if (this.dragFrom == null) return;
+    this.dragFrom = null;
+    const sheet = this.sheetTarget;
+    sheet.classList.remove("is-dragging");
+    const away = this.dragged > sheet.offsetHeight / 4 || (this.speed > 0.5 && this.dragged > 10);
+    if (!away) {
+      sheet.style.transform = "";
+      return;
+    }
+    sheet.style.transform = "translateY(100%)";
+    const done = () => {
+      sheet.removeEventListener("transitionend", done);
+      clearTimeout(this.leaving);
+      this.close();
+      sheet.style.transform = "";
+    };
+    sheet.addEventListener("transitionend", done);
+    this.leaving = setTimeout(done, 250);
   }
 
   // The focus goes back to the button only for a keyboard (Escape, or "Mbyll" by Enter, a click of

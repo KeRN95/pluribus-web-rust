@@ -209,13 +209,31 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
   animation: sheet-in .12s ease-out;
 }
 .message-sheet[hidden] { display: none; }
+/* Dragged by its bar it follows the finger; let go, it goes back up or slides away quickly. */
+.message-sheet { transition: transform .15s ease-out; }
+.message-sheet.is-dragging { transition: none; }
+/* The bar at its top, as on an iPhone's sheets: a short rounded line, in a strip as wide as the
+   sheet and tall enough for a finger to take, which drags the sheet down to close it. */
+.sheet-grabber {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  padding: .55rem 0 .35rem;
+  cursor: grab;
+  touch-action: none;
+}
+.sheet-grabber::before { content: ""; width: 2.5rem; height: 5px; border-radius: 999px; background: var(--border-strong); }
+.message-sheet.is-dragging .sheet-grabber { cursor: grabbing; }
+@media (prefers-reduced-motion: reduce) {
+  .message-sheet { transition: none; }
+}
 @keyframes sheet-in { from { transform: translateY(100%); } }
 @media (prefers-reduced-motion: reduce) {
   .message-sheet { animation: none; }
 }
 .sheet-close {
   position: absolute;
-  top: .6rem;
+  top: 1.3rem;
   right: max(.75rem, calc((100% - 760px) / 2 + .25rem));
   z-index: 3;
   display: flex;
@@ -239,6 +257,6 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
 .message-sheet .thread { flex: 1; }
 .message-sheet .conversation-block { margin: .25rem 0 .75rem; }
 .message-sheet .conversation-back { display: none; }
-.message-sheet .conversation-head { margin-top: .9rem; padding-right: 2.75rem; }
+.message-sheet .conversation-head { margin-top: .25rem; padding-right: 2.75rem; }
 .message-sheet-wait { margin: 1.25rem 0; color: var(--muted); }
 html.sheet-open { overflow: hidden; }
