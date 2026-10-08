@@ -1,0 +1,34 @@
+import { Controller } from "@hotwired/stimulus";
+
+// The header's button for the conversations (base.html): how many have messages the visitor hasn't
+// read, in a coral circle at its top right, asked for with each page (GET /mesazhet/numri, which
+// says none for someone not signed in) and again once a conversation's page has read some
+// (conversation_controller.js), and said to screen readers.
+export default class extends Controller {
+  static targets = ["count"];
+
+  connect() {
+    this.ask = this.ask.bind(this);
+    this.ask();
+    addEventListener("messages:read", this.ask);
+  }
+
+  disconnect() {
+    removeEventListener("messages:read", this.ask);
+  }
+
+  async ask() {
+    try {
+      const response = await fetch("/mesazhet/numri", { headers: { Accept: "application/json" }, cache: "no-store" });
+      if (response.ok) this.show((await response.json()).unread);
+    } catch {}
+  }
+
+  show(unread) {
+    const label = unread > 0 ? `Mesazhet: ${unread} të palexuara` : "Mesazhet";
+    this.countTarget.textContent = unread > 9 ? "9+" : String(unread);
+    this.countTarget.hidden = !(unread > 0);
+    this.element.setAttribute("aria-label", label);
+    this.element.title = label;
+  }
+}

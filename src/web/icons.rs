@@ -633,6 +633,13 @@ pub const HEART: &str = r#"<path d="M12 20.3 4.6 13.1A4.9 4.9 0 0 1 11.5 6.2l.5.
 /// many times it was shown (my_listings.html).
 pub const CALL: &str = r#"<path d="M5 4h3.2l1.6 4.2-2.1 1.4a11 11 0 0 0 6.7 6.7l1.4-2.1 4.2 1.6V19a2 2 0 0 1-2.2 2A17 17 0 0 1 3 6.2 2 2 0 0 1 5 4Z"/>"#;
 
+/// A speech bubble: messages (the header's button in base.html, and the button on a listing's
+/// page that writes to its seller).
+pub const CHAT: &str = r#"<path d="M20.5 11.5a8 8 0 0 1-11.6 7.2L4 20l1.3-4.4A8 8 0 1 1 20.5 11.5Z"/>"#;
+
+/// A paper plane: sending a message (conversation.html).
+pub const SEND: &str = r#"<path d="m21 3-6.5 18-4-7.5-7.5-4Z"/><path d="M21 3 10.5 13.5"/>"#;
+
 /// Other things, and a category without an icon of its own yet: a box.
 const BOX: &str = r#"<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5"/><path d="M12 12v9"/>"#;
 

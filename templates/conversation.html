@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}{{ other_name }} · Mesazhet | Pluribus{% endblock %}
+
+{% block content %}
+{#- A conversation between a listing's buyer and its seller (messages.rs), or the page that starts
+    one: who with and the listing it is about at the top; the messages, the visitor's own on the
+    right; then the box to write in, at the bottom of the screen. While the page is open, new
+    messages come every few seconds (conversation_controller.js); those shown are read, as the page
+    shows and as they come, and the header's count follows. -#}
+<section class="conversation" data-controller="conversation"
+  {%- if let Some(id) = id %} data-conversation-newer-url-value="/mesazhet/{{ id }}/te-rejat" data-conversation-read-url-value="/mesazhet/{{ id }}/lexuar"{% endif %}>
+  <p class="conversation-back"><a href="/mesazhet">‹ Mesazhet</a></p>
+  <header class="conversation-head">
+    <h1 class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span>{{ other_name }}</h1>
+    {%- if let Some(listing) = listing %}
+    {#- The listing: its photo, its title and its price, leading to it. -#}
+    <a class="conversation-listing" href="{{ listing.url }}">
+      {%- if let Some(photo) = listing.photo %}
+      <img src="{{ photo }}" alt="" width="56" height="56">
+      {%- else %}
+      <span class="placeholder" aria-hidden="true"></span>
+      {%- endif %}
+      <span class="conversation-listing-text">
+        <span class="conversation-title">{{ listing.title }}</span>
+        <span class="conversation-price">{{ listing.price }}</span>
+      </span>
+    </a>
+    {%- endif %}
+  </header>
+
+  <ol class="thread" id="thread" data-conversation-target="thread">
+    {%- for message in messages %}
+    {% include "message.html" %}
+    {%- endfor %}
+  </ol>
+
+  {%- match writing %}
+  {%- when Writing::Open %}
+  {#- The box grows with what is typed, up to a few lines; Enter sends where there is a keyboard
+      (Shift+Enter starts a new line), the button everywhere. The first message can be one of the
+      quick ones, which fill the box in. -#}
+  <form class="composer" id="composer" method="post" action="{{ action }}" data-conversation-target="form">
+    {%- if first %}
+    <div class="quick-messages">
+      {%- for text in crate::web::messages::QUICK %}
+      <button type="button" class="quick-message" data-action="conversation#fill" data-conversation-text-param="{{ text }}">{{ text }}</button>
+      {%- endfor %}
+    </div>
+    {%- endif %}
+    {%- if let Some(error) = error %}
+    <p class="field-error composer-error" role="alert">{{ error }}</p>
+    {%- endif %}
+    <div class="composer-row">
+      <label class="visually-hidden" for="message-body">Mesazhi për {{ other_name }}</label>
+      <textarea id="message-body" name="body" rows="1" maxlength="{{ crate::web::messages::MAX_CHARS }}" required
+        placeholder="Shkruaj një mesazh…" data-conversation-target="body"
+        data-action="input->conversation#grow keydown->conversation#key">{{ body }}</textarea>
+      <button type="submit" class="button composer-send" aria-label="Dërgo" title="Dërgo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SEND|safe }}</svg>
+      </button>
+    </div>
+    {%- if first %}
+    <p class="field-hint">Lidhjet dhe më shumë se tre mesazhe radhazi mund t'i dërgosh pasi {{ other_name }} të të përgjigjet.</p>
+    {%- endif %}
+  </form>
+  {%- when Writing::Blocked %}
+  <div class="composer-closed">
+    <p>E ke bllokuar këtë përdorues: nuk të shkruan dot, as ti atij.</p>
+    {%- if let Some(id) = id %}
+    <form method="post" action="/mesazhet/{{ id }}/zhblloko">
+      <button type="submit" class="button secondary">Zhblloko</button>
+    </form>
+    {%- endif %}
+  </div>
+  {%- when Writing::BlockedBy %}
+  <p class="composer-closed">{{ other_name }} nuk pranon mesazhe nga ti.</p>
+  {%- when Writing::Closed %}
+  <p class="composer-closed">Ky njoftim nuk pranon mesazhe tani.</p>
+  {%- endmatch %}
+
+  {%- if let Some(id) = id %}
+  {%- if writing != Writing::Blocked %}
+  {#- Whoever writes unwanted messages can be blocked: they can't write here any more, nor start
+      another conversation with the visitor. -#}
+  <form class="conversation-block" method="post" action="/mesazhet/{{ id }}/blloko"
+        data-turbo-confirm="Ta bllokojmë {{ other_name }}? Nuk do të të shkruajë dot më.">
+    <button type="submit" class="link-button">Blloko {{ other_name }}</button>
+  </form>
+  {%- endif %}
+  {%- endif %}
+</section>
+{% endblock %}

@@ -27,9 +27,9 @@ const SAVED_MOST: i64 = 200;
 /// While someone signs in after tapping a heart: the listing's number, and the page they tapped
 /// it on (after_sign_in).
 const SAVE_COOKIE: &str = "ruaj";
-const BACK_COOKIE: &str = "kthehu";
+pub(super) const BACK_COOKIE: &str = "kthehu";
 /// How long they have to sign in, in seconds.
-const SIGN_IN_SECONDS: i64 = 30 * 60;
+pub(super) const SIGN_IN_SECONDS: i64 = 30 * 60;
 
 #[derive(Deserialize)]
 pub struct SaveForm {

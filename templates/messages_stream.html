@@ -1,0 +1,9 @@
+{#- Messages that came after those a conversation's page has, added at its end (messages.rs,
+    newer). One the page has already moves to the end, which keeps them in order. -#}
+<turbo-stream action="append" target="thread">
+  <template>
+    {%- for message in messages %}
+    {% include "message.html" %}
+    {%- endfor %}
+  </template>
+</turbo-stream>

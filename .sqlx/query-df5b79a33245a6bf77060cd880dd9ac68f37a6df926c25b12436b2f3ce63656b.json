@@ -1,0 +1,113 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id, l.public_no AS \"public_no?\", l.slug AS \"slug?\",\n                  coalesce(l.generated_title, l.title) AS title, l.status AS \"listing_status?\",\n                  l.price_amount AS \"price_amount?\", l.currency::text AS currency, l.price_type AS \"price_type?\",\n                  l.listing_type AS \"listing_type?\",\n                  (SELECT coalesce(m.thumbnail_url, m.public_url)\n                   FROM listing_media m\n                   WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'\n                   ORDER BY m.is_cover DESC, m.sort_order\n                   LIMIT 1) AS photo,\n                  other.user_id AS \"other_id!\",\n                  CASE WHEN c.buyer_user_id = $2 THEN coalesce(b.display_name, u.display_name)\n                       ELSE u.display_name END AS \"other_name!\",\n                  EXISTS (SELECT 1 FROM messages m\n                          WHERE m.conversation_id = c.id AND m.sender_user_id = other.user_id) AS \"answered!\",\n                  (SELECT count(*) FROM messages m\n                   WHERE m.conversation_id = c.id AND m.sender_user_id = $2\n                     AND m.created_at > coalesce((SELECT max(o.created_at) FROM messages o\n                                                  WHERE o.conversation_id = c.id AND o.sender_user_id = other.user_id),\n                                                 '-infinity')) AS \"in_a_row!\",\n                  EXISTS (SELECT 1 FROM user_blocks k\n                          WHERE k.blocker_user_id = $2 AND k.blocked_user_id = other.user_id) AS \"blocked!\",\n                  EXISTS (SELECT 1 FROM user_blocks k\n                          WHERE k.blocker_user_id = other.user_id AND k.blocked_user_id = $2) AS \"blocked_by!\"\n           FROM conversations c\n           JOIN conversation_participants me ON me.conversation_id = c.id AND me.user_id = $2\n           JOIN LATERAL (SELECT p.user_id FROM conversation_participants p\n                         WHERE p.conversation_id = c.id AND p.user_id <> $2\n                         ORDER BY p.joined_at\n                         LIMIT 1) other ON true\n           JOIN users u ON u.id = other.user_id\n           LEFT JOIN listings l ON l.id = c.listing_id\n           LEFT JOIN businesses b ON b.id = c.seller_business_id\n           WHERE c.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "public_no?",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "slug?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "listing_status?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "price_amount?",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 6,
+        "name": "currency",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "price_type?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "listing_type?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "photo",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "other_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 11,
+        "name": "other_name!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "answered!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
+        "name": "in_a_row!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 14,
+        "name": "blocked!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 15,
+        "name": "blocked_by!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      false,
+      true,
+      null,
+      false,
+      false,
+      null,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "df5b79a33245a6bf77060cd880dd9ac68f37a6df926c25b12436b2f3ce63656b"
+}

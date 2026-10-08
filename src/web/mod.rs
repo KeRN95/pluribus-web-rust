@@ -6,6 +6,7 @@ mod browse;
 mod filters;
 mod icons;
 mod listings;
+mod messages;
 mod moderation;
 mod newest;
 mod photos;
@@ -69,6 +70,14 @@ pub fn router(state: AppState) -> Router {
         .route("/te-ruajturat", get(saved::page))
         .route("/te-ruajturat/numrat", get(saved::numbers))
         .route("/te-ruajturat/pare", post(saved::seen))
+        .route("/listing/{public_no}/mesazh", get(messages::compose).post(messages::start))
+        .route("/mesazhet", get(messages::inbox))
+        .route("/mesazhet/numri", get(messages::unread))
+        .route("/mesazhet/{id}", get(messages::conversation).post(messages::reply))
+        .route("/mesazhet/{id}/te-rejat", get(messages::newer))
+        .route("/mesazhet/{id}/lexuar", post(messages::read))
+        .route("/mesazhet/{id}/blloko", post(messages::block))
+        .route("/mesazhet/{id}/zhblloko", post(messages::unblock))
         .route("/moderim", get(moderation::page))
         .route("/moderim/{id}/mirato", post(moderation::approve))
         .route("/moderim/{id}/bashko", post(moderation::merge))
@@ -132,8 +141,9 @@ async fn cache_headers(request: Request, next: Next) -> Response {
 
 /// The site's stylesheets in static/css/, in the order base.html loads them, which the cascade
 /// follows: base.css (the colours, the type, the header), page.css (the cards, form fields),
-/// welcome.css, browse.css, map.css, posting.css and listing.css, each its part of the site.
-pub const STYLESHEETS: [&str; 7] = ["base", "page", "welcome", "browse", "map", "posting", "listing"];
+/// welcome.css, browse.css, map.css, posting.css, listing.css and messages.css, each its part of
+/// the site.
+pub const STYLESHEETS: [&str; 8] = ["base", "page", "welcome", "browse", "map", "posting", "listing", "messages"];
 
 /// A fingerprint of the site's own CSS and JavaScript, which base.html adds to their URLs. Turbo
 /// keeps the stylesheet and scripts of the first page a visitor opens while they move around the

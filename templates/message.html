@@ -1,0 +1,8 @@
+{#- One message in a conversation (conversation.html, messages_stream.html): the visitor's own on
+    the right in the coral's tint, the other side's on the left, with when it was sent under it.
+    Its line breaks stay (messages.css); links in it are only text. -#}
+<li class="message{% if message.mine %} mine{% endif %}" id="message-{{ message.id }}" data-id="{{ message.id }}">
+  <span class="visually-hidden">{% if message.mine %}Ti{% else %}{{ other_name }}{% endif %}: </span>
+  <p class="message-body">{{ message.body }}</p>
+  <time class="message-time">{{ message.when() }}</time>
+</li>

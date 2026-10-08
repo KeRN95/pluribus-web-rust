@@ -289,10 +289,12 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .post-button { margin-left: auto; }
 .post-button,
 .saved-button,
+.inbox-button,
 .theme-toggle,
 .account-button { background: var(--surface); border-color: var(--border); }
 .post-button:hover,
 .saved-button:hover,
+.inbox-button:hover,
 .account-button:hover { background: var(--surface-muted); }
 /* The listings kept: a dot in the buttons' coral at the heart's top right while some dropped
    their price unseen (heart_controller.js). */

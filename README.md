@@ -110,6 +110,7 @@ cargo test
 | `src/web/listings.rs` | A listing's page (its details and their icons, photos, price per square metre, loan, the seller's other listings and the related ones), what it tells link previews and Google (`listing_meta`), the phone number's reveal, and the views it reports |
 | `src/web/newest.rs` | The stream of new listings for the welcome page's row: server-sent events, each a Turbo Stream with a listing's card |
 | `src/web/saved.rs` | The hearts: keeping a listing, the page of those kept (`/te-ruajturat`) with the price drops not seen yet, keeping one after signing in, and the header heart's dot |
+| `src/web/messages.rs` | Messages between buyers and sellers: the page that starts a conversation from a listing, a conversation, the inbox (`/mesazhet`), the header's unread count, blocking, and the limits that keep spam out |
 | `src/web/post.rs` | Posting, editing, pausing, putting back and deleting listings, "Njoftimet e mia" with what each listing drew (views, contacts, saves), and the limits that keep spam out |
 | `src/web/properties.rs` | A category's properties in the listing form (the fields, a car's tiles, the body types' drawings), and checking what a seller picked or typed |
 | `src/web/ai_fill.rs` | "Plotëso pjesën tjetër me AI": the listing form filled in by the AI, its answer checked against the form's own lists |
@@ -125,6 +126,7 @@ cargo test
 | `src/db/listing_pages.rs` | Pages of listing cards: the browse pages' filters, orders and pages, counts, the rows under a listing, the most seen, the map's points |
 | `src/db/listing.rs` | One listing: its page, its photos and properties, and the contact it reveals |
 | `src/db/saved.rs` | The listings a signed-in user keeps |
+| `src/db/messages.rs` | Conversations and their messages: starting one, writing, reading up to a message, the inbox with its unread counts, what an account sent lately (for the limits), blocks |
 | `src/db/price_drops.rs` | Price drops: what a listing's price dropped from, for its page; the notifications to those who keep it when its seller lowers it (`notify_price_drop`); those not seen yet, and seeing them |
 | `src/db/sign_in.rs` | Sign-in codes, sessions and users |
 | `src/db/posting.rs` | Posting and editing listings, pausing them and taking them down; a seller's listings with what each drew (`ListingStats`: its views, how many times its contact was shown, how many keep it, all along and over the last seven days) |
@@ -137,7 +139,7 @@ cargo test
 | `src/format.rs` | Albanian display formatting: prices, counts, dates, phone numbers |
 | `build.rs` | Rebuilds when a migration changes, so `sqlx::migrate!()` embeds the current files |
 | `templates/` | Askama templates, compiled into the binary and checked at compile time (see "Templates") |
-| `static/css/` | The site's styles: seven stylesheets, loaded in order (see "Stylesheets") |
+| `static/css/` | The site's styles: eight stylesheets, loaded in order (see "Stylesheets") |
 | `static/js/` | `application.js` and the Stimulus controllers (see "JavaScript") |
 | `static/img/` | `pluribus.png`, the site's picture in link previews of the pages without a photo of their own: the logo's creature and name on the ivory, 1200 × 630 |
 | `static/vendor/` | Turbo, Stimulus, Leaflet and the fonts (Geist, and Merriweather for the logo), with their versions in their names, so there's no Node or npm |
@@ -166,7 +168,7 @@ cargo test
 | `migrations/0023_more_properties.sql` | The properties every category lacked: a car's customs, plates, engine and power, a motorcycle's and a van's own, a tyre's size, a flat's bathrooms, condition and heating, a plot's permit, a job's contract, a service's areas, shoes' sizes, a pet's breed, a machine's hours...; what only some kinds of a category have moves down to them (a plot has no rooms, a bag no size), and central heating goes from a home's amenities to its kinds of heating |
 | `migrations/0024_search_kinds.sql` | Words that name a kind of listing (shitje, shitet, shes; qira, qera; blej) find the listings of that kind, as well as those that say them: "golf 7 në shitje" finds the Golfs for sale |
 | `migrations/0025_photo_copies.sql` | Photos kept as WebP: beside the full and card-sized copies, a middle-sized one (`middle_url`), a JPEG of the full one (`jpeg_url`) and a tiny copy for the pages (`placeholder`) |
-| `tests/web.rs` | 98 request tests: each sends requests to the app, with a database of its own, and checks the pages, redirects, cookies and what the database holds after |
+| `tests/web.rs` | 104 request tests: each sends requests to the app, with a database of its own, and checks the pages, redirects, cookies and what the database holds after |
 | `tests/schema.rs` | Runs `schema_checks.sql` against a freshly migrated database |
 | `tests/schema_checks.sql` | 83 checks of the schema's constraints and behaviour (35 checks, 36 statements that must fail, 12 that must succeed), in one transaction rolled back at the end |
 | `tests/fixtures/listings.sql` | The tests' sample listings, which can also be loaded into the development database |
@@ -208,6 +210,13 @@ Every page and action, from `web::router`. Anything else is the 404 page. A form
 | GET | `/te-ruajturat` | The listings the user keeps, the last kept first, under those whose price dropped since they last looked (`saved::page`) |
 | GET | `/te-ruajturat/numrat` | For the hearts, as JSON: the numbers of those listings, and how many dropped their price unseen, for the header heart's dot: `{"numbers": [1001, 1005], "price_drops": 1}` (`saved::numbers`) |
 | POST | `/te-ruajturat/pare?deri=…` | `/te-ruajturat` was shown with its price drops: they are seen, up to the latest it showed, by its notification's id (`saved::seen`) |
+| GET, POST | `/listing/{number}/mesazh` | The page that starts a conversation with the listing's seller, and its first message; the conversation the visitor has about it already, if any (`messages::compose`, `messages::start`) |
+| GET | `/mesazhet` | The visitor's conversations, the latest written in first (`messages::inbox`) |
+| GET | `/mesazhet/numri` | How many of the visitor's conversations have messages unread, as JSON, for the header's button: `{"unread": 2}` (`messages::unread`) |
+| GET, POST | `/mesazhet/{id}` | A conversation, for the two in it ("not found" for anyone else), and a message in it (`messages::conversation`, `messages::reply`) |
+| GET | `/mesazhet/{id}/te-rejat?pas=…` | The messages after one, as a Turbo Stream that adds them at the page's end; 204 when none came (`messages::newer`) |
+| POST | `/mesazhet/{id}/lexuar?deri=…` | The conversation's page showed its messages up to one: they are read (`messages::read`) |
+| POST | `/mesazhet/{id}/blloko`, `/mesazhet/{id}/zhblloko` | Blocks the other side of the conversation, or lets them write again (`messages::block`, `messages::unblock`) |
 | GET | `/perdorues/{id}` | A private seller's profile and active listings (`browse::user_profile`) |
 | GET | `/biznes/{slug}` | A business's profile and active listings (`browse::business_profile`) |
 | GET | `/llogaria` | "Llogaria": signing in or creating an account, or, signed in, the account (`account::account_page`) |
@@ -300,6 +309,8 @@ No Node, no npm, no bundler: the browser's code is plain JavaScript modules, wit
 - Over the newest, "Më të klikuarat" shows the twelve active listings whose pages were seen the most over the last seven days, the most first, in one row that slides sideways as the seller's other listings do under a listing (`.most-viewed`), each with an eye and how many times it was seen at its photo's top left, on a dark pill like the heart's circle (`.card-views`), and nothing before any were seen (`db::most_viewed`). A listing's page says it was seen once Turbo shows it (`application.js`, `POST /listing/{no}/pare`), so a page Turbo fetches ahead under the pointer and never opens doesn't count, nor do bots that run no scripts or say they are bots, nor its seller; a visitor (their address and browser) counts once per listing per half hour. The views gather in memory and go into `listing_daily_stats.detail_views` once a minute in one statement (`views.rs`, as "Analytics are aggregated" asks), and the row is read again as often. `dev/generate_listings.sql` with `views=1` gives the listings it made two weeks of views.
 - A heart over a listing's photo, at its top right corner, on every card and on the listing's own page, keeps the listing for a signed-in user (`saved_listings`, `web/saved.rs`, `heart.html`). `heart_controller.js` asks the server with each page which listings the visitor keeps (`/te-ruajturat/numrat`) and fills their hearts in the buttons' coral; a tap keeps a listing or lets it go at once (`POST /listing/{number}/ruaj`), every heart for it on the page with it. Someone not signed in goes to sign in first, and comes back to the page with the listing kept: the listing and the page wait in cookies (`ruaj`, `kthehu`), which signing in reads (`saved::after_sign_in`). The heart in the top bar leads to `/te-ruajturat`, the listings kept, the last first.
 - A price lowered lately says so (`price_was!` in `db/mod.rs`, from `listing_price_history`, which a trigger fills as prices change): a card puts by how much before its price, in a green pill on its photo ("−12% 5 000 €", its tooltip and screen readers saying from what), and a listing's page what it was after its price, struck through, with the pill ("5 400 € ~~6 900 €~~ −22%", `price_drop.html`). A price counts as dropped when its last change, in the last 30 days, made it at least 1% lower, in the same currency, than the lowest it was over the 30 days before: so a price raised for a while and lowered back is no drop, and it shows by how much under that lowest. Only listings on sale, for rent or a service, with a price (fixed, negotiable or "from") and still up; a month after, a drop is just the price.
+- Buyers write to sellers from a listing's page: a speech bubble in a coral circle beside the phone opens a page with the seller's name, the listing (its photo, title and price) and the box to write in, with three quick first messages that fill it in ("Përshëndetje! A është ende në dispozicion?", "Cili është çmimi i fundit?", "Kur mund ta shoh?"; `web/messages.rs`, `conversation.html`). The first message starts their conversation about the listing (`conversations`, one per buyer and listing, both sides in `conversation_participants`; a business's listing reaches whoever posted it), and writing about it again goes on in the same one. `/mesazhet` lists the visitor's conversations, the latest written in first, each with the listing's photo, who with, the listing, the start of the latest message and when it came; those with messages unread in bold, with how many in a coral pill. The header's speech bubble, beside the heart, has how many conversations have messages unread in a coral circle (`inbox_controller.js`, from `/mesazhet/numri`). A conversation's page has the messages, the visitor's own on the right in the coral's tint, each with when it was sent by Albania's clock ("14:32", "Dje, 14:32", then the date; the database turns the times into Albania's, `AT TIME ZONE 'Europe/Tirane'`), and the box at the bottom of the screen, which grows with what is typed; Enter sends where there is a keyboard and Shift+Enter starts a new line, while on a phone Enter is a new line and the paper plane sends. While the page is open it asks every 8 seconds for messages that came, a Turbo Stream that adds them at its end (`conversation_controller.js`; server-sent events would be instant, but the development tunnel holds them back), and what it shows is read as it shows (`/mesazhet/{id}/lexuar`, up to the last message shown), not when Turbo only fetched it ahead under the pointer; the header's count follows. Someone not signed in goes to sign in first, and comes back to the page to write (the `kthehu` cookie, as for the hearts).
+- Messages are limited so they can't carry spam (`web/messages.rs`): only someone signed in writes, which takes a code sent to their phone or e-mail, so every sender has proved a contact; one account writes to at most 5 new sellers an hour and 15 a day (conversations it starts), and sends at most 8 messages a minute and 200 a day; until the other side answers, it sends at most 3 messages in a row, and none with a link (`http://`, `https://`, `www.`), which is what spam and scams mostly carry; links never become links on the page anyway. A message has at most 1 000 characters. Whoever gets messages they don't want blocks the other side, under the conversation ("Blloko …", `user_blocks`): they can't write there any more, nor start a conversation about another of the blocker's listings, and "Zhblloko" lets them again. A message refused goes back in the box with why. The counts come from the messages and conversations themselves (`db::sent_lately`), so a restart forgets none of them.
 - Those who keep a listing hear when its seller lowers its price (`db::notify_price_drop`, run in the edit's transaction): each gets a notification (`notifications`, type `PRICE_DROP`, with what it was and what it is), in place of one about it they haven't seen yet, keeping that one's "was", the price they last saw; not the seller, nor anyone who turned price drop alerts off (`notification_preferences.price_drop_alerts`, on unless a row says otherwise). The heart in the top bar gets a coral dot while they have drops unseen, and says how many to screen readers ("Të ruajturat: 1 me çmim më të ulët"; `heart_controller.js`, from `/te-ruajturat/numrat`), and `/te-ruajturat` lists them over the cards, each from what to what ("Çmime më të ulëta te njoftimet që ke ruajtur"). Once that page is shown, it says so (`data-seen-url`, the beacon `application.js` sends for a listing's views, to `/te-ruajturat/pare`), not when Turbo only fetched it ahead under the pointer, and the drops are seen up to the latest it showed (`?deri=`, the notification's UUIDv7 id), so a copy of the page the browser shows again from its cache doesn't see a drop that came after: the dot goes. Drops of a listing let go, or no longer up, are left out. E-mail or push notices could follow from the same rows.
 - The pages of every main category, and of a few big subcategories (`MOST_VIEWED_IN` in `views.rs`: Makina, Apartamente, Vila dhe shtëpi), have their own "Më të klikuarat", as the welcome page has it for every category: the listings seen the most this week in the category and those under it, under the page's buttons and over its listings, small cards whichever size the listings' are, while no filter or words are on (they would take no notice of them). The rows are read in the background, so that no page waits for them (`Views::most_viewed`): all of them as the server starts, then every minute, after the views are written, those that pages asked for in the last ten minutes; a row no page asked for in a while is read as it is asked for, if older than five minutes.
 - Category pages (`/c/makina`) and search (`/search?q=golf`) share one handler and one filter form. A search forgives typos and finds a word's other forms (see "Search can start in PostgreSQL"); when it searched a word in place of a misspelt one, a line under the heading names it: "Shfaqen edhe rezultatet për „golf“." A search across every category names, as chips under its heading, the categories it found listings in, the most first, with how many ("Makina 17"; the names alone once more than 1 000 are found): each narrows the search to its category, whose filters it then offers (`db::listing_categories`). Filters are ordinary query parameters (`/c/makina?vehicle_fuel=DIESEL&price_max=12000&sort=price_asc`), so any filtered page can be bookmarked, shared and indexed, and infinite scroll keeps them.
@@ -336,7 +347,7 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 
 | Template | What it renders |
 |---|---|
-| `base.html` | Every page's frame: the head (the theme set before the first paint, view transitions, the fonts preloaded, the seven stylesheets, the import map, `application.js`), the header with the logo and its creature, "+", the hearts, "Llogaria" and the theme toggle |
+| `base.html` | Every page's frame: the head (the theme set before the first paint, view transitions, the fonts preloaded, the eight stylesheets, the import map, `application.js`), the header with the logo and its creature, "+", the hearts, the messages, "Llogaria" and the theme toggle |
 | `meta.html` | What a page says about itself in its head (`web::seo::PageMeta`): its description and canonical address, `noindex` on a search's results and a sold listing, the Open Graph tags of link previews, a listing's price and its schema.org data; the pages without it have `base.html`'s description of the site |
 | `home.html` | The welcome page: the search pill, the main categories' pills, "Më të klikuarat", "Sapo u shtuan" and the newest listings |
 | `browse.html` | A category or search page: the heading, its breadcrumb and category menu, the subcategory pills, the round buttons and what they open (the search, the filters, the map, the orders), "Më të klikuarat", the order's heading and the listings |
@@ -354,6 +365,10 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 | `listing_properties.html`, `listing_properties_frame.html` | A category's properties in the form, and the frame that brings them when the category changes |
 | `my_listings.html` | "Njoftimet e mia": what the listings drew, all together (views, contacts, saves, each with the last seven days' under it), then each listing with its price, its own counts and its buttons |
 | `saved.html` | The listings the user keeps, under those whose price dropped since they last looked, from what to what |
+| `messages.html` | The inbox: the visitor's conversations, those with messages unread in bold |
+| `conversation.html` | A conversation, or the page that starts one: who with, the listing, the messages, the box to write in (with the quick first messages), blocking |
+| `message.html` | One message in a conversation, the visitor's own on the right |
+| `messages_stream.html` | New messages, as a Turbo Stream that adds them at a conversation's end |
 | `price_drop.html` | After a listing's price, when it dropped lately: what it was, struck through, and by how much |
 | `profile.html` | A seller's profile |
 | `sign_in.html`, `sign_in_code.html` | Signing in: the contact, then the code |
@@ -364,7 +379,7 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 
 ### Stylesheets
 
-`static/css/`, seven files that `base.html` loads in this order (`web::STYLESHEETS`). The cascade follows it, so a rule meets the others where it would in one file. Colours, sizes and weights are custom properties in `base.css` (`--accent`, `--button`, `--text-sm`, `--semibold`...), with the dark theme's values beside the light theme's.
+`static/css/`, eight files that `base.html` loads in this order (`web::STYLESHEETS`). The cascade follows it, so a rule meets the others where it would in one file. Colours, sizes and weights are custom properties in `base.css` (`--accent`, `--button`, `--text-sm`, `--semibold`...), with the dark theme's values beside the light theme's.
 
 | File | What it styles |
 |---|---|
@@ -375,6 +390,7 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 | `map.css` | The map, on its own page and over a browse page's results, the order's menu |
 | `posting.css` | Signing in, and the posting and edit forms: photos, a car's tiles, the AI's button |
 | `listing.css` | A listing's page: the gallery, the price's bubbles, the seller's card, the details' pills, the rows under it ("Më shumë nga ky përdorues", "Më të klikuarat"'s shared row style) |
+| `messages.css` | Messages: the header's unread count, the inbox, a conversation's bubbles and the box to write in |
 
 ### JavaScript
 
@@ -384,12 +400,14 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 |---|---|
 | `ai_fill_controller.js` | "Plotëso pjesën tjetër me AI": sends the form's title, description and photos, and fills in the answer as a seller would |
 | `cards_controller.js` | Small or big cards, remembered in a cookie |
+| `conversation_controller.js` | A conversation: opens at its end, reads what it shows, asks for new messages every 8 seconds; the box that grows, Enter to send, the quick messages |
 | `copy_controller.js` | Copies the seller's number or address, a check for a moment |
 | `drag_row_controller.js` | A mouse drags the rows that slide sideways ("Më të klikuarat", the seller's other listings, "Sapo u shtuan"), flicking them on, the click that ends a drag opening no card |
 | `dropdown_controller.js` | A `<details>` menu closes on a tap outside or Escape; one of the browse row's, open one at a time |
 | `filters_controller.js` | The filters' card: applies them as they change, keeps what is open while the page refreshes, fits the card under the row |
 | `gallery_controller.js` | A listing's photos: the counter and the arrows |
 | `heart_controller.js` | The hearts: fills those of the listings kept, keeps one or lets it go at a tap; puts the dot on the header's heart while kept listings dropped their price unseen |
+| `inbox_controller.js` | The header's count of conversations with messages unread |
 | `listing_form_controller.js` | The listing form follows its category: its kinds of listing, condition, currency and properties |
 | `loan_controller.js` | The loan calculator under a price |
 | `map_controller.js` | The map: its pin in the middle, the circle, the dots, the distance, "Vendndodhja ime" |
@@ -639,7 +657,7 @@ Financial rows are never cascade-deleted.
 - **Currency**: listing prices default to lekë (`ALL`). `categories.default_currency` preselects euros for cars and property, which Albanian sellers price in EUR.
 - **Timestamps** are `timestamptz`, and `updated_at` is set by trigger. The history tables use `clock_timestamp()` so several changes made in one transaction stay in order. Compute calendar days (`listing_daily_stats.stat_date`, daily digests) in `Europe/Tirane`, not UTC, or set the database default with `ALTER DATABASE <name> SET timezone = 'Europe/Tirane'`.
 - **History is automatic**: triggers write `listing_status_history` and `listing_price_history`, so don't insert those rows yourself. To record who changed a status and why, run `SELECT set_config('app.user_id', $1, true), set_config('app.status_reason', $2, true);` earlier in the same transaction.
-- **Chat**: start conversations with `INSERT ... ON CONFLICT (listing_id, buyer_user_id)` (below). A message's sender must be a participant, so add business members as participants when they open a thread.
+- **Chat**: start conversations with `INSERT ... ON CONFLICT (listing_id, buyer_user_id)` (below; `db::start_conversation`). A message's sender must be a participant. A business's listing reaches whoever posted it; add the business's other members as participants when they open a thread, for a shared inbox.
 - **Phone numbers** are E.164 (`+355691234567`) and currencies are upper-case ISO 4217 codes (`e164_phone` and `currency_code` domains).
 
 ## Using it from Rust (sqlx)

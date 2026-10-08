@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (SELECT 1 FROM conversation_participants\n                          WHERE conversation_id = $1 AND user_id = $2) AS \"takes_part!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "takes_part!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f48a026b8b4926683ac7dafa9f315c4b65ef8da2b4aacdb60fc84cc9bba7d9ed"
+}

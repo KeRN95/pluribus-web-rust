@@ -4187,3 +4187,197 @@ async fn those_who_keep_a_listing_hear_when_its_price_drops(pool: PgPool) {
     assert_eq!(send(pool.clone(), tap_heart(&no, "0", Some(&besnik))).await.status, StatusCode::NO_CONTENT);
     assert_eq!(unseen(&besnik).await, 0);
 }
+
+// Messages between buyers and sellers (web/messages.rs).
+
+const ANA_ID: &str = "11111111-1111-4111-8111-111111111111";
+const BESNIK_ID: &str = "22222222-2222-4222-8222-222222222222";
+const DRITAN_ID: &str = "33333333-3333-4333-8333-333333333333";
+
+/// The value of the first `name` attribute in the HTML.
+fn attribute(html: &str, name: &str) -> String {
+    let start = html.find(&format!(r#" {name}=""#)).unwrap_or_else(|| panic!("no {name} in {html}")) + name.len() + 3;
+    html[start..start + html[start..].find('"').unwrap()].to_string()
+}
+
+/// The ids of the messages on a conversation's page, in order.
+fn message_ids(html: &str) -> Vec<String> {
+    html.match_indices(r#"data-id=""#)
+        .map(|(at, found)| {
+            let start = at + found.len();
+            html[start..start + html[start..].find('"').unwrap()].to_string()
+        })
+        .collect()
+}
+
+/// How many conversations have messages the user hasn't read, as the header's button asks.
+async fn unread(pool: &PgPool, cookie: &str) -> String {
+    get_with_cookie(pool.clone(), "/mesazhet/numri", cookie).await.body
+}
+
+/// Sends a message from a page's form: starting a conversation (/listing/N/mesazh) or in one.
+async fn write(pool: &PgPool, uri: &str, body: &str, cookie: &str) -> TestResponse {
+    post_form(pool.clone(), uri, &[("body", body)], Some(cookie)).await
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_buyer_writes_to_a_seller_who_answers(pool: PgPool) {
+    let ana = session_for(&pool, ANA_ID).await;
+    let buyer = new_seller(&pool, "+355691112233").await;
+    let listing = "/listing/1001-volkswagen-golf-7-2016-nafte";
+    // Others have the listing's button to write to its seller; she doesn't.
+    assert!(get_with_cookie(pool.clone(), listing, &buyer).await.body.contains(r#"href="/listing/1001/mesazh""#));
+    assert!(!get_with_cookie(pool.clone(), listing, &ana).await.body.contains("/listing/1001/mesazh"));
+    // The page to write on: to whom, about what, and quick messages to start with.
+    let page = get_with_cookie(pool.clone(), "/listing/1001/mesazh", &buyer).await;
+    assert_eq!(page.status, StatusCode::OK);
+    assert!(page.body.contains("Ana") && page.body.contains("Volkswagen Golf") && page.body.contains("Cili është çmimi i fundit?"));
+    assert_eq!(get_with_cookie(pool.clone(), "/listing/1001/mesazh", &ana).await.location.as_deref(), Some(listing));
+
+    let sent = write(&pool, "/listing/1001/mesazh", "  A është ende në shitje?\r\n", &buyer).await;
+    assert_eq!(sent.status, StatusCode::SEE_OTHER, "{}", sent.body);
+    let url = sent.location.unwrap();
+    assert!(url.starts_with("/mesazhet/"), "{url}");
+    // Writing about the listing again goes on in the same conversation.
+    assert_eq!(get_with_cookie(pool.clone(), "/listing/1001/mesazh", &buyer).await.location.as_deref(), Some(url.as_str()));
+
+    // The seller has it, unread: in the header's count, and in her inbox in bold.
+    assert_eq!(unread(&pool, &ana).await, r#"{"unread":1}"#);
+    assert_eq!(unread(&pool, &buyer).await, r#"{"unread":0}"#);
+    let inbox = get_with_cookie(pool.clone(), "/mesazhet", &ana).await.body;
+    assert!(inbox.contains("is-unread") && inbox.contains("A është ende në shitje?") && inbox.contains("Përdorues"), "{inbox}");
+    // Opening it shows it; once the page says it showed it (conversation_controller.js), it is read.
+    let thread = get_with_cookie(pool.clone(), &url, &ana).await.body;
+    assert!(thread.contains(r#"<p class="message-body">A është ende në shitje?</p>"#), "{thread}");
+    let read = attribute(&thread, "data-conversation-read-url-value");
+    assert_eq!(read, format!("{url}/lexuar"));
+    let first = &message_ids(&thread)[0];
+    assert_eq!(post_form(pool.clone(), &format!("{read}?deri={first}"), &[], Some(&ana)).await.status, StatusCode::NO_CONTENT);
+    assert_eq!(unread(&pool, &ana).await, r#"{"unread":0}"#);
+
+    // She answers; he sees both, his own on the right, and hers unread.
+    assert_eq!(write(&pool, &url, "Po, është.", &ana).await.status, StatusCode::SEE_OTHER);
+    let thread = get_with_cookie(pool.clone(), &url, &buyer).await.body;
+    assert!(thread.find("A është ende në shitje?").unwrap() < thread.find("Po, është.").unwrap());
+    assert!(thread.contains(r#"<li class="message mine""#));
+    assert_eq!(unread(&pool, &buyer).await, r#"{"unread":1}"#);
+
+    // What came after a message, for the page to add at its end (conversation_controller.js).
+    let ids = message_ids(&thread);
+    assert_eq!(ids.len(), 2);
+    let newer = get_with_cookie(pool.clone(), &format!("{url}/te-rejat?pas={}", ids[0]), &buyer).await;
+    assert_eq!(newer.content_type.as_deref(), Some("text/vnd.turbo-stream.html; charset=utf-8"));
+    assert!(newer.body.contains(r#"<turbo-stream action="append" target="thread">"#));
+    assert!(newer.body.contains("Po, është.") && !newer.body.contains("A është ende"));
+    let none = get_with_cookie(pool.clone(), &format!("{url}/te-rejat?pas={}", ids[1]), &buyer).await;
+    assert_eq!(none.status, StatusCode::NO_CONTENT);
+
+    // Nobody else can read it or write in it.
+    let besnik = session_for(&pool, BESNIK_ID).await;
+    assert_eq!(get_with_cookie(pool.clone(), &url, &besnik).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(write(&pool, &url, "Hej", &besnik).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(get_with_cookie(pool.clone(), "/mesazhet/jo-nje-bisede", &besnik).await.status, StatusCode::NOT_FOUND);
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn writing_to_a_seller_takes_signing_in_first(pool: PgPool) {
+    // The page to write on sends to sign in, and keeps itself for after (saved::after_sign_in).
+    let page = get(pool.clone(), "/listing/1001/mesazh").await;
+    assert_eq!(page.location.as_deref(), Some("/llogaria"));
+    assert_eq!(page.cookie("kthehu"), Some("/listing/1001/mesazh"));
+    let inbox = get(pool.clone(), "/mesazhet").await.body;
+    assert!(inbox.contains("Hyr në llogari për t'u shkruar shitësve"));
+    assert_eq!(get(pool.clone(), "/mesazhet/numri").await.body, r#"{"unread":0}"#);
+    // Every page's header has the button to the conversations.
+    assert!(get(pool.clone(), "/").await.body.contains(r#"<a class="icon-button inbox-button" href="/mesazhet""#));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn until_the_seller_answers_a_buyer_sends_three_messages_and_no_links(pool: PgPool) {
+    let ana = session_for(&pool, ANA_ID).await;
+    let buyer = new_seller(&pool, "+355691112233").await;
+    // A first message with a link, empty, or too long goes back, as typed, with why.
+    let refused = write(&pool, "/listing/1001/mesazh", "Shiko www.example.com", &buyer).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("Lidhjet mund t") && refused.body.contains(">Shiko www.example.com</textarea>"), "{}", refused.body);
+    assert!(write(&pool, "/listing/1001/mesazh", " ", &buyer).await.body.contains("Shkruaj mesazhin."));
+    assert!(write(&pool, "/listing/1001/mesazh", &"a".repeat(1001), &buyer).await.body.contains("deri në 1000 shkronja"));
+
+    let url = write(&pool, "/listing/1001/mesazh", "Përshëndetje", &buyer).await.location.unwrap();
+    for body in ["A është ende në shitje?", "Kur mund ta shoh?"] {
+        assert_eq!(write(&pool, &url, body, &buyer).await.status, StatusCode::SEE_OTHER);
+    }
+    let fourth = write(&pool, &url, "Alo?", &buyer).await;
+    assert_eq!(fourth.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(fourth.body.contains("Prit që Ana të të përgjigjet"), "{}", fourth.body);
+    // Once she answers, he writes on, links and all.
+    assert_eq!(write(&pool, &url, "Po, nesër pasdite.", &ana).await.status, StatusCode::SEE_OTHER);
+    assert_eq!(write(&pool, &url, "Mirë. Ja ku jam: https://maps.example.com/x", &buyer).await.status, StatusCode::SEE_OTHER);
+    assert_eq!(write(&pool, &url, "Alo?", &buyer).await.status, StatusCode::SEE_OTHER);
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn one_account_writes_to_a_few_new_sellers_an_hour_and_a_day(pool: PgPool) {
+    let buyer = new_seller(&pool, "+355691112233").await;
+    let started = |count: i32, ago: &'static str| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query(
+                "INSERT INTO conversations (buyer_user_id, seller_user_id, created_at, last_message_at)
+                 SELECT u.id, $1::uuid, now() - $3::interval, now() - $3::interval
+                 FROM users u, generate_series(1, $2)
+                 WHERE u.phone_e164 = '+355691112233'",
+            )
+            .bind(BESNIK_ID)
+            .bind(count)
+            .bind(ago)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+    };
+    // Five sellers written to in the last hour: a sixth waits.
+    started(5, "10 minutes").await;
+    let refused = write(&pool, "/listing/1001/mesazh", "Përshëndetje", &buyer).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("U ke shkruar 5 shitësve këtë orë"), "{}", refused.body);
+    // Earlier in the day they count towards the day's fifteen.
+    sqlx::query("UPDATE conversations SET created_at = now() - interval '3 hours'").execute(&pool).await.unwrap();
+    started(10, "5 hours").await;
+    let refused = write(&pool, "/listing/1001/mesazh", "Përshëndetje", &buyer).await;
+    assert!(refused.body.contains("U ke shkruar 15 shitësve sot"), "{}", refused.body);
+    // A day later, he writes again.
+    sqlx::query("UPDATE conversations SET created_at = now() - interval '25 hours'").execute(&pool).await.unwrap();
+    assert_eq!(write(&pool, "/listing/1001/mesazh", "Përshëndetje", &buyer).await.status, StatusCode::SEE_OTHER);
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_seller_blocks_a_buyer_and_lets_him_write_again(pool: PgPool) {
+    let besnik = session_for(&pool, BESNIK_ID).await;
+    let buyer = new_seller(&pool, "+355691112233").await;
+    let url = write(&pool, "/listing/1003/mesazh", "Përshëndetje", &buyer).await.location.unwrap();
+    assert_eq!(post_form(pool.clone(), &format!("{url}/blloko"), &[], Some(&besnik)).await.status, StatusCode::SEE_OTHER);
+    // He can't write to Besnik any more, here or about another of his listings.
+    let refused = write(&pool, &url, "Alo?", &buyer).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("Besnik nuk pranon mesazhe nga ti."));
+    assert!(get_with_cookie(pool.clone(), &url, &buyer).await.body.contains("Besnik nuk pranon mesazhe nga ti."));
+    assert_eq!(write(&pool, "/listing/1004/mesazh", "Po kjo shtëpi?", &buyer).await.status, StatusCode::UNPROCESSABLE_ENTITY);
+    // Besnik sees he blocked him, and can let him write again.
+    let page = get_with_cookie(pool.clone(), &url, &besnik).await.body;
+    assert!(page.contains("E ke bllokuar këtë përdorues") && page.contains(&format!(r#"action="{url}/zhblloko""#)));
+    assert_eq!(post_form(pool.clone(), &format!("{url}/zhblloko"), &[], Some(&besnik)).await.status, StatusCode::SEE_OTHER);
+    assert_eq!(write(&pool, &url, "Alo?", &buyer).await.status, StatusCode::SEE_OTHER);
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_business_listing_reaches_whoever_posted_it(pool: PgPool) {
+    let dritan = session_for(&pool, DRITAN_ID).await;
+    let buyer = new_seller(&pool, "+355691112233").await;
+    let url = write(&pool, "/listing/1002/mesazh", "Përshëndetje", &buyer).await.location.unwrap();
+    // The buyer writes to the business; whoever posted its listing answers for it.
+    assert!(get_with_cookie(pool.clone(), &url, &buyer).await.body.contains("Auto Durrësi"));
+    let inbox = get_with_cookie(pool.clone(), "/mesazhet", &dritan).await.body;
+    assert!(inbox.contains("Përdorues") && inbox.contains("Mercedes-Benz"), "{inbox}");
+    assert_eq!(write(&pool, &url, "Po, ejani nesër.", &dritan).await.status, StatusCode::SEE_OTHER);
+}

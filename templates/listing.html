@@ -158,6 +158,13 @@
       </button>
     </form>
     {% endif %}
+    {%- if !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}
+    {#- A speech bubble in a coral circle beside the phone: a message to the seller, which takes
+        signing in first (messages.rs). -#}
+    <a class="button reveal-button" href="/listing/{{ listing.public_no }}/mesazh" aria-label="Shkruaji shitësit" title="Shkruaji shitësit">
+      <svg class="contact-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
+    </a>
+    {%- endif %}
     {%- if own %}
     {#- The seller's own: edit it, take it down for a while (back from "Njoftimet e mia"), or
         delete it after the browser asks to be sure. -#}

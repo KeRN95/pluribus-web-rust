@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FILTER (WHERE m.created_at > now() - interval '1 minute') AS \"last_minute!\",\n                  count(*) AS \"last_day!\",\n                  (SELECT count(*) FROM conversations c\n                   WHERE c.buyer_user_id = $1 AND c.created_at > now() - interval '1 hour') AS \"started_last_hour!\",\n                  (SELECT count(*) FROM conversations c\n                   WHERE c.buyer_user_id = $1 AND c.created_at > now() - interval '1 day') AS \"started_last_day!\"\n           FROM messages m\n           WHERE m.sender_user_id = $1 AND m.created_at > now() - interval '1 day'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "last_minute!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "last_day!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "started_last_hour!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "started_last_day!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "753eef61b74dda260e61605e253f86fca04303d867b1eec1d2abc9afe8684c9c"
+}

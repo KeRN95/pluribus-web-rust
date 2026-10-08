@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Mesazhet | Pluribus{% endblock %}
+
+{% block content %}
+{#- The visitor's conversations, the latest written in first (messages.rs, inbox): each with the
+    listing's photo, who with, the listing, the start of the latest message and when it came; those
+    with messages unread in bold, with how many. -#}
+<section class="inbox">
+  <h1>Mesazhet</h1>
+  {%- if !signed_in %}
+  <p class="lead">Hyr në llogari për t'u shkruar shitësve dhe për të lexuar mesazhet e tua.</p>
+  <p><a class="button" href="/llogaria">Hyr</a></p>
+  {%- else if conversations.is_empty() %}
+  <p class="empty">Ende s'ke mesazhe. Për t'i shkruar një shitësi, prek butonin e mesazhit në faqen e njoftimit.</p>
+  {%- else %}
+  <ul class="inbox-list">
+    {%- for entry in conversations %}
+    <li>
+      <a class="inbox-entry{% if entry.unread > 0 %} is-unread{% endif %}" href="/mesazhet/{{ entry.id }}">
+        {%- if let Some(photo) = entry.photo %}
+        <img class="inbox-photo" src="{{ photo }}" alt="" width="56" height="56" loading="lazy" decoding="async">
+        {%- else %}
+        <span class="inbox-photo placeholder" aria-hidden="true"></span>
+        {%- endif %}
+        <span class="inbox-text">
+          <span class="inbox-line">
+            <span class="inbox-name">{{ entry.other_name }}</span>
+            <span class="inbox-when">{{ entry.when() }}</span>
+          </span>
+          {%- if let Some(title) = entry.listing_title %}
+          <span class="inbox-listing">{{ title }}</span>
+          {%- endif %}
+          <span class="inbox-line">
+            <span class="inbox-last">{% if entry.last_mine %}Ti: {% endif %}{{ entry.preview() }}</span>
+            {%- if entry.unread > 0 %}
+            <span class="inbox-unread"><span class="visually-hidden">Të palexuara: </span>{{ entry.unread }}</span>
+            {%- endif %}
+          </span>
+        </span>
+      </a>
+    </li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
+</section>
+{% endblock %}

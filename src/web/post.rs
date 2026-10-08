@@ -369,7 +369,7 @@ fn fail(errors: &mut HashMap<String, String>, field: &str, message: &str) {
     errors.entry(field.to_string()).or_insert_with(|| message.to_string());
 }
 
-fn link_count(text: &str) -> usize {
+pub(super) fn link_count(text: &str) -> usize {
     let text = text.to_lowercase();
     ["http://", "https://", "www."].iter().map(|marker| text.matches(marker).count()).sum()
 }

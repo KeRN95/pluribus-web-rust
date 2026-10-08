@@ -1,0 +1,107 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT l.id AS listing_id, l.public_no, l.slug, coalesce(l.generated_title, l.title) AS \"title!\",\n                  l.price_amount, l.currency::text AS \"currency!\", l.price_type, l.listing_type,\n                  (SELECT coalesce(m.thumbnail_url, m.public_url)\n                   FROM listing_media m\n                   WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'\n                   ORDER BY m.is_cover DESC, m.sort_order\n                   LIMIT 1) AS photo,\n                  l.seller_user_id, l.seller_business_id,\n                  coalesce(l.seller_user_id, l.created_by_user_id) AS \"seller_side_id!\",\n                  coalesce(b.display_name, u.display_name) AS \"seller_name!\",\n                  (l.status IN ('ACTIVE', 'RESERVED') AND coalesce(c.allow_messages, true)) AS \"open!\",\n                  (SELECT v.id FROM conversations v WHERE v.listing_id = l.id AND v.buyer_user_id = $2) AS conversation_id\n           FROM listings l\n           JOIN users u ON u.id = coalesce(l.seller_user_id, l.created_by_user_id)\n           LEFT JOIN businesses b ON b.id = l.seller_business_id\n           LEFT JOIN listing_contacts c ON c.listing_id = l.id\n           WHERE l.public_no = $1 AND l.status NOT IN ('DRAFT', 'DELETED')",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "listing_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "public_no",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "slug",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "title!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "price_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 5,
+        "name": "currency!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "price_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "listing_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "photo",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "seller_user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 10,
+        "name": "seller_business_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 11,
+        "name": "seller_side_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 12,
+        "name": "seller_name!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 13,
+        "name": "open!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
+        "name": "conversation_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      true,
+      null,
+      false,
+      false,
+      null,
+      true,
+      true,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "3ad2dff95703b165681c59a9b34a92f4116e27f7cebd9286c03cf3928c51b35b"
+}
