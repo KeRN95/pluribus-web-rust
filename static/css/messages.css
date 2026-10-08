@@ -208,6 +208,9 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
   background: var(--bg);
   box-shadow: 0 -10px 30px rgb(0 0 0 / 14%);
   animation: sheet-in .12s ease-out;
+  /* Its corners clip what is in it: the box to write in, square and on the page's colour from
+     edge to edge, would otherwise stand over the rounded ones at the popup's foot. */
+  overflow: hidden;
 }
 .message-sheet[hidden] { display: none; }
 /* Dragged by its bar it follows the finger; let go, it goes back up or slides away quickly. It
