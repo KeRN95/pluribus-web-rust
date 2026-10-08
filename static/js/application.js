@@ -99,10 +99,11 @@ document.addEventListener("touchstart", () => {}, { passive: true });
 
 // Under a mouse, Turbo fetches a link ahead as the pointer rests on it (prefetch on hover), so that
 // a click finds the page there; on a phone there is no hovering, and the page is fetched only as
-// the finger lifts. So a listing's link starts fetching the moment a finger touches it, and the
-// visit the tap then makes takes that response, as it takes Turbo's own (turbo:before-fetch-request,
-// fetchRequest); a finger that moves, scrolling, drops it. A page fetched ahead counts no view: it
-// counts once it shows (below).
+// the finger lifts. So a link starts fetching the moment a finger touches it, any link Turbo would
+// fetch ahead under a mouse (aheadable), and the visit the tap then makes takes that response, as
+// it takes Turbo's own (turbo:before-fetch-request, fetchRequest); a finger that moves, scrolling,
+// drops it. A page fetched ahead changes nothing: a listing's view, price drops seen and messages
+// read count once a page shows (below).
 let touched = null;
 let touching = false;
 // What Turbo tells a request as it goes, which a page fetched ahead has no use for.
@@ -118,9 +119,26 @@ const ahead = {
   requestFinished() {},
 };
 const fresh = () => touched && Date.now() - touched.at < 10_000;
+// What Turbo fetches ahead under a mouse (LinkPrefetchObserver in turbo-8.0.23.js): a link to
+// another page of this site, not opened elsewhere nor downloaded, nobody opted out of
+// (data-turbo-prefetch="false", data-turbo="false"), that only reads (no method other than GET, no
+// confirm, no stream); and, here, one that leads the whole page, not a frame inside it, whose
+// requests ask for the frame alone.
+function aheadable(link) {
+  if (!link.getAttribute("href") || link.origin !== location.origin || !["http:", "https:"].includes(link.protocol)) return false;
+  if (link.hasAttribute("target") || link.hasAttribute("download")) return false;
+  if (link.pathname + link.search === location.pathname + location.search) return false;
+  if (link.closest('[data-turbo="false"]') || link.closest("[data-turbo-prefetch]")?.dataset.turboPrefetch === "false") return false;
+  const method = link.getAttribute("data-turbo-method");
+  if (method && method.toLowerCase() !== "get") return false;
+  if (link.matches("[data-turbo-confirm], [data-turbo-stream], [data-remote], [data-behavior], [data-confirm], [data-method]")) return false;
+  const frame = link.getAttribute("data-turbo-frame") ?? link.closest("turbo-frame")?.getAttribute("target");
+  if ((link.hasAttribute("data-turbo-frame") || link.closest("turbo-frame")) && frame !== "_top") return false;
+  return link.dispatchEvent(new CustomEvent("turbo:before-prefetch", { bubbles: true, cancelable: true }));
+}
 document.addEventListener("touchstart", (event) => {
-  const link = event.touches.length === 1 && event.target.closest?.('a[href^="/listing/"]:not([target]):not([data-turbo="false"])');
-  if (!link) return;
+  const link = event.touches.length === 1 && event.target.closest?.("a[href]");
+  if (!link || !aheadable(link)) return;
   const url = new URL(link.href);
   if (fresh() && touched.url === url.href) return;
   touched?.request.cancel();

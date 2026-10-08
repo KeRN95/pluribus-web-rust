@@ -300,11 +300,11 @@ async fn home_page_lists_categories(pool: PgPool) {
 #[sqlx::test(fixtures("listings"))]
 async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     let body = get(pool, "/").await.body;
-    // The question is for screen readers alone, with no line under it; behind the search and the
-    // categories, the logo's creature.
+    // The question is for screen readers alone, with no line under it; the logo's creature moves
+    // in the logo alone, not behind the search too, which on phones had it drawn twice each frame.
     assert!(body.contains(r#"<h1 class="visually-hidden">Çfarë po kërkon?</h1>"#));
     assert!(!body.contains("Shkruaj atë që të duhet"));
-    assert!(body.contains(r#"<div class="welcome-backdrop" aria-hidden="true"><svg class="thinking""#));
+    assert_eq!(body.matches(r#"<svg class="thinking""#).count(), 1);
     // Words only: no city, no category; the results' filters narrow them. Suggestions open under
     // the words as they are typed.
     assert!(body.contains(r#"<form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest""#));
@@ -2433,6 +2433,19 @@ async fn static_files_have_cache_headers(pool: PgPool) {
         "public, max-age=31536000, immutable"
     );
     assert_eq!(cache_control("/static/css/base.css").await, "no-cache");
+    // The site's own files, with the fingerprint the pages give them, are kept for good: their
+    // address changes when they do. With another, from a page loaded before a deploy, they aren't.
+    let version = marketplace::web::asset_version();
+    let kept = "public, max-age=31536000, immutable";
+    for (uri, policy) in [
+        (format!("/static/css/base.css?v={version}"), kept),
+        (format!("/static/js/controllers/heart_controller.js?v={version}"), kept),
+        ("/static/css/base.css?v=00000000".to_string(), "no-cache"),
+    ] {
+        let response = app(pool.clone()).oneshot(Request::get(uri.as_str()).body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{uri}");
+        assert_eq!(response.headers()[header::CACHE_CONTROL], policy, "{uri}");
+    }
     assert_eq!(
         cache_control("/static/vendor/leaflet-1.9.4/leaflet.js").await,
         "public, max-age=31536000, immutable"
@@ -2472,6 +2485,18 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     assert!(body.contains(&format!(
         r#"<script type="module" src="/static/js/application.js?v={version}" data-turbo-track="reload"></script>"#
     )));
+    // Every module at its address with the fingerprint, which browsers keep, and all of them
+    // preloaded at once, rather than application.js first and what it imports after.
+    let modules = marketplace::web::js_modules();
+    assert_eq!(modules[0], "application.js");
+    assert!(modules.iter().any(|module| module == "controllers/heart_controller.js"));
+    for module in modules {
+        assert!(body.contains(&format!(r#"<link rel="modulepreload" href="/static/js/{module}?v={version}">"#)), "{module}");
+        if module.starts_with("controllers/") {
+            assert!(body.contains(&format!(r#""{module}": "/static/js/{module}?v={version}","#)), "{module}");
+        }
+    }
+    assert!(body.contains(r#"<link rel="modulepreload" href="/static/vendor/turbo-8.0.23.js">"#));
     // The fingerprint only changes the URL; the file is served as before.
     let css = get(pool, &format!("/static/css/browse.css?v={version}")).await;
     assert_eq!(css.status, StatusCode::OK);
@@ -4827,4 +4852,21 @@ async fn the_number_a_seller_signed_in_with_shows_as_verified(pool: PgPool) {
         .await
         .unwrap();
     assert!(!html(pool.clone(), golf).await.contains("verifikuar"));
+}
+
+#[sqlx::test]
+async fn the_scripts_can_tell_whether_someone_is_signed_in(pool: PgPool) {
+    // The session cookie is out of scripts' reach; a cookie beside it says there is one, so a page
+    // for someone not signed in doesn't ask for their counts. Set when a session comes without it,
+    // as after signing in; cleared when it stays after the session has gone, as after signing out.
+    let with = |cookie: &'static str, uri: &'static str| {
+        let pool = pool.clone();
+        async move { send(pool, Request::get(uri).header(header::COOKIE, cookie).body(Body::empty()).unwrap()).await }
+    };
+    assert_eq!(with("session=abc", "/").await.cookie("llogari"), Some("1"));
+    assert_eq!(with("llogari=1", "/").await.cookie("llogari"), Some(""));
+    assert_eq!(with("session=abc; llogari=1", "/").await.cookie("llogari"), None);
+    assert_eq!(get(pool.clone(), "/").await.cookie("llogari"), None);
+    // Not on a static file, which browsers keep.
+    assert_eq!(with("session=abc", "/static/css/base.css").await.cookie("llogari"), None);
 }

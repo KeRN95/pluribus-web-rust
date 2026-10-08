@@ -728,11 +728,16 @@ pub async fn related_listings(db: &PgPool, listing_id: Uuid, limit: i64) -> sqlx
                      ORDER BY l.sort_at DESC, l.id DESC
                      LIMIT 40) c
                  UNION
+                 -- The newest 40 with its narrowest options (a car's model): read from the option's
+                 -- index, newest first, each listing looked up by its id until 40 are up in the
+                 -- category. As a join, the planner, who can't know the category ahead, took a
+                 -- big one for an average one and read all of it to match (100 ms for the cars).
                  SELECT c.listing_id FROM target t JOIN choices ch ON ch.narrow CROSS JOIN LATERAL (
                      SELECT v.listing_id FROM listing_attribute_values v
-                     JOIN listings l ON l.id = v.listing_id
                      WHERE v.attribute_id = ch.attribute_id AND v.value_option_id = ch.value_option_id
-                       AND l.status = 'ACTIVE' AND l.category_id = t.category_id
+                       AND (SELECT l.status = 'ACTIVE' AND l.category_id = t.category_id
+                            FROM listings l WHERE l.id = v.listing_id)
+                     ORDER BY v.listing_id DESC
                      LIMIT 40) c
              ),
              scored AS (

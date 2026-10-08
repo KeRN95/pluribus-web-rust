@@ -1,9 +1,10 @@
 import { Controller } from "@hotwired/stimulus";
+import { signedIn } from "controllers/signed_in.js";
 
 // The header's button for the conversations (base.html): how many have messages the visitor hasn't
-// read, in a coral circle at its top right, asked for with each page (GET /mesazhet/numri, which
-// says none for someone not signed in) and again once a conversation's page has read some
-// (conversation_controller.js), and said to screen readers.
+// read, in a coral circle at its top right, asked for with each page (GET /mesazhet/numri) and
+// again once a conversation's page has read some (conversation_controller.js), and said to screen
+// readers. Someone not signed in has none, and the page doesn't ask (signed_in.js).
 export default class extends Controller {
   static targets = ["count"];
 
@@ -18,6 +19,10 @@ export default class extends Controller {
   }
 
   async ask() {
+    if (!signedIn()) {
+      this.show(0);
+      return;
+    }
     try {
       const response = await fetch("/mesazhet/numri", { headers: { Accept: "application/json" }, cache: "no-store" });
       if (response.ok) this.show((await response.json()).unread);

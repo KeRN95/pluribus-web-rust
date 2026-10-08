@@ -104,6 +104,7 @@ pub fn router(state: AppState) -> Router {
         .fallback(not_found)
         .layer(middleware::from_fn(same_site_posts))
         .layer(middleware::from_fn(cache_headers))
+        .layer(middleware::from_fn(account::signed_in_cookie))
         // WOFF2 fonts are Brotli-compressed already; compressing them again only costs time.
         .layer(CompressionLayer::new().compress_when(
             DefaultPredicate::new().and(NotForContentType::const_new("font/")),
@@ -130,11 +131,17 @@ async fn same_site_posts(request: Request, next: Next) -> Response {
     next.run(request).await
 }
 
-/// Vendor files carry their version in the file name, so browsers may keep them for a year.
-/// The site's own CSS and JavaScript are revalidated on every use, so a deploy shows up at once.
+/// Vendor files carry their version in the file name, and the site's own CSS and JavaScript
+/// their fingerprint in the address (?v=, asset_version), so browsers keep them for a year and
+/// never ask again: a page loaded in full asks for none it has. Once a deploy changes them the
+/// fingerprint changes with them, and so do their addresses. Any other file under /static, or one
+/// asked for with another fingerprint (from a page loaded before a deploy), is checked again on
+/// every use, so a change shows up at once.
 async fn cache_headers(request: Request, next: Next) -> Response {
+    let fingerprinted = request.uri().query().and_then(|query| query.strip_prefix("v=")) == Some(asset_version());
     let policy = match request.uri().path() {
-        path if path.starts_with("/static/vendor/") => Some("public, max-age=31536000, immutable"),
+        path if path.starts_with("/static/vendor/") => Some(KEEP),
+        path if fingerprinted && (path.starts_with("/static/css/") || path.starts_with("/static/js/")) => Some(KEEP),
         path if path.starts_with("/static/") => Some("no-cache"),
         _ => None,
     };
@@ -144,6 +151,10 @@ async fn cache_headers(request: Request, next: Next) -> Response {
     }
     response
 }
+
+/// How long browsers keep a file whose address changes whenever the file does: a year, without
+/// asking again.
+const KEEP: &str = "public, max-age=31536000, immutable";
 
 /// The site's stylesheets in static/css/, in the order base.html loads them, which the cascade
 /// follows: base.css (the colours, the type, the header), page.css (the cards, form fields),
@@ -170,6 +181,26 @@ pub fn asset_version() -> &'static str {
             std::fs::read(file).unwrap_or_default().hash(&mut hasher);
         }
         format!("{:08x}", hasher.finish() as u32)
+    })
+}
+
+/// The site's JavaScript modules (static/js), as paths under it ("controllers/heart_controller.js"),
+/// application.js first. base.html maps each to its address with the fingerprint (the import map)
+/// and preloads them all with the page (modulepreload), so a first visit fetches them at once,
+/// not application.js and only then what it imports.
+pub fn js_modules() -> &'static [String] {
+    static MODULES: OnceLock<Vec<String>> = OnceLock::new();
+    MODULES.get_or_init(|| {
+        let mut files = Vec::new();
+        collect_files(Path::new("static/js"), &mut files);
+        let mut modules: Vec<String> = files
+            .iter()
+            .filter_map(|file| file.strip_prefix("static/js").ok())
+            .map(|path| path.to_string_lossy().replace('\\', "/"))
+            .filter(|path| path.ends_with(".js"))
+            .collect();
+        modules.sort_by_key(|module| (module != "application.js", module.clone()));
+        modules
     })
 }
 

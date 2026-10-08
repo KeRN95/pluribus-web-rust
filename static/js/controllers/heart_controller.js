@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus";
 import { visit } from "@hotwired/turbo";
+import { signedIn } from "controllers/signed_in.js";
 
 // The heart over a listing's photo (heart.html). Which listings the visitor keeps comes from the
 // server with each page (GET /te-ruajturat/numrat), for every heart on it and those that come later
@@ -8,22 +9,28 @@ import { visit } from "@hotwired/turbo";
 // it, and tells the server (POST /listing/N/ruaj), one tap after the other; should that fail, the
 // hearts go back. Someone not signed in goes to sign in, and comes back with the listing kept.
 // The same answer says how many kept listings dropped their price unseen, for the header's heart.
+// Someone not signed in keeps nothing, and the page doesn't ask (signed_in.js).
 let kept = new Set();
 let asking = null;
 
 function ask() {
+  if (!signedIn()) {
+    answered({ numbers: [], price_drops: 0 });
+    return;
+  }
   asking ??= fetch("/te-ruajturat/numrat", { headers: { Accept: "application/json" }, cache: "no-store" })
     .then((response) => (response.ok ? response.json() : null))
-    .then((answer) => {
-      if (!answer) return;
-      kept = new Set(answer.numbers);
-      for (const heart of document.querySelectorAll(".heart[data-heart-number-value]")) {
-        show(heart, kept.has(Number(heart.dataset.heartNumberValue)));
-      }
-      showDrops(answer.price_drops);
-    })
+    .then((answer) => answer && answered(answer))
     .catch(() => {})
     .finally(() => { asking = null; });
+}
+
+function answered(answer) {
+  kept = new Set(answer.numbers);
+  for (const heart of document.querySelectorAll(".heart[data-heart-number-value]")) {
+    show(heart, kept.has(Number(heart.dataset.heartNumberValue)));
+  }
+  showDrops(answer.price_drops);
 }
 
 // The header's heart (base.html) has a dot while listings the visitor keeps dropped their price

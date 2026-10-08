@@ -4,11 +4,8 @@
 
 {% block content %}
 <section class="welcome">
-  {#- The question, for screen readers: on the page the search and the categories ask it. Behind
-      them, the logo's creature, large and faint, moving as it does in the logo (thinking.svg,
-      .welcome-backdrop). -#}
+  {#- The question, for screen readers: on the page the search and the categories ask it. -#}
   <h1 class="visually-hidden">Çfarë po kërkon?</h1>
-  <div class="welcome-backdrop" aria-hidden="true">{% include "thinking.svg" %}</div>
   <div class="welcome-card">
 
   {#- Words only, searched in every category and town; the results' filters narrow them. Drawn like

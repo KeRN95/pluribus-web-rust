@@ -26,15 +26,26 @@
   {%- for sheet in crate::web::STYLESHEETS %}
   <link rel="stylesheet" href="/static/css/{{ sheet }}.css?v={{ crate::web::asset_version() }}" data-turbo-track="reload">
   {%- endfor %}
+  {#- Each module at its address with the fingerprint, which browsers keep for good (web::
+      cache_headers); then all of them preloaded at once, rather than application.js first and
+      what it imports after (web::js_modules). -#}
   <script type="importmap">
     {
       "imports": {
         "@hotwired/turbo": "/static/vendor/turbo-8.0.23.js",
         "@hotwired/stimulus": "/static/vendor/stimulus-3.2.2.js",
+        {%- for module in crate::web::js_modules() %}{% if module.starts_with("controllers/") %}
+        "{{ module }}": "/static/js/{{ module }}?v={{ crate::web::asset_version() }}",
+        {%- endif %}{% endfor %}
         "controllers/": "/static/js/controllers/"
       }
     }
   </script>
+  <link rel="modulepreload" href="/static/vendor/turbo-8.0.23.js">
+  <link rel="modulepreload" href="/static/vendor/stimulus-3.2.2.js">
+  {%- for module in crate::web::js_modules() %}
+  <link rel="modulepreload" href="/static/js/{{ module }}?v={{ crate::web::asset_version() }}">
+  {%- endfor %}
   <script type="module" src="/static/js/application.js?v={{ crate::web::asset_version() }}" data-turbo-track="reload"></script>
 </head>
 <body>

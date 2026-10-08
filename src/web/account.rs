@@ -13,8 +13,9 @@ use std::{
 use askama::Template;
 use axum::{
     Form,
-    extract::{ConnectInfo, FromRequestParts, State},
+    extract::{ConnectInfo, FromRequestParts, Request, State},
     http::{HeaderMap, HeaderValue, StatusCode, header, request::Parts},
+    middleware::Next,
     response::{IntoResponse, Redirect, Response},
 };
 use rand::Rng;
@@ -94,6 +95,31 @@ pub fn redirect_with_cookies(to: &str, cookies: Vec<HeaderValue>) -> Response {
     let mut response = Redirect::to(to).into_response();
     for value in cookies {
         response.headers_mut().append(header::SET_COOKIE, value);
+    }
+    response
+}
+
+/// The cookie the pages' scripts read to tell whether someone is signed in (signed_in.js): the
+/// session's is HttpOnly, out of their reach, and for someone not signed in there is nothing to ask
+/// the server for, neither the listings their hearts keep nor unread messages.
+pub const SIGNED_IN_COOKIE: &str = "llogari";
+
+/// Keeps SIGNED_IN_COOKIE in step with the session cookie: set on the answer to a request that has
+/// a session and not it, which signing in leads to, and cleared on one that has it and no session,
+/// after signing out. It says what the session cookie does, not whether the session is still
+/// good: one past its time keeps it until the browser lets both go, and the scripts' questions get
+/// the empty answers they always did. Static files are left alone, being kept by browsers.
+pub async fn signed_in_cookie(request: Request, next: Next) -> Response {
+    let session = cookie(request.headers(), SESSION_COOKIE).is_some();
+    let marked = cookie(request.headers(), SIGNED_IN_COOKIE).is_some_and(|value| value == "1");
+    let https = request.headers().get("x-forwarded-proto").is_some_and(|proto| proto == "https");
+    let page = !request.uri().path().starts_with("/static/");
+    let mut response = next.run(request).await;
+    if session != marked && page {
+        let (value, max_age) = if session { ("1", i64::from(SESSION_DAYS) * 86_400) } else { ("", 0) };
+        let secure = if https { "; Secure" } else { "" };
+        let cookie = format!("{SIGNED_IN_COOKIE}={value}; Path=/; Max-Age={max_age}; SameSite=Lax{secure}");
+        response.headers_mut().append(header::SET_COOKIE, HeaderValue::from_str(&cookie).expect("ASCII"));
     }
     response
 }
