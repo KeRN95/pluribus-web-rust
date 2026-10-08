@@ -156,8 +156,8 @@
             (map_controller.js), which the badge over the map's corner says (below). -#}
         <input type="hidden" name="radius" value="{{ filters.radius_km }}" data-map-target="radius">
       </form>
-      {#- The map fills the card, which takes the rest of the screen under the row (map.css); what
-          else there is floats over it. -#}
+      {#- The map fills the card, a square under the row, as wide as the row or as high as the
+          screen has left, whichever is less (map.css); what else there is floats over it. -#}
       <div class="map-canvas" data-map-target="canvas" role="region" aria-label="Harta"></div>
       {#- Over the map's top, pills as the welcome page's categories are. "Vendndodhja ime" moves
           the map to where the visitor is, for its point; the other opens the towns, by county,

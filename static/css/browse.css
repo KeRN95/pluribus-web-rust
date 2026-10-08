@@ -97,7 +97,7 @@
    form's own fields are: the menus' hairline and shadow on the surface, rounder corners; they take
    at most what is left of the screen under the row (--top, measured as one opens:
    filters_controller.js), the filters' form between its head and foot scrolling inside if it
-   needs more, the map's card taking all of it (map.css). The row and what it opens stay over the results and under the sticky header
+   needs more, the map's card a square within it (map.css). The row and what it opens stay over the results and under the sticky header
    (z-index 10). The search's card and the map's are no boxes of their own (display: contents):
    their buttons are the row's, and the row places what they open. */
 .browse-tools {

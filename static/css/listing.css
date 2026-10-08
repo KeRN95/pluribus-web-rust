@@ -11,6 +11,40 @@
 .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; margin: 1.75rem 0 .75rem; }
 .section-head h2 { margin: 0; }
 .section-head a { font-size: var(--text-sm); font-weight: var(--semibold); text-underline-offset: .2em; }
+/* Who sells it, under the description and over their other listings, in a card like the posting
+   form's (the menus' hairline on the surface), only as wide as what it holds: the seller
+   (posting.css, .seller), leading to their profile, and beside them the ways to reach them again,
+   small: the buttons from under the price at the header's buttons' size. On a phone the card is
+   the page's width, and the seller's name and summary are cut short rather than the buttons
+   dropping under them; the line wraps only where a revealed number needs the room. */
+.seller-section { margin-top: 2.5rem; }
+.seller-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem 1.25rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: .5rem .75rem .5rem .5rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
+}
+.seller-head .seller { flex: 1 1 0; min-width: 0; margin: 0; }
+/* The verified check, beside the name on its line (page.css, .verified). */
+.seller-head .verified { margin-left: .15rem; vertical-align: -.15em; }
+.seller-contact { display: flex; flex: none; align-items: center; gap: .4rem; margin-left: auto; }
+.seller-contact form { display: contents; }
+.seller-contact .button { border-radius: 999px; transition: background-color .15s, transform .1s; }
+.seller-contact .button:active { transform: scale(.97); }
+.seller-contact .button.small { justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; }
+.seller-contact .button.secondary { border-color: var(--menu-border); }
+.seller-contact .button.reveal-contact { gap: .35rem; padding: .45rem .85rem; font-size: var(--text-sm); white-space: nowrap; }
+.seller-contact svg { width: 16px; height: 16px; }
+/* Their other listings follow the seller's line closely. */
+.seller-section + .seller-listings { margin-top: .25rem; }
+.seller-section + .seller-listings .section-head { margin-top: 1rem; }
 /* The seller's other listings in one row, and the welcome page's most seen (.most-viewed), each
    card as wide as a column of the grid under them (two on a phone, as many as fit on wider
    screens: the container queries follow its auto-fill),
@@ -63,53 +97,16 @@
   :is(.seller-listings, .most-viewed) .grid:has(> .card:nth-child(5)) { --across: 4.25; --gaps: 4; }
 }
 
-/* Wide screens: the photos across the page, and under them two columns: the listing on the left,
-   and on the right who sells it and how to reach them, in a card like the posting form's (the
-   menus' hairline on the surface), which stays in view as the page scrolls. The notice and the
-   category path span both too. */
+/* Wide screens: the photos across the page, and under them, as on a phone, the title, the price,
+   the buttons, the details and the description, in a column at the page's left as wide as a line
+   reads well. */
 @media (min-width: 960px) {
-  .listing {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 22rem;
-    grid-template-rows: auto auto auto auto auto 1fr;
-    grid-template-areas:
-      "notice notice"
-      "tags tags"
-      "media media"
-      "header side"
-      "details side"
-      "description side";
-    column-gap: 2.5rem;
-    align-items: start;
-    max-width: none;
-  }
-  .listing > .notice { grid-area: notice; }
-  .listing > .listing-tags { grid-area: tags; }
-  .listing > .listing-media { grid-area: media; }
-  .listing > .listing-header { grid-area: header; }
-  .listing > .listing-details { grid-area: details; }
-  .listing > .listing-description { grid-area: description; }
+  .listing { max-width: none; }
+  .listing > :is(.listing-header, .listing-contact, .listing-details, .listing-description) { max-width: 46rem; }
   /* Across the page a photo's frame is wider than the photo, and no taller than most screens
      leave room for: the photo whole in the middle, its blurred copy filling the sides. */
   .listing-media .gallery-photo,
   .listing-media .listing-photo { aspect-ratio: auto; height: min(70vh, 38rem); }
-  /* The card's top level with the title's, under the photo. */
-  .listing > .listing-contact {
-    grid-area: side;
-    position: sticky;
-    top: 5rem;
-    margin-top: .75rem;
-    padding: 1rem;
-    border: 1px solid var(--menu-border);
-    border-radius: 16px;
-    background: var(--surface);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
-  }
-  .listing-contact .seller { margin: 0 -.6rem; }
-  /* The card is narrow: since when and how many listings may take two lines. */
-  .listing-contact .seller-summary { white-space: normal; }
-  /* Under the seller, over a hairline across the card, the buttons. */
-  .listing-contact .actions { margin: .75rem -1rem 0; padding: 1rem 1rem 0; border-top: 1px solid var(--menu-border); }
 }
 
 .listing-photo {
@@ -207,8 +204,8 @@
 .listing-price { margin: 0; font-size: 1.75rem; line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
 /* What follows the price ("/muaj", "(i diskutueshëm)"), half its size. */
 .price-note { font-size: .5em; letter-spacing: normal; }
-/* Under the seller's buttons, quietly, as links are: reporting the listing and blocking its seller
-   (safety.rs); and once blocked, a line that says so. */
+/* Under the buttons, quietly, as links are: blocking the seller (safety.rs), for someone signed
+   in; and once blocked, a line that says so. Reporting is a button among the others. */
 .listing-safety { display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; margin-top: .85rem; }
 .listing-safety form { display: contents; }
 .quiet-action {
@@ -397,7 +394,8 @@
   .attribute-icon { width: 16px; height: 16px; }
 }
 /* The listing's number, quietly, under the description. */
-.listing-number { margin: 1.25rem 0 0; color: var(--muted); font-size: var(--text-sm); }
+/* The listing's number ends the line under the title, whole on one line. */
+.listing-number { white-space: nowrap; }
 .description { margin: 0; font-size: var(--text-md); line-height: 1.7; white-space: pre-line; }
 /* A car's title as its seller wrote it, over the description. */
 .description-heading { margin: 0 0 .35rem; font-size: var(--text-lg); font-weight: var(--semibold); line-height: 1.35; }

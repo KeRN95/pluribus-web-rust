@@ -41,17 +41,21 @@
 }
 .sort-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* The map on a category or search page: a button in the row (above) that opens it over the
-   results, under the row, and folds it again. The card takes the rest of the screen under the row
-   (--top, measured as it opens: filters_controller.js; at least 16rem), and the map fills it,
-   edge to edge, nothing round it: its form, its fields all hidden, shows nothing. Over the map:
-   at the top, "Vendndodhja ime" and the towns' menu, whose list stays within the card; at the
-   bottom left, how far the circle covers, in a pill like the photo counter's; above it, what the
-   map has to say ("Po kërkoj vendndodhjen…"), only while it has something; at the bottom right,
-   Leaflet's zoom buttons (map_controller.js) over its credit. */
+   results, under the row, and folds it again. The card is a square, from the row's left edge: as
+   wide as the row, or as high as the screen has left under the row (--top, measured as it opens:
+   filters_controller.js; at least 16rem), whichever is less, and as tall as it is wide. The map
+   fills it, edge to edge, nothing round it: its form, its fields all hidden, shows nothing. Over
+   the map: at the top, "Vendndodhja ime" and the towns' menu, whose list stays within the card;
+   at the bottom left, how far the circle covers, in a pill like the photo counter's; above it,
+   what the map has to say ("Po kërkoj vendndodhjen…"), only while it has something; at the
+   bottom right, Leaflet's zoom buttons (map_controller.js) over its credit. */
 .map-card-body {
   display: flex;
   flex-direction: column;
-  height: max(16rem, calc(100dvh - var(--top, 12rem) - var(--drop) - .5rem));
+  right: auto;
+  width: min(100%, calc(100dvh - var(--top, 12rem) - var(--drop) - .5rem));
+  aspect-ratio: 1;
+  min-height: 16rem;
   max-height: none;
   padding: 0;
   overflow: hidden;

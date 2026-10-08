@@ -1676,10 +1676,10 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     // Where and when it went up, the date in bold, over the photo, on one line; its number under
     // the description.
     assert!(response.body.contains(r#"<p class="listing-meta">Tiranë · <span class="visually-hidden">Publikuar më </span><strong>"#));
-    assert!(response.body.contains(r#"<p class="listing-number">Numri i njoftimit: 1001</p>"#));
+    assert!(response.body.contains(r#"<span class="listing-number">Numri i njoftimit: 1001</span></p>"#));
     assert!(!response.body.contains("Nr. 1001"));
     // What kind of listing it is, and its condition, over the price, not among the details.
-    assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur</p>"#));
+    assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur · <span class="listing-number">"#));
     assert!(!response.body.contains(">Gjendja</dt>"));
     assert!(response.body.contains(r#"<dd class="attribute" title="Kilometrazhi"><svg class="attribute-icon""#));
     assert!(response.body.contains(r#"<dt class="visually-hidden">Kilometrazhi</dt>"#));
@@ -2608,6 +2608,9 @@ async fn revealing_a_phone_returns_a_turbo_stream_and_counts_it(pool: PgPool) {
     );
     assert!(response.body.contains(r#"<turbo-stream action="replace" target="phone-reveal">"#));
     assert!(response.body.contains(r#"href="tel:+355690000001"><svg class="contact-icon""#));
+    // And the number again, alone, where the small phone at the seller's line was.
+    assert!(response.body.contains(r#"<turbo-stream action="replace" target="phone-reveal-seller">"#));
+    assert!(response.body.contains(r#"<a id="phone-reveal-seller" class="button reveal-contact" href="tel:+355690000001">"#));
     assert!(response.body.contains("</svg>+355 69 000 0001</a>"));
     // Beside it, a button that copies it, as a phone dials it.
     assert!(response.body.contains(r#"data-controller="copy" data-copy-text-value="+355690000001""#));
@@ -4036,24 +4039,33 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // A private seller: Ana, with the five fixture listings she sells.
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
-    // The category above the photo; the title and the price under it; then her initial, her
-    // name, since when and how many listings, leading to her profile; then the buttons, the
-    // share one a link in a circle; then the details.
+    // The category above the photo; the title and the price under it; then the buttons, the share
+    // one a link in a circle; then the details and the description; then her initial, her name,
+    // since when and how many listings, leading to her profile, with the buttons again, small, at
+    // the other end of her line; then her other listings.
     let order = positions(&page, &[
         r#"<nav class="breadcrumbs listing-trail""#,
         r#"<div class="gallery">"#,
         r#"<p class="listing-meta">"#,
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
-        r#"<p class="card-meta listing-kind">Në shitje · E përdorur</p>"#,
+        r#"<p class="card-meta listing-kind">Në shitje · E përdorur · "#,
         r#"<p class="listing-price">"#,
-        r#"<aside class="listing-contact" aria-label="Shitësi">"#,
-        &format!(r#"<a class="seller" href="{ana}">"#),
-        r#"<span class="seller-name">Ana</span>"#,
-        r#"<span class="seller-summary">Në Pluribus që nga "#,
+        r#"<aside class="listing-contact" aria-label="Kontakti">"#,
         r#"<div class="actions">"#,
+        r#"<form id="phone-reveal" method="post""#,
         r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
         "</aside>",
         "<h2>Detajet</h2>",
+        "<h2>Përshkrimi</h2>",
+        r#"<section class="seller-section" aria-label="Shitësi">"#,
+        &format!(r#"<a class="seller" href="{ana}">"#),
+        r#"<span class="seller-name">Ana</span>"#,
+        r#"<span class="seller-summary">Në Pluribus që nga "#,
+        r#"<div class="seller-contact">"#,
+        r#"<form id="phone-reveal-seller" method="post""#,
+        r#"class="button reveal-button small" href="/listing/1001/mesazh""#,
+        r#"class="button secondary icon-circle share-button small""#,
+        r#"<h2 id="seller-heading">"#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
     assert!(page.contains(" · 5 njoftime</span>"));
@@ -4927,7 +4939,11 @@ async fn the_number_a_seller_signed_in_with_shows_as_verified(pool: PgPool) {
     // Ana signs in with a code sent to her number: her listings say so beside her name, and her
     // profile under it.
     sign_in_with_code(&pool, "069 000 0001", "+355690000001").await;
-    assert!(html(pool.clone(), golf).await.contains("Numër i verifikuar</span>"));
+    // On the listing, a check beside her name, which says what it means as a tooltip and to screen
+    // readers; on her profile, the words under her name.
+    let page = html(pool.clone(), golf).await;
+    assert!(page.contains(r#"<span class="seller-name">Ana<span class="verified" title="Numër i verifikuar">"#), "{page}");
+    assert!(page.contains(r#"<span class="visually-hidden">Numër i verifikuar</span></span></span>"#));
     assert!(html(pool.clone(), "/perdorues/11111111-1111-4111-8111-111111111111").await.contains("Numër i verifikuar</p>"));
     let (kind, value): (String, String) =
         sqlx::query_as("SELECT verification_type, verified_value FROM user_verifications WHERE status = 'VERIFIED'")
