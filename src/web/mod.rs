@@ -8,6 +8,7 @@ mod icons;
 mod listings;
 mod messages;
 mod moderation;
+mod named;
 mod newest;
 mod photos;
 mod post;

@@ -32,8 +32,8 @@ const PLACE_TOWNS: i64 = 3;
 
 /// The words that join what is searched to a place, folded ("në" and "ne" alike): "apartamente në
 /// Tiranë", "makina te Durrësi", "shtëpi afër Vlorës". A town's row leaves the last of them out of
-/// its search, since its filter says where.
-const PLACE_WORDS: [&str; 8] = ["ne", "te", "tek", "nga", "per", "prane", "afer", "rreth"];
+/// its search, since its filter says where; so does a search that names the town (named.rs).
+pub const PLACE_WORDS: [&str; 8] = ["ne", "te", "tek", "nga", "per", "prane", "afer", "rreth"];
 
 /// A row of suggestions: what it searches for, and after it, quieter, where.
 pub struct Suggestion {

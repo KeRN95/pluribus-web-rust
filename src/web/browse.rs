@@ -12,7 +12,7 @@ use axum::{
     Json,
     extract::{Path, RawQuery, State},
     http::{HeaderMap, HeaderValue, header},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
 };
 use rust_decimal::Decimal;
 use uuid::Uuid;
@@ -20,7 +20,7 @@ use uuid::Uuid;
 use super::{
     Result, cookie,
     filters::{Chip, Field, FieldKind, Filters, Params, PriceChoice, TOWN_COOKIE},
-    icons, is_next_page_request, newest, not_found, render,
+    icons, is_next_page_request, named, newest, not_found, render,
     safety,
     seo::{self, PageMeta},
 };
@@ -517,6 +517,14 @@ async fn browse(
         (None, _, View::Grid) => "/search".to_string(),
         (None, _, View::Map) => "/harta".to_string(),
     };
+    // Words that name a category, a kind of listing or a town go to the page with those filters
+    // on, the rest of them searched there (named.rs). Not the next page or the count, which a
+    // page asks for that did so already, nor the map, whose pin says where.
+    if view == View::Grid && !is_next_page_request(&headers) && params.first("numri").is_none() {
+        if let Some(named) = words.as_deref().and_then(|words| named::read(words, category, &categories, &cities)) {
+            return Ok(Redirect::to(&named::url_for(&path, query.as_deref(), &named)).into_response());
+        }
+    }
     let canonical_path = path.clone();
     let filters = Filters::new(
         &params,

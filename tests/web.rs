@@ -241,6 +241,16 @@ async fn html(pool: PgPool, uri: &str) -> String {
     get(pool, uri).await.body.replace("&#38;", "&")
 }
 
+/// The page at `uri`, or the one it sends the visitor on to: a search whose words name filters
+/// goes to the page with them on.
+async fn followed(pool: PgPool, uri: &str) -> TestResponse {
+    let response = get(pool.clone(), uri).await;
+    match (response.status, &response.location) {
+        (StatusCode::SEE_OTHER, Some(to)) => get(pool, to).await,
+        _ => response,
+    }
+}
+
 /// The id and URL of the lazy frame that loads the next page, if there is one.
 fn next_frame(html: &str) -> Option<(String, String)> {
     html.match_indices("<turbo-frame id=\"").find_map(|(start, _)| {
@@ -1144,7 +1154,8 @@ async fn the_map_has_a_dot_for_every_result_up_to_its_limit(pool: PgPool) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn search_ignores_accents(pool: PgPool) {
-    let response = get(pool, "/search?q=shtepi+vlore").await;
+    // "vlore" names the town, which the page then filters by, and "shtepi" is searched there.
+    let response = followed(pool, "/search?q=shtepi+vlore").await;
     assert_eq!(response.status, StatusCode::OK);
     assert!(response.body.contains("Shtëpi private në shitje në Vlorë"));
     assert!(!response.body.contains("Apartament 2+1"));
@@ -1152,15 +1163,16 @@ async fn search_ignores_accents(pool: PgPool) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn search_matches_property_values(pool: PgPool) {
-    // Neither the title nor the description says "telefon"; its type property does.
-    let body = get(pool, "/search?q=telefon").await.body;
+    // Neither the title nor the description says "telefon"; its type property does. (Searched
+    // across every category, "telefon" names Telefona, which the page would filter by instead.)
+    let body = get(pool, "/c/elektronike?q=telefon").await.body;
     assert!(body.contains("iPhone 13, 128 GB, si i ri"));
     assert!(!body.contains("Laptop Lenovo ThinkPad T14"));
 }
 
-/// The listings a search finds, by number.
+/// The listings a search finds, by number, on the page it goes to if its words name filters.
 async fn found(pool: &PgPool, words: &str) -> Vec<i64> {
-    card_numbers(&html(pool.clone(), &format!("/search?q={words}")).await)
+    card_numbers(&followed(pool.clone(), &format!("/search?q={words}")).await.body)
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -1201,8 +1213,8 @@ async fn search_forgives_typos_and_names_the_word_it_searched(pool: PgPool) {
 #[sqlx::test(fixtures("listings"))]
 async fn search_finds_other_forms_of_a_word(pool: PgPool) {
     // The flat's title says "Apartament" and the search the plural, "apartamente": the same word,
-    // which needs no note.
-    let body = get(pool, "/search?q=apartamente").await.body;
+    // which needs no note. (In a category's page, as across every category it names Apartamente.)
+    let body = get(pool, "/c/prona?q=apartamente").await.body;
     assert!(body.contains("Apartament 2+1 me qira në Tiranë"));
     assert!(!body.contains("search-corrections"));
 }
@@ -1216,16 +1228,64 @@ async fn a_word_left_out_stays_out_of_a_widened_search(pool: PgPool) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn search_finds_listings_by_their_category_and_town(pool: PgPool) {
-    // The laptop says neither "elektronikë" nor "Shkodër": its category and its town do, and the
-    // town is found with its article too ("Shkodra").
-    assert_eq!(card_numbers(&get(pool.clone(), "/search?q=elektronike+shkoder").await.body), vec![1006]);
-    assert_eq!(card_numbers(&get(pool, "/search?q=laptop+shkodra").await.body), vec![1006]);
+    // The laptop says neither "elektronikë" nor "Shkodër": the words name its category and its
+    // town, which the page filters by, the town with its article too ("Shkodra").
+    assert_eq!(card_numbers(&followed(pool.clone(), "/search?q=elektronike+shkoder").await.body), vec![1006]);
+    assert_eq!(card_numbers(&followed(pool, "/search?q=laptop+shkodra").await.body), vec![1006]);
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn words_that_name_a_category_a_kind_and_a_town_put_those_filters_on(pool: PgPool) {
+    // However typed, with its accents or without, the words in any of their forms and any order:
+    // the flats for rent in Tirana, each filter a chip to take off if it was misread.
+    let flats = "/search?category=apartamente&city=tirane&type=RENT";
+    for words in ["Apartament+me+qera+ne+tirane", "apartamente+me+qira+n%C3%AB+Tiran%C3%AB", "qira+apartamenti+tirana"] {
+        let sent = get(pool.clone(), &format!("/search?q={words}")).await;
+        assert_eq!((sent.status, sent.location.as_deref()), (StatusCode::SEE_OTHER, Some(flats)), "{words}");
+    }
+    let page = html(pool.clone(), flats).await;
+    assert_eq!(card_numbers(&page), [1003]);
+    for chip in ["Apartamente", "Tiranë", "Me qira"] {
+        assert!(page.contains(&format!(r#"aria-label="Hiq filtrin {chip}""#)), "{chip}");
+    }
+
+    let goes = |uri: &'static str| {
+        let pool = pool.clone();
+        async move { get(pool, uri).await.location }
+    };
+    // A town alone; and the words that name nothing stay searched there, the other filters kept.
+    assert_eq!(goes("/search?q=tirane").await.as_deref(), Some("/search?city=tirane"));
+    assert_eq!(
+        goes("/search?q=golf+7+ne+durres&sort=price_asc").await.as_deref(),
+        Some("/search?q=golf+7&city=durres&sort=price_asc")
+    );
+    // A short town only after the word that leads to it ("bojë mat" is a colour).
+    assert_eq!(goes("/search?q=makina+ne+mat").await.as_deref(), Some("/search?category=makina&city=mat"));
+    // A category's own page reads the town and the kind, the category being its own.
+    assert_eq!(goes("/c/makina?q=me+qira+ne+tirane").await.as_deref(), Some("/c/makina?city=tirane&type=RENT"));
+    // The thing sought comes first: headphones for a phone are headphones. A category's name is
+    // about its first word: a car is in Makina, not in Tapete makine (mats); and the verb an ad
+    // starts with comes before it.
+    assert_eq!(goes("/search?q=kufje+per+telefon").await.as_deref(), Some("/search?q=per+telefon&category=audio-dhe-kufje"));
+    assert_eq!(goes("/search?q=makine+me+nafte").await.as_deref(), Some("/search?q=me+nafte&category=makina"));
+    assert_eq!(goes("/search?q=kerkoj+apartament+me+qira").await.as_deref(), Some("/search?category=apartamente&type=RENT"));
+    // "shtëpi" is a house and the home alike, until the kind says which.
+    assert_eq!(goes("/search?q=shtepi+me+qira").await.as_deref(), Some("/search?category=vila-dhe-shtepi&type=RENT"));
+    // Words that name nothing, a kind with no category to take it, a category two names share, or
+    // two towns, are searched as they are.
+    for uri in ["/search?q=golf", "/search?q=golf+ne+shitje", "/search?q=karikues+telefoni", "/search?q=shtepi",
+        "/search?q=tirane+durres", "/search?q=boj%C3%AB+mat"]
+    {
+        assert_eq!(get(pool.clone(), uri).await.status, StatusCode::OK, "{uri}");
+    }
 }
 
 #[sqlx::test(fixtures("listings"))]
 async fn filler_words_needn_t_be_in_a_listing(pool: PgPool) {
-    // The Mercedes is in Durrës, but nothing it says has "në".
-    assert_eq!(card_numbers(&get(pool, "/search?q=mercedes+n%C3%AB+durr%C3%ABs").await.body), vec![1002]);
+    // The Mercedes is in Durrës, but nothing it says has "në" (which goes with the town, the
+    // page's filter); nor does the Golf, for sale, have "në" or "shitje".
+    assert_eq!(card_numbers(&followed(pool.clone(), "/search?q=mercedes+n%C3%AB+durr%C3%ABs").await.body), vec![1002]);
+    assert_eq!(card_numbers(&get(pool, "/search?q=golf+n%C3%AB+shitje").await.body), vec![1001]);
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -1233,11 +1293,11 @@ async fn a_search_across_categories_names_the_categories_it_found(pool: PgPool) 
     // Each chip narrows the search to its category, where that category's filters are.
     let found = html(pool.clone(), "/search?q=golf").await;
     assert!(found.contains(r#"<a class="chip" href="/c/makina?q=golf">Makina <span class="chip-count">1</span></a>"#));
-    // Tirana's listings are in three categories.
-    let tirana = html(pool.clone(), "/search?q=tirane").await;
-    for category in ["makina", "apartamente", "telefona"] {
-        assert!(tirana.contains(&format!(r#"<a class="chip" href="/c/{category}?q=tirane">"#)), "{category}");
-    }
+    // A kind of listing, with no category to take it, stays words: the listings for sale are in
+    // nine categories, of which the six with the most, the two cars' first.
+    let selling = html(pool.clone(), "/search?q=shitje").await;
+    assert!(selling.contains(r#"<a class="chip" href="/c/makina?q=shitje">Makina <span class="chip-count">2</span></a>"#), "{selling}");
+    assert_eq!(selling.matches(r#"<span class="chip-count">"#).count(), 6);
     // A category's page has its subcategories instead.
     assert!(!html(pool, "/c/makina?q=golf").await.contains("chip-count"));
 }
@@ -3360,15 +3420,16 @@ async fn listings_go_into_subcategories(pool: PgPool) {
     assert!(get(pool.clone(), "/c/elektronike").await.body.contains("Samsung Galaxy S21"));
     assert!(get(pool.clone(), "/c/telefona").await.body.contains("Samsung Galaxy S21"));
     assert!(!get(pool.clone(), "/c/laptope").await.body.contains("Samsung Galaxy S21"));
-    assert!(get(pool.clone(), "/search?q=telefon").await.body.contains("Samsung Galaxy S21"));
+    assert!(get(pool.clone(), "/c/elektronike?q=telefon").await.body.contains("Samsung Galaxy S21"));
 
     // Moved to Laptopë, its kind follows.
     let url = posted.location.unwrap();
     let no = url.trim_start_matches("/listing/").split('-').next().unwrap();
     let moved = post_form(pool.clone(), &format!("/listing/{no}/ndrysho"), &listing_fields(("category", "laptope"), &started), Some(&ana)).await;
     assert_eq!(moved.status, StatusCode::SEE_OTHER);
-    // Neither its title nor its description says "laptop"; its kind does.
-    assert!(get(pool, "/search?q=laptop").await.body.contains("Samsung Galaxy S21"));
+    // Neither its title nor its description says "laptop"; its kind does. (Searched across every
+    // category, "laptop" names Laptopë, which the page would filter by instead.)
+    assert!(get(pool, "/c/elektronike?q=laptop").await.body.contains("Samsung Galaxy S21"));
 }
 
 /// A car for sale, with its properties, and one field replaced (or added).
