@@ -510,19 +510,21 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 /* "Shfaq N njoftime" brings the results' heading to the top, clear of the sticky header. */
 .results-heading { scroll-margin-top: 5rem; }
 
-/* A laptop: the filters are a sidebar beside the page's box, always there, from under the header
-   to the bottom, outside the box, which keeps its width: the sidebar (--sidebar wide, the card on
-   a phone's width), a gap and the page, at most --page wide, stand together in the middle of the
-   screen (--left from its edge, a margin at least), the top bar's contents as wide as the three,
-   so that the logo stands over the sidebar; on a wide screen the sidebar costs the page nothing.
-   The results follow the filters as they change; the sidebar stays as the page scrolls, and
-   scrolls inside if it needs more room. It is the card the phone has, as it is there: its form in
-   two columns, the icons four to a line, and at its foot "Pastro", when a filter is on, and the
-   button that says how many results there are; only "Mbyll" is gone, there being nothing to close,
-   and no button opens it. */
+/* A laptop: the filters are a sidebar beside the page's box, always there, from under the search
+   and the map's buttons (--under-row, where the row ends on the page, filters_controller.js) to
+   the bottom, outside the box, which keeps its width: the sidebar (--sidebar wide), a gap and the
+   page, at most --page wide, stand together in the middle of the screen (--left from its edge, a
+   margin at least); the page's heading, its subcategories and the categories a search found span
+   the two, over the sidebar, and the top bar's contents are as wide as the three, so that the logo
+   stands over the sidebar; on a wide screen the sidebar costs the page nothing. The results follow
+   the filters as they change; the sidebar stays as the page scrolls, and scrolls inside if it
+   needs more room. It is the card the phone has, as it is there, wider: its form in two columns,
+   the icons four to a line, and at its foot "Pastro", when a filter is on, and the button that
+   says how many results there are; only "Mbyll" is gone, there being nothing to close, and no
+   button opens it. */
 @media (min-width: 1024px) {
   body:has(main.container > .browse) {
-    --sidebar: 23rem;
+    --sidebar: 27rem;
     --gap: 2rem;
     --page: 1320px;
     --left: calc(1rem + max(0px, (100% - 2rem - var(--sidebar) - var(--gap) - var(--page)) / 2));
@@ -534,15 +536,16 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
     padding-left: calc(var(--left) + var(--sidebar) + var(--gap));
     padding-right: var(--left);
   }
+  main.container:has(> .browse) > :is(.results-header, .subcategories, .categories) { margin-left: calc(-1 * (var(--sidebar) + var(--gap))); }
   .browse > .filters {
     position: fixed;
-    top: 4.75rem;
+    top: calc(var(--under-row, 4.75rem) + var(--drop, .75rem));
     bottom: 1rem;
     left: var(--left, 1rem);
     right: auto;
     z-index: auto;
     display: flex;
-    width: var(--sidebar, 23rem);
+    width: var(--sidebar, 27rem);
     max-height: none;
     animation: none;
   }
