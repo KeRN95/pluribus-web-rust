@@ -210,9 +210,11 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
   animation: sheet-in .12s ease-out;
 }
 .message-sheet[hidden] { display: none; }
-/* Dragged by its bar it follows the finger; let go, it goes back up or slides away quickly. */
+/* Dragged by its bar it follows the finger; let go, it goes back up or slides away quickly. It
+   moves by transform alone, which the browser does off the page's own work at the screen's rate
+   (120 times a second where it refreshes so), on a layer of its own while it is dragged. */
 .message-sheet { transition: transform .15s ease-out; }
-.message-sheet.is-dragging { transition: none; }
+.message-sheet.is-dragging { transition: none; will-change: transform; }
 /* The bar at its top, as on an iPhone's sheets: a short rounded line, in a strip as wide as the
    sheet and tall enough for a finger to take, which drags the sheet down to close it. */
 .sheet-grabber {

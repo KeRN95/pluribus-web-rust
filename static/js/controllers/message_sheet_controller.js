@@ -109,12 +109,19 @@ export default class extends Controller {
     if (elapsed > 0) this.speed = (event.clientY - this.lastY) / elapsed;
     this.lastY = event.clientY;
     this.lastAt = event.timeStamp;
-    this.sheetTarget.style.transform = `translateY(${this.dragged}px)`;
+    // Moved once a frame, at the screen's own rate (120 times a second where it refreshes so),
+    // however many moves the finger sends in between.
+    this.frame ??= requestAnimationFrame(() => {
+      this.frame = null;
+      if (this.dragFrom != null) this.sheetTarget.style.transform = `translateY(${this.dragged}px)`;
+    });
   }
 
   release() {
     if (this.dragFrom == null) return;
     this.dragFrom = null;
+    cancelAnimationFrame(this.frame);
+    this.frame = null;
     this.justDragged = this.dragged > 6;
     setTimeout(() => (this.justDragged = false), 400);
     const sheet = this.sheetTarget;
