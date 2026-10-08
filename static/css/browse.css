@@ -283,9 +283,9 @@
 .results-head > .sort-menu { flex: none; }
 .results-head:has(> .results-heading.visually-hidden) { margin: 0 0 .75rem; }
 /* The heading, a heading by its role (it holds the order's menu): an h2's face, size and weight.
-   Its order's words quietly marked, in the site's colour with a soft underline and a small
-   chevron, a faint tint under a pointer, opening the orders in a menu under them as the order's
-   pill does; the menu in the page's own text, not the heading's. */
+   Its order's words quietly marked, in the site's colour with a soft underline, a faint tint
+   under a pointer, opening the orders in a menu under them as the order's pill does; the menu in
+   the page's own text, not the heading's. */
 .results-head > div.results-heading { font-family: var(--font-heading, inherit); font-size: var(--text-xl); font-weight: var(--semibold); letter-spacing: -0.015em; line-height: 1.25; }
 .results-heading .heading-sort { display: inline-block; }
 .heading-sort-button {
@@ -302,8 +302,6 @@
   -webkit-tap-highlight-color: transparent;
 }
 .heading-sort-button::-webkit-details-marker { display: none; }
-.heading-sort-button svg { width: .7em; height: .7em; flex: none; opacity: .75; transition: transform .15s; }
-.heading-sort[open] > .heading-sort-button svg { transform: rotate(180deg); }
 @media (hover: hover) {
   .heading-sort-button:hover { background: var(--badge); }
 }

@@ -267,7 +267,7 @@
     {%- if let Some(place) = listings_place %}
     <div class="results-heading" id="results-heading" role="heading" aria-level="2">Njoftimet <details class="sort-menu heading-sort" data-controller="dropdown"
         data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
-        <summary class="heading-sort-button" title="Rendit">{{ filters.sort_adjective() }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <summary class="heading-sort-button" title="Rendit">{{ filters.sort_adjective() }}</summary>
         <fieldset class="sort-options">
           <legend class="visually-hidden">Rendit</legend>
           {%- for choice in sorts.iter() %}
