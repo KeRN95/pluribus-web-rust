@@ -759,7 +759,7 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         r#"<section class="map-card map-hidden""#,
         r#"<div class="pills-row">"#,
         r#"<details class="sort-menu" data-controller="dropdown""#,
-        r#"<button type="button" class="small-pill cards-button" data-cards-target="button" data-action="cards#toggle""#,
+        r#"<details class="sort-menu cards-menu" data-controller="dropdown" data-cards-target="menu""#,
         r#"<aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">"#,
         r#"<div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>"#,
         r#"<section class="results""#,
@@ -826,7 +826,7 @@ async fn prona_shows_big_cards_until_the_visitor_chooses_small_ones_there(pool: 
     // Prona and the categories under it: big cards, their own cookie for the view button...
     let prona = get(pool.clone(), "/c/prona").await.body;
     assert!(prona.contains(big) && prona.contains(r#"data-cards-cookie-value="cards-prona""#), "{prona}");
-    assert!(prona.contains(r#"aria-pressed="true" aria-label="Kartela të mëdha""#));
+    assert!(prona.contains(r#"aria-label="Pamja: Kartela të mëdha""#));
     assert!(get(pool.clone(), "/c/apartamente").await.body.contains(big));
     // ...which a choice on other pages leaves as they are; one made there doesn't.
     assert!(get_with_cookie(pool.clone(), "/c/prona", "cards=small").await.body.contains(big));
@@ -855,15 +855,15 @@ async fn big_cards_slide_through_every_photo(pool: PgPool) {
     // the copy fetched for a column of the grid.
     let small = get(pool.clone(), "/c/makina").await.body;
     assert!(small.contains(r#"<div class="browse" data-controller="filters cards place""#));
-    assert!(small.contains(r#"aria-pressed="false" aria-label="Kartela të mëdha""#));
+    assert!(small.contains(r#"aria-label="Pamja: Kartela të vogla""#));
     assert!(small.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
 
-    // Big ones, from the cookie the view button sets: every photo, the cover first, each with its
+    // Big ones, from the cookie the view menu sets: every photo, the cover first, each with its
     // full copy for the browser to pick, and the dots and arrows to slide through them.
     let request = Request::get("/c/makina").header("cookie", "cards=big").body(Body::empty()).unwrap();
     let big = send(pool.clone(), request).await.body;
     assert!(big.contains(r#"<div class="browse cards-big" data-controller="filters cards place""#));
-    assert!(big.contains(r#"aria-pressed="true" aria-label="Kartela të mëdha""#));
+    assert!(big.contains(r#"aria-label="Pamja: Kartela të mëdha""#));
     assert!(!big.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
     assert_eq!(big.matches(r#"<div class="card-media" data-controller="slides">"#).count(), 1, "only the Golf has more than one");
     let golf = &big[big.find(r#"<div class="card-media" data-controller="slides">"#).unwrap()..];
@@ -882,6 +882,41 @@ async fn big_cards_slide_through_every_photo(pool: PgPool) {
     // The next pages come the same way, and the map page's list stays small.
     let pinned = Request::get("/harta").header("cookie", "cards=big").body(Body::empty()).unwrap();
     assert!(send(pool, pinned).await.body.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn the_list_shows_a_line_for_each_listing(pool: PgPool) {
+    // The view menu: small cards, big ones or the list, the one now ticked and its icon on the
+    // pill; picking one switches the cards at once (cards_controller.js).
+    let cars = get(pool.clone(), "/c/makina").await.body;
+    let menu = &cars[cars.find(r#"<details class="sort-menu cards-menu""#).unwrap()..];
+    let menu = &menu[..menu.find("</details>").unwrap()];
+    let options = positions(menu, &[
+        r#"value="small" data-action="change->cards#choose" checked>"#,
+        r#"value="big" data-action="change->cards#choose">"#,
+        r#"value="list" data-action="change->cards#choose">"#,
+    ]);
+    assert!(options.is_sorted(), "{options:?}");
+    assert!(menu.contains("</svg>Kartela të vogla</label>") && menu.contains("</svg>Listë</label>"));
+    assert!(cars.contains(r#"data-cards-list-value="(min-width: 720px) 176px, 128px""#));
+
+    // Chosen, from its cookie: the page says so, the photos fetched for the line's left, each
+    // card saying when it was posted after its details line (page.css leaves that out of cards).
+    let request = Request::get("/c/makina").header("cookie", "cards=list").body(Body::empty()).unwrap();
+    let list = send(pool.clone(), request).await.body;
+    assert!(list.contains(r#"<div class="browse cards-list" data-controller="filters cards place""#));
+    assert!(list.contains(r#"aria-label="Pamja: Listë""#));
+    assert!(list.contains(r#"value="list" data-action="change->cards#choose" checked>"#));
+    assert!(list.contains(r#"sizes="(min-width: 720px) 176px, 128px""#));
+    let golf = &list[list.find(r#"<article class="card" id="listing-1001">"#).unwrap()..];
+    let golf = &golf[..golf.find("</article>").unwrap()];
+    assert!(golf.contains("Naftë</p>\n    <p class=\"card-when\">"));
+
+    // Prona keeps its own: the list chosen elsewhere leaves its big cards; the map's list is small.
+    assert!(get_with_cookie(pool.clone(), "/c/prona", "cards=list").await.body.contains(r#"<div class="browse cards-big""#));
+    assert!(get_with_cookie(pool.clone(), "/c/prona", "cards-prona=list").await.body.contains(r#"<div class="browse cards-list""#));
+    let map = Request::get("/harta").header("cookie", "cards=list").body(Body::empty()).unwrap();
+    assert!(send(pool, map).await.body.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -3082,8 +3117,8 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     assert!(!level.contains(r#"href="/c/gps-dhe-navigatore""#), "not itself: {level}");
     assert!(!level.contains(r#"href="/c/automjete""#) && !level.contains("Të gjitha njoftimet"), "{level}");
     assert!(!gps.contains(r#"<div class="subcategories">"#), "no subcategories, no pills under");
-    // Every branch closes; the other two </details> are its pill's own and the order's.
-    assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - 2, "balanced");
+    // Every branch closes; the other three </details> are its pill's own, the order's and the view's.
+    assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - 3, "balanced");
 
     // The old address still works.
     assert_eq!(get(pool.clone(), "/c/pjese-kembimi").await.status, StatusCode::OK);

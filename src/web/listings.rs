@@ -116,6 +116,12 @@ impl ListingCard {
         format!("Përdorues që nga {}", format::month_year(self.seller_since))
     }
 
+    /// When it was posted, or last brought up again: "Sot", "para 3 ditësh", the date from a week
+    /// on; at the right end of its line in the list (.cards-list in page.css).
+    pub fn when_text(&self) -> String {
+        format::when(self.sort_at, time::OffsetDateTime::now_utc())
+    }
+
     /// The seller's initial, in a circle before their name, as on the listing page.
     pub fn seller_initial(&self) -> String {
         format::initial(&self.seller_name)

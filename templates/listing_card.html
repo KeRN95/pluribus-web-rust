@@ -5,7 +5,7 @@
     its photo where it was slid to. -#}
 <article class="card" id="listing-{{ card.public_no }}">
   {#- The photo, darkening toward its bottom edge, with the price on it there; the title under it
-      (.card-media in page.css). A big card (the view button, cards_controller.js) has every photo
+      (.card-media in page.css); in the list, the photo at the left, the rest beside it. A big card (the view menu, cards_controller.js) has every photo
       in a row to slide through, dots over them saying which shows and, under a pointer, arrows
       (slides_controller.js); a small one shows the first. -#}
   {%- let eager = loop.index <= page.eager %}
@@ -63,7 +63,8 @@
   </div>
   {#- The details line, which starts with a location pin and the city, then the distance from the
       map pin when there is one: "Tiranë · 2,4 km · 2016 · Naftë". One line, ending in "…" when
-      longer. -#}
+      longer. In the list, when it was posted at its right end ("para 3 ditësh"); the cards leave
+      that out (page.css). -#}
   <div class="card-body">
     <p class="card-summary">
       {%- let rest = card.details_line() -%}
@@ -72,5 +73,6 @@
       {%- endif -%}
       {{- rest -}}
     </p>
+    <p class="card-when">{{ card.when_text() }}</p>
   </div>
 </article>

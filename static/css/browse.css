@@ -275,11 +275,11 @@
   .browse-tools .button.round-button { transition: none; }
   .browse-tools .round-button:active { transform: none; }
 }
-/* Under the buttons, smaller pills: the order ("Më të rejat", which opens its menu) and the cards'
-   size, an open order and big cards on the accent's tint, as a picked filter is. */
+/* Under the buttons, smaller pills: the order ("Më të rejat") and how the cards show, each opening
+   its menu, on the accent's tint while it is open, as a picked filter is. */
 .pills-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; }
 .pills-row > .sort-menu,
-.pills-row > .cards-button { flex: none; }
+.pills-row > .cards-menu { flex: none; }
 /* How many the page found, before the order's pill, in the pills' size, with room kept for the
    most it can say ("10 000+ njoftime"): the count past 1 000 comes once the page shows
    (filters_controller.js), and the pills after it must not move as it does. */
@@ -307,13 +307,25 @@
 .small-pill > svg { flex: none; }
 .sort-button { list-style: none; }
 .sort-button::-webkit-details-marker { display: none; }
-.cards-button { padding-inline: .7rem; }
+.cards-button { padding-inline: .7rem; list-style: none; }
+.cards-button::-webkit-details-marker { display: none; }
+/* The view's pill shows the icon of the one now (Cards::icon), which the page's class says; its
+   menu, the views as rows, each with its icon. */
+.cards-icon { display: none; }
+.browse:not(.cards-big, .cards-list) .cards-icon-small,
+.cards-big .cards-icon-big,
+.cards-list .cards-icon-list { display: block; }
+/* At the row's right end, even on a line of its own, its menu growing leftward from there. */
+.pills-row > .cards-menu { margin-left: auto; }
+.cards-menu > .cards-options { left: auto; right: 0; transform-origin: top right; }
+.cards-options .sort-option { display: flex; align-items: center; gap: .55rem; }
+.cards-options .sort-option > svg { flex: none; }
 .sort-menu[open] > .sort-button,
-.cards-button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+.cards-menu[open] > .cards-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
 @media (hover: hover) {
   .small-pill:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
   .sort-menu[open] > .sort-button:hover,
-  .cards-button[aria-pressed="true"]:hover { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+  .cards-menu[open] > .cards-button:hover { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
 }
 
 /* The filters' form, between the card's head and foot, scrolling if it needs more room. */

@@ -34,46 +34,95 @@ use crate::{
 pub struct ListingPage {
     pub cards: Vec<ListingCard>,
     pub next: Option<NextPage>,
-    /// Big cards, one a line, every photo to slide through, as the visitor chose, or as the
-    /// category shows them by default (big_cards).
-    pub big: bool,
+    /// How the cards show, as the visitor chose, or as the category shows them by default
+    /// (cards_layout).
+    pub layout: Cards,
     /// How many cards load their photo straight away, the first row's; the rest wait until they
     /// come near the screen (listing_card.html).
     pub eager: usize,
 }
 
-/// How wide a card's photo shows, for the browser to pick the copy it fetches (srcset in
-/// listing_card.html): a column of the grid, or for a big card the line, no wider than 40rem, and
-/// half the page's 1100px on a wide screen (page.css, .cards-big). cards_controller.js switches
-/// between them as the view button switches the cards.
-const SMALL_CARD_SIZES: &str = "(min-width: 720px) 260px, 50vw";
-const BIG_CARD_SIZES: &str = "(min-width: 960px) 535px, (min-width: 720px) 40rem, 100vw";
+/// How a browse page shows its listings (the view menu, cards_controller.js): small cards, as many
+/// to a line as fit; big ones, one a line, every photo to slide through; or a list, a line each,
+/// the photo at its left and the price, title, place and when beside it (page.css, .cards-big and
+/// .cards-list). Pages other than the browse pages show small ones.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Cards {
+    #[default]
+    Small,
+    Big,
+    List,
+}
 
-/// The cookie the view button sets (cards_controller.js): "big" or "small".
-const CARDS_COOKIE: &str = "cards";
+impl Cards {
+    /// Each, in the order the view menu has them.
+    pub const ALL: [Cards; 3] = [Cards::Small, Cards::Big, Cards::List];
 
-/// The main categories whose pages, and those of the categories under them, show big cards until
-/// the visitor chooses small ones there: the photos say the most about a home. The choice made on
-/// them is kept apart ("cards-prona"), so that one made on other pages leaves them as they are.
-const BIG_CARDS_IN: [&str; 1] = ["prona"];
+    /// The cookie's value for it, and the name of its class on the page (cards-big).
+    pub fn value(self) -> &'static str {
+        match self {
+            Cards::Small => "small",
+            Cards::Big => "big",
+            Cards::List => "list",
+        }
+    }
 
-/// The view button's cookie on a page of `category`, and whether its cards are big without one.
-fn cards_cookie(categories: &db::Categories, category: Option<&db::Category>) -> (String, bool) {
-    let main = category.map(|category| categories.ancestors(category).first().copied().unwrap_or(category));
-    match main.filter(|main| BIG_CARDS_IN.contains(&main.slug.as_str())) {
-        Some(main) => (format!("{CARDS_COOKIE}-{}", main.slug), true),
-        None => (CARDS_COOKIE.to_string(), false),
+    fn from_value(value: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|cards| cards.value() == value)
+    }
+
+    /// Its name in the view menu, which its button says too.
+    pub fn label(self) -> &'static str {
+        match self {
+            Cards::Small => "Kartela të vogla",
+            Cards::Big => "Kartela të mëdha",
+            Cards::List => "Listë",
+        }
+    }
+
+    /// Its icon's shapes, in a 24×24 box, stroked.
+    pub fn icon(self) -> &'static str {
+        match self {
+            Cards::Small => r#"<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>"#,
+            Cards::Big => r#"<rect x="4" y="3.5" width="16" height="11.5" rx="2.5"/><path d="M4.5 18.5h15M4.5 21h9"/>"#,
+            Cards::List => r#"<rect x="3.5" y="4" width="6" height="6" rx="1.5"/><rect x="3.5" y="14" width="6" height="6" rx="1.5"/><path d="M13 5.5h7.5M13 8.5h4.5M13 15.5h7.5M13 18.5h4.5"/>"#,
+        }
+    }
+
+    /// How wide a card's photo shows, for the browser to pick the copy it fetches (srcset in
+    /// listing_card.html): a column of the grid; for a big card the line, no wider than 40rem, and
+    /// half the page's 1100px on a wide screen; in the list, the photo at the line's left.
+    /// cards_controller.js switches between them as the view menu switches the cards.
+    pub fn sizes(self) -> &'static str {
+        match self {
+            Cards::Small => "(min-width: 720px) 260px, 50vw",
+            Cards::Big => "(min-width: 960px) 535px, (min-width: 720px) 40rem, 100vw",
+            Cards::List => "(min-width: 720px) 176px, 128px",
+        }
     }
 }
 
-/// Whether the page shows big cards: as the visitor chose with `cookie`, or else as it does by
-/// default.
-fn big_cards(headers: &HeaderMap, cookie_name: &str, by_default: bool) -> bool {
-    match cookie(headers, cookie_name).as_deref() {
-        Some("big") => true,
-        Some("small") => false,
-        _ => by_default,
+/// The cookie the view menu sets (cards_controller.js): "small", "big" or "list" (Cards::value).
+const CARDS_COOKIE: &str = "cards";
+
+/// The main categories whose pages, and those of the categories under them, show big cards until
+/// the visitor chooses others there: the photos say the most about a home. The choice made on
+/// them is kept apart ("cards-prona"), so that one made on other pages leaves them as they are.
+const BIG_CARDS_IN: [&str; 1] = ["prona"];
+
+/// The view menu's cookie on a page of `category`, and how its cards show without one.
+fn cards_cookie(categories: &db::Categories, category: Option<&db::Category>) -> (String, Cards) {
+    let main = category.map(|category| categories.ancestors(category).first().copied().unwrap_or(category));
+    match main.filter(|main| BIG_CARDS_IN.contains(&main.slug.as_str())) {
+        Some(main) => (format!("{CARDS_COOKIE}-{}", main.slug), Cards::Big),
+        None => (CARDS_COOKIE.to_string(), Cards::Small),
     }
+}
+
+/// How the page shows its cards: as the visitor chose with `cookie`, or else as it does by
+/// default.
+fn cards_layout(headers: &HeaderMap, cookie_name: &str, by_default: Cards) -> Cards {
+    cookie(headers, cookie_name).as_deref().and_then(Cards::from_value).unwrap_or(by_default)
 }
 
 /// A lazily loaded `<turbo-frame>` that fetches the next page when it scrolls into view.
@@ -91,31 +140,31 @@ impl ListingPage {
             let cursor = Cursor::after(sort, last);
             NextPage { frame_id: frame_id(&cursor), url: next_url(&cursor.encode()) }
         });
-        Self { cards: rows, next, big: false, eager: 4 }
+        Self { cards: rows, next, layout: Cards::Small, eager: 4 }
     }
 
     /// The cards under a listing's page, the seller's other listings and those like it
     /// (db::seller_listings, db::related_listings): small, none of them loaded before they come
     /// near the screen, as they come after the listing.
     pub fn related(cards: Vec<ListingCard>) -> Self {
-        Self { cards, next: None, big: false, eager: 0 }
+        Self { cards, next: None, layout: Cards::Small, eager: 0 }
     }
 
-    fn big(mut self, big: bool) -> Self {
-        self.big = big;
+    fn layout(mut self, layout: Cards) -> Self {
+        self.layout = layout;
         self
     }
 
     pub fn sizes(&self) -> &'static str {
-        if self.big { BIG_CARD_SIZES } else { SMALL_CARD_SIZES }
+        self.layout.sizes()
     }
 
-    pub fn small_sizes(&self) -> &'static str {
-        SMALL_CARD_SIZES
-    }
-
-    pub fn big_sizes(&self) -> &'static str {
-        BIG_CARD_SIZES
+    /// The page's class for how its cards show: none for small ones.
+    pub fn cards_class(&self) -> String {
+        match self.layout {
+            Cards::Small => String::new(),
+            layout => format!(" cards-{}", layout.value()),
+        }
     }
 }
 
@@ -551,14 +600,14 @@ async fn browse(
         }
     };
 
-    // Big cards only in the grid: the map page's list stays small, beside the map.
-    let (cards_cookie, big_by_default) = cards_cookie(&categories, category);
-    let big = view == View::Grid && big_cards(&headers, &cards_cookie, big_by_default);
+    // Big cards and the list only in the grid: the map page's list stays small, beside the map.
+    let (cards_cookie, default_layout) = cards_cookie(&categories, category);
+    let layout = if view == View::Grid { cards_layout(&headers, &cards_cookie, default_layout) } else { Cards::Small };
 
     if is_next_page_request(&headers) {
         let mut rows = db::listing_page(&state.db, &filter).await?;
         mark_city(&mut rows);
-        return frame_response(filter.after, &ListingPage::new(rows, filter.sort, next_url).big(big));
+        return frame_response(filter.after, &ListingPage::new(rows, filter.sort, next_url).layout(layout));
     }
 
     // Every main category's page, and those of a few big subcategories, show their own most seen,
@@ -624,7 +673,7 @@ async fn browse(
     let count_number = count;
     let count = format::listing_count(count, db::COUNT_LIMIT);
     mark_city(&mut rows);
-    let page = ListingPage::new(rows, filter.sort, next_url).big(big);
+    let page = ListingPage::new(rows, filter.sort, next_url).layout(layout);
     let more_points = points.len() as i64 > db::MAP_POINTS;
     points.truncate(db::MAP_POINTS as usize);
     if view == View::Map {
