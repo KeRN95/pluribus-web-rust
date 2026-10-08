@@ -55,6 +55,7 @@ mod sign_in;
 mod sitemap;
 mod posting;
 mod price_drops;
+mod safety;
 mod typed_in;
 
 pub use categories::*;
@@ -67,6 +68,7 @@ pub use sign_in::*;
 pub use sitemap::*;
 pub use posting::*;
 pub use price_drops::*;
+pub use safety::*;
 pub use typed_in::*;
 
 #[cfg(test)]

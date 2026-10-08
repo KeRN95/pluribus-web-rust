@@ -98,6 +98,11 @@ pub fn redirect_with_cookies(to: &str, cookies: Vec<HeaderValue>) -> Response {
     response
 }
 
+/// The hash of the session the request carries, if any, as the database keeps it.
+pub fn session_hash(headers: &HeaderMap) -> Option<Vec<u8>> {
+    cookie(headers, SESSION_COOKIE).map(|token| hash(&token))
+}
+
 /// The signed-in user, if the request carries a live session.
 pub async fn current_user(state: &AppState, headers: &HeaderMap) -> Result<Option<SessionUser>> {
     let Some(token) = cookie(headers, SESSION_COOKIE) else {
@@ -342,6 +347,9 @@ pub async fn check_code(
                 });
             }
             db::confirm_account(&state.db, account.id, name).await?;
+            // The code came to this number or address, so it is theirs: listings showing it, and
+            // their profile, say it is verified.
+            db::verify_contact(&state.db, account.id, phone.as_deref(), email.as_deref()).await?;
             let token: String = rand::rng().random::<[u8; 32]>().iter().map(|byte| format!("{byte:02x}")).collect();
             db::create_session(&state.db, &hash(&token), account.id, SESSION_DAYS).await?;
             let session = cookie_header(&headers, SESSION_COOKIE, &token, i64::from(SESSION_DAYS) * 86_400);

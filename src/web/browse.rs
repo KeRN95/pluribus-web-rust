@@ -12,6 +12,7 @@ use super::{
     Result, cookie,
     filters::{Chip, Field, FieldKind, Filters, Params},
     icons, is_next_page_request, newest, not_found, render,
+    safety,
     seo::{self, PageMeta},
 };
 use crate::{
@@ -159,18 +160,20 @@ pub async fn home(
 ) -> Result<Response> {
     let params = Params::parse(query.as_deref());
     let after = params.first("after").and_then(|value| Cursor::decode(Sort::Newest, value));
-    let filter = ListingFilter { after, ..Default::default() };
+    let hidden = safety::hidden_accounts(&state, &headers).await?;
+    let filter = ListingFilter { after, hidden_accounts: hidden.clone(), ..Default::default() };
     let next_url = |cursor: &str| format!("/?after={cursor}");
     if is_next_page_request(&headers) {
         let rows = db::listing_page(&state.db, &filter).await?;
         return frame_response(after, &ListingPage::new(rows, Sort::Newest, next_url));
     }
 
-    let (rows, categories, most_viewed) = tokio::try_join!(
+    let (rows, categories, mut most_viewed) = tokio::try_join!(
         db::listing_page(&state.db, &filter),
         db::categories(&state.db),
         state.views.most_viewed(&state.db, None),
     )?;
+    safety::without_hidden(&mut most_viewed, &hidden);
     // Every main category, in its order, with its icon.
     let shortcuts = categories
         .top_level()
@@ -281,6 +284,8 @@ struct ProfilePage {
     found: String,
     page: ListingPage,
     meta: PageMeta,
+    /// "Numër i verifikuar" when the number they signed in with is theirs, or the address.
+    verified: Option<&'static str>,
 }
 
 pub async fn user_profile(
@@ -360,9 +365,18 @@ async fn profile_page(
         since,
         count,
         business: matches!(profile.seller, db::Seller::Business(_)),
+        verified: verified_label(profile.verified.as_deref()),
         name: profile.name,
         page,
     })
+}
+
+/// What a seller's page and listings say of the contact they proved theirs by signing in with it.
+pub fn verified_label(kind: Option<&str>) -> Option<&'static str> {
+    match kind? {
+        "EMAIL" => Some("Email i verifikuar"),
+        _ => Some("Numër i verifikuar"),
+    }
 }
 
 /// The map page: drop a pin, pick a distance, and see the listings around it.
@@ -423,7 +437,7 @@ async fn browse(
     let params = Params::parse(query.as_deref());
     let category_slug = page_slug.as_deref().or(params.first("category"));
     let words = params.search_words();
-    let (categories, cities, attributes, search) = tokio::try_join!(
+    let (categories, cities, attributes, search, hidden) = tokio::try_join!(
         db::categories(&state.db),
         db::cities(&state.db),
         async {
@@ -433,6 +447,7 @@ async fn browse(
             }
         },
         db::text_search(&state.db, words.as_deref()),
+        safety::hidden_accounts(&state, &headers),
     )?;
     let category = category_slug.and_then(|slug| categories.by_slug(slug));
     let path = match (&page_slug, category, view) {
@@ -453,7 +468,8 @@ async fn browse(
     );
     // The words searched in place of misspelt ones, which the heading's line names.
     let corrections = search.as_ref().map(|search| format::quoted_list(&search.corrections)).unwrap_or_default();
-    let filter = filters.listing_filter(search);
+    let mut filter = filters.listing_filter(search);
+    filter.hidden_accounts = hidden;
     let next_url = |cursor: &str| filters.next_url(cursor);
 
     // In a search limited to a city, the cards in that city leave it out (ListingCard::city_label).
@@ -487,7 +503,7 @@ async fn browse(
         }
         _ => None,
     };
-    let (mut rows, count, mut points, found_in, most_viewed) = tokio::try_join!(
+    let (mut rows, count, mut points, found_in, mut most_viewed) = tokio::try_join!(
         db::listing_page(&state.db, &filter),
         db::listing_count(&state.db, &filter),
         async {
@@ -511,6 +527,7 @@ async fn browse(
             }
         },
     )?;
+    safety::without_hidden(&mut most_viewed, &filter.hidden_accounts);
     let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::related(most_viewed));
     // Counted among at most COUNT_LIMIT + 1 listings, as the count is: past that, numbers would
     // mislead, and the names go alone.

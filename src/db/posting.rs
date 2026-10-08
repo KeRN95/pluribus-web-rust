@@ -327,17 +327,6 @@ pub async fn update_listing(db: &PgPool, public_no: i64, listing: &NewListing<'_
     Ok(true)
 }
 
-/// Whether the user created this listing, so its page offers them the edit button.
-pub async fn is_own_listing(db: &PgPool, listing_id: Uuid, user_id: Uuid) -> sqlx::Result<bool> {
-    sqlx::query_scalar!(
-        r#"SELECT EXISTS (SELECT 1 FROM listings WHERE id = $1 AND created_by_user_id = $2) AS "own!""#,
-        listing_id,
-        user_id,
-    )
-    .fetch_one(db)
-    .await
-}
-
 /// What a seller can do to their own listing, besides editing it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ListingAction {
@@ -355,7 +344,7 @@ impl ListingAction {
         match self {
             Self::Pause => (&["ACTIVE", "RESERVED"], "PAUSED"),
             Self::Resume => (&["PAUSED"], "ACTIVE"),
-            Self::Delete => (&["DRAFT", "ACTIVE", "RESERVED", "SOLD", "EXPIRED", "PAUSED"], "DELETED"),
+            Self::Delete => (&["DRAFT", "ACTIVE", "RESERVED", "SOLD", "EXPIRED", "PAUSED", "SUSPENDED", "REJECTED"], "DELETED"),
         }
     }
 }

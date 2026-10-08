@@ -4381,3 +4381,181 @@ async fn a_business_listing_reaches_whoever_posted_it(pool: PgPool) {
     assert!(inbox.contains("Përdorues") && inbox.contains("Mercedes-Benz"), "{inbox}");
     assert_eq!(write(&pool, &url, "Po, ejani nesër.", &dritan).await.status, StatusCode::SEE_OTHER);
 }
+
+/// Signs in with a code sent to this contact, typed as `typed`, which is `contact` once read: the
+/// session's cookie.
+async fn sign_in_with_code(pool: &PgPool, typed: &str, contact: &str) -> String {
+    let sent = post_form(pool.clone(), "/hyr", &[("contact", typed), ("started", &started())], None).await;
+    assert_eq!(sent.location.as_deref(), Some("/hyr/kodi"));
+    let login = format!("login={}", sent.cookie("login").unwrap());
+    sqlx::query("UPDATE login_codes SET code_hash = sha256(convert_to(contact || ':123456', 'UTF8')) WHERE contact = $1")
+        .bind(contact)
+        .execute(pool)
+        .await
+        .unwrap();
+    let signed = post_form(pool.clone(), "/hyr/kodi", &[("code", "123456")], Some(&login)).await;
+    format!("session={}", signed.cookie("session").expect("signed in"))
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_reported_listing_comes_off_the_site_until_a_moderator_decides(pool: PgPool) {
+    let golf = "/listing/1001-volkswagen-golf-7-2016-nafte";
+    // Anyone may report a listing from its page. Someone not signed in is asked to sign in first,
+    // and comes back to the report after; its own seller can't.
+    assert!(html(pool.clone(), golf).await.contains(r#"href="/listing/1001/raporto""#));
+    let anonymous = get(pool.clone(), "/listing/1001/raporto").await;
+    assert!(anonymous.body.contains("Hyr në llogari që ta raportosh."), "{}", anonymous.body);
+    assert_eq!(anonymous.cookie("kthehu"), Some("/listing/1001/raporto"));
+    let ana = session_for(&pool, "11111111-1111-4111-8111-111111111111").await;
+    assert_eq!(get_with_cookie(pool.clone(), "/listing/1001/raporto", &ana).await.status, StatusCode::NOT_FOUND);
+
+    let mut reporters = Vec::new();
+    for phone in ["+355691110001", "+355691110002", "+355691110003", "+355691110004"] {
+        reporters.push(new_seller(&pool, phone).await);
+    }
+    let report = |session: &str, reason: &'static str, details: &'static str| {
+        let (pool, session) = (pool.clone(), session.to_string());
+        async move { post_form(pool, "/listing/1001/raporto", &[("reason", reason), ("details", details)], Some(&session)).await }
+    };
+    // The form offers its reasons, and needs one; "Tjetër" needs what is wrong.
+    let form = get_with_cookie(pool.clone(), "/listing/1001/raporto", &reporters[0]).await.body;
+    assert_eq!(form.matches(r#"<input type="radio" name="reason""#).count(), 7);
+    let none = report(&reporters[0], "", "").await;
+    assert_eq!(none.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(none.body.contains("Zgjidh çfarë nuk shkon me njoftimin."));
+    assert!(report(&reporters[0], "OTHER", "  ").await.body.contains("Shkruaj shkurt çfarë nuk shkon me njoftimin."));
+
+    // Reported for the wrong details, then for a scam and as fake: it stays up, as wrong details
+    // are for a moderator to see to, not reason to hide it. Thanked; a second report is the first.
+    let sent = report(&reporters[0], "WRONG_DETAILS", "Është në kategorinë e gabuar.").await;
+    assert_eq!(sent.location.as_deref(), Some("/listing/1001/raporto"));
+    assert!(get_with_cookie(pool.clone(), "/listing/1001/raporto", &reporters[0]).await.body.contains("Faleminderit!"));
+    report(&reporters[0], "SCAM", "").await;
+    report(&reporters[1], "SCAM", "Kërkon para përpara, pa e parë makinën.").await;
+    report(&reporters[2], "FAKE", "").await;
+    let reports: i64 = sqlx::query_scalar("SELECT count(*) FROM reports").fetch_one(&pool).await.unwrap();
+    assert_eq!(reports, 3);
+    assert_eq!(get(pool.clone(), golf).await.status, StatusCode::OK);
+
+    // A third for a serious reason takes it off the site: gone for others, the cards with it, and
+    // the report page but for whoever reported it.
+    report(&reporters[3], "SCAM", "").await;
+    assert_eq!(get(pool.clone(), golf).await.status, StatusCode::NOT_FOUND);
+    assert!(!card_numbers(&html(pool.clone(), "/c/makina").await).contains(&1001));
+    assert!(get_with_cookie(pool.clone(), "/listing/1001/raporto", &reporters[3]).await.body.contains("Faleminderit!"));
+    // Its seller still sees it, told why, and so do the moderators.
+    let own = get_with_cookie(pool.clone(), golf, &ana).await.body;
+    assert!(own.contains("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë."));
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(r#"<span class="badge">Në shqyrtim</span>"#));
+    let moderator = new_seller(&pool, MODERATOR).await;
+    assert_eq!(get_with_cookie(pool.clone(), golf, &moderator).await.status, StatusCode::OK);
+    // On /moderim, the hidden first: who reported it and why, and what they wrote.
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &moderator).await.body.contains("Për miratim (1)"));
+    let queue = get_with_cookie(pool.clone(), "/moderim", &moderator).await.body;
+    for text in ["4 veta e raportuan", r#"<span class="badge">Fshehur</span>"#, "<li>Mashtrim (2)</li>", "<li>Njoftim i rremë</li>",
+                 "<li>Të dhëna të gabuara</li>", "Kërkon para përpara, pa e parë makinën."] {
+        assert!(queue.contains(text), "{text}: {queue}");
+    }
+
+    // Kept: back on the site, its reports dismissed, both steps on record.
+    let kept = post_form(pool.clone(), "/moderim/njoftim/1001/mbaje", &[], Some(&moderator)).await;
+    assert_eq!(kept.location.as_deref(), Some("/moderim"));
+    assert_eq!(get(pool.clone(), golf).await.status, StatusCode::OK);
+    assert!(get_with_cookie(pool.clone(), "/moderim", &moderator).await.body.contains("Nuk ka njoftime të raportuara."));
+    let actions: Vec<(String, bool)> = sqlx::query_as(
+        "SELECT action_type, moderator_user_id IS NOT NULL FROM moderation_actions ORDER BY created_at",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(actions, [("SUSPEND_LISTING".to_string(), false), ("RESTORE_LISTING".to_string(), true)]);
+    let open: i64 = sqlx::query_scalar("SELECT count(*) FROM reports WHERE status = 'OPEN'").fetch_one(&pool).await.unwrap();
+    assert_eq!(open, 0);
+
+    // Another taken down for good: off the site, and its seller told so; deleting it is theirs.
+    let iphone = "/listing/1005-iphone-13-128-gb-si-i-ri";
+    post_form(pool.clone(), "/listing/1005/raporto", &[("reason", "PROHIBITED"), ("details", "")], Some(&reporters[0])).await;
+    assert_eq!(get(pool.clone(), iphone).await.status, StatusCode::OK);
+    let removed = post_form(pool.clone(), "/moderim/njoftim/1005/hiq", &[], Some(&moderator)).await;
+    assert_eq!(removed.location.as_deref(), Some("/moderim"));
+    assert_eq!(get(pool.clone(), iphone).await.status, StatusCode::NOT_FOUND);
+    assert!(get_with_cookie(pool.clone(), iphone, &ana).await.body.contains("Moderatorët e hoqën këtë njoftim nga faqja."));
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
+    assert!(mine.contains(r#"<span class="badge">Hequr nga moderatorët</span>"#));
+    let deleted = post_form(pool.clone(), "/listing/1005/fshi", &[], Some(&ana)).await;
+    assert_eq!(deleted.location.as_deref(), Some("/njoftimet-e-mia"));
+    // Nobody else decides.
+    assert_eq!(post_form(pool.clone(), "/moderim/njoftim/1001/hiq", &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_blocked_sellers_listings_leave_the_pages_of_whoever_blocked_them(pool: PgPool) {
+    let golf = "/listing/1001-volkswagen-golf-7-2016-nafte";
+    let mercedes = "/listing/1002-mercedes-benz-c-220-2018-automatike";
+    // Blocking takes being signed in.
+    assert!(!html(pool.clone(), golf).await.contains("Blloko shitësin"));
+    let besnik = session_for(&pool, "22222222-2222-4222-8222-222222222222").await;
+    assert!(get_with_cookie(pool.clone(), golf, &besnik).await.body.contains(r#"<form method="post" action="/listing/1001/blloko" data-turbo-confirm="#));
+
+    // Besnik blocks Ana, who sells the Golf, the iPhone and three more.
+    let blocked = post_form(pool.clone(), "/listing/1001/blloko", &[("blloko", "1")], Some(&besnik)).await;
+    assert_eq!(blocked.location.as_deref(), Some("/listing/1001"));
+    // Her listings leave his pages: the welcome page, a category's, a search, those under another
+    // listing; others still see them.
+    let anas = [1001, 1005, 1007, 1010, 1012];
+    let his = |uri: &'static str| {
+        let (pool, besnik) = (pool.clone(), besnik.clone());
+        async move { card_numbers(&get_with_cookie(pool, uri, &besnik).await.body.replace("&#38;", "&")) }
+    };
+    let home = his("/").await;
+    assert!(!home.is_empty() && home.iter().all(|number| !anas.contains(number)), "{home:?}");
+    assert!(card_numbers(&html(pool.clone(), "/").await).contains(&1001));
+    assert!(!his("/c/makina").await.contains(&1001));
+    assert!(!his("/search?q=golf").await.contains(&1001));
+    assert!(card_numbers(&html(pool.clone(), mercedes).await).contains(&1001), "the Golf is like the Mercedes");
+    assert!(!his(mercedes).await.contains(&1001));
+    // Her listing's own page, which he can still open, says so, with the way back.
+    let page = get_with_cookie(pool.clone(), golf, &besnik).await.body;
+    assert!(page.contains("E ke bllokuar këtë shitës") && page.contains("Zhblloko shitësin"));
+
+    // "Njoftimet e mia" lists her, to let be again.
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &besnik).await.body;
+    assert!(mine.contains(r#"<a href="/perdorues/11111111-1111-4111-8111-111111111111">Ana</a>"#), "{mine}");
+    let unblocked = post_form(pool.clone(), "/llogaria/zhblloko/11111111-1111-4111-8111-111111111111", &[], Some(&besnik)).await;
+    assert_eq!(unblocked.location.as_deref(), Some("/njoftimet-e-mia"));
+    assert!(his("/c/makina").await.contains(&1001));
+
+    // Nobody blocks themselves.
+    let ana = session_for(&pool, "11111111-1111-4111-8111-111111111111").await;
+    assert_eq!(post_form(pool.clone(), "/listing/1001/blloko", &[("blloko", "1")], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn the_number_a_seller_signed_in_with_shows_as_verified(pool: PgPool) {
+    let golf = "/listing/1001-volkswagen-golf-7-2016-nafte";
+    // Nobody signed in with a code yet: nothing is verified.
+    assert!(!html(pool.clone(), golf).await.contains("verifikuar"));
+    // Ana signs in with a code sent to her number: her listings say so beside her name, and her
+    // profile under it.
+    sign_in_with_code(&pool, "069 000 0001", "+355690000001").await;
+    assert!(html(pool.clone(), golf).await.contains("Numër i verifikuar</span>"));
+    assert!(html(pool.clone(), "/perdorues/11111111-1111-4111-8111-111111111111").await.contains("Numër i verifikuar</p>"));
+    let (kind, value): (String, String) =
+        sqlx::query_as("SELECT verification_type, verified_value FROM user_verifications WHERE status = 'VERIFIED'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!((kind.as_str(), value.as_str()), ("PHONE", "+355690000001"));
+    // Besnik never did: his flat says nothing of it.
+    assert!(!html(pool.clone(), "/listing/1003-apartament-2-1-me-qira-ne-tirane").await.contains("verifikuar"));
+    // A shop's number is verified once one of its people signs in with it: Dritan signs in with
+    // his own, which isn't the one the Mercedes shows.
+    sign_in_with_code(&pool, "069 000 0003", "+355690000003").await;
+    assert!(!html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await.contains("verifikuar"));
+    // A listing showing another number than the one verified says nothing either.
+    sqlx::query("UPDATE listing_contacts SET phone_e164 = '+355690000011' WHERE listing_id = (SELECT id FROM listings WHERE public_no = 1001)")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert!(!html(pool.clone(), golf).await.contains("verifikuar"));
+}

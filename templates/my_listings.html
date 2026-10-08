@@ -79,5 +79,22 @@
   </ul>
   {% endif %}
   <p><a class="button" href="/shto">+ Shto një njoftim</a></p>
+  {%- if !blocked.is_empty() %}
+  {#- Those the user blocked, on a listing's page (safety.rs) or in a conversation (messages.rs):
+      their listings leave the user's pages, and neither writes to the other. Each to let be
+      again. -#}
+  <h2 class="blocked-heading">Ata që ke bllokuar</h2>
+  <p class="field-hint">Njoftimet që kanë vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit.</p>
+  <ul class="blocked-sellers">
+    {%- for seller in blocked %}
+    <li class="blocked-seller">
+      <a href="{{ seller.url }}">{{ seller.name }}</a>
+      <form method="post" action="/llogaria/zhblloko/{{ seller.id }}">
+        <button type="submit" class="button secondary small">Zhblloko</button>
+      </form>
+    </li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
 </section>
 {% endblock %}

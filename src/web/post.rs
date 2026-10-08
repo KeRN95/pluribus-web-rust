@@ -754,8 +754,10 @@ struct MyListingsPage {
     listings: Vec<MyListing>,
     /// What they drew, all of them together.
     totals: db::ListingStats,
-    /// For a moderator, how many typed options wait on /moderim.
+    /// For a moderator, how many typed options and reported listings wait on /moderim.
     pending: Option<i64>,
+    /// Those the user blocked, on a listing's page or in a conversation, to let be again.
+    blocked: Vec<db::BlockedSeller>,
 }
 
 impl MyListing {
@@ -776,6 +778,8 @@ impl MyListing {
             "EXPIRED" => Some("Skaduar"),
             "PENDING_REVIEW" | "DRAFT" => Some("Në pritje"),
             "PAUSED" => Some("Çaktivizuar"),
+            "SUSPENDED" => Some("Në shqyrtim"),
+            "REJECTED" => Some("Hequr nga moderatorët"),
             _ => Some("Jo aktiv"),
         }
     }
@@ -828,13 +832,16 @@ pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap) -> R
     let Some(user) = current_user(&state, &headers).await? else {
         return render(SignInPage::new());
     };
-    let listings = db::my_listings(&state.db, user.id).await?;
+    let (listings, blocked) = tokio::try_join!(db::my_listings(&state.db, user.id), db::blocked_sellers(&state.db, user.id))?;
     let pending = match state.moderators.include(&user) {
-        true => Some(db::pending_option_count(&state.db).await?),
+        true => {
+            let (options, reported) = tokio::try_join!(db::pending_option_count(&state.db), db::reported_count(&state.db))?;
+            Some(options + reported)
+        }
         false => None,
     };
     let totals = listings.iter().map(|listing| listing.stats).sum();
-    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending })
+    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending, blocked })
 }
 
 /// What a listing drew, or all of a seller's listings together, as "Njoftimet e mia" says it.

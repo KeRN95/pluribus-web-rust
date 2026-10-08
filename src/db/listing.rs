@@ -42,6 +42,11 @@ pub struct ListingDetail {
     pub seller_url: String,
     pub seller_since: OffsetDateTime,
     pub seller_listings: i64,
+    /// The account that posted it: its seller, or one of a business's people.
+    pub created_by_user_id: Uuid,
+    /// Whether the number (or address) it shows is one the account that posted it signed in with,
+    /// proved theirs by the code (user_verifications).
+    pub contact_verified: bool,
 }
 
 #[derive(Debug)]
@@ -71,7 +76,9 @@ pub struct Photo {
     pub height_px: Option<i32>,
 }
 
-/// Sold and reserved listings stay viewable, so shared links keep working.
+/// Sold and reserved listings stay viewable, so shared links keep working; those the reports or
+/// the moderators took off the site come too, for their seller and the moderators alone (web/
+/// listings.rs).
 pub async fn listing_by_public_no(
     db: &PgPool,
     public_no: i64,
@@ -98,14 +105,25 @@ pub async fn listing_by_public_no(
                   coalesce(b.created_at, u.created_at) AS "seller_since!",
                   (SELECT count(*) FROM listings o
                    WHERE o.status = 'ACTIVE'
-                     AND (o.seller_business_id = l.seller_business_id OR o.seller_user_id = l.seller_user_id)) AS "seller_listings!"
+                     AND (o.seller_business_id = l.seller_business_id OR o.seller_user_id = l.seller_user_id)) AS "seller_listings!",
+                  l.created_by_user_id,
+                  coalesce((SELECT CASE WHEN c.show_phone AND c.phone_e164 IS NOT NULL
+                                        THEN EXISTS (SELECT 1 FROM user_verifications v
+                                                     WHERE v.user_id = l.created_by_user_id AND v.status = 'VERIFIED'
+                                                       AND v.verification_type = 'PHONE' AND v.verified_value = c.phone_e164::text)
+                                        WHEN c.show_email AND c.email IS NOT NULL
+                                        THEN EXISTS (SELECT 1 FROM user_verifications v
+                                                     WHERE v.user_id = l.created_by_user_id AND v.status = 'VERIFIED'
+                                                       AND v.verification_type = 'EMAIL' AND lower(v.verified_value) = lower(c.email::text))
+                                        ELSE false END
+                            FROM listing_contacts c WHERE c.listing_id = l.id), false) AS "contact_verified!"
            FROM listings l
            JOIN categories c ON c.id = l.category_id
            LEFT JOIN locations loc ON loc.id = l.location_id
            LEFT JOIN zone_area_prices zone_price ON zone_price.zone_id = l.location_id AND zone_price.category_id = l.category_id
            LEFT JOIN users u ON u.id = l.seller_user_id
            LEFT JOIN businesses b ON b.id = l.seller_business_id
-           WHERE l.public_no = $1 AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD')"#,
+           WHERE l.public_no = $1 AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD', 'SUSPENDED', 'REJECTED')"#,
         public_no
     )
     .fetch_optional(db)

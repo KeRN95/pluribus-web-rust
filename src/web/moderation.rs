@@ -1,7 +1,9 @@
-//! The moderators' page, /moderim: the makes, models and brands sellers typed in when a list
-//! lacked theirs ("Tjetër", properties.rs). A moderator approves one, its spelling put right, and
-//! the lists and filters offer it; or merges it into the listed one it is, spelt another way.
-//! Only for the moderators .env names (MODERATORS); anyone else finds nothing here.
+//! The moderators' page, /moderim. The listings people reported (safety.rs), those the reports
+//! took off the site first: a moderator keeps one, which goes back up, or takes it down for good.
+//! And the makes, models and brands sellers typed in when a list lacked theirs ("Tjetër",
+//! properties.rs): a moderator approves one, its spelling put right, and the lists and filters
+//! offer it; or merges it into the listed one it is, spelt another way. Only for the moderators
+//! .env names (MODERATORS); anyone else finds nothing here.
 
 use std::collections::HashMap;
 
@@ -15,10 +17,10 @@ use axum::{
 use serde::Deserialize;
 use uuid::Uuid;
 
-use super::{Result, account::current_user, filters::Choice, not_found, properties, render};
+use super::{Result, account::current_user, filters::Choice, not_found, properties, render, safety::reason_label};
 use crate::{
     AppState,
-    db::{self, Approval, MergeTarget, PendingOption, SessionUser},
+    db::{self, Approval, Decision, MergeTarget, PendingOption, ReportedListing, SessionUser},
     format,
 };
 
@@ -53,10 +55,52 @@ impl PendingRow {
     }
 }
 
+/// A reported listing, as /moderim shows it.
+impl ReportedListing {
+    pub fn url(&self) -> String {
+        format!("/listing/{}-{}", self.public_no, self.slug)
+    }
+
+    /// Taken off the site by its reports, until a moderator decides.
+    pub fn hidden(&self) -> bool {
+        self.status == "SUSPENDED"
+    }
+
+    /// "1 person e raportoi", "3 veta e raportuan".
+    pub fn reporters_text(&self) -> String {
+        match self.reporters {
+            1 => "1 person e raportoi".to_string(),
+            reporters => format!("{reporters} veta e raportuan"),
+        }
+    }
+
+    /// When it was last reported.
+    pub fn when(&self) -> String {
+        format::date(self.last_reported)
+    }
+
+    /// The reasons given, by their names, with how many gave each.
+    pub fn reasons(&self) -> Vec<(&str, i64)> {
+        self.reason_codes.iter().zip(&self.reason_counts).map(|(code, count)| (reason_label(code), *count)).collect()
+    }
+}
+
 #[derive(Template)]
 #[template(path = "moderation.html")]
 struct ModerationPage {
+    /// The listings people reported, which wait for a decision.
+    reported: Vec<ReportedListing>,
     rows: Vec<PendingRow>,
+    /// How many people reporting a listing take it off the site (db::HIDE_AFTER).
+    hide_after: i64,
+}
+
+impl ModerationPage {
+    /// The page as things stand, with `error` beside the typed option it is about.
+    async fn now(state: &AppState, error: Option<(Uuid, String)>) -> Result<Self> {
+        let reported = db::reported_listings(&state.db).await?;
+        Ok(Self { reported, rows: rows(state, error).await?, hide_after: db::HIDE_AFTER })
+    }
 }
 
 /// The signed-in user, if they are a moderator.
@@ -102,7 +146,7 @@ pub async fn page(State(state): State<AppState>, headers: HeaderMap) -> Result<R
     if moderator(&state, &headers).await?.is_none() {
         return not_found().await;
     }
-    render(ModerationPage { rows: rows(&state, None).await? })
+    render(ModerationPage::now(&state, None).await?)
 }
 
 #[derive(Deserialize)]
@@ -137,7 +181,7 @@ pub async fn approve(
     match problem {
         None => Ok(Redirect::to("/moderim").into_response()),
         Some(message) => {
-            let page = ModerationPage { rows: rows(&state, Some((id, message))).await? };
+            let page = ModerationPage::now(&state, Some((id, message))).await?;
             Ok((StatusCode::UNPROCESSABLE_ENTITY, render(page)?).into_response())
         }
     }
@@ -159,11 +203,34 @@ pub async fn merge(
         return not_found().await;
     };
     let Ok(into) = form.into.parse::<Uuid>() else {
-        let page = ModerationPage { rows: rows(&state, Some((id, NO_TARGET.to_string()))).await? };
+        let page = ModerationPage::now(&state, Some((id, NO_TARGET.to_string()))).await?;
         return Ok((StatusCode::UNPROCESSABLE_ENTITY, render(page)?).into_response());
     };
     if db::merge_option(&state.db, id, into).await? {
         tracing::info!(moderator = %user.id, option = %id, %into, "merged a typed option");
+    }
+    Ok(Redirect::to("/moderim").into_response())
+}
+
+/// POST /moderim/njoftim/{number}/mbaje: nothing wrong with the reported listing. Its reports are
+/// dismissed, and if they took it off the site, it goes back up as it was.
+pub async fn keep(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
+    decide(&state, &headers, public_no, Decision::Keep).await
+}
+
+/// POST /moderim/njoftim/{number}/hiq: the reported listing breaks the rules, and comes off the
+/// site for good; its seller sees it on "Njoftimet e mia" as taken down by the moderators.
+pub async fn remove(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
+    decide(&state, &headers, public_no, Decision::Remove).await
+}
+
+async fn decide(state: &AppState, headers: &HeaderMap, public_no: i64, decision: Decision) -> Result<Response> {
+    let Some(user) = moderator(state, headers).await? else {
+        return not_found().await;
+    };
+    // Decided by someone else meanwhile: the page shows how things are.
+    if db::decide(&state.db, public_no, user.id, decision).await? {
+        tracing::info!(moderator = %user.id, listing = public_no, ?decision, "decided on a reported listing");
     }
     Ok(Redirect::to("/moderim").into_response())
 }

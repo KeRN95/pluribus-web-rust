@@ -68,6 +68,46 @@
 @media (max-width: 719px) {
   .my-listing { flex-direction: column; align-items: stretch; }
 }
+/* Reporting a listing (report.html): the reasons as boxes to pick one of, each its name and what
+   it covers, the one picked outlined in the accent. */
+.report-reasons { display: grid; gap: .45rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+.report-reasons legend { margin-bottom: .45rem; padding: 0; }
+.report-reason {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+  padding: .65rem .8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.report-reason:has(input:checked) { border-color: var(--accent); }
+.report-reason input { flex: none; margin: .2rem 0 0; accent-color: var(--accent); }
+.report-reason-text { display: grid; gap: .1rem; }
+.report-reason-label { font-weight: var(--semibold); }
+.report-reason .field-hint { margin: 0; }
+/* "Njoftimet e mia": the sellers the user blocked, each with its button to let them be again. */
+.blocked-heading { margin: 2rem 0 .2rem; font-size: var(--text-xl); }
+.blocked-sellers { display: grid; gap: .45rem; margin: .7rem 0 0; padding: 0; list-style: none; }
+.blocked-seller {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .55rem .9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.blocked-seller a { overflow: hidden; color: var(--text); font-weight: var(--semibold); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.blocked-seller form { display: contents; }
+/* The moderators' page (/moderim): its two parts, the reported listings and the typed names; a
+   reported listing's reasons as pills, and what its reporters wrote, quoted. */
+.moderation-heading { margin: 1.75rem 0 .3rem; font-size: var(--text-xl); }
+.report-summary { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
+.report-summary li { padding: .15rem .6rem; border-radius: 999px; background: var(--badge); font-size: var(--text-sm); }
+.report-note { margin: 0; padding: .35rem .75rem; border-left: 3px solid var(--border-strong); color: var(--muted); font-size: var(--text-sm); white-space: pre-line; }
 /* The moderators' page (/moderim): each name sellers typed in, in a box like a listing on
    "Njoftimet e mia", with its two forms side by side, under each other on phones. */
 .moderation-link { margin: -.5rem 0 1.25rem; }
@@ -277,6 +317,8 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 }
 .profile-header h1 { margin: 0; font-size: var(--text-2xl); line-height: 1.2; }
 .profile-header p { margin: .15rem 0 0; color: var(--muted); font-size: var(--text-sm); }
+/* Its verified number keeps the green its badge has everywhere (page.css), its size too. */
+.profile-header .verified { margin-top: .3rem; color: var(--below); font-size: var(--text-xs); }
 /* Searching one seller's listings: a small field under their name. */
 .profile-search {
   display: flex;

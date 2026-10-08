@@ -417,6 +417,10 @@
 .listing-meta strong { font-weight: var(--semibold); }
 .more { display: inline-block; padding: 1rem; color: var(--muted); }
 .empty { color: var(--muted); }
+/* A seller's number or address proved theirs by signing in with it (safety.rs): a shield with a
+   check, in the green of a good price, on a listing's seller card and on their profile. */
+.verified { display: inline-flex; align-items: center; gap: .3rem; margin: 0; color: var(--below); font-size: var(--text-xs); font-weight: var(--semibold); }
+.verified svg { flex: none; }
 /* On /te-ruajturat, over the cards: the kept listings whose price dropped since the visitor last
    looked, each from what to what (saved.html). */
 .price-drops-title { margin: 0; font-weight: var(--semibold); }

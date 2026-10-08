@@ -206,6 +206,26 @@
 .listing-price { margin: 0; font-size: var(--text-3xl); line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
 /* What follows the price ("/muaj", "(i diskutueshëm)"), half its size. */
 .price-note { font-size: .5em; letter-spacing: normal; }
+/* Under the seller's buttons, quietly, as links are: reporting the listing and blocking its seller
+   (safety.rs); and once blocked, a line that says so. */
+.listing-safety { display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; margin-top: .85rem; }
+.listing-safety form { display: contents; }
+.quiet-action {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-decoration: none;
+  cursor: pointer;
+}
+.quiet-action:hover { color: var(--text); text-decoration: underline; }
+.quiet-action svg { flex: none; }
+.blocked-note { margin: .5rem 0 0; color: var(--muted); font-size: var(--text-sm); }
 /* A price that dropped lately (price_drop.html): what it was, struck through, quietly, and by how
    much in a green pill, as the zone's bubble says a square metre is cheap for it. */
 .price-was {

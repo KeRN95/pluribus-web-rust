@@ -13,12 +13,12 @@ use rust_decimal::{Decimal, RoundingStrategy, prelude::ToPrimitive};
 use super::{
     Result,
     account::{ClientIp, cookie_header, current_user},
-    browse::ListingPage,
+    browse::{ListingPage, verified_label},
     cookie, not_found,
     icons::{self, Reads},
     photos,
     post::POSTED_COOKIE,
-    properties, render, render_stream,
+    properties, render, render_stream, safety,
     seo::{self, PageMeta},
 };
 use crate::{
@@ -291,8 +291,15 @@ impl ListingDetail {
         match self.status.as_str() {
             "RESERVED" => Some("Rezervuar"),
             "SOLD" => Some("Shitur"),
+            "SUSPENDED" => Some("Në shqyrtim"),
+            "REJECTED" => Some("Hequr"),
             _ => None,
         }
+    }
+
+    /// On the site for anyone with its link: not taken off it by its reports or the moderators.
+    pub fn on_site(&self) -> bool {
+        matches!(self.status.as_str(), "ACTIVE" | "RESERVED" | "SOLD")
     }
 }
 
@@ -325,6 +332,14 @@ struct ListingShow {
     meta: PageMeta,
     /// By how much its price dropped lately, and from what (price_drop): beside the price.
     price_drop: Option<(i64, String)>,
+    /// The visitor is signed in, and so can block its seller.
+    signed_in: bool,
+    /// The visitor blocked its seller (safety.rs): the page says so, and leaves out their others.
+    blocked: bool,
+    /// "Numër i verifikuar" when the number it shows is one its seller signed in with.
+    verified: Option<&'static str>,
+    /// Why it isn't on the site, for its seller and the moderators, who alone see it then.
+    hidden_note: Option<&'static str>,
 }
 
 /// What a listing's page says about itself (seo.rs). Its preview: the title and the price, where
@@ -332,7 +347,8 @@ struct ListingShow {
 /// photo. With a price, the price for the product:price tags, and on sale, a schema.org Product
 /// and its Offer for Google: the price, the currency, the condition, whether it is still for sale,
 /// and the seller. A sold listing is not for search engines to list, though its page stays for
-/// those who have its link; a reserved one still is, as it may yet be for sale again.
+/// those who have its link; a reserved one still is, as it may yet be for sale again; one taken off
+/// the site (its seller and the moderators see it) is not.
 fn listing_meta(origin: &str, listing: &ListingDetail, photos: &[Photo]) -> PageMeta {
     let price = format::price(listing.price_amount, &listing.currency, &listing.price_type, &listing.listing_type);
     let mut about: Vec<&str> = Vec::new();
@@ -353,7 +369,7 @@ fn listing_meta(origin: &str, listing: &ListingDetail, photos: &[Photo]) -> Page
     if let Some(photo) = photos.first() {
         meta = meta.with_image(origin, &photo.url, listing.title.clone());
     }
-    meta.noindex = listing.status == "SOLD";
+    meta.noindex = !matches!(listing.status.as_str(), "ACTIVE" | "RESERVED");
     let priced = matches!(listing.price_type.as_str(), "FIXED" | "NEGOTIABLE" | "FROM");
     let Some(amount) = listing.price_amount.filter(|_| priced) else {
         return meta;
@@ -419,12 +435,19 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let Some(listing) = db::listing_by_public_no(&state.db, public_no).await? else {
         return not_found().await;
     };
+    // One its reports or the moderators took off the site is for its seller and the moderators.
+    let user = current_user(&state, &headers).await?;
+    let own = user.as_ref().is_some_and(|user| user.id == listing.created_by_user_id);
+    let moderator = user.as_ref().is_some_and(|user| state.moderators.include(user));
+    if !listing.on_site() && !own && !moderator {
+        return not_found().await;
+    }
     let canonical = format!("{}-{}", listing.public_no, listing.slug);
     if key != canonical {
         return Ok(Redirect::permanent(&format!("/listing/{canonical}")).into_response());
     }
     // One more of the seller's listings than the page shows says whether they have more.
-    let (attributes, photos, contact, categories, mut from_seller, related, views, price_was) = tokio::try_join!(
+    let (attributes, photos, contact, categories, mut from_seller, mut related, views, price_was, hidden) = tokio::try_join!(
         db::listing_attributes(&state.db, listing.id, listing.category_id),
         db::listing_photos(&state.db, listing.id),
         db::visible_contact(&state.db, listing.id),
@@ -433,6 +456,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         db::related_listings(&state.db, listing.id, db::RELATED),
         db::listing_views(&state.db, listing.id),
         db::price_was(&state.db, listing.id),
+        safety::hidden_accounts(&state, &headers),
     )?;
     let price_drop = price_drop(price_was, listing.price_amount, &listing.currency);
     let views = (views > 0).then(|| format::number(Decimal::from(views)));
@@ -455,14 +479,27 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             .collect(),
         None => vec![listing.category_slug.as_str()],
     };
-    let own = match current_user(&state, &headers).await? {
-        Some(user) => db::is_own_listing(&state.db, listing.id, user.id).await?,
-        None => false,
-    };
     let reveal = contact.map(|contact| match contact {
         SellerContact::Phone(_) => Reveal::Phone,
         SellerContact::Email(_) => Reveal::Email,
     });
+    // Whether the contact it shows is verified; whether the visitor blocked its seller, whose
+    // other listings then go, as do those of any seller they blocked among the related ones.
+    let verified = match (listing.contact_verified, &reveal) {
+        (true, Some(Reveal::Phone)) => verified_label(Some("PHONE")),
+        (true, Some(Reveal::Email)) => verified_label(Some("EMAIL")),
+        _ => None,
+    };
+    let blocked = hidden.contains(&listing.created_by_user_id);
+    if blocked {
+        from_seller.clear();
+    }
+    safety::without_hidden(&mut related, &hidden);
+    let hidden_note = match listing.status.as_str() {
+        "SUSPENDED" => Some("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë."),
+        "REJECTED" => Some("Moderatorët e hoqën këtë njoftim nga faqja."),
+        _ => None,
+    };
     // A car's title says its make, model, body type and colour: its details leave them out.
     let titled = listing.heading.is_some();
     let mut details: Vec<Detail> = attributes
@@ -492,7 +529,25 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let page = ListingPage::related(related);
     let meta = listing_meta(&seo::origin(&headers), &listing, &photos);
     let mut response =
-        render(ListingShow { listing, trail, details, photos, reveal, own, posted, seller_page, seller_more, page, views, meta, price_drop })?;
+        render(ListingShow {
+            signed_in: user.is_some(),
+            listing,
+            trail,
+            details,
+            photos,
+            reveal,
+            own,
+            posted,
+            seller_page,
+            seller_more,
+            page,
+            views,
+            meta,
+            price_drop,
+            blocked,
+            verified,
+            hidden_note,
+        })?;
     if posted {
         response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));
     }

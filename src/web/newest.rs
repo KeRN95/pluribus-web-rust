@@ -20,7 +20,7 @@ use time::OffsetDateTime;
 use tokio::{sync::watch, time::Instant};
 use uuid::Uuid;
 
-use super::filters::Params;
+use super::{filters::Params, safety};
 use crate::{
     AppState,
     db::{self, Cursor, ListingCard, Sort},
@@ -87,7 +87,9 @@ pub async fn stream(State(state): State<AppState>, headers: HeaderMap, RawQuery(
             Cursor::Newest { sort_at, id } => Some((sort_at, id)),
             _ => None,
         });
+    let hidden = safety::hidden_accounts(&state, &headers).await.unwrap_or_default();
     let follower = Follower {
+        hidden,
         db: state.db,
         since,
         known: None,
@@ -107,6 +109,8 @@ pub async fn stream(State(state): State<AppState>, headers: HeaderMap, RawQuery(
 
 /// One page's stream: what it last saw, what waits to be sent, and when it may look and send.
 struct Follower {
+    /// The accounts the visitor blocked, whose new listings the row leaves out (safety.rs).
+    hidden: Vec<Uuid>,
     db: PgPool,
     /// Where the page's row starts: what the first look finds after it is new.
     since: Option<Key>,
@@ -178,7 +182,9 @@ impl Follower {
         self.known = Some(newest);
         if !new.is_empty() {
             for card in db::cards_by_id(&self.db, &new).await? {
-                wait(&mut self.waiting, card, |card| card.id);
+                if !self.hidden.contains(&card.created_by_user_id) {
+                    wait(&mut self.waiting, card, |card| card.id);
+                }
             }
         }
         Ok(())

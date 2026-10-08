@@ -11,6 +11,10 @@
   <div>
     <h1>{{ name }}</h1>
     <p>{% if business %}Biznes · {% endif %}Në Pluribus që nga {{ since }} · {{ count }}</p>
+    {%- if let Some(verified) = verified %}
+    {#- The number (or address) they signed in with, proved theirs by the code (safety.rs). -#}
+    <p class="verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::VERIFIED|safe }}</svg>{{ verified }}</p>
+    {%- endif %}
   </div>
 </header>
 {#- A search within this seller's listings only. -#}

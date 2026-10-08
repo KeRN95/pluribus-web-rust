@@ -629,6 +629,15 @@ pub const EYE: &str = r#"<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 1
 /// listing's photo), and how many keep a seller's listing (my_listings.html).
 pub const HEART: &str = r#"<path d="M12 20.3 4.6 13.1A4.9 4.9 0 0 1 11.5 6.2l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/>"#;
 
+/// A flag: reporting a listing (listing.html).
+pub const FLAG: &str = r#"<path d="M5.5 21V4"/><path d="M5.5 4h12l-2.5 4 2.5 4h-12"/>"#;
+
+/// A circle crossed out: blocking a seller (listing.html).
+pub const BLOCK: &str = r#"<circle cx="12" cy="12" r="8.5"/><path d="m6 6 12 12"/>"#;
+
+/// A shield with a check: a seller's number or address verified (listing.html, profile.html).
+pub const VERIFIED: &str = r#"<path d="M12 3 4.5 6v5.5c0 4.5 3.2 8.3 7.5 9.5 4.3-1.2 7.5-5 7.5-9.5V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>"#;
+
 /// A telephone's handset, for a call: the button that shows a seller's number (phone.svg), and how
 /// many times it was shown (my_listings.html).
 pub const CALL: &str = r#"<path d="M5 4h3.2l1.6 4.2-2.1 1.4a11 11 0 0 0 6.7 6.7l1.4-2.1 4.2 1.6V19a2 2 0 0 1-2.2 2A17 17 0 0 1 3 6.2 2 2 0 0 1 5 4Z"/>"#;

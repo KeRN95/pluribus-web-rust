@@ -327,6 +327,8 @@ impl<'a> Filters<'a> {
             sort: self.sort,
             after: self.after,
             seller: None,
+            // The page adds the accounts the visitor blocked (safety.rs).
+            hidden_accounts: Vec::new(),
         }
     }
 

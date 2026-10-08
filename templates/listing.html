@@ -6,10 +6,15 @@
 
 {% block content %}
 {#- Shown to anyone but its seller, the page says so (application.js), for "Më të klikuarat". -#}
-<article class="listing"{% if !own %} data-seen-url="/listing/{{ listing.public_no }}/pare"{% endif %}>
+<article class="listing"{% if !own && listing.on_site() %} data-seen-url="/listing/{{ listing.public_no }}/pare"{% endif %}>
   {%- if posted %}
   {#- Posted just now without signing in (post.rs): changing it later takes signing in. -#}
   <p class="notice" role="status">Njoftimi yt u publikua. Për ta ndryshuar ose fshirë më vonë, <a href="/njoftimet-e-mia">hyr</a> me numrin ose email-in që shkruajte.</p>
+  {%- endif %}
+  {%- if let Some(note) = hidden_note %}
+  {#- Taken off the site by its reports or the moderators: what its seller and the moderators, who
+      alone see it now, are told. -#}
+  <p class="notice" role="status">{{ note }}</p>
   {%- endif %}
   {#- Where it is: its category and those above it, as a category page's heading shows its path
       (.breadcrumbs): quiet links with a fainter › between them, its own category last; then its
@@ -142,6 +147,10 @@
     <span class="avatar" aria-hidden="true">{{ listing.seller_initial() }}</span>
     <span class="seller-text">
       <span class="seller-name">{{ listing.seller_name }}</span>
+      {%- if let Some(verified) = verified %}
+      {#- The number (or address) it shows is one its seller signed in with (safety.rs). -#}
+      <span class="verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::VERIFIED|safe }}</svg>{{ verified }}</span>
+      {%- endif %}
       <span class="seller-summary">{{ listing.seller_summary() }}</span>
     </span>
     <svg class="seller-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
@@ -188,6 +197,24 @@
       </button>
     </div>
   </div>
+  {%- if !own %}
+  {#- Under the buttons, quietly: reporting the listing (report.html), and for someone signed in,
+      blocking its seller, whose listings then leave their pages (safety.rs) and who can't write
+      to them, nor they to the seller (messages.rs), or letting them be.
+      Not fetched ahead under the pointer: the report page remembers where to come back to. -#}
+  <div class="listing-safety">
+    <a class="quiet-action" href="/listing/{{ listing.public_no }}/raporto" data-turbo-prefetch="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::FLAG|safe }}</svg>Raporto</a>
+    {%- if signed_in %}
+    <form method="post" action="/listing/{{ listing.public_no }}/blloko"{% if !blocked %} data-turbo-confirm="Ta bllokojmë këtë shitës? Nuk do t'i shohësh më njoftimet që ka vënë, dhe nuk do t'i shkruani dot njëri-tjetrit."{% endif %}>
+      <input type="hidden" name="blloko" value="{% if blocked %}0{% else %}1{% endif %}">
+      <button type="submit" class="quiet-action"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BLOCK|safe }}</svg>{% if blocked %}Zhblloko shitësin{% else %}Blloko shitësin{% endif %}</button>
+    </form>
+    {%- endif %}
+  </div>
+  {%- if blocked %}
+  <p class="blocked-note">E ke bllokuar këtë shitës: njoftimet që ka vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit.</p>
+  {%- endif %}
+  {%- endif %}
   </aside>
 
   {% if !details.is_empty() %}

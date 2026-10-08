@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Raporto njoftimin | Pluribus{% endblock %}
+
+{% block content %}
+{#- Reporting a listing (safety.rs): what is wrong with it, for the moderators, from someone signed
+    in, whom it thanks once sent; whoever isn't signs in first, and comes back here. -#}
+<section class="account report">
+  <h1>Raporto njoftimin</h1>
+  <p class="lead"><a href="{{ url }}">{{ title }}</a></p>
+  {%- match state %}
+  {%- when ReportState::SignIn %}
+  <p>Hyr në llogari që ta raportosh. Kur disa llogari raportojnë të njëjtin njoftim, ai fshihet nga faqja derisa ta shohin moderatorët, prandaj pa llogari nuk mund të raportohet.</p>
+  <p><a class="button" href="/llogaria">Hyr</a></p>
+  {%- when ReportState::Done %}
+  <p class="notice" role="status">Faleminderit! Moderatorët do ta shohin raportimin tënd.</p>
+  <p><a class="button secondary" href="{{ url }}">Kthehu te njoftimi</a></p>
+  {%- when ReportState::Form %}
+  <form class="account-form" method="post" action="/listing/{{ public_no }}/raporto">
+    {#- One reason, each with what it covers. -#}
+    <fieldset class="report-reasons">
+      <legend class="field-label">Çfarë nuk shkon me të?</legend>
+      {%- for choice in reasons %}
+      <label class="report-reason">
+        <input type="radio" name="reason" value="{{ choice.code }}" required{% if reason == choice.code %} checked{% endif %}>
+        <span class="report-reason-text"><span class="report-reason-label">{{ choice.label }}</span><span class="field-hint">{{ choice.hint }}</span></span>
+      </label>
+      {%- endfor %}
+    </fieldset>
+    <div class="field">
+      <label class="field-label" for="report-details">Shpjegim <span class="optional">(sipas dëshirës)</span></label>
+      <textarea id="report-details" name="details" rows="4" maxlength="1000">{{ details }}</textarea>
+    </div>
+    {%- if let Some(error) = error %}
+    <p class="form-error" role="alert">{{ error }}</p>
+    {%- endif %}
+    <div class="form-actions"><button type="submit" class="button">Dërgo raportimin</button></div>
+  </form>
+  {%- endmatch %}
+</section>
+{% endblock %}

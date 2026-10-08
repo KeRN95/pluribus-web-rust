@@ -6,6 +6,10 @@ use super::*;
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct ListingCard {
     pub id: Uuid,
+    /// The account that posted it (a business's, one of its people): the rows of cards leave out
+    /// those of the accounts the visitor blocked (web/safety.rs).
+    #[sqlx(default)]
+    pub created_by_user_id: Uuid,
     pub public_no: i64,
     pub slug: String,
     pub title: String,
@@ -203,6 +207,8 @@ impl Near {
 pub struct ListingFilter {
     /// One seller's listings, for their profile.
     pub seller: Option<Seller>,
+    /// The accounts the visitor blocked, whose listings are left out (web/safety.rs).
+    pub hidden_accounts: Vec<Uuid>,
     pub category_ids: Option<Vec<Uuid>>,
     /// A municipality: listings placed in it or anywhere inside it.
     pub location_id: Option<Uuid>,
@@ -372,30 +378,56 @@ pub struct Profile {
     pub name: String,
     pub since: OffsetDateTime,
     pub listings: i64,
+    /// What of theirs is verified (user_verifications): PHONE, the number they signed in with,
+    /// or EMAIL; a business's public number when one of its people signed in with it.
+    pub verified: Option<String>,
 }
 
 pub async fn user_profile(db: &PgPool, id: Uuid) -> sqlx::Result<Option<Profile>> {
     let row = sqlx::query!(
         r#"SELECT u.display_name, u.created_at,
-                  (SELECT count(*) FROM listings l WHERE l.seller_user_id = u.id AND l.status = 'ACTIVE') AS "listings!"
+                  (SELECT count(*) FROM listings l WHERE l.seller_user_id = u.id AND l.status = 'ACTIVE') AS "listings!",
+                  (SELECT v.verification_type FROM user_verifications v
+                   WHERE v.user_id = u.id AND v.status = 'VERIFIED'
+                     AND ((v.verification_type = 'PHONE' AND v.verified_value = u.phone_e164::text)
+                          OR (v.verification_type = 'EMAIL' AND lower(v.verified_value) = lower(u.email::text)))
+                   ORDER BY v.verification_type = 'PHONE' DESC
+                   LIMIT 1) AS verified
            FROM users u WHERE u.id = $1 AND u.status = 'ACTIVE'"#,
         id,
     )
     .fetch_optional(db)
     .await?;
-    Ok(row.map(|row| Profile { seller: Seller::User(id), name: row.display_name, since: row.created_at, listings: row.listings }))
+    Ok(row.map(|row| Profile {
+        seller: Seller::User(id),
+        name: row.display_name,
+        since: row.created_at,
+        listings: row.listings,
+        verified: row.verified,
+    }))
 }
 
 pub async fn business_profile(db: &PgPool, slug: &str) -> sqlx::Result<Option<Profile>> {
     let row = sqlx::query!(
         r#"SELECT b.id, b.display_name, b.created_at,
-                  (SELECT count(*) FROM listings l WHERE l.seller_business_id = b.id AND l.status = 'ACTIVE') AS "listings!"
+                  (SELECT count(*) FROM listings l WHERE l.seller_business_id = b.id AND l.status = 'ACTIVE') AS "listings!",
+                  (SELECT v.verification_type FROM business_members m
+                   JOIN user_verifications v ON v.user_id = m.user_id
+                   WHERE m.business_id = b.id AND v.status = 'VERIFIED' AND v.verification_type = 'PHONE'
+                     AND v.verified_value = b.public_phone::text
+                   LIMIT 1) AS verified
            FROM businesses b WHERE b.slug = $1 AND b.status = 'ACTIVE'"#,
         slug,
     )
     .fetch_optional(db)
     .await?;
-    Ok(row.map(|row| Profile { seller: Seller::Business(row.id), name: row.display_name, since: row.created_at, listings: row.listings }))
+    Ok(row.map(|row| Profile {
+        seller: Seller::Business(row.id),
+        name: row.display_name,
+        since: row.created_at,
+        listings: row.listings,
+        verified: row.verified,
+    }))
 }
 
 #[derive(Debug, Clone)]
@@ -435,7 +467,7 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH card_attributes AS MATERIALI
              FROM effective_category_attributes
              WHERE show_in_details AND NOT show_in_card
          )
-         SELECT l.id, l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.listing_type, l.price_amount,
+         SELECT l.id, l.created_by_user_id, l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.listing_type, l.price_amount,
                 l.currency::text AS currency, l.price_type, l.price_normalized,
                 loc.name AS location_name,
                 CASE WHEN loc.location_type = 'AREA' THEN loc.name END AS zone,
@@ -896,6 +928,9 @@ fn push_conditions(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilte
             query.push(" AND l.seller_business_id = ").push_bind(id);
         }
         None => {}
+    }
+    if !filter.hidden_accounts.is_empty() {
+        query.push(" AND l.created_by_user_id <> ALL(").push_bind(filter.hidden_accounts.clone()).push(")");
     }
     if let Some(ids) = &filter.category_ids {
         if per_category {

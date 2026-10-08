@@ -5,6 +5,45 @@
 {% block content %}
 <section class="account">
   <h1>Për miratim</h1>
+
+  {#- The listings people reported (safety.rs), those the reports took off the site first: each
+      with how many reported it, why, and what they wrote; kept, it goes back up, taken down, it is
+      off the site for good. -#}
+  <h2 class="moderation-heading">Njoftime të raportuara</h2>
+  <p class="lead">Njoftimet që kanë raportuar të tjerët. Kur {{ hide_after }} veta raportojnë një njoftim si mashtrim, të rremë, të ndaluar ose spam, ai fshihet nga faqja derisa ta shohësh. Mbaje nëse s'ka gjë të keqe, dhe kthehet në faqe; hiqe nëse nuk i respekton rregullat.</p>
+  {% if reported.is_empty() %}
+  <p class="empty">Nuk ka njoftime të raportuara.</p>
+  {% else %}
+  <ul class="pending-options">
+    {% for listing in reported %}
+    <li class="pending-option">
+      <div class="pending-head">
+        <span class="pending-attribute">{{ listing.reporters_text() }} · {{ listing.when() }}{% if listing.hidden() %} · <span class="badge">Fshehur</span>{% endif %}</span>
+        <a class="pending-label" href="{{ listing.url() }}">{{ listing.title }}</a>
+        <span class="my-listing-meta">nga <a href="{{ listing.seller_url }}">{{ listing.seller_name }}</a></span>
+      </div>
+      <ul class="report-summary">
+        {%- for (label, count) in listing.reasons() %}
+        <li>{{ label }}{% if count > 1 %} ({{ count }}){% endif %}</li>
+        {%- endfor %}
+      </ul>
+      {%- for note in listing.notes %}
+      <blockquote class="report-note">{{ note }}</blockquote>
+      {%- endfor %}
+      <div class="pending-actions">
+        <form method="post" action="/moderim/njoftim/{{ listing.public_no }}/mbaje">
+          <button type="submit" class="button small">Mbaje</button>
+        </form>
+        <form method="post" action="/moderim/njoftim/{{ listing.public_no }}/hiq" data-turbo-confirm="Ta heqim „{{ listing.title }}“ nga faqja?">
+          <button type="submit" class="button secondary small danger">Hiqe</button>
+        </form>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <h2 class="moderation-heading">Emra për miratim</h2>
   <p class="lead">Emrat që shitësit kanë shkruar te „Tjetër“, kur lista nuk e kishte markën apo modelin e tyre. Miratoje një emër, që të dalë në lista dhe në filtra, ose bashkoje me një emër të listës, nëse është i njëjti i shkruar ndryshe.</p>
 
   {% if rows.is_empty() %}

@@ -12,6 +12,7 @@ mod newest;
 mod photos;
 mod post;
 mod properties;
+mod safety;
 mod saved;
 mod seo;
 mod suggestions;
@@ -61,6 +62,9 @@ pub fn router(state: AppState) -> Router {
         .route("/listing/{public_no}/phone", post(listings::reveal_phone))
         .route("/listing/{public_no}/pare", post(listings::seen))
         .route("/listing/{public_no}/ruaj", post(saved::save))
+        .route("/listing/{public_no}/raporto", get(safety::report_page).post(safety::report))
+        .route("/listing/{public_no}/blloko", post(safety::block))
+        .route("/llogaria/zhblloko/{id}", post(safety::unblock))
         .route("/shto", get(post::new_listing).post(post::create_listing).layer(with_photos()))
         .route("/listing/{public_no}/ndrysho", get(post::edit_listing).post(post::update_listing).layer(with_photos()))
         .route("/media/{*key}", get(photos::serve))
@@ -81,6 +85,8 @@ pub fn router(state: AppState) -> Router {
         .route("/moderim", get(moderation::page))
         .route("/moderim/{id}/mirato", post(moderation::approve))
         .route("/moderim/{id}/bashko", post(moderation::merge))
+        .route("/moderim/njoftim/{public_no}/mbaje", post(moderation::keep))
+        .route("/moderim/njoftim/{public_no}/hiq", post(moderation::remove))
         .route("/listing/{public_no}/caktivizo", post(post::pause_listing))
         .route("/listing/{public_no}/aktivizo", post(post::resume_listing))
         .route("/listing/{public_no}/fshi", post(post::delete_listing))

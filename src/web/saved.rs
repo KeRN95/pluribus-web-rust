@@ -144,6 +144,12 @@ pub async fn seen(State(state): State<AppState>, headers: HeaderMap, Query(Seen 
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
+/// For a page someone must sign in to use (reporting a listing, safety.rs): the cookie that brings
+/// them back to it after signing in (after_sign_in).
+pub fn back_after_sign_in(headers: &HeaderMap, page: &str) -> HeaderValue {
+    cookie_header(headers, BACK_COOKIE, page, SIGN_IN_SECONDS)
+}
+
 /// After signing in (account.rs, check_code): the listing whose heart was tapped before is kept for
 /// the user, and the page it was tapped on is where they go back to. The cookies that held them go.
 pub async fn after_sign_in(
