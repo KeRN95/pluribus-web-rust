@@ -510,28 +510,32 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 /* "Shfaq N njoftime" brings the results' heading to the top, clear of the sticky header. */
 .results-heading { scroll-margin-top: 5rem; }
 
-/* A laptop: the filters are a column on the left, always there, beside the row, the places and the
-   results, which follow them as they change; it stays in sight as the page scrolls, and scrolls
-   inside if it needs more room. Its form in one column, the icons three to a line. No button
-   opens or closes it; its foot has "Pastro" only, when a filter is on, the results being there
-   beside it. Spanning every row, its last row (1fr) takes what its height needs beyond theirs. */
+/* A laptop: the filters are a sidebar at the screen's left edge, always there, from under the
+   header to the bottom, outside the page's box (--sidebar wide, a margin either side), which keeps
+   its width: the page takes what is left of the screen, at most its usual 1100px, in the middle of
+   it, so on a wide screen the sidebar costs the page nothing. The results follow the filters as
+   they change; the sidebar stays as the page scrolls, and scrolls inside if it needs more room.
+   Its form in one column, the icons three to a line. No button opens or closes it; its foot has
+   "Pastro" only, when a filter is on, the results being there beside it. */
 @media (min-width: 1024px) {
-  .browse {
-    display: grid;
-    grid-template-columns: 19rem minmax(0, 1fr);
-    grid-template-rows: auto auto auto 1fr;
-    column-gap: 2rem;
-    align-items: start;
+  main.container:has(> .browse) {
+    --sidebar: 19rem;
+    --beside: calc(100vw - var(--sidebar) - 3rem); /* the room beside the sidebar and the margins */
+    max-width: none;
+    margin: 0;
+    padding-left: calc(var(--sidebar) + 2rem + max(0px, (var(--beside) - 1100px) / 2));
+    padding-right: calc(1rem + max(0px, (var(--beside) - 1100px) / 2));
   }
-  .browse > * { grid-column: 2; }
   .browse > .filters {
-    position: sticky;
+    position: fixed;
     top: 4.75rem;
+    bottom: 1rem;
+    left: 1rem;
+    right: auto;
     z-index: auto;
     display: flex;
-    grid-column: 1;
-    grid-row: 1 / -1;
-    max-height: calc(100dvh - 5.75rem);
+    width: var(--sidebar, 19rem);
+    max-height: none;
     box-shadow: none;
     animation: none;
   }
