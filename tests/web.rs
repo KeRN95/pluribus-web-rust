@@ -760,11 +760,11 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         r#"<aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">"#,
         r#"<div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>"#,
         r#"<section class="results""#,
-        // The count, the order and the view on the listings' heading's right.
+        // The listings' heading, its order's words opening the orders; the count and the view
+        // under it.
         r#"<div class="results-head">"#,
-        r#"<h2 class="results-heading" id="results-heading">Njoftimet më të reja në Makina</h2>"#,
+        r#"<div class="results-heading" id="results-heading" role="heading" aria-level="2">Njoftimet <details class="sort-menu heading-sort" data-controller="dropdown""#,
         r#"<div class="pills-row">"#,
-        r#"<details class="sort-menu" data-controller="dropdown""#,
         r#"<details class="sort-menu cards-menu" data-controller="dropdown" data-cards-target="menu""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
@@ -798,16 +798,21 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     assert!(cars.contains(r#"<button type="button" class="button secondary round-button labelled filters-open" aria-controls="filters" aria-expanded="false""#));
     assert!(cars.contains(r#"<span class="button-label">Filtrat</span>"#) && !cars.contains("button-count"));
     assert!(cars.contains(r#"<button type="button" class="button round-button search-button""#));
-    assert!(cars.contains(r#"<summary class="small-pill sort-button" aria-label="Rendit: Më të rejat" title="Rendit: Më të rejat"><svg"#));
-    assert!(cars.contains("</svg>Më të rejat</summary>"));
-    assert!(cars.contains(r#"<h2 class="results-heading" id="results-heading">Njoftimet më të reja në Makina</h2>"#));
+    // A category page's heading says the order, its words opening the orders; no pill for it.
+    assert!(cars.contains(r#"<summary class="heading-sort-button" title="Rendit">më të reja<svg"#));
+    assert!(cars.contains("</details> në Makina</div>"));
+    assert!(!cars.contains("small-pill sort-button"));
     let row = &cars[cars.find(r#"<div class="browse-tools""#).unwrap()..cars.find(r#"<div class="pills-row">"#).unwrap()];
-    assert!(!row.contains("sort-menu") && !row.contains("cards-button"));
+    assert!(!row.contains("cards-button"));
     let cheap = html(pool.clone(), "/c/makina?sort=price_asc").await;
-    assert!(cheap.contains("</svg>Më të lirat</summary>") && cheap.contains(r#"id="results-heading">Njoftimet më të lira në Makina</h2>"#));
+    assert!(cheap.contains(r#"title="Rendit">më të lira<svg"#) && cheap.contains("</details> në Makina</div>"));
     assert!(cars.contains("toggle->dropdown#announce"));
-    let menu = &cars[cars.find(r#"<details class="sort-menu""#).unwrap()..];
+    let menu = &cars[cars.find(r#"<details class="sort-menu heading-sort""#).unwrap()..];
     assert!(menu[..menu.find("</details>").unwrap()].contains(r#"<fieldset class="sort-options">"#));
+    // A search's heading is for screen readers alone: the order's pill says it to the eye.
+    let search = html(pool.clone(), "/search?q=golf").await;
+    assert!(search.contains(r#"<summary class="small-pill sort-button" aria-label="Rendit: Më të rejat" title="Rendit: Më të rejat"><svg"#));
+    assert!(search.contains("</svg>Më të rejat</summary>") && !search.contains("heading-sort"));
 
     // The top bar has no search: the row starts with a round button that opens one under it,
     // which searches the page's category and keeps its filters.
@@ -1001,7 +1006,8 @@ async fn the_maps_card_picks_a_town_or_all_of_albania(pool: PgPool) {
     assert!(menu.contains(r#"data-url="/c/makina?city=durres&vehicle_fuel=DIESEL">Durrës</option>"#));
     assert!(!cars.contains("place-pills") && !cars.contains("place-near"));
     let pills = &cars[cars.find(r#"<div class="pills-row">"#).unwrap()..cars.find(r#"<div class="grid">"#).unwrap()];
-    assert_eq!(pills.matches(r#"class="small-pill"#).count(), 2);
+    // The view's pill alone: the heading says the order.
+    assert_eq!(pills.matches(r#"class="small-pill"#).count(), 1);
     // The page's town is kept in a cookie for the next pages (place_controller.js), on the page's
     // own element.
     assert!(cars.contains(r#"data-controller="filters cards place""#) && cars.contains(r#"data-place-town-value="""#));
@@ -4173,7 +4179,7 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
         r#"<a class="shortcut small" href="/c/pjese-dhe-aksesore"><svg class="shortcut-icon""#,
         r#"<div class="pills-row">"#,
         r#"<p class="result-count" id="result-count""#,
-        r#"<details class="sort-menu""#,
+        r#"<details class="sort-menu cards-menu""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
     assert!(!cars.contains(r#"<a class="shortcut small" href="/c/makina">"#), "not itself");
@@ -4318,11 +4324,11 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
     assert!(buttons < seen && seen < results, "under the buttons, over the results");
     // The listings under it, headed by what they are: their order, the category and, when one is
     // chosen, their kind; a search across the categories keeps the order alone, for screen readers.
-    assert!(vehicles.contains(r#"<h2 class="results-heading" id="results-heading">Njoftimet më të reja në Automjete</h2>"#));
+    assert!(vehicles.contains(r#"title="Rendit">më të reja<svg"#) && vehicles.contains("</details> në Automjete</div>"));
     let cheapest = html(pool.clone(), "/c/automjete?sort=price_asc").await;
-    assert!(cheapest.contains(r#"<h2 class="results-heading" id="results-heading">Njoftimet më të lira në Automjete</h2>"#));
+    assert!(cheapest.contains(r#"title="Rendit">më të lira<svg"#) && cheapest.contains("</details> në Automjete</div>"));
     let rented = html(pool.clone(), "/c/prona?type=RENT").await;
-    assert!(rented.contains(r#"<h2 class="results-heading" id="results-heading">Njoftimet më të reja në Prona me qira</h2>"#));
+    assert!(rented.contains(r#"title="Rendit">më të reja<svg"#) && rented.contains("</details> në Prona me qira</div>"));
     let search = html(pool.clone(), "/search?q=golf").await;
     assert!(search.contains(r#"<h2 class="results-heading visually-hidden" id="results-heading">Më të rejat</h2>"#));
     assert_eq!(row(&html(pool.clone(), "/c/prona").await), [1003, 1004]);

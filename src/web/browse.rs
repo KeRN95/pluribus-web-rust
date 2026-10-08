@@ -283,10 +283,11 @@ pub struct FoundIn {
 #[template(path = "browse.html")]
 struct BrowsePage<'a> {
     heading: String,
-    /// On a category page, the listings' own heading over them, under "Më të klikuarat" where it
-    /// is: the order, the category and the kind of listing when one is chosen ("Njoftimet më të
-    /// reja në Makina në shitje"). Elsewhere the order alone heads them, for screen readers.
-    listings_heading: Option<String>,
+    /// On a category page, where the listings' own heading over them says they are, after their
+    /// order: the category and the kind of listing when one is chosen ("në Makina në shitje", in
+    /// "Njoftimet më të reja në Makina në shitje"). Elsewhere the order alone heads them, for
+    /// screen readers.
+    listings_place: Option<String>,
     count: String,
     /// The words searched in place of misspelt ones, quoted ("„golf“"), or empty.
     corrections: String,
@@ -704,17 +705,17 @@ async fn browse(
         (Some(_), Some(current)) => category_icon(current),
         _ => None,
     };
-    // The listings' own heading on a category page: the order as what it makes of them, the
-    // category and, when one is chosen, the kind of listing, in small letters after the name
-    // ("Njoftimet më të reja në Makina në shitje", "Njoftimet më të lira në Prona me qira").
-    let listings_heading = match (&page_slug, category) {
+    // Where the listings' own heading on a category page says they are, after their order (the
+    // template's, which opens the orders): the category and, when one is chosen, the kind of
+    // listing, in small letters ("në Makina në shitje", "në Prona me qira").
+    let listings_place = match (&page_slug, category) {
         (Some(_), Some(current)) => {
-            let mut heading = format!("Njoftimet {} në {}", filters.sort_adjective(), current.name);
+            let mut place = format!("në {}", current.name);
             if let Some(kind) = &filters.listing_type {
-                heading.push(' ');
-                heading.push_str(&format::listing_type(kind).to_lowercase());
+                place.push(' ');
+                place.push_str(&format::listing_type(kind).to_lowercase());
             }
-            Some(heading)
+            Some(place)
         }
         _ => None,
     };
@@ -788,7 +789,7 @@ async fn browse(
         meta,
         show_label: show_label(count_number, &count),
         heading,
-        listings_heading,
+        listings_place,
         count,
         capped,
         corrections,

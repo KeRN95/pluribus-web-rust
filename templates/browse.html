@@ -255,19 +255,31 @@
   {%- endif %}
 
   <section class="results" aria-labelledby="results-heading">
-    {#- The listings' heading, with the count, the order and the view under it. On a category
-        page, to the eye, under "Më të klikuarat" where it is: the order, the category and the
-        kind of listing when one is chosen ("Njoftimet më të reja në Makina në shitje",
-        browse.rs). Elsewhere the order alone, for screen readers ("Më të rejat"): the order's
-        pill says it to the eye, and the pills stand alone at the head of the results. -#}
+    {#- The listings' heading, with the count and the view under it. On a category page, to the
+        eye, under "Më të klikuarat" where it is: the order, the category and the kind of listing
+        when one is chosen ("Njoftimet më të reja në Makina në shitje", browse.rs), the order's
+        words highlighted, which open the orders in a menu under them, as the order's pill does
+        on a search (a heading by its role, as a heading can't hold a menu). Elsewhere the order
+        alone, for screen readers ("Më të rejat"): the order's pill says it to the eye, and the
+        pills stand alone at the head of the results. -#}
+    {%- let sorts = filters.sort_choices() %}
     <div class="results-head">
-    {%- if let Some(listings_heading) = listings_heading %}
-    <h2 class="results-heading" id="results-heading">{{ listings_heading }}</h2>
+    {%- if let Some(place) = listings_place %}
+    <div class="results-heading" id="results-heading" role="heading" aria-level="2">Njoftimet <details class="sort-menu heading-sort" data-controller="dropdown"
+        data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
+        <summary class="heading-sort-button" title="Rendit">{{ filters.sort_adjective() }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <fieldset class="sort-options">
+          <legend class="visually-hidden">Rendit</legend>
+          {%- for choice in sorts.iter() %}
+          <label class="picker-option sort-option"><input class="visually-hidden" type="radio" name="sort" value="{{ choice.value }}" form="filter-form" data-action="filters#submit"{% if choice.selected %} checked{% endif %}>{{ choice.label }}</label>
+          {%- endfor %}
+        </fieldset>
+      </details> {{ place }}</div>
     {%- else %}
     <h2 class="results-heading visually-hidden" id="results-heading">{{ filters.sort_label() }}</h2>
     {%- endif %}
-    {#- Under the heading, smaller pills: how many, the order and how the cards show. The
-        order says the one now ("Më të rejat"), and "Rendit" with it to screen readers and in its
+    {#- Under the heading, smaller pills: how many, the order (where the heading doesn't say it)
+        and how the cards show. The order says the one now ("Më të rejat"), and "Rendit" with it to screen readers and in its
         tooltip; it opens the orders in a menu under it, like the in-page dropdowns', the one now ticked; a tap
         outside or Escape closes it (dropdown_controller.js), and it is one of those open one at a
         time (section:open). Picking one sends the filter form (form="filter-form"), so the filters
@@ -275,12 +287,12 @@
         cards, as many to a line as fit; big ones, one a line, every photo to slide through; or a
         list, a line each, the photo at its left (cards_controller.js, which switches at once and
         keeps the choice in a cookie, so the pages after come the same way). -#}
-    {%- let sorts = filters.sort_choices() %}
     <div class="pills-row">
       {#- How many: counted up to 1 000 with the page, and once it shows further, up to 10 000, when
           it stopped there (data-capped, filters_controller.js); data-show is what the button at the
           foot of the filters says. -#}
       <p class="result-count" id="result-count" data-show="{{ show_label }}"{% if capped %} data-capped{% endif %}>{{ count }}</p>
+      {%- if listings_place.is_none() %}
       <details class="sort-menu" data-controller="dropdown"
                data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
         <summary class="small-pill sort-button" aria-label="Rendit: {{ filters.sort_label() }}" title="Rendit: {{ filters.sort_label() }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5"/><path d="M17 20V4M13.5 7.5 17 4l3.5 3.5"/></svg>{{ filters.sort_label() }}</summary>
@@ -291,6 +303,7 @@
           {%- endfor %}
         </fieldset>
       </details>
+      {%- endif %}
       {%- let current = page.layout %}
       <details class="sort-menu cards-menu" data-controller="dropdown" data-cards-target="menu"
                data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">

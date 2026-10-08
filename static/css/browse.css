@@ -281,6 +281,30 @@
    only (a search), the pills lead the results on their own. */
 .results-head { display: grid; gap: .6rem; margin: 1.75rem 0 .75rem; }
 .results-head > .results-heading { margin: 0; }
+/* The heading, a heading by its role (it holds the order's menu): an h2's face, size and weight.
+   Its order's words highlighted, as a picked filter is, with a chevron, opening the orders in a
+   menu under them as the order's pill does; the menu in the page's own text, not the heading's. */
+.results-head > div.results-heading { font-family: var(--font-heading, inherit); font-size: var(--text-xl); font-weight: var(--semibold); letter-spacing: -0.015em; line-height: 1.25; }
+.results-heading .heading-sort { display: inline-block; }
+.heading-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: .2em;
+  padding: 0 .3em 0 .4em;
+  border-radius: .45em;
+  background: var(--badge);
+  color: var(--accent);
+  list-style: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.heading-sort-button::-webkit-details-marker { display: none; }
+.heading-sort-button svg { width: .75em; height: .75em; flex: none; transition: transform .15s; }
+.heading-sort[open] > .heading-sort-button svg { transform: rotate(180deg); }
+@media (hover: hover) {
+  .heading-sort-button:hover { background: color-mix(in srgb, var(--accent) 22%, var(--badge)); }
+}
+.results-heading .sort-options { font-family: var(--font); font-size: var(--text-md); font-weight: var(--regular); letter-spacing: normal; line-height: 1.55; }
 .results-head:has(> .results-heading.visually-hidden) { margin: 0 0 1rem; }
 .pills-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0; }
 .pills-row > .sort-menu,
