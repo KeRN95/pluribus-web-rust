@@ -96,13 +96,15 @@ export default class extends Controller {
     // A page restored from Turbo's cache still holds the old map's markup.
     this.canvasTarget.replaceChildren();
     // A pinch, a double tap and the + and − buttons zoom around the middle, so the pin stays on
-    // its place; the mouse wheel scrolls the page, which goes on below the map. Any zoom, not only
+    // its place, and in a card, which fills the screen, the mouse wheel too (the pointer's own
+    // place would move the pin); on the map page the wheel scrolls the page, which goes on below
+    // the map. Any zoom, not only
     // whole ones, as the distance follows it: a tap on + or − is half a zoom, the distance about
     // 1.4 times smaller or bigger, and a pinch stops at the closest and the furthest the circle
     // may cover (fit). A flick glides on a little, not across the Balkans (Leaflet's own top speed
     // has no end).
     this.map = L.map(this.canvasTarget, {
-      scrollWheelZoom: false, touchZoom: "center", doubleClickZoom: "center", inertiaMaxSpeed: 1500,
+      scrollWheelZoom: this.lazyValue && "center", touchZoom: "center", doubleClickZoom: "center", inertiaMaxSpeed: 1500,
       zoomSnap: 0, zoomDelta: 0.5, bounceAtZoomLimits: false, zoomControl: !this.lazyValue,
     });
     // In a card the + and − sit at the bottom right, clear of the pills over the map's top (map.css).
