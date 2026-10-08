@@ -188,12 +188,13 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
 }
 .link-button:hover { color: var(--danger); }
 
-/* A listing's message sheet (listing.html, message_sheet_controller.js): the screen's lower half,
-   across it, sliding up from its bottom in a blink, on the page's own colour like the conversation
-   page, its top corners rounded and a shadow over the page above. The conversation scrolls inside
-   it, as wide as on its own page, with "Mbyll" at its right edge and its box to write in at the
-   sheet's foot; its way back to the inbox stays on its own page. The page under it holds still
-   while it is open. */
+/* A listing's message sheet (listing.html, message_sheet_controller.js). On a phone, the screen's
+   lower half, across it, sliding up from its bottom in a blink, on the page's own colour like the
+   conversation page, its top corners rounded and a shadow over the page above; the page under it
+   holds still while it is open. From 720 px up, a popup card from the button instead, under it
+   (or over it, where the screen has more room there), as the menus open theirs (--top, --left,
+   --height). The conversation scrolls inside it, with "Mbyll" at its right edge and its box to
+   write in at its foot; its way back to the inbox stays on its own page. */
 .listing-page { display: contents; }
 .message-sheet {
   position: fixed;
@@ -258,5 +259,32 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
 .message-sheet .conversation-block { margin: .25rem 0 .75rem; }
 .message-sheet .conversation-back { display: none; }
 .message-sheet .conversation-head { margin-top: .25rem; padding-right: 2.75rem; }
+/* On a phone the head drags the sheet down as its bar does; it scrolls nothing itself. */
+@media (max-width: 719px) {
+  .message-sheet .conversation-head { touch-action: none; }
+}
 .message-sheet-wait { margin: 1.25rem 0; color: var(--muted); }
 html.sheet-open { overflow: hidden; }
+/* From 720 px up: the popup card from the button, as wide as a phone, as tall as the screen allows
+   under or over it, with the menus' hairline and shadow, coming in as they do; no bar to drag. */
+@media (min-width: 720px) {
+  .message-sheet {
+    position: absolute;
+    inset: auto;
+    top: var(--top, 0);
+    left: var(--left, 0);
+    width: 25rem;
+    height: var(--height, 32rem);
+    border: 1px solid var(--menu-border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    box-shadow: var(--menu-shadow);
+    transform-origin: top left;
+    animation: menu-in .14s ease-out;
+    transition: none;
+  }
+  .message-sheet.opens-up { transform-origin: bottom left; }
+  .sheet-grabber { display: none; }
+  .sheet-close { top: .7rem; right: .7rem; }
+  .message-sheet .conversation-head { margin-top: .9rem; }
+}
