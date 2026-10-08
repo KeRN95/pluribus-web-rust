@@ -104,7 +104,7 @@ pub async fn blocks_between(db: &PgPool, user: Uuid, other: Uuid) -> sqlx::Resul
 }
 
 /// Blocks `other` for `user`, or with `on` false lets them write again.
-pub async fn set_blocked(db: &PgPool, user: Uuid, other: Uuid, on: bool) -> sqlx::Result<()> {
+pub async fn set_user_blocked(db: &PgPool, user: Uuid, other: Uuid, on: bool) -> sqlx::Result<()> {
     if on {
         sqlx::query!(
             "INSERT INTO user_blocks (blocker_user_id, blocked_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",

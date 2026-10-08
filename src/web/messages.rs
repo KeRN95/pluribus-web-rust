@@ -474,7 +474,7 @@ async fn set_blocked(State(state): State<AppState>, headers: HeaderMap, Path(id)
     let Some(conversation) = find(&state, &user, &id).await? else {
         return not_found().await;
     };
-    db::set_blocked(&state.db, user.id, conversation.other_id, on).await?;
+    db::set_user_blocked(&state.db, user.id, conversation.other_id, on).await?;
     Ok(Redirect::to(&format!("/mesazhet/{}", conversation.id)).into_response())
 }
 
