@@ -17,11 +17,10 @@
     } catch {}
   </script>
   <meta name="view-transition" content="same-origin">
-  {#- Fetch the fonts, Geist, the headings' Cormorant and the logo's Merriweather, alongside the stylesheets rather than after
+  {#- Fetch the fonts, Geist and the headings' and logo's Cormorant, alongside the stylesheets rather than after
       it, so text and the logo rarely wait for them. -#}
   <link rel="preload" href="/static/vendor/fonts/geist-v5-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/vendor/fonts/cormorant-5.3.0-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/static/vendor/fonts/merriweather-5.3.0-latin-700.woff2" as="font" type="font/woff2" crossorigin>
   {#- The fingerprint changes with the files; Turbo then reloads open pages in full, see
       web::asset_version. -#}
   {%- for sheet in crate::web::STYLESHEETS %}

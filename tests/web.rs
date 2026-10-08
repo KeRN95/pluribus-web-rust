@@ -2483,9 +2483,9 @@ async fn the_site_is_called_pluribus(pool: PgPool) {
     assert!(home.contains(r#"<span class="logo-word">pluribus</span></a>"#));
     assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
     assert!(home.contains(
-        r#"<link rel="preload" href="/static/vendor/fonts/merriweather-5.3.0-latin-700.woff2" as="font" type="font/woff2" crossorigin>"#
+        r#"<link rel="preload" href="/static/vendor/fonts/cormorant-5.3.0-latin-wght.woff2" as="font" type="font/woff2" crossorigin>"#
     ));
-    let font = get(pool.clone(), "/static/vendor/fonts/merriweather-5.3.0-latin-700.woff2").await;
+    let font = get(pool.clone(), "/static/vendor/fonts/cormorant-5.3.0-latin-wght.woff2").await;
     assert_eq!(font.status, StatusCode::OK);
     let listing = html(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await;
     assert!(listing.contains(" | Pluribus</title>") && !listing.contains("Marketplace"), "{listing}");
