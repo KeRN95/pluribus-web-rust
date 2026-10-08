@@ -53,7 +53,6 @@
   .map-card .map-canvas { aspect-ratio: 2 / 1; }
 }
 .map-card .map-note { margin: .6rem 0 0; }
-.map-locate .pin-icon { margin-right: 0; }
 
 .map-header { margin: 1.25rem 0 1rem; }
 .map-header h1 { margin: 0 0 .3rem; }
@@ -68,10 +67,46 @@
 .map-radius output { margin-left: .25rem; color: var(--text); font-weight: var(--bold); }
 .map-radius .field-label { margin: 0; }
 .map-radius-hint { margin: 0; color: var(--muted); font-size: var(--text-xs); }
-.map-locate { flex: none; gap: .35rem; }
-/* "Vendndodhja ime" and the towns' dropdown beside it, the dropdown taking what room is left. */
-.map-place { display: flex; flex: 1 1 18rem; align-items: center; gap: .5rem; min-width: 0; }
-.map-place .picker { flex: 1 1 9rem; min-width: 0; max-width: 16rem; }
+/* "Vendndodhja ime" and the towns' menu beside it, pills as the welcome page's categories are
+   (.shortcut): the menu's says the place now ("Gjithë Shqipëria", "Durrës", the map's point) or,
+   on the map page, "Qyteti", its chevron turning as its list, of the towns by county, opens. A
+   press sinks them a little; they wrap under each other where they don't fit side by side. */
+.map-place { display: flex; flex: 1 1 18rem; flex-wrap: wrap; align-items: center; gap: .5rem; min-width: 0; }
+.map-place .picker { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.map-pill,
+.map-town .picker-button {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  width: auto;
+  max-width: 100%;
+  padding: .6rem 1.05rem .6rem .95rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: var(--medium);
+  line-height: 1.3;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .15s, transform .1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.map-town .picker-button { padding-right: 2.4rem; }
+.map-town .picker-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.map-pill .pin-icon { flex: none; width: 16px; height: 16px; margin: 0; }
+.map-pill:active,
+.map-town .picker-button:active { background: color-mix(in srgb, var(--surface-muted) 95%, transparent); transform: scale(.97); }
+@media (hover: hover) {
+  .map-pill:hover,
+  .map-town .picker-button:hover { background: color-mix(in srgb, var(--surface-muted) 95%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-pill:active,
+  .map-town .picker-button:active { transform: none; }
+}
 .map-toggle[hidden] { display: none; }
 /* Under the map on the map page, the button that sets its point, in the site's colour, the whole
    width. */

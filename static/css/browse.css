@@ -268,26 +268,11 @@
 }
 
 /* Under the buttons, smaller pills: the order ("Më të rejat", which opens its menu) and the cards'
-   size, then, past a hairline, where to look (browse.html, place_controller.js), sliding sideways
-   on a phone to the screen's edge, and on as many lines as they need when wider; the place the
-   page is in, an open order and big cards on the accent's tint, as a picked filter is. What "Afër
-   meje" is doing shows under the places. */
+   size, an open order and big cards on the accent's tint, as a picked filter is. */
 .pills-row { display: flex; align-items: flex-start; gap: .4rem; margin: 0 0 1rem; }
 .pills-row > .sort-menu,
 .pills-row > .cards-button { flex: none; }
-.places { flex: 1; min-width: 0; padding-left: .55rem; border-left: 1px solid var(--border); }
-.place-pills {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  margin: 0 -1rem 0 0;
-  padding: 0 1rem 0 0;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-.place-pills::-webkit-scrollbar { display: none; }
-.place-pill {
+.small-pill {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -307,26 +292,16 @@
   transition: background-color .15s, border-color .15s;
   -webkit-tap-highlight-color: transparent;
 }
-.place-pill .pin-icon { width: 14px; height: 14px; margin: 0; vertical-align: 0; }
-.place-pill > svg { flex: none; }
+.small-pill > svg { flex: none; }
 .sort-button { list-style: none; }
 .sort-button::-webkit-details-marker { display: none; }
 .cards-button { padding-inline: .7rem; }
-.place-pill.is-selected,
 .sort-menu[open] > .sort-button,
 .cards-button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
-.place-pill.is-selected { cursor: default; }
-a.place-pill.is-selected { cursor: pointer; }
 @media (hover: hover) {
-  .place-pill:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
-  .place-pill.is-selected:hover,
+  .small-pill:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
   .sort-menu[open] > .sort-button:hover,
   .cards-button[aria-pressed="true"]:hover { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
-}
-.place-status { margin: .5rem 0 0; color: var(--muted); font-size: var(--text-sm); }
-.place-status[hidden] { display: none; }
-@media (min-width: 720px) {
-  .place-pills { flex-wrap: wrap; margin-inline: 0; padding-inline: 0; overflow: visible; }
 }
 
 /* The filters' form, between the card's head and foot, scrolling if it needs more room. */

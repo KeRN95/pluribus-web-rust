@@ -53,8 +53,8 @@ application.register("slides", SlidesController);
 application.register("suggest", SuggestController);
 application.register("theme", ThemeController);
 
-// A link that drops the town ("Gjithë Shqipëria", the town's chip) forgets it too, before Turbo
-// follows it, so the page it opens doesn't open in it again (place_controller.js). Such links are
+// A link that drops the town (the town's chip, "Kërko në gjithë Shqipërinë") forgets it too, before
+// Turbo follows it, so the page it opens doesn't open in it again (place_controller.js). Such links are
 // never fetched ahead (data-turbo-prefetch), which would have the town still.
 document.addEventListener("click", (event) => {
   if (event.target.closest?.("[data-forget-town]")) forgetTown();

@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
-import { refreshFor } from "controllers/refresh.js";
+import { refreshFor, refreshTo } from "controllers/refresh.js";
 import { locate } from "controllers/locate.js";
+import { forgetTown } from "controllers/place_controller.js";
 
 // A map of the results, as Facebook's: its pin stays in the middle and the map moves under it,
 // on the point set before, the town picked, or Tirana's middle (filters.rs, map_start). Round the
@@ -13,7 +14,8 @@ import { locate } from "controllers/locate.js";
 // always comes folded, and loads, with its dots, only when it first opens (lazy); there the circle
 // round the pin shows only once a point is set (ring), the map saying how to set one until then,
 // and the middle and the distance apply as soon as they change, when the map stops after a drag
-// or a zoom, or a place or a town is picked (pointChanged), in place of a town: the page refreshes
+// or a zoom, or "Vendndodhja ime" moves it (pointChanged), in place of a town; a town from the
+// card's menu puts the page in it instead, the map moving onto it (pickTown): the page refreshes
 // in place (refresh.js), which keeps the category and the filters, the card open as it is and the
 // map as Leaflet drew it (keep), its dots following the new results (reloadPoints). Each result
 // gets a dot on the map: those within the circle once it is set. Leaflet draws the map with
@@ -36,6 +38,8 @@ const SETTLE_MS = 400;
 // The equator's length in metres, which the map (Web Mercator) draws 256 pixels long at zoom 0 and
 // twice as long at each zoom after: at a latitude, a pixel is this times its cosine over 256 * 2^zoom.
 const EQUATOR = 40075016.686;
+// What the card says while no point is set.
+const HINT = "Lëviz ose zmadho hartën për të kërkuar përreth pikës.";
 const PIN = '<svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>';
 
 // Leaflet is only fetched on pages with a map, and only once: its script and its stylesheet.
@@ -121,9 +125,9 @@ export default class extends Controller {
     // (placeRing). Not Leaflet's own circle, which is a size on the ground rather than on the
     // screen, and stays in the middle only by being moved on the map at every step.
     this.map.createPane("ring").style.zIndex = 350;
-    this.ring = Object.assign(document.createElement("div"), { className: "map-area", hidden: !this.ringValue });
+    this.ring = Object.assign(document.createElement("div"), { className: "map-area" });
     this.map.getPane("ring").append(this.ring);
-    if (!this.ringValue) this.statusTarget.textContent = "Lëviz ose zmadho hartën për të kërkuar përreth pikës.";
+    this.ringValueChanged();
     this.map.on("move zoom viewreset", () => this.placeRing());
     // The distance follows the zoom: as a pinch goes, and as the + and − start theirs; once it
     // stops, the map settles on it (zoomed). A map whose box changed (a phone turned) keeps it.
@@ -196,10 +200,11 @@ export default class extends Controller {
     if (event.target !== this.toggleTarget && !this.element.classList.contains("map-hidden")) this.fold(true);
   }
 
-  // While the page refreshes in place (refresh.js): the map stays as Leaflet drew it, and an open
+  // While the page refreshes in place (refresh.js): the map stays as Leaflet drew it, and the line
+  // under the card's pills says what this controller has it say (the new page's is empty); an open
   // card stays open, its button saying so.
   keep(event) {
-    if (event.target === this.canvasTarget) event.preventDefault();
+    if (event.target === this.canvasTarget || event.target === this.statusTarget) event.preventDefault();
   }
 
   keepOpen(event) {
@@ -256,7 +261,7 @@ export default class extends Controller {
     }
   }
 
-  // A town from the dropdown: the map moves onto its point, for "Vendos hartën" to set, as with
+  // The map page's town: the map moves onto its point, for "Vendos hartën" to set, as with
   // "Vendndodhja ime".
   goToTown() {
     const option = this.townTarget.selectedOptions[0];
@@ -277,15 +282,36 @@ export default class extends Controller {
     this.formTarget.requestSubmit();
   }
 
+  // A town from the card's menu, or all of Albania: the page refreshes in place in it
+  // (refresh.js), the card open as it is, the town in place of the map's point, or no place at all,
+  // which forgets the town kept for the next pages (place_controller.js). The map moves onto the
+  // town, its circle gone until a point is set again by moving it (ring). The point's own entry,
+  // there while one is set, leads nowhere.
+  pickTown() {
+    const option = this.townTarget.selectedOptions[0];
+    const url = option?.dataset.url;
+    if (!url) return;
+    if (!option.value) forgetTown();
+    this.ringValue = false;
+    if (this.map && option.dataset.lat) {
+      this.fit({ point: this.L.latLng(Number(option.dataset.lat), Number(option.dataset.lng)) });
+    }
+    refreshTo(url);
+  }
+
+  // A point set, or none (a town picked, a page without one): the circle shows or goes, and in a
+  // card the map says how to set one while there is none.
+  ringValueChanged() {
+    if (!this.ring) return;
+    this.ring.hidden = !this.ringValue;
+    if (this.lazyValue) this.statusTarget.textContent = this.ringValue ? "" : HINT;
+  }
+
   // In a card (lazy), the map's middle and the distance apply as soon as they change, and the
-  // circle shows. A place or a town gives its own point, the map still on its way there.
+  // circle shows. A place gives its own point, the map still on its way there.
   pointChanged(point) {
     if (!this.lazyValue) return;
-    if (!this.ringValue) {
-      this.ringValue = true;
-      if (this.ring) this.ring.hidden = false;
-      this.statusTarget.textContent = "";
-    }
+    this.ringValue = true;
     this.apply(point);
   }
 

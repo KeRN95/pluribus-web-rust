@@ -81,6 +81,21 @@ export default class extends Controller {
       this.button.focus();
     };
     this.label?.addEventListener("click", this.labelled);
+    // While the page refreshes in place (refresh.js) the new page's select comes without them: the
+    // button and the list stay, and the select hidden, and the button then shows what the new page
+    // chose.
+    this.keepUi = (event) => {
+      if (event.target.hasAttribute?.("data-picker-ui")) event.preventDefault();
+    };
+    this.keepHidden = (event) => {
+      if (event.target === this.select && ["class", "tabindex"].includes(event.detail.attributeName)) event.preventDefault();
+    };
+    this.morphed = (event) => {
+      if (event.target === this.select) this.show();
+    };
+    this.element.addEventListener("turbo:before-morph-element", this.keepUi);
+    this.element.addEventListener("turbo:before-morph-attribute", this.keepHidden);
+    this.element.addEventListener("turbo:morph-element", this.morphed);
   }
 
   disconnect() {
@@ -89,6 +104,9 @@ export default class extends Controller {
     this.select.removeEventListener("change", this.shown);
     this.select.removeEventListener("invalid", this.invalid);
     this.label?.removeEventListener("click", this.labelled);
+    this.element.removeEventListener("turbo:before-morph-element", this.keepUi);
+    this.element.removeEventListener("turbo:before-morph-attribute", this.keepHidden);
+    this.element.removeEventListener("turbo:morph-element", this.morphed);
     delete this.select.value;
     delete this.select.selectedIndex;
   }

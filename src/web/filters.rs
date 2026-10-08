@@ -42,12 +42,6 @@ const MIN_RADIUS_KM: u32 = 1;
 const MAX_RADIUS_KM: u32 = 50;
 const DEFAULT_RADIUS_KM: u32 = 10;
 
-/// The towns offered as pills under the browse row, after "Gjithë Shqipëria" and "Afër meje":
-/// those with the most listings (2026-10-08). The others are in the filters' Qyteti; one picked
-/// there joins the pills, first.
-const TOP_TOWNS: [&str; 12] =
-    ["tirane", "durres", "vlore", "shkoder", "elbasan", "fier", "korce", "kamez", "lushnje", "berat", "sarande", "pogradec"];
-
 /// An order's name, as its button, its menu and the results' heading say it.
 fn sort_name(sort: Sort) -> &'static str {
     match sort {
@@ -178,9 +172,15 @@ pub struct Chip {
     pub forgets_town: bool,
 }
 
-/// A place under the browse row: a town, or everywhere.
-pub struct PlacePill {
-    pub label: String,
+/// A county's towns in the map card's menu (Filters::town_menu).
+pub struct TownMenuGroup<'a> {
+    pub label: &'a str,
+    pub towns: Vec<TownLink<'a>>,
+}
+
+/// A town in the map card's menu: the same page in it, and whether the page is.
+pub struct TownLink<'a> {
+    pub town: &'a City,
     pub url: String,
     pub selected: bool,
 }
@@ -669,19 +669,22 @@ impl<'a> Filters<'a> {
 
     // ------------------------------------------------------------ the place
 
-    /// The towns under the browse row (TOP_TOWNS), the one picked first if it isn't among them.
-    pub fn town_pills(&self) -> Vec<PlacePill> {
-        let mut towns: Vec<&City> =
-            TOP_TOWNS.iter().filter_map(|slug| self.cities.iter().find(|city| city.slug == *slug)).collect();
-        if let Some(city) = self.city.filter(|city| !towns.iter().any(|town| town.id == city.id)) {
-            towns.insert(0, city);
-        }
-        towns
+    /// The towns of the map card's menu, by county, each the same page in it (place_url), the one
+    /// the page is in marked; all of Albania, before them, is placeless_url.
+    pub fn town_menu(&self) -> Vec<TownMenuGroup<'a>> {
+        self.town_groups()
             .into_iter()
-            .map(|town| PlacePill {
-                label: town.name.clone(),
-                url: self.place_url(Some(town)),
-                selected: self.city.is_some_and(|city| city.id == town.id),
+            .map(|group| TownMenuGroup {
+                label: group.label,
+                towns: group
+                    .towns
+                    .into_iter()
+                    .map(|town| TownLink {
+                        url: self.place_url(Some(town)),
+                        selected: self.city.is_some_and(|city| city.id == town.id),
+                        town,
+                    })
+                    .collect(),
             })
             .collect()
     }
@@ -691,7 +694,7 @@ impl<'a> Filters<'a> {
         self.city.is_none() && !self.pin_in_url
     }
 
-    /// The same page without a place: "Gjithë Shqipëria", and what "Afër meje" adds its point to.
+    /// The same page without a place: "Gjithë Shqipëria", first in the map card's menu.
     pub fn placeless_url(&self) -> String {
         self.place_url(None)
     }

@@ -28,6 +28,12 @@ export function filledIn(params) {
 export function refreshFor(form) {
   const url = new URL(form.action);
   url.search = filledIn(new FormData(form)).toString();
+  refreshTo(url);
+}
+
+// The same, for an address of this page already made: the map card's towns (map_controller.js).
+export function refreshTo(address) {
+  const url = new URL(address, location.href);
   if (sameAddress(url, new URL(refreshing ?? location.href))) return;
   refreshing = url.href;
   document.head.querySelector('meta[name="view-transition"]')?.remove();
