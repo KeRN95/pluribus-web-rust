@@ -14,6 +14,10 @@ pub struct FilterAttribute {
     /// Set for dependent properties, like a car model, whose options each belong to an option
     /// of the parent property (the make).
     pub parent_attribute_id: Option<Uuid>,
+    /// The category asks every listing for it, or shows it on its cards: the filters show it at
+    /// once rather than under "Më shumë filtra" (filters.rs, Field::primary).
+    pub required: bool,
+    pub show_in_card: bool,
     pub options: Json<Vec<AttributeOption>>,
 }
 
@@ -36,6 +40,7 @@ pub async fn filter_attributes(
     sqlx::query_as!(
         FilterAttribute,
         r#"SELECT a.id, a.code, coalesce(eca.label, a.name) AS "name!", a.data_type, a.unit, a.parent_attribute_id,
+                  eca.required AS "required!", eca.show_in_card AS "show_in_card!",
                   coalesce(jsonb_agg(jsonb_build_object('id', o.id, 'code', o.value_code,
                                                          'label', o.label, 'parent_id', o.parent_option_id)
                                      ORDER BY o.sort_order, o.label)
@@ -47,7 +52,7 @@ pub async fn filter_attributes(
            WHERE eca.category_id = (SELECT id FROM categories WHERE slug = $1 AND active)
              AND eca.filterable
              AND a.data_type IN ('SELECT', 'MULTISELECT', 'NUMBER', 'BOOLEAN')
-           GROUP BY a.id, eca.sort_order, eca.label
+           GROUP BY a.id, eca.sort_order, eca.label, eca.required, eca.show_in_card
            ORDER BY eca.sort_order, a.name"#,
         category_slug
     )

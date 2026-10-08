@@ -1,0 +1,72 @@
+{#- One property's filter (filters.html, `field`): a dropdown, boxes, a range from and to, a year
+    (a part's vehicle's), or a box to tick. A range whose unit has steps, a year's, kilometres,
+    square metres, picks them from two dropdowns (filters.rs, range_steps); another is typed. -#}
+{%- match field.kind %}
+{%- when FieldKind::Select %}
+<div class="filter-group{% if field.half %} filter-half{% endif %}">
+  <label class="filter-label" for="filter-{{ field.name }}">{{ field.label }}</label>
+  <div class="picker" data-controller="picker">
+  <select id="filter-{{ field.name }}" name="{{ field.name }}"{% if let Some(parent) = field.depends_on %} data-depends-on="{{ parent }}"{% endif %}>
+    <option value="">Të gjitha</option>
+    {% for choice in field.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+    {% for group in field.groups %}
+    <optgroup label="{{ group.label }}" data-parent="{{ group.parent }}"{% if group.hidden %} hidden{% endif %}>
+      {% for choice in group.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+    </optgroup>
+    {% endfor %}
+  </select>
+  </div>
+</div>
+{%- when FieldKind::Checkboxes %}
+<fieldset class="filter-group filter-options{% if field.half %} filter-half{% endif %}{% if field.icons %} filter-icons{% endif %}">
+  <legend class="filter-label">{{ field.label }}</legend>
+  {% for choice in field.choices %}
+  <label class="check"><input type="checkbox" name="{{ field.name }}" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}>
+    {%- if let Some(icon) = field.icon(choice) %}<svg class="check-icon" width="48" height="24" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %} {{ choice.label }}</label>
+  {% endfor %}
+</fieldset>
+{%- when FieldKind::Range %}
+<fieldset class="filter-group{% if field.half %} filter-half{% endif %}">
+  <legend class="filter-label">{{ field.label }}{% if !field.unit.is_empty() %} ({{ field.unit }}){% endif %}</legend>
+  <div class="range">
+    {%- if field.min_choices.is_empty() %}
+    <input type="text" inputmode="numeric" name="{{ field.name }}_min" value="{{ field.min }}" placeholder="nga" aria-label="{{ field.label }} nga">
+    <span aria-hidden="true">–</span>
+    <input type="text" inputmode="numeric" name="{{ field.name }}_max" value="{{ field.max }}" placeholder="deri" aria-label="{{ field.label }} deri">
+    {%- else %}
+    <div class="picker" data-controller="picker">
+    <select name="{{ field.name }}_min" aria-label="{{ field.label }} nga">
+      <option value="">nga</option>
+      {% for choice in field.min_choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+    </select>
+    </div>
+    <span aria-hidden="true">–</span>
+    <div class="picker" data-controller="picker">
+    <select name="{{ field.name }}_max" aria-label="{{ field.label }} deri">
+      <option value="">deri</option>
+      {% for choice in field.max_choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+    </select>
+    </div>
+    {%- endif %}
+  </div>
+</fieldset>
+{%- when FieldKind::Year %}
+<div class="filter-group{% if field.half %} filter-half{% endif %}">
+  <label class="filter-label" for="filter-{{ field.name }}">{{ field.label }}</label>
+  {%- if field.min_choices.is_empty() %}
+  <input id="filter-{{ field.name }}" type="text" inputmode="numeric" name="{{ field.name }}" value="{{ field.min }}"
+         maxlength="4" placeholder="p.sh. 2006">
+  {%- else %}
+  <div class="picker" data-controller="picker">
+  <select id="filter-{{ field.name }}" name="{{ field.name }}">
+    <option value="">Çdo vit</option>
+    {% for choice in field.min_choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+  </select>
+  </div>
+  {%- endif %}
+</div>
+{%- when FieldKind::Toggle %}
+<div class="filter-group{% if field.half %} filter-half{% endif %}">
+  <label class="check"><input type="checkbox" name="{{ field.name }}" value="1"{% if field.checked %} checked{% endif %}> {{ field.label }}</label>
+</div>
+{%- endmatch %}

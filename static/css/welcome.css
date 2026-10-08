@@ -270,14 +270,11 @@
   .category-menu { animation: none; }
 }
 
-/* Where the select sat beside something, the button does: the currency next to the price, the
-   order next to Filtrat and Harta. */
-.amount .picker,
-.filter-form .range .picker { flex: none; }
-.amount .picker-button,
-.filter-form .range .picker-button { display: inline-block; width: auto; }
-.amount .picker-list,
-.filter-form .range .picker-list { width: max(100%, 8rem); }
+/* Where the select sat beside something, the button does: the posting form's currency next to
+   the price. */
+.amount .picker { flex: none; }
+.amount .picker-button { display: inline-block; width: auto; }
+.amount .picker-list { width: max(100%, 8rem); }
 
 /* Read by screen readers, not shown. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

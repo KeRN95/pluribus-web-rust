@@ -1,16 +1,19 @@
 import { Controller } from "@hotwired/stimulus";
 import { refreshFor } from "controllers/refresh.js";
+import { locate } from "controllers/locate.js";
 
 // A map of the results, as Facebook's: its pin stays in the middle and the map moves under it,
-// on the point set before or Tirana's middle (filters.rs). The slider sets how far around it to
-// look. On the map page (/harta) "Vendos hartën" sends the map's middle and the distance, which
-// reloads only the results panel. On a category or search page the map is in a card that always
-// comes folded, and loads, with its dots, only when it first opens (lazy); there the middle and
-// the distance apply as soon as they change, when the map stops after a drag, the distance is let
-// go, or a place or a town is picked (pointChanged): the page refreshes in place (refresh.js),
-// which keeps the category and the filters, the card open as it is and the map as Leaflet drew it
-// (keep), its dots following the new results (reloadPoints). Each result gets a dot on the map.
-// Leaflet draws the map with OpenStreetMap's tiles.
+// on the point set before, the town picked, or Tirana's middle (filters.rs, map_start). The slider
+// sets how far around it to look, in steps. On the map page (/harta) "Vendos hartën" sends the
+// map's middle and the distance, which reloads only the results panel. On a category or search
+// page the map is in a card that always comes folded, and loads, with its dots, only when it first
+// opens (lazy); there the circle round the pin shows only once a point is set (ring), the map
+// saying how to set one until then, and the middle and the distance apply as soon as they change,
+// when the map stops after a drag, the distance is let go, or a place or a town is picked
+// (pointChanged), in place of a town: the page refreshes in place (refresh.js), which keeps the
+// category and the filters, the card open as it is and the map as Leaflet drew it (keep), its dots
+// following the new results (reloadPoints). Each result gets a dot on the map: those within the
+// circle once it is set. Leaflet draws the map with OpenStreetMap's tiles.
 
 const LEAFLET = "/static/vendor/leaflet-1.9.4";
 const TIRANA = [41.3275, 19.8187];
@@ -18,9 +21,8 @@ const TIRANA = [41.3275, 19.8187];
 // they are grouped by squares of the screen, CELL pixels a side, and taps go to the map.
 const CLOSE_ZOOM = 15;
 const CELL = 40;
-// The distance slider goes from 0 to 100 and stands for 1 to MAX_RADIUS_KM km, slowly near the
-// pin and faster further out: km = MAX_RADIUS_KM ^ (position / 100). As in filters.rs.
-const MAX_RADIUS_KM = 50;
+// The distances the slider stops at, one a position. As in filters.rs (RADIUS_STEPS_KM).
+const RADIUS_STEPS_KM = [1, 2, 5, 10, 25, 50];
 // The equator's length in metres, which the map (Web Mercator) draws 256 pixels long at zoom 0 and
 // twice as long at each zoom after: at a latitude, a pixel is this times its cosine over 256 * 2^zoom.
 const EQUATOR = 40075016.686;
@@ -47,8 +49,9 @@ export default class extends Controller {
     "canvas", "form", "latitude", "longitude", "radius", "slider", "radiusLabel", "status", "results", "points", "toggle",
     "frame", "town",
   ];
-  // lazy: the map loads when its card is first opened (category and search pages).
-  static values = { latitude: Number, longitude: Number, lazy: Boolean };
+  // lazy: the map loads when its card is first opened (category and search pages). ring: a point
+  // is set, and its circle shows.
+  static values = { latitude: Number, longitude: Number, lazy: Boolean, ring: { type: Boolean, default: true } };
 
   connect() {
     if (!this.lazyValue) {
@@ -106,8 +109,9 @@ export default class extends Controller {
     // map stopped, and while a pinch zoomed, Leaflet scaled it as well, so it grew or shrank twice
     // as fast.
     this.map.createPane("ring").style.zIndex = 350;
-    this.ring = Object.assign(document.createElement("div"), { className: "map-area" });
+    this.ring = Object.assign(document.createElement("div"), { className: "map-area", hidden: !this.ringValue });
     this.map.getPane("ring").append(this.ring);
+    if (!this.ringValue) this.statusTarget.textContent = "Lëviz hartën ose zgjidh një qytet: kërkohet përreth pikës.";
     this.map.on("move zoom", () => this.placeRing());
     this.map.on("zoomanim", ({ zoom, center }) => this.placeRing({ zoom, center, animated: true }));
     // The pin isn't on the map but over it, in the middle (map.css): the map moves, the circle
@@ -196,7 +200,8 @@ export default class extends Controller {
   // and out with it, at once, to keep the circle whole. The map page's "Vendos hartën" sends it; in
   // a card it applies when let go (radiusChanged).
   radiusInput() {
-    const km = Math.max(1, Math.round(MAX_RADIUS_KM ** (Number(this.sliderTarget.value) / 100)));
+    const position = Math.min(RADIUS_STEPS_KM.length - 1, Math.max(0, Math.round(Number(this.sliderTarget.value))));
+    const km = RADIUS_STEPS_KM[position];
     this.radiusTarget.value = km;
     this.radiusLabelTarget.textContent = `${km} km`;
     this.sliderTarget.setAttribute("aria-valuetext", `${km} km`);
@@ -214,23 +219,18 @@ export default class extends Controller {
 
   // "Vendndodhja ime": the map moves to where the visitor is, if the browser may say, for
   // "Vendos hartën" to send, or in a card to apply by itself.
-  locate() {
+  async locate() {
     if (!this.map) return;
-    if (!navigator.geolocation) {
-      this.statusTarget.textContent = "Ky shfletues nuk e jep vendndodhjen.";
-      return;
-    }
     this.statusTarget.textContent = "Po kërkoj vendndodhjen…";
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        this.statusTarget.textContent = "";
-        const point = this.L.latLng(coords.latitude, coords.longitude);
-        this.fitCircle({ point });
-        this.pointChanged(point);
-      },
-      () => { this.statusTarget.textContent = "Vendndodhja nuk u gjet. Lëviz hartën për ta vendosur pikën."; },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
-    );
+    try {
+      const { latitude, longitude } = await locate();
+      this.statusTarget.textContent = "";
+      const point = this.L.latLng(latitude, longitude);
+      this.fitCircle({ point });
+      this.pointChanged(point);
+    } catch (error) {
+      this.statusTarget.textContent = error.message;
+    }
   }
 
   // A town from the dropdown: the map moves onto its point, for "Vendos hartën" to set, as with
@@ -254,10 +254,16 @@ export default class extends Controller {
     this.formTarget.requestSubmit();
   }
 
-  // In a card (lazy), the map's middle and the distance apply as soon as they change. A place or a
-  // town gives its own point, the map still on its way there.
+  // In a card (lazy), the map's middle and the distance apply as soon as they change, and the
+  // circle shows. A place or a town gives its own point, the map still on its way there.
   pointChanged(point) {
-    if (this.lazyValue) this.apply(point);
+    if (!this.lazyValue) return;
+    if (!this.ringValue) {
+      this.ringValue = true;
+      if (this.ring) this.ring.hidden = false;
+      this.statusTarget.textContent = "";
+    }
+    this.apply(point);
   }
 
   // The page refreshes in place for the point, the map's middle unless another is given, and the

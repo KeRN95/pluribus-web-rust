@@ -768,10 +768,39 @@ pub async fn related_listings(db: &PgPool, listing_id: Uuid, limit: i64) -> sqlx
 
 /// How many active listings match the filter, counting at most COUNT_LIMIT + 1.
 pub async fn listing_count(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<i64> {
+    listing_count_up_to(db, filter, COUNT_LIMIT).await
+}
+
+/// How many active listings match the filter, counting at most `limit` + 1.
+pub async fn listing_count_up_to(db: &PgPool, filter: &ListingFilter, limit: i64) -> sqlx::Result<i64> {
     let mut query = QueryBuilder::<Postgres>::new("SELECT count(*) FROM (SELECT 1 FROM listings l");
     push_filters(&mut query, filter);
-    query.push(" LIMIT ").push_bind(COUNT_LIMIT + 1).push(") matches");
+    query.push(" LIMIT ").push_bind(limit + 1).push(") matches");
     query.build_query_scalar().fetch_one(db).await
+}
+
+/// The prices that split the active listings of these categories priced in `currency` into four
+/// as many each (the lowest quarter, the next...), for the price's quick choices (filters.rs,
+/// price_choices); None with too few of them to say. Every such listing counts, so it takes a
+/// moment in a big category: browse.rs keeps the answer for hours.
+pub async fn price_quarters(db: &PgPool, category_ids: &[Uuid], currency: &str) -> sqlx::Result<Option<[Decimal; 3]>> {
+    let row = sqlx::query!(
+        r#"SELECT percentile_disc(0.25) WITHIN GROUP (ORDER BY price_amount) AS lower,
+                  percentile_disc(0.5) WITHIN GROUP (ORDER BY price_amount) AS middle,
+                  percentile_disc(0.75) WITHIN GROUP (ORDER BY price_amount) AS upper,
+                  count(*) AS "priced!"
+           FROM listings
+           WHERE status = 'ACTIVE' AND category_id = ANY($1) AND currency::text = $2
+             AND price_type IN ('FIXED', 'NEGOTIABLE') AND price_amount > 0"#,
+        category_ids,
+        currency,
+    )
+    .fetch_one(db)
+    .await?;
+    Ok(match (row.lower, row.middle, row.upper) {
+        (Some(lower), Some(middle), Some(upper)) if row.priced >= 20 => Some([lower, middle, upper]),
+        _ => None,
+    })
 }
 
 /// The categories the listings matching the filter are in, with how many each, the most first:

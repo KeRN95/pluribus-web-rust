@@ -1,16 +1,25 @@
 //! The welcome page and the browse pages (a category, a search, or the map): listing grids with
 //! filters, sorting and infinite scroll.
 
+use std::{
+    collections::HashMap,
+    sync::{Mutex, OnceLock},
+    time::{Duration, Instant},
+};
+
 use askama::Template;
 use axum::{
+    Json,
     extract::{Path, RawQuery, State},
-    http::HeaderMap,
-    response::Response,
+    http::{HeaderMap, HeaderValue, header},
+    response::{IntoResponse, Response},
 };
+use rust_decimal::Decimal;
+use uuid::Uuid;
 
 use super::{
     Result, cookie,
-    filters::{Chip, Field, FieldKind, Filters, Params},
+    filters::{Chip, Field, FieldKind, Filters, Params, PriceChoice, TOWN_COOKIE},
     icons, is_next_page_request, newest, not_found, render,
     safety,
     seo::{self, PageMeta},
@@ -243,6 +252,55 @@ struct BrowsePage<'a> {
     points: Vec<db::MapPoint>,
     more_points: bool,
     meta: PageMeta,
+    /// The count stopped at db::COUNT_LIMIT: the page asks for one up to db::PRECISE_COUNT_LIMIT
+    /// once it shows (filters_controller.js, numri=1).
+    capped: bool,
+    /// What the filters' card's button says it shows: "Shfaq 24 njoftime", or "Asnjë njoftim".
+    show_label: String,
+    /// The price's quick choices, from the category's prices (filters.rs, price_choices).
+    price_choices: Vec<PriceChoice>,
+    /// Some of the filters wait under "Më shumë filtra" (Field::primary), and whether it opens
+    /// with the page: one of them is on, or the kind of listing waiting there is.
+    has_more: bool,
+    more_open: bool,
+}
+
+/// How long a category's price quarters, its price's quick choices, are kept before they are
+/// worked out again: every listing priced counts (db::price_quarters), and they move slowly.
+const PRICE_QUARTERS_HOURS: u64 = 6;
+
+/// The price quarters by database (each test has one of its own), category and currency, with
+/// when they were worked out.
+type KeptQuarters = HashMap<(String, Uuid, String), (Instant, Option<[Decimal; 3]>)>;
+
+fn kept_quarters() -> &'static Mutex<KeptQuarters> {
+    static KEPT: OnceLock<Mutex<KeptQuarters>> = OnceLock::new();
+    KEPT.get_or_init(Default::default)
+}
+
+/// The category's price quarters in its usual currency, as kept, or worked out again once
+/// PRICE_QUARTERS_HOURS have gone.
+async fn price_quarters(
+    state: &AppState,
+    categories: &db::Categories,
+    category: &db::Category,
+) -> sqlx::Result<Option<[Decimal; 3]>> {
+    let database = state.db.connect_options().get_database().unwrap_or_default().to_string();
+    let key = (database, category.id, category.default_currency.clone());
+    let fresh = Duration::from_secs(PRICE_QUARTERS_HOURS * 3600);
+    if let Some((at, quarters)) = kept_quarters().lock().unwrap().get(&key) {
+        if at.elapsed() < fresh {
+            return Ok(*quarters);
+        }
+    }
+    let quarters = db::price_quarters(&state.db, &categories.subtree_ids(category.id), &category.default_currency).await?;
+    kept_quarters().lock().unwrap().insert(key, (Instant::now(), quarters));
+    Ok(quarters)
+}
+
+/// What the filters' card's button says it shows, for a count as format::listing_count says it.
+fn show_label(count: i64, count_text: &str) -> String {
+    if count == 0 { "Asnjë njoftim".to_string() } else { format!("Shfaq {count_text}") }
 }
 
 /// A category in the category menu.
@@ -434,7 +492,10 @@ async fn browse(
     page_slug: Option<String>,
     view: View,
 ) -> Result<Response> {
-    let params = Params::parse(query.as_deref());
+    // A category or search page whose address names no place opens in the town the visitor
+    // picked last (filters.rs, TOWN_COOKIE); the map page has its own point.
+    let town = (view == View::Grid).then(|| cookie(&headers, TOWN_COOKIE)).flatten();
+    let params = Params::parse(query.as_deref()).remembering_town(town);
     let category_slug = page_slug.as_deref().or(params.first("category"));
     let words = params.search_words();
     let (categories, cities, attributes, search, hidden) = tokio::try_join!(
@@ -472,6 +533,16 @@ async fn browse(
     filter.hidden_accounts = hidden;
     let next_url = |cursor: &str| filters.next_url(cursor);
 
+    // Only the count, further than the page counts (db::PRECISE_COUNT_LIMIT), which the page asks
+    // for once it shows when its own stopped at db::COUNT_LIMIT (filters_controller.js):
+    // {"count": 3412, "text": "3 412 njoftime", "show": "Shfaq 3 412 njoftime"}.
+    if params.first("numri") == Some("1") {
+        let count = db::listing_count_up_to(&state.db, &filter, db::PRECISE_COUNT_LIMIT).await?;
+        let text = format::listing_count(count, db::PRECISE_COUNT_LIMIT);
+        let body = serde_json::json!({ "count": count, "show": show_label(count, &text), "text": text });
+        return Ok(([(header::CACHE_CONTROL, HeaderValue::from_static("no-store"))], Json(body)).into_response());
+    }
+
     // In a search limited to a city, the cards in that city leave it out (ListingCard::city_label).
     let mark_city = |rows: &mut Vec<ListingCard>| {
         if let Some(city) = filters.city {
@@ -503,7 +574,7 @@ async fn browse(
         }
         _ => None,
     };
-    let (mut rows, count, mut points, found_in, mut most_viewed) = tokio::try_join!(
+    let (mut rows, count, mut points, found_in, mut most_viewed, quarters) = tokio::try_join!(
         db::listing_page(&state.db, &filter),
         db::listing_count(&state.db, &filter),
         async {
@@ -526,6 +597,13 @@ async fn browse(
                 None => Ok(Vec::new()),
             }
         },
+        async {
+            // The price's quick choices, from the category's prices: on its grid only.
+            match (view, category) {
+                (View::Grid, Some(category)) => price_quarters(&state, &categories, category).await,
+                _ => Ok(None),
+            }
+        },
     )?;
     safety::without_hidden(&mut most_viewed, &filter.hidden_accounts);
     let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::related(most_viewed));
@@ -543,6 +621,8 @@ async fn browse(
             })
         })
         .collect();
+    let capped = count > db::COUNT_LIMIT;
+    let count_number = count;
     let count = format::listing_count(count, db::COUNT_LIMIT);
     mark_city(&mut rows);
     let page = ListingPage::new(rows, filter.sort, next_url).big(big);
@@ -638,12 +718,22 @@ async fn browse(
         meta = meta.with_image(&origin, photo, card.title.clone());
     }
     meta.noindex = page_slug.is_none() || filters.q.is_some();
+    let fields = filters.fields();
+    let has_more = fields.iter().any(|field| !field.primary);
+    let type_waits = !filters.type_first() && filters.type_chosen();
+    let more_open = fields.iter().any(|field| !field.primary && field.active) || (has_more && type_waits);
+    let price_choices = quarters.map(|quarters| filters.price_choices(quarters)).unwrap_or_default();
     render(BrowsePage {
         meta,
+        show_label: show_label(count_number, &count),
         heading,
         count,
+        capped,
         corrections,
-        fields: filters.fields(),
+        price_choices,
+        has_more,
+        more_open,
+        fields,
         chips: filters.chips(),
         clear_url: filters.clear_url(),
         filters: &filters,

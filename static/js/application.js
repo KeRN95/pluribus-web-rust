@@ -18,6 +18,7 @@ import NarrowController from "controllers/narrow_controller.js";
 import NewestController from "controllers/newest_controller.js";
 import PanelController from "controllers/panel_controller.js";
 import PickerController from "controllers/picker_controller.js";
+import PlaceController, { forgetTown } from "controllers/place_controller.js";
 import PhotosController from "controllers/photos_controller.js";
 import PriceRangeController from "controllers/price_range_controller.js";
 import ShareController from "controllers/share_controller.js";
@@ -44,12 +45,20 @@ application.register("narrow", NarrowController);
 application.register("newest", NewestController);
 application.register("panel", PanelController);
 application.register("picker", PickerController);
+application.register("place", PlaceController);
 application.register("photos", PhotosController);
 application.register("price-range", PriceRangeController);
 application.register("share", ShareController);
 application.register("slides", SlidesController);
 application.register("suggest", SuggestController);
 application.register("theme", ThemeController);
+
+// A link that drops the town ("Gjithë Shqipëria", the town's chip) forgets it too, before Turbo
+// follows it, so the page it opens doesn't open in it again (place_controller.js). Such links are
+// never fetched ahead (data-turbo-prefetch), which would have the town still.
+document.addEventListener("click", (event) => {
+  if (event.target.closest?.("[data-forget-town]")) forgetTown();
+}, true);
 
 // A GET form sends every field, filled in or not. Drop the empty ones before Turbo fetches the
 // page (filledIn, refresh.js), so filter URLs stay short and shareable; the address bar shows the

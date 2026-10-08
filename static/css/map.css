@@ -4,7 +4,7 @@
 /* Map page, and the ways to it */
 
 /* The order (Rendit): a round button like the map's, its orders in a menu under it. */
-.sort-menu { position: relative; grid-row: 1; align-self: center; }
+.sort-menu { position: relative; flex: none; }
 /* Its menu, as the in-page dropdowns' are, under it and growing leftward from its right edge: the
    orders as rows, the one now in the site's colour, ticked; a tap on another reloads the page in
    it. The radio itself is there for keyboards and screen readers only, its ring round the row. */
@@ -65,6 +65,10 @@
 /* The distance slider, in the button colour, with the distance it stands for beside its name. */
 .map-radius output { margin-left: .25rem; color: var(--text); font-weight: var(--bold); }
 .map-radius input[type="range"] { width: 100%; height: 2.25rem; margin: 0; padding: 0; border: 0; background: none; accent-color: var(--button); cursor: pointer; }
+/* Under it, the distances it stops at (1, 2, 5, 10, 25, 50 km), each under its position: the
+   track runs from half a thumb in from either end. */
+.map-radius-steps { position: relative; height: 1.1rem; margin: -.25rem .6rem 0; color: var(--muted); font-size: var(--text-xs); }
+.map-radius-steps span { position: absolute; left: calc(var(--i) * 20%); transform: translateX(-50%); }
 .map-locate { flex: none; gap: .35rem; }
 /* "Vendndodhja ime" and the towns' dropdown beside it, the dropdown taking what room is left. */
 .map-place { display: flex; flex: 1 1 18rem; align-items: center; gap: .5rem; min-width: 0; }
@@ -135,8 +139,9 @@
   .map-center::after { transition: none; }
 }
 /* The circle round it (map_controller.js, placeRing): a ring in the location colour round a faint
-   wash of it, letting every touch through. As a zoom animates it grows or shrinks with the map,
+   wash of it, letting every touch through; in a category's card, only once a point is set. As a zoom animates it grows or shrinks with the map,
    as Leaflet's own layers do (leaflet.css). */
+.map-area[hidden] { display: none; }
 .map-area {
   position: absolute;
   border: 2px solid var(--location);

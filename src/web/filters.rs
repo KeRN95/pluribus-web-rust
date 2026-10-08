@@ -4,13 +4,20 @@
 //! Parameters: q, category (on /search and /harta; on a category page the path names it), city,
 //! lat, lng and radius (a map pin, and how many km around it), type, condition (repeatable),
 //! price_min, price_max, currency, sort and after, harta=1 (a category or search page with its
-//! map's dots, which its map fetches when it first opens), plus one per filterable
-//! property of the category, named by the property's code: option codes for SELECT and
-//! MULTISELECT properties (vehicle_fuel=DIESEL, repeatable), <code>_min and <code>_max for
-//! NUMBER properties, and <code>=1 for BOOLEAN ones. Values that don't exist are ignored, so an
-//! outdated or hand-edited URL still shows a page.
+//! map's dots, which its map fetches when it first opens), numri=1 (only the count, as JSON:
+//! browse.rs), plus one per filterable property of the category, named by the property's code:
+//! option codes for SELECT and MULTISELECT properties (vehicle_fuel=DIESEL, repeatable),
+//! <code>_min and <code>_max for NUMBER properties, and <code>=1 for BOOLEAN ones. Values that
+//! don't exist are ignored, so an outdated or hand-edited URL still shows a page.
+//!
+//! Where to look is a place: a town (city), or a point on the map with a distance around it (lat,
+//! lng, radius); one or the other, as the pills under the browse row offer them, and the town a
+//! visitor picked stays theirs on the next pages (Params::remembering_town).
 
-use rust_decimal::{Decimal, prelude::ToPrimitive};
+use rust_decimal::{
+    Decimal,
+    prelude::{FromPrimitive, ToPrimitive},
+};
 use uuid::Uuid;
 
 use super::properties;
@@ -29,11 +36,50 @@ pub const SEARCH_CHARS: usize = 100;
 const CONDITIONS: [&str; 4] = ["NEW", "LIKE_NEW", "USED", "FOR_PARTS"];
 const CURRENCIES: [&str; 2] = ["EUR", "ALL"];
 
-/// How far around the map pin to look, in whole kilometres: anything from 1 to 50 (the map's
-/// slider, see map_radius.html).
+/// How far around the map pin to look, in whole kilometres: anything from 1 to 50 in a link, the
+/// slider's steps (RADIUS_STEPS_KM) in the map's form.
 const MIN_RADIUS_KM: u32 = 1;
 const MAX_RADIUS_KM: u32 = 50;
 const DEFAULT_RADIUS_KM: u32 = 10;
+
+/// The distances the map's slider stops at (map_radius.html, map_controller.js): a neighbourhood,
+/// a town, its surroundings, a county.
+pub const RADIUS_STEPS_KM: [u32; 6] = [1, 2, 5, 10, 25, 50];
+
+/// The towns offered as pills under the browse row, after "Gjithë Shqipëria" and "Afër meje":
+/// those with the most listings (2026-10-08). The others are in the filters' Qyteti; one picked
+/// there joins the pills, first.
+const TOP_TOWNS: [&str; 12] =
+    ["tirane", "durres", "vlore", "shkoder", "elbasan", "fier", "korce", "kamez", "lushnje", "berat", "sarande", "pogradec"];
+
+/// The cookie that keeps the town a visitor picked last (place_controller.js), which a page whose
+/// address names no place opens in (Params::remembering_town).
+pub const TOWN_COOKIE: &str = "qyteti";
+
+/// Properties the filters show at once wherever a category has them, besides those it requires or
+/// shows on its cards (Field::primary): what buyers mostly narrow by. The rest wait under "Më shumë
+/// filtra".
+const PRIMARY: [&str; 10] = [
+    "vehicle_body_type",
+    "vehicle_transmission",
+    "vehicle_fuel",
+    "commercial_make",
+    "moto_make",
+    "machine_brand",
+    "electronics_brand",
+    "property_furnished",
+    "job_contract",
+    "job_place",
+];
+
+/// A category with at most this many filters shows them all; so does one that would leave at most
+/// FEW_MORE under "Më shumë filtra".
+const ALL_AT_ONCE: usize = 6;
+const FEW_MORE: usize = 2;
+
+/// The oldest year a year's dropdown offers: a vehicle's or a machine's, and a building's.
+const FIRST_YEAR: i32 = 1970;
+const FIRST_BUILT_YEAR: i32 = 1950;
 
 /// Where a map's pin stands until the visitor sets another point: the middle of Tirana (Skanderbeg
 /// Square). On the map page it is the point the results are for; elsewhere a map only starts there.
@@ -75,6 +121,16 @@ impl Params {
         self.first("q").map(|q| q.chars().take(SEARCH_CHARS).collect())
     }
 
+    /// The town a visitor picked last (TOWN_COOKIE), for an address that names no place: the page
+    /// opens in it, its pill and chip on, and the links from it name it.
+    pub fn remembering_town(mut self, town: Option<String>) -> Self {
+        let placeless = ["city", "lat", "lng"].into_iter().all(|name| self.first(name).is_none());
+        if let Some(town) = town.filter(|town| placeless && !town.is_empty()) {
+            self.0.push(("city".to_string(), town));
+        }
+        self
+    }
+
     fn all<'p>(&'p self, name: &'p str) -> impl Iterator<Item = &'p str> {
         self.0.iter().filter(move |(n, _)| n == name).map(|(_, v)| v.as_str())
     }
@@ -112,6 +168,24 @@ pub struct OptionGroup {
 pub struct Chip {
     pub label: String,
     pub url: String,
+    /// The town's chip: removing it forgets the town too (TOWN_COOKIE, application.js).
+    pub forgets_town: bool,
+}
+
+/// A place under the browse row: a town, or everywhere.
+pub struct PlacePill {
+    pub label: String,
+    pub url: String,
+    pub selected: bool,
+}
+
+/// One of the price's quick choices, under its slider: about a quarter of the category's listings.
+pub struct PriceChoice {
+    pub label: String,
+    pub min: String,
+    pub max: String,
+    pub currency: &'static str,
+    pub selected: bool,
 }
 
 /// A property's filter in the form.
@@ -137,6 +211,16 @@ pub struct Field {
     /// Its boxes have icons over the names, a car's side over each body type (Karroceria): they
     /// are bigger, and take a line of their own on every screen.
     pub icons: bool,
+    /// Shown at once rather than under "Më shumë filtra": a property the category requires or
+    /// shows on its cards, one of PRIMARY, or the parent or dependent of one (a make and its
+    /// models). Filters::fields decides.
+    pub primary: bool,
+    /// Set to something: the visitor filters by it.
+    pub active: bool,
+    /// For a range, the values its two dropdowns offer (range_steps), each marked if chosen; for a
+    /// year (FieldKind::Year), its dropdown's, in min_choices. Empty for a range that is typed.
+    pub min_choices: Vec<Choice>,
+    pub max_choices: Vec<Choice>,
 }
 
 impl Field {
@@ -283,6 +367,8 @@ impl<'a> Filters<'a> {
             .filter(|sort| *sort != Sort::Nearest || near.is_some())
             .unwrap_or(default_sort);
         let after = params.first("after").and_then(|value| Cursor::decode(sort, value));
+        // A town or a point, not both: a point in the address leaves out a town with it.
+        let city = params.first("city").filter(|_| pin.is_none()).and_then(|slug| cities.iter().find(|c| c.slug == slug));
 
         Self {
             path,
@@ -291,7 +377,7 @@ impl<'a> Filters<'a> {
             cities,
             q: params.search_words(),
             category,
-            city: params.first("city").and_then(|slug| cities.iter().find(|c| c.slug == slug)),
+            city,
             near,
             pin_in_url: pin.is_some(),
             radius_km,
@@ -462,10 +548,11 @@ impl<'a> Filters<'a> {
         self.pairs().into_iter().filter(|(name, _)| !matches!(name.as_str(), "q" | "after")).collect()
     }
 
+    /// Everything but the place: the map's point, which its own fields carry, replaces a town.
     pub fn map_form_fields(&self) -> Vec<(String, String)> {
         self.pairs()
             .into_iter()
-            .filter(|(name, _)| !matches!(name.as_str(), "lat" | "lng" | "radius"))
+            .filter(|(name, _)| !matches!(name.as_str(), "city" | "lat" | "lng" | "radius"))
             .collect()
     }
 
@@ -475,14 +562,35 @@ impl<'a> Filters<'a> {
         self.url_without(|name, _| matches!(name, "lat" | "lng" | "radius"))
     }
 
-    /// The same search without any filters.
+    /// The same search without its filters: the words, the order and the place stay, as the place
+    /// has pills of its own.
     pub fn clear_url(&self) -> String {
-        self.url_without(|name, _| !matches!(name, "q" | "sort"))
+        self.url_without(|name, _| !matches!(name, "q" | "sort" | "city" | "lat" | "lng" | "radius"))
     }
 
+    /// The filters on, each a chip that removes it: the place first (the town, or the map's point),
+    /// then the rest.
     pub fn chips(&self) -> Vec<Chip> {
+        let mut chips = self.place_chips();
+        chips.extend(self.filter_chips());
+        chips
+    }
+
+    fn place_chips(&self) -> Vec<Chip> {
         let mut chips = Vec::new();
-        let mut chip = |label: String, url: String| chips.push(Chip { label, url });
+        if let Some(city) = self.city {
+            chips.push(Chip { label: city.name.clone(), url: self.url_without(|name, _| name == "city"), forgets_town: true });
+        }
+        if let Some(label) = self.point_label() {
+            chips.push(Chip { label, url: self.everywhere_url(), forgets_town: false });
+        }
+        chips
+    }
+
+    /// The chips of what the filters' card sets, the place aside.
+    fn filter_chips(&self) -> Vec<Chip> {
+        let mut chips = Vec::new();
+        let mut chip = |label: String, url: String| chips.push(Chip { label, url, forgets_town: false });
         if let (true, Some(category)) = (self.category_is_filter, self.category) {
             // The properties belong to the category, so they go with it.
             let names: Vec<String> = self.properties.iter().flat_map(Property::param_names).collect();
@@ -490,12 +598,6 @@ impl<'a> Filters<'a> {
                 category.name.clone(),
                 self.url_without(|name, _| name == "category" || names.iter().any(|n| n == name)),
             );
-        }
-        if let Some(city) = self.city {
-            chip(city.name.clone(), self.url_without(|name, _| name == "city"));
-        }
-        if let Some(label) = self.point_label() {
-            chip(label, self.everywhere_url());
         }
         if let Some(listing_type) = &self.listing_type {
             chip(format::listing_type(listing_type).to_string(), self.url_without(|name, _| name == "type"));
@@ -547,25 +649,136 @@ impl<'a> Filters<'a> {
         (self.near.is_some() && self.path != "/harta").then(|| format!("Brenda {} km nga pika", self.radius_km))
     }
 
-    /// What the filters' card says under "Filtrat": the filters on, as their chips say them, but
-    /// the map's point, which is the map's button's beside it (its tooltip) and has its own chip;
-    /// empty with none.
+    /// What the filters' button says to screen readers and as its tooltip, "Filtrat: Naftë · deri
+    /// 5 000 €": the filters on, as their chips say them, but the place, which the pills and the
+    /// map's button say; empty with none.
     pub fn summary(&self) -> String {
-        let point = self.point_label();
-        let labels: Vec<String> =
-            self.chips().into_iter().map(|chip| chip.label).filter(|label| Some(label) != point.as_ref()).collect();
-        labels.join(" · ")
+        self.filter_chips().into_iter().map(|chip| chip.label).collect::<Vec<_>>().join(" · ")
+    }
+
+    /// How many filters are on, the place aside: the number on the filters' button.
+    pub fn filter_count(&self) -> usize {
+        self.filter_chips().len()
+    }
+
+    // ------------------------------------------------------------ the place
+
+    /// The towns under the browse row (TOP_TOWNS), the one picked first if it isn't among them.
+    pub fn town_pills(&self) -> Vec<PlacePill> {
+        let mut towns: Vec<&City> =
+            TOP_TOWNS.iter().filter_map(|slug| self.cities.iter().find(|city| city.slug == *slug)).collect();
+        if let Some(city) = self.city.filter(|city| !towns.iter().any(|town| town.id == city.id)) {
+            towns.insert(0, city);
+        }
+        towns
+            .into_iter()
+            .map(|town| PlacePill {
+                label: town.name.clone(),
+                url: self.place_url(Some(town)),
+                selected: self.city.is_some_and(|city| city.id == town.id),
+            })
+            .collect()
+    }
+
+    /// No place: all of Albania.
+    pub fn everywhere(&self) -> bool {
+        self.city.is_none() && !self.pin_in_url
+    }
+
+    /// The same page without a place: "Gjithë Shqipëria", and what "Afër meje" adds its point to.
+    pub fn placeless_url(&self) -> String {
+        self.place_url(None)
+    }
+
+    /// The same page in `town`, or without a place: the town, or no town, replaces the map's
+    /// point, and a town replaces the town.
+    fn place_url(&self, town: Option<&City>) -> String {
+        let mut pairs: Vec<(String, String)> =
+            self.pairs().into_iter().filter(|(name, _)| !matches!(name.as_str(), "city" | "lat" | "lng" | "radius")).collect();
+        if let Some(town) = town {
+            // Where the town goes in the fixed order: after the words and the category.
+            let at = pairs.iter().position(|(name, _)| !matches!(name.as_str(), "q" | "category")).unwrap_or(pairs.len());
+            pairs.insert(at, ("city".to_string(), town.slug.clone()));
+        }
+        url(&self.path, pairs)
+    }
+
+    /// The town picked, for the cookie that keeps it (place_controller.js); empty with none.
+    pub fn town_slug(&self) -> &str {
+        self.city.map_or("", |city| city.slug.as_str())
+    }
+
+    /// The towns by county, for the filters' Qyteti, the one picked selected.
+    pub fn city_groups(&self) -> Vec<ChoiceGroup> {
+        city_groups(self.cities, self.city.map(|city| city.slug.as_str()))
+    }
+
+    /// Whether the map's point is on: its circle shows, and the results are those within it.
+    pub fn has_pin(&self) -> bool {
+        self.pin_in_url
+    }
+
+    /// The map's point, when it is on.
+    pub fn pin(&self) -> Option<Near> {
+        self.near.filter(|_| self.pin_in_url)
+    }
+
+    /// What the map's button says: the town, or the map's point as its nearest town and the
+    /// distance ("Tiranë · 10 km"), or "Harta" with neither.
+    pub fn map_label(&self) -> String {
+        if let Some(city) = self.city {
+            return city.name.clone();
+        }
+        match self.near.filter(|_| self.pin_in_url) {
+            Some(near) => match self.nearest_town(near.latitude, near.longitude) {
+                Some(town) => format!("{} · {} km", town.name, self.radius_km),
+                None => format!("{} km", self.radius_km),
+            },
+            None => "Harta".to_string(),
+        }
+    }
+
+    /// The town whose point is nearest this one (a flat projection does at Albania's size).
+    fn nearest_town(&self, latitude: f64, longitude: f64) -> Option<&'a City> {
+        let shrink = latitude.to_radians().cos();
+        let distance = |city: &City| ((city.longitude - longitude) * shrink).powi(2) + (city.latitude - latitude).powi(2);
+        self.cities.iter().min_by(|one, other| distance(one).total_cmp(&distance(other)))
+    }
+
+    /// Where the map starts: on its point, else on the town picked; None, on Tirana (map_controller.js).
+    pub fn map_start(&self) -> Option<(f64, f64)> {
+        match (self.near, self.city) {
+            (Some(near), _) => Some((near.latitude, near.longitude)),
+            (None, Some(city)) => Some((city.latitude, city.longitude)),
+            (None, None) => None,
+        }
+    }
+
+    /// With the map's point and less than the widest distance, the same search further out (25
+    /// km, or 50 from 25), and how far: what a page without results offers.
+    pub fn wider_url(&self) -> Option<(String, u32)> {
+        let wider = match self.radius_km {
+            radius if radius < 25 => 25,
+            radius if radius < MAX_RADIUS_KM => MAX_RADIUS_KM,
+            _ => return None,
+        };
+        self.pin_in_url.then(|| {
+            let pairs = self.pairs().into_iter().map(|(name, value)| match name.as_str() {
+                "radius" => (name, wider.to_string()),
+                _ => (name, value),
+            });
+            (url(&self.path, pairs), wider)
+        })
     }
 
     // ------------------------------------------------------------ the form
 
     /// What the filter form carries along hidden, having no fields for it: the search words (the
-    /// header's search has them), the town (a link may bring it; its chip drops it), the map pin
-    /// and its radius.
+    /// row's search has them), the map pin and its radius (the map's). Its Qyteti is the town.
     pub fn kept_fields(&self) -> Vec<(String, String)> {
         self.pairs()
             .into_iter()
-            .filter(|(name, _)| matches!(name.as_str(), "q" | "city" | "lat" | "lng" | "radius"))
+            .filter(|(name, _)| matches!(name.as_str(), "q" | "lat" | "lng" | "radius"))
             .collect()
     }
 
@@ -595,6 +808,20 @@ impl<'a> Filters<'a> {
 
     pub fn category_choices(&self) -> Vec<Choice> {
         category_choices(self.categories, self.category.map(|c| c.slug.as_str()))
+    }
+
+    /// Whether the kind of listing comes first among the filters: in Prona, where buying and
+    /// renting are two searches. Elsewhere nearly everything is for sale, and it waits under "Më
+    /// shumë filtra", or after the rest where nothing else does.
+    pub fn type_first(&self) -> bool {
+        self.category.is_some_and(|category| {
+            category.slug == "prona" || self.categories.ancestors(category).iter().any(|above| above.slug == "prona")
+        })
+    }
+
+    /// Whether the kind of listing is chosen, which opens "Më shumë filtra" where it waits.
+    pub fn type_chosen(&self) -> bool {
+        self.listing_type.is_some()
     }
 
     /// Empty unless the category takes more than one kind of listing.
@@ -680,6 +907,30 @@ impl<'a> Filters<'a> {
         }
     }
 
+    /// The price's quick choices: four stretches between the round prices nearest the category's
+    /// `quarters` (db::price_quarters), each holding about a quarter of its listings: "deri 3 000
+    /// €", "3 000 – 6 000 €", "6 000 – 12 000 €", "nga 12 000 €", in its usual currency. None
+    /// where rounding makes two of them one.
+    pub fn price_choices(&self, quarters: [Decimal; 3]) -> Vec<PriceChoice> {
+        let Some(category) = self.category else { return Vec::new() };
+        let currency = CURRENCIES.into_iter().find(|code| *code == category.default_currency).unwrap_or("ALL");
+        let [low, middle, high] = quarters.map(round_price);
+        if !(low < middle && middle < high) {
+            return Vec::new();
+        }
+        let symbol = format::currency_symbol(currency);
+        [(None, Some(low)), (Some(low), Some(middle)), (Some(middle), Some(high)), (Some(high), None)]
+            .into_iter()
+            .map(|(min, max)| PriceChoice {
+                label: range_label(min, max, Some(symbol), true).unwrap_or_default(),
+                min: min.map(plain).unwrap_or_default(),
+                max: max.map(plain).unwrap_or_default(),
+                currency,
+                selected: self.price_min == min && self.price_max == max && self.currency == currency,
+            })
+            .collect()
+    }
+
     /// The default order's value is empty, so it stays out of URLs. Nearest first is only on
     /// offer with a map pin.
     pub fn sort_choices(&self) -> Vec<Choice> {
@@ -701,18 +952,44 @@ impl<'a> Filters<'a> {
             .collect()
     }
 
-    /// Where the distance slider stands for the radius, from 0 to 100. The slider moves slowly
-    /// near the pin and faster further out (km = 50 ^ (position / 100), so its middle is 7 km);
-    /// map_controller.js turns a position back into kilometres.
-    pub fn radius_position(&self) -> u32 {
-        (f64::from(self.radius_km).ln() / f64::from(MAX_RADIUS_KM).ln() * 100.0).round() as u32
+    /// Where the distance slider stands for the radius: the step nearest it (RADIUS_STEPS_KM), 0
+    /// to 5; map_controller.js turns a position back into kilometres.
+    pub fn radius_position(&self) -> usize {
+        RADIUS_STEPS_KM
+            .iter()
+            .enumerate()
+            .min_by_key(|(_, km)| km.abs_diff(self.radius_km))
+            .map_or(3, |(position, _)| position)
     }
 
+    /// The category's filters, those shown at once first (Field::primary), each in its order: a
+    /// property the category requires or shows on its cards, one of PRIMARY, or the parent or
+    /// dependent of one, a car's make with its models. All at once in a category with few, or
+    /// where few would wait under "Më shumë filtra".
     pub fn fields(&self) -> Vec<Field> {
         let mut fields: Vec<Field> = self.properties.iter().map(|property| property.field(&self.properties)).collect();
-        // Small fields stand two to a line: one left over, alone, takes the whole line rather than
-        // half of it beside nothing.
-        for run in fields.chunk_by_mut(|one, next| one.half == next.half) {
+        for (field, property) in fields.iter_mut().zip(&self.properties) {
+            let attribute = property.attribute;
+            field.primary = attribute.required || attribute.show_in_card || PRIMARY.contains(&attribute.code.as_str());
+        }
+        for (i, property) in self.properties.iter().enumerate() {
+            let parent = property.attribute.parent_attribute_id.and_then(|id| self.properties.iter().position(|p| p.attribute.id == id));
+            if let Some(parent) = parent {
+                let either = fields[i].primary || fields[parent].primary;
+                fields[i].primary = either;
+                fields[parent].primary = either;
+            }
+        }
+        let waiting = fields.iter().filter(|field| !field.primary).count();
+        if fields.len() <= ALL_AT_ONCE || waiting <= FEW_MORE {
+            for field in &mut fields {
+                field.primary = true;
+            }
+        }
+        fields.sort_by_key(|field| !field.primary);
+        // Small fields stand two to a line, among those of their kind: one left over, alone, takes
+        // the whole line rather than half of it beside nothing.
+        for run in fields.chunk_by_mut(|one, next| one.half == next.half && one.primary == next.primary) {
             if run[0].half && run.len() % 2 == 1 {
                 run[run.len() - 1].half = false;
             }
@@ -796,16 +1073,31 @@ impl<'a> Property<'a> {
             checked: self.checked,
             half: true,
             icons: false,
+            primary: true,
+            active: !self.selected.is_empty() || self.min.is_some() || self.max.is_some() || self.checked || self.year.is_some(),
+            min_choices: Vec::new(),
+            max_choices: Vec::new(),
         };
         if self.fits_to.is_some() {
             field.name = year_param(attribute);
             field.label = FITS_YEAR_LABEL.to_string();
             field.kind = FieldKind::Year;
             field.min = self.year.map(plain).unwrap_or_default();
+            if let Some(steps) = range_steps(&attribute.code, attribute.unit.as_deref()) {
+                field.min_choices = step_choices(&steps, self.year);
+            }
             return field;
         }
         match attribute.data_type.as_str() {
-            "NUMBER" => field.kind = FieldKind::Range,
+            "NUMBER" => {
+                field.kind = FieldKind::Range;
+                // Picked from dropdowns where the unit has steps, two of them a line's width.
+                if let Some(steps) = range_steps(&attribute.code, attribute.unit.as_deref()) {
+                    field.min_choices = step_choices(&steps, self.min);
+                    field.max_choices = step_choices(&steps, self.max);
+                    field.half = false;
+                }
+            }
             "BOOLEAN" => field.kind = FieldKind::Toggle,
             data_type => {
                 let parent = attribute
@@ -870,6 +1162,69 @@ fn closes_year_pair(attribute: &FilterAttribute, all: &[FilterAttribute]) -> boo
 /// The pair's parameter, "<x>_year": "fits_year".
 fn year_param(opening: &FilterAttribute) -> String {
     format!("{}_year", opening.code.strip_suffix("_from_year").unwrap_or(&opening.code))
+}
+
+/// The values a range's dropdowns offer, in the order they are offered, and whether they are years
+/// (shown as they are, the newest first) rather than amounts (grouped, the smallest first).
+struct Steps {
+    values: Vec<i64>,
+    years: bool,
+}
+
+/// A range's dropdown values by its unit, or a year's: a car's kilometres, a flat's square
+/// metres, an engine's cm³, a screen's inches; years from the next back to FIRST_YEAR
+/// (FIRST_BUILT_YEAR for a building). None for a range that is typed: a floor, a count, hours.
+fn range_steps(code: &str, unit: Option<&str>) -> Option<Steps> {
+    if code.ends_with("year") || code.ends_with("year_built") || code.ends_with("from_year") {
+        let first = if code == "property_year_built" { FIRST_BUILT_YEAR } else { FIRST_YEAR };
+        let next = time::OffsetDateTime::now_utc().year() + 1;
+        return Some(Steps { values: (first..=next).rev().map(i64::from).collect(), years: true });
+    }
+    let values: &[i64] = match (code, unit) {
+        ("rim_size", _) => &[13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
+        (_, Some("km")) => &[
+            5_000, 10_000, 20_000, 30_000, 40_000, 50_000, 75_000, 100_000, 125_000, 150_000, 175_000, 200_000, 250_000,
+            300_000,
+        ],
+        (_, Some("m²")) => &[20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 200, 250, 300, 500, 1_000, 2_000, 5_000],
+        (_, Some("cm³")) => &[50, 125, 250, 500, 750, 1_000, 1_200, 1_400, 1_600, 1_800, 2_000, 2_500, 3_000, 4_000, 5_000],
+        (_, Some("HP")) => &[50, 75, 100, 125, 150, 175, 200, 250, 300, 400, 500],
+        (_, Some("inç")) => &[5, 6, 7, 8, 10, 11, 13, 14, 15, 16, 17, 24, 27, 32, 43, 50, 55, 65, 75, 85],
+        _ => return None,
+    };
+    Some(Steps { values: values.to_vec(), years: false })
+}
+
+/// A range's dropdown, `current` marked: offered in its place among the steps where it isn't one
+/// of them (an older link's).
+fn step_choices(steps: &Steps, current: Option<Decimal>) -> Vec<Choice> {
+    let mut values: Vec<Decimal> = steps.values.iter().map(|value| Decimal::from(*value)).collect();
+    if let Some(current) = current.filter(|current| !values.contains(current)) {
+        let at = values
+            .iter()
+            .position(|value| if steps.years { *value < current } else { *value > current })
+            .unwrap_or(values.len());
+        values.insert(at, current);
+    }
+    values
+        .into_iter()
+        .map(|value| Choice {
+            value: plain(value),
+            label: if steps.years { plain(value) } else { format::number(value) },
+            selected: current == Some(value),
+        })
+        .collect()
+}
+
+/// A price as a round one near it, for the price's quick choices: two figures from 10, 12, 15, 20,
+/// 25, 30, 40, 50, 60, 70, 80, the nearest by ratio (2 870 € is 3 000 €, 450 € is 500 €).
+fn round_price(price: Decimal) -> Decimal {
+    const ROUND: [f64; 12] = [10.0, 12.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 100.0];
+    let value = price.to_f64().unwrap_or(1.0).max(1.0);
+    let scale = 10f64.powf(value.log10().floor() - 1.0);
+    let off = |round: &f64| (value / scale / round).ln().abs();
+    let round = ROUND.iter().min_by(|one, other| off(one).total_cmp(&off(other))).copied().unwrap_or(10.0);
+    Decimal::from_f64((round * scale).round()).unwrap_or(price).normalize()
 }
 
 /// A year a vehicle could have been made in; anything else is ignored.
@@ -997,6 +1352,39 @@ mod tests {
         assert_eq!(range_label(n(2015), None, None, false).unwrap(), "nga 2015");
         assert_eq!(range_label(None, n(150000), Some("km"), true).unwrap(), "deri 150\u{a0}000\u{a0}km");
         assert_eq!(range_label(None, None, None, false), None);
+    }
+
+    #[test]
+    fn rounds_prices_for_the_quick_choices() {
+        let round = |price: i64| round_price(Decimal::from(price)).to_string();
+        assert_eq!(round(2870), "3000");
+        assert_eq!(round(450), "500");
+        assert_eq!(round(11_400), "12000");
+        assert_eq!(round(64_000), "60000");
+        assert_eq!(round(9), "10");
+    }
+
+    #[test]
+    fn ranges_offer_steps_by_their_unit() {
+        let km = range_steps("vehicle_mileage", Some("km")).unwrap();
+        assert!(!km.years && km.values.contains(&150_000));
+        let years = range_steps("vehicle_year", None).unwrap();
+        assert!(years.years && years.values.first() > years.values.last(), "the newest first");
+        assert!(range_steps("property_floor", None).is_none(), "a floor is typed");
+        // A value that isn't a step is offered in its place, chosen.
+        let choices = step_choices(&km, Some(Decimal::from(123_456)));
+        let at = choices.iter().position(|choice| choice.selected).unwrap();
+        assert_eq!((choices[at - 1].value.as_str(), choices[at].value.as_str()), ("100000", "123456"));
+        assert_eq!(choices[at].label, "123\u{a0}456");
+    }
+
+    #[test]
+    fn a_remembered_town_counts_where_no_place_is_named() {
+        let town = || Some("durres".to_string());
+        assert_eq!(Params::parse(Some("vehicle_fuel=DIESEL")).remembering_town(town()).first("city"), Some("durres"));
+        assert_eq!(Params::parse(Some("city=vlore")).remembering_town(town()).first("city"), Some("vlore"));
+        assert_eq!(Params::parse(Some("lat=41.3&lng=19.8")).remembering_town(town()).first("city"), None);
+        assert_eq!(Params::parse(None).remembering_town(Some(String::new())).first("city"), None);
     }
 
     #[test]

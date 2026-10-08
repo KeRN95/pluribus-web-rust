@@ -16,6 +16,12 @@ pub const PAGE_SIZE: i64 = 24;
 /// more than the exact number is worth.
 pub const COUNT_LIMIT: i64 = 1_000;
 
+/// A browse page asks again, once it shows, for a count that stopped at COUNT_LIMIT, this time to
+/// here (browse.rs, numri=1): so that the count still moves as filters narrow a big category,
+/// without the page waiting for it. Counting a town's cars to here takes some 70 ms, where to
+/// COUNT_LIMIT it takes 10.
+pub const PRECISE_COUNT_LIMIT: i64 = 10_000;
+
 /// SQL for the price a listing read as `l` dropped from, as a scalar subquery: the lowest it was
 /// over the 30 days before its price last changed, when that change, in the last 30 days, made it
 /// at least 1% lower in the same currency; NULL otherwise, or when the listing is no longer up or

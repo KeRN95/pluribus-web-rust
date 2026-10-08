@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT percentile_disc(0.25) WITHIN GROUP (ORDER BY price_amount) AS lower,\n                  percentile_disc(0.5) WITHIN GROUP (ORDER BY price_amount) AS middle,\n                  percentile_disc(0.75) WITHIN GROUP (ORDER BY price_amount) AS upper,\n                  count(*) AS \"priced!\"\n           FROM listings\n           WHERE status = 'ACTIVE' AND category_id = ANY($1) AND currency::text = $2\n             AND price_type IN ('FIXED', 'NEGOTIABLE') AND price_amount > 0",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "lower",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 1,
+        "name": "middle",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 2,
+        "name": "upper",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "priced!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "00b9f74e26a49d5a97497f59c6c5a025abb6e342f0996591cb7b0321f8a858a6"
+}

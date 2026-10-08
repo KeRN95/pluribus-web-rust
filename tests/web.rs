@@ -581,7 +581,7 @@ async fn category_page_includes_subcategories(pool: PgPool) {
     assert!(response.body.contains("Volkswagen Golf 7, 2016, naftë"));
     assert!(response.body.contains("Mercedes-Benz C 220, 2018, automatike"));
     assert!(!response.body.contains("iPhone 13"));
-    assert!(response.body.contains(r#"<p class="result-count">2 njoftime</p>"#));
+    assert!(response.body.contains(r#"<p class="result-count" id="result-count" data-show="Shfaq 2 njoftime">2 njoftime</p>"#));
     // Cards show the cover photo's thumbnail.
     let html = response.body.replace("&#38;", "&");
     assert!(html.contains("photo-1591230740238-e9a71182b67c?auto=format&fit=crop&w=480"));
@@ -735,21 +735,24 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
-    // The search, Filtrat, Harta and Rendit stand in one row over the results, round buttons, the
-    // orders opening in a menu; opening one says so (section:open) and the others fold, so only
-    // one is open at a time. The search is in the site's colour. What they open floats over the
-    // results, the page dimmed under it; Escape or a tap on the dim folds it again.
+    // The search, Filtrat, Harta and Rendit stand in one row over the results, the orders opening
+    // in a menu; opening one says so (section:open) and the others fold, so only one is open at a
+    // time. The search is in the site's colour. What they open floats over the results, the page
+    // dimmed under it; Escape or a tap on the dim folds it again. The filters' card comes after the
+    // row and the places under it: a column beside the results on a wide screen (browse.css).
     let cars = html(pool.clone(), "/c/makina").await;
     let order = positions(&cars, &[
         r#"<div class="browse-tools" data-filters-target="tools">"#,
         r#"<div class="search-card" data-controller="panel""#,
-        r#"<div class="filters-card">"#,
+        r#"<button type="button" class="button secondary round-button labelled filters-open""#,
         r#"<section class="map-card map-hidden""#,
         r#"<details class="sort-menu" data-controller="dropdown""#,
+        r#"<div class="places" data-controller="place""#,
+        r#"<aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">"#,
         r#"<div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>"#,
         r#"<section class="results""#,
     ]);
-    assert!(order.is_sorted());
+    assert!(order.is_sorted(), "{order:?}");
     for listener in ["panel#foldFor", "filters#foldFor", "map#foldFor", "dropdown#foldFor", "filters#fit"] {
         assert!(cars.contains(&format!("section:open@document->{listener}")), "{listener}");
     }
@@ -770,11 +773,14 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         assert!(cars.contains(keep), "{keep}");
     }
     assert!(cars.contains(r#"<article class="card" id="listing-1001">"#));
-    // The map's and the order's buttons have only their icons to see: their names and what they
-    // are set to are for screen readers, and their tooltips; the orders' menu opens with no
-    // JavaScript.
-    assert!(cars.contains(r#"<button type="button" class="button secondary round-button map-button" data-map-target="toggle""#));
-    assert!(cars.contains(r#"<button type="button" class="button secondary round-button filters-open" aria-controls="filters" aria-expanded="false""#));
+    // The filters' and the map's buttons say their names and what is on: "Filtrat", with how many
+    // (none yet), and the map's place, "Harta" with none. The order's has only its icon to see:
+    // its name and the order now are for screen readers, and its tooltip; the orders' menu opens
+    // with no JavaScript.
+    assert!(cars.contains(r#"<button type="button" class="button secondary round-button labelled map-button" data-map-target="toggle""#));
+    assert!(cars.contains(r#"<span class="button-label">Harta</span>"#));
+    assert!(cars.contains(r#"<button type="button" class="button secondary round-button labelled filters-open" aria-controls="filters" aria-expanded="false""#));
+    assert!(cars.contains(r#"<span class="button-label">Filtrat</span>"#) && !cars.contains("button-count"));
     assert!(cars.contains(r#"<button type="button" class="button round-button search-button""#));
     assert!(cars.contains(r#"<summary class="button secondary round-button sort-button" aria-label="Rendit: Më të rejat" title="Rendit: Më të rejat">"#));
     assert!(cars.contains("toggle->dropdown#announce"));
@@ -786,6 +792,7 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     let header = &cars[..cars.find("</header>").unwrap()];
     assert!(!header.contains(r#"name="q""#));
     let fuel = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&sort=price_asc").await;
+    assert!(fuel.contains(r#"<span class="button-label">Filtrat</span><span class="button-count" aria-hidden="true">1</span>"#));
     let search = &fuel[fuel.find(r#"<form class="search" action="/c/makina""#).expect("the row's search")..];
     let search = &search[..search.find("</form>").unwrap()];
     assert!(search.contains(r#"<input type="hidden" name="vehicle_fuel" value="DIESEL">"#));
@@ -866,6 +873,9 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(cars.contains(r#"<section class="map-card map-hidden" data-controller="map" data-map-lazy-value="true""#));
     assert!(cars.contains(r#"aria-controls="map-card-body" aria-expanded="false""#));
     assert!(cars.contains(r#"aria-label="Harta: Kudo" title="Harta: Kudo""#));
+    // With no point, it has no circle until one is set by moving it (map_controller.js), and it
+    // starts on Tirana.
+    assert!(cars.contains(r#"data-map-ring-value="false""#) && !cars.contains("data-map-latitude-value"));
     assert!(!cars.contains("map-open") && !cars.contains("Brenda 10 km nga pika"));
     // Its dots come when it first opens: the same page with harta=1, whose frame has them.
     assert!(cars.contains(r#"<turbo-frame id="map-points" data-map-target="frame" data-src="/c/makina?vehicle_fuel=DIESEL&harta=1">"#));
@@ -884,17 +894,26 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
 
     // With a point, the page stays the category's, with its heading and filters, the card still
     // folded, saying how far around the point; the filter form and the category menu keep it.
-    let pinned = html(pool, "/c/makina?lat=41.32833&lng=19.81806&radius=5&sort=price_asc").await;
+    let pinned = html(pool.clone(), "/c/makina?lat=41.32833&lng=19.81806&radius=5&sort=price_asc").await;
     assert!(pinned.contains("<h1>Makina"));
     assert!(pinned.contains(r#"<section class="map-card map-hidden""#));
     assert!(pinned.contains(r#"data-map-latitude-value="41.32833""#));
-    // The map's button says how far, to screen readers and as its tooltip; the filters' summary
-    // leaves the point to it, and to its chip.
-    assert!(pinned.contains(r#"aria-label="Harta: 5 km""#));
+    // The map's button says where, the point's nearest town and how far, and its pin is in the
+    // location colour; the filters' summary leaves the point to it, and to its chip. Its circle
+    // shows from the start.
+    assert!(pinned.contains(r#"aria-label="Harta: Tiranë · 5 km" title="Harta: Tiranë · 5 km""#));
+    assert!(pinned.contains(r#"<span class="button-label">Tiranë · 5 km</span>"#));
+    assert!(pinned.contains(r#"class="button secondary round-button labelled map-button is-set""#));
+    assert!(pinned.contains(r#"data-map-ring-value="true""#));
     assert!(pinned.contains(r#"aria-label="Filtrat: Asnjë filtër""#));
-    // The distance is a slider; 5 km stands at 41 of 100 (50 ^ 0.41 = 5).
+    // The distance is a slider that stops at 1, 2, 5, 10, 25 and 50 km, each named under it: 5 km
+    // is the third.
     assert!(pinned.contains(r#"<output data-map-target="radiusLabel">5 km</output>"#));
-    assert!(pinned.contains(r#"<input id="map-radius" type="range" min="0" max="100" step="1" value="41""#));
+    assert!(pinned.contains(r#"<input id="map-radius" type="range" min="0" max="5" step="1" value="2""#));
+    assert!(pinned.contains(r#"<span style="--i: 0">1</span><span style="--i: 1">2</span><span style="--i: 2">5</span>"#));
+    // A distance between them, from an older link, stands at the step nearest it.
+    let seven = html(pool.clone(), "/c/makina?lat=41.32833&lng=19.81806&radius=7").await;
+    assert!(seven.contains(r#"<input id="map-radius" type="range" min="0" max="5" step="1" value="2""#));
     for (name, value) in [("lat", "41.32833"), ("lng", "19.81806"), ("radius", "5")] {
         assert!(pinned.contains(&format!(r#"<input type="hidden" name="{name}" value="{value}">"#)), "{name}");
     }
@@ -905,6 +924,180 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(pinned.contains(r#"href="/c/prona?lat=41.32833&lng=19.81806&radius=5""#));
     // The point's chip searches everywhere again, keeping the rest.
     assert!(pinned.contains(r#"<a class="filter-chip" href="/c/makina?sort=price_asc" aria-label="Hiq filtrin Brenda 5 km nga pika">"#));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn places_are_a_tap_away_under_the_row(pool: PgPool) {
+    // Under the row, where to look: all of Albania (picked, there being no place), around the
+    // visitor, and the twelve towns with the most listings, each narrowing the page to it, its
+    // filters kept.
+    let cars = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL").await;
+    assert!(cars.contains(r#"data-place-town-value="" data-place-near-url-value="/c/makina?vehicle_fuel=DIESEL" data-place-radius-value="10">"#));
+    let order = positions(&cars, &[
+        r#"<nav class="place-pills" aria-label="Ku">"#,
+        r#"<a class="place-pill is-selected" href="/c/makina?vehicle_fuel=DIESEL" data-forget-town data-turbo-prefetch="false" aria-current="true">Gjithë Shqipëria</a>"#,
+        r#"<button type="button" class="place-pill place-near" data-action="place#near">"#,
+        r#"<a class="place-pill" href="/c/makina?city=tirane&vehicle_fuel=DIESEL">Tiranë</a>"#,
+        r#"<a class="place-pill" href="/c/makina?city=durres&vehicle_fuel=DIESEL">Durrës</a>"#,
+        r#"<a class="place-pill" href="/c/makina?city=pogradec&vehicle_fuel=DIESEL">Pogradec</a>"#,
+        r#"<p class="place-status" data-place-target="status" role="status" hidden></p>"#,
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
+    assert_eq!(cars.matches(r#"<a class="place-pill"#).count(), 13);
+
+    // A town: its pill picked, kept in a cookie for the next pages (place_controller.js); its
+    // chip forgets it, as "Gjithë Shqipëria" does. The map's button says it, and the map starts
+    // there, with no circle until a point is set.
+    let durres = html(pool.clone(), "/c/makina?city=durres").await;
+    assert!(durres.contains(r#"data-place-town-value="durres""#));
+    assert!(durres.contains(r#"<a class="place-pill is-selected" href="/c/makina?city=durres" aria-current="true">Durrës</a>"#));
+    assert!(durres.contains(r#"<a class="place-pill" href="/c/makina" data-forget-town data-turbo-prefetch="false">Gjithë Shqipëria</a>"#));
+    assert!(durres.contains(r#"<a class="filter-chip" href="/c/makina" aria-label="Hiq filtrin Durrës" data-forget-town data-turbo-prefetch="false">"#));
+    assert!(durres.contains(r#"aria-label="Harta: Durrës" title="Harta: Durrës""#));
+    assert!(durres.contains(r#"data-map-ring-value="false""#));
+    assert!(durres.contains(r#"data-map-latitude-value="41.313333" data-map-longitude-value="19.445833""#));
+    // A town not among the twelve comes first among them while it is picked.
+    let kruje = html(pool.clone(), "/c/makina?city=kruje").await;
+    let first = positions(&kruje, &[
+        r#"<button type="button" class="place-pill place-near""#,
+        r#"<a class="place-pill is-selected" href="/c/makina?city=kruje" aria-current="true">Krujë</a>"#,
+        r#"<a class="place-pill" href="/c/makina?city=tirane">Tiranë</a>"#,
+    ]);
+    assert!(first.is_sorted(), "{first:?}");
+
+    // The map's point, in place of a town: a pill of its own says it, and its chip and "Gjithë
+    // Shqipëria" drop it.
+    let pinned = html(pool, "/c/makina?lat=41.32833&lng=19.81806&radius=5").await;
+    assert!(pinned.contains(r#"<span class="place-pill is-selected" aria-current="true">"#));
+    assert!(pinned.contains("</svg>Tiranë · 5 km</span>"));
+    assert!(pinned.contains(r#"<a class="place-pill" href="/c/makina" data-forget-town data-turbo-prefetch="false">Gjithë Shqipëria</a>"#));
+    assert!(pinned.contains(r#"<p class="field-hint">Tani nga harta: Tiranë · 5 km.</p>"#));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn the_town_picked_last_opens_the_next_category_in_it(pool: PgPool) {
+    // The cookie the page keeps the town in (qyteti): a category whose address names no place
+    // opens in it, as if picked there.
+    let durres = get_with_cookie(pool.clone(), "/c/automjete", "qyteti=durres").await.body;
+    assert!(durres.contains("Mercedes-Benz C 220, 2018, automatike"));
+    assert!(!durres.contains("Volkswagen Golf 7, 2016, naftë"));
+    assert!(durres.contains(r#"aria-current="true">Durrës</a>"#));
+    // A place in the address wins: a town, or the map's point.
+    let tirana = get_with_cookie(pool.clone(), "/c/automjete?city=tirane", "qyteti=durres").await.body;
+    assert!(tirana.contains("Volkswagen Golf 7, 2016, naftë") && !tirana.contains("Mercedes-Benz C 220"));
+    let point = get_with_cookie(pool.clone(), "/c/automjete?lat=41.32833&lng=19.81806&radius=10", "qyteti=durres").await.body;
+    assert!(point.contains("Volkswagen Golf 7, 2016, naftë") && !point.contains("Mercedes-Benz C 220"));
+    // The map page has its point; a town that isn't one counts for nothing.
+    let map = get_with_cookie(pool.clone(), "/harta", "qyteti=durres").await.body;
+    assert!(map.contains("Volkswagen Golf 7, 2016, naftë"));
+    let nowhere = get_with_cookie(pool, "/c/automjete", "qyteti=atlantis").await.body;
+    assert!(nowhere.contains("Mercedes-Benz C 220") && nowhere.contains("Volkswagen Golf 7"));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn the_count_goes_on_past_a_thousand_once_the_page_shows(pool: PgPool) {
+    // With numri=1, only the count, as far as 10 000, for the heading's line and the button at
+    // the foot of the filters ("Shfaq 2 njoftime"), which the page asks for when its own count
+    // stopped (filters_controller.js); never kept by the browser.
+    let few = get(pool.clone(), "/c/makina?numri=1").await;
+    assert_eq!(few.content_type.as_deref(), Some("application/json"));
+    assert_eq!(few.body, r#"{"count":2,"show":"Shfaq 2 njoftime","text":"2 njoftime"}"#);
+    let page = html(pool.clone(), "/c/makina").await;
+    assert!(page.contains(r#"<button type="button" class="button filters-show" data-filters-target="show" data-action="filters#showResults">Shfaq 2 njoftime</button>"#));
+    assert!(!page.contains("data-capped"));
+    let none = get(pool.clone(), "/c/makina?city=shkoder&numri=1").await;
+    assert_eq!(none.body, r#"{"count":0,"show":"Asnjë njoftim","text":"0 njoftime"}"#);
+
+    // 1 000 more in Të tjera: the page counts to 1 000 and says it stopped there; asked, the count
+    // goes on.
+    sqlx::query(
+        "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title,
+                               description, price_amount, currency, status, published_at)
+         SELECT '11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111111',
+                '10000000-0000-0000-0000-000000000011', 'njoftim-' || g, 'Njoftim shtesë ' || g, '',
+                100, 'ALL', 'ACTIVE', now()
+         FROM generate_series(1, 1000) g",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let many = html(pool.clone(), "/c/te-tjera").await;
+    assert!(many.contains("<p class=\"result-count\" id=\"result-count\" data-show=\"Shfaq 1\u{a0}000+ njoftime\" data-capped>1\u{a0}000+ njoftime</p>"));
+    let counted = get(pool, "/c/te-tjera?numri=1").await;
+    assert_eq!(counted.body, "{\"count\":1001,\"show\":\"Shfaq 1\u{a0}001 njoftime\",\"text\":\"1\u{a0}001 njoftime\"}");
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn the_filters_buyers_use_most_come_first(pool: PgPool) {
+    // First the place and the price, then what the category asks of every listing or shows on its
+    // cards, and a few more (Karroceria, Kambio); the rest under "Më shumë filtra", folded.
+    let filter_form = |page: &str| {
+        let form = &page[page.find(r#"<form id="filter-form""#).unwrap()..];
+        form[..form.find("</form>").unwrap()].to_string()
+    };
+    let cars = filter_form(&html(pool.clone(), "/c/makina").await);
+    let more = cars.find(r#"<details class="more-filters">"#).expect("Më shumë filtra");
+    let at = |name: &str| cars.find(&format!(r#"name="{name}""#)).unwrap_or_else(|| panic!("{name}"));
+    for name in [
+        "city", "price_min", "vehicle_make", "vehicle_model", "vehicle_body_type", "vehicle_year_min",
+        "vehicle_mileage_max", "vehicle_fuel", "vehicle_transmission",
+    ] {
+        assert!(at(name) < more, "{name} comes first");
+    }
+    for name in ["vehicle_engine_min", "vehicle_power_min", "vehicle_color", "vehicle_features", "vehicle_no_accident"] {
+        assert!(at(name) > more, "{name} waits under Më shumë filtra");
+    }
+    // It opens with the page while one of them is on.
+    let white = html(pool.clone(), "/c/makina?vehicle_color=WHITE").await;
+    assert!(white.contains(r#"<details class="more-filters" open>"#));
+    // A category with few has them all at once: a part's make, model and year.
+    assert!(!html(pool.clone(), "/c/pjese-dhe-aksesore").await.contains("more-filters"));
+    // The kind of listing comes first for property (Shitje, Qira), before the price.
+    let flats = filter_form(&html(pool, "/c/apartamente").await);
+    assert!(flats.find(r#"name="type""#).unwrap() < flats.find(r#"name="price_min""#).unwrap());
+    let more = flats.find("more-filters").unwrap();
+    assert!(flats.find(r#"name="property_rooms""#).unwrap() < more);
+    assert!(flats.find(r#"name="property_heating""#).unwrap() > more);
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn years_and_kilometres_are_picked_from_steps(pool: PgPool) {
+    // A range whose unit has steps offers them in two dropdowns, from and to: the years from next
+    // year back to 1970, the kilometres in round numbers. A value from an older link, not a step,
+    // stands in its place among them.
+    let cars = html(pool.clone(), "/c/makina?vehicle_year_min=2015&vehicle_mileage_max=123456").await;
+    assert!(cars.contains(r#"<select name="vehicle_year_min" aria-label="Viti nga">"#));
+    assert!(cars.contains(r#"<option value="">nga</option>"#) && cars.contains(r#"<option value="">deri</option>"#));
+    assert!(cars.contains(r#"<option value="2015" selected>2015</option>"#));
+    assert!(cars.contains(r#"<option value="1970">1970</option>"#) && !cars.contains(r#"<option value="1969">"#));
+    assert!(cars.contains(r#"<select name="vehicle_mileage_max" aria-label="Kilometrazhi deri">"#));
+    assert!(cars.contains(
+        "<option value=\"100000\">100\u{a0}000</option><option value=\"123456\" selected>123\u{a0}456</option><option value=\"125000\">125\u{a0}000</option>"
+    ));
+    // A range without steps is typed.
+    let phones = html(pool, "/c/telefona").await;
+    assert!(phones.contains(r#"<input type="text" inputmode="numeric" name="phone_battery_min" value="" placeholder="nga""#));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn nothing_found_offers_what_would_find_more(pool: PgPool) {
+    // Around a point in Shkodër there are no cars: a wider circle, a tap away, then a wider one,
+    // and all of Albania; the filters' chips each drop one.
+    let shkoder = "/c/makina?vehicle_fuel=DIESEL&lat=42.06813&lng=19.51214&radius=10";
+    let page = html(pool.clone(), shkoder).await;
+    assert!(page.contains("Nuk u gjet asnjë njoftim."));
+    assert!(page.contains(r#"<p class="empty">Provo të heqësh ndonjë filtër nga lart.</p>"#));
+    assert!(page.contains(r#"<a class="button secondary" href="/c/makina?lat=42.06813&lng=19.51214&radius=25&vehicle_fuel=DIESEL">Zgjero largësinë në 25 km</a>"#));
+    assert!(page.contains(r#"<a class="button secondary" href="/c/makina?vehicle_fuel=DIESEL" data-forget-town data-turbo-prefetch="false">Kërko në gjithë Shqipërinë</a>"#));
+    let wider = html(pool.clone(), "/c/makina?lat=42.06813&lng=19.51214&radius=25").await;
+    assert!(wider.contains("Zgjero largësinë në 50 km</a>") && !wider.contains("Provo të heqësh"));
+    let widest = html(pool.clone(), "/c/makina?lat=42.06813&lng=19.51214&radius=50").await;
+    assert!(!widest.contains("Zgjero largësinë") && widest.contains("Kërko në gjithë Shqipërinë</a>"));
+    // In a town with none: all of Albania. Everywhere already: only the words.
+    let town = html(pool.clone(), "/c/makina?city=shkoder").await;
+    assert!(!town.contains("Zgjero largësinë") && town.contains("Kërko në gjithë Shqipërinë</a>"));
+    let everywhere = html(pool, "/c/makina?vehicle_fuel=ELECTRIC").await;
+    assert!(everywhere.contains("Provo të heqësh") && !everywhere.contains("Kërko në gjithë Shqipërinë"));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -1095,7 +1288,7 @@ async fn city_filter_keeps_to_that_city(pool: PgPool) {
     assert!(body.contains("Mercedes-Benz C 220, 2018, automatike"));
     assert!(body.contains("Kërkohet kamarier/e me eksperiencë"));
     assert!(!body.contains("Volkswagen Golf 7, 2016, naftë"));
-    assert!(body.contains(r#"<p class="result-count">2 njoftime</p>"#));
+    assert!(body.contains(r#"<p class="result-count" id="result-count" data-show="Shfaq 2 njoftime">2 njoftime</p>"#));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -1124,18 +1317,61 @@ async fn price_filter_converts_currencies(pool: PgPool) {
 
 #[sqlx::test(fixtures("listings"))]
 async fn the_price_is_a_slider_with_two_ends(pool: PgPool) {
-    // Without a price, the ends stand at the edges: no limit either way.
+    // Without a price, the ends stand at the edges: no limit either way, and the fields to type
+    // the prices in are empty.
     let any = html(pool.clone(), "/c/elektronike").await;
     assert!(any.contains(r#"<legend class="filter-label">Çmimi <output data-price-range-target="label">Çdo çmim</output></legend>"#));
-    assert!(any.contains(r#"<input type="range" min="0" max="1000" step="1" value="0" aria-label="Çmimi nga""#));
-    assert!(any.contains(r#"<input type="range" min="0" max="1000" step="1" value="1000" aria-label="Çmimi deri""#));
+    assert!(any.contains(r#"<input type="range" min="0" max="1000" step="1" value="0" aria-label="Çmimi nga, në shkallë""#));
+    assert!(any.contains(r#"<input type="range" min="0" max="1000" step="1" value="1000" aria-label="Çmimi deri, në shkallë""#));
+    assert!(any.contains(r#"<input type="text" inputmode="numeric" name="price_min" value="" placeholder="nga" aria-label="Çmimi nga""#));
     // 1 000 € is two of the scale's five decades from 10 €, so 400 of 1 000; 20 000 € is
-    // log10(2 000) = 3.30 of them, so 660. The hidden fields carry the prices themselves.
+    // log10(2 000) = 3.30 of them, so 660. The typed fields carry the prices themselves.
     let some = html(pool, "/c/elektronike?price_min=1000&price_max=20000&currency=EUR").await;
-    assert!(some.contains(r#"value="400" aria-label="Çmimi nga""#));
-    assert!(some.contains(r#"value="660" aria-label="Çmimi deri""#));
-    assert!(some.contains(r#"<input type="hidden" name="price_min" value="1000" data-price-range-target="min">"#));
+    assert!(some.contains(r#"value="400" aria-label="Çmimi nga, në shkallë""#));
+    assert!(some.contains(r#"value="660" aria-label="Çmimi deri, në shkallë""#));
+    assert!(some.contains(r#"<input type="text" inputmode="numeric" name="price_min" value="1000" placeholder="nga" aria-label="Çmimi nga" autocomplete="off"
+             data-price-range-target="min" data-action="change->price-range#typed">"#));
     assert!(some.contains("<output data-price-range-target=\"label\">1\u{a0}000 – 20\u{a0}000\u{a0}€</output>"));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn the_price_has_quick_choices_by_the_categorys_prices(pool: PgPool) {
+    // Too few prices to go by: no quick choices. (Worked out once for some hours, so not asked of
+    // Të tjera before its prices come.)
+    assert!(!html(pool.clone(), "/c/makina").await.contains("price-choices"));
+    // 24 more in Të tjera, at 1 000 to 24 000 Lekë: a quarter of them up to 6 000, half up to
+    // 12 000, three quarters up to 18 000, each kept to round figures (20 000).
+    sqlx::query(
+        "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title,
+                               description, price_amount, currency, price_type, price_normalized,
+                               status, published_at)
+         SELECT '11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111111',
+                '10000000-0000-0000-0000-000000000011', 'njoftim-' || g, 'Njoftim shtesë ' || g, '',
+                g * 1000, 'ALL', 'FIXED', g * 10, 'ACTIVE', now()
+         FROM generate_series(1, 24) g",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let page = html(pool.clone(), "/c/te-tjera").await;
+    let choice = |label: &str, min: &str, max: &str, pressed: bool| {
+        format!(
+            r#"<button type="button" class="price-choice" aria-pressed="{pressed}" data-price-range-target="choice"
+              data-action="price-range#pick" data-price-range-min-param="{min}" data-price-range-max-param="{max}" data-price-range-currency-param="ALL">{label}</button>"#
+        )
+    };
+    let choices = [
+        choice("deri 6\u{a0}000\u{a0}Lekë", "", "6000", false),
+        choice("6\u{a0}000 – 12\u{a0}000\u{a0}Lekë", "6000", "12000", false),
+        choice("12\u{a0}000 – 20\u{a0}000\u{a0}Lekë", "12000", "20000", false),
+        choice("nga 20\u{a0}000\u{a0}Lekë", "20000", "", false),
+    ];
+    let order = positions(&page, &choices.iter().map(String::as_str).collect::<Vec<_>>());
+    assert!(order.is_sorted(), "{order:?}");
+    // The one the prices are shows pressed.
+    let picked = html(pool, "/c/te-tjera?price_min=6000&price_max=12000&currency=ALL").await;
+    assert!(picked.contains(&choice("6\u{a0}000 – 12\u{a0}000\u{a0}Lekë", "6000", "12000", true)));
+    assert!(picked.contains(&choice("deri 6\u{a0}000\u{a0}Lekë", "", "6000", false)));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -1295,17 +1531,28 @@ async fn chosen_filters_can_be_removed_one_by_one(pool: PgPool) {
     // Each chip links to the page without its own filter, in a fixed parameter order.
     assert!(body.contains(r#"<a class="filter-chip" href="/c/makina?vehicle_fuel=DIESEL&sort=price_desc""#));
     assert!(body.contains(r#"<a class="filter-chip" href="/c/makina?city=durres&sort=price_desc""#));
-    assert!(body.contains(r#"<a class="clear-filters" href="/c/makina?sort=price_desc">"#));
-    // The filters' button says which are on, to screen readers and as its tooltip.
-    assert!(body.contains(r#"aria-label="Filtrat: Durrës · Naftë" title="Filtrat: Durrës · Naftë""#));
-    // The filter form has no fields for the town and the search words, so it carries them along:
-    // filtering keeps them, and the town's chip, or the header's search, changes them.
+    // "Pastro filtrat", and the card's "Pastro", drop the filters but keep the place, which has
+    // its pills.
+    assert!(body.contains(r#"<a class="clear-filters" href="/c/makina?city=durres&sort=price_desc">"#));
+    assert!(body.contains(r#"<a class="button secondary filters-clear" href="/c/makina?city=durres&sort=price_desc">Pastro</a>"#));
+    // The town's chip forgets the town kept for the next pages (application.js).
+    assert!(body.contains(r#"href="/c/makina?vehicle_fuel=DIESEL&sort=price_desc" aria-label="Hiq filtrin Durrës" data-forget-town data-turbo-prefetch="false">"#));
+    // The filters' button says which are on, to screen readers and as its tooltip, and how many;
+    // the place is the pills' and the map's to say.
+    assert!(body.contains(r#"aria-label="Filtrat: Naftë" title="Filtrat: Naftë""#));
+    assert!(body.contains(r#"<span class="button-count" aria-hidden="true">1</span>"#));
+    // The town is the filter form's first field, Qyteti, by county, with "Afër meje" beside it.
+    // The form has no field for the search words, so it carries them along: filtering keeps them,
+    // and the row's search changes them.
     let filter_form = |page: &str| {
         let form = &page[page.find(r#"<form id="filter-form""#).unwrap()..];
         form[..form.find("</form>").unwrap()].to_string()
     };
-    assert!(!body.contains(r#"id="filter-city""#) && !body.contains(r#"id="filter-q""#));
-    assert!(filter_form(&body).contains(r#"<input type="hidden" name="city" value="durres">"#));
+    let form = filter_form(&body);
+    assert!(form.contains(r#"<select id="filter-city" name="city" data-action="filters#placed">"#));
+    assert!(form.contains(r#"<option value="durres" selected>Durrës</option>"#));
+    assert!(form.contains(r#"<button type="button" class="button secondary filter-locate" data-action="filters#locate">"#));
+    assert!(!form.contains(r#"<input type="hidden" name="city""#) && !body.contains(r#"id="filter-q""#));
     let words = html(pool, "/c/makina?q=golf").await;
     assert!(filter_form(&words).contains(r#"<input type="hidden" name="q" value="golf">"#));
 }
@@ -2208,7 +2455,7 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     // The fingerprint only changes the URL; the file is served as before.
     let css = get(pool, &format!("/static/css/browse.css?v={version}")).await;
     assert_eq!(css.status, StatusCode::OK);
-    assert!(css.body.contains(".filters-card"));
+    assert!(css.body.contains(".place-pills"));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -2840,7 +3087,8 @@ async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
     assert!(page.contains(r#"<label class="filter-label" for="filter-vehicle_make">Marka e automjetit</label>"#));
     assert!(page.contains(r#"<option value="AUDI">Audi</option>"#));
     assert!(page.contains(r#"<label class="filter-label" for="filter-fits_year">Viti i automjetit</label>"#));
-    assert!(page.contains(r#"name="fits_year" value="""#));
+    assert!(page.contains(r#"<select id="filter-fits_year" name="fits_year">"#));
+    assert!(page.contains(r#"<option value="">Çdo vit</option>"#) && page.contains(r#"<option value="1970">1970</option>"#));
     assert!(!page.contains("fits_from_year") && !page.contains("fits_to_year_min"));
     assert_eq!(found(&page), [true, true, true, true]);
 
@@ -2850,7 +3098,7 @@ async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
     // And year: the one whose years include it.
     let page = html(pool.clone(), "/c/pjese-dhe-aksesore?vehicle_make=VOLKSWAGEN&fits_year=2015").await;
     assert_eq!(found(&page), [true, false, false, false]);
-    assert!(page.contains(r#"name="fits_year" value="2015""#));
+    assert!(page.contains(r#"<option value="2015" selected>2015</option>"#));
     assert!(page.contains(r#"<a class="filter-chip" href="/c/pjese-dhe-aksesore?vehicle_make=VOLKSWAGEN" aria-label="Hiq filtrin Viti i automjetit: 2015">"#));
     // A kind of part narrows the page, so its links keep the filters, in the chips and the menu;
     // links that widen it or go elsewhere keep only the words, the town and the map pin.
@@ -3500,8 +3748,8 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     let pages = [
         ("/shto", 7),
         ("/shto/fushat?category=makina", 11),
-        ("/search?q=golf", 3),
-        ("/c/makina", 4),
+        ("/search?q=golf", 4),
+        ("/c/makina", 13),
         ("/harta", 2),
     ];
     for (uri, selects) in pages {

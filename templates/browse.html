@@ -41,7 +41,10 @@
     </nav>
   </details>
   {%- endif %}
-  <p class="result-count">{{ count }}</p>
+  {#- How many: counted up to 1 000 with the page, and once it shows further, up to 10 000, when it
+      stopped there (data-capped, filters_controller.js); data-show is what the button at the foot
+      of the filters says. -#}
+  <p class="result-count" id="result-count" data-show="{{ show_label }}"{% if capped %} data-capped{% endif %}>{{ count }}</p>
   {%- if !corrections.is_empty() %}
   {#- Under the heading, the words searched in place of misspelt ones ("golff" finds the Golfs). -#}
   <p class="search-corrections">Shfaqen edhe rezultatet për {{ corrections }}.</p>
@@ -63,20 +66,24 @@
 </nav>
 {%- endif %}
 
-{#- The search, the filters, the map, the order and the cards' size, round buttons side by side;
-    the search, the filters and the map open over the results, under the row and as wide as it,
-    the page dimmed under them, the orders in a menu; only one is open at a time: opening one says
-    so (section:open) and the others fold. Escape or a tap on the dim folds it again (foldAll), and
-    the filters and the map take at most what is left of the screen under the row (fit). The
-    filters and the map apply as soon as something changes, the filters also as they close: the
-    page refreshes in place (refresh.js), and what is open stays as it is while it morphs (keep).
-    Without JavaScript the
-    search and the filters stay open, in the page, the filters with a button to apply them, the
-    row's buttons gone, and the map, which needs it, is not there. -#}
-<noscript><style>.search-panel, .filters { display: block; position: static; max-height: none; } .search-button, .filters-open, .map-card { display: none; }</style></noscript>
+{#- The search, the filters, the map, the order and the cards' size, side by side: round buttons,
+    but the filters' and the map's, which say their names and what is on: "Filtrat" with how many
+    filters (2), the map the town or the point ("Tiranë · 10 km"). The search, the filters and the
+    map open over the results, under the row and as wide as it, the page dimmed under them, the
+    orders in a menu; only one is open at a time: opening one says so (section:open) and the others
+    fold. Escape or a tap on the dim folds it again (foldAll), and the filters and the map take at
+    most what is left of the screen under the row (fit). The filters and the map apply as soon as
+    something changes, the filters also as they close: the page refreshes in place (refresh.js),
+    and what is open stays as it is while it morphs (keep). On a wide screen the filters are a
+    column beside the results instead, always there (browse.css). Without JavaScript the search
+    and the filters stay open, in the page, the filters with a button to apply them, the row's
+    buttons gone, and the map, which needs it, is not there. -#}
+<noscript><style>.search-panel, .filters { display: block; position: static; max-height: none; } .search-button, .filters-open, .map-card, .place-near, .filter-locate, .filters-header, .filters-footer { display: none; }</style></noscript>
+{%- let summary = filters.summary() %}
+{%- let on = filters.filter_count() %}
 <div class="browse{% if page.big %} cards-big{% endif %}" data-controller="filters cards"
      data-cards-small-value="{{ page.small_sizes() }}" data-cards-big-value="{{ page.big_sizes() }}" data-cards-cookie-value="{{ cards_cookie }}"
-     data-action="keydown.esc@document->filters#foldAll turbo:before-cache@document->filters#reset section:open@document->filters#foldFor section:open@document->filters#fit turbo:before-morph-element->filters#keep turbo:before-morph-attribute->filters#keepAttribute">
+     data-action="keydown.esc@document->filters#foldAll turbo:before-cache@document->filters#reset section:open@document->filters#foldFor section:open@document->filters#fit turbo:before-morph-element->filters#keep turbo:before-morph-attribute->filters#keepAttribute turbo:morph@document->filters#counted">
   <div class="browse-tools" data-filters-target="tools">
     {#- Searching these listings: a round button that opens a search box under the row, as the
         filters do (panel_controller.js), the words as they are typed suggesting searches
@@ -103,43 +110,36 @@
       </div>
     </div>
 
-    {#- The filters: a round button like the map's, which opens the form over the results, under
-        the row, and folds it again, and says which are on (the map's point is the map's to say), "Filtrat: Naftë", to
-        screen readers and as its tooltip; their chips under the row say them too. -#}
-    <div class="filters-card">
-      {%- let summary = filters.summary() %}
-      <button type="button" class="button secondary round-button filters-open" aria-controls="filters" aria-expanded="false"
-              aria-label="Filtrat: {% if summary.is_empty() %}Asnjë filtër{% else %}{{ summary }}{% endif %}" title="Filtrat: {% if summary.is_empty() %}Asnjë filtër{% else %}{{ summary }}{% endif %}"
-              data-filters-target="toggle" data-action="filters#toggle">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-      </button>
-      <aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">
-        <div class="filters-header">
-          <h2 id="filters-heading">Filtrat</h2>
-        </div>
-        {% include "filters.html" %}
-      </aside>
-    </div>
+    {#- The filters: their name, and how many are on in a coral circle; which ones, to screen
+        readers and as its tooltip, "Filtrat: Naftë" (the place is the pills' and the map's to
+        say). It opens their card (below) over the results, and folds it again. -#}
+    <button type="button" class="button secondary round-button labelled filters-open" aria-controls="filters" aria-expanded="false"
+            aria-label="Filtrat: {% if summary.is_empty() %}Asnjë filtër{% else %}{{ summary }}{% endif %}" title="Filtrat: {% if summary.is_empty() %}Asnjë filtër{% else %}{{ summary }}{% endif %}"
+            data-filters-target="toggle" data-action="filters#toggle">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+      <span class="button-label">Filtrat</span>
+      {%- if on > 0 %}<span class="button-count" aria-hidden="true">{{ on }}</span>{% endif %}
+    </button>
 
-    {#- The map: a round button with only its pin, which says "Harta" and how far around a point
-        the results are ("10 km"), or "Kudo", to screen readers and as its tooltip. It opens the
-        map under the row, and folds it again; the map loads only then, its dots after
-        (map_controller.js). Its pin stays in the middle, on the point set before or on
-        Tirana, and the map moves under it. As soon as it stops after a drag, or the distance is
-        let go, or a place or a town is picked, they apply: the page refreshes in place with its
-        category and filters, the card open as it is, the dots following. The point's chip drops
-        them. -#}
-    <section class="map-card map-hidden" data-controller="map" data-map-lazy-value="true"
+    {#- The map: its pin and what it is set to, the town ("Durrës"), the point as its nearest town
+        and the distance ("Tiranë · 10 km"), or "Harta". It opens the map under the row, and folds
+        it again; the map loads only then, its dots after (map_controller.js). It starts on the
+        point, or on the town, or on Tirana, its circle there only once a point is set (ring).
+        As soon as it stops after a drag, or the distance is let go, or a place or a town is
+        picked, the point applies, in place of a town: the page refreshes in place with its
+        category and filters, the card open as it is, the dots following. The point's chip, and
+        "Gjithë Shqipëria", drop it. -#}
+    <section class="map-card map-hidden" data-controller="map" data-map-lazy-value="true" data-map-ring-value="{{ filters.has_pin() }}"
       data-action="turbo:frame-load->map#plot section:open@document->map#foldFor turbo:before-morph-element->map#keep turbo:before-morph-attribute->map#keepOpen turbo:morph@document->map#reloadPoints" aria-label="Harta"
-      {%- if let Some(near) = filters.near %} data-map-latitude-value="{{ near.latitude }}" data-map-longitude-value="{{ near.longitude }}"{% endif %}>
-      <button type="button" class="button secondary round-button map-button" data-map-target="toggle" data-action="map#toggleMap"
+      {%- if let Some((latitude, longitude)) = filters.map_start() %} data-map-latitude-value="{{ latitude }}" data-map-longitude-value="{{ longitude }}"{% endif %}>
+      <button type="button" class="button secondary round-button labelled map-button{% if !filters.everywhere() %} is-set{% endif %}" data-map-target="toggle" data-action="map#toggleMap"
               aria-controls="map-card-body" aria-expanded="false"
-              aria-label="Harta: {% if filters.near.is_some() %}{{ filters.radius_km }} km{% else %}Kudo{% endif %}" title="Harta: {% if filters.near.is_some() %}{{ filters.radius_km }} km{% else %}Kudo{% endif %}">
-        {%- include "pin.svg" %}
+              aria-label="Harta: {% if filters.everywhere() %}Kudo{% else %}{{ filters.map_label() }}{% endif %}" title="Harta: {% if filters.everywhere() %}Kudo{% else %}{{ filters.map_label() }}{% endif %}">
+        {%- include "pin.svg" %}<span class="button-label">{{ filters.map_label() }}</span>
       </button>
       <div class="map-card-body" id="map-card-body">
       <form class="map-form" action="{{ filters.action() }}" method="get" data-map-target="form">
-        {%- if let Some(near) = filters.near %}
+        {%- if let Some(near) = filters.pin() %}
         <input type="hidden" name="lat" value="{{ "{:.5}"|format(near.latitude) }}" data-map-target="latitude">
         <input type="hidden" name="lng" value="{{ "{:.5}"|format(near.longitude) }}" data-map-target="longitude">
         {%- else %}
@@ -203,6 +203,45 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="11.5" rx="2.5"/><path d="M4.5 18.5h15M4.5 21h9"/></svg>
     </button>
   </div>
+
+  {#- Where to look, a tap away, under the row: all of Albania, around the visitor (the browser
+      says where, place_controller.js), or one of the towns with the most listings, the one picked
+      on (a town picked from the filters' Qyteti joins them). A town is kept in a cookie for the
+      next pages (filters.rs, TOWN_COOKIE); "Gjithë Shqipëria" forgets it (application.js). With
+      the map's point on, a pill of its own says it. The row slides sideways on a phone; what "Afër
+      meje" is doing shows under it. -#}
+  <div class="places" data-controller="place"
+       data-place-town-value="{{ filters.town_slug() }}" data-place-near-url-value="{{ filters.placeless_url() }}" data-place-radius-value="{{ filters.radius_km }}">
+  <nav class="place-pills" aria-label="Ku">
+    <a class="place-pill{% if filters.everywhere() %} is-selected{% endif %}" href="{{ filters.placeless_url() }}" data-forget-town data-turbo-prefetch="false"{% if filters.everywhere() %} aria-current="true"{% endif %}>Gjithë Shqipëria</a>
+    <button type="button" class="place-pill place-near" data-action="place#near">{% include "pin.svg" %}Afër meje</button>
+    {%- if filters.has_pin() %}
+    <span class="place-pill is-selected" aria-current="true">{% include "pin.svg" %}{{ filters.map_label() }}</span>
+    {%- endif %}
+    {%- for pill in filters.town_pills() %}
+    <a class="place-pill{% if pill.selected %} is-selected{% endif %}" href="{{ pill.url }}"{% if pill.selected %} aria-current="true"{% endif %}>{{ pill.label }}</a>
+    {%- endfor %}
+  </nav>
+  <p class="place-status" data-place-target="status" role="status" hidden></p>
+  </div>
+
+  {#- The filters' card: over the results under the row on a phone, its name and "Mbyll" at the
+      top and at the foot "Pastro" and the button that shows the results, saying how many there
+      are now (they follow every change, under the card); a column beside the results on a wide
+      screen. -#}
+  <aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">
+    <div class="filters-header">
+      <h2 id="filters-heading">Filtrat</h2>
+      <button type="button" class="filters-close" data-action="filters#fold">Mbyll</button>
+    </div>
+    {% include "filters.html" %}
+    <div class="filters-footer">
+      {%- if on > 0 %}
+      <a class="button secondary filters-clear" href="{{ clear_url }}">Pastro</a>
+      {%- endif %}
+      <button type="button" class="button filters-show" data-filters-target="show" data-action="filters#showResults">{{ show_label }}</button>
+    </div>
+  </aside>
   {#- Under what the row opened, the page dimmed (browse.css); a tap on it folds that again. -#}
   <div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>
 
@@ -225,14 +264,30 @@
     {% if !chips.is_empty() %}
     <ul class="active-filters" aria-label="Filtrat e zgjedhur">
       {% for chip in chips %}
-      <li><a class="filter-chip" href="{{ chip.url }}" aria-label="Hiq filtrin {{ chip.label }}">{{ chip.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></li>
+      <li><a class="filter-chip" href="{{ chip.url }}" aria-label="Hiq filtrin {{ chip.label }}"{% if chip.forgets_town %} data-forget-town data-turbo-prefetch="false"{% endif %}>{{ chip.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></li>
       {% endfor %}
+      {%- if on > 0 %}
       <li><a class="clear-filters" href="{{ clear_url }}">Pastro filtrat</a></li>
+      {%- endif %}
     </ul>
     {% endif %}
 
     {% include "listing_grid.html" %}
-    {% if page.cards.is_empty() && !chips.is_empty() %}<p class="empty">Provo të heqësh ndonjë filtër.</p>{% endif %}
+    {%- if page.cards.is_empty() %}
+    {#- Nothing found: what would find more, a tap away: a wider circle round the map's point, or all
+        of Albania; and the chips above, each a filter less. -#}
+    <div class="empty-state">
+      {%- if on > 0 %}
+      <p class="empty">Provo të heqësh ndonjë filtër nga lart.</p>
+      {%- endif %}
+      {%- if let Some((url, km)) = filters.wider_url() %}
+      <a class="button secondary" href="{{ url }}">Zgjero largësinë në {{ km }} km</a>
+      {%- endif %}
+      {%- if !filters.everywhere() %}
+      <a class="button secondary" href="{{ filters.placeless_url() }}" data-forget-town data-turbo-prefetch="false">Kërko në gjithë Shqipërinë</a>
+      {%- endif %}
+    </div>
+    {%- endif %}
   </section>
 </div>
 {% endblock %}

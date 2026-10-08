@@ -1,11 +1,38 @@
 {#- The filter form. Its fields come from the category's filterable properties (see filters.rs).
-    They apply as soon as one changes, and as the card closes (filters_controller.js). -#}
+    They apply as soon as one changes, and as the card closes (filters_controller.js). First where
+    (Qyteti, or "Afër meje"), then the price, then the filters buyers narrow by most (Field::primary),
+    the rest under "Më shumë filtra", open when one of them is on. -#}
 <form id="filter-form" class="filter-form" action="{{ filters.action() }}" method="get"
       data-controller="narrow" data-filters-target="form"
       data-action="change->filters#changed keydown.enter->filters#enter">
   {%- for (name, value) in filters.kept_fields() %}
   <input type="hidden" name="{{ name }}" value="{{ value }}">
   {%- endfor %}
+
+  {#- Where: a town, by county, which replaces the map's point; or around the visitor, as the
+      browser says (filters_controller.js), which replaces the town. "Gjithë Shqipëria" forgets the
+      town kept for the next pages too. -#}
+  <div class="filter-group filter-place">
+    <label class="filter-label" for="filter-city">Qyteti</label>
+    <div class="filter-place-row">
+      <div class="picker" data-controller="picker">
+      <select id="filter-city" name="city" data-action="filters#placed">
+        <option value="">Gjithë Shqipëria</option>
+        {%- for group in filters.city_groups() %}
+        <optgroup label="{{ group.label }}">
+          {%- for choice in group.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+        </optgroup>
+        {%- endfor %}
+      </select>
+      </div>
+      <button type="button" class="button secondary filter-locate" data-action="filters#locate">{% include "pin.svg" %}Afër meje</button>
+    </div>
+    {%- if filters.has_pin() %}
+    <p class="field-hint">Tani nga harta: {{ filters.map_label() }}.</p>
+    {%- endif %}
+    <p class="field-hint" data-filters-target="placeStatus" role="status" hidden></p>
+  </div>
+
   {% if filters.shows_category() %}
   <div class="filter-group">
     <label class="filter-label" for="filter-category">Kategoria</label>
@@ -18,39 +45,50 @@
   </div>
   {% endif %}
 
-  {% let types = filters.type_choices() %}
-  {% if !types.is_empty() %}
-  <fieldset class="filter-group filter-options">
-    <legend class="filter-label">Lloji i njoftimit</legend>
-    <label class="check"><input type="radio" name="type" value=""{% if filters.listing_type.is_none() %} checked{% endif %}> Të gjitha</label>
-    {% for choice in types %}
-    <label class="check"><input type="radio" name="type" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}> {{ choice.label }}</label>
-    {% endfor %}
-  </fieldset>
-  {% endif %}
+  {%- if filters.type_first() %}
+  {% include "filter_type.html" %}
+  {%- endif %}
 
-  {#- The price: one track with two ends, the lowest and the highest, on a scale that grows to the
-      right (price_range_controller.js). Either end at its edge is no limit; the hidden fields
-      carry the prices, and the label beside the name says them. -#}
+  {#- The price: typed, from and to, the currency beside them; or on one track with two ends, the
+      lowest and the highest, on a scale that grows to the right (price_range_controller.js), either
+      end at its edge no limit; or one of the quick choices under it, each about a quarter of the
+      category's listings. Each moves the others; the label beside the name says the prices. -#}
   <fieldset class="filter-group price-filter" data-controller="price-range">
     <legend class="filter-label">Çmimi <output data-price-range-target="label">{{ filters.price_label() }}</output></legend>
-    <input type="hidden" name="price_min" value="{{ filters.price_min_value() }}" data-price-range-target="min">
-    <input type="hidden" name="price_max" value="{{ filters.price_max_value() }}" data-price-range-target="max">
-    <div class="price-slider">
-      <div class="price-track">
-        <span class="price-fill" data-price-range-target="fill"></span>
-        <input type="range" min="0" max="1000" step="1" value="{{ filters.price_from_position() }}" aria-label="Çmimi nga"
-               aria-valuetext="{{ filters.price_min_text() }}" data-price-range-target="from" data-action="price-range#slide">
-        <input type="range" min="0" max="1000" step="1" value="{{ filters.price_to_position() }}" aria-label="Çmimi deri"
-               aria-valuetext="{{ filters.price_max_text() }}" data-price-range-target="to" data-action="price-range#slide">
-      </div>
+    <div class="price-typed">
+      <input type="text" inputmode="numeric" name="price_min" value="{{ filters.price_min_value() }}" placeholder="nga" aria-label="Çmimi nga" autocomplete="off"
+             data-price-range-target="min" data-action="change->price-range#typed">
+      <span aria-hidden="true">–</span>
+      <input type="text" inputmode="numeric" name="price_max" value="{{ filters.price_max_value() }}" placeholder="deri" aria-label="Çmimi deri" autocomplete="off"
+             data-price-range-target="max" data-action="change->price-range#typed">
       <div class="picker" data-controller="picker">
       <select name="currency" aria-label="Monedha" data-price-range-target="currency" data-action="price-range#slide">
         {% for choice in filters.currency_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
       </select>
       </div>
     </div>
+    <div class="price-track">
+      <span class="price-fill" data-price-range-target="fill"></span>
+      <input type="range" min="0" max="1000" step="1" value="{{ filters.price_from_position() }}" aria-label="Çmimi nga, në shkallë"
+             aria-valuetext="{{ filters.price_min_text() }}" data-price-range-target="from" data-action="price-range#slide">
+      <input type="range" min="0" max="1000" step="1" value="{{ filters.price_to_position() }}" aria-label="Çmimi deri, në shkallë"
+             aria-valuetext="{{ filters.price_max_text() }}" data-price-range-target="to" data-action="price-range#slide">
+    </div>
+    {%- if !price_choices.is_empty() %}
+    <div class="price-choices">
+      {%- for choice in price_choices %}
+      <button type="button" class="price-choice" aria-pressed="{{ choice.selected }}" data-price-range-target="choice"
+              data-action="price-range#pick" data-price-range-min-param="{{ choice.min }}" data-price-range-max-param="{{ choice.max }}" data-price-range-currency-param="{{ choice.currency }}">{{ choice.label }}</button>
+      {%- endfor %}
+    </div>
+    {%- endif %}
   </fieldset>
+
+  {%- for field in fields %}
+  {%- if field.primary %}
+  {% include "filter_field.html" %}
+  {%- endif %}
+  {%- endfor %}
 
   {% let conditions = filters.condition_choices() %}
   {% if !conditions.is_empty() %}
@@ -62,52 +100,26 @@
   </fieldset>
   {% endif %}
 
-  {% for field in fields %}
-  {% match field.kind %}
-  {% when FieldKind::Select %}
-  <div class="filter-group{% if field.half %} filter-half{% endif %}">
-    <label class="filter-label" for="filter-{{ field.name }}">{{ field.label }}</label>
-    <div class="picker" data-controller="picker">
-    <select id="filter-{{ field.name }}" name="{{ field.name }}"{% if let Some(parent) = field.depends_on %} data-depends-on="{{ parent }}"{% endif %}>
-      <option value="">Të gjitha</option>
-      {% for choice in field.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
-      {% for group in field.groups %}
-      <optgroup label="{{ group.label }}" data-parent="{{ group.parent }}"{% if group.hidden %} hidden{% endif %}>
-        {% for choice in group.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
-      </optgroup>
-      {% endfor %}
-    </select>
+  {%- if !filters.type_first() && !has_more %}
+  {% include "filter_type.html" %}
+  {%- endif %}
+
+  {%- if has_more %}
+  {#- The rest, folded under their own heading; open while one of them is on. -#}
+  <details class="more-filters"{% if more_open %} open{% endif %}>
+    <summary>Më shumë filtra<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <div class="more-fields">
+      {%- if !filters.type_first() %}
+      {% include "filter_type.html" %}
+      {%- endif %}
+      {%- for field in fields %}
+      {%- if !field.primary %}
+      {% include "filter_field.html" %}
+      {%- endif %}
+      {%- endfor %}
     </div>
-  </div>
-  {% when FieldKind::Checkboxes %}
-  <fieldset class="filter-group filter-options{% if field.half %} filter-half{% endif %}{% if field.icons %} filter-icons{% endif %}">
-    <legend class="filter-label">{{ field.label }}</legend>
-    {% for choice in field.choices %}
-    <label class="check"><input type="checkbox" name="{{ field.name }}" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}>
-      {%- if let Some(icon) = field.icon(choice) %}<svg class="check-icon" width="48" height="24" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %} {{ choice.label }}</label>
-    {% endfor %}
-  </fieldset>
-  {% when FieldKind::Range %}
-  <fieldset class="filter-group{% if field.half %} filter-half{% endif %}">
-    <legend class="filter-label">{{ field.label }}{% if !field.unit.is_empty() %} ({{ field.unit }}){% endif %}</legend>
-    <div class="range">
-      <input type="text" inputmode="numeric" name="{{ field.name }}_min" value="{{ field.min }}" placeholder="nga" aria-label="{{ field.label }} nga">
-      <span aria-hidden="true">–</span>
-      <input type="text" inputmode="numeric" name="{{ field.name }}_max" value="{{ field.max }}" placeholder="deri" aria-label="{{ field.label }} deri">
-    </div>
-  </fieldset>
-  {% when FieldKind::Year %}
-  <div class="filter-group{% if field.half %} filter-half{% endif %}">
-    <label class="filter-label" for="filter-{{ field.name }}">{{ field.label }}</label>
-    <input id="filter-{{ field.name }}" type="text" inputmode="numeric" name="{{ field.name }}" value="{{ field.min }}"
-           maxlength="4" placeholder="p.sh. 2006">
-  </div>
-  {% when FieldKind::Toggle %}
-  <div class="filter-group{% if field.half %} filter-half{% endif %}">
-    <label class="check"><input type="checkbox" name="{{ field.name }}" value="1"{% if field.checked %} checked{% endif %}> {{ field.label }}</label>
-  </div>
-  {% endmatch %}
-  {% endfor %}
+  </details>
+  {%- endif %}
 
   {#- Without JavaScript, a button applies them. -#}
   <noscript><div class="filter-actions">
