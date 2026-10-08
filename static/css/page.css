@@ -397,8 +397,9 @@
 /* A quiet line on the listing page: over the price, what kind of listing, and its condition. */
 .card-meta { margin: .25rem 0 0; color: var(--muted); font-size: var(--text-sm); }
 .listing-kind { margin: 0 0 .2rem; }
-/* Over the photo's top corner, where, when and which number, in a pill like the photo counter's
-   in the other corner: the site's dark colour, see-through, and the date in bold. */
+/* Over the photo's top corner, where and when, in a pill like the photo counter's in the other
+   corner: the site's dark colour, see-through, and the date in bold; on one line, a long town
+   ending in "…" before it wraps. */
 .listing-media { position: relative; }
 .listing-meta {
   position: absolute;
@@ -409,9 +410,12 @@
   margin: 0;
   padding: .2rem .65rem;
   border-radius: 999px;
+  overflow: hidden;
   background: rgb(38 38 36 / 60%);
   color: #faf9f5;
   font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
   pointer-events: none;
 }
 .listing-meta strong { font-weight: var(--semibold); }

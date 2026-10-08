@@ -68,12 +68,15 @@
     {%- endif %}
   </div>
   {% endif %}
-  {#- Over the photo's top corner: where it is, when it went up (the date in bold), its number. -#}
+  {#- Over the photo's top corner, on one line: where it is and when it went up, the date in bold
+      ("Publikuar më" for screen readers). Its number is under the description. -#}
+  {%- let published = listing.published_display() %}
+  {%- if listing.location_name.is_some() || published.is_some() %}
   <p class="listing-meta">
-    {% if let Some(location) = listing.location_name %}{{ location }} · {% endif %}
-    {% if let Some(date) = listing.published_display() %}Publikuar më <strong>{{ date }}</strong> · {% endif %}
-    Nr. {{ listing.public_no }}
+    {%- if let Some(location) = listing.location_name %}{{ location }}{% endif %}
+    {%- if let Some(date) = published %}{% if listing.location_name.is_some() %} · {% endif %}<span class="visually-hidden">Publikuar më </span><strong>{{ date }}</strong>{% endif -%}
   </p>
+  {%- endif %}
   {%- let heart_number = listing.public_no %}
   {% include "heart.html" %}
   {%- if let Some(views) = views %}
@@ -248,6 +251,8 @@
     <h3 class="description-heading">{{ heading }}</h3>
     {%- endif %}
     <p class="description">{{ listing.description }}</p>
+    {#- Its number, quietly, under what its seller wrote: to name it on the phone. -#}
+    <p class="listing-number">Numri i njoftimit: {{ listing.public_no }}</p>
   </section>
 </article>
 

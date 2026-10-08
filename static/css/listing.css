@@ -201,9 +201,10 @@
 .listing-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
 .listing-tags .badge { margin-left: 0; }
 .listing-trail a:last-child { color: var(--text); font-weight: var(--medium); }
-/* The price is the headline, the title under its size. */
+/* The price is the headline: on a phone a little over the title's size (24.5px), from a tablet up
+   a size over it (--text-3xl, below), the title under it either way. */
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: var(--text-2xl); }
-.listing-price { margin: 0; font-size: var(--text-3xl); line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
+.listing-price { margin: 0; font-size: 1.75rem; line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
 /* What follows the price ("/muaj", "(i diskutueshëm)"), half its size. */
 .price-note { font-size: .5em; letter-spacing: normal; }
 /* Under the seller's buttons, quietly, as links are: reporting the listing and blocking its seller
@@ -386,6 +387,17 @@
 }
 .attribute-icon { flex: none; color: var(--muted); }
 .attribute-label { color: var(--muted); font-weight: normal; }
+/* A phone: the top of the page not all large type. The path to the category at the text's size
+   rather than a heading's, quieter than the title under the photo, and the details' pills a
+   little smaller (13px, their icons 16px), so more of them share a line. */
+@media (max-width: 719px) {
+  .listing-trail { font-size: var(--text-md); }
+  .attributes { gap: .4rem; }
+  .attribute { gap: .4rem; padding: .45rem .8rem; font-size: .93rem; }
+  .attribute-icon { width: 16px; height: 16px; }
+}
+/* The listing's number, quietly, under the description. */
+.listing-number { margin: 1.25rem 0 0; color: var(--muted); font-size: var(--text-sm); }
 .description { margin: 0; font-size: var(--text-md); line-height: 1.7; white-space: pre-line; }
 /* A car's title as its seller wrote it, over the description. */
 .description-heading { margin: 0 0 .35rem; font-size: var(--text-lg); font-weight: var(--semibold); line-height: 1.35; }

@@ -1329,8 +1329,8 @@ async fn the_price_is_a_slider_with_two_ends(pool: PgPool) {
     let some = html(pool, "/c/elektronike?price_min=1000&price_max=20000&currency=EUR").await;
     assert!(some.contains(r#"value="400" aria-label="Çmimi nga, në shkallë""#));
     assert!(some.contains(r#"value="660" aria-label="Çmimi deri, në shkallë""#));
-    assert!(some.contains(r#"<input type="text" inputmode="numeric" name="price_min" value="1000" placeholder="nga" aria-label="Çmimi nga" autocomplete="off"
-             data-price-range-target="min" data-action="change->price-range#typed">"#));
+    assert!(some.contains(r#"<input type="text" inputmode="numeric" name="price_min" value="1000" placeholder="nga" aria-label="Çmimi nga" autocomplete="off""#));
+    assert!(some.contains(r#"data-price-range-target="min" data-action="change->price-range#typed">"#));
     assert!(some.contains("<output data-price-range-target=\"label\">1\u{a0}000 – 20\u{a0}000\u{a0}€</output>"));
 }
 
@@ -1354,24 +1354,34 @@ async fn the_price_has_quick_choices_by_the_categorys_prices(pool: PgPool) {
     .await
     .unwrap();
     let page = html(pool.clone(), "/c/te-tjera").await;
-    let choice = |label: &str, min: &str, max: &str, pressed: bool| {
+    // A choice's button up to its label, its whitespace one space whatever the template's line
+    // endings, and as it should be.
+    let button = |page: &str, label: &str| {
+        let end = page.find(&format!(">{label}</button>")).unwrap_or_else(|| panic!("{label}"));
+        let start = page[..end].rfind("<button").unwrap();
+        page[start..end].split_whitespace().collect::<Vec<_>>().join(" ")
+    };
+    let choice = |min: &str, max: &str, pressed: bool| {
         format!(
-            r#"<button type="button" class="price-choice" aria-pressed="{pressed}" data-price-range-target="choice"
-              data-action="price-range#pick" data-price-range-min-param="{min}" data-price-range-max-param="{max}" data-price-range-currency-param="ALL">{label}</button>"#
+            r#"<button type="button" class="price-choice" aria-pressed="{pressed}" data-price-range-target="choice" data-action="price-range#pick" data-price-range-min-param="{min}" data-price-range-max-param="{max}" data-price-range-currency-param="ALL""#
         )
     };
-    let choices = [
-        choice("deri 6\u{a0}000\u{a0}Lekë", "", "6000", false),
-        choice("6\u{a0}000 – 12\u{a0}000\u{a0}Lekë", "6000", "12000", false),
-        choice("12\u{a0}000 – 20\u{a0}000\u{a0}Lekë", "12000", "20000", false),
-        choice("nga 20\u{a0}000\u{a0}Lekë", "20000", "", false),
+    let labels = [
+        "deri 6\u{a0}000\u{a0}Lekë",
+        "6\u{a0}000 – 12\u{a0}000\u{a0}Lekë",
+        "12\u{a0}000 – 20\u{a0}000\u{a0}Lekë",
+        "nga 20\u{a0}000\u{a0}Lekë",
     ];
-    let order = positions(&page, &choices.iter().map(String::as_str).collect::<Vec<_>>());
+    for (label, (min, max)) in labels.into_iter().zip([("", "6000"), ("6000", "12000"), ("12000", "20000"), ("20000", "")]) {
+        assert_eq!(button(&page, label), choice(min, max, false), "{label}");
+    }
+    let ends = labels.map(|label| format!(">{label}</button>"));
+    let order = positions(&page, &ends.iter().map(String::as_str).collect::<Vec<_>>());
     assert!(order.is_sorted(), "{order:?}");
     // The one the prices are shows pressed.
     let picked = html(pool, "/c/te-tjera?price_min=6000&price_max=12000&currency=ALL").await;
-    assert!(picked.contains(&choice("6\u{a0}000 – 12\u{a0}000\u{a0}Lekë", "6000", "12000", true)));
-    assert!(picked.contains(&choice("deri 6\u{a0}000\u{a0}Lekë", "", "6000", false)));
+    assert_eq!(button(&picked, labels[1]), choice("6000", "12000", true));
+    assert_eq!(button(&picked, labels[0]), choice("", "6000", false));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -1591,8 +1601,11 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("9\u{a0}500\u{a0}€"));
     // Each detail a pill, its icon before its value; its name for screen readers and as a
     // tooltip. The options, several, a pill each.
-    // When it went up, the date in bold, over the photo.
-    assert!(response.body.contains("Publikuar më <strong>"));
+    // Where and when it went up, the date in bold, over the photo, on one line; its number under
+    // the description.
+    assert!(response.body.contains(r#"<p class="listing-meta">Tiranë · <span class="visually-hidden">Publikuar më </span><strong>"#));
+    assert!(response.body.contains(r#"<p class="listing-number">Numri i njoftimit: 1001</p>"#));
+    assert!(!response.body.contains("Nr. 1001"));
     // What kind of listing it is, and its condition, over the price, not among the details.
     assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur</p>"#));
     assert!(!response.body.contains(">Gjendja</dt>"));
