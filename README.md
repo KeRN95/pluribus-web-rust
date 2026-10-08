@@ -90,7 +90,7 @@ docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v views=1 < de
 docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v drops=1 < dev/generate_listings.sql
 ```
 
-The tests need the database running; each test gets a fresh database of its own, which is most of what a test costs. Two things keep that cheap. `compose.yaml` runs the development database for speed over durability (no waiting for the disk on each commit), with the lock memory and connections for a dozen test databases at once. And `dev/test_template.sh` makes the cluster's `template1` a migrated copy of the schema (sqlx-cli needed: `cargo install sqlx-cli --no-default-features --features postgres`), so that the `create database` behind every `#[sqlx::test]` copies 12 MB of files in a tenth of a second instead of running the 26 migrations, which the migrator then finds applied. Run it once after `docker compose up -d`, and again whenever `migrations/` changes: a new migration only costs the tests its own run until then, but a migration changed under the tests fails them all with "migration N was previously applied but has been modified". Scratch databases made with `sqlx database create` come migrated too. The 118 request tests then take about 15 seconds, eight at a time:
+The tests need the database running; each test gets a fresh database of its own, which is most of what a test costs. Two things keep that cheap. `compose.yaml` runs the development database for speed over durability (no waiting for the disk on each commit), with the lock memory and connections for a dozen test databases at once. And `dev/test_template.sh` makes the cluster's `template1` a migrated copy of the schema (sqlx-cli needed: `cargo install sqlx-cli --no-default-features --features postgres`), so that the `create database` behind every `#[sqlx::test]` copies 12 MB of files in a tenth of a second instead of running the 26 migrations, which the migrator then finds applied. Run it once after `docker compose up -d`, and again whenever `migrations/` changes: a new migration only costs the tests its own run until then, but a migration changed under the tests fails them all with "migration N was previously applied but has been modified". Scratch databases made with `sqlx database create` come migrated too. The 120 request tests then take about 15 seconds, eight at a time:
 
 ```bash
 sh dev/test_template.sh
@@ -99,6 +99,18 @@ sh dev/test_template.sh
 ```bash
 cargo test -- --test-threads=8
 ```
+
+`dev/check.sh` runs what a commit needs, clippy over every target and every test, side by side, each in a target directory of its own under `~/.cache` (a build there is far faster than one on a Windows drive from WSL), and prints only the warnings, the results and any failures; about 30 seconds once built. Given words, it runs only the tests whose names hold them, for while a change is being made:
+
+```bash
+sh dev/check.sh
+```
+
+```bash
+sh dev/check.sh heading sort
+```
+
+Every test in `tests/web.rs` names the file's one embedded copy of the migrations, `#[sqlx::test(migrator = "MIGRATOR")]` (with `fixtures("listings")` after it when it needs the sample listings). A plain `#[sqlx::test]` reads all the migrations from disk and embeds them again for its test alone: with 120 tests, that was three quarters of the file's build, and rebuilding the tests after a change to them took 21 seconds rather than 5 to 9.
 
 **Windows:** Rust's MSVC toolchain needs Microsoft's C++ build tools for its linker (`link.exe`): Visual Studio Build Tools with the "Desktop development with C++" workload. Without them nothing links, so build and run in WSL instead.
 
@@ -182,6 +194,7 @@ cargo test -- --test-threads=8
 | `tests/schema_checks.sql` | 83 checks of the schema's constraints and behaviour (35 checks, 36 statements that must fail, 12 that must succeed), in one transaction rolled back at the end |
 | `tests/fixtures/listings.sql` | The tests' sample listings, which can also be loaded into the development database |
 | `dev/deploy.sh` | Builds the release and (re)starts it on `BIND_ADDR`, keeping the previous one to go back to |
+| `dev/check.sh` | Clippy and every test side by side, as a commit needs them; given words, only the tests whose names hold them (see "Running it locally") |
 | `dev/test_template.sh` | Makes the development database's `template1` a migrated copy of the schema, so the tests' databases start migrated (see "Running it locally"); run again when `migrations/` changes |
 | `dev/setup_garage.sh`, `dev/garage.toml` | The local photo store's one-time setup, and its configuration |
 | `dev/sample_listings.sql` | 305 extra sample listings for the development database (not used by the tests) |
@@ -701,7 +714,7 @@ Financial rows are never cascade-deleted.
 - **Types:** enable sqlx's `uuid`, `time` (or `chrono`), `rust_decimal` and `json` features, so `uuid`, `timestamptz`, `numeric` and `jsonb` map to `Uuid`, `OffsetDateTime`, `Decimal` and `Json<T>`. Never select `search_vector`, which has no Rust type; only filter on it. If a macro rejects the `e164_phone` or `currency_code` domains, cast to text in SQL (`$1::text`).
 - **Nullability:** the macros infer whether each column can be NULL and sometimes guess wrong, for example after a LEFT JOIN. Override with `AS "name!"` (never NULL) or `AS "name?"` (may be NULL).
 - **IDs:** columns default to `uuid_v7()`. If you'd rather create IDs in Rust, `Uuid::now_v7()` from the `uuid` crate produces the same kind.
-- **Tests:** `#[sqlx::test]` gives each test a fresh database with `migrations/` applied. `tests/schema_checks.sql` is a psql script, and cargo ignores `.sql` files in `tests/`.
+- **Tests:** `#[sqlx::test]` gives each test a fresh database with `migrations/` applied; in `tests/web.rs`, write it `#[sqlx::test(migrator = "MIGRATOR")]`, so the migrations are embedded once rather than once per test. `tests/schema_checks.sql` is a psql script, and cargo ignores `.sql` files in `tests/`.
 
 ## Typical listing creation flow
 

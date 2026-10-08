@@ -17,6 +17,11 @@ use serde_json::{Value, json};
 use sqlx::PgPool;
 use tower::ServiceExt;
 
+/// The migrations, embedded once for every test (`migrator = "MIGRATOR"` in each attribute):
+/// without it, `#[sqlx::test]` reads and embeds all of them again for each test, which took three
+/// quarters of this file's build.
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
+
 /// The tests' moderator (MODERATORS in .env): whoever signs in with this number.
 const MODERATOR: &str = "+355690000099";
 
@@ -299,7 +304,7 @@ fn positions(html: &str, texts: &[&str]) -> Vec<usize> {
     texts.iter().map(|text| html.find(text).unwrap_or_else(|| panic!("missing {text}"))).collect()
 }
 
-#[sqlx::test]
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn home_page_lists_categories(pool: PgPool) {
     let response = get(pool, "/").await;
     assert_eq!(response.status, StatusCode::OK);
@@ -307,7 +312,7 @@ async fn home_page_lists_categories(pool: PgPool) {
     assert!(response.body.contains("Nuk u gjet asnjë njoftim."));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     let body = get(pool, "/").await.body;
     // The question is for screen readers alone, with no line under it; the logo's creature moves
@@ -350,7 +355,7 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(!body.contains(r#"class="tile""#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn welcome_page_ignores_the_city_it_used_to_remember(pool: PgPool) {
     // The welcome page no longer asks for a city, so the one an older visit left in a cookie
     // would narrow the categories unseen: it is ignored.
@@ -363,7 +368,7 @@ async fn welcome_page_ignores_the_city_it_used_to_remember(pool: PgPool) {
     assert!(!body.contains("city=vlore"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn bumped_listing_comes_first(pool: PgPool) {
     let body = get(pool, "/").await.body;
     let house = body.find("Shtëpi private në shitje në Vlorë").unwrap();
@@ -414,7 +419,7 @@ async fn events(mut body: Body, count: usize, wait: Duration) -> Vec<(String, Du
     events
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_welcome_page_has_the_newest_listings_in_a_row_that_follows_new_ones(pool: PgPool) {
     let body = html(pool.clone(), "/").await;
     // Under the categories, over the newest listings, the ten they start with, in a row.
@@ -431,7 +436,7 @@ async fn the_welcome_page_has_the_newest_listings_in_a_row_that_follows_new_ones
     assert!(row.contains(r#"<div class="newest-waiting" data-newest-target="waiting" hidden>"#), "{row}");
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_row_of_newest_listings_gets_new_ones_no_more_than_two_a_second(pool: PgPool) {
     let since = newest_cursor(&pool).await;
     let request = Request::get(format!("/te-rejat?since={since}")).body(Body::empty()).unwrap();
@@ -461,7 +466,7 @@ async fn the_row_of_newest_listings_gets_new_ones_no_more_than_two_a_second(pool
     }
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_rows_stream_ends_every_few_seconds_and_goes_on_from_the_last_listing_it_sent(pool: PgPool) {
     // A response ends after a few seconds, so that a proxy which holds it back until then passes
     // the new listings on, and asks the browser to connect again a second later...
@@ -501,7 +506,7 @@ fn tap_heart(number: &str, keep: &str, cookie: Option<&str>) -> Request<Body> {
     request.body(Body::from(format!("ruaj={keep}"))).unwrap()
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn every_listing_has_a_heart_over_its_photo(pool: PgPool) {
     // On every card, the newest listings' row's too, and on the listing's page; the top bar leads to
     // the listings kept.
@@ -516,7 +521,7 @@ async fn every_listing_has_a_heart_over_its_photo(pool: PgPool) {
     assert!(listing.contains(r#"<button type="submit" class="heart-button" aria-pressed="false" aria-label="Ruaje""#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_heart_keeps_a_listing_for_a_signed_in_user(pool: PgPool) {
     let session = new_seller(&pool, "+355690000011").await;
     let kept = |pool: PgPool| {
@@ -558,7 +563,7 @@ async fn a_heart_keeps_a_listing_for_a_signed_in_user(pool: PgPool) {
     assert!(page.contains(r#"<a class="button" href="/llogaria">Hyr</a>"#) && card_numbers(&page).is_empty());
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_heart_tapped_before_signing_in_keeps_the_listing_once_signed_in(pool: PgPool) {
     // Not signed in: the heart says so, and the listing and the page wait in cookies.
     let tapped = send(pool.clone(), tap_heart("1001", "1", None)).await;
@@ -583,7 +588,7 @@ async fn a_heart_tapped_before_signing_in_keeps_the_listing_once_signed_in(pool:
     assert_eq!(get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body, r#"{"numbers":[1001],"price_drops":0}"#);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn category_page_includes_subcategories(pool: PgPool) {
     // Automjete has no listings of its own; the cars sit in its Makina subcategory.
     let response = get(pool, "/c/automjete").await;
@@ -597,7 +602,7 @@ async fn category_page_includes_subcategories(pool: PgPool) {
     assert!(html.contains("photo-1591230740238-e9a71182b67c?auto=format&fit=crop&w=480"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn card_details_start_with_the_city(pool: PgPool) {
     // A location pin, then the city, then the category's card properties.
     let pin = r#"<p class="card-summary"><svg class="pin-icon" "#;
@@ -622,7 +627,7 @@ async fn card_details_start_with_the_city(pool: PgPool) {
     assert!(cars.contains("<p class=\"card-summary\">Hatchback · 2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_card_links_to_its_listing_through_the_title(pool: PgPool) {
     let body = get(pool, "/").await.body;
     // The title link is stretched over the whole card (see .card-link in page.css).
@@ -632,7 +637,7 @@ async fn a_card_links_to_its_listing_through_the_title(pool: PgPool) {
     assert_eq!(body.matches(r#"<article class="card""#).count(), 12);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_map_pin_finds_the_listings_within_its_radius_nearest_first(pool: PgPool) {
     // Tirana's centre, where the fixture puts the Tirana listings. Durrës is 31 km away.
     let body = html(pool.clone(), "/search?lat=41.32833&lng=19.81806&radius=10").await;
@@ -652,7 +657,7 @@ async fn a_map_pin_finds_the_listings_within_its_radius_nearest_first(pool: PgPo
     assert!(body.contains("</svg>Tiranë · 31\u{a0}km · 2016"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn nearest_pages_continue_where_the_last_one_ended(pool: PgPool) {
     // 40 more in Të tjera, north of Tirana's centre at nine distances, so many are tied and the
     // id has to break the ties.
@@ -696,7 +701,7 @@ async fn nearest_pages_continue_where_the_last_one_ended(pool: PgPool) {
     assert_eq!(seen, expected);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_map_page_reloads_only_its_results(pool: PgPool) {
     let page = get(pool.clone(), "/harta").await;
     assert_eq!(page.status, StatusCode::OK);
@@ -732,7 +737,7 @@ async fn the_map_page_reloads_only_its_results(pool: PgPool) {
     assert!(send(pool.clone(), request).await.body.contains("<html"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
     let seven = html(pool.clone(), "/search?lat=41.32833&lng=19.81806&radius=7").await;
     assert!(seven.contains("Brenda 7 km nga pika"));
@@ -743,7 +748,7 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
     }
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     // The search, Filtrat, Harta and Rendit stand in one row over the results, the orders opening
     // in a menu; opening one says so (section:open) and the others fold, so only one is open at a
@@ -828,7 +833,7 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     assert!(search.contains(r#"<input type="search" name="q" value="""#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn prona_shows_big_cards_until_the_visitor_chooses_small_ones_there(pool: PgPool) {
     let big = r#"<div class="browse cards-big" data-controller="filters cards place""#;
     let small = r#"<div class="browse" data-controller="filters cards place""#;
@@ -847,7 +852,7 @@ async fn prona_shows_big_cards_until_the_visitor_chooses_small_ones_there(pool: 
     assert!(get_with_cookie(pool, "/c/automjete", "cards=big").await.body.contains(big));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn big_cards_slide_through_every_photo(pool: PgPool) {
     // Two more photos for the Golf, after its cover.
     sqlx::query(
@@ -893,7 +898,7 @@ async fn big_cards_slide_through_every_photo(pool: PgPool) {
     assert!(send(pool, pinned).await.body.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_list_shows_a_line_for_each_listing(pool: PgPool) {
     // The view menu: small cards, big ones or the list, the one now ticked and its icon on the
     // pill; picking one switches the cards at once (cards_controller.js).
@@ -928,7 +933,7 @@ async fn the_list_shows_a_line_for_each_listing(pool: PgPool) {
     assert!(send(pool, map).await.body.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn category_pages_keep_their_map_folded(pool: PgPool) {
     // Every category page has its map, in a card folded to its header; with no point, the
     // results are from everywhere. Nothing else opens it.
@@ -990,7 +995,7 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(pinned.contains(r#"<a class="filter-chip" href="/c/makina?sort=price_asc" aria-label="Hiq filtrin Brenda 5 km nga pika">"#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_maps_card_picks_a_town_or_all_of_albania(pool: PgPool) {
     // In the map's card, beside "Vendndodhja ime", the towns' menu: all of Albania first (chosen,
     // there being no place), then the towns by county, each the same page in it, its filters kept.
@@ -1034,7 +1039,7 @@ async fn the_maps_card_picks_a_town_or_all_of_albania(pool: PgPool) {
     assert!(pinned.contains(r#"<p class="field-hint">Tani nga harta: Tiranë · 5 km.</p>"#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_town_picked_last_opens_the_next_category_in_it(pool: PgPool) {
     // The cookie the page keeps the town in (qyteti): a category whose address names no place
     // opens in it, as if picked there.
@@ -1054,7 +1059,7 @@ async fn the_town_picked_last_opens_the_next_category_in_it(pool: PgPool) {
     assert!(nowhere.contains("Mercedes-Benz C 220") && nowhere.contains("Volkswagen Golf 7"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_count_goes_on_past_a_thousand_once_the_page_shows(pool: PgPool) {
     // With numri=1, only the count, as far as 10 000, for the heading's line and the button at
     // the foot of the filters ("Shfaq 2 njoftime"), which the page asks for when its own count
@@ -1087,7 +1092,7 @@ async fn the_count_goes_on_past_a_thousand_once_the_page_shows(pool: PgPool) {
     assert_eq!(counted.body, "{\"count\":1001,\"show\":\"Shfaq 1k njoftime\",\"text\":\"1k njoftime\"}");
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_filters_buyers_use_most_come_first(pool: PgPool) {
     // First the place and the price, then what the category asks of every listing or shows on its
     // cards, and a few more (Karroceria, Kambio); the rest under "Më shumë filtra", folded.
@@ -1120,7 +1125,7 @@ async fn the_filters_buyers_use_most_come_first(pool: PgPool) {
     assert!(flats.find(r#"name="property_heating""#).unwrap() > more);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn years_and_kilometres_are_picked_from_steps(pool: PgPool) {
     // A range whose unit has steps offers them in two dropdowns, from and to: the years from next
     // year back to 1970, the kilometres in round numbers. A value from an older link, not a step,
@@ -1139,7 +1144,7 @@ async fn years_and_kilometres_are_picked_from_steps(pool: PgPool) {
     assert!(phones.contains(r#"<input type="text" inputmode="numeric" name="phone_battery_min" value="" placeholder="nga""#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn nothing_found_offers_what_would_find_more(pool: PgPool) {
     // Around a point in Shkodër there are no cars: a wider circle, a tap away, then a wider one,
     // and all of Albania; the filters' chips each drop one.
@@ -1160,7 +1165,7 @@ async fn nothing_found_offers_what_would_find_more(pool: PgPool) {
     assert!(everywhere.contains("Provo të heqësh") && !everywhere.contains("Kërko në gjithë Shqipërinë"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_map_has_a_dot_for_every_result_up_to_its_limit(pool: PgPool) {
     // 501 more in Të tjera, north of Tirana's centre at nine distances, 1.1 km apart.
     sqlx::query(
@@ -1199,7 +1204,7 @@ async fn the_map_has_a_dot_for_every_result_up_to_its_limit(pool: PgPool) {
     assert!(!card.contains("map-note"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn search_ignores_accents(pool: PgPool) {
     // "vlore" names the town, which the page then filters by, and "shtepi" is searched there.
     let response = followed(pool, "/search?q=shtepi+vlore").await;
@@ -1208,7 +1213,7 @@ async fn search_ignores_accents(pool: PgPool) {
     assert!(!response.body.contains("Apartament 2+1"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn search_matches_property_values(pool: PgPool) {
     // Neither the title nor the description says "telefon"; its type property does. (Searched
     // across every category, "telefon" names Telefona, which the page would filter by instead.)
@@ -1222,7 +1227,7 @@ async fn found(pool: &PgPool, words: &str) -> Vec<i64> {
     card_numbers(&followed(pool.clone(), &format!("/search?q={words}")).await.body)
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn words_that_name_a_kind_of_listing_find_that_kind(pool: PgPool) {
     // The Golf is for sale, though it doesn't say so: "në shitje", "shitet" and "shes" find it as
     // "golf" does, "me qira" doesn't.
@@ -1245,7 +1250,7 @@ async fn words_that_name_a_kind_of_listing_find_that_kind(pool: PgPool) {
     assert!(found(&pool, "golf+-shitje").await.contains(&1001));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn search_forgives_typos_and_names_the_word_it_searched(pool: PgPool) {
     // No listing says "golff": the Golf is found, and the page says "golf" was searched too.
     let misspelt = get(pool.clone(), "/search?q=golff").await.body;
@@ -1257,7 +1262,7 @@ async fn search_forgives_typos_and_names_the_word_it_searched(pool: PgPool) {
     assert!(!typed.contains("search-corrections"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn search_finds_other_forms_of_a_word(pool: PgPool) {
     // The flat's title says "Apartament" and the search the plural, "apartamente": the same word,
     // which needs no note. (In a category's page, as across every category it names Apartamente.)
@@ -1266,14 +1271,14 @@ async fn search_finds_other_forms_of_a_word(pool: PgPool) {
     assert!(!body.contains("search-corrections"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_word_left_out_stays_out_of_a_widened_search(pool: PgPool) {
     // The Golf runs on diesel (naftë): leaving that out leaves the Golf out, typo or not.
     let body = get(pool, "/search?q=golff+-naft%C3%AB").await.body;
     assert!(card_numbers(&body).is_empty());
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn search_finds_listings_by_their_category_and_town(pool: PgPool) {
     // The laptop says neither "elektronikë" nor "Shkodër": the words name its category and its
     // town, which the page filters by, the town with its article too ("Shkodra").
@@ -1281,7 +1286,7 @@ async fn search_finds_listings_by_their_category_and_town(pool: PgPool) {
     assert_eq!(card_numbers(&followed(pool, "/search?q=laptop+shkodra").await.body), vec![1006]);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn words_that_name_a_category_a_kind_and_a_town_put_those_filters_on(pool: PgPool) {
     // However typed, with its accents or without, the words in any of their forms and any order:
     // the flats for rent in Tirana, each filter a chip to take off if it was misread.
@@ -1327,7 +1332,7 @@ async fn words_that_name_a_category_a_kind_and_a_town_put_those_filters_on(pool:
     }
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn filler_words_needn_t_be_in_a_listing(pool: PgPool) {
     // The Mercedes is in Durrës, but nothing it says has "në" (which goes with the town, the
     // page's filter); nor does the Golf, for sale, have "në" or "shitje".
@@ -1335,7 +1340,7 @@ async fn filler_words_needn_t_be_in_a_listing(pool: PgPool) {
     assert_eq!(card_numbers(&get(pool, "/search?q=golf+n%C3%AB+shitje").await.body), vec![1001]);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_search_across_categories_names_the_categories_it_found(pool: PgPool) {
     // Each chip narrows the search to its category, where that category's filters are.
     let found = html(pool.clone(), "/search?q=golf").await;
@@ -1349,7 +1354,7 @@ async fn a_search_across_categories_names_the_categories_it_found(pool: PgPool) 
     assert!(!html(pool, "/c/makina?q=golf").await.contains("chip-count"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn suggestions_finish_the_words_and_say_where_they_lead(pool: PgPool) {
     // The word finished as the listings have it, then the category it is found in, then the make
     // and model it names.
@@ -1395,7 +1400,7 @@ async fn suggestions_finish_the_words_and_say_where_they_lead(pool: PgPool) {
     assert!(!get(pool, "/sugjerime?q=g").await.body.contains("suggestion"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn city_filter_keeps_to_that_city(pool: PgPool) {
     let body = get(pool, "/search?city=durres").await.body;
     assert!(body.contains("<h1>Njoftimet në Durrës</h1>"));
@@ -1405,7 +1410,7 @@ async fn city_filter_keeps_to_that_city(pool: PgPool) {
     assert!(body.contains(r#"<p class="result-count" id="result-count" data-show="Shfaq 2 njoftime">2 njoftime</p>"#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn welcome_form_narrows_to_a_category_and_city(pool: PgPool) {
     let body = html(pool, "/search?category=automjete&city=tirane").await;
     assert!(body.contains("<h1>Automjete</h1>"));
@@ -1417,7 +1422,7 @@ async fn welcome_form_narrows_to_a_category_and_city(pool: PgPool) {
     assert!(body.contains(r#"<a class="filter-chip" href="/search?category=automjete""#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn price_filter_converts_currencies(pool: PgPool) {
     // 55 000 Lekë is 550 € and 62 000 Lekë is 620 €, at the placeholder rate of 100 Lekë per euro.
     let body = get(pool.clone(), "/c/elektronike?price_max=600&currency=EUR").await.body;
@@ -1429,7 +1434,7 @@ async fn price_filter_converts_currencies(pool: PgPool) {
     assert!(body.contains(">nga 60\u{a0}000\u{a0}Lekë<"), "the chip shows the bound");
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_price_is_a_slider_with_two_ends(pool: PgPool) {
     // Without a price, the ends stand at the edges: no limit either way, and the fields to type
     // the prices in are empty.
@@ -1448,7 +1453,7 @@ async fn the_price_is_a_slider_with_two_ends(pool: PgPool) {
     assert!(some.contains("<output data-price-range-target=\"label\">1\u{a0}000 – 20\u{a0}000\u{a0}€</output>"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_price_has_quick_choices_by_the_categorys_prices(pool: PgPool) {
     // Too few prices to go by: no quick choices. (Worked out once for some hours, so not asked of
     // Të tjera before its prices come.)
@@ -1498,7 +1503,7 @@ async fn the_price_has_quick_choices_by_the_categorys_prices(pool: PgPool) {
     assert_eq!(button(&picked, labels[0]), choice("", "6000", false));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn sorts_by_price_with_unpriced_listings_last(pool: PgPool) {
     let body = get(pool.clone(), "/search?sort=price_asc").await.body;
     let order = positions(&body, &[
@@ -1521,7 +1526,7 @@ async fn sorts_by_price_with_unpriced_listings_last(pool: PgPool) {
     assert!(order.is_sorted(), "{order:?}");
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn price_pages_continue_where_the_last_one_ended(pool: PgPool) {
     // 40 more in Të tjera: 30 with prices, many of them equal so the id has to break ties, and
     // 10 with the price on request.
@@ -1569,7 +1574,7 @@ async fn price_pages_continue_where_the_last_one_ended(pool: PgPool) {
     }
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn filter_form_offers_the_category_properties(pool: PgPool) {
     let cars = get(pool.clone(), "/c/makina").await.body;
     assert!(cars.contains(r#"<legend class="filter-label">Karburanti</legend>"#));
@@ -1627,7 +1632,7 @@ async fn filter_form_offers_the_category_properties(pool: PgPool) {
     assert!(!mixed.contains(r#"<option value="VOLKSWAGEN_GOLF" selected>"#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn filters_on_properties(pool: PgPool) {
     let golf = "Volkswagen Golf 7, 2016, naftë";
     let mercedes = "Mercedes-Benz C 220, 2018, automatike";
@@ -1649,7 +1654,7 @@ async fn filters_on_properties(pool: PgPool) {
     assert!(!body.contains("Shtëpi private në shitje në Vlorë"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn chosen_filters_can_be_removed_one_by_one(pool: PgPool) {
     let body = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&city=durres&sort=price_desc").await;
     // Each chip links to the page without its own filter, in a fixed parameter order.
@@ -1681,7 +1686,7 @@ async fn chosen_filters_can_be_removed_one_by_one(pool: PgPool) {
     assert!(filter_form(&words).contains(r#"<input type="hidden" name="q" value="golf">"#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn unknown_filter_values_are_ignored(pool: PgPool) {
     let uri = "/c/makina?vehicle_fuel=NUCLEAR&price_min=abc&sort=sideways&city=atlantis&type=JOB&x=1";
     let response = get(pool, uri).await;
@@ -1691,7 +1696,7 @@ async fn unknown_filter_values_are_ignored(pool: PgPool) {
     assert!(!response.body.contains("filter-chip"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn every_detail_has_its_icon_its_categorys_where_that_says_more(pool: PgPool) {
     // A phone's brand is drawn as a phone, as its category is; a flat's rooms and furnishing say
     // what they are beside their icons, its floor after its name.
@@ -1708,7 +1713,7 @@ async fn every_detail_has_its_icon_its_categorys_where_that_says_more(pool: PgPo
     assert!(details.contains(r#"</svg><span class="attribute-label" aria-hidden="true">Kati</span>4</dd>"#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     let response = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await;
     assert_eq!(response.status, StatusCode::OK);
@@ -1716,8 +1721,11 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     // Each detail a pill, its icon before its value; its name for screen readers and as a
     // tooltip. The options, several, a pill each.
     // Where and when it went up, in bold, over the photo, on one line: published two hours ago,
-    // "Sot" (format::when); its number at the end of the line under the title.
-    assert!(response.body.contains(r#"<p class="listing-meta">Tiranë · <span class="visually-hidden">Publikuar </span><strong>Sot</strong>"#));
+    // "Sot" (format::when), or "Dje" in the first two hours of the day; its number at the end of
+    // the line under the title.
+    let now = time::OffsetDateTime::now_utc();
+    let when = marketplace::format::when(now - time::Duration::hours(2), now);
+    assert!(response.body.contains(&format!(r#"<p class="listing-meta">Tiranë · <span class="visually-hidden">Publikuar </span><strong>{when}</strong>"#)));
     assert!(response.body.contains(r#"<span class="listing-number">Numri i njoftimit: 1001</span></p>"#));
     assert!(!response.body.contains("Nr. 1001"));
     // What kind of listing it is, and its condition, over the price, not among the details.
@@ -1744,7 +1752,7 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(html.contains("photo-1591230740238-e9a71182b67c?auto=format&fit=crop&w=1200"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     let car = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
     // A bubble beside the price, like the price per square metre's, which opens the calculator in a
@@ -1796,7 +1804,7 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     }
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn outdated_slug_redirects_to_the_current_one(pool: PgPool) {
     let response = get(pool, "/listing/1001-old-title").await;
     assert_eq!(response.status, StatusCode::PERMANENT_REDIRECT);
@@ -1806,7 +1814,7 @@ async fn outdated_slug_redirects_to_the_current_one(pool: PgPool) {
     );
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_parent_category_pages_in_order_across_its_subcategories(pool: PgPool) {
     // Thirty more each in Makina and Motoçikleta, both under Automjete, their prices and their
     // distances from Tirana's middle taking turns between the two. A page over Automjete reads
@@ -1858,7 +1866,7 @@ async fn a_parent_category_pages_in_order_across_its_subcategories(pool: PgPool)
     }
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_listing_shows_listings_like_it(pool: PgPool) {
     // Three more Golfs from Besnik at about the Golf's price, Ana's own second Golf, and an Audi
     // from Dritan, all in Makina in Tirana.
@@ -1918,7 +1926,7 @@ async fn a_listing_shows_listings_like_it(pool: PgPool) {
     assert!(!dog.contains("related-heading"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_listing_shows_more_from_its_seller(pool: PgPool) {
     const GOLF: &str = "/listing/1001-volkswagen-golf-7-2016-nafte";
     let number = |slug: &'static str| {
@@ -1983,7 +1991,7 @@ async fn a_listing_shows_more_from_its_seller(pool: PgPool) {
     assert!(!job.contains("seller-heading"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_property_says_its_zone(pool: PgPool) {
     // A seller new today: the fixtures' have posted their five for the day.
     let seller = new_seller(&pool, "+355692223344").await;
@@ -2064,7 +2072,7 @@ async fn a_property_says_its_zone(pool: PgPool) {
     assert_eq!(place, "MUNICIPALITY");
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_property_in_a_zone_compares_its_square_metre_with_the_zones(pool: PgPool) {
     // Eleven flats on sale in Blloku, 100 m² each: ten from 700 to 1 200 € a square metre, and one
     // at 5 000 € as a mistyped price would have it. The zone's average leaves out the cheapest and
@@ -2149,7 +2157,7 @@ async fn a_property_in_a_zone_compares_its_square_metre_with_the_zones(pool: PgP
     assert!(alone.starts_with(r#"<details class="bubble area-price" data-controller="dropdown">"#), "{alone}");
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_listing_form_asks_for_the_writing_first_and_offers_ai_when_it_is_set_up(pool: PgPool) {
     // The title, the description and the photos first, then the category, the price and the town.
     let form = html(pool.clone(), "/shto").await;
@@ -2176,7 +2184,7 @@ async fn the_listing_form_asks_for_the_writing_first_and_offers_ai_when_it_is_se
     assert!(edit.contains(r#"id="category""#) && !edit.contains("Plotëso pjesën tjetër me AI"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn ai_fills_in_the_rest_of_the_form_from_the_writing_and_the_photos(pool: PgPool) {
     // The AI's answer, with what the form can't take mixed in: a colour and an option it doesn't
     // list, a flat's area, and a zone, which a car doesn't say.
@@ -2240,7 +2248,7 @@ async fn ai_fills_in_the_rest_of_the_form_from_the_writing_and_the_photos(pool: 
     assert!(content[1]["text"].as_str().unwrap().starts_with("Titulli: Volkswagen Golf 7, 2016, naftë"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn ai_fill_wants_the_writing_first_has_limits_and_says_when_it_fails(pool: PgPool) {
     let (url, asked) = ai_stand_in(Some(json!({"category": "makina"}))).await;
     let words = [("title", "Volkswagen Golf 7, 2016"), ("description", "Makina në gjendje shumë të mirë.")];
@@ -2266,7 +2274,7 @@ async fn ai_fill_wants_the_writing_first_has_limits_and_says_when_it_fails(pool:
     assert!(answer["message"].as_str().unwrap().contains("Plotëso vetë"), "{answer}");
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn electronics_subcategories_have_properties_of_their_own(pool: PgPool) {
     // A phone's form: phones' brands (Huawei, not Canon) in their own order, the models under
     // them, storage from 32 GB, RAM, battery, colour, features, a warranty and what comes with it;
@@ -2379,7 +2387,7 @@ async fn form_fields(pool: &PgPool, category: &str) -> String {
     get(pool.clone(), &format!("/shto/fushat?category={category}")).await.body
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn each_kind_of_thing_asks_for_what_fits_it(pool: PgPool) {
     let has = |fields: &str, name: &str| fields.contains(&format!(r#"name="prop_{name}""#));
     // A flat: its rooms and bathrooms, floor, condition, heating, and what a tenant asks. Central
@@ -2473,7 +2481,7 @@ async fn each_kind_of_thing_asks_for_what_fits_it(pool: PgPool) {
     }
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_site_is_called_pluribus(pool: PgPool) {
     // The logo is the welcome page's creature, moving, and the name in lowercase, in a typeface of
     // its own that comes with the page; it stays from page to page. The pages' titles and the
@@ -2491,14 +2499,14 @@ async fn the_site_is_called_pluribus(pool: PgPool) {
     assert!(listing.contains(" | Pluribus</title>") && !listing.contains("Marketplace"), "{listing}");
 }
 
-#[sqlx::test]
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn unknown_pages_are_404(pool: PgPool) {
     for uri in ["/listing/999999-nothing", "/c/does-not-exist", "/nowhere"] {
         assert_eq!(get(pool.clone(), uri).await.status, StatusCode::NOT_FOUND, "{uri}");
     }
 }
 
-#[sqlx::test]
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn the_footer_leads_to_the_pages_about_the_site(pool: PgPool) {
     // Every page's footer links the five; each is a page of its own, with its description and
     // canonical address for search engines, in the pages' sitemap, and open to crawlers.
@@ -2527,7 +2535,7 @@ async fn the_footer_leads_to_the_pages_about_the_site(pool: PgPool) {
     assert!(!pages.iter().any(|(path, ..)| robots.contains(&format!("Disallow: {path}"))));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn next_page_loads_as_a_turbo_frame(pool: PgPool) {
     sqlx::query(
         "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title,
@@ -2558,7 +2566,7 @@ async fn next_page_loads_as_a_turbo_frame(pool: PgPool) {
     assert!(!next.body.contains("Shfaq më shumë"));
 }
 
-#[sqlx::test]
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn static_files_have_cache_headers(pool: PgPool) {
     let cache_control = |uri: &'static str| {
         let pool = pool.clone();
@@ -2611,7 +2619,7 @@ async fn static_files_have_cache_headers(pool: PgPool) {
     }
 }
 
-#[sqlx::test]
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPool) {
     let version = marketplace::web::asset_version();
     assert_eq!(version.len(), 8);
@@ -2646,7 +2654,7 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     assert!(css.body.contains(".results-meta"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn revealing_a_phone_returns_a_turbo_stream_and_counts_it(pool: PgPool) {
     let request = Request::post("/listing/1001/phone").body(Body::empty()).unwrap();
     let response = send(pool.clone(), request).await;
@@ -2672,7 +2680,7 @@ async fn revealing_a_phone_returns_a_turbo_stream_and_counts_it(pool: PgPool) {
     assert_eq!(reveals, 1);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn every_listing_offers_its_sellers_phone(pool: PgPool) {
     let listings: Vec<(i64, String)> =
         sqlx::query_as("SELECT public_no, slug FROM listings ORDER BY public_no")
@@ -2710,7 +2718,7 @@ async fn every_listing_offers_its_sellers_phone(pool: PgPool) {
     assert_eq!(send(pool, request).await.status, StatusCode::NOT_FOUND);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn signing_in_takes_a_code_sent_to_the_phone(pool: PgPool) {
     // Not signed in, "Llogaria" asks for a name and a phone number or an e-mail address.
     let page = get(pool.clone(), "/llogaria").await;
@@ -2771,7 +2779,7 @@ async fn signing_in_takes_a_code_sent_to_the_phone(pool: PgPool) {
     assert!(get_with_cookie(pool, "/llogaria", &session).await.body.contains("Krijo një llogari"));
 }
 
-#[sqlx::test]
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn sign_in_codes_are_limited(pool: PgPool) {
     let codes = |pool: PgPool| async move {
         sqlx::query_scalar::<_, i64>("SELECT count(*) FROM login_codes").fetch_one(&pool).await.unwrap()
@@ -2851,7 +2859,7 @@ fn listing_fields<'a>(replace: (&'a str, &'a str), started: &'a str) -> Vec<(&'a
     fields
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_signed_in_seller_posts_a_listing(pool: PgPool) {
     let started = started();
     // Not signed in, a listing needs a phone number or an e-mail address (see
@@ -2887,7 +2895,7 @@ async fn a_signed_in_seller_posts_a_listing(pool: PgPool) {
     assert_eq!((status.as_str(), on_map), ("ACTIVE", true));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn listing_forms_are_checked(pool: PgPool) {
     let started = started();
     // The fixture sellers have posted more than five listings today already.
@@ -2931,7 +2939,7 @@ async fn listing_forms_are_checked(pool: PgPool) {
     assert!(sixth.body.contains("Ke publikuar 5 njoftime sot."));
 }
 
-#[sqlx::test]
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn sellers_who_sign_in_by_email_get_an_email_button(pool: PgPool) {
     let id: String = sqlx::query_scalar(
         "INSERT INTO users (auth_subject, email, display_name)
@@ -2952,7 +2960,7 @@ async fn sellers_who_sign_in_by_email_get_an_email_button(pool: PgPool) {
     assert!(reveal.body.contains("</svg>besa@example.com</a>"));
 }
 
-#[sqlx::test]
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn forms_posted_from_other_sites_are_refused(pool: PgPool) {
     let post = |origin: &'static str| {
         let pool = pool.clone();
@@ -2977,7 +2985,7 @@ async fn post_listing(pool: &PgPool, seller: &str) -> String {
     url.trim_start_matches("/listing/").split('-').next().unwrap().to_string()
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn sellers_edit_their_own_listings(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let no = post_listing(&pool, &ana).await;
@@ -3033,7 +3041,7 @@ async fn sellers_edit_their_own_listings(pool: PgPool) {
     assert!(mine.contains(&format!(r#"href="/listing/{no}/ndrysho""#)));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn nobody_else_can_edit_a_listing(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let besa = new_seller(&pool, "+355691112244").await;
@@ -3067,7 +3075,7 @@ async fn nobody_else_can_edit_a_listing(pool: PgPool) {
     assert!(!mine.contains(&edit));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     // Automjete lists its four subcategories, each with its icon; the kinds of parts sit under the
     // fourth.
@@ -3137,7 +3145,7 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     assert!(search.contains("<option value=\"gps-dhe-navigatore\">\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}GPS dhe navigatorë</option>"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_listing_form_offers_categories_at_every_depth(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let form = get_with_cookie(pool.clone(), "/shto", &ana).await.body;
@@ -3177,7 +3185,7 @@ async fn post_part(pool: &PgPool, seller: &str, title: &str, fits: &[(&str, &str
     posted.location.expect("posted")
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
     // The fields, under the parts' own names for them; none required.
     let fields = get(pool.clone(), "/shto/fushat?category=gps-dhe-navigatore").await.body;
@@ -3258,7 +3266,7 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
     assert!(refused.body.contains("Ky model nuk i përket markës së zgjedhur."));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let newer = post_part(&pool, &ana, "GPS Golf 7", &[
@@ -3334,7 +3342,7 @@ async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
     assert!(cars.contains(r#"name="vehicle_year_min""#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn listings_get_photos(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let started = started();
@@ -3436,7 +3444,7 @@ async fn listings_get_photos(pool: PgPool) {
     assert_eq!(get(pool, "/media/../.env").await.status, StatusCode::NOT_FOUND);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn sellers_pause_resume_and_delete_their_listings(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let besa = new_seller(&pool, "+355691112244").await;
@@ -3490,7 +3498,7 @@ async fn sellers_pause_resume_and_delete_their_listings(pool: PgPool) {
     assert!(by_seller);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn listings_go_into_subcategories(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     // The form groups subcategories under their category.
@@ -3552,7 +3560,7 @@ fn car_fields<'a>(replace: (&'a str, &'a str), started: &'a str) -> Vec<(&'a str
     fields
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_car_is_posted_with_its_make_model_and_year(pool: PgPool) {
     // The fields come with the category: the frame the form reloads when it changes.
     let frame = get(pool.clone(), "/shto/fushat?category=makina").await.body;
@@ -3617,7 +3625,7 @@ async fn a_car_is_posted_with_its_make_model_and_year(pool: PgPool) {
     assert!(!get(pool, "/c/makina?vehicle_fuel=DIESEL").await.body.contains(&url));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_cars_title_is_made_from_what_it_is(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let started = started();
@@ -3667,7 +3675,7 @@ async fn a_cars_title_is_made_from_what_it_is(pool: PgPool) {
     assert!(page.contains("<h1>Navigator origjinal për Golf</h1>") && !page.contains("description-heading"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn car_properties_are_checked(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let started = started();
@@ -3703,7 +3711,7 @@ fn typed_car<'a>(make: &'a str, model: &'a str, started: &'a str) -> Vec<(&'a st
     fields
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn sellers_type_a_make_or_model_the_list_lacks(pool: PgPool) {
     // The make and model lists end with "Tjetër", which opens a box to type in.
     let frame = get(pool.clone(), "/shto/fushat?category=makina").await.body;
@@ -3801,7 +3809,7 @@ async fn option_active(pool: &PgPool, label: &str) -> Option<bool> {
         .unwrap()
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn moderators_approve_or_merge_what_sellers_typed(pool: PgPool) {
     let started = started();
     let ana = new_seller(&pool, "+355691112233").await;
@@ -3910,7 +3918,7 @@ async fn moderators_approve_or_merge_what_sellers_typed(pool: PgPool) {
     assert!(mine.contains("Për miratim (1)"));
 }
 
-#[sqlx::test]
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn the_makes_and_models_have_the_codes_typing_them_gives(pool: PgPool) {
     // As the posting form codes a typed option (properties.rs), a model's after its make's.
     let code = |name: &str| marketplace::format::slug(name).to_uppercase().replace('-', "_");
@@ -3934,7 +3942,7 @@ async fn the_makes_and_models_have_the_codes_typing_them_gives(pool: PgPool) {
     }
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     // Each select comes inside the picker (picker_controller.js), which keeps it for the form and
     // offers its options in a list in the page instead of the phone's own picker; a category's
@@ -3964,7 +3972,7 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     }
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
     // Not signed in, the form asks for a phone number or an e-mail address as well, and no code.
     let form = get(pool.clone(), "/shto").await.body;
@@ -4053,7 +4061,7 @@ async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
     }
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn posting_without_signing_in_is_limited_per_network(pool: PgPool) {
     // Twenty an hour from one network (IP address), each under a new number; the next waits.
     let started = started();
@@ -4088,7 +4096,7 @@ async fn posting_without_signing_in_is_limited_per_network(pool: PgPool) {
     assert_eq!(signed_in.status, StatusCode::SEE_OTHER, "{}", signed_in.body);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(pool: PgPool) {
     // A private seller: Ana, with the five fixture listings she sells.
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
@@ -4146,7 +4154,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     assert_eq!(get(pool, ana).await.status, StatusCode::NOT_FOUND);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_category_page_heading_switches_category(pool: PgPool) {
     let page = html(pool.clone(), "/c/prona?city=durres&q=shtepi").await;
     assert!(page.contains(r#"<details class="category-switch" data-controller="disclosure" data-action="turbo:before-morph-attribute->disclosure#keep">"#));
@@ -4162,7 +4170,7 @@ async fn a_category_page_heading_switches_category(pool: PgPool) {
     assert!(!get(pool, "/search?q=golf").await.body.contains("category-switch"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
     // Makina: on its line, small, the way up to Automjete, then Makina itself, filled, as the
     // heading, which shows the other categories at its level as pills after it, not itself; no
@@ -4215,7 +4223,7 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
     assert!(search.contains("<h1>Rezultatet për „golf“</h1>") && !search.contains("category-pills") && !search.contains("BreadcrumbList"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_profile_searches_its_sellers_listings(pool: PgPool) {
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
     let profile = get(pool.clone(), ana).await.body;
@@ -4242,7 +4250,7 @@ fn seen(no: i64, ip: &str, agent: &str) -> Request<Body> {
         .unwrap()
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     // Seen by nobody yet: no row.
     assert!(!html(pool.clone(), "/").await.contains("Më të klikuarat"));
@@ -4294,7 +4302,7 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     assert!(unseen.contains("listing-meta") && !unseen.contains("listing-views"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: PgPool) {
     // The apartment and the house in their own subcategories of Prona, the iPhone among the phones.
     for (slug, no) in [("apartamente", 1003), ("vila-dhe-shtepi", 1004), ("telefona", 1005)] {
@@ -4384,7 +4392,7 @@ fn locations(xml: &str) -> Vec<String> {
     xml.split("<loc>").skip(1).map(|rest| rest[..rest.find("</loc>").unwrap()].to_string()).collect()
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_shared_listing_shows_its_title_price_and_photo(pool: PgPool) {
     let url = format!("{}/listing/1002-mercedes-benz-c-220-2018-automatike", site());
     let page = send(pool.clone(), from_the_site("/listing/1002-mercedes-benz-c-220-2018-automatike")).await.body.replace("&#38;", "&");
@@ -4434,7 +4442,7 @@ async fn a_shared_listing_shows_its_title_price_and_photo(pool: PgPool) {
     assert!(json_ld(&flat).is_none());
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_category_is_found_by_its_filters_and_a_search_not_at_all(pool: PgPool) {
     let site = site();
     // A category's page has one address, however it is ordered, and its first listing's photo.
@@ -4473,7 +4481,7 @@ async fn a_category_is_found_by_its_filters_and_a_search_not_at_all(pool: PgPool
     assert!(meta_tag(&account, "og:title").is_none());
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn search_engines_find_the_listings_and_the_categories_by_the_sitemaps(pool: PgPool) {
     let site = site();
     // robots.txt keeps crawlers out of a visitor's own pages, and says where the sitemaps are.
@@ -4508,7 +4516,7 @@ async fn search_engines_find_the_listings_and_the_categories_by_the_sitemaps(poo
     assert_eq!(get(pool, "/sitemaps/te-tjera.xml").await.status, StatusCode::NOT_FOUND);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_seller_sees_what_each_listing_drew(pool: PgPool) {
     // Ana's Golf, seen 3 times today and 1 200 times a fortnight ago, its number shown twice today
     // and once then; her iPhone seen once today; Besnik's flat seen 50 times today.
@@ -4581,7 +4589,7 @@ fn card_of(html: &str, number: i64) -> String {
     rest[..rest.find("</article>").unwrap()].to_string()
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_card_carries_the_start_of_its_description(pool: PgPool) {
     // The Golf's whole description, short enough, under its title, for the list to show.
     let golf = card_of(&html(pool.clone(), "/c/makina").await, 1001);
@@ -4614,7 +4622,7 @@ async fn set_price(pool: &PgPool, number: i64, amount: &str) {
         .unwrap();
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
     // The Golf, from 9 500 € to 9 000 €: 5% less, after its price with what it was struck
     // through, on its card as on its page.
@@ -4653,7 +4661,7 @@ async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
     assert!(!html(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await.contains("price-was"));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn those_who_keep_a_listing_hear_when_its_price_drops(pool: PgPool) {
     // Ana's phone, at 32 000 Lekë, kept by Besnik, and by Dritan, who turned price drop alerts off.
     let ana = new_seller(&pool, "+355691112233").await;
@@ -4759,7 +4767,7 @@ async fn write(pool: &PgPool, uri: &str, body: &str, cookie: &str) -> TestRespon
     post_form(pool.clone(), uri, &[("body", body)], Some(cookie)).await
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_buyer_writes_to_a_seller_who_answers(pool: PgPool) {
     let ana = session_for(&pool, ANA_ID).await;
     let buyer = new_seller(&pool, "+355691112233").await;
@@ -4832,7 +4840,7 @@ async fn a_buyer_writes_to_a_seller_who_answers(pool: PgPool) {
     assert_eq!(get_with_cookie(pool.clone(), "/mesazhet/jo-nje-bisede", &besnik).await.status, StatusCode::NOT_FOUND);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn writing_to_a_seller_takes_signing_in_first(pool: PgPool) {
     // The page to write on sends to sign in, and keeps itself for after (saved::after_sign_in).
     let page = get(pool.clone(), "/listing/1001/mesazh").await;
@@ -4845,7 +4853,7 @@ async fn writing_to_a_seller_takes_signing_in_first(pool: PgPool) {
     assert!(get(pool.clone(), "/").await.body.contains(r#"<a class="icon-button inbox-button" href="/mesazhet""#));
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn until_the_seller_answers_a_buyer_sends_three_messages_and_no_links(pool: PgPool) {
     let ana = session_for(&pool, ANA_ID).await;
     let buyer = new_seller(&pool, "+355691112233").await;
@@ -4869,7 +4877,7 @@ async fn until_the_seller_answers_a_buyer_sends_three_messages_and_no_links(pool
     assert_eq!(write(&pool, &url, "Alo?", &buyer).await.status, StatusCode::SEE_OTHER);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn one_account_writes_to_a_few_new_sellers_an_hour_and_a_day(pool: PgPool) {
     let buyer = new_seller(&pool, "+355691112233").await;
     let started = |count: i32, ago: &'static str| {
@@ -4904,7 +4912,7 @@ async fn one_account_writes_to_a_few_new_sellers_an_hour_and_a_day(pool: PgPool)
     assert_eq!(write(&pool, "/listing/1001/mesazh", "Përshëndetje", &buyer).await.status, StatusCode::SEE_OTHER);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_seller_blocks_a_buyer_and_lets_him_write_again(pool: PgPool) {
     let besnik = session_for(&pool, BESNIK_ID).await;
     let buyer = new_seller(&pool, "+355691112233").await;
@@ -4923,7 +4931,7 @@ async fn a_seller_blocks_a_buyer_and_lets_him_write_again(pool: PgPool) {
     assert_eq!(write(&pool, &url, "Alo?", &buyer).await.status, StatusCode::SEE_OTHER);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_business_listing_reaches_whoever_posted_it(pool: PgPool) {
     let dritan = session_for(&pool, DRITAN_ID).await;
     let buyer = new_seller(&pool, "+355691112233").await;
@@ -4950,7 +4958,7 @@ async fn sign_in_with_code(pool: &PgPool, typed: &str, contact: &str) -> String 
     format!("session={}", signed.cookie("session").expect("signed in"))
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_reported_listing_comes_off_the_site_until_a_moderator_decides(pool: PgPool) {
     let golf = "/listing/1001-volkswagen-golf-7-2016-nafte";
     // Anyone may report a listing from its page. Someone not signed in is asked to sign in first,
@@ -5041,7 +5049,7 @@ async fn a_reported_listing_comes_off_the_site_until_a_moderator_decides(pool: P
     assert_eq!(post_form(pool.clone(), "/moderim/njoftim/1001/hiq", &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_blocked_sellers_listings_leave_the_pages_of_whoever_blocked_them(pool: PgPool) {
     let golf = "/listing/1001-volkswagen-golf-7-2016-nafte";
     let mercedes = "/listing/1002-mercedes-benz-c-220-2018-automatike";
@@ -5083,7 +5091,7 @@ async fn a_blocked_sellers_listings_leave_the_pages_of_whoever_blocked_them(pool
     assert_eq!(post_form(pool.clone(), "/listing/1001/blloko", &[("blloko", "1")], Some(&ana)).await.status, StatusCode::NOT_FOUND);
 }
 
-#[sqlx::test(fixtures("listings"))]
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_number_a_seller_signed_in_with_shows_as_verified(pool: PgPool) {
     let golf = "/listing/1001-volkswagen-golf-7-2016-nafte";
     // Nobody signed in with a code yet: nothing is verified.
@@ -5117,7 +5125,7 @@ async fn the_number_a_seller_signed_in_with_shows_as_verified(pool: PgPool) {
     assert!(!html(pool.clone(), golf).await.contains("verifikuar"));
 }
 
-#[sqlx::test]
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn the_scripts_can_tell_whether_someone_is_signed_in(pool: PgPool) {
     // The session cookie is out of scripts' reach; a cookie beside it says there is one, so a page
     // for someone not signed in doesn't ask for their counts. Set when a session comes without it,
