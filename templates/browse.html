@@ -255,7 +255,7 @@
   {%- endif %}
 
   <section class="results" aria-labelledby="results-heading">
-    {#- The listings' heading, with the count, the order and the view on its right. On a category
+    {#- The listings' heading, with the count, the order and the view under it. On a category
         page, to the eye, under "Më të klikuarat" where it is: the order, the category and the
         kind of listing when one is chosen ("Njoftimet më të reja në Makina në shitje",
         browse.rs). Elsewhere the order alone, for screen readers ("Më të rejat"): the order's
@@ -266,7 +266,7 @@
     {%- else %}
     <h2 class="results-heading visually-hidden" id="results-heading">{{ filters.sort_label() }}</h2>
     {%- endif %}
-    {#- On the heading's right, smaller pills: how many, the order and how the cards show. The
+    {#- Under the heading, smaller pills: how many, the order and how the cards show. The
         order says the one now ("Më të rejat"), and "Rendit" with it to screen readers and in its
         tooltip; it opens the orders in a menu under it, like the in-page dropdowns', the one now ticked; a tap
         outside or Escape closes it (dropdown_controller.js), and it is one of those open one at a
