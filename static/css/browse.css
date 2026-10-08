@@ -510,27 +510,29 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 /* "Shfaq N njoftime" brings the results' heading to the top, clear of the sticky header. */
 .results-heading { scroll-margin-top: 5rem; }
 
-/* A laptop: the filters are a sidebar at the screen's left edge, always there, from under the
-   header to the bottom, outside the page's box (--sidebar wide, a margin either side), which keeps
-   its width: the page takes what is left of the screen, at most its usual 1100px, in the middle of
-   it, so on a wide screen the sidebar costs the page nothing. The results follow the filters as
-   they change; the sidebar stays as the page scrolls, and scrolls inside if it needs more room.
+/* A laptop: the filters are a sidebar beside the page's box, always there, from under the header
+   to the bottom, outside the box, which keeps its width: the sidebar (--sidebar wide), a gap and
+   the page, at most its usual 1100px, stand together in the middle of the screen (--left from its
+   edge, a margin at least), so on a wide screen the sidebar costs the page nothing. The results
+   follow the filters as they change; the sidebar stays as the page scrolls, and scrolls inside if
+   it needs more room.
    Its form in one column, the icons three to a line. No button opens or closes it; its foot has
    "Pastro" only, when a filter is on, the results being there beside it. */
 @media (min-width: 1024px) {
   main.container:has(> .browse) {
     --sidebar: 19rem;
-    --beside: calc(100vw - var(--sidebar) - 3rem); /* the room beside the sidebar and the margins */
+    --gap: 2rem;
+    --left: calc(1rem + max(0px, (100% - 2rem - var(--sidebar) - var(--gap) - 1100px) / 2));
     max-width: none;
     margin: 0;
-    padding-left: calc(var(--sidebar) + 2rem + max(0px, (var(--beside) - 1100px) / 2));
-    padding-right: calc(1rem + max(0px, (var(--beside) - 1100px) / 2));
+    padding-left: calc(var(--left) + var(--sidebar) + var(--gap));
+    padding-right: var(--left);
   }
   .browse > .filters {
     position: fixed;
     top: 4.75rem;
     bottom: 1rem;
-    left: 1rem;
+    left: var(--left, 1rem);
     right: auto;
     z-index: auto;
     display: flex;
