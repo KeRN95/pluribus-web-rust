@@ -5,9 +5,19 @@ use std::collections::HashMap;
 
 use rust_decimal::Decimal;
 use serde::Deserialize;
-use sqlx::{PgPool, Postgres, QueryBuilder, types::Json};
+use sqlx::{PgPool, Postgres, QueryBuilder, postgres::PgConnectOptions, types::Json};
 use time::OffsetDateTime;
 use uuid::Uuid;
+
+/// The site's connections, each planning every query for the values it runs with
+/// (plan_cache_mode = force_custom_plan). Once a connection has run a prepared query five times,
+/// Postgres may plan it once for any values (a generic plan), and a filter's values match a
+/// handful of listings or tens of thousands: a plan made for none of them took the cars filtered
+/// to BMW from 16 ms to 90 from their sixth time on a connection. Planning every time costs a
+/// fraction of a millisecond a query.
+pub fn plan_for_values(options: PgConnectOptions) -> PgConnectOptions {
+    options.options([("plan_cache_mode", "force_custom_plan")])
+}
 
 /// Listings per page. Pages fetch one extra row to find out whether another page follows.
 pub const PAGE_SIZE: i64 = 24;
@@ -79,7 +89,18 @@ pub use typed_in::*;
 
 #[cfg(test)]
 mod tests {
+    use sqlx::ConnectOptions;
+
     use super::*;
+
+    /// A connection opened as the site opens its own plans every query for its values.
+    #[sqlx::test]
+    async fn the_sites_connections_plan_queries_for_their_values(pool: PgPool) -> sqlx::Result<()> {
+        let mut connection = plan_for_values((*pool.connect_options()).clone()).connect().await?;
+        let mode: String = sqlx::query_scalar("SHOW plan_cache_mode").fetch_one(&mut connection).await?;
+        assert_eq!(mode, "force_custom_plan");
+        Ok(())
+    }
 
     #[test]
     fn cursors_survive_a_round_trip() {

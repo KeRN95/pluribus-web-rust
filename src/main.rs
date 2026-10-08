@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, time::Duration};
 
 use anyhow::Context;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use tracing_subscriber::EnvFilter;
 
 /// How often the words search corrects typos from (db::refresh_search_words) and what a square
@@ -20,9 +20,10 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL is not set")?;
+    let options: PgConnectOptions = database_url.parse().context("DATABASE_URL is not a PostgreSQL address")?;
     let db = PgPoolOptions::new()
         .max_connections(10)
-        .connect(&database_url)
+        .connect_with(marketplace::db::plan_for_values(options))
         .await
         .context("could not connect to PostgreSQL")?;
 
