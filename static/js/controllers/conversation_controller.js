@@ -40,12 +40,21 @@ export default class extends Controller {
     return this.threadTarget.lastElementChild?.dataset.id;
   }
 
+  // What scrolls the messages: the page, or, in a listing's message sheet, the sheet's body.
+  get scroller() {
+    return this.element.closest("[data-scroll-root]");
+  }
+
   atEnd() {
+    const box = this.scroller;
+    if (box) return box.scrollTop + box.clientHeight >= box.scrollHeight - 120;
     return innerHeight + scrollY >= document.documentElement.scrollHeight - 120;
   }
 
   toEnd() {
-    scrollTo({ top: document.documentElement.scrollHeight });
+    const box = this.scroller;
+    if (box) box.scrollTop = box.scrollHeight;
+    else scrollTo({ top: document.documentElement.scrollHeight });
   }
 
   async poll() {

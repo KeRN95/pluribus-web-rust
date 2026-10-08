@@ -165,3 +165,56 @@
   cursor: pointer;
 }
 .link-button:hover { color: var(--danger); }
+
+/* A listing's message sheet (listing.html, message_sheet_controller.js): from under the message
+   button to the screen's bottom (--top), across it, on the page's own colour like the conversation
+   page, its top corners rounded and a shadow over the page above. The conversation scrolls inside
+   it, as wide as on its own page, with "Mbyll" at its right edge and its box to write in at the
+   sheet's foot; its way back to the inbox stays on its own page. The page under it holds still while it is open. */
+.listing-page { display: contents; }
+.message-sheet {
+  position: fixed;
+  inset: var(--top, 4rem) 0 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  border-radius: 18px 18px 0 0;
+  background: var(--bg);
+  box-shadow: 0 -10px 30px rgb(0 0 0 / 14%);
+  animation: sheet-in .2s ease-out;
+}
+.message-sheet[hidden] { display: none; }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(24px); } }
+@media (prefers-reduced-motion: reduce) {
+  .message-sheet { animation: none; }
+}
+.sheet-close {
+  position: absolute;
+  top: .6rem;
+  right: max(.75rem, calc((100% - 760px) / 2 + .25rem));
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--menu-border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.sheet-close:hover { background: var(--surface-muted); }
+.message-sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 1rem; }
+/* The conversation fills the sheet's height, its messages taking what is spare, so that the box to
+   write in stands at the sheet's foot even before there are any. */
+.message-sheet-body > turbo-frame { display: flex; flex-direction: column; min-height: 100%; }
+.message-sheet-body .conversation { display: flex; flex: 1; flex-direction: column; width: 100%; margin-inline: auto; }
+.message-sheet .thread { flex: 1; }
+.message-sheet .conversation-block { margin: .25rem 0 .75rem; }
+.message-sheet .conversation-back { display: none; }
+.message-sheet .conversation-head { margin-top: .9rem; padding-right: 2.75rem; }
+.message-sheet-wait { margin: 1.25rem 0; color: var(--muted); }
+html.sheet-open { overflow: hidden; }

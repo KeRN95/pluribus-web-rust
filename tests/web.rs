@@ -4760,9 +4760,20 @@ async fn a_buyer_writes_to_a_seller_who_answers(pool: PgPool) {
     // Others have the listing's button to write to its seller; she doesn't.
     assert!(get_with_cookie(pool.clone(), listing, &buyer).await.body.contains(r#"href="/listing/1001/mesazh""#));
     assert!(!get_with_cookie(pool.clone(), listing, &ana).await.body.contains("/listing/1001/mesazh"));
-    // The page to write on: to whom, about what, and quick messages to start with.
+    // Signed in, both buttons open the conversation in the listing's sheet, in its frame; signed
+    // out, the button leads to the page, which asks to sign in first, and there is no sheet.
+    let theirs = get_with_cookie(pool.clone(), listing, &buyer).await.body;
+    let to_sheet = r#"href="/listing/1001/mesazh" aria-label="Shkruaji shitësit" title="Shkruaji shitësit" data-turbo-frame="conversation" data-turbo-prefetch="false" data-action="message-sheet#open">"#;
+    assert_eq!(theirs.matches(to_sheet).count(), 2, "{theirs}");
+    assert!(theirs.contains(r#"<div class="message-sheet" id="message-sheet" role="dialog" aria-modal="true""#));
+    assert!(theirs.contains(r#"<turbo-frame id="conversation" data-message-sheet-target="frame""#));
+    let anyone = get(pool.clone(), listing).await.body;
+    assert!(anyone.contains(r#"href="/listing/1001/mesazh""#) && !anyone.contains("data-turbo-frame=\"conversation\"") && !anyone.contains(r#"id="message-sheet""#));
+    // The page to write on: to whom, about what, and quick messages to start with; in the frame
+    // of the same name, for the sheet to take.
     let page = get_with_cookie(pool.clone(), "/listing/1001/mesazh", &buyer).await;
     assert_eq!(page.status, StatusCode::OK);
+    assert!(page.body.contains(r#"<turbo-frame id="conversation" data-turbo-action="advance">"#));
     assert!(page.body.contains("Ana") && page.body.contains("Volkswagen Golf") && page.body.contains("Cili është çmimi i fundit?"));
     assert_eq!(get_with_cookie(pool.clone(), "/listing/1001/mesazh", &ana).await.location.as_deref(), Some(listing));
 

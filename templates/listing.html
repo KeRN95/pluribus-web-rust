@@ -5,6 +5,11 @@
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
 {% block content %}
+{%- let sheet = signed_in && !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}
+{#- The page, in a box of no size of its own (listing.css), for the message sheet's controller to
+    hear both of its buttons, under the price and in the seller's card. -#}
+<div class="listing-page" data-controller="message-sheet"
+     data-action="keydown.esc@document->message-sheet#close turbo:before-cache@document->message-sheet#close">
 {#- Shown to anyone but its seller, the page says so (application.js), for "Më të klikuarat". -#}
 <article class="listing"{% if !own && listing.on_site() %} data-seen-url="/listing/{{ listing.public_no }}/pare"{% endif %}>
   {%- if posted %}
@@ -167,8 +172,9 @@
     {% endif %}
     {%- if !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}
     {#- A speech bubble in a coral circle beside the phone: a message to the seller, which takes
-        signing in first (messages.rs). -#}
-    <a class="button reveal-button" href="/listing/{{ listing.public_no }}/mesazh" aria-label="Shkruaji shitësit" title="Shkruaji shitësit">
+        signing in first (messages.rs); signed in, the conversation opens in the sheet under it. -#}
+    <a class="button reveal-button" href="/listing/{{ listing.public_no }}/mesazh" aria-label="Shkruaji shitësit" title="Shkruaji shitësit"
+       {%- if sheet %} data-turbo-frame="conversation" data-turbo-prefetch="false" data-action="message-sheet#open"{% endif %}>
       <svg class="contact-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
     </a>
     {%- endif %}
@@ -287,7 +293,8 @@
       </form>
       {%- endif %}
       {%- if !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}
-      <a class="button reveal-button small" href="/listing/{{ listing.public_no }}/mesazh" aria-label="Shkruaji shitësit" title="Shkruaji shitësit">
+      <a class="button reveal-button small" href="/listing/{{ listing.public_no }}/mesazh" aria-label="Shkruaji shitësit" title="Shkruaji shitësit"
+         {%- if sheet %} data-turbo-frame="conversation" data-turbo-prefetch="false" data-action="message-sheet#open"{% endif %}>
         <svg class="contact-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
       </a>
       {%- endif %}
@@ -324,4 +331,24 @@
   {% include "listing_grid.html" %}
 </section>
 {%- endif %}
+{%- if sheet %}
+{#- The message sheet: a message button opens it under itself, the page scrolled to bring the
+    button near the top, and it takes the rest of the screen below (message_sheet_controller.js).
+    The button loads the conversation into its frame: the page that starts one, or the one
+    already going on (conversation.html, whose frame has the same name), and writing, sending
+    and blocking go on in it without leaving the listing; its messages scroll inside it. -#}
+<div class="message-sheet" id="message-sheet" role="dialog" aria-modal="true" aria-label="Mesazh për shitësin" hidden
+     data-message-sheet-target="sheet">
+  <button type="button" class="sheet-close" aria-label="Mbyll" title="Mbyll" data-action="message-sheet#close">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+  <div class="message-sheet-body" data-scroll-root data-message-sheet-target="body">
+    <turbo-frame id="conversation" data-message-sheet-target="frame"
+                 data-action="turbo:frame-missing->message-sheet#missing turbo:frame-load->message-sheet#loaded">
+      <p class="message-sheet-wait">Po hapet biseda…</p>
+    </turbo-frame>
+  </div>
+</div>
+{%- endif %}
+</div>
 {% endblock %}
