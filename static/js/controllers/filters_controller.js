@@ -4,8 +4,8 @@ import { locate } from "controllers/locate.js";
 import { forgetTown } from "controllers/place_controller.js";
 
 // The filter panel: a card the "Filtrat" button opens over the results and closes ("Mbyll", or the
-// button at its foot that shows the results); on a wide screen a column beside the results, always
-// there (WIDE, browse.css). Its options apply by themselves, as soon as one changes (a box ticked,
+// button at its foot that shows the results), on every screen. Its options apply by themselves, as
+// soon as one changes (a box ticked,
 // a choice picked, a typed field left or entered, a slider let go) and as the card closes, with
 // whatever was typed but not left: the page refreshes in place for them (apply, refresh.js), the
 // card left as the visitor has it (keep), and the results, their count and the chips follow under
@@ -16,7 +16,6 @@ import { forgetTown } from "controllers/place_controller.js";
 // time: opening it says so (section:open), and another's opening folds it (foldFor). Being the
 // browse page's own, it also folds whatever is open on Escape, a tap on the dim under it (foldAll)
 // or a tap on the row beside its buttons (foldFromRow), and fits what opens into the screen (fit).
-const WIDE = "(min-width: 1024px)";
 
 export default class extends Controller {
   static targets = ["panel", "form", "toggle", "tools", "scrim", "show", "placeStatus"];
@@ -180,12 +179,10 @@ export default class extends Controller {
 
   // While the page morphs into the refreshed one: an open card stays open, its button saying so,
   // and its form as the visitor has it, while its foot follows the page ("Pastro", once a filter
-  // is on); a column beside the results follows the page, form and all (the map's point
-  // included), but for the field in use; "Më shumë filtra" stays open or folded as it is; the page
-  // keeps its measure (--top); and a field in use elsewhere, the map's distance as it is dragged,
-  // keeps its value.
+  // is on); "Më shumë filtra" stays open or folded as it is; the page keeps its measure (--top);
+  // and a field in use elsewhere, the map's distance as it is dragged, keeps its value.
   keep(event) {
-    if (event.target === this.formTarget && this.isOpen && !matchMedia(WIDE).matches) event.preventDefault();
+    if (event.target === this.formTarget && this.isOpen) event.preventDefault();
   }
 
   keepAttribute(event) {

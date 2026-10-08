@@ -127,8 +127,8 @@
   animation: menu-in .16s ease-out;
 }
 .map-card-body { overflow-y: auto; scrollbar-width: thin; }
-/* The filters' card, under the row as the map's is, but outside it (it is the page's, a column
-   beside the results when wide): a column of its head, its form, which scrolls, and its foot. */
+/* The filters' card, under the row as the map's is, but outside it (it is the page's): a column of
+   its head, its form, which scrolls, and its foot. */
 .filters {
   position: absolute;
   top: calc(var(--row) + var(--drop));
@@ -509,42 +509,3 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .empty-state .empty { flex-basis: 100%; margin: 0 0 .25rem; }
 /* "Shfaq N njoftime" brings the results' heading to the top, clear of the sticky header. */
 .results-heading { scroll-margin-top: 5rem; }
-
-/* A laptop: the filters are a column on the left, always there, beside the row, the places and the
-   results, which follow them as they change; it stays in sight as the page scrolls, and scrolls
-   inside if it needs more room. Its form in one column, the icons three to a line. No button
-   opens or closes it; its foot has "Pastro" only, when a filter is on, the results being there
-   beside it. Spanning every row, its last row (1fr) takes what its height needs beyond theirs. */
-@media (min-width: 1024px) {
-  .browse {
-    display: grid;
-    grid-template-columns: 19rem minmax(0, 1fr);
-    grid-template-rows: auto auto auto 1fr;
-    column-gap: 2rem;
-    align-items: start;
-  }
-  .browse > * { grid-column: 2; }
-  .browse > .filters {
-    position: sticky;
-    top: 4.75rem;
-    z-index: auto;
-    display: flex;
-    grid-column: 1;
-    grid-row: 1 / -1;
-    max-height: calc(100dvh - 5.75rem);
-    box-shadow: none;
-    animation: none;
-  }
-  .browse-tools .filters-open,
-  .filters-close,
-  .filters-footer .filters-show { display: none; }
-  .filters-footer:not(:has(.filters-clear)) { display: none; }
-  .filters-footer .filters-clear { flex: 1; }
-  .filters .filter-form,
-  .filters .more-fields { grid-template-columns: minmax(0, 1fr); column-gap: 0; }
-  .filters :is(.filter-form, .more-fields) > *,
-  .filters :is(.filter-form, .more-fields) > .filter-half { grid-column: 1 / -1; }
-  .filters .filter-form .filter-icons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .filters .price-typed .picker { width: 4.9rem; }
-  .filters .price-typed input { padding-inline: .6rem; }
-}

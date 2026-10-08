@@ -74,8 +74,7 @@
     row beside its buttons, folds it again (foldAll, foldFromRow), and the filters and the map take
     at most what is left of the screen under the row (fit). The filters and the map apply as soon
     as something changes, the filters also as they close: the page refreshes in place (refresh.js),
-    and what is open stays as it is while it morphs (keep). On a wide screen the filters are a
-    column beside the results instead, always there (browse.css). Without JavaScript the search
+    and what is open stays as it is while it morphs (keep). Without JavaScript the search
     and the filters stay open, in the page, the filters with a button to apply them, the row's
     buttons gone, and the map, which needs it, is not there. -#}
 <noscript><style>.search-panel, .filters { display: block; position: static; max-height: none; } .search-button, .filters-open, .map-card, .filter-locate, .filters-header, .filters-footer { display: none; }</style></noscript>
@@ -232,8 +231,7 @@
 
   {#- The filters' card: over the results under the row on a phone, its name and "Mbyll" at the
       top and at the foot "Pastro" and the button that shows the results, saying how many there
-      are now (they follow every change, under the card); a column beside the results on a wide
-      screen. -#}
+      are now (they follow every change, under the card); the same on every screen. -#}
   <aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">
     <div class="filters-header">
       <h2 id="filters-heading">Filtrat</h2>
