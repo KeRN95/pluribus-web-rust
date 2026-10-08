@@ -8,7 +8,7 @@ import { renderStreamMessage } from "@hotwired/turbo";
 // Stream that adds them at the end), follows them down when it was at the end, and reads them too.
 // The box grows with what is typed; Enter sends where there is a keyboard and Shift+Enter starts a
 // new line, while on a phone Enter is a new line and the button sends; a quick message fills the
-// box in.
+// box in, without bringing a phone's keyboard up.
 const EVERY = 8000; // milliseconds
 
 export default class extends Controller {
@@ -105,9 +105,11 @@ export default class extends Controller {
     if (this.bodyTarget.value.trim()) this.formTarget.requestSubmit();
   }
 
+  // A quick message fills the box in; where there is a mouse the box takes the focus too, while
+  // on a phone the keyboard stays down, the message ready to send with the plane.
   fill({ params: { text } }) {
     this.bodyTarget.value = text;
     this.grow();
-    this.bodyTarget.focus();
+    if (matchMedia("(pointer: fine)").matches) this.bodyTarget.focus();
   }
 }
