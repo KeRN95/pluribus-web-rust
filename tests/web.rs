@@ -738,11 +738,12 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     // The search, Filtrat, Harta and Rendit stand in one row over the results, the orders opening
     // in a menu; opening one says so (section:open) and the others fold, so only one is open at a
     // time. The search is in the site's colour. What they open floats over the results, the page
-    // dimmed under it; Escape or a tap on the dim folds it again. The filters' card comes after the
-    // row and the places under it: a column beside the results on a wide screen (browse.css).
+    // dimmed under it; Escape, or a tap on the dim or on the row beside its buttons, folds it again.
+    // The filters' card comes after the row and the places under it: a column beside the results
+    // on a wide screen (browse.css).
     let cars = html(pool.clone(), "/c/makina").await;
     let order = positions(&cars, &[
-        r#"<div class="browse-tools" data-filters-target="tools">"#,
+        r#"<div class="browse-tools" data-filters-target="tools" data-action="click->filters#foldFromRow">"#,
         r#"<div class="search-card" data-controller="panel""#,
         r#"<button type="button" class="button secondary round-button labelled filters-open""#,
         r#"<section class="map-card map-hidden""#,

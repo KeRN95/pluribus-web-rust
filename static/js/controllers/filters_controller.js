@@ -14,8 +14,8 @@ import { forgetTown } from "controllers/place_controller.js";
 // Qyteti replaces the map's point with a town, "Afër meje" the town with the visitor's point. Of
 // what the browse row opens (the search, the filters, the map, the order) only one is open at a
 // time: opening it says so (section:open), and another's opening folds it (foldFor). Being the
-// browse page's own, it also folds whatever is open on Escape or a tap on the dim under it
-// (foldAll), and fits what opens into the screen (fit).
+// browse page's own, it also folds whatever is open on Escape, a tap on the dim under it (foldAll)
+// or a tap on the row beside its buttons (foldFromRow), and fits what opens into the screen (fit).
 const WIDE = "(min-width: 1024px)";
 
 export default class extends Controller {
@@ -75,6 +75,13 @@ export default class extends Controller {
     const inside = document.getElementById(toggle.getAttribute("aria-controls"))?.contains(document.activeElement);
     this.dispatch("open", { target: this.scrimTarget, prefix: "section" });
     if (inside) toggle.focus();
+  }
+
+  // A tap on the row itself, beside or between its buttons, rather than on one of them or on what
+  // it opened: as on the dim, which the row stands over. (A listener of its own also lets iPhones
+  // send the tap at all, and the order's menu closes on it, as on any tap outside it.)
+  foldFromRow(event) {
+    if (event.target === this.toolsTarget) this.foldAll();
   }
 
   // What opens floats under the row and takes at most what is left of the screen under it
