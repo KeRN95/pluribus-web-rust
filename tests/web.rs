@@ -1391,6 +1391,9 @@ async fn a_zone_named_in_a_property_search_puts_it_on(pool: PgPool) {
     for chip in ["Apartamente", "Durrës", "Plazh"] {
         assert!(page.contains(&format!(r#"aria-label="Hiq filtrin {chip}""#)), "{chip}");
     }
+    // Without the category, which its chip and "Pastro filtrat" take off, a zone is nothing: it goes.
+    assert!(page.contains(r#"<a class="filter-chip" href="/search?q=2%2B1&city=durres" aria-label="Hiq filtrin Apartamente">"#));
+    assert!(page.contains(r#"<a class="clear-filters" href="/search?q=2%2B1&city=durres">"#));
     // In its forms and any order; a zone of a few words, on a category's page.
     assert_eq!(goes("/search?q=plazhi+apartament").await.as_deref(), Some("/search?category=apartamente&city=durres&zone=plazh"));
     assert_eq!(goes("/c/prona?q=komuna+e+parisit").await.as_deref(), Some("/c/prona?city=tirane&zone=komuna-e-parisit"));

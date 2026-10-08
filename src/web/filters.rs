@@ -596,9 +596,13 @@ impl<'a> Filters<'a> {
     }
 
     /// The same search without its filters: the words, the order and the place stay, as the place
-    /// has pills of its own.
+    /// has pills of its own; the zone with the category it is for, a category page's.
     pub fn clear_url(&self) -> String {
-        self.url_without(|name, _| !matches!(name, "q" | "sort" | "city" | "zone" | "lat" | "lng" | "radius"))
+        self.url_without(|name, _| match name {
+            "q" | "sort" | "city" | "lat" | "lng" | "radius" => false,
+            "zone" => self.category_is_filter,
+            _ => true,
+        })
     }
 
     /// The filters on, each a chip that removes it: the place first (the town, or the map's point),
@@ -630,11 +634,11 @@ impl<'a> Filters<'a> {
         let mut chips = Vec::new();
         let mut chip = |label: String, url: String| chips.push(Chip { label, url, forgets_town: false });
         if let (true, Some(category)) = (self.category_is_filter, self.category) {
-            // The properties belong to the category, so they go with it.
+            // The properties belong to the category, so they go with it, as does a property's zone.
             let names: Vec<String> = self.properties.iter().flat_map(Property::param_names).collect();
             chip(
                 category.name.clone(),
-                self.url_without(|name, _| name == "category" || names.iter().any(|n| n == name)),
+                self.url_without(|name, _| matches!(name, "category" | "zone") || names.iter().any(|n| n == name)),
             );
         }
         if let Some(listing_type) = &self.listing_type {
