@@ -12,8 +12,7 @@ import { forgetTown } from "controllers/place_controller.js";
 // either way. On the map page (/harta) "Vendos hartën" sends the map's middle and the distance,
 // which reloads only the results panel. On a category or search page the map is in a card that
 // always comes folded, and loads, with its dots, only when it first opens (lazy); there the circle
-// round the pin shows only once a point is set (ring), the map saying how to set one until then,
-// and the middle and the distance apply as soon as they change, when the map stops after a drag
+// round the pin shows only once a point is set (ring), and the middle and the distance apply as soon as they change, when the map stops after a drag
 // or a zoom, or "Vendndodhja ime" moves it (pointChanged), in place of a town; a town from the
 // card's menu puts the page in it instead, the map moving onto it (pickTown): the page refreshes
 // in place (refresh.js), which keeps the category and the filters, the card open as it is and the
@@ -38,8 +37,6 @@ const SETTLE_MS = 400;
 // The equator's length in metres, which the map (Web Mercator) draws 256 pixels long at zoom 0 and
 // twice as long at each zoom after: at a latitude, a pixel is this times its cosine over 256 * 2^zoom.
 const EQUATOR = 40075016.686;
-// What the card says while no point is set.
-const HINT = "Lëviz ose zmadho hartën për të kërkuar përreth pikës.";
 const PIN = '<svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>';
 
 // Leaflet is only fetched on pages with a map, and only once: its script and its stylesheet.
@@ -106,8 +103,10 @@ export default class extends Controller {
     // has no end).
     this.map = L.map(this.canvasTarget, {
       scrollWheelZoom: false, touchZoom: "center", doubleClickZoom: "center", inertiaMaxSpeed: 1500,
-      zoomSnap: 0, zoomDelta: 0.5, bounceAtZoomLimits: false,
+      zoomSnap: 0, zoomDelta: 0.5, bounceAtZoomLimits: false, zoomControl: !this.lazyValue,
     });
+    // In a card the + and − sit at the bottom right, clear of the pills over the map's top (map.css).
+    if (this.lazyValue) L.control.zoom({ position: "bottomright" }).addTo(this.map);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -299,12 +298,9 @@ export default class extends Controller {
     refreshTo(url);
   }
 
-  // A point set, or none (a town picked, a page without one): the circle shows or goes, and in a
-  // card the map says how to set one while there is none.
+  // A point set, or none (a town picked, a page without one): the circle shows or goes.
   ringValueChanged() {
-    if (!this.ring) return;
-    this.ring.hidden = !this.ringValue;
-    if (this.lazyValue) this.statusTarget.textContent = this.ringValue ? "" : HINT;
+    if (this.ring) this.ring.hidden = !this.ringValue;
   }
 
   // In a card (lazy), the map's middle and the distance apply as soon as they change, and the

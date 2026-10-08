@@ -153,14 +153,20 @@
         {%- for (name, value) in filters.map_form_fields() %}
         <input type="hidden" name="{{ name }}" value="{{ value }}">
         {%- endfor %}
-        {% include "map_radius.html" %}
-        {#- Where: pills as the welcome page's categories are. "Vendndodhja ime" moves the map to
-            where the visitor is, for its point; the other opens the towns, by county, all of
-            Albania first, and says the one the page is in, or the map's point. A town puts the
-            page in it, as the town's link in the filters does, all of Albania drops the place, and
-            the card stays open, the map moving onto the town (map_controller.js, pickTown); the
-            menu has no name, so the map's form sends no town of its own. -#}
-        <div class="map-place">
+        {#- How far around the pin to look: what the map's circle covers at its zoom, 1 to 50 km
+            (map_controller.js), which the badge over the map's corner says (below). -#}
+        <input type="hidden" name="radius" value="{{ filters.radius_km }}" data-map-target="radius">
+      </form>
+      {#- The map fills the card, which takes the rest of the screen under the row (map.css); what
+          else there is floats over it. -#}
+      <div class="map-canvas" data-map-target="canvas" role="region" aria-label="Harta"></div>
+      {#- Over the map's top, pills as the welcome page's categories are. "Vendndodhja ime" moves
+          the map to where the visitor is, for its point; the other opens the towns, by county,
+          all of Albania first, and says the one the page is in, or the map's point. A town puts
+          the page in it, as the town's link in the filters does, all of Albania drops the place,
+          and the card stays open, the map moving onto the town (map_controller.js, pickTown);
+          the menu has no name, so the map's form sends no town of its own. -#}
+        <div class="map-place map-overlay">
           <button type="button" class="map-pill map-locate" data-action="map#locate">
             {%- include "pin.svg" %}Vendndodhja ime
           </button>
@@ -178,15 +184,15 @@
           </select>
           </div>
         </div>
-        <p class="map-status" data-map-target="status" role="status"></p>
-      </form>
-      <div class="map-canvas" data-map-target="canvas" role="region" aria-label="Harta"></div>
-      {#- The results' dots, fetched when the map first opens (map_points_url). -#}
+      {#- Over the map's bottom left corner, how far the circle covers, following the zoom; over
+          its bottom, what the map has to say ("Po kërkoj vendndodhjen…"), only while it has
+          something. -#}
+      <p class="map-distance"><span class="visually-hidden">Largësia </span><output data-map-target="radiusLabel">{{ filters.radius_km }} km</output></p>
+      <p class="map-status" data-map-target="status" role="status"></p>
+      {#- The results' dots, fetched when the map first opens (map_points_url): the nearest
+          db::MAP_POINTS of them. -#}
       <turbo-frame id="map-points" data-map-target="frame" data-src="{{ filters.map_points_url() }}">
         {%- if filters.map_points %}
-        {%- if more_points %}
-        <p class="map-note">Në hartë shfaqen {{ crate::db::MAP_POINTS }} njoftimet e para të listës.</p>
-        {%- endif %}
         <ul class="map-points" hidden data-map-target="points">
           {%- for point in points %}
           <li data-lat="{{ point.latitude }}" data-lng="{{ point.longitude }}" data-url="{{ point.url() }}" data-price="{{ point.price_display() }}">{{ point.title }}</li>

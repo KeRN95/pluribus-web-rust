@@ -929,7 +929,8 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(pinned.contains(r#"aria-label="Filtrat: Asnjë filtër""#));
     // The distance is what the circle covers at the map's zoom (map_controller.js), said beside its
     // name and carried by the radius field: no slider.
-    assert!(pinned.contains(r#"<p class="field-label">Largësia <output data-map-target="radiusLabel">5 km</output></p>"#));
+    assert!(pinned.contains(r#"<p class="map-distance"><span class="visually-hidden">Largësia </span><output data-map-target="radiusLabel">5 km</output></p>"#));
+    assert!(!pinned.contains("Zmadho hartën") && !pinned.contains("map-radius"));
     assert!(pinned.contains(r#"<input type="hidden" name="radius" value="5" data-map-target="radius">"#));
     assert!(!pinned.contains(r#"id="map-radius""#) && !pinned.contains("map-radius-steps"));
     // Any whole distance from a link, the zoom showing it as it is.
@@ -1147,9 +1148,13 @@ async fn the_map_has_a_dot_for_every_result_up_to_its_limit(pool: PgPool) {
     assert_eq!(dots(&next), 0);
 
     // Within 10 km, all 501: the map shows the nearest 500, and says so.
-    let page = html(pool, "/harta?category=te-tjera&lat=41.32833&lng=19.81806&radius=10").await;
+    let page = html(pool.clone(), "/harta?category=te-tjera&lat=41.32833&lng=19.81806&radius=10").await;
     assert_eq!(dots(&page), 500);
     assert!(page.contains(r#"<p class="map-note">Në hartë shfaqen 500 njoftimet e para të listës.</p>"#));
+    // A category's card says nothing of it: its map is all map (browse.html).
+    let card = html(pool, "/c/te-tjera?lat=41.32833&lng=19.81806&radius=10&harta=1").await;
+    assert_eq!(dots(&card), 500);
+    assert!(!card.contains("map-note"));
 }
 
 #[sqlx::test(fixtures("listings"))]

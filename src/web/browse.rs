@@ -250,7 +250,6 @@ struct BrowsePage<'a> {
     page: ListingPage,
     /// With the map's dots asked for (harta=1), a dot for each result, up to db::MAP_POINTS.
     points: Vec<db::MapPoint>,
-    more_points: bool,
     meta: PageMeta,
     /// The count stopped at db::COUNT_LIMIT: the page asks for one up to db::PRECISE_COUNT_LIMIT
     /// once it shows (filters_controller.js, numri=1).
@@ -753,6 +752,5 @@ async fn browse(
         most_viewed,
         page,
         points,
-        more_points,
     })
 }
