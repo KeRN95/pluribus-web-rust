@@ -13,7 +13,52 @@
 {%- endmacro %}
 
 {% block content %}
-{%- if category_menu.is_empty() %}
+{%- if let Some(level) = level %}
+{#- A category page says where it is and where to go next in pills. On a line of their own, small:
+    the category above it, quieter, a way up; and the page's own, filled, the heading, which shows
+    the other categories at its level as pills after it on the line, and hides them again. It is a
+    <details> holding its pill alone, those pills standing after it (.category-level, browse.css),
+    so that they take their places on the line, and it opens and closes without scripts
+    (disclosure_controller.js keeps it open while the page refreshes in place). Under them, its
+    subcategories, when it has any. -#}
+<nav class="category-pills" aria-label="Kategoritë">
+  <div class="category-path">
+    {%- if let Some(parent) = parent %}
+    <a class="shortcut small category-up" href="{{ parent.url }}"><svg class="up-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+      {%- if let Some(icon) = parent.icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
+      {{ parent.name }}</a>
+    {%- endif %}
+    {%- if level.is_empty() %}
+    {#- Alone at its level: nothing to show, its pill only says where the page is. -#}
+    <div class="shortcut small is-selected" aria-current="page">
+      {%- if let Some(icon) = heading_icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
+      <h1>{{ heading }}</h1></div>
+    {%- else %}
+    <details class="category-switch" data-controller="disclosure" data-action="turbo:before-morph-attribute->disclosure#keep">
+      <summary class="shortcut small is-selected" aria-label="{{ heading }}: ndrysho kategorinë" aria-current="page">
+        {%- if let Some(icon) = heading_icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
+        <h1>{{ heading }}</h1><svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+    </details>
+    {#- The others at its level, as small as it, each with its icon. -#}
+    <div class="category-level">
+      {%- for entry in level %}
+      <a class="shortcut small" href="{{ entry.url }}">
+        {%- if let Some(icon) = entry.icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
+        {{ entry.name }}</a>
+      {%- endfor %}
+    </div>
+    {%- endif %}
+  </div>
+  {%- if !subcategories.is_empty() %}
+  <div class="subcategories">
+    {% call pills(subcategories) %}
+  </div>
+  {%- endif %}
+</nav>
+{%- if !corrections.is_empty() %}
+<p class="search-corrections">Shfaqen edhe rezultatet për {{ corrections }}.</p>
+{%- endif %}
+{%- else %}
 <header class="results-header">
   {#- A search's heading ("Rezultatet për „golf“"), or a town's; a search within a category has
       the category's name, with its subcategories under it as on the category's page. -#}
@@ -28,41 +73,6 @@
   {% call pills(subcategories) %}
 </nav>
 {% endif %}
-{%- else %}
-{#- A category page says where it is and where to go next in one row of pills: the category above
-    it first, quieter, a way up; then this one, filled, the page's heading, which opens the menu of
-    every category (dropdown_controller.js closes it on a tap outside); then its subcategories,
-    when it has any. -#}
-<nav class="category-pills" aria-label="Kategoritë">
-  {%- if let Some(parent) = parent %}
-  <a class="shortcut category-up" href="{{ parent.url }}"><svg class="up-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{{ parent.name }}</a>
-  {%- endif %}
-  <details class="category-switch" data-controller="dropdown">
-    <summary class="shortcut is-selected" aria-label="{{ heading }}: ndrysho kategorinë" aria-current="page"><h1>{{ heading }}</h1><svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
-    {#- Rows as the in-page lists have them (picker_controller.js): a category with subcategories
-        folds them (<details>), its name leading to it and its arrow opening them, the path to
-        this page's category open from the start. -#}
-    <nav class="category-menu" aria-label="Ndrysho kategorinë">
-      {%- for item in category_menu %}
-      {%- match item %}
-      {%- when MenuItem::Branch with (branch) %}
-      <details class="menu-branch"{% if branch.open %} open{% endif %}>
-        <summary class="picker-option picker-branch{% if branch.entry.current %} is-current{% endif %}"><a href="{{ branch.entry.url }}"{% if branch.entry.current %} aria-current="page"{% endif %}>{{ branch.entry.name }}</a><span class="picker-toggle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></summary>
-        <div class="picker-children">
-      {%- when MenuItem::Leaf with (entry) %}
-      <a class="picker-option{% if entry.current %} is-current{% endif %}" href="{{ entry.url }}"{% if entry.current %} aria-current="page"{% endif %}>{{ entry.name }}</a>
-      {%- when MenuItem::End %}
-        </div>
-      </details>
-      {%- endmatch %}
-      {%- endfor %}
-    </nav>
-  </details>
-  {% call pills(subcategories) %}
-</nav>
-{%- if !corrections.is_empty() %}
-<p class="search-corrections">Shfaqen edhe rezultatet për {{ corrections }}.</p>
-{%- endif %}
 {%- endif %}
 {%- if !found_in.is_empty() %}
 {#- A search across every category: the categories it found listings in, the most first, with how
@@ -271,9 +281,15 @@
   {%- endif %}
 
   <section class="results" aria-labelledby="results-heading">
-    {#- The order the listings come in, as their heading for screen readers ("Më të rejat"): the
-        order's pill under the row says it to the eye. -#}
+    {#- The listings' heading. On a category page, to the eye, under "Më të klikuarat" where it is:
+        the order, the category and the kind of listing when one is chosen ("Njoftimet më të reja
+        në Makina në shitje", browse.rs). Elsewhere the order alone, for screen readers ("Më të
+        rejat"): the order's pill under the row says it to the eye. -#}
+    {%- if let Some(listings_heading) = listings_heading %}
+    <h2 class="results-heading" id="results-heading">{{ listings_heading }}</h2>
+    {%- else %}
     <h2 class="results-heading visually-hidden" id="results-heading">{{ filters.sort_label() }}</h2>
+    {%- endif %}
 
     {% if !chips.is_empty() %}
     <ul class="active-filters" aria-label="Filtrat e zgjedhur">

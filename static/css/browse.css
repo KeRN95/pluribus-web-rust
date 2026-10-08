@@ -9,21 +9,33 @@
 .results-header h1 { margin: 0; font-size: var(--text-xl); font-weight: var(--medium); }
 /* The words searched in place of misspelt ones take a line of their own, under the heading. */
 .search-corrections { flex-basis: 100%; margin: .5rem 0 0; color: var(--muted); }
-/* A category page's head is one row of pills (welcome.css, .shortcut): the category above it
-   first, quieter, with a "‹", a way up; this one filled, as the row's buttons are when set, the
-   page's heading at the pill's size with the chevron that opens the menu of every category; then
-   its subcategories, when it has any. */
-.category-pills { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; margin: 1.25rem 0 0; }
-.category-up { gap: .35rem; padding-left: .8rem; color: var(--muted); }
-.category-up .up-icon { flex: none; }
-.category-pills .shortcut.is-selected {
-  gap: .35rem;
-  padding-right: .85rem;
+/* A category page's head: on a line of their own, small, the category above it, quieter, with a
+   "‹", a way up, and the page's own, filled as the row's buttons are when set, the heading at the
+   pill's size with a chevron, which shows the other categories at its level as pills after it;
+   under them, when it has any, its subcategories as pills like the welcome page's (welcome.css,
+   .shortcut). */
+.category-pills { display: flex; flex-direction: column; align-items: flex-start; gap: .5rem; margin: 1.25rem 0 0; }
+.category-path { display: flex; flex-wrap: wrap; align-items: center; align-self: stretch; gap: .4rem; }
+/* The subcategories as close under the small pills as their own rows are to each other: one
+   group. (A search within a category has them under its heading instead, with room above.) */
+.subcategories { display: flex; flex-wrap: wrap; gap: .5rem; }
+.category-pills > .subcategories { margin: 0; }
+/* The subcategories' pills a touch smaller than the welcome page's main categories: between the
+   row's buttons and the small pills over them. */
+.subcategories .shortcut { gap: .5rem; padding: .6rem .95rem .6rem .85rem; font-size: calc(var(--text-md) * .94); }
+.subcategories .shortcut-icon { width: 18px; height: 18px; }
+.shortcut.small { gap: .4rem; padding: .55rem .9rem .55rem .8rem; font-size: calc(var(--text-md) * .9); }
+.category-up { color: var(--muted); }
+.category-up .up-icon { flex: none; margin-right: -.05rem; }
+/* The small pills' icons, a size down from the subcategories', the selected one's in the text's
+   colour. */
+.category-path .shortcut-icon { width: 16px; height: 16px; }
+.category-path .is-selected .shortcut-icon { color: inherit; }
+.category-path .shortcut.is-selected {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
   background: var(--badge);
-  cursor: pointer;
 }
-.category-switch h1 { margin: 0; font: inherit; line-height: inherit; }
+.category-path h1 { margin: 0; font: inherit; line-height: inherit; }
 /* A listing page's trail (listing.html, .listing-trail): the categories above it, quiet links each
    followed by a fainter "›". */
 .breadcrumbs {
@@ -40,54 +52,30 @@
 .breadcrumbs a:hover { color: var(--text); }
 .breadcrumbs span { color: color-mix(in srgb, var(--muted) 50%, var(--bg)); }
 
-/* The selected pill opens a menu of every category, under it. */
-.category-switch { position: relative; }
+/* The selected pill shows the other categories at its level as pills after it, on its line, and
+   hides them again. They stand after its <details> (.category-level), whose box gives way to them
+   when it is open (display: contents), so that they take their places on the line as the pills
+   before them do, coming in as the menus do. */
+.category-switch .shortcut.is-selected { padding-right: .7rem; cursor: pointer; }
 .category-switch summary { list-style: none; }
 .category-switch summary::-webkit-details-marker { display: none; }
 .category-switch .chevron { flex: none; color: var(--muted); transition: transform .15s; }
 .category-switch[open] .chevron { transform: rotate(180deg); }
 .category-switch summary:hover .chevron { color: var(--text); }
-.category-menu {
-  position: absolute;
-  top: calc(100% + .4rem);
-  left: 0;
-  z-index: 20;
-  width: min(22rem, calc(100vw - 2rem));
-  max-height: min(70vh, 32rem);
-  overflow-y: auto;
-  padding: .375rem;
-  background: var(--surface);
-  border: 1px solid var(--menu-border);
-  border-radius: var(--radius);
-  box-shadow: var(--menu-shadow);
-  overscroll-behavior: contain;
-  transform-origin: top left;
-  animation: menu-in .14s ease-out;
+.category-level { display: none; }
+.category-switch[open] + .category-level { display: contents; }
+@media (prefers-reduced-motion: no-preference) {
+  .category-switch[open] + .category-level > .shortcut { animation: menu-in .14s ease-out; }
 }
-/* On a phone the selected pill may stand well right of the margin, where a menu under it would
-   run off the screen: the menu opens under the whole row of pills instead, as wide as it. */
-@media (max-width: 719px) {
-  .category-pills { position: relative; }
-  .category-switch { position: static; }
-  .category-menu { right: 0; width: auto; }
-}
-/* Its rows are the in-page lists' (.picker-option); the top level stands out. A branch's name
-   takes the row up to its arrow and leads to the category; the arrow opens it. */
-.category-menu .picker-option { display: block; color: var(--text); text-decoration: none; }
-.category-menu .picker-option.is-current { display: flex; color: var(--on-button); }
-.category-menu > .picker-option,
-.category-menu > .menu-branch > .picker-branch { font-weight: var(--semibold); }
-.category-menu .picker-branch { display: flex; list-style: none; }
-.category-menu .picker-branch::-webkit-details-marker { display: none; }
-.category-menu .picker-branch a { flex: 1; min-width: 0; padding: .3rem 0; color: inherit; text-decoration: none; }
-.category-menu .menu-branch[open] > .picker-branch .picker-toggle { transform: rotate(90deg); }
 .result-count { margin: 0; color: var(--muted); }
 
 /* The browse page (browse.html): the row of buttons, the places under it, what is found. --row is
    the round buttons' size, --drop the room between the row and what opens under it; both measure
    where the filters' card goes too, under the row (below). Wide, the filters are a column beside
    the rest instead (at the end). */
-.browse { --row: 3.4rem; --drop: .75rem; position: relative; margin-top: 1rem; }
+/* --row is the subcategory pills' height (.subcategories .shortcut: a line of their text, .6rem
+   over and under it, the hairline), so the row's buttons are as big as the pills over them. */
+.browse { --row: calc(1.55 * .94 * var(--text-md) + 1.2rem + 2px); --drop: .75rem; position: relative; margin-top: 1rem; }
 
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 
@@ -124,7 +112,7 @@
   z-index: 9;
   display: flex;
   align-items: center;
-  gap: .5rem;
+  gap: .55rem;
   margin: 0 0 .75rem;
 }
 .map-card { display: contents; }
@@ -235,7 +223,7 @@
 .browse-tools .button.round-button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
 .browse-tools .button.search-button { border-color: transparent; }
 .browse-tools .button.search-button[aria-expanded="true"] { border-color: transparent; background: var(--button-hover); }
-.browse-tools .round-button svg { width: 20px; height: 20px; }
+.browse-tools .round-button svg { width: 18px; height: 18px; }
 .round-button .pin-icon { margin: 0; color: inherit; }
 /* The filters' and the map's buttons say their names and what is on: pills as wide as their
    words rather than circles. "Filtrat" has how many filters are on in a coral circle after it;
@@ -244,9 +232,11 @@
 .browse-tools .button.round-button.labelled {
   width: auto;
   min-width: 0;
-  gap: .4rem;
-  padding: 0 1rem 0 .85rem;
+  gap: .5rem;
+  padding: 0 .95rem 0 .85rem;
   border-radius: 999px;
+  font-size: calc(var(--text-md) * .94);
+  font-weight: var(--medium);
   white-space: nowrap;
 }
 .browse-tools .labelled svg { flex: none; width: 18px; height: 18px; }
@@ -279,20 +269,15 @@
   .browse-tools .button.round-button { transition: none; }
   .browse-tools .round-button:active { transform: none; }
 }
-/* A phone: smaller buttons closer together. */
-@media (max-width: 479px) {
-  .browse { --row: 2.9rem; }
-  .browse-tools { gap: .4rem; }
-  .browse-tools .button.round-button.labelled { gap: .35rem; padding: 0 .8rem 0 .7rem; }
-}
-
 /* Under the buttons, smaller pills: the order ("Më të rejat", which opens its menu) and the cards'
    size, an open order and big cards on the accent's tint, as a picked filter is. */
 .pills-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; }
 .pills-row > .sort-menu,
 .pills-row > .cards-button { flex: none; }
-/* How many the page found, before the order's pill, in the pills' size. */
-.pills-row > .result-count { margin: 0 .35rem 0 0; font-size: var(--text-sm); }
+/* How many the page found, before the order's pill, in the pills' size, with room kept for the
+   most it can say ("10 000+ njoftime"): the count past 1 000 comes once the page shows
+   (filters_controller.js), and the pills after it must not move as it does. */
+.pills-row > .result-count { min-width: 7.9em; margin: 0 .35rem 0 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
 .small-pill {
   display: inline-flex;
   flex: none;

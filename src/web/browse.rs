@@ -201,13 +201,17 @@ pub async fn home(
     render(HomePage { shortcuts, page, strip, since, most_viewed, meta })
 }
 
-pub struct Link {
-    pub name: String,
-    pub url: String,
+/// A category's icon, as its pill has it (icons.rs): a main category's own, a subcategory's where
+/// it has one.
+fn category_icon(category: &db::Category) -> Option<&'static str> {
+    match category.parent_id {
+        None => Some(icons::main_category(&category.slug)),
+        Some(_) => icons::subcategory(&category.slug),
+    }
 }
 
-/// A subcategory under a category page's heading, a pill like the welcome page's main categories:
-/// its icon, where it has one (icons::subcategory), then its name.
+/// A category as a pill like the welcome page's main categories: its icon, where it has one, then
+/// its name. A category page's subcategories, the category above it, and those beside it.
 pub struct Subcategory {
     pub name: String,
     pub url: String,
@@ -229,6 +233,10 @@ pub struct FoundIn {
 #[template(path = "browse.html")]
 struct BrowsePage<'a> {
     heading: String,
+    /// On a category page, the listings' own heading over them, under "Më të klikuarat" where it
+    /// is: the order, the category and the kind of listing when one is chosen ("Njoftimet më të
+    /// reja në Makina në shitje"). Elsewhere the order alone heads them, for screen readers.
+    listings_heading: Option<String>,
     count: String,
     /// The words searched in place of misspelt ones, quoted ("„golf“"), or empty.
     corrections: String,
@@ -237,12 +245,16 @@ struct BrowsePage<'a> {
     chips: Vec<Chip>,
     clear_url: String,
     /// On a category page, the category above it, the row's first pill: a way up.
-    parent: Option<Link>,
+    parent: Option<Subcategory>,
+    /// On a category page, its own icon, on its pill.
+    heading_icon: Option<&'static str>,
     subcategories: Vec<Subcategory>,
     /// On a search across every category, the categories its listings are in, the most first.
     found_in: Vec<FoundIn>,
-    /// On a category page, the menu the heading opens to go to another category.
-    category_menu: Vec<MenuItem>,
+    /// On a category page, the other categories at its level, which its own pill shows as pills
+    /// after it: those beside it; for a main category, the other main ones, after "Të gjitha
+    /// njoftimet". None on a search, whose heading is just a heading.
+    level: Option<Vec<Subcategory>>,
     /// The cookie the view button sets on this page (cards_cookie).
     cards_cookie: String,
     /// In a category whose page shows its own most seen (views::has_own_most_viewed), with no
@@ -301,28 +313,6 @@ async fn price_quarters(
 /// What the filters' card's button says it shows, for a count as format::listing_count says it.
 fn show_label(count: i64, count_text: &str) -> String {
     if count == 0 { "Asnjë njoftim".to_string() } else { format!("Shfaq {count_text}") }
-}
-
-/// A category in the category menu.
-pub struct MenuEntry {
-    pub name: String,
-    pub url: String,
-    pub current: bool,
-}
-
-/// A category with subcategories in the category menu, folded unless the page's category is it or
-/// is under it.
-pub struct MenuBranch {
-    pub entry: MenuEntry,
-    pub open: bool,
-}
-
-/// The category menu, line by line: a category with subcategories opens a branch, which an `End`
-/// closes once they are listed; one without is a leaf. browse.html nests them as it goes.
-pub enum MenuItem {
-    Branch(MenuBranch),
-    Leaf(MenuEntry),
-    End,
 }
 
 /// A seller's profile: a private seller's (/perdorues/{id}) or a business's (/biznes/{slug}),
@@ -651,13 +641,31 @@ async fn browse(
             None => "Të gjitha njoftimet".to_string(),
         },
     };
-    let link = |category: &db::Category| Link {
-        name: category.name.clone(),
-        url: filters.category_url(category),
-    };
-    // The category above this one, the row's first pill: a way up.
+    // The category above this one, the row's first pill: a way up; and this one's own icon.
     let parent = match (&page_slug, category) {
-        (Some(_), Some(current)) => current.parent_id.and_then(|id| categories.by_id(id)).map(link),
+        (Some(_), Some(current)) => current.parent_id.and_then(|id| categories.by_id(id)).map(|above| Subcategory {
+            name: above.name.clone(),
+            url: filters.category_url(above),
+            icon: category_icon(above),
+        }),
+        _ => None,
+    };
+    let heading_icon = match (&page_slug, category) {
+        (Some(_), Some(current)) => category_icon(current),
+        _ => None,
+    };
+    // The listings' own heading on a category page: the order as what it makes of them, the
+    // category and, when one is chosen, the kind of listing, in small letters after the name
+    // ("Njoftimet më të reja në Makina në shitje", "Njoftimet më të lira në Prona me qira").
+    let listings_heading = match (&page_slug, category) {
+        (Some(_), Some(current)) => {
+            let mut heading = format!("Njoftimet {} në {}", filters.sort_adjective(), current.name);
+            if let Some(kind) = &filters.listing_type {
+                heading.push(' ');
+                heading.push_str(&format::listing_type(kind).to_lowercase());
+            }
+            Some(heading)
+        }
         _ => None,
     };
     // The subcategories narrow the page, so their links keep its filters as well.
@@ -673,47 +681,26 @@ async fn browse(
                 .collect()
         })
         .unwrap_or_default();
-    // Every category, each followed by its subcategories; the links keep the words, the town
-    // and the map pin, as the category links do, and those under the page's category its filters.
-    let category_menu = match (&page_slug, category) {
+    // The other categories at this one's level, which its pill shows as pills after it: those
+    // beside it, not itself; for a main category, the other main ones, after "Të gjitha
+    // njoftimet". The links keep the words, the town and the map pin, as the category links do.
+    let level: Option<Vec<Subcategory>> = match (&page_slug, category) {
         (Some(_), Some(current)) => {
-            let all = MenuEntry { name: "Të gjitha njoftimet".to_string(), url: filters.all_categories_url(), current: false };
-            let mut menu = vec![MenuItem::Leaf(all)];
-            let narrower: Vec<uuid::Uuid> =
-                categories.subtree_ids(current.id).into_iter().filter(|id| *id != current.id).collect();
-            // Open: the page's category and those above it.
-            let path: Vec<uuid::Uuid> = categories.ancestors(current).iter().map(|c| c.id).chain([current.id]).collect();
-            // Each category followed by its subcategories, at any depth.
-            fn add(categories: &db::Categories, category: &db::Category, depth: usize, current: &db::Category,
-                   narrower: &[uuid::Uuid], path: &[uuid::Uuid], filters: &Filters, menu: &mut Vec<MenuItem>) {
-                let entry = MenuEntry {
-                    name: category.name.clone(),
-                    url: match narrower.contains(&category.id) {
-                        true => filters.narrowed_url(category),
-                        false => filters.category_url(category),
-                    },
-                    current: category.id == current.id,
-                };
-                let children: Vec<&db::Category> = match depth < 5 {
-                    true => categories.children(category.id).collect(),
-                    false => Vec::new(),
-                };
-                if children.is_empty() {
-                    menu.push(MenuItem::Leaf(entry));
-                    return;
+            let others = |category: &&db::Category| category.id != current.id;
+            let pill = |category: &db::Category| Subcategory {
+                name: category.name.clone(),
+                url: filters.category_url(category),
+                icon: category_icon(category),
+            };
+            Some(match current.parent_id {
+                Some(parent) => categories.children(parent).filter(others).map(pill).collect(),
+                None => {
+                    let all = Subcategory { name: "Të gjitha njoftimet".to_string(), url: filters.all_categories_url(), icon: None };
+                    std::iter::once(all).chain(categories.top_level().filter(others).map(pill)).collect()
                 }
-                menu.push(MenuItem::Branch(MenuBranch { entry, open: path.contains(&category.id) }));
-                for child in children {
-                    add(categories, child, depth + 1, current, narrower, path, filters, menu);
-                }
-                menu.push(MenuItem::End);
-            }
-            for top in categories.top_level() {
-                add(&categories, top, 0, current, &narrower, &path, &filters, &mut menu);
-            }
-            menu
+            })
         }
-        _ => Vec::new(),
+        _ => None,
     };
     // What the page says about itself (seo.rs), its first listing's photo for the preview; a
     // search's results are not for search engines to list, a category's page is, with its filters.
@@ -751,6 +738,7 @@ async fn browse(
         meta,
         show_label: show_label(count_number, &count),
         heading,
+        listings_heading,
         count,
         capped,
         corrections,
@@ -762,9 +750,10 @@ async fn browse(
         clear_url: filters.clear_url(),
         filters: &filters,
         parent,
+        heading_icon,
         subcategories,
         found_in,
-        category_menu,
+        level,
         cards_cookie,
         most_viewed,
         page,

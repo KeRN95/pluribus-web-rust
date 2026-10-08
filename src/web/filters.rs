@@ -52,6 +52,17 @@ fn sort_name(sort: Sort) -> &'static str {
     }
 }
 
+/// The order as what it makes of the listings, for their heading on a category page ("Njoftimet
+/// më të reja në Makina").
+fn sort_adjective(sort: Sort) -> &'static str {
+    match sort {
+        Sort::Newest => "më të reja",
+        Sort::PriceLow => "më të lira",
+        Sort::PriceHigh => "më të shtrenjta",
+        Sort::Nearest => "më afër",
+    }
+}
+
 /// The cookie that keeps the town a visitor picked last (place_controller.js), which a page whose
 /// address names no place opens in (Params::remembering_town).
 pub const TOWN_COOKIE: &str = "qyteti";
@@ -959,6 +970,12 @@ impl<'a> Filters<'a> {
     /// heading.
     pub fn sort_label(&self) -> &'static str {
         sort_name(self.sort)
+    }
+
+    /// The order as what it makes of the listings, for their heading on a category page
+    /// ("Njoftimet më të reja në Makina", browse.rs).
+    pub fn sort_adjective(&self) -> &'static str {
+        sort_adjective(self.sort)
     }
 
     /// The category's filters, those shown at once first (Field::primary), each in its order: a

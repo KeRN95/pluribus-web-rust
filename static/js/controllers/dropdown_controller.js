@@ -1,7 +1,8 @@
 import { Controller } from "@hotwired/stimulus";
 
-// A <details> menu (the category page's heading, the order) closes again on a tap outside it or
-// on Escape, the way menus do; opening and choosing need no JavaScript. The order's is one of the
+// A <details> menu or card (the order; on a listing, the loan calculator and what a square metre
+// costs) closes again on a tap outside it or on Escape, the way menus do; opening and choosing
+// need no JavaScript. The order's is one of the
 // three beside each other that are open one at a time, as the filters and the map are: opened, it
 // says so (announce, section:open), and another opening closes it (foldFor).
 export default class extends Controller {
