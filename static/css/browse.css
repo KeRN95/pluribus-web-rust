@@ -27,7 +27,27 @@
 .subcategories .shortcut-icon { width: 18px; height: 18px; }
 .shortcut.small { gap: .4rem; padding: .55rem .9rem .55rem .8rem; font-size: calc(var(--text-md) * .9); }
 .category-up { color: var(--muted); }
-.category-up .up-icon { flex: none; margin-right: -.05rem; }
+/* Back, before the small pills: a circle as tall as they are, to the page before
+   (back_controller.js). */
+.back-button {
+  --size: calc(1.55 * .9 * var(--text-md) + 1.1rem + 2px);
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size);
+  height: var(--size);
+  border: 1px solid var(--menu-border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  transition: background-color .15s, transform .1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.back-button:active { background: var(--surface-muted); transform: scale(.94); }
+@media (hover: hover) {
+  .back-button:hover { background: var(--surface-muted); }
+}
 /* The small pills' icons, a size down from the subcategories', the selected one's in the text's
    colour. */
 .category-path .shortcut-icon { width: 16px; height: 16px; }

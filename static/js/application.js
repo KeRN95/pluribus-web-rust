@@ -2,6 +2,7 @@
 import { FetchMethod, FetchRequest } from "@hotwired/turbo";
 import { Application } from "@hotwired/stimulus";
 import AiFillController from "controllers/ai_fill_controller.js";
+import BackController from "controllers/back_controller.js";
 import CardsController from "controllers/cards_controller.js";
 import ConversationController from "controllers/conversation_controller.js";
 import CopyController from "controllers/copy_controller.js";
@@ -30,6 +31,7 @@ import { filledIn } from "controllers/refresh.js";
 
 const application = Application.start();
 application.register("ai-fill", AiFillController);
+application.register("back", BackController);
 application.register("cards", CardsController);
 application.register("conversation", ConversationController);
 application.register("copy", CopyController);
