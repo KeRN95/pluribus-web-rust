@@ -89,6 +89,17 @@ pub fn listing_count(count: i64, limit: i64) -> String {
     }
 }
 
+/// How many a browse page found, its thousands as "k", whole ones: "1 njoftim", "850 njoftime",
+/// "3k njoftime" (3 000 to 3 999), "1k+ njoftime" past the limit counted to (1 000).
+pub fn short_listing_count(count: i64, limit: i64) -> String {
+    let (n, more) = if count > limit { (limit, "+") } else { (count, "") };
+    match n {
+        1 if more.is_empty() => "1 njoftim".to_string(),
+        n if n >= 1000 => format!("{}k{more} njoftime", n / 1000),
+        n => format!("{n}{more} njoftime"),
+    }
+}
+
 /// Words in Albanian quotes, listed: "„golf“", "„golf“ dhe „mercedes“", "„a“, „b“ dhe „c“".
 pub fn quoted_list(words: &[String]) -> String {
     let quoted: Vec<String> = words.iter().map(|word| format!("„{word}“")).collect();
@@ -405,6 +416,17 @@ mod tests {
         assert_eq!(listing_count(1, 1000), "1 njoftim");
         assert_eq!(listing_count(1000, 1000), "1\u{a0}000 njoftime");
         assert_eq!(listing_count(1001, 1000), "1\u{a0}000+ njoftime");
+    }
+
+    #[test]
+    fn short_listing_counts_say_thousands_as_k() {
+        assert_eq!(short_listing_count(0, 1000), "0 njoftime");
+        assert_eq!(short_listing_count(1, 1000), "1 njoftim");
+        assert_eq!(short_listing_count(999, 1000), "999 njoftime");
+        assert_eq!(short_listing_count(1000, 1000), "1k njoftime");
+        assert_eq!(short_listing_count(1001, 1000), "1k+ njoftime");
+        assert_eq!(short_listing_count(3412, 10_000), "3k njoftime");
+        assert_eq!(short_listing_count(10_001, 10_000), "10k+ njoftime");
     }
 
     #[test]

@@ -275,12 +275,13 @@
   .browse-tools .button.round-button { transition: none; }
   .browse-tools .round-button:active { transform: none; }
 }
-/* The results' head: their heading, and under it a line of smaller pills: how many, the order
-   ("Më të rejat") and how the cards show, at the line's far right, each opening its menu, on the
-   accent's tint while it is open, as a picked filter is. Where the heading is for screen readers
-   only (a search), the pills lead the results on their own. */
-.results-head { display: grid; gap: .6rem; margin: 1.75rem 0 .75rem; }
-.results-head > .results-heading { margin: 0; }
+/* The results' head: their heading, and on its line, at the far right, how the cards show, a
+   smaller pill opening its menu, on the accent's tint while it is open, as a picked filter is. On
+   a search, whose heading is for screen readers, the order's pill leads the line instead. */
+.results-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; margin: 1.75rem 0 .75rem; }
+.results-head > .results-heading { min-width: 0; margin: 0; }
+.results-head > .sort-menu { flex: none; }
+.results-head:has(> .results-heading.visually-hidden) { margin: 0 0 .75rem; }
 /* The heading, a heading by its role (it holds the order's menu): an h2's face, size and weight.
    Its order's words quietly marked, in the site's colour with a soft underline and a small
    chevron, a faint tint under a pointer, opening the orders in a menu under them as the order's
@@ -307,14 +308,23 @@
   .heading-sort-button:hover { background: var(--badge); }
 }
 .results-heading .sort-options { font-family: var(--font); font-size: var(--text-md); font-weight: var(--regular); letter-spacing: normal; line-height: 1.55; }
-.results-head:has(> .results-heading.visually-hidden) { margin: 0 0 1rem; }
-.pills-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0; }
-.pills-row > .sort-menu,
-.pills-row > .cards-menu { flex: none; }
-/* How many the page found, before the order's pill, in the pills' size, with room kept for the
-   most it can say ("10 000+ njoftime"): the count past 1 000 comes once the page shows
-   (filters_controller.js), and the pills after it must not move as it does. */
-.pills-row > .result-count { min-width: 7.9em; margin: 0 .35rem 0 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+/* Under the heading, how many the page found as a quiet pill ("3k njoftime"), on the surface
+   with the menus' hairline, then the filters picked, their chips flowing on the same lines. */
+.results-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; }
+.results-meta > .active-filters { display: contents; }
+.results-meta > .result-count {
+  display: inline-flex;
+  align-items: center;
+  padding: .3rem .8rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: var(--medium);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .small-pill {
   display: inline-flex;
   flex: none;
@@ -346,8 +356,8 @@
 .browse:not(.cards-big, .cards-list) .cards-icon-small,
 .cards-big .cards-icon-big,
 .cards-list .cards-icon-list { display: block; }
-/* At the row's right end, even on a line of its own, its menu growing leftward from there. */
-.pills-row > .cards-menu { margin-left: auto; }
+/* At the line's right end, even on a line of its own, its menu growing leftward from there. */
+.results-head > .cards-menu { flex: none; margin-left: auto; }
 .cards-menu > .cards-options { left: auto; right: 0; transform-origin: top right; }
 .cards-options .sort-option { display: flex; align-items: center; gap: .55rem; }
 .cards-options .sort-option > svg { flex: none; }

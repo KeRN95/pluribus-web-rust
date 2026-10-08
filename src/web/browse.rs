@@ -584,10 +584,10 @@ async fn browse(
 
     // Only the count, further than the page counts (db::PRECISE_COUNT_LIMIT), which the page asks
     // for once it shows when its own stopped at db::COUNT_LIMIT (filters_controller.js):
-    // {"count": 3412, "text": "3 412 njoftime", "show": "Shfaq 3 412 njoftime"}.
+    // {"count": 3412, "text": "3k njoftime", "show": "Shfaq 3k njoftime"}.
     if params.first("numri") == Some("1") {
         let count = db::listing_count_up_to(&state.db, &filter, db::PRECISE_COUNT_LIMIT).await?;
-        let text = format::listing_count(count, db::PRECISE_COUNT_LIMIT);
+        let text = format::short_listing_count(count, db::PRECISE_COUNT_LIMIT);
         let body = serde_json::json!({ "count": count, "show": show_label(count, &text), "text": text });
         return Ok(([(header::CACHE_CONTROL, HeaderValue::from_static("no-store"))], Json(body)).into_response());
     }
@@ -672,7 +672,7 @@ async fn browse(
         .collect();
     let capped = count > db::COUNT_LIMIT;
     let count_number = count;
-    let count = format::listing_count(count, db::COUNT_LIMIT);
+    let count = format::short_listing_count(count, db::COUNT_LIMIT);
     mark_city(&mut rows);
     let page = ListingPage::new(rows, filter.sort, next_url).layout(layout);
     let more_points = points.len() as i64 > db::MAP_POINTS;

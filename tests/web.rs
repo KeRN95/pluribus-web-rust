@@ -760,12 +760,13 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         r#"<aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">"#,
         r#"<div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>"#,
         r#"<section class="results""#,
-        // The listings' heading, its order's words opening the orders; the count and the view
-        // under it.
+        // The listings' heading, its order's words opening the orders, the view on its line; the
+        // count under it, before the chips.
         r#"<div class="results-head">"#,
         r#"<div class="results-heading" id="results-heading" role="heading" aria-level="2">Njoftimet <details class="sort-menu heading-sort" data-controller="dropdown""#,
-        r#"<div class="pills-row">"#,
         r#"<details class="sort-menu cards-menu" data-controller="dropdown" data-cards-target="menu""#,
+        r#"<div class="results-meta">"#,
+        r#"<p class="result-count" id="result-count""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
     for listener in ["panel#foldFor", "filters#foldFor", "map#foldFor", "dropdown#foldFor", "filters#fit"] {
@@ -802,7 +803,7 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     assert!(cars.contains(r#"<summary class="heading-sort-button" title="Rendit">më të reja<svg"#));
     assert!(cars.contains("</details> në Makina</div>"));
     assert!(!cars.contains("small-pill sort-button"));
-    let row = &cars[cars.find(r#"<div class="browse-tools""#).unwrap()..cars.find(r#"<div class="pills-row">"#).unwrap()];
+    let row = &cars[cars.find(r#"<div class="browse-tools""#).unwrap()..cars.find(r#"<div class="results-head">"#).unwrap()];
     assert!(!row.contains("cards-button"));
     let cheap = html(pool.clone(), "/c/makina?sort=price_asc").await;
     assert!(cheap.contains(r#"title="Rendit">më të lira<svg"#) && cheap.contains("</details> në Makina</div>"));
@@ -1005,7 +1006,7 @@ async fn the_maps_card_picks_a_town_or_all_of_albania(pool: PgPool) {
     assert!(order.is_sorted(), "{order:?}");
     assert!(menu.contains(r#"data-url="/c/makina?city=durres&vehicle_fuel=DIESEL">Durrës</option>"#));
     assert!(!cars.contains("place-pills") && !cars.contains("place-near"));
-    let pills = &cars[cars.find(r#"<div class="pills-row">"#).unwrap()..cars.find(r#"<div class="grid">"#).unwrap()];
+    let pills = &cars[cars.find(r#"<div class="results-head">"#).unwrap()..cars.find(r#"<div class="grid">"#).unwrap()];
     // The view's pill alone: the heading says the order.
     assert_eq!(pills.matches(r#"class="small-pill"#).count(), 1);
     // The page's town is kept in a cookie for the next pages (place_controller.js), on the page's
@@ -1081,9 +1082,9 @@ async fn the_count_goes_on_past_a_thousand_once_the_page_shows(pool: PgPool) {
     .await
     .unwrap();
     let many = html(pool.clone(), "/c/te-tjera").await;
-    assert!(many.contains("<p class=\"result-count\" id=\"result-count\" data-show=\"Shfaq 1\u{a0}000+ njoftime\" data-capped>1\u{a0}000+ njoftime</p>"));
+    assert!(many.contains("<p class=\"result-count\" id=\"result-count\" data-show=\"Shfaq 1k+ njoftime\" data-capped>1k+ njoftime</p>"));
     let counted = get(pool, "/c/te-tjera?numri=1").await;
-    assert_eq!(counted.body, "{\"count\":1001,\"show\":\"Shfaq 1\u{a0}001 njoftime\",\"text\":\"1\u{a0}001 njoftime\"}");
+    assert_eq!(counted.body, "{\"count\":1001,\"show\":\"Shfaq 1k njoftime\",\"text\":\"1k njoftime\"}");
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -2642,7 +2643,7 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     // The fingerprint only changes the URL; the file is served as before.
     let css = get(pool, &format!("/static/css/browse.css?v={version}")).await;
     assert_eq!(css.status, StatusCode::OK);
-    assert!(css.body.contains(".pills-row"));
+    assert!(css.body.contains(".results-meta"));
 }
 
 #[sqlx::test(fixtures("listings"))]
@@ -4177,9 +4178,9 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
         r#"<div class="category-level">"#,
         r#"<a class="shortcut small" href="/c/motocikleta"><svg class="shortcut-icon""#,
         r#"<a class="shortcut small" href="/c/pjese-dhe-aksesore"><svg class="shortcut-icon""#,
-        r#"<div class="pills-row">"#,
-        r#"<p class="result-count" id="result-count""#,
         r#"<details class="sort-menu cards-menu""#,
+        r#"<div class="results-meta">"#,
+        r#"<p class="result-count" id="result-count""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
     assert!(!cars.contains(r#"<a class="shortcut small" href="/c/makina">"#), "not itself");
