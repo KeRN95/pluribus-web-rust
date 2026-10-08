@@ -402,14 +402,6 @@
 /* A car's title as its seller wrote it, over the description. */
 .description-heading { margin: 0 0 .35rem; font-size: var(--text-lg); font-weight: var(--semibold); line-height: 1.35; }
 
-.site-footer {
-  padding: 2.5rem 1rem;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: var(--text-sm);
-  text-align: center;
-}
-
 @media (min-width: 720px) {
   .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.75rem 1rem; }
   h1 { font-size: var(--text-3xl); }

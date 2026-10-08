@@ -83,6 +83,16 @@
   <main class="container">
     {% block content %}{% endblock %}
   </main>
-  <footer class="site-footer">© 2026 Pluribus</footer>
+  {#- The pages about the site (web/pages.rs), on every page, where people look for them. -#}
+  <footer class="site-footer">
+    <nav class="footer-links" aria-label="Rreth faqes">
+      <a href="/si-funksionon">Si funksionon</a>
+      <a href="/siguria">Këshilla sigurie</a>
+      <a href="/kushtet">Kushtet</a>
+      <a href="/privatesia">Privatësia</a>
+      <a href="/kontakt">Kontakt</a>
+    </nav>
+    <p>© 2026 Pluribus</p>
+  </footer>
 </body>
 </html>

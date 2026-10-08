@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Kontakt | Pluribus{% endblock %}
+
+{% block meta %}{% include "meta.html" %}{% endblock %}
+
+{% block content %}
+{#- How to reach the site (web/pages.rs): the address CONTACT_EMAIL names, when one is set, and
+    the quicker ways for what has one of its own (Raporto, Blloko). -#}
+<article class="text-page">
+  <h1>Kontakt</h1>
+  <p class="lead">Për gjithçka rreth Pluribus: një problem me llogarinë, një njoftim që s'duhej të ishte aty, një ide, ose një pyetje nga shtypi.</p>
+  {%- if let Some(email) = email %}
+  <p>Na shkruaj te <a href="mailto:{{ email }}">{{ email }}</a>. Për një pyetje rreth llogarisë, shkruaj nga numri ose email-i me të cilin hyn, që të të njohim.</p>
+  {%- endif %}
+
+  <h2>Më shpejt se një email</h2>
+  <ul>
+    <li>Një njoftim i dyshimtë ose i gabuar: shtyp „Raporto“ te faqja e tij. Moderatorët e shohin, dhe raportimet e shumta e heqin njoftimin menjëherë.</li>
+    <li>Një shitës që s'do ta shohësh më: „Blloko shitësin“ te faqja e njoftimit ose te biseda.</li>
+    <li>Një njoftim yt: ndryshoje, çaktivizoje ose fshije te „Njoftimet e mia“.</li>
+  </ul>
+
+  <p>Shiko edhe <a href="/si-funksionon">si funksionon Pluribus</a> dhe <a href="/siguria">këshillat e sigurisë</a>.</p>
+</article>
+{% endblock %}

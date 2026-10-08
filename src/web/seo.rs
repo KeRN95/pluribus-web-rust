@@ -173,15 +173,16 @@ pub async fn sitemap_index(State(state): State<AppState>, headers: HeaderMap) ->
     Ok(xml_response(xml))
 }
 
-/// GET /sitemaps/{name}: faqet.xml, the welcome page, every category's and the businesses' with
-/// listings; njoftimet-{n}.xml, the active listings numbered from n × LISTINGS_PER_SITEMAP on,
-/// each with the day it last changed.
+/// GET /sitemaps/{name}: faqet.xml, the welcome page, the pages about the site, every category's
+/// and the businesses' with listings; njoftimet-{n}.xml, the active listings numbered from
+/// n × LISTINGS_PER_SITEMAP on, each with the day it last changed.
 pub async fn sitemap(State(state): State<AppState>, headers: HeaderMap, Path(name): Path<String>) -> Result<Response> {
     let origin = origin(&headers);
     let mut urls: Vec<(String, Option<String>)> = Vec::new();
     if name == "faqet.xml" {
         let (categories, businesses) = tokio::try_join!(db::categories(&state.db), db::businesses_with_listings(&state.db))?;
         urls.push((format!("{origin}/"), None));
+        urls.extend(super::pages::PAGES.iter().map(|(path, _)| (format!("{origin}{path}"), None)));
         urls.extend(categories.iter().map(|category| (format!("{origin}/c/{}", category.slug), None)));
         urls.extend(businesses.into_iter().map(|slug| (format!("{origin}/biznes/{slug}"), None)));
     } else if let Some(file) = name

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Kushtet e përdorimit | Pluribus{% endblock %}
+
+{% block meta %}{% include "meta.html" %}{% endblock %}
+
+{% block content %}
+{#- The terms of use (web/pages.rs): written to be read, each section a heading and a few lines. -#}
+<article class="text-page">
+  <h1>Kushtet e përdorimit</h1>
+  <p class="updated">Përditësuar më {{ updated }}</p>
+  <p class="lead">Duke përdorur Pluribus pranon këto kushte. Janë shkruar që të lexohen; ku ke pyetje, <a href="/kontakt">na shkruaj</a>.</p>
+
+  <h2>1. Çfarë është Pluribus</h2>
+  <p>Pluribus është një faqe njoftimesh ku përdoruesit publikojnë vetë ofertat e tyre. Pluribus nuk shet, nuk blen dhe nuk është palë në marrëveshjet mes përdoruesve; nuk garanton saktësinë e një njoftimi, gjendjen e mallit, as që një shitje do të kryhet.</p>
+
+  <h2>2. Llogaria</h2>
+  <p>Hyn me numrin e celularit ose me email-in dhe kodin që të dërgojmë. Je përgjegjës për çfarë bëhet me llogarinë tënde: mos ia jep kodin askujt. Përdor emrin tënd ose emrin e biznesit tënd, dhe mos hap llogari në emër të dikujt tjetër. Për të hapur llogari duhet të jesh të paktën 18 vjeç.</p>
+
+  <h2>3. Njoftimet</h2>
+  <p>Publiko vetëm sende dhe shërbime që ke të drejtë t'i ofrosh, me të dhëna të vërteta dhe me foto të tuat ose që ke leje t'i përdorësh, në kategorinë e duhur dhe një njoftim për çdo send. Nuk lejohen: armë dhe municione; drogë dhe ilaçe me recetë; mallra të vjedhura ose të falsifikuara; dokumente dhe para false; kafshë të mbrojtura; përmbajtje seksuale, fyese ose që diskriminon; skema piramidale dhe „fitime të lehta“; dhe çdo gjë tjetër e paligjshme. Pluribus mund të heqë njoftime dhe llogari që i shkelin këto, pa njoftim paraprak, dhe t'ua japë të dhënat autoriteteve kur e kërkon ligji.</p>
+
+  <h2>4. Mesazhet dhe sjellja</h2>
+  <p>Mesazhet janë për njoftimin që po flisni. Nuk lejohen reklamat e pakërkuara, kërcënimet, ngacmimet dhe mashtrimet; numri i mesazheve që nis në një ditë është i kufizuar, kundër spam-it. Secili mund ta bllokojë tjetrin.</p>
+
+  <h2>5. Të drejtat mbi përmbajtjen</h2>
+  <p>Fotot dhe tekstet që publikon mbeten të tuat. I jep Pluribus të drejtën t'i shfaqë, t'i përpunojë (madhësi, format) dhe t'i përfshijë në kërkim dhe në parapamjet e lidhjeve që ndahen, sa kohë njoftimi është në faqe, dhe pas kësaj aq sa duhet për historinë e tij dhe për raportimet.</p>
+
+  <h2>6. Përgjegjësia</h2>
+  <p>Shërbimi jepet siç është, dhe mund të ketë ndërprerje. Në masën që e lejon ligji, Pluribus nuk mban përgjegjësi për humbje që vijnë nga marrëveshjet mes përdoruesve ose nga përmbajtja që publikojnë ata.</p>
+
+  <h2>7. Ndryshimet</h2>
+  <p>Këto kushte mund të ndryshojnë; data në krye thotë kur. Vazhdimi i përdorimit pas një ndryshimi do të thotë se e pranon.</p>
+
+  <h2>8. Ligji</h2>
+  <p>Për këto kushte zbatohet ligji i Republikës së Shqipërisë.</p>
+
+  <p>Shiko edhe <a href="/privatesia">privatësinë</a> dhe <a href="/siguria">këshillat e sigurisë</a>.</p>
+</article>
+{% endblock %}

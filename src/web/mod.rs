@@ -10,6 +10,7 @@ mod messages;
 mod moderation;
 mod named;
 mod newest;
+mod pages;
 mod photos;
 mod post;
 mod properties;
@@ -97,6 +98,11 @@ pub fn router(state: AppState) -> Router {
         .route("/hyr", post(account::request_code))
         .route("/hyr/kodi", get(account::code_page).post(account::check_code))
         .route("/dil", post(account::sign_out))
+        .route("/si-funksionon", get(pages::how_it_works))
+        .route("/siguria", get(pages::safety_tips))
+        .route("/kushtet", get(pages::terms))
+        .route("/privatesia", get(pages::privacy))
+        .route("/kontakt", get(pages::contact))
         .route("/healthz", get(health))
         .route("/robots.txt", get(seo::robots))
         .route("/sitemap.xml", get(seo::sitemap_index))

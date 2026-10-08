@@ -2449,6 +2449,35 @@ async fn unknown_pages_are_404(pool: PgPool) {
     }
 }
 
+#[sqlx::test]
+async fn the_footer_leads_to_the_pages_about_the_site(pool: PgPool) {
+    // Every page's footer links the five; each is a page of its own, with its description and
+    // canonical address for search engines, in the pages' sitemap, and open to crawlers.
+    let home = html(pool.clone(), "/").await;
+    let pages = [
+        ("/si-funksionon", "Si funksionon", "Si funksionon Pluribus"),
+        ("/siguria", "Këshilla sigurie", "Këshilla sigurie"),
+        ("/kushtet", "Kushtet", "Kushtet e përdorimit"),
+        ("/privatesia", "Privatësia", "Privatësia"),
+        ("/kontakt", "Kontakt", "Kontakt"),
+    ];
+    for (path, link, heading) in pages {
+        assert!(home.contains(&format!(r#"<a href="{path}">{link}</a>"#)), "{path}");
+        let page = get(pool.clone(), path).await;
+        assert_eq!(page.status, StatusCode::OK, "{path}");
+        assert!(page.body.contains(&format!("<h1>{heading}</h1>")), "{path}");
+        assert!(page.body.contains(r#"<meta name="description" content=""#), "{path}");
+        assert!(page.body.contains(&format!(r#"<link rel="canonical" href="http://127.0.0.1:3000{path}">"#)), "{path}");
+        assert!(!page.body.contains("noindex"), "{path}");
+    }
+    let sitemap = get(pool.clone(), "/sitemaps/faqet.xml").await.body;
+    for (path, ..) in pages {
+        assert!(sitemap.contains(&format!("<loc>http://127.0.0.1:3000{path}</loc>")), "{path}");
+    }
+    let robots = get(pool, "/robots.txt").await.body;
+    assert!(!pages.iter().any(|(path, ..)| robots.contains(&format!("Disallow: {path}"))));
+}
+
 #[sqlx::test(fixtures("listings"))]
 async fn next_page_loads_as_a_turbo_frame(pool: PgPool) {
     sqlx::query(
