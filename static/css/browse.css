@@ -278,7 +278,7 @@
 /* The results' head: their heading, and on its line, at the far right, how the cards show, a
    smaller pill opening its menu, on the accent's tint while it is open, as a picked filter is. On
    a search, whose heading is for screen readers, the order's pill leads the line instead. */
-.results-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; margin: 1.75rem 0 .75rem; }
+.results-head { display: flex; align-items: center; gap: .5rem .75rem; margin: 1.75rem 0 .75rem; }
 .results-head > .results-heading { min-width: 0; margin: 0; }
 .results-head > .sort-menu { flex: none; }
 .results-head:has(> .results-heading.visually-hidden) { margin: 0 0 .75rem; }
@@ -288,6 +288,12 @@
    the page's own text, not the heading's. */
 .results-head > div.results-heading { font-family: var(--font-heading, inherit); font-size: var(--text-xl); font-weight: var(--semibold); letter-spacing: -0.015em; line-height: 1.25; }
 .results-heading .heading-sort { display: inline-block; }
+/* On one line with the view's pill, always: the heading doesn't wrap, and what is left of the line
+   after "Njoftimet" and the order's words goes to the category's name (.heading-place), which is
+   cut with "…" where it doesn't fit. The heading can't clip itself, its order's menu hangs from it. */
+.results-head > div.results-heading { display: flex; align-items: baseline; gap: .3em; flex: 1 1 auto; white-space: nowrap; }
+.results-heading > .heading-sort { flex: none; }
+.heading-place { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .heading-sort-button {
   display: inline-flex;
   align-items: center;

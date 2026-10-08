@@ -274,7 +274,7 @@
           <label class="picker-option sort-option"><input class="visually-hidden" type="radio" name="sort" value="{{ choice.value }}" form="filter-form" data-action="filters#submit"{% if choice.selected %} checked{% endif %}>{{ choice.label }}</label>
           {%- endfor %}
         </fieldset>
-      </details> {{ place }}</div>
+      </details> <span class="heading-place">{{ place }}</span></div>
     {%- else %}
     <h2 class="results-heading visually-hidden" id="results-heading">{{ filters.sort_label() }}</h2>
     {%- endif %}
