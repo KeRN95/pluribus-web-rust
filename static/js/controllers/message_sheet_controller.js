@@ -5,14 +5,16 @@ import { Controller } from "@hotwired/stimulus";
 // its middle (messages.css), the page under it held still. The box to write in takes the focus
 // once the conversation is in, where there is a mouse; on a phone the keyboard waits for a tap in
 // it. "Mbyll", Escape, or Turbo caching the page closes it, empties the frame (its conversation
-// stops asking for new messages) and gives the focus back to the button. A response that isn't a
-// conversation (the sign-in page, once the session ran out) opens as a page of its own.
+// stops asking for new messages) and gives the focus back to the button, for a keyboard. A
+// response that isn't a conversation (the sign-in page, once the session ran out) opens as a page
+// of its own. A tap or a click leaves the button without the focus, and so without a ring.
 export default class extends Controller {
   static targets = ["sheet", "body", "frame"];
 
   open(event) {
     if (!this.hasSheetTarget) return;
     this.button = event.currentTarget;
+    if (event.detail) this.button.blur();
     this.sheetTarget.hidden = false;
     document.documentElement.classList.add("sheet-open");
   }
@@ -30,13 +32,17 @@ export default class extends Controller {
     event.detail.visit(event.detail.response);
   }
 
-  close() {
+  // The focus goes back to the button only for a keyboard (Escape, or "Mbyll" by Enter, a click of
+  // no pointer): a tap or a click leaves it, so no ring shows round the button.
+  close(event) {
     if (!this.hasSheetTarget || this.sheetTarget.hidden) return;
     this.sheetTarget.hidden = true;
     document.documentElement.classList.remove("sheet-open");
     this.frameTarget.removeAttribute("src");
     this.frameTarget.innerHTML = '<p class="message-sheet-wait">Po hapet biseda…</p>';
-    this.button?.focus({ preventScroll: true });
+    const byKeyboard = event?.type === "keydown" || (event?.type === "click" && event.detail === 0);
+    if (byKeyboard) this.button?.focus({ preventScroll: true });
+    else this.button?.blur();
   }
 
   disconnect() {

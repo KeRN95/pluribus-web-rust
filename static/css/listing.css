@@ -332,6 +332,8 @@
   text-decoration: none;
   cursor: pointer;
   transition: background-color .15s;
+  /* No flash of the browser's own colour over it as a finger taps it; its press shows instead. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .button:hover { background: var(--button-hover); }
