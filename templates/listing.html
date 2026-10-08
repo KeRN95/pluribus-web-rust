@@ -74,7 +74,7 @@
   {%- if listing.location_name.is_some() || published.is_some() %}
   <p class="listing-meta">
     {%- if let Some(location) = listing.location_name %}{{ location }}{% endif %}
-    {%- if let Some(date) = published %}{% if listing.location_name.is_some() %} · {% endif %}<span class="visually-hidden">Publikuar më </span><strong>{{ date }}</strong>{% endif -%}
+    {%- if let Some((prefix, date)) = published %}{% if listing.location_name.is_some() %} · {% endif %}<span class="visually-hidden">{{ prefix }}</span><strong>{{ date }}</strong>{% endif -%}
   </p>
   {%- endif %}
   {%- let heart_number = listing.public_no %}

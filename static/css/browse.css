@@ -3,16 +3,29 @@
 
 /* Browse pages: filters beside the results */
 
-/* A category page's heading is the last of a breadcrumb: the categories above it on its line, as
-   big as it, quiet links each followed by a fainter "›", wrapping between them where the line is
-   too narrow; the count after them all, a little further off. The heading itself, a search's too,
-   is two sizes smaller than the page headings elsewhere and of medium weight, so that the line
-   doesn't weigh on the results. */
+/* A search's heading, a town's too, two sizes smaller than the page headings elsewhere and of
+   medium weight, so that it doesn't weigh on the results. */
 .results-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .45rem; margin: 1.25rem 0 .25rem; }
 .results-header h1 { margin: 0; font-size: var(--text-xl); font-weight: var(--medium); }
-.results-header .result-count { margin-left: .55rem; }
 /* The words searched in place of misspelt ones take a line of their own, under the heading. */
-.search-corrections { flex-basis: 100%; margin: 0; color: var(--muted); }
+.search-corrections { flex-basis: 100%; margin: .5rem 0 0; color: var(--muted); }
+/* A category page's head is one row of pills (welcome.css, .shortcut): the category above it
+   first, quieter, with a "‹", a way up; this one filled, as the row's buttons are when set, the
+   page's heading at the pill's size with the chevron that opens the menu of every category; then
+   its subcategories, when it has any. */
+.category-pills { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; margin: 1.25rem 0 0; }
+.category-up { gap: .35rem; padding-left: .8rem; color: var(--muted); }
+.category-up .up-icon { flex: none; }
+.category-pills .shortcut.is-selected {
+  gap: .35rem;
+  padding-right: .85rem;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background: var(--badge);
+  cursor: pointer;
+}
+.category-switch h1 { margin: 0; font: inherit; line-height: inherit; }
+/* A listing page's trail (listing.html, .listing-trail): the categories above it, quiet links each
+   followed by a fainter "›". */
 .breadcrumbs {
   display: flex;
   flex-wrap: wrap;
@@ -27,12 +40,11 @@
 .breadcrumbs a:hover { color: var(--text); }
 .breadcrumbs span { color: color-mix(in srgb, var(--muted) 50%, var(--bg)); }
 
-/* The heading of a category page opens a menu of every category. */
+/* The selected pill opens a menu of every category, under it. */
 .category-switch { position: relative; }
-.category-switch summary { list-style: none; cursor: pointer; border-radius: 10px; }
+.category-switch summary { list-style: none; }
 .category-switch summary::-webkit-details-marker { display: none; }
-.category-switch h1 { display: inline-flex; align-items: center; gap: .3rem; }
-.category-switch .chevron { flex: none; width: 16px; height: 16px; color: var(--muted); transition: transform .15s; }
+.category-switch .chevron { flex: none; color: var(--muted); transition: transform .15s; }
 .category-switch[open] .chevron { transform: rotate(180deg); }
 .category-switch summary:hover .chevron { color: var(--text); }
 .category-menu {
@@ -51,6 +63,13 @@
   overscroll-behavior: contain;
   transform-origin: top left;
   animation: menu-in .14s ease-out;
+}
+/* On a phone the selected pill may stand well right of the margin, where a menu under it would
+   run off the screen: the menu opens under the whole row of pills instead, as wide as it. */
+@media (max-width: 719px) {
+  .category-pills { position: relative; }
+  .category-switch { position: static; }
+  .category-menu { right: 0; width: auto; }
 }
 /* Its rows are the in-page lists' (.picker-option); the top level stands out. A branch's name
    takes the row up to its arrow and leads to the category; the arrow opens it. */
@@ -269,9 +288,11 @@
 
 /* Under the buttons, smaller pills: the order ("Më të rejat", which opens its menu) and the cards'
    size, an open order and big cards on the accent's tint, as a picked filter is. */
-.pills-row { display: flex; align-items: flex-start; gap: .4rem; margin: 0 0 1rem; }
+.pills-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; }
 .pills-row > .sort-menu,
 .pills-row > .cards-button { flex: none; }
+/* How many the page found, before the order's pill, in the pills' size. */
+.pills-row > .result-count { margin: 0 .35rem 0 0; font-size: var(--text-sm); }
 .small-pill {
   display: inline-flex;
   flex: none;

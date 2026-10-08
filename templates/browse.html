@@ -4,23 +4,41 @@
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
+{#- Category pills, as the welcome page's main categories: the icon, where there is one, then the
+    name. A category's subcategories. -#}
+{%- macro pills(items) -%}
+{% for item in items %}<a class="shortcut" href="{{ item.url }}">
+    {%- if let Some(icon) = item.icon %}<svg class="shortcut-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
+    {{ item.name }}</a>{% endfor %}
+{%- endmacro %}
+
 {% block content %}
+{%- if category_menu.is_empty() %}
 <header class="results-header">
-  {%- if !breadcrumbs.is_empty() %}
-  {#- The categories above this one, on the heading's line: a breadcrumb whose last is the
-      heading. -#}
-  <nav class="breadcrumbs" aria-label="Kategoritë sipër">
-    {%- for crumb in breadcrumbs %}<a href="{{ crumb.url }}">{{ crumb.name }}</a><span aria-hidden="true">›</span>{% endfor -%}
-  </nav>
-  {%- endif %}
-  {%- if category_menu.is_empty() %}
+  {#- A search's heading ("Rezultatet për „golf“"), or a town's; a search within a category has
+      the category's name, with its subcategories under it as on the category's page. -#}
   <h1>{{ heading }}</h1>
-  {%- else %}
-  {#- The heading opens a menu to switch category (dropdown_controller.js closes it on a tap outside). -#}
+  {%- if !corrections.is_empty() %}
+  {#- Under the heading, the words searched in place of misspelt ones ("golff" finds the Golfs). -#}
+  <p class="search-corrections">Shfaqen edhe rezultatet për {{ corrections }}.</p>
+  {%- endif %}
+</header>
+{% if !subcategories.is_empty() %}
+<nav class="shortcuts subcategories" aria-label="Nënkategoritë">
+  {% call pills(subcategories) %}
+</nav>
+{% endif %}
+{%- else %}
+{#- A category page says where it is and where to go next in one row of pills: the category above
+    it first, quieter, a way up; then this one, filled, the page's heading, which opens the menu of
+    every category (dropdown_controller.js closes it on a tap outside); then its subcategories,
+    when it has any. -#}
+<nav class="category-pills" aria-label="Kategoritë">
+  {%- if let Some(parent) = parent %}
+  <a class="shortcut category-up" href="{{ parent.url }}"><svg class="up-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{{ parent.name }}</a>
+  {%- endif %}
   <details class="category-switch" data-controller="dropdown">
-    <summary aria-label="{{ heading }}: ndrysho kategorinë">
-      <h1>{{ heading }}<svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></h1>
-    </summary>
+    <summary class="shortcut is-selected" aria-label="{{ heading }}: ndrysho kategorinë" aria-current="page"><h1>{{ heading }}</h1><svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
     {#- Rows as the in-page lists have them (picker_controller.js): a category with subcategories
         folds them (<details>), its name leading to it and its arrow opening them, the path to
         this page's category open from the start. -#}
@@ -40,24 +58,12 @@
       {%- endfor %}
     </nav>
   </details>
-  {%- endif %}
-  {#- How many: counted up to 1 000 with the page, and once it shows further, up to 10 000, when it
-      stopped there (data-capped, filters_controller.js); data-show is what the button at the foot
-      of the filters says. -#}
-  <p class="result-count" id="result-count" data-show="{{ show_label }}"{% if capped %} data-capped{% endif %}>{{ count }}</p>
-  {%- if !corrections.is_empty() %}
-  {#- Under the heading, the words searched in place of misspelt ones ("golff" finds the Golfs). -#}
-  <p class="search-corrections">Shfaqen edhe rezultatet për {{ corrections }}.</p>
-  {%- endif %}
-</header>
-{% if !subcategories.is_empty() %}
-<nav class="shortcuts subcategories" aria-label="Nënkategoritë">
-  {#- Pills like the welcome page's main categories: the icon, where it has one, then the name. -#}
-  {% for subcategory in subcategories %}<a class="shortcut" href="{{ subcategory.url }}">
-    {%- if let Some(icon) = subcategory.icon %}<svg class="shortcut-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
-    {{ subcategory.name }}</a>{% endfor %}
+  {% call pills(subcategories) %}
 </nav>
-{% endif %}
+{%- if !corrections.is_empty() %}
+<p class="search-corrections">Shfaqen edhe rezultatet për {{ corrections }}.</p>
+{%- endif %}
+{%- endif %}
 {%- if !found_in.is_empty() %}
 {#- A search across every category: the categories it found listings in, the most first, with how
     many, each narrowing it to that category, whose filters it then offers. -#}
@@ -213,6 +219,10 @@
       cookie, so the pages after come the same way). -#}
   {%- let sorts = filters.sort_choices() %}
   <div class="pills-row">
+    {#- How many: counted up to 1 000 with the page, and once it shows further, up to 10 000, when
+        it stopped there (data-capped, filters_controller.js); data-show is what the button at the
+        foot of the filters says. -#}
+    <p class="result-count" id="result-count" data-show="{{ show_label }}"{% if capped %} data-capped{% endif %}>{{ count }}</p>
     <details class="sort-menu" data-controller="dropdown"
              data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
       <summary class="small-pill sort-button" aria-label="Rendit: {{ filters.sort_label() }}" title="Rendit: {{ filters.sort_label() }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5"/><path d="M17 20V4M13.5 7.5 17 4l3.5 3.5"/></svg>{{ filters.sort_label() }}</summary>

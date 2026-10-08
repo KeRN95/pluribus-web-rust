@@ -1,7 +1,7 @@
 //! Display formatting with Albanian conventions: "9 500 €", "60 000 Lekë", "04.10.2026".
 
 use rust_decimal::{Decimal, prelude::ToPrimitive};
-use time::{OffsetDateTime, macros::format_description};
+use time::{Date, Duration, Month, OffsetDateTime, UtcOffset, macros::format_description};
 
 /// Keeps a number and its unit on one line.
 const NBSP: char = '\u{a0}';
@@ -133,10 +133,36 @@ pub fn condition(code: &str) -> &str {
     }
 }
 
+/// A date by Albania's clock: "04.10.2026".
 pub fn date(value: OffsetDateTime) -> String {
-    value
+    tirana(value)
         .format(format_description!("[day].[month].[year]"))
         .unwrap_or_default()
+}
+
+/// When something happened, as a line says it, by Albania's clock: "Sot", "Dje", "para 3 ditësh"
+/// within the week, and the date from a week on.
+pub fn when(value: OffsetDateTime, now: OffsetDateTime) -> String {
+    match (tirana(now).date() - tirana(value).date()).whole_days() {
+        ..=0 => "Sot".to_string(),
+        1 => "Dje".to_string(),
+        days @ 2..=6 => format!("para {days} ditësh"),
+        _ => date(value),
+    }
+}
+
+/// A moment by Albania's clock: Central European Time, an hour ahead of UTC, and two from the
+/// last Sunday of March at 01:00 UTC to the last Sunday of October at 01:00 UTC, the summer
+/// time Europe keeps.
+fn tirana(value: OffsetDateTime) -> OffsetDateTime {
+    let utc = value.to_offset(UtcOffset::UTC);
+    let last_sunday_at_one = |month: Month| {
+        let last = Date::from_calendar_date(utc.year(), month, 31).expect("a month of 31 days");
+        let sunday = last - Duration::days(i64::from(last.weekday().number_days_from_sunday()));
+        sunday.with_hms(1, 0, 0).expect("a time of day").assume_utc()
+    };
+    let summer = (last_sunday_at_one(Month::March)..last_sunday_at_one(Month::October)).contains(&utc);
+    value.to_offset(UtcOffset::from_hms(if summer { 2 } else { 1 }, 0, 0).expect("an offset"))
 }
 
 /// Albanian mobile numbers as +355 69 123 4567; anything else is shown unchanged.
@@ -388,6 +414,28 @@ mod tests {
         assert_eq!(distance(960.0), "1,0\u{a0}km");
         assert_eq!(distance(2_430.0), "2,4\u{a0}km");
         assert_eq!(distance(18_400.0), "18\u{a0}km");
+    }
+
+    #[test]
+    fn says_when_by_albanias_clock() {
+        use time::macros::datetime;
+        // A Saturday evening in October, by Albania's summer time (UTC+2): the 10th in Tirana.
+        let now = datetime!(2026-10-10 21:30 UTC);
+        assert_eq!(when(datetime!(2026-10-10 06:00 UTC), now), "Sot");
+        // 22:30 UTC on the 9th is half past midnight on the 10th in Tirana: today, not yesterday.
+        assert_eq!(when(datetime!(2026-10-09 22:30 UTC), now), "Sot");
+        assert_eq!(when(datetime!(2026-10-09 21:00 UTC), now), "Dje");
+        assert_eq!(when(datetime!(2026-10-07 12:00 UTC), now), "para 3 ditësh");
+        assert_eq!(when(datetime!(2026-10-04 12:00 UTC), now), "para 6 ditësh");
+        assert_eq!(when(datetime!(2026-10-03 12:00 UTC), now), "03.10.2026");
+        // A moment just ahead of the clock still counts as today.
+        assert_eq!(when(datetime!(2026-10-10 22:00 UTC), now), "Sot");
+        // In winter (UTC+1): 23:30 UTC on the 4th of December is the 5th in Tirana.
+        assert_eq!(date(datetime!(2026-12-04 23:30 UTC)), "05.12.2026");
+        assert_eq!(date(datetime!(2026-12-04 22:30 UTC)), "04.12.2026");
+        // Summer time starts on the last Sunday of March at 01:00 UTC (the 29th in 2026).
+        assert_eq!(date(datetime!(2026-03-28 22:30 UTC)), "28.03.2026");
+        assert_eq!(date(datetime!(2026-03-29 22:30 UTC)), "30.03.2026");
     }
 
     #[test]

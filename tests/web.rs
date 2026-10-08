@@ -1557,7 +1557,7 @@ async fn filter_form_offers_the_category_properties(pool: PgPool) {
     assert!(motorcycles[..make].trim_end().ends_with(r#"<div class="filter-group">"#));
 
     let property = get(pool.clone(), "/c/prona").await.body;
-    assert!(property.contains("<h1>Prona<svg class=\"chevron\""));
+    assert!(property.contains("<h1>Prona</h1><svg class=\"chevron\""));
     assert!(property.contains(r#"<input type="radio" name="type" value="RENT">"#));
     assert!(!property.contains("Gjendja"), "property has no condition");
     // Rooms are a flat's and a house's, not every property's: a plot has none.
@@ -1673,9 +1673,9 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("9\u{a0}500\u{a0}€"));
     // Each detail a pill, its icon before its value; its name for screen readers and as a
     // tooltip. The options, several, a pill each.
-    // Where and when it went up, the date in bold, over the photo, on one line; its number under
-    // the description.
-    assert!(response.body.contains(r#"<p class="listing-meta">Tiranë · <span class="visually-hidden">Publikuar më </span><strong>"#));
+    // Where and when it went up, in bold, over the photo, on one line: published two hours ago,
+    // "Sot" (format::when); its number at the end of the line under the title.
+    assert!(response.body.contains(r#"<p class="listing-meta">Tiranë · <span class="visually-hidden">Publikuar </span><strong>Sot</strong>"#));
     assert!(response.body.contains(r#"<span class="listing-number">Numri i njoftimit: 1001</span></p>"#));
     assert!(!response.body.contains("Nr. 1001"));
     // What kind of listing it is, and its condition, over the price, not among the details.
@@ -3038,8 +3038,9 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     for slug in ["prona", "elektronike", "shtepi-dhe-kopsht", "pune", "sherbime", "veshje-dhe-aksesore", "sport-dhe-hobi",
                  "kafshe-shtepiake", "makineri-dhe-biznes"] {
         let page = html(pool.clone(), &format!("/c/{slug}")).await;
-        let nav = &page[page.find(r#"aria-label="Nënkategoritë""#).expect(slug)..];
-        let nav = &nav[..nav.find("</nav>").unwrap()];
+        // The row of pills, up to what follows it (the category menu inside it has a nav of its own).
+        let nav = &page[page.find(r#"aria-label="Kategoritë""#).expect(slug)..];
+        let nav = &nav[..nav.find("<noscript>").unwrap()];
         let pills = nav.matches(r#"<a class="shortcut""#).count();
         assert!(pills > 0 && nav.matches(r#"<svg class="shortcut-icon""#).count() == pills, "{slug}: {nav}");
     }
@@ -3059,11 +3060,15 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     ]);
     assert!(kinds.is_sorted(), "{kinds:?}");
 
-    // A kind's page: its two levels above it in the breadcrumbs, and in the menu, inside its
-    // parent's branch, inside Automjete's, both open; other categories folded.
+    // A kind's page: the way up to its parent first, then itself, filled, and no more; and in the
+    // menu, inside its parent's branch, inside Automjete's, both open; other categories folded.
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
-    let crumbs = positions(&gps, &[r#"<a href="/c/automjete">Automjete</a>"#, r#"<a href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#]);
-    assert!(crumbs.is_sorted());
+    let head = positions(&gps, &[
+        r#"<a class="shortcut category-up" href="/c/pjese-dhe-aksesore">"#,
+        r#"<summary class="shortcut is-selected" aria-label="GPS dhe navigatorë: ndrysho kategorinë" aria-current="page"><h1>GPS dhe navigatorë</h1>"#,
+    ]);
+    assert!(head.is_sorted(), "{head:?}");
+    assert!(!gps.contains(r#"<a class="shortcut" href="/c/pjese-kembimi">"#), "no pills beside it");
     let automjete = gps.find(r#"<summary class="picker-option picker-branch"><a href="/c/automjete">Automjete</a>"#).expect("Automjete's branch");
     let parts = gps.find(r#"<summary class="picker-option picker-branch"><a href="/c/pjese-dhe-aksesore">Pjesë dhe aksesorë</a>"#).expect("the parts' branch");
     let here = gps.find(r#"<a class="picker-option is-current" href="/c/gps-dhe-navigatore" aria-current="page">GPS dhe navigatorë</a>"#).expect("the page's own");
@@ -4103,6 +4108,35 @@ async fn a_category_page_heading_switches_category(pool: PgPool) {
     assert!(page.contains(r#"<a class="picker-option" href="/search?q=shtepi&city=durres">Të gjitha njoftimet</a>"#));
     // A search page's heading is just a heading.
     assert!(!get(pool, "/search?q=golf").await.body.contains("category-switch"));
+}
+
+#[sqlx::test(fixtures("listings"))]
+async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
+    // Makina: the way up to Automjete first, then Makina itself, filled, as the heading, and no
+    // more pills, as it has no subcategories; the count by the order's pill; and the trail for
+    // search engines (schema.org's BreadcrumbList), in place of a breadcrumb.
+    let cars = html(pool.clone(), "/c/makina").await;
+    let order = positions(&cars, &[
+        r#"<nav class="category-pills" aria-label="Kategoritë">"#,
+        r#"<a class="shortcut category-up" href="/c/automjete">"#,
+        r#"<summary class="shortcut is-selected" aria-label="Makina: ndrysho kategorinë" aria-current="page"><h1>Makina</h1>"#,
+        r#"<div class="pills-row">"#,
+        r#"<p class="result-count" id="result-count""#,
+        r#"<details class="sort-menu""#,
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
+    let pills = &cars[cars.find(r#"aria-label="Kategoritë""#).unwrap()..cars.find("<noscript>").unwrap()];
+    assert!(!pills.contains(r#"<a class="shortcut""#), "no subcategories, no other pills: {pills}");
+    assert!(!cars.contains(r#"<nav class="breadcrumbs""#));
+    assert!(cars.contains(r#""@type":"BreadcrumbList""#));
+    assert!(cars.contains(r#"{"@type":"ListItem","item":"http://127.0.0.1:3000/c/makina","name":"Makina","position":3}"#), "{cars}");
+    // A main category has no way up, and its subcategories after it; a search's heading stays a
+    // heading, without the trail.
+    let vehicles = html(pool.clone(), "/c/automjete").await;
+    assert!(!vehicles.contains("category-up"));
+    assert!(vehicles.contains("<h1>Automjete</h1>") && vehicles.contains(r#"<a class="shortcut" href="/c/makina"><svg class="shortcut-icon""#));
+    let search = html(pool, "/search?q=golf").await;
+    assert!(search.contains("<h1>Rezultatet për „golf“</h1>") && !search.contains("category-pills") && !search.contains("BreadcrumbList"));
 }
 
 #[sqlx::test(fixtures("listings"))]

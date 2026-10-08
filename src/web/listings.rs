@@ -274,8 +274,14 @@ impl ListingDetail {
         )
     }
 
-    pub fn published_display(&self) -> Option<String> {
-        self.published_at.map(format::date)
+    /// When it was published, as the pill over the photo says it ("Sot", "Dje", "para 3 ditësh",
+    /// the date; format::when), with what screen readers hear before it: "Publikuar " for the
+    /// words, "Publikuar më " for a date.
+    pub fn published_display(&self) -> Option<(&'static str, String)> {
+        let published = self.published_at?;
+        let when = format::when(published, time::OffsetDateTime::now_utc());
+        let prefix = if when.starts_with(|c: char| c.is_ascii_digit()) { "Publikuar më " } else { "Publikuar " };
+        Some((prefix, when))
     }
 
     /// What kind of listing it is, and in what condition when it has one: "Në shitje · E përdorur".

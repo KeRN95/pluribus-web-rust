@@ -236,7 +236,8 @@ struct BrowsePage<'a> {
     fields: Vec<Field>,
     chips: Vec<Chip>,
     clear_url: String,
-    breadcrumbs: Vec<Link>,
+    /// On a category page, the category above it, the row's first pill: a way up.
+    parent: Option<Link>,
     subcategories: Vec<Subcategory>,
     /// On a search across every category, the categories its listings are in, the most first.
     found_in: Vec<FoundIn>,
@@ -654,12 +655,13 @@ async fn browse(
         name: category.name.clone(),
         url: filters.category_url(category),
     };
-    let breadcrumbs = match (&page_slug, category) {
-        (Some(_), Some(category)) => categories.ancestors(category).into_iter().map(link).collect(),
-        _ => Vec::new(),
+    // The category above this one, the row's first pill: a way up.
+    let parent = match (&page_slug, category) {
+        (Some(_), Some(current)) => current.parent_id.and_then(|id| categories.by_id(id)).map(link),
+        _ => None,
     };
     // The subcategories narrow the page, so their links keep its filters as well.
-    let subcategories = category
+    let subcategories: Vec<Subcategory> = category
         .map(|category| {
             categories
                 .children(category.id)
@@ -725,6 +727,21 @@ async fn browse(
         meta = meta.with_image(&origin, photo, card.title.clone());
     }
     meta.noindex = page_slug.is_none() || filters.q.is_some();
+    // Where a category page stands, for the trail search engines show under a result (schema.org's
+    // BreadcrumbList): the welcome page, the categories above, and the page's own.
+    if let (Some(_), Some(current)) = (&page_slug, category) {
+        let trail = categories.ancestors(current).into_iter().chain([current]);
+        let items: Vec<serde_json::Value> = std::iter::once(("Pluribus".to_string(), format!("{origin}/")))
+            .chain(trail.map(|category| (category.name.clone(), format!("{origin}/c/{}", category.slug))))
+            .enumerate()
+            .map(|(at, (name, item))| serde_json::json!({"@type": "ListItem", "position": at + 1, "name": name, "item": item}))
+            .collect();
+        meta.json_ld = Some(seo::json_ld(&serde_json::json!({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": items,
+        })));
+    }
     let fields = filters.fields();
     let has_more = fields.iter().any(|field| !field.primary);
     let type_waits = !filters.type_first() && filters.type_chosen();
@@ -744,7 +761,7 @@ async fn browse(
         chips: filters.chips(),
         clear_url: filters.clear_url(),
         filters: &filters,
-        breadcrumbs,
+        parent,
         subcategories,
         found_in,
         category_menu,
