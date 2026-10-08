@@ -511,18 +511,24 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .results-heading { scroll-margin-top: 5rem; }
 
 /* A laptop: the filters are a sidebar beside the page's box, always there, from under the header
-   to the bottom, outside the box, which keeps its width: the sidebar (--sidebar wide), a gap and
-   the page, at most its usual 1100px, stand together in the middle of the screen (--left from its
-   edge, a margin at least), so on a wide screen the sidebar costs the page nothing. The results
-   follow the filters as they change; the sidebar stays as the page scrolls, and scrolls inside if
-   it needs more room.
-   Its form in one column, the icons three to a line. No button opens or closes it; its foot has
-   "Pastro" only, when a filter is on, the results being there beside it. */
+   to the bottom, outside the box, which keeps its width: the sidebar (--sidebar wide, the card on
+   a phone's width), a gap and the page, at most --page wide, stand together in the middle of the
+   screen (--left from its edge, a margin at least), the top bar's contents as wide as the three,
+   so that the logo stands over the sidebar; on a wide screen the sidebar costs the page nothing.
+   The results follow the filters as they change; the sidebar stays as the page scrolls, and
+   scrolls inside if it needs more room. It is the card the phone has, as it is there: its form in
+   two columns, the icons four to a line, and at its foot "Pastro", when a filter is on, and the
+   button that says how many results there are; only "Mbyll" is gone, there being nothing to close,
+   and no button opens it. */
 @media (min-width: 1024px) {
-  main.container:has(> .browse) {
-    --sidebar: 19rem;
+  body:has(main.container > .browse) {
+    --sidebar: 23rem;
     --gap: 2rem;
-    --left: calc(1rem + max(0px, (100% - 2rem - var(--sidebar) - var(--gap) - 1100px) / 2));
+    --page: 1320px;
+    --left: calc(1rem + max(0px, (100% - 2rem - var(--sidebar) - var(--gap) - var(--page)) / 2));
+  }
+  body:has(main.container > .browse) .header-inner { max-width: calc(var(--sidebar) + var(--gap) + var(--page) + 2rem); }
+  main.container:has(> .browse) {
     max-width: none;
     margin: 0;
     padding-left: calc(var(--left) + var(--sidebar) + var(--gap));
@@ -536,21 +542,15 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
     right: auto;
     z-index: auto;
     display: flex;
-    width: var(--sidebar, 19rem);
+    width: var(--sidebar, 23rem);
     max-height: none;
-    box-shadow: none;
     animation: none;
   }
   .browse-tools .filters-open,
-  .filters-close,
-  .filters-footer .filters-show { display: none; }
-  .filters-footer:not(:has(.filters-clear)) { display: none; }
-  .filters-footer .filters-clear { flex: 1; }
+  .filters-close { display: none; }
   .filters .filter-form,
-  .filters .more-fields { grid-template-columns: minmax(0, 1fr); column-gap: 0; }
-  .filters :is(.filter-form, .more-fields) > *,
-  .filters :is(.filter-form, .more-fields) > .filter-half { grid-column: 1 / -1; }
-  .filters .filter-form .filter-icons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .filters .price-typed .picker { width: 4.9rem; }
-  .filters .price-typed input { padding-inline: .6rem; }
+  .filters .more-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: .75rem; }
+  .filters :is(.filter-form, .more-fields) > * { grid-column: 1 / -1; }
+  .filters :is(.filter-form, .more-fields) > .filter-half { grid-column: auto; }
+  .filters .filter-form .filter-icons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
