@@ -456,6 +456,43 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
 }
+/* The start of the description under the title, three lines at most until "Lexo më shumë" opens
+   it (excerpt_controller.js); its button over the title's stretched link. Only in the list. */
+.card-description { display: none; }
+.cards-list .results .card-description { display: block; grid-area: 3 / 2 / 4 / 4; align-self: start; padding: .3rem 0 0; }
+.card-description-text {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+.card-description.is-open .card-description-text { display: block; -webkit-line-clamp: unset; line-clamp: none; }
+.card-more {
+  position: relative;
+  z-index: 2;
+  margin: .15rem 0 0;
+  padding: .2rem 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--semibold);
+  text-decoration: underline;
+  text-underline-offset: .15em;
+  cursor: pointer;
+}
+.card-more[hidden] { display: none; }
+@media (min-width: 720px) {
+  .card-description-text,
+  .card-more { font-size: var(--text-sm); }
+}
 .cards-list .results .card-media .heart { grid-area: 1 / 3 / 3 / 4; margin: -.45rem -.45rem 0 0; padding: 0; }
 .cards-list .results .heart-button { --circle: 2rem; --reach: .3rem; color: var(--text); }
 .cards-list .results .heart-button::before { background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }

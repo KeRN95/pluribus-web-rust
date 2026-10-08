@@ -77,6 +77,17 @@ impl ListingCard {
         format::price(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
     }
 
+    /// What the list's card shows of its description: all of it, or, when it is longer than
+    /// db::DESCRIPTION_EXCERPT, that much, cut at a word and ending in "…".
+    pub fn description_excerpt(&self) -> String {
+        if self.description.chars().count() <= db::DESCRIPTION_EXCERPT {
+            return self.description.clone();
+        }
+        let cut: String = self.description.chars().take(db::DESCRIPTION_EXCERPT).collect();
+        let at_word = cut.rfind(' ').filter(|&at| at > cut.len() / 2).map_or(cut.as_str(), |at| &cut[..at]);
+        format!("{}…", at_word.trim_end_matches([',', '.', ';', ':', '-']))
+    }
+
     /// By how much its price dropped lately, and from what (price_drop), for the badge beside it.
     pub fn price_drop(&self) -> Option<(i64, String)> {
         price_drop(self.price_was, self.price_amount, &self.currency)

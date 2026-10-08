@@ -56,7 +56,15 @@ pub struct ListingCard {
     /// much beside its price.
     #[sqlx(default)]
     pub price_was: Option<Decimal>,
+    /// The start of its description, its spaces and lines run together, one character past
+    /// DESCRIPTION_EXCERPT so that a longer one shows it was cut: the list's cards show it under
+    /// the title (description_excerpt).
+    #[sqlx(default)]
+    pub description: String,
 }
+
+/// How much of a description a card carries, in characters.
+pub const DESCRIPTION_EXCERPT: usize = 400;
 
 /// A photo's WebP copies (media.rs), as a card has them: the card's, the middle one (none for a
 /// photo no bigger), the full one and its longer side, and the tiny one as a data: URI.
@@ -522,6 +530,7 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH card_attributes AS MATERIALI
                    AND strpos(lower(coalesce(l.generated_title, l.title)), lower(spare.value)) = 0
                  ORDER BY spare.sort_order
                  LIMIT 1) AS spare_detail,
+                left(btrim(regexp_replace(coalesce(l.description, ''), '\\s+', ' ', 'g')), 401) AS description,
                 ", price_was!(), " AS price_was,
                 ");
 
