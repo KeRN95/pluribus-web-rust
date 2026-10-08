@@ -4583,7 +4583,7 @@ async fn a_card_carries_the_start_of_its_description(pool: PgPool) {
         r#"<h2 class="card-title">"#,
         r#"<div class="card-description" data-controller="excerpt">"#,
         r#"<p class="card-description-text" data-excerpt-target="text">Makina është në gjendje shumë të mirë, e mirëmbajtur rregullisht. Kambio manuale, 148 000 km.</p>"#,
-        r#"<button type="button" class="card-more" data-excerpt-target="button" data-action="excerpt#expand" hidden>Lexo më shumë</button>"#,
+        r#"<button type="button" class="card-more" data-excerpt-target="button" data-action="excerpt#expand" hidden>më shumë</button>"#,
     ]);
     assert!(description.is_sorted(), "{golf}");
     // A long one, its lines run together, is cut at a word near 400 characters, ending in "…".

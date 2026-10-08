@@ -1,9 +1,9 @@
 import { Controller } from "@hotwired/stimulus";
 
 // The start of a listing's description on a card in the list, three lines at most (page.css):
-// "Lexo më shumë" shows only when it has more than those, and opens it all where it is. It measures
-// again whenever the text's box changes, as when the view menu turns small cards into the list
-// (cards_controller.js), which shows it, or the screen turns.
+// "më shumë", at the end of the third line, shows only when it has more than those, and opens it
+// all where it is. It measures again whenever the text's box changes, as when the view menu turns
+// small cards into the list (cards_controller.js), which shows it, or the screen turns.
 export default class extends Controller {
   static targets = ["text", "button"];
 

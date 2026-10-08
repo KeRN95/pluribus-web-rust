@@ -53,11 +53,12 @@
     {%- let description = card.description_excerpt() %}
     {%- if !description.is_empty() %}
     {#- In the list, under the title, the start of its description, three lines at most; when it
-        has more, "Lexo më shumë" shows the rest of what the card carries (excerpt_controller.js,
-        which shows the button only then). The cards leave it out (page.css). -#}
+        has more, "më shumë" at the end of the third line shows the rest of what the card carries
+        (excerpt_controller.js, which shows the button only then). The cards leave it out
+        (page.css). -#}
     <div class="card-description" data-controller="excerpt">
       <p class="card-description-text" data-excerpt-target="text">{{ description }}</p>
-      <button type="button" class="card-more" data-excerpt-target="button" data-action="excerpt#expand" hidden>Lexo më shumë</button>
+      <button type="button" class="card-more" data-excerpt-target="button" data-action="excerpt#expand" hidden>më shumë</button>
     </div>
     {%- endif %}
     {#- The price; one that dropped lately is followed, as on the listing's page, by what it was,

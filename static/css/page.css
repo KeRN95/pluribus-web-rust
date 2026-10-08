@@ -456,10 +456,12 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
 }
-/* The start of the description under the title, three lines at most until "Lexo më shumë" opens
-   it (excerpt_controller.js); its button over the title's stretched link. Only in the list. */
+/* The start of the description under the title, three lines at most until "më shumë" opens it
+   (excerpt_controller.js): the button sits at the end of the third line, in the text's own box,
+   over the words it hides, which fade into the page under it; and over the title's stretched
+   link. Only in the list. */
 .card-description { display: none; }
-.cards-list .results .card-description { display: block; grid-area: 3 / 2 / 4 / 4; align-self: start; padding: .3rem 0 0; }
+.cards-list .results .card-description { position: relative; display: block; grid-area: 3 / 2 / 4 / 4; align-self: start; padding: .3rem 0 0; }
 .card-description-text {
   display: -webkit-box;
   margin: 0;
@@ -474,16 +476,19 @@
 }
 .card-description.is-open .card-description-text { display: block; -webkit-line-clamp: unset; line-clamp: none; }
 .card-more {
-  position: relative;
+  position: absolute;
+  right: 0;
+  bottom: 0;
   z-index: 2;
-  margin: .15rem 0 0;
-  padding: .2rem 0;
+  margin: 0;
+  padding: 0 0 0 2.25em;
   border: 0;
-  background: none;
+  background: linear-gradient(to right, transparent, var(--bg) 1.75em);
   color: var(--text);
   font: inherit;
   font-size: var(--text-xs);
   font-weight: var(--semibold);
+  line-height: 1.5;
   text-decoration: underline;
   text-underline-offset: .15em;
   cursor: pointer;
