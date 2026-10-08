@@ -48,6 +48,16 @@ const DEFAULT_RADIUS_KM: u32 = 10;
 const TOP_TOWNS: [&str; 12] =
     ["tirane", "durres", "vlore", "shkoder", "elbasan", "fier", "korce", "kamez", "lushnje", "berat", "sarande", "pogradec"];
 
+/// An order's name, as its button, its menu and the results' heading say it.
+fn sort_name(sort: Sort) -> &'static str {
+    match sort {
+        Sort::Newest => "Më të rejat",
+        Sort::PriceLow => "Më të lirat",
+        Sort::PriceHigh => "Më të shtrenjtat",
+        Sort::Nearest => "Më afër",
+    }
+}
+
 /// The cookie that keeps the town a visitor picked last (place_controller.js), which a page whose
 /// address names no place opens in (Params::remembering_town).
 pub const TOWN_COOKIE: &str = "qyteti";
@@ -936,16 +946,16 @@ impl<'a> Filters<'a> {
             .filter(|sort| *sort != Sort::Nearest || self.near.is_some())
             .map(|sort| Choice {
                 value: if sort == default { String::new() } else { sort.param().to_string() },
-                label: match sort {
-                    Sort::Newest => "Më të rejat",
-                    Sort::PriceLow => "Më të lirat",
-                    Sort::PriceHigh => "Më të shtrenjtat",
-                    Sort::Nearest => "Më afër",
-                }
-                .to_string(),
+                label: sort_name(sort).to_string(),
                 selected: sort == self.sort,
             })
             .collect()
+    }
+
+    /// The order the listings come in, by name: what the order's button says, and the results'
+    /// heading.
+    pub fn sort_label(&self) -> &'static str {
+        sort_name(self.sort)
     }
 
     /// The category's filters, those shown at once first (Field::primary), each in its order: a

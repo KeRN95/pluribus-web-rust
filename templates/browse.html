@@ -66,9 +66,9 @@
 </nav>
 {%- endif %}
 
-{#- The search, the filters, the map, the order and the cards' size, side by side: round buttons,
-    but the filters' and the map's, which say their names and what is on: "Filtrat" with how many
-    filters (2), the map the town or the point ("Tiranë · 10 km"). The search, the filters and the
+{#- The search, the filters, the map and the order, side by side: the search a round button, the
+    others pills that say their names and what is on: "Filtrat" with how many filters (2), the
+    map the town or the point ("Tiranë · 10 km"), the order the one now ("Më të rejat"). The search, the filters and the
     map open over the results, under the row and as wide as it, the page dimmed under them, the
     orders in a menu; only one is open at a time: opening one says so (section:open) and the others
     fold. Escape, or a tap on the dim or on the row beside its buttons, folds it again (foldAll,
@@ -177,17 +177,17 @@
       </div>
     </section>
 
-    {#- The order: a round button like the map's, with only its arrows, which says "Rendit" and the
-        order now to screen readers, and as its tooltip. It opens the orders
-        in a menu under it, like the in-page dropdowns', the one now ticked; a tap outside or
-        Escape closes it (dropdown_controller.js), and it is one of the three open one at a time
-        (section:open). Picking one sends the filter form (form="filter-form"), so the filters
-        stay. -#}
+    {#- The order: a pill like the map's, its arrows and the order now ("Më të rejat"), and
+        "Rendit" with it to screen readers and in its tooltip. It opens the orders in a menu under
+        it, like the in-page dropdowns', the one now ticked; a tap outside or Escape closes it
+        (dropdown_controller.js), and it is one of the three open one at a time (section:open).
+        Picking one sends the filter form (form="filter-form"), so the filters stay. -#}
     {%- let sorts = filters.sort_choices() %}
     <details class="sort-menu" data-controller="dropdown"
              data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
-      <summary class="button secondary round-button sort-button" aria-label="Rendit: {% for choice in sorts.iter() %}{% if choice.selected %}{{ choice.label }}{% endif %}{% endfor %}" title="Rendit: {% for choice in sorts.iter() %}{% if choice.selected %}{{ choice.label }}{% endif %}{% endfor %}">
+      <summary class="button secondary round-button labelled sort-button" aria-label="Rendit: {{ filters.sort_label() }}" title="Rendit: {{ filters.sort_label() }}">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5"/><path d="M17 20V4M13.5 7.5 17 4l3.5 3.5"/></svg>
+        <span class="button-label">{{ filters.sort_label() }}</span>
       </summary>
       <fieldset class="sort-options">
         <legend class="visually-hidden">Rendit</legend>
@@ -196,14 +196,6 @@
         {%- endfor %}
       </fieldset>
     </details>
-
-    {#- How the listings show: small cards, as many to a line as fit, or big ones, one a line, every
-        photo to slide through; pressed, big (cards_controller.js, which keeps the choice in a
-        cookie, so the pages after come the same way). -#}
-    <button type="button" class="button secondary round-button cards-button" data-cards-target="button" data-action="cards#toggle"
-            aria-pressed="{% if page.big %}true{% else %}false{% endif %}" aria-label="Kartela të mëdha" title="Kartela të mëdha">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="11.5" rx="2.5"/><path d="M4.5 18.5h15M4.5 21h9"/></svg>
-    </button>
   </div>
 
   {#- Where to look, a tap away, under the row: all of Albania, around the visitor (the browser
@@ -260,8 +252,17 @@
   {%- endif %}
 
   <section class="results" aria-labelledby="results-heading">
-    {#- The order the listings come in, as their heading: "Më të rejat", "Më të lirat"... -#}
-    <h2 class="results-heading" id="results-heading">{% for choice in sorts.iter() %}{% if choice.selected %}{{ choice.label }}{% endif %}{% endfor %}</h2>
+    {#- The order the listings come in, as their heading: "Më të rejat", "Më të lirat"...; at the
+        line's end, how they show: small cards, as many to a line as fit, or big ones, one a line,
+        every photo to slide through; pressed, big (cards_controller.js, which keeps the choice in
+        a cookie, so the pages after come the same way). -#}
+    <div class="results-head">
+      <h2 class="results-heading" id="results-heading">{{ filters.sort_label() }}</h2>
+      <button type="button" class="button secondary cards-button" data-cards-target="button" data-action="cards#toggle"
+              aria-pressed="{% if page.big %}true{% else %}false{% endif %}" aria-label="Kartela të mëdha" title="Kartela të mëdha">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="11.5" rx="2.5"/><path d="M4.5 18.5h15M4.5 21h9"/></svg>
+      </button>
+    </div>
 
     {% if !chips.is_empty() %}
     <ul class="active-filters" aria-label="Filtrat e zgjedhur">

@@ -12,8 +12,26 @@
 .results-header h1 { margin: 0; font-size: var(--text-xl); font-weight: var(--medium); }
 .results-header .result-count { margin-left: .55rem; }
 /* Over the listings, the order they come in ("Më të rejat"), as the welcome page's sections have
-   their headings. */
-.results-heading { margin: 1.25rem 0 .75rem; }
+   their headings, and at the line's end the cards' size: a round button like those of the row
+   above, a little smaller, on the accent's tint while the cards are big. */
+.results-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin: 1.25rem 0 .75rem; }
+.results-heading { margin: 0; }
+.results-head .button.cards-button {
+  flex: none;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0;
+  border-color: var(--menu-border);
+  border-radius: 50%;
+  transition: background-color .15s, border-color .15s, transform .1s;
+}
+.results-head .button.cards-button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+.results-head .cards-button:active { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce) {
+  .results-head .button.cards-button { transition: none; }
+  .results-head .cards-button:active { transform: none; }
+}
 /* The words searched in place of misspelt ones take a line of their own, under the heading. */
 .search-corrections { flex-basis: 100%; margin: 0; color: var(--muted); }
 .breadcrumbs {
@@ -92,8 +110,8 @@
 .clear-filters { padding: .3rem .4rem; color: var(--muted); font-size: var(--text-sm); }
 
 /* The browse row: buttons side by side, the search first, round and in the site's colour, then the
-   filters and the map, which say their names and what is on (below), the order and the cards'
-   size, round. Only one opens at a time (section:open). The search, the filters and the map open
+   filters, the map and the order, which say their names and what is on (below). Only one opens
+   at a time (section:open). The search, the filters and the map open
    over the results rather than pushing them down: a little under the row (--drop), as wide as it,
    fading in as the menus do, the page dimmed under them (.browse-scrim); Escape or a tap on the
    dim folds them again. The filters and the map come in cards drawn like Claude's, as the listing
@@ -222,10 +240,11 @@
 .browse-tools .button.search-button[aria-expanded="true"] { border-color: transparent; background: var(--button-hover); }
 .browse-tools .round-button svg { width: 20px; height: 20px; }
 .round-button .pin-icon { margin: 0; color: inherit; }
-/* The filters' and the map's buttons say their names and what is on: pills as wide as their
-   words rather than circles. "Filtrat" has how many filters are on in a coral circle after it;
-   the map has its place ("Tiranë · 10 km"), its pin in the location colour once one is set, and is
-   the one to give up width on a narrow phone, its words ending in "…". */
+/* The filters', the map's and the order's buttons say their names and what is on: pills as wide
+   as their words rather than circles. "Filtrat" has how many filters are on in a coral circle
+   after it; the map has its place ("Tiranë · 10 km"), its pin in the location colour once one is
+   set; the order the one now ("Më të rejat"). The map and the order give up width on a narrow
+   phone, their words ending in "…". */
 .browse-tools .button.round-button.labelled {
   width: auto;
   min-width: 0;
@@ -264,11 +283,16 @@
   .browse-tools .button.round-button { transition: none; }
   .browse-tools .round-button:active { transform: none; }
 }
-/* A phone: smaller buttons closer together, so that the five fit beside each other at 360px. */
+/* A phone: smaller buttons closer together. The order's words need the room: once a place is
+   set, the map's button is its pin alone, round, the place pills under the row saying the place;
+   "Harta" keeps its word, and only the order's give way, ending in "…", on the narrowest. */
 @media (max-width: 479px) {
   .browse { --row: 2.9rem; }
   .browse-tools { gap: .4rem; }
   .browse-tools .button.round-button.labelled { gap: .35rem; padding: 0 .8rem 0 .7rem; }
+  .browse-tools .button.map-button { flex-shrink: 0; }
+  .browse-tools .button.round-button.labelled.map-button.is-set { width: var(--row); padding: 0; gap: 0; }
+  .browse-tools .map-button.is-set .button-label { display: none; }
 }
 
 /* Where to look (browse.html, place_controller.js): pills in a row under the buttons, sliding

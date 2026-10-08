@@ -3,8 +3,10 @@
 
 /* Map page, and the ways to it */
 
-/* The order (Rendit): a round button like the map's, its orders in a menu under it. */
-.sort-menu { position: relative; flex: none; }
+/* The order (Rendit): a pill like the map's, saying the order now, which gives up width as the
+   map's does (browse.css); its orders in a menu under it. */
+.sort-menu { position: relative; flex: 0 1 auto; min-width: 0; }
+.sort-menu > .sort-button { max-width: 100%; }
 /* Its menu, as the in-page dropdowns' are, under it and growing leftward from its right edge: the
    orders as rows, the one now in the site's colour, ticked; a tap on another reloads the page in
    it. The radio itself is there for keyboards and screen readers only, its ring round the row. */
