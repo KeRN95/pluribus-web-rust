@@ -106,8 +106,9 @@
 .message-time { display: block; margin-top: .1rem; color: var(--muted); font-size: .7rem; text-align: right; }
 
 /* The box to write in, which stays at the bottom of the screen over the messages as they scroll,
-   above the phone's home bar: a pill that grows with what is typed up to a few lines, and the send
-   button, a paper plane in a coral circle. Before the first message, quick ones to start with. */
+   above the phone's home bar: a pill that grows with what is typed up to a few lines, the send
+   button inside it at its right end, a paper plane in a coral circle, which turns to point up as
+   soon as something is typed. Before the first message, quick ones to start with. */
 .composer {
   position: sticky;
   bottom: 0;
@@ -116,13 +117,13 @@
   padding: .6rem 1rem calc(.6rem + env(safe-area-inset-bottom));
   background: var(--bg);
 }
-.composer-row { display: flex; align-items: flex-end; gap: .5rem; }
+.composer-row { position: relative; display: flex; align-items: flex-end; }
 .composer textarea {
   flex: 1;
   min-width: 0;
   min-height: 2.75rem;
   max-height: 9.5rem;
-  padding: .62rem 1rem;
+  padding: .62rem 3.1rem .62rem 1rem;
   border: 1px solid var(--border-strong);
   border-radius: 22px;
   background: var(--input);
@@ -132,7 +133,21 @@
   resize: none;
 }
 .composer textarea::placeholder { color: var(--muted); }
-.composer-send { flex: none; justify-content: center; width: 2.75rem; height: 2.75rem; padding: 0; border-radius: 50%; }
+.composer-send {
+  position: absolute;
+  right: .3rem;
+  bottom: .3rem;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  padding: 0;
+  border-radius: 50%;
+}
+.composer-send svg { width: 17px; height: 17px; transition: transform .15s ease-out; }
+.composer-row:has(textarea:not(:placeholder-shown)) .composer-send svg { transform: rotate(-45deg); }
+@media (prefers-reduced-motion: reduce) {
+  .composer-send svg { transition: none; }
+}
 .composer-error { margin: 0 0 .5rem; }
 .composer .field-hint { margin-top: .5rem; }
 .quick-messages { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .65rem; }
