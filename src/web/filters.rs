@@ -2,6 +2,7 @@
 //! shown back as the filter form, removable chips and the URL of the next page.
 //!
 //! Parameters: q, category (on /search and /harta; on a category page the path names it), city,
+//! zone (one of the town's zones, Plazh in Durrës: in property only, whose listings can say one),
 //! lat, lng and radius (a map pin, and how many km around it), type, condition (repeatable),
 //! price_min, price_max, currency, sort and after, harta=1 (a category or search page with its
 //! map's dots, which its map fetches when it first opens), numri=1 (only the count, as JSON:
@@ -12,7 +13,8 @@
 //!
 //! Where to look is a place: a town (city), or a point on the map with a distance around it (lat,
 //! lng, radius); one or the other, as the pills under the browse row offer them, and the town a
-//! visitor picked stays theirs on the next pages (Params::remembering_town).
+//! visitor picked stays theirs on the next pages (Params::remembering_town). In property, a zone
+//! of the town narrows it further; it goes with its town.
 
 use rust_decimal::{
     Decimal,
@@ -20,11 +22,11 @@ use rust_decimal::{
 };
 use uuid::Uuid;
 
-use super::properties;
+use super::{post::zoned, properties};
 use crate::{
     db::{
         AttributeFilter, AttributeOption, Categories, Category, City, Cursor, FilterAttribute,
-        ListingFilter, Near, PriceRange, Sort, TextSearch,
+        ListingFilter, Near, PriceRange, Sort, TextSearch, Zone,
     },
     format,
 };
@@ -271,6 +273,9 @@ pub struct Filters<'a> {
     pub q: Option<String>,
     pub category: Option<&'a Category>,
     pub city: Option<&'a City>,
+    /// One of the town's zones, in property (Plazh in Durrës): listings there rather than anywhere
+    /// in the town.
+    pub zone: Option<&'a Zone>,
     /// The map pin, with its radius: the one in the address, or on the map page without one there,
     /// TIRANA.
     pub near: Option<Near>,
@@ -386,6 +391,11 @@ impl<'a> Filters<'a> {
         let after = params.first("after").and_then(|value| Cursor::decode(sort, value));
         // A town or a point, not both: a point in the address leaves out a town with it.
         let city = params.first("city").filter(|_| pin.is_none()).and_then(|slug| cities.iter().find(|c| c.slug == slug));
+        // A zone of that town, where the category's listings can say one; its name alone could be
+        // another town's (Qendër is Tirana's, Durrës's and Vlora's).
+        let zone = city
+            .filter(|_| category.is_some_and(|category| zoned(categories, category)))
+            .and_then(|city| params.first("zone").and_then(|slug| city.zones.iter().find(|zone| zone.slug == slug)));
 
         Self {
             path,
@@ -395,6 +405,7 @@ impl<'a> Filters<'a> {
             q: params.search_words(),
             category,
             city,
+            zone,
             near,
             pin_in_url: pin.is_some(),
             radius_km,
@@ -416,7 +427,7 @@ impl<'a> Filters<'a> {
         let has_price = self.price_min.is_some() || self.price_max.is_some();
         ListingFilter {
             category_ids: self.category.map(|c| self.categories.subtree_ids(c.id)),
-            location_id: self.city.map(|c| c.id),
+            location_id: self.zone.map(|zone| zone.id).or(self.city.map(|c| c.id)),
             near: self.near,
             search,
             listing_type: self.listing_type.clone(),
@@ -447,6 +458,9 @@ impl<'a> Filters<'a> {
         }
         if let Some(city) = self.city {
             push("city", &city.slug);
+        }
+        if let Some(zone) = self.zone {
+            push("zone", &zone.slug);
         }
         match self.near {
             Some(near) if self.pin_in_url => {
@@ -514,12 +528,13 @@ impl<'a> Filters<'a> {
         url(&self.path, pairs)
     }
 
-    /// Another category's page, keeping the search words, the city and the map pin.
+    /// Another category's page, keeping the search words, the city and the map pin; the zone too,
+    /// where that category's listings can say one.
     pub fn category_url(&self, category: &Category) -> String {
-        let kept = self
-            .pairs()
-            .into_iter()
-            .filter(|(name, _)| matches!(name.as_str(), "q" | "city" | "lat" | "lng" | "radius"));
+        let zone_kept = zoned(self.categories, category);
+        let kept = self.pairs().into_iter().filter(|(name, _)| {
+            matches!(name.as_str(), "q" | "city" | "lat" | "lng" | "radius") || (name == "zone" && zone_kept)
+        });
         url(&format!("/c/{}", category.slug), kept)
     }
 
@@ -565,11 +580,12 @@ impl<'a> Filters<'a> {
         self.pairs().into_iter().filter(|(name, _)| !matches!(name.as_str(), "q" | "after")).collect()
     }
 
-    /// Everything but the place: the map's point, which its own fields carry, replaces a town.
+    /// Everything but the place: the map's point, which its own fields carry, replaces a town and
+    /// its zone.
     pub fn map_form_fields(&self) -> Vec<(String, String)> {
         self.pairs()
             .into_iter()
-            .filter(|(name, _)| !matches!(name.as_str(), "city" | "lat" | "lng" | "radius"))
+            .filter(|(name, _)| !matches!(name.as_str(), "city" | "zone" | "lat" | "lng" | "radius"))
             .collect()
     }
 
@@ -582,7 +598,7 @@ impl<'a> Filters<'a> {
     /// The same search without its filters: the words, the order and the place stay, as the place
     /// has pills of its own.
     pub fn clear_url(&self) -> String {
-        self.url_without(|name, _| !matches!(name, "q" | "sort" | "city" | "lat" | "lng" | "radius"))
+        self.url_without(|name, _| !matches!(name, "q" | "sort" | "city" | "zone" | "lat" | "lng" | "radius"))
     }
 
     /// The filters on, each a chip that removes it: the place first (the town, or the map's point),
@@ -593,10 +609,15 @@ impl<'a> Filters<'a> {
         chips
     }
 
+    /// The town's chip takes its zone with it; the zone's leaves the town.
     fn place_chips(&self) -> Vec<Chip> {
         let mut chips = Vec::new();
         if let Some(city) = self.city {
-            chips.push(Chip { label: city.name.clone(), url: self.url_without(|name, _| name == "city"), forgets_town: true });
+            let url = self.url_without(|name, _| name == "city" || name == "zone");
+            chips.push(Chip { label: city.name.clone(), url, forgets_town: true });
+        }
+        if let Some(zone) = self.zone {
+            chips.push(Chip { label: zone.name.clone(), url: self.town_url(), forgets_town: false });
         }
         if let Some(label) = self.point_label() {
             chips.push(Chip { label, url: self.everywhere_url(), forgets_town: false });
@@ -710,11 +731,20 @@ impl<'a> Filters<'a> {
         self.place_url(None)
     }
 
+    /// The same page in the whole town, without its zone: the zone's chip, and what a zone with
+    /// nothing in it offers.
+    pub fn town_url(&self) -> String {
+        self.url_without(|name, _| name == "zone")
+    }
+
     /// The same page in `town`, or without a place: the town, or no town, replaces the map's
-    /// point, and a town replaces the town.
+    /// point, and a town replaces the town and its zone.
     fn place_url(&self, town: Option<&City>) -> String {
-        let mut pairs: Vec<(String, String)> =
-            self.pairs().into_iter().filter(|(name, _)| !matches!(name.as_str(), "city" | "lat" | "lng" | "radius")).collect();
+        let mut pairs: Vec<(String, String)> = self
+            .pairs()
+            .into_iter()
+            .filter(|(name, _)| !matches!(name.as_str(), "city" | "zone" | "lat" | "lng" | "radius"))
+            .collect();
         if let Some(town) = town {
             // Where the town goes in the fixed order: after the words and the category.
             let at = pairs.iter().position(|(name, _)| !matches!(name.as_str(), "q" | "category")).unwrap_or(pairs.len());
@@ -731,6 +761,40 @@ impl<'a> Filters<'a> {
     /// The towns by county, for the filters' Qyteti, the one picked selected.
     pub fn city_groups(&self) -> Vec<ChoiceGroup> {
         city_groups(self.cities, self.city.map(|city| city.slug.as_str()))
+    }
+
+    /// Whether the filters have Zona: in property, whose listings can say their zone.
+    pub fn zoned(&self) -> bool {
+        self.category.is_some_and(|category| zoned(self.categories, category))
+    }
+
+    /// Whether Zona shows: the town picked has zones (Tirana, Durrës, Vlorë).
+    pub fn zone_shown(&self) -> bool {
+        self.city.is_some_and(|city| !city.zones.is_empty())
+    }
+
+    /// Every town's zones, under their town, for Zona: those of the town picked show, the others'
+    /// once Qyteti picks theirs (narrow_controller.js, filters_controller.js), the zone picked
+    /// selected.
+    pub fn zone_groups(&self) -> Vec<OptionGroup> {
+        self.cities
+            .iter()
+            .filter(|city| !city.zones.is_empty())
+            .map(|city| OptionGroup {
+                label: city.name.clone(),
+                parent: city.slug.clone(),
+                hidden: self.city.is_none_or(|picked| picked.id != city.id),
+                choices: city
+                    .zones
+                    .iter()
+                    .map(|zone| Choice {
+                        value: zone.slug.clone(),
+                        label: zone.name.clone(),
+                        selected: self.zone.is_some_and(|picked| picked.id == zone.id),
+                    })
+                    .collect(),
+            })
+            .collect()
     }
 
     /// Whether the map's point is on: its circle shows, and the results are those within it.

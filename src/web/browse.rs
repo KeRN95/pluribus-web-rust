@@ -558,11 +558,12 @@ async fn browse(
         (None, _, View::Grid) => "/search".to_string(),
         (None, _, View::Map) => "/harta".to_string(),
     };
-    // Words that name a category, a kind of listing or a town go to the page with those filters
-    // on, the rest of them searched there (named.rs). Not the next page or the count, which a
-    // page asks for that did so already, nor the map, whose pin says where.
+    // Words that name a category, a kind of listing, a town or a property's zone go to the page
+    // with those filters on, the rest of them searched there (named.rs). Not the next page or the
+    // count, which a page asks for that did so already, nor the map, whose pin says where.
     if view == View::Grid && !is_next_page_request(&headers) && params.first("numri").is_none() {
-        if let Some(named) = words.as_deref().and_then(|words| named::read(words, category, &categories, &cities)) {
+        let town = params.first("city").and_then(|slug| cities.iter().find(|city| city.slug == slug));
+        if let Some(named) = words.as_deref().and_then(|words| named::read(words, category, town, &categories, &cities)) {
             return Ok(Redirect::to(&named::url_for(&path, query.as_deref(), &named)).into_response());
         }
     }

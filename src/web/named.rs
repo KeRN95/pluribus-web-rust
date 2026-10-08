@@ -8,6 +8,13 @@
 //! - A town is named by its name in any of its forms (Tirana, Tiranës, Durrësi, Shkodra), or by
 //!   the two or three words of one (Malësi e Madhe); one shorter than four letters (Mat, Has) only
 //!   after a word that leads to a place ("në Mat"). Words that name two towns name neither.
+//! - A zone of a town (migration 0019) only where the search is about property, whose listings
+//!   can say theirs: the page's category, or the one the words name, is Prona or under it
+//!   ("apartament 2+1 në Plazh" is the flats in Plazh, in Durrës). Elsewhere its name stays a word
+//!   ("peshqir plazhi" is a beach towel). It is named as a town is, and read before the towns, as
+//!   some are named after one (Rruga e Durrësit is in Tirana); it puts its town on too. A name
+//!   that zones of several towns share (Qendër) is the one in the town the words name, or else in
+//!   the page's; a zone in another town than the one named, and two zones, name none.
 //! - A kind of listing by the words search_kind knows (migration 0024: shitje, qira, blej...),
 //!   where the category takes that kind and another, as its type filter does.
 //! - A category only in a search across every category, by the first word that is none of the
@@ -19,9 +26,9 @@
 //!   alike name neither ("shtëpi" is Vila dhe shtëpi and Shtëpi dhe kopsht alike, but "shtëpi me
 //!   qira" only the first).
 
-use super::{filters::url, suggestions::PLACE_WORDS};
+use super::{filters::url, post::zoned, suggestions::PLACE_WORDS};
 use crate::{
-    db::{Categories, Category, City},
+    db::{Categories, Category, City, Zone},
     format,
 };
 
@@ -41,11 +48,16 @@ const ENDINGS: [&str; 16] = ["ave", "eve", "ash", "ve", "at", "et", "it", "ut", 
 /// how many of the words its name has, how many of them as typed, and how short its name is.
 type Fit = (bool, usize, usize, std::cmp::Reverse<usize>);
 
+/// A zone, with the town it is in.
+type TownZone<'a> = (&'a City, &'a Zone);
+
 /// What a search's words name.
 pub struct Named<'a> {
     pub category: Option<&'a Category>,
     pub kind: Option<&'static str>,
+    /// The town, the zone's when they name a zone.
     pub town: Option<&'a City>,
+    pub zone: Option<&'a Zone>,
     /// The words that name none of them, as typed.
     pub rest: Option<String>,
 }
@@ -57,8 +69,32 @@ struct Word<'w> {
 }
 
 /// What `words` name, or None when they name nothing a filter could take. `category` is the
-/// page's (or the one its category parameter names): its words then stay words.
-pub fn read<'a>(words: &str, category: Option<&'a Category>, categories: &'a Categories, towns: &'a [City]) -> Option<Named<'a>> {
+/// page's (or the one its category parameter names): its words then stay words. `town` is the
+/// page's, where a zone's name that several towns' zones share is.
+pub fn read<'a>(
+    words: &str,
+    category: Option<&'a Category>,
+    town: Option<&'a City>,
+    categories: &'a Categories,
+    towns: &'a [City],
+) -> Option<Named<'a>> {
+    // Read with a zone, then kept where the search turns out to be about property; read again
+    // without one otherwise, its name a word.
+    let in_property = |named: &Named| named.category.or(category).is_some_and(|category| zoned(categories, category));
+    read_words(words, category, Some(town), categories, towns)
+        .filter(|named| named.zone.is_some() && in_property(named))
+        .or_else(|| read_words(words, category, None, categories, towns))
+}
+
+/// What `words` name (see read): with `zone_town` a zone, with the page's town in it, and nothing
+/// without one.
+fn read_words<'a>(
+    words: &str,
+    category: Option<&'a Category>,
+    zone_town: Option<Option<&'a City>>,
+    categories: &'a Categories,
+    towns: &'a [City],
+) -> Option<Named<'a>> {
     let mut words: Vec<Word> = words
         .split_whitespace()
         .map(|typed| Word {
@@ -68,7 +104,25 @@ pub fn read<'a>(words: &str, category: Option<&'a Category>, categories: &'a Cat
         })
         .collect();
 
-    let town = read_town(&mut words, towns);
+    let zones = match zone_town {
+        Some(_) => Some(read_zone(&mut words, towns)?),
+        None => None,
+    };
+    let mut town = read_town(&mut words, towns);
+    let mut zone = None;
+    if let Some(zones) = zones {
+        // Of the zones so called, the one in the town named, or else in the page's.
+        let (zone_town, named) = match (town, zones.as_slice()) {
+            (Some(town), _) => zones.iter().find(|(city, _)| city.id == town.id).copied()?,
+            (None, [one]) => *one,
+            (None, _) => {
+                let page = zone_town.flatten()?;
+                zones.iter().find(|(city, _)| city.id == page.id).copied()?
+            }
+        };
+        town = Some(zone_town);
+        zone = Some(named);
+    }
 
     // The kind the words name, if they name one only.
     let mut kinds: Vec<&'static str> = words.iter().filter_map(|word| kind(&word.folded)).collect();
@@ -100,7 +154,7 @@ pub fn read<'a>(words: &str, category: Option<&'a Category>, categories: &'a Cat
         true => None,
         false => Some(left.iter().map(|word| word.typed).collect::<Vec<_>>().join(" ")),
     };
-    Some(Named { category: named_category, kind, town, rest })
+    Some(Named { category: named_category, kind, town, zone, rest })
 }
 
 /// Where the page at `path`, asked for with `query`, shows what its words name: the words that
@@ -116,13 +170,16 @@ pub fn url_for(path: &str, query: Option<&str>, named: &Named) -> String {
     if let Some(town) = named.town {
         pairs.push(("city".to_string(), town.slug.clone()));
     }
+    if let Some(zone) = named.zone {
+        pairs.push(("zone".to_string(), zone.slug.clone()));
+    }
     if let Some(kind) = named.kind {
         pairs.push(("type".to_string(), kind.to_string()));
     }
     let replaced = |name: &str| match name {
         "q" | "after" | "numri" => true,
         "category" => named.category.is_some(),
-        "city" | "lat" | "lng" | "radius" => named.town.is_some(),
+        "city" | "zone" | "lat" | "lng" | "radius" => named.town.is_some(),
         "type" => named.kind.is_some(),
         _ => false,
     };
@@ -134,19 +191,58 @@ pub fn url_for(path: &str, query: Option<&str>, named: &Named) -> String {
     url(path, pairs)
 }
 
-/// The town the words name, its words marked used, with the word that leads to it ("në").
+/// The zone the words name, as each town with a zone so called has it (Qendër is in three), its
+/// words marked used, with the word that leads to it ("në"); None for none, or for two.
+fn read_zone<'a>(words: &mut [Word], towns: &'a [City]) -> Option<Vec<TownZone<'a>>> {
+    let mut found: Option<(Vec<TownZone>, usize, usize)> = None;
+    let mut at = 0;
+    while at < words.len() {
+        // The longest name first: Plazhi i Vjetër, in Vlorë, before Plazh, in Durrës.
+        let named = (1..=3).rev().filter(|len| at + len <= words.len()).find_map(|len| {
+            let joined = joined(&words[at..at + len]);
+            let zones: Vec<TownZone> = towns
+                .iter()
+                .flat_map(|town| town.zones.iter().map(move |zone| (town, zone)))
+                .filter(|(_, zone)| match len {
+                    1 => names_place(&joined, &zone.slug, &zone.name),
+                    _ => joined == zone.slug,
+                })
+                .collect();
+            (!zones.is_empty()).then_some((zones, len))
+        });
+        let Some((zones, len)) = named else {
+            at += 1;
+            continue;
+        };
+        match found.as_ref().map(|(other, ..)| other[0].1.slug == zones[0].1.slug) {
+            Some(false) => return None,
+            Some(true) => {}
+            None => found = Some((zones, at, len)),
+        }
+        at += len;
+    }
+    let (zones, at, len) = found?;
+    use_place(words, at, len);
+    Some(zones)
+}
+
+/// The town the words name, its words marked used, with the word that leads to it ("në"). Words
+/// a zone took are not a town's (Rruga e Durrësit).
 fn read_town<'a>(words: &mut [Word], towns: &'a [City]) -> Option<&'a City> {
     let mut found: Option<(&City, usize, usize)> = None;
     let mut at = 0;
     while at < words.len() {
         // The longest name first: Malësi e Madhe before a town called Madhe, were there one.
         let named = (1..=3).rev().filter(|len| at + len <= words.len()).find_map(|len| {
-            let joined = words[at..at + len].iter().map(|word| word.folded.as_str()).collect::<Vec<_>>().join("-");
+            if words[at..at + len].iter().any(|word| word.used) {
+                return None;
+            }
+            let joined = joined(&words[at..at + len]);
             let after_place = at > 0 && PLACE_WORDS.contains(&words[at - 1].folded.as_str());
             towns
                 .iter()
                 .find(|town| match len {
-                    1 => names_town(&joined, town) && (town.slug.len() >= 4 || after_place),
+                    1 => names_place(&joined, &town.slug, &town.name) && (town.slug.len() >= 4 || after_place),
                     _ => joined == town.slug,
                 })
                 .map(|town| (town, len))
@@ -159,38 +255,53 @@ fn read_town<'a>(words: &mut [Word], towns: &'a [City]) -> Option<&'a City> {
         at += named.map_or(1, |(_, len)| len);
     }
     let (town, at, len) = found?;
+    use_place(words, at, len);
+    Some(town)
+}
+
+/// Words folded and joined as a slug joins them: "komuna-e-parisit".
+fn joined(words: &[Word]) -> String {
+    words.iter().map(|word| word.folded.as_str()).collect::<Vec<_>>().join("-")
+}
+
+/// Marks a place's `len` words from `at` used, and the word that leads to it ("në").
+fn use_place(words: &mut [Word], at: usize, len: usize) {
     for word in &mut words[at..at + len] {
         word.used = true;
     }
     if at > 0 && PLACE_WORDS.contains(&words[at - 1].folded.as_str()) {
         words[at - 1].used = true;
     }
-    Some(town)
 }
 
-/// Whether a folded word is the town's name in one of its forms: as it is (tirane), with the
-/// article or a case ending (tirana, tiranes, tiranen; durresi, durresit, durresin; shijaku), and
-/// with the ë before a last r, l or z gone, as the language drops it (shkodra, shkodres; kamza).
-fn names_town(word: &str, town: &City) -> bool {
-    let name = town.slug.as_str();
-    if word == name {
+/// Whether a folded word is a place's one-word name (`slug`, `name`) in one of its forms: as it is
+/// (tirane), with the article or a case ending (tirana, tiranes, tiranen; durresi, durresit,
+/// durresin; shijaku, but gramshi and plazhi, whose h is part of a letter), with the ending of a
+/// name that has its article already (blloku: bllokut, bllokun), and with the ë before a last r, l
+/// or z gone, as the language drops it (shkodra, shkodres; kamza).
+fn names_place(word: &str, slug: &str, name: &str) -> bool {
+    if word == slug {
         return true;
     }
-    if name.contains('-') {
+    if slug.contains('-') {
         return false;
     }
     let ends = |stem: &str, endings: &[&str]| endings.iter().any(|ending| word.strip_prefix(stem) == Some(*ending));
-    if let Some(stem) = name.strip_suffix('e') {
+    if let Some(stem) = slug.strip_suffix('e') {
         return ends(stem, &["a", "es", "en"]);
     }
-    let lowered = town.name.to_lowercase();
+    let lowered = name.to_lowercase();
     if lowered.ends_with("ër") || lowered.ends_with("ël") || lowered.ends_with("ëz") {
-        let (head, last) = name.split_at(name.len() - 2);
+        let (head, last) = slug.split_at(slug.len() - 2);
         return ends(&format!("{head}{}", &last[1..]), &["a", "es", "en"]);
     }
-    match name.ends_with(['k', 'g', 'h']) {
-        true => ends(name, &["u", "ut", "un"]),
-        false => ends(name, &["i", "it", "in"]),
+    if slug.ends_with(['u', 'i']) {
+        return ends(slug, &["t", "n"]);
+    }
+    let digraph = ["dh", "sh", "th", "xh", "zh"].iter().any(|letter| slug.ends_with(letter));
+    match slug.ends_with(['k', 'g', 'h']) && !digraph {
+        true => ends(slug, &["u", "ut", "un"]),
+        false => ends(slug, &["i", "it", "in"]),
     }
 }
 
@@ -286,25 +397,14 @@ fn use_with_fillers(words: &mut [Word], at: usize) {
 
 #[cfg(test)]
 mod tests {
-    use sqlx::types::Json;
-    use uuid::Uuid;
-
     use super::*;
 
-    fn town(name: &str) -> City {
-        City {
-            id: Uuid::nil(),
-            name: name.to_string(),
-            slug: format::slug(name),
-            county: String::new(),
-            latitude: 0.0,
-            longitude: 0.0,
-            zones: Json(Vec::new()),
-        }
+    fn names(word: &str, name: &str) -> bool {
+        names_place(word, &format::slug(name), name)
     }
 
     #[test]
-    fn a_town_is_named_in_its_forms() {
+    fn a_place_is_named_in_its_forms() {
         for (name, forms) in [
             ("Tiranë", &["tirane", "tirana", "tiranes", "tiranen"][..]),
             ("Vlorë", &["vlore", "vlora", "vlores"]),
@@ -313,13 +413,25 @@ mod tests {
             ("Shkodër", &["shkoder", "shkodra", "shkodres"]),
             ("Kamëz", &["kamez", "kamza", "kamzes"]),
             ("Fushë-Arrëz", &["fushe-arrez"]),
+            ("Gramsh", &["gramsh", "gramshi", "gramshit"]),
+            // Zones: one whose h is part of a letter, one with its article already, one with an ë.
+            ("Plazh", &["plazh", "plazhi", "plazhit", "plazhin"]),
+            ("Blloku", &["blloku", "bllokut", "bllokun"]),
+            ("Qendër", &["qender", "qendra", "qendres", "qendren"]),
         ] {
             for form in forms {
-                assert!(names_town(form, &town(name)), "{name}: {form}");
+                assert!(names(form, name), "{name}: {form}");
             }
         }
-        for (name, word) in [("Tiranë", "tiranez"), ("Durrës", "durresa"), ("Berat", "bera"), ("Shkodër", "shkodri")] {
-            assert!(!names_town(word, &town(name)), "{name}: {word}");
+        for (name, word) in [
+            ("Tiranë", "tiranez"),
+            ("Durrës", "durresa"),
+            ("Berat", "bera"),
+            ("Shkodër", "shkodri"),
+            ("Gramsh", "gramshu"),
+            ("Blloku", "bllokui"),
+        ] {
+            assert!(!names(word, name), "{name}: {word}");
         }
     }
 

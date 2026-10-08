@@ -336,14 +336,17 @@
 
     {% include "listing_grid.html" %}
     {%- if page.cards.is_empty() %}
-    {#- Nothing found: what would find more, a tap away: a wider circle round the map's point, or all
-        of Albania; and the chips above, each a filter less. -#}
+    {#- Nothing found: what would find more, a tap away: a wider circle round the map's point, the
+        whole town rather than its zone, or all of Albania; and the chips above, each a filter less. -#}
     <div class="empty-state">
       {%- if on > 0 %}
       <p class="empty">Provo të heqësh ndonjë filtër nga lart.</p>
       {%- endif %}
       {%- if let Some((url, km)) = filters.wider_url() %}
       <a class="button secondary" href="{{ url }}">Zgjero largësinë në {{ km }} km</a>
+      {%- endif %}
+      {%- if filters.zone.is_some() %}
+      <a class="button secondary" href="{{ filters.town_url() }}">Kërko në gjithë qytetin</a>
       {%- endif %}
       {%- if !filters.everywhere() %}
       <a class="button secondary" href="{{ filters.placeless_url() }}" data-forget-town data-turbo-prefetch="false">Kërko në gjithë Shqipërinë</a>

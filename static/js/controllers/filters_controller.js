@@ -5,20 +5,21 @@ import { forgetTown } from "controllers/place_controller.js";
 
 // The filter panel: a card the "Filtrat" button opens over the results and closes ("Mbyll", or the
 // button at its foot that shows the results), on every screen. Its options apply by themselves, as
-// soon as one changes (a box ticked,
-// a choice picked, a typed field left or entered, a slider let go) and as the card closes, with
-// whatever was typed but not left: the page refreshes in place for them (apply, refresh.js), the
-// card left as the visitor has it (keep), and the results, their count and the chips follow under
-// it. The button at its foot says how many results there are now, from the page's count, which
-// once the page shows is asked for further where it stopped at 1 000 (counted, numri=1). Its
-// Qyteti replaces the map's point with a town, "Afër meje" the town with the visitor's point. Of
-// what the browse row opens (the search, the filters, the map, the order) only one is open at a
-// time: opening it says so (section:open), and another's opening folds it (foldFor). Being the
-// browse page's own, it also folds whatever is open on Escape, a tap on the dim under it (foldAll)
-// or a tap on the row beside its buttons (foldFromRow), and fits what opens into the screen (fit).
+// soon as one changes (a box ticked, a choice picked, a typed field left or entered, a slider let
+// go) and as the card closes, with whatever was typed but not left: the page refreshes in place for
+// them (apply, refresh.js), the card left as the visitor has it (keep), and the results, their
+// count and the chips follow under it. The button at its foot says how many results there are now,
+// from the page's count, which once the page shows is asked for further where it stopped at 1 000
+// (counted, numri=1). Its Qyteti replaces the map's point with a town, and in property shows the
+// town's Zona where it has zones; "Afër meje" replaces the town and its zone with the visitor's
+// point. Of what the browse row opens (the search, the filters, the map, the order) only one is
+// open at a time: opening it says so (section:open), and another's opening folds it (foldFor).
+// Being the browse page's own, it also folds whatever is open on Escape, a tap on the dim under it
+// (foldAll) or a tap on the row beside its buttons (foldFromRow), and fits what opens into the
+// screen (fit).
 
 export default class extends Controller {
-  static targets = ["panel", "form", "toggle", "tools", "scrim", "show", "placeStatus"];
+  static targets = ["panel", "form", "toggle", "tools", "scrim", "show", "placeStatus", "zone"];
 
   connect() {
     this.counted();
@@ -114,6 +115,17 @@ export default class extends Controller {
   placed(event) {
     this.dropPoint();
     if (!event.target.value) forgetTown();
+    this.zoneShown();
+  }
+
+  // Zona, in property: shown where the town picked has zones of its own, which narrow_controller.js
+  // offers (dropping another town's zone, picked before); hidden, it says no zone.
+  zoneShown() {
+    if (!this.hasZoneTarget) return;
+    const town = this.formTarget.elements.namedItem("city")?.value;
+    const zones = town && this.zoneTarget.querySelector(`optgroup[data-parent="${CSS.escape(town)}"]`);
+    this.zoneTarget.hidden = !zones;
+    if (!zones) this.zoneTarget.querySelector("select").value = "";
   }
 
   // "Afër meje": the visitor's point, as far around it as the distance picked, or 10 km, in place
@@ -125,6 +137,7 @@ export default class extends Controller {
       this.say("");
       const town = this.formTarget.elements.namedItem("city");
       if (town) town.value = "";
+      this.zoneShown();
       this.setHidden("lat", latitude.toFixed(5));
       this.setHidden("lng", longitude.toFixed(5));
       if (!this.hidden("radius")?.value) this.setHidden("radius", "10");

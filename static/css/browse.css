@@ -451,6 +451,8 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .filter-locate .pin-icon { margin: 0; }
 .filter-form .field-hint { margin: 0; padding-left: calc(.7rem + 1px); }
 .filter-form .field-hint[hidden] { display: none; }
+/* Zona, under the place: hidden where the town picked has no zones (filters_controller.js). */
+.filter-form .filter-group[hidden] { display: none; }
 /* A range, from and to: two typed fields, or two dropdowns of steps (a year's, kilometres). */
 .range { display: flex; align-items: center; gap: .4rem; color: var(--muted); }
 .range input { flex: 1; }

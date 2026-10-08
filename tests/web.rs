@@ -1332,6 +1332,84 @@ async fn words_that_name_a_category_a_kind_and_a_town_put_those_filters_on(pool:
     }
 }
 
+/// Moves a listing into one of a town's zones.
+async fn in_zone(pool: &PgPool, number: i64, town: &str, zone: &str) {
+    sqlx::query(
+        "UPDATE listings SET location_id = (SELECT z.id FROM locations z JOIN locations t ON t.id = z.parent_id
+                                            WHERE t.slug = $1 AND z.slug = $2 AND z.location_type = 'AREA')
+         WHERE public_no = $3",
+    )
+    .bind(town)
+    .bind(zone)
+    .bind(number)
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn property_narrows_to_a_zone_of_its_town(pool: PgPool) {
+    in_zone(&pool, 1003, "tirane", "komuna-e-parisit").await;
+    // In its zone, the flat; in another of Tirana's, nothing, and a way to the whole town.
+    let zone = html(pool.clone(), "/c/apartamente?city=tirane&zone=komuna-e-parisit").await;
+    assert_eq!(card_numbers(&zone), [1003]);
+    let other = html(pool.clone(), "/c/apartamente?city=tirane&zone=blloku").await;
+    assert!(card_numbers(&other).is_empty());
+    assert!(other.contains(r#"<a class="button secondary" href="/c/apartamente?city=tirane">Kërko në gjithë qytetin</a>"#));
+    // Zona has every town's zones under it, those of the town picked showing, the zone selected.
+    assert!(zone.contains(r#"<optgroup label="Tiranë" data-parent="tirane">"#));
+    assert!(zone.contains(r#"<option value="komuna-e-parisit" selected>Komuna e Parisit</option>"#));
+    assert!(zone.contains(r#"<optgroup label="Durrës" data-parent="durres" hidden>"#));
+    // The zone's chip leaves the town; the town's takes the zone with it.
+    assert!(zone.contains(r#"<a class="filter-chip" href="/c/apartamente?city=tirane" aria-label="Hiq filtrin Komuna e Parisit">"#));
+    assert!(zone.contains(r#"<a class="filter-chip" href="/c/apartamente" aria-label="Hiq filtrin Tiranë" data-forget-town"#));
+    // A town without zones keeps Zona hidden, and a category whose listings have none has none.
+    let shkoder = html(pool.clone(), "/c/apartamente?city=shkoder").await;
+    assert!(shkoder.contains(r#"<div class="filter-group filter-zone" data-filters-target="zone" hidden>"#));
+    assert!(!html(pool.clone(), "/c/makina?city=tirane").await.contains("filter-zone"));
+    // A zone goes with its town: without it, in another town or outside property, it is nothing.
+    let lone = html(pool.clone(), "/c/apartamente?zone=komuna-e-parisit").await;
+    assert!(card_numbers(&lone).contains(&1003) && !lone.contains("Hiq filtrin Komuna e Parisit"));
+    assert!(!html(pool.clone(), "/c/apartamente?city=durres&zone=komuna-e-parisit").await.contains("Hiq filtrin Komuna"));
+    let cars = html(pool, "/c/makina?city=tirane&zone=blloku").await;
+    assert_eq!(card_numbers(&cars), [1001]);
+    assert!(!cars.contains("Hiq filtrin Blloku"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_zone_named_in_a_property_search_puts_it_on(pool: PgPool) {
+    in_zone(&pool, 1003, "durres", "plazh").await;
+    let goes = |uri: &'static str| {
+        let pool = pool.clone();
+        async move { get(pool, uri).await.location }
+    };
+    // The flats in Plazh, which is in Durrës, "2+1" searched there.
+    let plazh = "/search?q=2%2B1&category=apartamente&city=durres&zone=plazh";
+    assert_eq!(goes("/search?q=apartament+2%2B1+ne+plazh").await.as_deref(), Some(plazh));
+    let page = html(pool.clone(), plazh).await;
+    assert_eq!(card_numbers(&page), [1003]);
+    for chip in ["Apartamente", "Durrës", "Plazh"] {
+        assert!(page.contains(&format!(r#"aria-label="Hiq filtrin {chip}""#)), "{chip}");
+    }
+    // In its forms and any order; a zone of a few words, on a category's page.
+    assert_eq!(goes("/search?q=plazhi+apartament").await.as_deref(), Some("/search?category=apartamente&city=durres&zone=plazh"));
+    assert_eq!(goes("/c/prona?q=komuna+e+parisit").await.as_deref(), Some("/c/prona?city=tirane&zone=komuna-e-parisit"));
+    // A zone named after a town is not that town: Rruga e Durrësit is in Tirana.
+    assert_eq!(
+        goes("/c/apartamente?q=rruga+e+durresit").await.as_deref(),
+        Some("/c/apartamente?city=tirane&zone=rruga-e-durresit")
+    );
+    // Qendër is Tirana's, Durrës's and Vlora's: the one in the town named, or else in the page's.
+    assert_eq!(goes("/c/apartamente?q=ne+qender+te+tiranes").await.as_deref(), Some("/c/apartamente?city=tirane&zone=qender"));
+    assert_eq!(goes("/c/apartamente?city=vlore&q=qendra").await.as_deref(), Some("/c/apartamente?city=vlore&zone=qender"));
+    // A zone in another town than the one named stays a word, the town kept.
+    assert_eq!(goes("/c/apartamente?q=plazh+ne+vlore").await.as_deref(), Some("/c/apartamente?q=plazh&city=vlore"));
+    // Outside property, or with no town to say which Qendër, the name is a word: a beach towel.
+    for uri in ["/search?q=peshqir+plazhi", "/c/makina?q=golf+blloku", "/c/apartamente?q=qender"] {
+        assert_eq!(get(pool.clone(), uri).await.status, StatusCode::OK, "{uri}");
+    }
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn filler_words_needn_t_be_in_a_listing(pool: PgPool) {
     // The Mercedes is in Durrës, but nothing it says has "në" (which goes with the town, the
