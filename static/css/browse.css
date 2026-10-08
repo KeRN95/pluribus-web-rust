@@ -275,15 +275,24 @@
   .browse-tools .button.round-button { transition: none; }
   .browse-tools .round-button:active { transform: none; }
 }
-/* Under the buttons, smaller pills: the order ("Më të rejat") and how the cards show, each opening
-   its menu, on the accent's tint while it is open, as a picked filter is. */
-.pills-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; }
+/* The results' head: their heading, and on its right, smaller pills: how many, the order ("Më të
+   rejat") and how the cards show, each opening its menu, on the accent's tint while it is open, as
+   a picked filter is. Where the heading is too long for both, the pills take the next line, still
+   on the right. Where the heading is for screen readers only (a search), the pills lead the
+   results on their own, the count first and the view at the far right. */
+.results-head { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.25rem; margin: 1.75rem 0 .75rem; }
+.results-head > .results-heading { margin: 0; }
+.results-head:has(> .results-heading.visually-hidden) { margin: 0 0 1rem; }
+.pills-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 0 auto; }
+.results-head:has(> .results-heading.visually-hidden) > .pills-row { flex: 1; margin: 0; }
 .pills-row > .sort-menu,
 .pills-row > .cards-menu { flex: none; }
 /* How many the page found, before the order's pill, in the pills' size, with room kept for the
    most it can say ("10 000+ njoftime"): the count past 1 000 comes once the page shows
-   (filters_controller.js), and the pills after it must not move as it does. */
+   (filters_controller.js), and the pills after it must not move as it does: beside a heading, the
+   number against them. */
 .pills-row > .result-count { min-width: 7.9em; margin: 0 .35rem 0 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.results-heading:not(.visually-hidden) + .pills-row > .result-count { text-align: right; }
 .small-pill {
   display: inline-flex;
   flex: none;
@@ -315,8 +324,10 @@
 .browse:not(.cards-big, .cards-list) .cards-icon-small,
 .cards-big .cards-icon-big,
 .cards-list .cards-icon-list { display: block; }
-/* At the row's right end, even on a line of its own, its menu growing leftward from there. */
+/* At the row's right end, even on a line of its own, its menu growing leftward from there; the
+   order's too, at the heading's right, where it would run off a phone's screen. */
 .pills-row > .cards-menu { margin-left: auto; }
+.results-heading:not(.visually-hidden) + .pills-row .sort-options { left: auto; right: 0; transform-origin: top right; }
 .cards-menu > .cards-options { left: auto; right: 0; transform-origin: top right; }
 .cards-options .sort-option { display: flex; align-items: center; gap: .55rem; }
 .cards-options .sort-option > svg { flex: none; }

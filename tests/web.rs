@@ -757,12 +757,15 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         r#"<div class="search-card" data-controller="panel""#,
         r#"<button type="button" class="button secondary round-button labelled filters-open""#,
         r#"<section class="map-card map-hidden""#,
-        r#"<div class="pills-row">"#,
-        r#"<details class="sort-menu" data-controller="dropdown""#,
-        r#"<details class="sort-menu cards-menu" data-controller="dropdown" data-cards-target="menu""#,
         r#"<aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">"#,
         r#"<div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>"#,
         r#"<section class="results""#,
+        // The count, the order and the view on the listings' heading's right.
+        r#"<div class="results-head">"#,
+        r#"<h2 class="results-heading" id="results-heading">Njoftimet më të reja në Makina</h2>"#,
+        r#"<div class="pills-row">"#,
+        r#"<details class="sort-menu" data-controller="dropdown""#,
+        r#"<details class="sort-menu cards-menu" data-controller="dropdown" data-cards-target="menu""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
     for listener in ["panel#foldFor", "filters#foldFor", "map#foldFor", "dropdown#foldFor", "filters#fit"] {
@@ -997,7 +1000,7 @@ async fn the_maps_card_picks_a_town_or_all_of_albania(pool: PgPool) {
     assert!(order.is_sorted(), "{order:?}");
     assert!(menu.contains(r#"data-url="/c/makina?city=durres&vehicle_fuel=DIESEL">Durrës</option>"#));
     assert!(!cars.contains("place-pills") && !cars.contains("place-near"));
-    let pills = &cars[cars.find(r#"<div class="pills-row">"#).unwrap()..cars.find(r#"<aside class="filters""#).unwrap()];
+    let pills = &cars[cars.find(r#"<div class="pills-row">"#).unwrap()..cars.find(r#"<div class="grid">"#).unwrap()];
     assert_eq!(pills.matches(r#"class="small-pill"#).count(), 2);
     // The page's town is kept in a cookie for the next pages (place_controller.js), on the page's
     // own element.
