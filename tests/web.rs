@@ -892,9 +892,8 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(cars.contains(r#"<section class="map-card map-hidden" data-controller="map" data-map-lazy-value="true""#));
     assert!(cars.contains(r#"aria-controls="map-card-body" aria-expanded="false""#));
     assert!(cars.contains(r#"aria-label="Harta: Kudo" title="Harta: Kudo""#));
-    // With no point, it has no circle until one is set by moving it (map_controller.js), and it
-    // starts on Tirana.
-    assert!(cars.contains(r#"data-map-ring-value="false""#) && !cars.contains("data-map-latitude-value"));
+    // With no point, it starts on Tirana, its circle round the pin all the same (map_controller.js).
+    assert!(!cars.contains("data-map-latitude-value") && !cars.contains("data-map-ring-value"));
     assert!(!cars.contains("map-open") && !cars.contains("Brenda 10 km nga pika"));
     // Its dots come when it first opens: the same page with harta=1, whose frame has them.
     assert!(cars.contains(r#"<turbo-frame id="map-points" data-map-target="frame" data-src="/c/makina?vehicle_fuel=DIESEL&harta=1">"#));
@@ -925,7 +924,6 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(pinned.contains(r#"aria-label="Harta: Tiranë · 5 km" title="Harta: Tiranë · 5 km""#));
     assert!(pinned.contains(r#"<span class="button-label">Tiranë · 5 km</span>"#));
     assert!(pinned.contains(r#"class="button secondary round-button labelled map-button is-set""#));
-    assert!(pinned.contains(r#"data-map-ring-value="true""#));
     assert!(pinned.contains(r#"aria-label="Filtrat: Asnjë filtër""#));
     // The distance is what the circle covers at the map's zoom (map_controller.js), said beside its
     // name and carried by the radius field: no slider.
@@ -971,14 +969,13 @@ async fn the_maps_card_picks_a_town_or_all_of_albania(pool: PgPool) {
     assert!(cars.contains(r#"data-controller="filters cards place""#) && cars.contains(r#"data-place-town-value="""#));
 
     // A town: chosen in the menu, which says it; kept in the cookie; its chip forgets it. The
-    // map's button says it, and the map starts there, with no circle until a point is set.
+    // map's button says it, and the map starts there.
     let durres = html(pool.clone(), "/c/makina?city=durres").await;
     assert!(durres.contains(r#"data-place-town-value="durres""#));
     assert!(durres.contains(r#"data-url="/c/makina?city=durres" selected>Durrës</option>"#));
     assert!(durres.contains(r#"<option value="" data-url="/c/makina">Gjithë Shqipëria</option>"#));
     assert!(durres.contains(r#"<a class="filter-chip" href="/c/makina" aria-label="Hiq filtrin Durrës" data-forget-town data-turbo-prefetch="false">"#));
     assert!(durres.contains(r#"aria-label="Harta: Durrës" title="Harta: Durrës""#));
-    assert!(durres.contains(r#"data-map-ring-value="false""#));
     assert!(durres.contains(r#"data-map-latitude-value="41.313333" data-map-longitude-value="19.445833""#));
 
     // The map's point, in place of a town: the menu says it, after all of Albania, which drops it,

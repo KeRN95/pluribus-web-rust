@@ -10,13 +10,13 @@ import { forgetTown } from "controllers/place_controller.js";
 // out bigger, from 1 to 50 km, the nearest whole kilometre said over the map as it changes, and
 // the zoom goes no further either way. On the map page (/harta) "Vendos hartën" sends the map's middle and the distance,
 // which reloads only the results panel. On a category or search page the map is in a card that
-// always comes folded, and loads, with its dots, only when it first opens (lazy); there the circle
-// round the pin shows only once a point is set (ring), and the middle and the distance apply as soon as they change, when the map stops after a drag
+// always comes folded, and loads, with its dots, only when it first opens (lazy), its circle round
+// the pin from the first; there the middle and the distance apply as soon as they change, when the map stops after a drag
 // or a zoom, or "Vendndodhja ime" moves it (pointChanged), in place of a town; a town from the
 // card's menu puts the page in it instead, the map moving onto it (pickTown): the page refreshes
 // in place (refresh.js), which keeps the category and the filters, the card open as it is and the
 // map as Leaflet drew it (keep), its dots following the new results (reloadPoints). Each result
-// gets a dot on the map: those within the circle once it is set. Leaflet draws the map with
+// gets a dot on the map: those within the circle once a point is set. Leaflet draws the map with
 // OpenStreetMap's tiles.
 
 const LEAFLET = "/static/vendor/leaflet-1.9.4";
@@ -59,9 +59,8 @@ export default class extends Controller {
     "canvas", "form", "latitude", "longitude", "radius", "radiusLabel", "status", "results", "points", "toggle",
     "frame", "town",
   ];
-  // lazy: the map loads when its card is first opened (category and search pages). ring: a point
-  // is set, and its circle shows.
-  static values = { latitude: Number, longitude: Number, lazy: Boolean, ring: { type: Boolean, default: true } };
+  // lazy: the map loads when its card is first opened (category and search pages).
+  static values = { latitude: Number, longitude: Number, lazy: Boolean };
 
   connect() {
     if (!this.lazyValue) {
@@ -127,7 +126,6 @@ export default class extends Controller {
     this.map.createPane("ring").style.zIndex = 350;
     this.ring = Object.assign(document.createElement("div"), { className: "map-area" });
     this.map.getPane("ring").append(this.ring);
-    this.ringValueChanged();
     this.map.on("move zoom viewreset", () => this.placeRing());
     // The distance follows the zoom: as a pinch goes, and as the + and − start theirs; once it
     // stops, it applies (zoomed). A map whose box changed (a phone turned) keeps it.
@@ -284,30 +282,22 @@ export default class extends Controller {
   // A town from the card's menu, or all of Albania: the page refreshes in place in it
   // (refresh.js), the card open as it is, the town in place of the map's point, or no place at all,
   // which forgets the town kept for the next pages (place_controller.js). The map moves onto the
-  // town, its circle gone until a point is set again by moving it (ring). The point's own entry,
-  // there while one is set, leads nowhere.
+  // town. The point's own entry, there while one is set, leads nowhere.
   pickTown() {
     const option = this.townTarget.selectedOptions[0];
     const url = option?.dataset.url;
     if (!url) return;
     if (!option.value) forgetTown();
-    this.ringValue = false;
     if (this.map && option.dataset.lat) {
       this.fit({ point: this.L.latLng(Number(option.dataset.lat), Number(option.dataset.lng)) });
     }
     refreshTo(url);
   }
 
-  // A point set, or none (a town picked, a page without one): the circle shows or goes.
-  ringValueChanged() {
-    if (this.ring) this.ring.hidden = !this.ringValue;
-  }
-
-  // In a card (lazy), the map's middle and the distance apply as soon as they change, and the
-  // circle shows. A place gives its own point, the map still on its way there.
+  // In a card (lazy), the map's middle and the distance apply as soon as they change. A place
+  // gives its own point, the map still on its way there.
   pointChanged(point) {
     if (!this.lazyValue) return;
-    this.ringValue = true;
     this.apply(point);
   }
 
