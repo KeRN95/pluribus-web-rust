@@ -2330,6 +2330,33 @@ async fn ai_fills_in_the_rest_of_the_form_from_the_writing_and_the_photos(pool: 
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn ai_fill_takes_the_properties_put_beside_the_other_fields(pool: PgPool) {
+    // Haiku's answer for some photos of a Golf: its properties beside the category rather than in
+    // "properties", where they are asked for. The form got none of them.
+    let (url, asked) = ai_stand_in(Some(json!({
+        "category": "makina", "city": "tirane", "condition": "USED", "currency": "EUR", "listing_type": "SELL",
+        "price": 8900, "price_type": "NEGOTIABLE", "vehicle_doors": "D4", "vehicle_engine": 1600,
+        "vehicle_features": ["AIR_CONDITIONING", "PARKING_SENSORS"], "vehicle_fuel": "DIESEL",
+        "vehicle_make": "VOLKSWAGEN", "vehicle_mileage": 142000, "vehicle_model": "VOLKSWAGEN_GOLF",
+        "vehicle_no_accident": true, "vehicle_service_book": true, "vehicle_transmission": "MANUAL", "vehicle_year": 2016
+    })))
+    .await;
+    let words = [("title", "Shes golf 7"), ("description", "Golf 7 1.6 TDI, viti 2016, 142,000 km të bëra. Manual, 5 porta.")];
+    let (status, filled) = ai_fill(app_with_ai(pool, &url), &words, &[], "198.51.100.21").await;
+    assert_eq!(status, StatusCode::OK, "{filled}");
+    assert_eq!(filled["properties"], json!({
+        "prop_vehicle_doors": ["D4"], "prop_vehicle_engine": ["1600"],
+        "prop_vehicle_features": ["AIR_CONDITIONING", "PARKING_SENSORS"], "prop_vehicle_fuel": ["DIESEL"],
+        "prop_vehicle_make": ["VOLKSWAGEN"], "prop_vehicle_mileage": ["142000"], "prop_vehicle_model": ["VOLKSWAGEN_GOLF"],
+        "prop_vehicle_no_accident": ["1"], "prop_vehicle_service_book": ["1"], "prop_vehicle_transmission": ["MANUAL"],
+        "prop_vehicle_year": ["2016"]
+    }));
+    // The tool takes nothing beside its fields, which steers the AI to put them where they go.
+    let asked = asked.lock().unwrap();
+    assert_eq!(asked[0].1["tools"][0]["input_schema"]["additionalProperties"], json!(false));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn ai_fill_wants_the_writing_first_has_limits_and_says_when_it_fails(pool: PgPool) {
     let (url, asked) = ai_stand_in(Some(json!({"category": "makina"}))).await;
     let words = [("title", "Volkswagen Golf 7, 2016"), ("description", "Makina në gjendje shumë të mirë.")];

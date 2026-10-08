@@ -73,9 +73,10 @@ never guess a year, a mileage, an area, a floor, a number of rooms or a price.
 WANTED_RENT (wants to rent), SERVICE (offers a service), JOB (a job offered or wanted).
 - condition: only for a category marked (condition): NEW, LIKE_NEW (like new), USED, or FOR_PARTS \
 (for parts, or not working).
-- properties: only the chosen category's, by property code: a listed option's code, a number, \
-true for one that applies, or for a list the codes of all the options that apply. A model must be \
-one listed under the make chosen.
+- properties: only the chosen category's, by property code, all of them inside the properties \
+object rather than beside category and the other fields: a listed option's code, a number, true \
+for one that applies, or for a list the codes of all the options that apply. A model must be one \
+listed under the make chosen.
 - price: only when the seller wrote one, as a plain number (\"9 500 €\" is 9500, \"95 mijë euro\" \
 95000, \"1,2 milion lekë\" 1200000), with currency EUR for euros (€, euro, eur) or ALL for lekë. \
 price_type: NEGOTIABLE when the price can be discussed (\"i diskutueshëm\", \"negociohet\"), FREE \
@@ -305,7 +306,8 @@ fn tool<'a>(leaves: &[&Category]) -> Tool<'a> {
                 "city": {"type": "string", "description": "A town's code"},
                 "zone": {"type": "string", "description": "A zone's code, in the town given"}
             },
-            "required": ["category"]
+            "required": ["category"],
+            "additionalProperties": false
         }),
     }
 }
@@ -336,7 +338,17 @@ async fn checked(
             filled.fields.insert("condition", condition.to_string());
         }
         let attributes = db::form_attributes(&state.db, category.id).await?;
-        filled.properties = checked_properties(&attributes, &answer["properties"]);
+        let given = given_properties(answer);
+        filled.properties = checked_properties(&attributes, &given);
+        // What the form couldn't take, for the log: a code it doesn't have, a value it doesn't list.
+        let dropped: Vec<&str> = given
+            .keys()
+            .filter(|code| !filled.properties.contains_key(&field_name(code)))
+            .map(String::as_str)
+            .collect();
+        if !dropped.is_empty() {
+            tracing::info!(category = %category.slug, ?dropped, "the form doesn't take some of the AI's properties");
+        }
     }
 
     // The price: an amount for a fixed or negotiable one, the kind alone for the others.
@@ -367,13 +379,34 @@ async fn checked(
     Ok(filled)
 }
 
-/// The category's properties as the AI gave them, by field name, those the form takes: checked as
-/// the form checks them (properties::check), a list's options only those it has, and a model only
-/// with its make.
-fn checked_properties(attributes: &[FormAttribute], given: &Value) -> BTreeMap<String, Vec<String>> {
+/// The fields the tool takes beside the properties.
+const FIELDS: [&str; 9] = ["category", "listing_type", "condition", "properties", "price", "currency", "price_type", "city", "zone"];
+
+/// The properties the AI gave, by code: in `properties`, as it is asked to, but also where it
+/// sometimes puts them instead, beside the other fields (a car's make next to its category: all of
+/// a Golf's were there for some photos, and the form got none), or in `properties` as a JSON text;
+/// named by the form's field name too ("prop_vehicle_make"). Those in `properties` come first.
+fn given_properties(answer: &Value) -> serde_json::Map<String, Value> {
+    let nested = match &answer["properties"] {
+        Value::String(text) => serde_json::from_str(text).unwrap_or(Value::Null),
+        value => value.clone(),
+    };
+    let mut given = serde_json::Map::new();
+    let beside = answer.as_object().into_iter().flatten().filter(|(name, _)| !FIELDS.contains(&name.as_str()));
+    for (name, value) in nested.as_object().into_iter().flatten().chain(beside) {
+        let code = name.strip_prefix("prop_").unwrap_or(name);
+        given.entry(code.to_string()).or_insert_with(|| value.clone());
+    }
+    given
+}
+
+/// The category's properties as the AI gave them (given_properties), by field name, those the
+/// form takes: checked as the form checks them (properties::check), a list's options only those it
+/// has, and a model only with its make.
+fn checked_properties(attributes: &[FormAttribute], given: &serde_json::Map<String, Value>) -> BTreeMap<String, Vec<String>> {
     let mut values: HashMap<String, Vec<String>> = HashMap::new();
     for attribute in attributes {
-        let value = &given[attribute.code.as_str()];
+        let value = given.get(&attribute.code).unwrap_or(&Value::Null);
         let mut texts: Vec<String> = match value {
             Value::String(text) => vec![text.trim().to_string()],
             Value::Number(_) => number(value).map(typed).into_iter().collect(),
@@ -475,5 +508,24 @@ mod tests {
         assert_eq!(number(&json!(12.5)).map(typed).as_deref(), Some("12,5"));
         assert_eq!(number(&json!("85")).map(typed).as_deref(), Some("85"));
         assert_eq!(number(&json!(true)), None);
+    }
+
+    #[test]
+    fn properties_count_wherever_the_ai_puts_them() {
+        let given = |answer: Value| Value::Object(given_properties(&answer));
+        // In properties, as asked.
+        assert_eq!(given(json!({"category": "makina", "properties": {"vehicle_make": "VOLKSWAGEN"}})), json!({"vehicle_make": "VOLKSWAGEN"}));
+        // Beside the other fields, as a Golf's all were for some photos; those in properties first.
+        assert_eq!(
+            given(json!({
+                "category": "makina", "price": 8900, "city": "tirane", "vehicle_year": 2016, "vehicle_make": "AUDI",
+                "properties": {"vehicle_make": "VOLKSWAGEN"}
+            })),
+            json!({"vehicle_make": "VOLKSWAGEN", "vehicle_year": 2016})
+        );
+        // As a JSON text, and by the form's field names.
+        assert_eq!(given(json!({"properties": "{\"vehicle_fuel\": \"DIESEL\"}"})), json!({"vehicle_fuel": "DIESEL"}));
+        assert_eq!(given(json!({"properties": {"prop_vehicle_fuel": "DIESEL"}})), json!({"vehicle_fuel": "DIESEL"}));
+        assert_eq!(given(json!({"category": "makina", "properties": "not JSON"})), json!({}));
     }
 }
