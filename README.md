@@ -90,10 +90,14 @@ docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v views=1 < de
 docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v drops=1 < dev/generate_listings.sql
 ```
 
-The tests need the database running; each test gets a fresh database of its own:
+The tests need the database running; each test gets a fresh database of its own, which is most of what a test costs. Two things keep that cheap. `compose.yaml` runs the development database for speed over durability (no waiting for the disk on each commit), with the lock memory and connections for a dozen test databases at once. And `dev/test_template.sh` makes the cluster's `template1` a migrated copy of the schema (sqlx-cli needed: `cargo install sqlx-cli --no-default-features --features postgres`), so that the `create database` behind every `#[sqlx::test]` copies 12 MB of files in a tenth of a second instead of running the 26 migrations, which the migrator then finds applied. Run it once after `docker compose up -d`, and again whenever `migrations/` changes: a new migration only costs the tests its own run until then, but a migration changed under the tests fails them all with "migration N was previously applied but has been modified". Scratch databases made with `sqlx database create` come migrated too. The 118 request tests then take about 15 seconds, eight at a time:
 
 ```bash
-cargo test
+sh dev/test_template.sh
+```
+
+```bash
+cargo test -- --test-threads=8
 ```
 
 **Windows:** Rust's MSVC toolchain needs Microsoft's C++ build tools for its linker (`link.exe`): Visual Studio Build Tools with the "Desktop development with C++" workload. Without them nothing links, so build and run in WSL instead.
@@ -178,10 +182,11 @@ cargo test
 | `tests/schema_checks.sql` | 83 checks of the schema's constraints and behaviour (35 checks, 36 statements that must fail, 12 that must succeed), in one transaction rolled back at the end |
 | `tests/fixtures/listings.sql` | The tests' sample listings, which can also be loaded into the development database |
 | `dev/deploy.sh` | Builds the release and (re)starts it on `BIND_ADDR`, keeping the previous one to go back to |
+| `dev/test_template.sh` | Makes the development database's `template1` a migrated copy of the schema, so the tests' databases start migrated (see "Running it locally"); run again when `migrations/` changes |
 | `dev/setup_garage.sh`, `dev/garage.toml` | The local photo store's one-time setup, and its configuration |
 | `dev/sample_listings.sql` | 305 extra sample listings for the development database (not used by the tests) |
 | `dev/generate_listings.sql` | Generates as many realistic listings as you ask for, with sellers and photos, for trying the site at scale; removes them again with `remove=1`, gives listings with only a cover more photos with `photos=1`, puts property listings from earlier versions of it in their zones with `zones=1`, gives listings views with `views=1`, and lowers some of their prices with `drops=1` |
-| `compose.yaml` | The development services: PostgreSQL 15 (port 5432) and Garage (port 3900) |
+| `compose.yaml` | The development services: PostgreSQL 15 (port 5432), set for speed over durability (`fsync` and `synchronous_commit` off, lock memory and connections for the tests' databases, 256 MB of shared memory), and Garage (port 3900) |
 | `.env.example` | Every setting, with values that work locally (see "Configuration") |
 | `Cargo.toml` | The crates the site uses (see "Dependencies") |
 | `.gitattributes` | LF line endings for migrations, which sqlx checksums byte by byte, and for shell scripts, which a carriage return breaks |

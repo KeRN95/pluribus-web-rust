@@ -3,6 +3,14 @@
 services:
   db:
     image: postgres:15-alpine
+    # Speed over durability, as a development database can afford: no waiting for the disk on each
+    # commit (fsync, synchronous_commit, full_page_writes off), which makes the tests' databases,
+    # each migrated from nothing, two to three times quicker to make; enough lock memory and
+    # connections for a dozen of them migrating at once (max_locks_per_transaction,
+    # max_connections); and a bigger shared memory for parallel vacuums and sorts than Docker's
+    # 64 MB (shm_size). A crash mid-write could corrupt this database; regenerate it then.
+    command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_locks_per_transaction=512 -c max_connections=300
+    shm_size: 256mb
     environment:
       POSTGRES_USER: marketplace
       POSTGRES_PASSWORD: marketplace
