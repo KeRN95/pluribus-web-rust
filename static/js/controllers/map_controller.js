@@ -7,9 +7,8 @@ import { forgetTown } from "controllers/place_controller.js";
 // on the point set before, the town picked, or Tirana's middle (filters.rs, map_start). Round the
 // pin, a circle that stays the same size in the middle of the map whatever the zoom: how far
 // around the pin to look is what it covers, so zooming in makes the distance smaller and zooming
-// out bigger, from 1 to 50 km in whole kilometres, said over the map as it changes (the zoom, once
-// it stops, settling on the one whose circle covers exactly that), and the zoom goes no further
-// either way. On the map page (/harta) "Vendos hartën" sends the map's middle and the distance,
+// out bigger, from 1 to 50 km, the nearest whole kilometre said over the map as it changes, and
+// the zoom goes no further either way. On the map page (/harta) "Vendos hartën" sends the map's middle and the distance,
 // which reloads only the results panel. On a category or search page the map is in a card that
 // always comes folded, and loads, with its dots, only when it first opens (lazy); there the circle
 // round the pin shows only once a point is set (ring), and the middle and the distance apply as soon as they change, when the map stops after a drag
@@ -131,7 +130,7 @@ export default class extends Controller {
     this.ringValueChanged();
     this.map.on("move zoom viewreset", () => this.placeRing());
     // The distance follows the zoom: as a pinch goes, and as the + and − start theirs; once it
-    // stops, the map settles on it (zoomed). A map whose box changed (a phone turned) keeps it.
+    // stops, it applies (zoomed). A map whose box changed (a phone turned) keeps it.
     this.map.on("zoom", () => this.showDistance(this.map.getZoom()));
     this.map.on("zoomanim", ({ zoom }) => this.showDistance(zoom));
     this.map.on("zoomend", () => this.zoomed());
@@ -220,12 +219,12 @@ export default class extends Controller {
     if (this.map && this.hasFrameTarget) this.frameTarget.src = this.frameTarget.dataset.src;
   }
 
-  // A zoom stopped: once the map has been still a moment (SETTLE_MS, so that taps on + or − in a
-  // row make one change), the distance is what the circle covers, in whole kilometres, and the map
-  // settles on the zoom whose circle covers exactly that, at once (an animation would swallow a tap
-  // that came during it). Changed by a pinch, a tap or a button, in a card the results follow
-  // (pointChanged), and on the map page "Vendos hartën" sends it; the map's own zooms (fit, and
-  // the settling) keep the distance, so they change nothing.
+  // A zoom stopped: once the map has been still a moment (SETTLE_MS, so that taps on + or − or
+  // notches of the wheel in a row make one change), the distance is what the circle covers, to
+  // the nearest whole kilometre; the map stays as it is (moving it onto the zoom of exactly that
+  // many was a jump the eye caught). Changed by a pinch, a tap, a button or the wheel, in a card
+  // the results follow (pointChanged), and on the map page "Vendos hartën" sends it; the map's own
+  // zooms (fit) keep the distance, so they change nothing.
   zoomed() {
     clearTimeout(this.settling);
     this.settling = setTimeout(() => this.settle(), SETTLE_MS);
@@ -237,7 +236,6 @@ export default class extends Controller {
     this.showDistance(this.map.getZoom());
     if (km === this.km) return;
     this.radiusTarget.value = km;
-    this.map.setZoom(this.zoomFor(km), { animate: false });
     this.pointChanged();
   }
 
