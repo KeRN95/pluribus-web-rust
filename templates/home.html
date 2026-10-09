@@ -119,7 +119,8 @@
       </button>
     </div>
   </div>
-  <turbo-stream-source src="/te-rejat{% if let Some(since) = since %}?since={{ since }}{% endif %}" data-newest-target="source"></turbo-stream-source>
+  {#- The stream, which newest_controller.js puts in the page once it has loaded. -#}
+  <template data-newest-target="sourceTemplate"><turbo-stream-source src="/te-rejat{% if let Some(since) = since %}?since={{ since }}{% endif %}" data-newest-target="source"></turbo-stream-source></template>
 </section>
 
 <section class="latest" aria-labelledby="latest-heading">

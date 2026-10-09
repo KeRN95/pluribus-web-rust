@@ -16,7 +16,7 @@ const PACE = 500;
 const STILL = 200;
 
 export default class extends Controller {
-  static targets = ["strip", "source", "waiting", "count"];
+  static targets = ["strip", "source", "waiting", "count", "sourceTemplate"];
 
   // The cards that came and wait their turn, the oldest first, each with what tells Turbo it is
   // done with; how many more came than wait (only the newest KEEP do); when the next may come in.
@@ -27,7 +27,21 @@ export default class extends Controller {
   touching = false;
   moving = false;
 
+  // The stream starts once the page has loaded: it brings nothing the page needs to show, and it
+  // stays open, a long request among the page's own while they load. Its element waits in a
+  // <template> until then; a page Turbo shows again from its cache has it already.
+  connect() {
+    if (this.hasSourceTarget) return;
+    if (document.readyState === "complete") this.startStream();
+    else window.addEventListener("load", this.startStream, { once: true });
+  }
+
+  startStream = () => {
+    if (!this.hasSourceTarget && this.hasSourceTemplateTarget) this.element.append(this.sourceTemplateTarget.content.cloneNode(true));
+  };
+
   disconnect() {
+    window.removeEventListener("load", this.startStream);
     for (const card of this.queue) card.done();
     this.queue = [];
     this.dropped = 0;

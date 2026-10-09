@@ -501,7 +501,12 @@ async fn the_welcome_page_has_the_newest_listings_in_a_row_that_follows_new_ones
     // The row follows the listings that come after its newest.
     let since = newest_cursor(&pool).await;
     assert!(row.contains(&format!(r#"data-cursor="{since}""#)), "{row}");
-    assert!(row.contains(&format!(r#"<turbo-stream-source src="/te-rejat?since={since}""#)), "{row}");
+    // Its stream waits in a template, which newest_controller.js puts in the page once it has
+    // loaded: nothing it brings is needed to show the page.
+    assert!(
+        row.contains(&format!(r#"<template data-newest-target="sourceTemplate"><turbo-stream-source src="/te-rejat?since={since}""#)),
+        "{row}"
+    );
     // While the row is slid along, a fade over its start says how many new ones wait: none yet.
     assert!(row.contains(r#"<div class="newest-waiting" data-newest-target="waiting" hidden>"#), "{row}");
 }
@@ -2928,23 +2933,21 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     let version = marketplace::web::asset_version();
     assert_eq!(version.len(), 8);
     let body = get(pool.clone(), "/").await.body;
-    // One stylesheet, the site's eight in their order, which the cascade follows, without their
-    // comments.
+    // One stylesheet, the site's eight in their order, which the cascade follows, minified: no
+    // comments, no lines.
     assert_eq!(body.matches(r#"<link rel="stylesheet""#).count(), 1);
     assert!(body.contains(&format!(r#"<link rel="stylesheet" href="/static/css/site.css?v={version}" data-turbo-track="reload">"#)));
     let site = get(pool.clone(), &format!("/static/css/site.css?v={version}")).await;
     assert_eq!((site.status, site.content_type.as_deref()), (StatusCode::OK, Some("text/css; charset=utf-8")));
-    assert!(!site.body.contains("/*"));
-    let sheets: Vec<usize> = marketplace::web::STYLESHEETS
-        .iter()
-        .map(|sheet| {
-            let css = std::fs::read_to_string(format!("static/css/{sheet}.css")).unwrap();
-            let first = css.lines().find(|line| line.contains('{') && !line.starts_with(['/', '*', ' '])).unwrap();
-            let first = first.split("/*").next().unwrap().trim_end();
-            site.body.find(first).unwrap_or_else(|| panic!("{sheet}: {first}"))
-        })
-        .collect();
-    assert!(sheets.is_sorted(), "{sheets:?}");
+    assert!(!site.body.contains("/*") && !site.body.contains('\n'));
+    // Each file's first rule, by its selector, after the one before's.
+    let mut at = 0;
+    for sheet in marketplace::web::STYLESHEETS {
+        let css = std::fs::read_to_string(format!("static/css/{sheet}.css")).unwrap();
+        let first = css.lines().find(|line| line.contains('{') && !line.starts_with(['/', '*', ' '])).unwrap();
+        let selector = format!("{}{{", first.split('{').next().unwrap().trim());
+        at += site.body[at..].find(&selector).unwrap_or_else(|| panic!("{sheet}: {selector}"));
+    }
     assert!(body.contains(&format!(
         r#"<script type="module" src="/static/js/application.js?v={version}" data-turbo-track="reload"></script>"#
     )));
@@ -3513,23 +3516,24 @@ async fn elektronike_and_shtepi_kopsht_have_colours_of_their_own(pool: PgPool) {
     assert!(home.contains("<body>") && !home.contains("data-section"));
     // Elektronikë's are in Claude's blue and Shtëpi / kopsht's in its olive wherever the rest of
     // the site is coral: what is picked or open, the buttons, their tints, the logo's creature.
+    // (The stylesheet comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for (section, colour) in [("elektronike", "blue"), ("shtepi-dhe-kopsht", "olive")] {
-        let rule = &css[css.find(&format!(r#"body[data-section="{section}"] {{"#)).expect(section)..];
+        let rule = &css[css.find(&format!(r#"body[data-section="{section}"]{{"#)).expect(section)..];
         let rule = &rule[..rule.find('}').unwrap()];
         for token in [
-            format!("--accent: var(--{colour});"),
-            format!("--button: var(--{colour}-button);"),
-            format!("--button-hover: var(--{colour}-button-hover);"),
-            format!("--badge: var(--{colour}-bg);"),
+            format!("--accent:var(--{colour});"),
+            format!("--button:var(--{colour}-button);"),
+            format!("--button-hover:var(--{colour}-button-hover);"),
+            format!("--badge:var(--{colour}-bg)"),
         ] {
             assert!(rule.contains(&token), "{token} in {rule}");
         }
     }
     // The welcome page's conversations button wears the olive too; a kept listing's heart is the
     // welcome page heart's red, in every part of the site.
-    assert!(css.contains(".inbox-shortcut { --tone: var(--olive); --tone-bg: var(--olive-bg); }"));
-    assert!(css.contains(r#".heart-button[aria-pressed="true"] svg { fill: var(--red); stroke: var(--red); }"#));
+    assert!(css.contains(".inbox-shortcut{--tone:var(--olive);--tone-bg:var(--olive-bg);}"));
+    assert!(css.contains(r#".heart-button[aria-pressed="true"] svg{fill:var(--red);stroke:var(--red);"#));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
