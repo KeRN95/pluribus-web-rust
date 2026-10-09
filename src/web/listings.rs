@@ -387,7 +387,8 @@ struct ListingShow {
     /// Why it isn't on the site, for its seller and the moderators, who alone see it then.
     hidden_note: Option<&'static str>,
     /// The main category it is in, which the page's body names (base.html, data-section), as a
-    /// category page's does: Elektronikë's listings are in Claude's blue (base.css).
+    /// category page's does: Elektronikë's listings are in Claude's blue and Shtëpi / kopsht's in
+    /// its olive (base.css).
     section: Option<String>,
 }
 

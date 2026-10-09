@@ -394,8 +394,8 @@ struct BrowsePage<'a> {
     has_more: bool,
     more_open: bool,
     /// The main category the page is in, its category's own or the one above it, which the page's
-    /// body names (base.html, data-section): Elektronikë's pages are in Claude's blue where the
-    /// rest of the site is coral (base.css).
+    /// body names (base.html, data-section): Elektronikë's pages are in Claude's blue and Shtëpi /
+    /// kopsht's in its olive where the rest of the site is coral (base.css).
     section: Option<String>,
 }
 

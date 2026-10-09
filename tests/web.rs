@@ -3485,9 +3485,10 @@ async fn nobody_else_can_edit_a_listing(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
-async fn elektronikes_pages_are_in_claudes_blue(pool: PgPool) {
+async fn elektronike_and_shtepi_kopsht_have_colours_of_their_own(pool: PgPool) {
     // A page in a main category names it on its body: Elektronikë's own, a category's under it, a
-    // search in it, its map, and its listings; other categories' theirs, and the welcome page none.
+    // search in it, its map, and its listings; Shtëpi / kopsht's, and the other categories', theirs,
+    // and the welcome page none.
     for page in [
         "/c/elektronike",
         "/c/telefona",
@@ -3497,16 +3498,26 @@ async fn elektronikes_pages_are_in_claudes_blue(pool: PgPool) {
     ] {
         assert!(html(pool.clone(), page).await.contains(r#"<body data-section="elektronike">"#), "{page}");
     }
+    for page in ["/c/shtepi-dhe-kopsht", "/c/kopsht", "/listing/1007-divan-qoshe-ngjyre-gri"] {
+        assert!(html(pool.clone(), page).await.contains(r#"<body data-section="shtepi-dhe-kopsht">"#), "{page}");
+    }
     assert!(html(pool.clone(), "/c/makina").await.contains(r#"<body data-section="automjete">"#));
     let home = html(pool.clone(), "/").await;
     assert!(home.contains("<body>") && !home.contains("data-section"));
-    // Elektronikë's are in Claude's blue wherever the rest of the site is coral: what is picked or
-    // open, the buttons, their tints, the logo's creature.
+    // Elektronikë's are in Claude's blue and Shtëpi / kopsht's in its olive wherever the rest of
+    // the site is coral: what is picked or open, the buttons, their tints, the logo's creature.
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    let rule = &css[css.find(r#"body[data-section="elektronike"] {"#).expect("Elektronikë's colours")..];
-    let rule = &rule[..rule.find('}').unwrap()];
-    for colour in ["--accent: var(--blue);", "--button: var(--blue-button);", "--button-hover: var(--blue-button-hover);", "--badge: var(--blue-bg);"] {
-        assert!(rule.contains(colour), "{colour} in {rule}");
+    for (section, colour) in [("elektronike", "blue"), ("shtepi-dhe-kopsht", "olive")] {
+        let rule = &css[css.find(&format!(r#"body[data-section="{section}"] {{"#)).expect(section)..];
+        let rule = &rule[..rule.find('}').unwrap()];
+        for token in [
+            format!("--accent: var(--{colour});"),
+            format!("--button: var(--{colour}-button);"),
+            format!("--button-hover: var(--{colour}-button-hover);"),
+            format!("--badge: var(--{colour}-bg);"),
+        ] {
+            assert!(rule.contains(&token), "{token} in {rule}");
+        }
     }
 }
 

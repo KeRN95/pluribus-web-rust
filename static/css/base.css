@@ -65,6 +65,10 @@
   --blue-bg: #e2ecf6;            /* its tint, as --badge is the coral's */
   --blue-button: #4a7fb0;        /* the buttons in it, in Elektronikë (below) */
   --blue-button-hover: #41709b;
+  --olive: #6a7d50;              /* Claude's olive, a toned-down green, deeper on the ivory: Shtëpi / kopsht (below) */
+  --olive-bg: #e6ecdc;
+  --olive-button: #6a7d50;
+  --olive-button-hover: #5c6d45;
   --red: #c1444c;                /* a red as deep as they: the welcome page's heart */
   --red-bg: #f7dee0;
   --green: #3f8d60;              /* a green: its speech bubble */
@@ -132,6 +136,10 @@
   --blue-bg: #293642;
   --blue-button: #4a7fb0;
   --blue-button-hover: #6a9bcc;
+  --olive: #788c5d;
+  --olive-bg: #313627;
+  --olive-button: #6a7d50;
+  --olive-button-hover: #788c5d;
   --red: #d16165;
   --red-bg: #42292b;
   --green: #4ea673;
@@ -172,6 +180,10 @@
     --blue-bg: #293642;
     --blue-button: #4a7fb0;
     --blue-button-hover: #6a9bcc;
+    --olive: #788c5d;
+    --olive-bg: #313627;
+    --olive-button: #6a7d50;
+    --olive-button-hover: #788c5d;
     --red: #d16165;
     --red-bg: #42292b;
     --green: #4ea673;
@@ -192,15 +204,23 @@
   }
 }
 
-/* Elektronikë's pages, its own, those of the categories under it and their listings' (the body's
-   data-section, base.html), are in Claude's blue wherever the rest of the site is coral: what is
-   picked or open, the buttons, their tints, the logo's creature. Set on <body>, under the themes'
-   colours on <html>, so that each theme's own blue comes through. */
+/* Two parts of the site have a colour of their own wherever the rest is coral, on their pages, their
+   own, those of the categories under them and their listings' (the body's data-section,
+   base.html): what is picked or open, the buttons, their tints, the logo's creature. Elektronikë
+   in Claude's blue; Shtëpi / kopsht in Claude's olive, a toned-down green (#788c5d, deeper on the
+   ivory, as the blue is). Set on <body>, under the themes' colours on <html>, so that each theme's
+   own comes through. */
 body[data-section="elektronike"] {
   --accent: var(--blue);
   --button: var(--blue-button);
   --button-hover: var(--blue-button-hover);
   --badge: var(--blue-bg);
+}
+body[data-section="shtepi-dhe-kopsht"] {
+  --accent: var(--olive);
+  --button: var(--olive-button);
+  --button-hover: var(--olive-button-hover);
+  --badge: var(--olive-bg);
 }
 
 * { box-sizing: border-box; }
