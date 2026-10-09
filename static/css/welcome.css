@@ -325,14 +325,15 @@
 
 
 /* The round buttons among the categories' pills (home.html), as tall as they are (--pill): first
-   the search's, coral as the message box's send button in Claude's app is (.welcome-search), and
-   after the pills the one that posts a listing, plain as that box's "+" is: the pills' hairline on
-   the surface, its plus in Claude's blue (--blue), the warm shade under the pointer or a press;
-   then, as plain, the listings kept, the conversations and the theme, which the other pages have
-   in their top bar (base.css), their icons in the text's colour. Their icons are the pills' size.
-   On a phone a finger's target is bigger than the button, as a pill's is (::after, from the
-   gaps). The search opens its box over the first line, the page dimmed under it
-   (.welcome-scrim), as the browse row's does. */
+   the search's, and after the pills the one that posts a listing, both marked as the site marks
+   what is picked or open (a category page's own pill, an open menu's button): a tint of their
+   colour, a border of it and their icon in it, the search's the coral (--badge, --accent) and the
+   plus's Claude's blue (--blue-bg, --blue), the border whole under the pointer or a press; then,
+   plain, the listings kept, the conversations and the theme, which the other pages have in their
+   top bar (base.css): the pills' hairline on the surface, their icons in the text's colour, the
+   warm shade under the pointer or a press. Their icons are the pills' size. On a phone a finger's
+   target is bigger than the button, as a pill's is (::after, from the gaps). The search opens its
+   box over the first line, the page dimmed under it (.welcome-scrim), as the browse row's does. */
 .circle-shortcut {
   position: relative;
   display: flex;
@@ -342,28 +343,27 @@
   width: var(--pill);
   height: var(--pill);
   padding: 0;
-  border: 1px solid transparent;
+  border: 1px solid var(--menu-border);
   border-radius: 50%;
-  background: var(--button);
-  color: var(--on-button);
+  background: var(--surface);
+  color: var(--text);
   font: inherit;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color .15s, transform .1s;
+  transition: background-color .15s, border-color .15s, transform .1s;
   -webkit-tap-highlight-color: transparent;
 }
 .circle-icon { flex: none; }
-.plus-shortcut,
-.saved-shortcut,
-.inbox-shortcut,
-.theme-shortcut { border-color: var(--menu-border); background: var(--surface); color: var(--text); }
-.plus-shortcut { color: var(--blue); }
+.search-shortcut { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+.plus-shortcut { border-color: color-mix(in srgb, var(--blue) 60%, transparent); background: var(--blue-bg); color: var(--blue); }
 .circle-shortcut:active { transform: scale(.94); }
-.search-shortcut:active { background: var(--button-hover); }
-:is(.plus-shortcut, .saved-shortcut, .inbox-shortcut, .theme-shortcut):active { background: var(--surface-muted); }
+.search-shortcut:active { border-color: var(--accent); }
+.plus-shortcut:active { border-color: var(--blue); }
+:is(.saved-shortcut, .inbox-shortcut, .theme-shortcut):active { background: var(--surface-muted); }
 @media (hover: hover) {
-  .search-shortcut:hover { background: var(--button-hover); }
-  :is(.plus-shortcut, .saved-shortcut, .inbox-shortcut, .theme-shortcut):hover { background: var(--surface-muted); }
+  .search-shortcut:hover { border-color: var(--accent); }
+  .plus-shortcut:hover { border-color: var(--blue); }
+  :is(.saved-shortcut, .inbox-shortcut, .theme-shortcut):hover { background: var(--surface-muted); }
 }
 /* The listings kept: a dot in the buttons' coral at the heart's top right while some dropped their
    price unseen, as the top bar's has it (base.css; ::before, as a phone's target is ::after). */

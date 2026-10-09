@@ -12,8 +12,8 @@
 <section class="welcome">
   {#- The question, for screen readers: on the page the search and the categories ask it. -#}
   <h1 class="visually-hidden">Çfarë po kërkon?</h1>
-  {#- The search starts as the first of the categories' pills, a coral one about as wide as two
-      of them: a tap opens the search box over their first line, the page dimmed under it, the box
+  {#- The search starts as a round button before the categories' pills, in the coral's tint: a tap
+      opens the search box over their first line, the page dimmed under it, the box
       taking the focus so that a phone shows its keyboard (panel_controller.js, as the browse row's
       round search button does); Escape, or a tap on the dim, folds it again. Without JavaScript
       the box stands over the pills, as it did, and the button is gone (the noscript below). -#}
@@ -38,10 +38,10 @@
   </div>
 
   {#- Every main category at once, as pills like the listing page's details: its icon, then its
-      name. First, a round button as tall as they are, the search's, coral as the message box's
-      send button in Claude's app is; after them, one that posts a listing, plain as that box's
-      "+", and as plain the listings kept, the conversations and the theme, which the other pages
-      have in their top bar (base.html). -#}
+      name. First, a round button as tall as they are, the search's, marked as what is picked is,
+      in the coral's tint with a coral magnifier; after them, one that posts a listing, marked so in
+      Claude's blue, then, plain, the listings kept, the conversations and the theme, which the
+      other pages have in their top bar (base.html). -#}
   <nav class="shortcuts" aria-label="Kategoritë">
     <button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false" aria-label="Kërko" title="Kërko"
             data-panel-target="toggle" data-action="panel#toggle">
