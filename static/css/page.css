@@ -489,23 +489,24 @@
   .cards-big .results .card-step::before { transition: none; }
 }
 
-/* The list (the view menu): a line each, one under another, no wider than 46rem, in the middle.
-   The photo at the line's left, square, its first alone; beside it at the top the price, in the
+/* The list (the view menu): a line each, one under another, the whole of the page's width. The
+   photo at the line's left, square, its first alone, 8.8rem on a phone and 12.1rem wider (a tenth
+   more than the 8rem and 11rem it had, the lines widened); beside it at the top the price, in the
    text's colour and a size bigger as nothing is under it, then the title on up to two lines, and
    at the foot, level with the photo's bottom, the details line and, at its right, when it was
    posted (.card-when, which the cards leave out). The heart at the top right, on the page, the
    text's colour with no circle, as no photo is under it. The photo's box (.card-media) gives its
    parts to the card's own grid, its shades and the seller over the photo left out. */
 .card-when { display: none; }
-.cards-list .results .grid { grid-template-columns: minmax(0, 1fr); max-width: 46rem; margin-inline: auto; row-gap: 1.25rem; }
+.cards-list .results .grid { grid-template-columns: minmax(0, 1fr); row-gap: 1.25rem; }
 .cards-list .results .card {
   display: grid;
-  grid-template-columns: 8rem minmax(0, 1fr) auto;
+  grid-template-columns: 8.8rem minmax(0, 1fr) auto;
   grid-template-rows: auto auto 1fr auto;
   column-gap: .85rem;
 }
 @media (min-width: 720px) {
-  .cards-list .results .card { grid-template-columns: 11rem minmax(0, 1fr) auto; column-gap: 1.1rem; }
+  .cards-list .results .card { grid-template-columns: 12.1rem minmax(0, 1fr) auto; column-gap: 1.1rem; }
 }
 .cards-list .results .card-media { display: contents; }
 .cards-list .results .card-media::before,

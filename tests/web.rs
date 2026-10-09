@@ -821,7 +821,7 @@ async fn prona_shows_big_cards_until_the_visitor_chooses_small_ones_there(pool: 
 /// (ROW_SIZES).
 const SMALL_SIZES: &str = "(min-width: 1100px) 255px, (min-width: 960px) calc((100vw - 80px) / 4), (min-width: 724px) calc((100vw - 64px) / 3), (min-width: 720px) calc((100vw - 48px) / 2), calc((100vw - 38px) / 2)";
 const BIG_SIZES: &str = "(min-width: 1100px) 522px, (min-width: 960px) calc((100vw - 56px) / 2), (min-width: 720px) 640px, (min-width: 588px) 560px, calc(100vw - 28px)";
-const LIST_SIZES: &str = "(min-width: 720px) 176px, 112px";
+const LIST_SIZES: &str = "(min-width: 720px) 194px, 123px";
 const ROW_SIZES: &str = "(min-width: 1100px) 236px, (min-width: 960px) calc((100vw - 96px) / 4.25), (min-width: 724px) calc((100vw - 80px) / 3.25), (min-width: 720px) calc((100vw - 64px) / 2.25), calc((100vw - 49px) / 2.25)";
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
