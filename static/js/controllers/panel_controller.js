@@ -2,9 +2,10 @@ import { Controller } from "@hotwired/stimulus";
 
 // A panel that a round button opens and folds again: the search box, the browse row's under the row
 // (one of the row's, which are open one at a time, section:open, as the filters and the map are),
-// and the welcome page's over its categories (home.html), over the line its button stands on
-// (follow: the line's top, from the controller's own, as --toggle-top for welcome.css). Opened, its
-// box takes the focus, so that a phone shows its keyboard at once.
+// and the welcome page's over its categories (home.html), over the line its button stands on,
+// growing out of the button to the line's ends (follow: the button's top, left and right, from the
+// controller's own edges, as --toggle-top, --toggle-left and --toggle-right for welcome.css).
+// Opened, its box takes the focus, so that a phone shows its keyboard at once.
 export default class extends Controller {
   static targets = ["toggle", "panel", "input"];
   static values = { follow: Boolean };
@@ -16,8 +17,11 @@ export default class extends Controller {
 
   open() {
     if (this.followValue) {
-      const top = this.toggleTarget.getBoundingClientRect().top - this.element.getBoundingClientRect().top;
-      this.element.style.setProperty("--toggle-top", `${top}px`);
+      const button = this.toggleTarget.getBoundingClientRect();
+      const own = this.element.getBoundingClientRect();
+      this.element.style.setProperty("--toggle-top", `${button.top - own.top}px`);
+      this.element.style.setProperty("--toggle-left", `${button.left - own.left}px`);
+      this.element.style.setProperty("--toggle-right", `${own.right - button.right}px`);
     }
     this.panelTarget.classList.add("is-open");
     this.toggleTarget.setAttribute("aria-expanded", "true");

@@ -394,9 +394,28 @@
   }
 }
 /* Centred on the line its button stands on (--toggle-top, which panel_controller.js sets as it
-   opens; the first line until then): the box is its button and padding tall (.welcome-form). */
+   opens; the first line until then): the box is its button and padding tall (.welcome-form). It
+   grows out of the button: clipped to the button's circle as it opens (--toggle-left and
+   --toggle-right, the button's distance from the line's ends, and as much over and under as the
+   box is taller than the button), then out to the line's ends, over the pills beside it. Open, the
+   box wears the glass a card's heart stands on (page.css, .heart-button::before): the site's dark
+   colour at 45% over the pills, blurred, with the words in white, rather than the surface. */
 .welcome-search-panel { display: none; position: absolute; top: calc(var(--toggle-top, 0px) + (var(--pill) - 3.7rem - 2px) / 2); right: 0; left: 0; z-index: 9; }
-.welcome-search-panel.is-open { display: block; animation: menu-in .16s ease-out; }
+.welcome-search-panel.is-open { display: block; animation: search-grow .28s cubic-bezier(.2, .8, .2, 1); }
+@keyframes search-grow {
+  from { clip-path: inset(calc((3.7rem + 2px - var(--pill)) / 2) var(--toggle-right, 0px) calc((3.7rem + 2px - var(--pill)) / 2) var(--toggle-left, 0px) round 999px); }
+  to { clip-path: inset(0 round 999px); }
+}
+.welcome-search-panel.is-open .welcome-form {
+  border-color: transparent;
+  background: rgb(38 38 36 / 45%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: none;
+}
+.welcome-search-panel.is-open .welcome-form:focus-within { border-color: rgb(255 255 255 / 25%); box-shadow: none; }
+.welcome-search-panel.is-open .welcome-form input { color: #fff; }
+.welcome-search-panel.is-open .welcome-form input::placeholder { color: rgb(255 255 255 / 72%); }
 .welcome-scrim { display: none; }
 .welcome-start:has(.welcome-search-panel.is-open) .welcome-scrim {
   display: block;
