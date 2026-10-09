@@ -270,8 +270,9 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
 .message-sheet-body > turbo-frame { display: flex; flex-direction: column; min-height: 100%; }
 .message-sheet-body .conversation { display: flex; flex: 1; flex-direction: column; width: 100%; margin-inline: auto; }
 .message-sheet .thread { flex: 1; }
-.message-sheet .conversation-block { margin: .25rem 0 .75rem; }
-.message-sheet .conversation-back { display: none; }
+/* Neither the way back to the inbox nor "Blloko" at the conversation's end: the sheet is on the
+   listing's page, which has "Blloko shitësin" under its buttons. */
+.message-sheet .conversation-block, .message-sheet .conversation-back { display: none; }
 /* In the sheet, "Mbyll" stands at the end of who with's line, which leaves it room; the hairline
    runs under both. */
 .message-sheet .conversation-head { margin-top: .25rem; }
