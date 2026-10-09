@@ -47,13 +47,13 @@
   </div>
 
   {#- Every main category at once, as pills like the listing page's details: its icon, then its
-      name. After most of
-      them, a button as tall as they are and a little wider, the search's, marked as what is picked
-      is, in the coral's tint with a coral magnifier; then Automjete, Prona and Elektronikë
-      (LAST_ON_WELCOME in browse.rs); then one that posts a listing, marked so in Claude's blue, the listings kept,
-      marked so in a red, the conversations, in Claude's olive, and the theme, in the blue under its moon
-      and a yellow under its sun: the other pages have these in their top bar (base.html). Those
-      four are one group, which goes to the next line whole rather than split (.welcome-actions). -#}
+      name. After most of them, a button as tall as they are and a little wider, the search's,
+      marked as what is picked is, in the coral's tint with a coral magnifier; then Automjete,
+      Prona, Elektronikë and Veshje / aksesorë (LAST_ON_WELCOME in browse.rs); then one that posts
+      a listing, marked so in Claude's blue, the listings kept, marked so in a red, the
+      conversations, in Claude's olive, and the theme, in the blue under its moon and a yellow under
+      its sun: the other pages have these in their top bar (base.html). Those four are one group,
+      which goes to the next line whole rather than split (.welcome-actions). -#}
   <nav class="shortcuts" aria-label="Kategoritë">
     {%- for shortcut in shortcuts %}{% call pill(shortcut) %}{% endfor %}
     <button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false" aria-label="Kërko" title="Kërko"

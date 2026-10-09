@@ -246,7 +246,7 @@ pub struct Shortcut {
 }
 
 /// The main categories the welcome page puts last, after its search's button, in this order.
-const LAST_ON_WELCOME: [&str; 3] = ["automjete", "prona", "elektronike"];
+const LAST_ON_WELCOME: [&str; 4] = ["automjete", "prona", "elektronike", "veshje-dhe-aksesore"];
 
 #[derive(Template)]
 #[template(path = "home.html")]
@@ -289,8 +289,8 @@ pub async fn home(
         state.views.most_viewed(&state.db, None),
     )?;
     safety::without_hidden(&mut most_viewed, &hidden);
-    // Every main category, in its order, with its icon; Automjete, Prona and Elektronikë after the
-    // search.
+    // Every main category, in its order, with its icon; Automjete, Prona, Elektronikë and Veshje /
+    // aksesorë after the search.
     let shortcut = |category: &db::Category| Shortcut {
         name: category.name.clone(),
         url: format!("/c/{}", category.slug),

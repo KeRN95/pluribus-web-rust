@@ -339,9 +339,10 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         .unwrap();
     assert!(panel < body.find(r#"<form class="welcome-form""#).unwrap() && nav < toggle);
     assert!(body.contains(r#"<div class="welcome-start" data-controller="panel" data-panel-follow-value="true""#));
-    // The search's button comes after the categories but Automjete, Prona and Elektronikë, which
-    // follow it; after them one that posts a listing, then the listings kept, the conversations and
-    // the theme, which the other pages have in their top bar: here it has the account alone.
+    // The search's button comes after the categories but Automjete, Prona, Elektronikë and Veshje /
+    // aksesorë, which follow it; after them one that posts a listing, then the listings kept, the
+    // conversations and the theme, which the other pages have in their top bar: here it has the
+    // account alone.
     let post = body.find(r#"<a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#).unwrap();
     let order = positions(&body, &[
         r#"<a class="shortcut" href="/c/te-tjera">"#,
@@ -349,10 +350,11 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         r#"<a class="shortcut" href="/c/automjete">"#,
         r#"<a class="shortcut" href="/c/prona">"#,
         r#"<a class="shortcut" href="/c/elektronike">"#,
+        r#"<a class="shortcut" href="/c/veshje-dhe-aksesore">"#,
         r#"<a class="circle-shortcut plus-shortcut""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
-    assert_eq!(order[5], post);
+    assert_eq!(order[6], post);
     let end = positions(
         &body,
         &[
@@ -379,13 +381,12 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(body.contains(r#"data-suggest-target="input" data-panel-target="input""#));
     assert!(body.contains(".welcome-search-panel { display: block; position: static;"));
     assert!(!body.contains(r#"name="city""#) && !body.contains(r#"name="category""#));
-    // A shortcut to every main category, in their order but Automjete, Prona and Elektronikë last,
-    // each its icon before its name; no more listing-like cards.
+    // A shortcut to every main category, in their order but Automjete, Prona, Elektronikë and
+    // Veshje / aksesorë last, each its icon before its name; no more listing-like cards.
     let main = [
         ("shtepi-dhe-kopsht", "Shtëpi / kopsht"),
         ("pune", "Punë"),
         ("sherbime", "Shërbime"),
-        ("veshje-dhe-aksesore", "Veshje / aksesorë"),
         ("sport-dhe-hobi", "Sport / hobi"),
         ("kafshe-shtepiake", "Kafshë shtëpiake"),
         ("makineri-dhe-biznes", "Makineri / biznes"),
@@ -393,6 +394,7 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         ("automjete", "Automjete"),
         ("prona", "Prona"),
         ("elektronike", "Elektronikë"),
+        ("veshje-dhe-aksesore", "Veshje / aksesorë"),
     ];
     let links: Vec<String> =
         main.iter().map(|(slug, _)| format!(r#"<a class="shortcut" href="/c/{slug}">"#)).collect();
