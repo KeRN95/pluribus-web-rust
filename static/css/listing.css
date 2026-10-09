@@ -123,10 +123,17 @@
      card; the listings like it under both. */
   .listing-split { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: 2rem; }
   .listing-split > :is(.notice, .listing-tags) { grid-column: 1 / -1; }
-  .listing-split > .listing-media { grid-column: 1; align-self: start; }
+  /* The photo and its filmstrip stay put under the top bar (3.55rem and its hairline, base.css,
+     and 1rem under it) while the column beside them scrolls, and go with the page once the
+     column has all gone by: sticky within their grid row, which the column's height sets. The
+     frame is no taller than the screen leaves room for under the bar, with the strip (5.5rem
+     with its room over it) and 1rem under that, so that the strip stays in sight while they
+     stand still; a wide screen that is short gets a wider frame, its blurred copy filling the
+     sides, as across the page. */
+  .listing-split > .listing-media { grid-column: 1; align-self: start; position: sticky; top: calc(4.55rem + 1px); }
   .listing-split > .listing-side { grid-column: 2; grid-template-columns: minmax(0, 1fr); }
   .listing-split .listing-media .gallery-photo,
-  .listing-split .listing-media .listing-photo { aspect-ratio: 3 / 4; height: auto; }
+  .listing-split .listing-media .listing-photo { aspect-ratio: 3 / 4; height: auto; max-height: calc(100vh - 12.05rem - 1px); }
   .listing-split .listing-side > :is(.listing-header, .listing-details, .listing-description) { max-width: none; }
   .listing-split .listing-header h1 { margin-top: 0; }
   .listing-split .listing-side > .contact-bar { grid-column: 1 / -1; margin-right: 0; }
