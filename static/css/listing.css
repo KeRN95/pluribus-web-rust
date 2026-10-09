@@ -5,6 +5,11 @@
 /* Its path as far below the header as the welcome page's first line and a category page's path,
    as the page's sides are from the screen's (--gutter). */
 .listing { max-width: 760px; padding-top: var(--gutter); }
+/* At least a screen tall, less the header (its padding, its button and its hairline, base.css)
+   and the gap over "Njoftime të ngjashme" (.related; the gap over the path is the listing's own
+   padding, inside its height), so that the section starts just out of view on a short listing's
+   page, as it does on a long one; svh, so that a phone's toolbars count as showing. */
+.listing { min-height: calc(100vh - 3.55rem - 1px - 2.5rem); min-height: calc(100svh - 3.55rem - 1px - 2.5rem); }
 /* Its parts in grids rather than the flow: the page's (its notices, its path, its photos and the
    rest, .listing-side) and the rest's (the title and the price, the contact bar, the share and the
    report, the details, the description, the seller's card and the map), so that on a phone the
