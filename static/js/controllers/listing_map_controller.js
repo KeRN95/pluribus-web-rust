@@ -41,6 +41,7 @@ export default class extends Controller {
     if (!this.element.isConnected || this.map) return;
     // A page Turbo shows again from its cache still holds the old map's markup.
     this.canvasTarget.replaceChildren();
+    const point = L.latLng(this.latitudeValue, this.longitudeValue);
     this.map = L.map(this.canvasTarget, {
       dragging: !L.Browser.mobile,
       touchZoom: "center",
@@ -49,13 +50,11 @@ export default class extends Controller {
       zoomSnap: 0.25,
       zoomControl: false,
     });
+    // Round the circle: the square it fits in, which needs no view of the map to be worked out, as
+    // the circle's own bounds do.
+    this.map.fitBounds(point.toBounds(RADIUS * 2), { padding: [20, 20] });
     L.control.zoom({ position: "bottomright" }).addTo(this.map);
     tiles(L).addTo(this.map);
-    const area = L.circle([this.latitudeValue, this.longitudeValue], {
-      radius: RADIUS,
-      className: "listing-map-area",
-      interactive: false,
-    }).addTo(this.map);
-    this.map.fitBounds(area.getBounds(), { padding: [20, 20] });
+    L.circle(point, { radius: RADIUS, className: "listing-map-area", interactive: false }).addTo(this.map);
   }
 }
