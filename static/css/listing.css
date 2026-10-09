@@ -28,11 +28,12 @@
 .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; margin: 1.75rem 0 .75rem; }
 .section-head h2 { margin: 0; }
 .section-head a { font-size: var(--text-sm); font-weight: var(--semibold); text-underline-offset: .2em; }
-/* Who sells it, under the description and over their other listings, in a card like the posting
-   form's (the menus' hairline on the surface), across the page: the seller (posting.css,
-   .seller), leading to their profile, their name and summary cut short where the line is too
-   short. The ways to reach them are the buttons under the price alone. */
-.seller-section { margin-top: 2.5rem; }
+/* Who sells it, under the description, as far under it as the details and the description stand
+   under what is over them (1.75rem; it stood 2.5rem under once), in a card like the posting form's
+   (the menus' hairline on the surface), across the page: the seller (posting.css, .seller),
+   leading to their profile, their name and summary cut short where the line is too short. The
+   ways to reach them are the buttons under the price alone. */
+.seller-section { margin-top: 1.75rem; }
 .seller-head {
   display: flex;
   align-items: center;
