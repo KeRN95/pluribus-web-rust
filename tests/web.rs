@@ -3495,8 +3495,8 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
                  "kafshe-shtepiake", "makineri-dhe-biznes"] {
         let page = html(pool.clone(), &format!("/c/{slug}")).await;
         // The subcategories' pills, under the small ones, which carry icons of their own.
-        let nav = &page[page.find(r#"<div class="subcategories">"#).expect(slug)..];
-        let nav = &nav[..nav.find("<noscript>").unwrap()];
+        let nav = &page[page.find(r#"<nav class="subcategories" aria-label="Nënkategoritë">"#).expect(slug)..];
+        let nav = &nav[..nav.find("</nav>").unwrap()];
         let pills = nav.matches(r#"<a class="shortcut""#).count();
         assert!(pills > 0 && nav.matches(r#"<svg class="shortcut-icon""#).count() == pills, "{slug}: {nav}");
     }
@@ -3533,7 +3533,7 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     let level = &level[..level.find("</div>").unwrap()];
     assert!(!level.contains(r#"href="/c/gps-dhe-navigatore""#), "not itself: {level}");
     assert!(!level.contains(r#"href="/c/automjete""#) && !level.contains("Të gjitha njoftimet"), "{level}");
-    assert!(!gps.contains(r#"<div class="subcategories">"#), "no subcategories, no pills under");
+    assert!(!gps.contains(r#"<nav class="subcategories""#), "no subcategories, no pills under");
     // Every branch closes; the other three </details> are its pill's own, the order's and the view's.
     assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - 3, "balanced");
 
@@ -4646,7 +4646,7 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
     assert!(!gps.contains("Faqja kryesore"));
     assert!(!cars.contains("up-icon"));
     assert!(cars.contains(r#"</svg><h1>Makina</h1><svg class="chevron""#), "{cars}");
-    let pills = &cars[cars.find(r#"aria-label="Kategoritë""#).unwrap()..cars.find("<noscript>").unwrap()];
+    let pills = &cars[cars.find(r#"aria-label="Kategoritë""#).unwrap()..cars.find(r#"<div class="browse-tools""#).unwrap()];
     assert!(!pills.contains(r#"<a class="shortcut""#), "no subcategories, no other pills: {pills}");
     assert!(!cars.contains(r#"<nav class="breadcrumbs""#));
     assert!(cars.contains(r#""@type":"BreadcrumbList""#));
@@ -4662,7 +4662,7 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
     let at = positions(&vehicles, &[
         r#"<a class="shortcut small" href="/search">Të gjitha njoftimet</a>"#,
         r#"<a class="shortcut small" href="/c/prona"><svg class="shortcut-icon""#,
-        r#"<div class="subcategories">"#,
+        r#"<nav class="subcategories" aria-label="Nënkategoritë">"#,
         r#"<a class="shortcut" href="/c/makina"><svg class="shortcut-icon""#,
     ]);
     assert!(at.is_sorted(), "{at:?}");

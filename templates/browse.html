@@ -16,14 +16,29 @@
 {%- endmacro %}
 
 {% block content %}
+{#- Without JavaScript the search and the filters stay open, in the page, the filters with a button
+    to apply them, the row's buttons gone, and the map, which needs it, is not there. -#}
+<noscript><style>.search-panel, .filters { display: block; position: static; max-height: none; } .search-button, .filters-open, .map-card, .filter-locate, .filters-header, .filters-footer { display: none; }</style></noscript>
+{%- let summary = filters.summary() %}
+{%- let on = filters.filter_count() %}
+{#- The page's town is kept in a cookie for the next pages, as it shows and as a refresh in place
+    changes it (place_controller.js, filters.rs, TOWN_COOKIE). -#}
+<div class="browse{{ page.cards_class() }}" data-controller="filters cards place"
+     data-cards-small-value="{{ Cards::Small.sizes() }}" data-cards-big-value="{{ Cards::Big.sizes() }}" data-cards-list-value="{{ Cards::List.sizes() }}" data-cards-cookie-value="{{ cards_cookie }}"
+     data-place-town-value="{{ filters.town_slug() }}"
+     data-action="keydown.esc@document->filters#foldAll turbo:before-cache@document->filters#reset section:open@document->filters#foldFor section:open@document->filters#fit turbo:before-morph-element->filters#keep turbo:before-morph-attribute->filters#keepAttribute turbo:morph@document->filters#counted">
+  {#- The head: where the page is, in pills, or a search's heading; its subcategories; and the row
+      of buttons, one under another on a phone, the row sharing the first line on a wide screen,
+      at its right end (browse.css, .browse-head). What the row opens floats under the head, or
+      under its first line where the row shares it. -#}
+  <div class="browse-head">
 {%- if let Some(level) = level %}
 {#- A category page says where it is and where to go next in pills. On a line of their own, small:
     a round back button; the category above it, quieter, a way up; and the page's own, filled, the heading, which shows
     the other categories at its level as pills after it on the line, and hides them again. It is a
     <details> holding its pill alone, those pills standing after it (.category-level, browse.css),
     so that they take their places on the line, and it opens and closes without scripts
-    (disclosure_controller.js keeps it open while the page refreshes in place). Under them, its
-    subcategories, when it has any. -#}
+    (disclosure_controller.js keeps it open while the page refreshes in place). -#}
 <nav class="category-pills" aria-label="Kategoritë">
   <div class="category-path">
     {#- Back, round, first: to the page before, or, opened from elsewhere, a level up
@@ -59,11 +74,6 @@
     </div>
     {%- endif %}
   </div>
-  {%- if !subcategories.is_empty() %}
-  <div class="subcategories">
-    {% call pills(subcategories) %}
-  </div>
-  {%- endif %}
 </nav>
 {%- if !corrections.is_empty() %}
 <p class="search-corrections">Shfaqen edhe rezultatet për {{ corrections }}.</p>
@@ -78,11 +88,14 @@
   <p class="search-corrections">Shfaqen edhe rezultatet për {{ corrections }}.</p>
   {%- endif %}
 </header>
-{% if !subcategories.is_empty() %}
-<nav class="shortcuts subcategories" aria-label="Nënkategoritë">
+{%- endif %}
+{%- if !subcategories.is_empty() %}
+{#- Under the line, its subcategories, when it has any, as pills like the welcome page's main
+    categories; a search within a category has the category's under its heading alike. On a phone
+    they are one line that slides sideways (browse.css). -#}
+<nav class="subcategories" aria-label="Nënkategoritë">
   {% call pills(subcategories) %}
 </nav>
-{% endif %}
 {%- endif %}
 {%- if !found_in.is_empty() %}
 {#- A search across every category: the categories it found listings in, the most first, with how
@@ -101,17 +114,7 @@
     at most what is left of the screen under the row (fit). The filters and the map apply as soon
     as something changes, the filters also as they close: the page refreshes in place (refresh.js),
     and what is open stays as it is while it morphs (keep). Without JavaScript the search
-    and the filters stay open, in the page, the filters with a button to apply them, the row's
-    buttons gone, and the map, which needs it, is not there. -#}
-<noscript><style>.search-panel, .filters { display: block; position: static; max-height: none; } .search-button, .filters-open, .map-card, .filter-locate, .filters-header, .filters-footer { display: none; }</style></noscript>
-{%- let summary = filters.summary() %}
-{%- let on = filters.filter_count() %}
-{#- The page's town is kept in a cookie for the next pages, as it shows and as a refresh in place
-    changes it (place_controller.js, filters.rs, TOWN_COOKIE). -#}
-<div class="browse{{ page.cards_class() }}" data-controller="filters cards place"
-     data-cards-small-value="{{ Cards::Small.sizes() }}" data-cards-big-value="{{ Cards::Big.sizes() }}" data-cards-list-value="{{ Cards::List.sizes() }}" data-cards-cookie-value="{{ cards_cookie }}"
-     data-place-town-value="{{ filters.town_slug() }}"
-     data-action="keydown.esc@document->filters#foldAll turbo:before-cache@document->filters#reset section:open@document->filters#foldFor section:open@document->filters#fit turbo:before-morph-element->filters#keep turbo:before-morph-attribute->filters#keepAttribute turbo:morph@document->filters#counted">
+    and the filters stay open, in the page (the noscript over the head). -#}
   <div class="browse-tools" data-filters-target="tools" data-action="click->filters#foldFromRow">
     {#- Searching these listings: a round button that opens a search box under the row, as the
         filters do (panel_controller.js), the words as they are typed suggesting searches
@@ -276,6 +279,7 @@
       <button type="button" class="button filters-show" data-filters-target="show" data-action="filters#showResults">{{ show_label }}</button>
     </div>
   </aside>
+  </div>
   {#- Under what the row opened, the page dimmed (browse.css); a tap on it folds that again. -#}
   <div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>
 
