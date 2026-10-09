@@ -16,7 +16,8 @@
 {#- Shown to anyone but its seller, the page says so (application.js), for "Më të klikuarat". For
     all but a car's or a property's listing (wide_photos, listings.rs) the page is split from
     960 px up, as the classifieds sites have it (listing.css, .listing-split): the photo at the
-    left in a square frame, and the rest (.listing-side, below) in a column at its right. -#}
+    left in a frame taller than wide, and the rest (.listing-side, below) in a column at its
+    right. -#}
 <article class="listing{% if !wide_photos %} listing-split{% endif %}"{% if !own && listing.on_site() %} data-seen-url="/listing/{{ listing.public_no }}/pare"{% endif %}>
   {%- if posted %}
   {#- Posted just now without signing in (post.rs): changing it later takes signing in. -#}
