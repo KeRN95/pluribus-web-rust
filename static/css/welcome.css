@@ -298,9 +298,9 @@
    than the pill it sees: half the gaps round each pill (::after, which is part of the link), so
    that its neighbours' targets meet it halfway, with no overlap and no gap between them. The
    lines stand a little further apart than the pills on a line, so that a pill about 35 px tall is
-   44 to the touch (42 on the narrowest phones), as Apple asks, and three still fit on a line. */
+   about 43 to the touch (41 on the narrowest phones), and three still fit on a line. */
 @media (max-width: 719px) {
-  .welcome .shortcuts { --row-gap: .65rem; --column-gap: .45rem; gap: var(--row-gap) var(--column-gap); }
+  .welcome .shortcuts { --row-gap: .55rem; --column-gap: .45rem; gap: var(--row-gap) var(--column-gap); }
   .welcome .shortcut { position: relative; gap: .4rem; padding: .45rem .85rem .45rem .7rem; font-size: .9375rem; }
   /* From the border's outer edge. */
   .welcome .shortcut::after {
