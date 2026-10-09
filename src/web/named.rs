@@ -372,7 +372,7 @@ fn read_category<'a>(words: &mut [Word], categories: &'a Categories, kind: Optio
             Some((category, (takes, matched, typed, std::cmp::Reverse(name.len()))))
         })
         .collect();
-    candidates.sort_by(|a, b| b.1.cmp(&a.1));
+    candidates.sort_by_key(|(_, fit)| std::cmp::Reverse(*fit));
     let (category, key) = candidates.first()?;
     if candidates.get(1).is_some_and(|(_, other)| other == key) {
         return None;

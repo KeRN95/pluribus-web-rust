@@ -315,11 +315,11 @@ pub fn check(
             "SELECT" => match option(typed[0]) {
                 Some(option) => {
                     let parent_chosen = attribute.parent_attribute_id.and_then(|parent| chosen.get(&parent));
-                    if let (Some(parent), Some(parent_option)) = (parent_chosen, option.parent_id) {
-                        if *parent != Some(parent_option) {
-                            fail("Ky model nuk i përket markës së zgjedhur.".to_string());
-                            continue;
-                        }
+                    if let (Some(parent), Some(parent_option)) = (parent_chosen, option.parent_id)
+                        && *parent != Some(parent_option)
+                    {
+                        fail("Ky model nuk i përket markës së zgjedhur.".to_string());
+                        continue;
                     }
                     chosen.insert(attribute.id, Some(option.id));
                     PropertyValue::Option(option.id)
@@ -387,12 +387,12 @@ fn check_year_pairs(attributes: &[FormAttribute], properties: &[ListingProperty]
         let Some(prefix) = opening.code.strip_suffix("_from_year") else { continue };
         let closing_code = format!("{prefix}_to_year");
         let Some(closing) = attributes.iter().find(|attribute| attribute.code == closing_code) else { continue };
-        if let (Some(from), Some(to)) = (number(opening), number(closing)) {
-            if from > to {
-                errors
-                    .entry(field_name(&closing.code))
-                    .or_insert(format!("Duhet të jetë {} ose më vonë.", from.normalize()));
-            }
+        if let (Some(from), Some(to)) = (number(opening), number(closing))
+            && from > to
+        {
+            errors
+                .entry(field_name(&closing.code))
+                .or_insert(format!("Duhet të jetë {} ose më vonë.", from.normalize()));
         }
     }
 }

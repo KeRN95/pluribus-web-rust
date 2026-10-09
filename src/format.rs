@@ -231,10 +231,8 @@ impl Contact {
             format!("+{rest}")
         } else if let Some(rest) = digits.strip_prefix("00") {
             format!("+{rest}")
-        } else if let Some(rest) = digits.strip_prefix('0') {
-            format!("+355{rest}")
         } else {
-            return None;
+            format!("+355{}", digits.strip_prefix('0')?)
         };
         let number = &e164[1..];
         let valid = number.chars().all(|c| c.is_ascii_digit())

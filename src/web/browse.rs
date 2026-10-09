@@ -431,10 +431,10 @@ async fn price_quarters(
     let database = state.db.connect_options().get_database().unwrap_or_default().to_string();
     let key = (database, category.id, category.default_currency.clone());
     let fresh = Duration::from_secs(PRICE_QUARTERS_HOURS * 3600);
-    if let Some((at, quarters)) = kept_quarters().lock().unwrap().get(&key) {
-        if at.elapsed() < fresh {
-            return Ok(*quarters);
-        }
+    if let Some((at, quarters)) = kept_quarters().lock().unwrap().get(&key)
+        && at.elapsed() < fresh
+    {
+        return Ok(*quarters);
     }
     let quarters = db::price_quarters(&state.db, &categories.subtree_ids(category.id), &category.default_currency).await?;
     kept_quarters().lock().unwrap().insert(key, (Instant::now(), quarters));

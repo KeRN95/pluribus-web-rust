@@ -449,10 +449,10 @@ pub async fn read(
     Path(id): Path<String>,
     Query(Upto { deri }): Query<Upto>,
 ) -> Result<Response> {
-    if let (Some(user), Ok(id)) = (current_user(&state, &headers).await?, id.parse::<Uuid>()) {
-        if db::takes_part(&state.db, id, user.id).await? {
-            db::mark_read(&state.db, id, user.id, deri).await?;
-        }
+    if let (Some(user), Ok(id)) = (current_user(&state, &headers).await?, id.parse::<Uuid>())
+        && db::takes_part(&state.db, id, user.id).await?
+    {
+        db::mark_read(&state.db, id, user.id, deri).await?;
     }
     Ok(StatusCode::NO_CONTENT.into_response())
 }

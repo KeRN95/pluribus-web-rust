@@ -145,21 +145,19 @@ impl Follower {
             if now >= self.until {
                 return None;
             }
-            if now >= self.next_send {
-                if let Some(card) = self.waiting.pop_front() {
-                    self.next_send = now + SEND_EVERY;
-                    let id = card.newest_cursor();
-                    match (NewestStream { page: ListingPage::row(vec![card], NEWEST_IDS, 0) }).render() {
-                        // Each line a "data:" line of its own. The templates' lines may end in
-                        // CR LF, and a CR would end a line of the event early.
-                        Ok(html) => {
-                            let event = Event::default().id(id).data(html.replace('\r', ""));
-                            return Some((event, self));
-                        }
-                        Err(error) => tracing::warn!(%error, "could not render a new listing's card"),
+            if now >= self.next_send && let Some(card) = self.waiting.pop_front() {
+                self.next_send = now + SEND_EVERY;
+                let id = card.newest_cursor();
+                match (NewestStream { page: ListingPage::row(vec![card], NEWEST_IDS, 0) }).render() {
+                    // Each line a "data:" line of its own. The templates' lines may end in
+                    // CR LF, and a CR would end a line of the event early.
+                    Ok(html) => {
+                        let event = Event::default().id(id).data(html.replace('\r', ""));
+                        return Some((event, self));
                     }
-                    continue;
+                    Err(error) => tracing::warn!(%error, "could not render a new listing's card"),
                 }
+                continue;
             }
             if now >= self.next_look {
                 if let Err(error) = self.look().await {

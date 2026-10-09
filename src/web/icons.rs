@@ -906,10 +906,10 @@ mod tests {
                 at = *parent;
             }
             let seen = look(&slugs, code).unwrap_or_else(|| panic!("{code} has no icon in {}", slugs[0]));
-            if seen.reads == Alone {
-                if let Some(other) = alone.insert((*category, seen.icon), code.as_str()) {
-                    panic!("{code} and {other} look alike in {}", slugs[0]);
-                }
+            if seen.reads == Alone
+                && let Some(other) = alone.insert((*category, seen.icon), code.as_str())
+            {
+                panic!("{code} and {other} look alike in {}", slugs[0]);
             }
         }
         Ok(())
