@@ -304,6 +304,7 @@ html.sheet-open { overflow: hidden; }
   }
   .message-sheet.opens-up { transform-origin: bottom left; }
   .sheet-grabber { display: none; }
-  .sheet-close { top: .7rem; right: .7rem; }
-  .message-sheet .conversation-head { margin-top: .65rem; }
+  /* "Mbyll" a rem in from the card's corner, which is round, and who with's line level with it. */
+  .sheet-close { top: 1rem; right: 1rem; }
+  .message-sheet .conversation-head { margin-top: 1rem; }
 }
