@@ -333,14 +333,15 @@
   .welcome { padding-top: 2.75rem; }
 }
 
-/* The search, before the categories' pills (home.html): it takes the room of two lines of them
-   (--circle), floating at the start, the first two lines of pills beside it, a pixel short of two
-   lines with its gap, so that the third starts under it whatever the rounding; all of that room
-   takes a tap. In the middle of it, 15% smaller (::before, 85% across), a coral circle with the
-   magnifier in the buttons' colour, as much smaller, and a soft glow of its coral that grows under
-   the pointer, as the browse row's round search button has. It opens the search box over it and
-   the first line, the page dimmed under it (.welcome-scrim), as the browse row's do. */
-.welcome .search-shortcut {
+/* The two circles before the categories' pills (home.html), the search's and, beside it, the one
+   that posts a listing: each takes the room of two lines of pills (--circle), floating at the
+   start, the first two lines of pills beside them, a pixel short of two lines with its gap, so
+   that the third starts under them whatever the rounding; all of that room takes a tap. In the
+   middle of it, 15% smaller (::before, 85% across), a coral circle, a darker coral under the
+   pointer or a press, with its icon in the buttons' colour, as much smaller. The search opens its
+   box over them and the first line, the page dimmed under it (.welcome-scrim), as the browse
+   row's does. */
+.welcome .circle-shortcut {
   float: left;
   position: relative;
   width: var(--circle);
@@ -356,25 +357,24 @@
   cursor: pointer;
   transition: transform .1s;
 }
-.welcome .search-shortcut::before {
+.welcome .circle-shortcut::before {
   content: "";
   position: absolute;
   inset: 7.5%;
   border-radius: 50%;
   background: var(--button);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--button) 55%, transparent);
-  transition: background-color .15s, box-shadow .2s;
+  transition: background-color .15s;
 }
-.welcome .search-shortcut .shortcut-icon { position: relative; width: calc(var(--circle) * .85 * .36); height: calc(var(--circle) * .85 * .36); }
-.welcome .search-shortcut .shortcut-icon,
-.welcome .search-shortcut:active .shortcut-icon { color: inherit; }
+.welcome .circle-shortcut .shortcut-icon { position: relative; width: calc(var(--circle) * .85 * .36); height: calc(var(--circle) * .85 * .36); }
+.welcome .circle-shortcut .shortcut-icon,
+.welcome .circle-shortcut:active .shortcut-icon { color: inherit; }
 /* The pills' own shade under the pointer or a press is the circle's darker coral here. */
-.welcome .search-shortcut:active { background: none; }
-.welcome .search-shortcut:active::before { background: var(--button-hover); }
+.welcome .circle-shortcut:active { background: none; }
+.welcome .circle-shortcut:active::before { background: var(--button-hover); }
 @media (hover: hover) {
-  .welcome .search-shortcut:hover { background: none; }
-  .welcome .search-shortcut:hover::before { background: var(--button-hover); box-shadow: 0 0 20px color-mix(in srgb, var(--button) 75%, transparent); }
-  .welcome .search-shortcut:hover .shortcut-icon { color: inherit; }
+  .welcome .circle-shortcut:hover { background: none; }
+  .welcome .circle-shortcut:hover::before { background: var(--button-hover); }
+  .welcome .circle-shortcut:hover .shortcut-icon { color: inherit; }
 }
 /* Centred on the circle: the box is its button and padding tall (.welcome-form). */
 .welcome-search-panel { display: none; position: absolute; top: calc((var(--circle) - 3.7rem - 2px) / 2); right: 0; left: 0; z-index: 9; }
