@@ -14,11 +14,9 @@
 .section-head h2 { margin: 0; }
 .section-head a { font-size: var(--text-sm); font-weight: var(--semibold); text-underline-offset: .2em; }
 /* Who sells it, under the description and over their other listings, in a card like the posting
-   form's (the menus' hairline on the surface), only as wide as what it holds: the seller
-   (posting.css, .seller), leading to their profile, and beside them the ways to reach them again,
-   small: the buttons from under the price at the header's buttons' size. On a phone the card is
-   the page's width, and the seller's name and summary are cut short rather than the buttons
-   dropping under them; the line wraps only where a revealed number needs the room. */
+   form's (the menus' hairline on the surface), across the page: the seller (posting.css,
+   .seller), leading to their profile, their name and summary cut short where the line is too
+   short. The ways to reach them are the buttons under the price alone. */
 .seller-section { margin-top: 2.5rem; }
 .seller-head {
   display: flex;
@@ -84,7 +82,6 @@
    pages' circle is. CSS beats the colours Leaflet sets as attributes. */
 .listing-map-area { stroke: var(--location); stroke-width: 2; fill: var(--location); fill-opacity: .12; }
 @media (min-width: 960px) {
-  .listing-map-section { max-width: 46rem; }
   .listing-map { aspect-ratio: auto; height: min(35vh, 19rem); }
 }
 /* Their other listings follow the seller's line, or the map under it, closely. */

@@ -11,10 +11,3 @@
     </div>
   </template>
 </turbo-stream>
-{#- The same number at the seller's line at the page's foot (listing.html, .seller-head), where
-    the small phone was: the number alone, a tap calls it. -#}
-<turbo-stream action="replace" target="phone-reveal-seller">
-  <template>
-    <a id="phone-reveal-seller" class="button reveal-contact" href="{{ href }}">{% match reveal %}{% when Reveal::Phone %}{% include "phone.svg" %}{% when Reveal::Email %}{% include "mail.svg" %}{% endmatch %}{{ display }}</a>
-  </template>
-</turbo-stream>

@@ -3015,9 +3015,6 @@ async fn revealing_a_phone_returns_a_turbo_stream_and_counts_it(pool: PgPool) {
     );
     assert!(response.body.contains(r#"<turbo-stream action="replace" target="phone-reveal">"#));
     assert!(response.body.contains(r#"href="tel:+355690000001"><svg class="contact-icon""#));
-    // And the number again, alone, where the small phone at the seller's line was.
-    assert!(response.body.contains(r#"<turbo-stream action="replace" target="phone-reveal-seller">"#));
-    assert!(response.body.contains(r#"<a id="phone-reveal-seller" class="button reveal-contact" href="tel:+355690000001">"#));
     assert!(response.body.contains("</svg>+355 69 000 0001</a>"));
     // Beside it, a button that copies it, as a phone dials it.
     assert!(response.body.contains(r#"data-controller="copy" data-copy-text-value="+355690000001""#));
@@ -3025,6 +3022,8 @@ async fn revealing_a_phone_returns_a_turbo_stream_and_counts_it(pool: PgPool) {
 
     let reveals: i64 = sqlx::query_scalar("SELECT phone_reveals FROM listing_daily_stats")
         .fetch_one(&pool)
+    // Under the price alone: the seller's card at the foot has no buttons of its own.
+    assert_eq!(response.body.matches("<turbo-stream ").count(), 1);
         .await
         .unwrap();
     assert_eq!(reveals, 1);
@@ -4556,10 +4555,6 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="seller-name">Ana</span>"#,
         r#"<span class="seller-summary">Në Pluribus që nga "#,
-        r#"<div class="seller-contact">"#,
-        r#"<form id="phone-reveal-seller" method="post""#,
-        r#"class="button reveal-button small" href="/listing/1001/mesazh""#,
-        r#"class="button secondary icon-circle share-button small""#,
         r#"<h2 id="seller-heading">"#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
@@ -4569,6 +4564,8 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     let profile = get(pool.clone(), ana).await.body;
     assert!(profile.contains("<h1>Ana</h1>"));
     assert!(profile.contains("Në Pluribus që nga ") && profile.contains(" · 5 njoftime</p>"));
+    // The seller's card has no buttons of its own: the ways to reach them are under the price.
+    assert!(!page.contains("seller-contact") && !page.contains("phone-reveal-seller"), "{page}");
     assert_eq!(card_numbers(&profile).len(), 5);
     assert!(profile.contains("Volkswagen Golf 7, 2016, naftë"));
     assert!(!profile.contains("Mercedes-Benz C 220"), "Auto Durrësi's, not Ana's");
@@ -5249,11 +5246,12 @@ async fn a_buyer_writes_to_a_seller_who_answers(pool: PgPool) {
     // Others have the listing's button to write to its seller; she doesn't.
     assert!(get_with_cookie(pool.clone(), listing, &buyer).await.body.contains(r#"href="/listing/1001/mesazh""#));
     assert!(!get_with_cookie(pool.clone(), listing, &ana).await.body.contains("/listing/1001/mesazh"));
-    // Signed in, both buttons open the conversation in the listing's sheet, in its frame; signed
-    // out, the button leads to the page, which asks to sign in first, and there is no sheet.
+    // Signed in, the button under the price (the seller's card has none) opens the conversation
+    // in the listing's sheet, in its frame; signed out, the button leads to the page, which asks
+    // to sign in first, and there is no sheet.
     let theirs = get_with_cookie(pool.clone(), listing, &buyer).await.body;
     let to_sheet = r#"href="/listing/1001/mesazh" aria-label="Shkruaji shitësit" title="Shkruaji shitësit" data-turbo-frame="conversation" data-turbo-prefetch="false" data-action="message-sheet#open">"#;
-    assert_eq!(theirs.matches(to_sheet).count(), 2, "{theirs}");
+    assert_eq!(theirs.matches(to_sheet).count(), 1, "{theirs}");
     assert!(theirs.contains(r#"<div class="message-sheet" id="message-sheet" role="dialog" aria-modal="true""#));
     assert!(theirs.contains(r#"<turbo-frame id="conversation" data-message-sheet-target="frame""#));
     let anyone = get(pool.clone(), listing).await.body;
