@@ -334,26 +334,18 @@
   white-space: nowrap;
 }
 
-/* The details line ("2016 · 148 000 km · Naftë", "Me kohë të pjesshme"), small and grey, so it
-   stays behind the title and price, in a pill of no colour: the surface, the menus' hairline, as
-   wide as its words. One line, ending in "…" when longer than the card; none when there is
-   nothing to say. */
+/* The details line: the city first, with no pin before it, then the category's card properties
+   ("Tiranë · 2016 · 148 000 km · Naftë"), small and grey, so it stays behind the title and price.
+   One line, ending in "…" when longer. In the list, a pill (below). */
 .card-summary {
-  width: fit-content;
-  max-width: 100%;
-  margin: .35rem 0 0;
-  padding: .1rem .55rem;
+  margin: .2rem 0 0;
   overflow: hidden;
-  border: 1px solid var(--menu-border);
-  border-radius: 999px;
-  background: var(--surface);
   color: var(--muted);
   font-size: var(--text-xs);
   line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.card-summary:empty { display: none; }
 
 /* A card's photos: in a small card the first alone. In a big one (the view button) every photo in
    a row that a finger, or a mouse pressed and moved, slides through a photo at a time
@@ -606,7 +598,19 @@
   gap: .75rem;
   padding: .5rem 0 .1rem;
 }
-.cards-list .results .card-summary { flex: 0 1 auto; min-width: 0; margin: 0; font-size: var(--text-xs); }
+/* In the list the details line is a pill of no colour, as wide as its words: the surface, the
+   menus' hairline; none when there is nothing to say. */
+.cards-list .results .card-summary {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: .1rem .55rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: var(--text-xs);
+}
+.cards-list .results .card-summary:empty { display: none; }
 .cards-list .results .card-when { display: block; flex: none; margin: 0 0 0 auto; color: var(--muted); font-size: var(--text-xs); }
 @media (min-width: 720px) {
   .cards-list .results .card-summary,
