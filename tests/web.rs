@@ -721,7 +721,7 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
 async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     // The search, Filtrat, Harta and Rendit stand in one row over the results, the orders opening
     // in a menu; opening one says so (section:open) and the others fold, so only one is open at a
-    // time. The search is in the site's colour. What they open floats over the results, the page
+    // time. The search is plain until its box is open, as the others are. What they open floats over the results, the page
     // dimmed under it; Escape, or a tap on the dim or on the row beside its buttons, folds it again.
     // The filters' card comes after the row and the places under it: a column beside the results
     // on a wide screen (browse.css).
@@ -774,7 +774,7 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     assert!(cars.contains(r#"<span class="button-label">Harta</span>"#));
     assert!(cars.contains(r#"<button type="button" class="button secondary round-button labelled filters-open" aria-controls="filters" aria-expanded="false""#));
     assert!(cars.contains(r#"<span class="button-label">Filtrat</span>"#) && !cars.contains("button-count"));
-    assert!(cars.contains(r#"<button type="button" class="button round-button search-button""#));
+    assert!(cars.contains(r#"<button type="button" class="button secondary round-button search-button""#));
     // A category page's heading says the order, its words opening the orders; no pill for it.
     assert!(cars.contains(r#"<summary class="heading-sort-button" title="Rendit">më të reja</summary>"#));
     assert!(cars.contains(r#"</details> <span class="heading-place">në Makina</span></div>"#));
@@ -3237,7 +3237,7 @@ async fn a_signed_in_seller_posts_a_listing(pool: PgPool) {
     assert!(page.contains("32\u{a0}000\u{a0}Lekë"));
     // A wide pill that says its name, in the contact bar under the price.
     assert!(page.contains(r#"<aside class="contact-bar" aria-label="Kontakti">"#));
-    assert!(page.contains(r#"<button type="submit" class="button reveal-button"><svg class="contact-icon""#));
+    assert!(page.contains(r#"<button type="submit" class="button secondary reveal-button"><svg class="contact-icon""#));
     assert!(page.contains(r#"</svg><span class="button-label">Shfaq numrin</span></button>"#));
     let public_no = url.trim_start_matches("/listing/").split('-').next().unwrap();
     let reveal = post_form(pool.clone(), &format!("/listing/{public_no}/phone"), &[], None).await;

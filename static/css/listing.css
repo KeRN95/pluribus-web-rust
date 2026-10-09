@@ -359,27 +359,29 @@
    "Shfaq email-in", for a seller who signed in by e-mail), and a message, "Shkruaji shitësit", a
    speech bubble: wide pills that say their names, a little taller than the circles beside them,
    the way to the seller being what the page is for. The message is filled in the page's colour,
-   as the site's main buttons are (.button's own look), and the phone marked as the site marks
-   what is picked (a category page's own pill, the welcome page's search): the coral's tint, a
-   border of the coral and its icon and words in it, the border whole under the pointer or a
-   press. Once tapped, the number takes the phone's place, after the same icon, marked alike,
-   with a button beside it that copies it (copy_controller.js). From 720 px up the two stand
-   under the price on one line with the share and the report, before them; on a phone they are a
-   bar at the foot of the screen (below). */
+   as the site's main buttons are (.button's own look), and the phone plain, on the surface with
+   the menus' hairline as the share and the report are, its icon in the muted colour and in the
+   text's under the pointer, as the browse row's buttons have theirs (it wore the coral's tint
+   once, one tinted thing more beside the filled one). Once tapped, the number takes the phone's
+   place, after the same icon, marked as the site marks what is picked (a category page's own
+   pill): the coral's tint, a border of the coral and the number in it, the border whole under
+   the pointer or a press, with a button beside it that copies it (copy_controller.js). From
+   720 px up the two stand under the price on one line with the share and the report, before
+   them; on a phone they are a bar at the foot of the screen (below). */
 .contact-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .9rem; }
 .contact-bar form { display: contents; }
 .contact-bar .button { justify-content: center; gap: .5rem; height: 3.1rem; padding: 0 1.3rem 0 1.1rem; font-weight: var(--semibold); white-space: nowrap; }
+.contact-bar .button.secondary { border-color: var(--menu-border); }
 .contact-bar .button-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.button.reveal-button,
+.contact-bar .reveal-button .contact-icon { color: var(--muted); transition: color .15s; }
 .button.reveal-contact {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
   background: var(--badge);
   color: var(--accent);
 }
-.button.reveal-button:active,
 .button.reveal-contact:active { border-color: var(--accent); }
 @media (hover: hover) {
-  .button.reveal-button:hover,
+  .contact-bar .reveal-button:hover .contact-icon { color: var(--text); }
   .button.reveal-contact:hover { border-color: var(--accent); background: var(--badge); }
 }
 .contact-icon { flex: none; }
@@ -427,11 +429,11 @@
 /* The listing's details as pills, smaller than the category pills (the text a size down, 14px,
    their icons 16px), the menus' hairline on the surface, each as wide as what it says, one after
    another: a detail's icon before its value, or its name, quiet, before it; a car's options a
-   pill each. The category's key facts, those its cards show too (.is-key), have their icon lit as
-   a picked pill is, in a small round one of its own: the accent's tint, a border of the accent,
-   the icon in it (its padding taken back by its margins, so that the pill stays as tall as the
-   others, the circle following the pill's round end); the pill itself as the others. The groups
-   (a name and its values) leave their pills to the line (display: contents). */
+   pill each. The category's key facts, those its cards show too (.is-key), have their icon in
+   the text's colour where the others' is muted; the pill itself as the others. (Each stood in a
+   small circle of the accent's tint once: one tinted thing more on a page with enough of them,
+   and the pill's words say what it is.) The groups (a name and its values) leave their pills to
+   the line (display: contents). */
 .attributes { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0; }
 .attribute-group { display: contents; }
 .attribute {
@@ -449,27 +451,12 @@
 }
 .attribute-icon { flex: none; width: 16px; height: 16px; color: var(--muted); }
 .attribute-label { color: var(--muted); font-weight: normal; }
-/* The key detail's circle follows the pill's round end, as far in from it at its left as at its
-   top and bottom (4px inside the hairline): the pill's left room is that inset, and the circle
-   is the pill's inner height (its padding taken back by its margins, so that the pill stays as
-   tall as the others). */
-.attribute.is-key { padding-left: 4px; }
-.attribute.is-key .attribute-icon {
-  box-sizing: content-box;
-  margin: -8px 0;
-  padding: 7px;
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
-  border-radius: 50%;
-  background: var(--badge);
-  color: var(--accent);
-}
+.attribute.is-key .attribute-icon { color: var(--text); }
 /* A phone: smaller still (13px, their icons 15px), so more of them share a line. */
 @media (max-width: 719px) {
   .attributes { gap: .4rem; }
   .attribute { gap: .4rem; padding: .5rem .7rem; font-size: .875rem; }
-  .attribute.is-key { padding-left: 4px; }
   .attribute-icon { width: 15px; height: 15px; }
-  .attribute.is-key .attribute-icon { margin: -6px 0; padding: 5px; }
 }
 /* The listing's number, quietly, under the description. */
 /* The listing's number ends the line under the title, whole on one line. */

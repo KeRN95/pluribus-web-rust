@@ -30,10 +30,10 @@
 .subcategories .shortcut-icon { width: 18px; height: 18px; }
 .category-up { color: var(--muted); }
 /* Back, and the way beyond the pills, before them: circles as tall as they are, their icons the
-   welcome page's size (20px; 18 on a phone). Back itself, the one back_controller.js drives, is
-   marked as the page's own pill is, in the page's colour (--accent, --badge: the coral, Elektronikë's
-   blue, Shtëpi / kopsht's olive; base.css, data-section): its tint, a border of it and its chevron
-   in it, the border whole under the pointer or a press; the way beyond stays plain. */
+   welcome page's size (20px; 18 on a phone), both plain, on the surface with the menus' hairline:
+   the chevron says back, the house or the category's icon says where the other leads, and the
+   page's own pill after them is the line's one marked thing. (Back wore the page's colour's tint
+   once, as that pill does: one tinted thing more on a line with the search's circle beside it.) */
 .back-button {
   --size: calc(1.55 * var(--text-md) + 1.4rem + 2px);
   display: flex;
@@ -49,12 +49,9 @@
   transition: background-color .15s, border-color .15s, transform .1s;
   -webkit-tap-highlight-color: transparent;
 }
-.back-button[data-controller~="back"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
 .back-button:active { background: var(--surface-muted); transform: scale(.94); }
-.back-button[data-controller~="back"]:active { border-color: var(--accent); background: var(--badge); }
 @media (hover: hover) {
   .back-button:hover { background: var(--surface-muted); }
-  .back-button[data-controller~="back"]:hover { border-color: var(--accent); background: var(--badge); }
 }
 /* The path's icons, the welcome page's size (18px on a phone, below). The selected pill, the page's
    own, marked as the welcome page's search is: the coral's tint, a border of the coral, and its
@@ -313,10 +310,10 @@
 /* The round buttons: only their icons, in the page's own colours, on the surface with the menus'
    hairline, as the listing page's share button is; while what they open is open, marked as a
    selected pill is, on the accent's tint, their icon and words in the coral; a press sinks them a
-   little. The search is marked as the welcome page's is: the coral's
-   tint, a border of the coral and its magnifier in it, the border whole under the pointer and
-   while its box is open. (Three classes, to win over .button and .button.secondary, which come
-   later.) */
+   little. The search is one of them: plain until its box is open, then marked as the others are
+   (it wore the coral's tint always once, as the welcome page's does, one tinted thing more on a
+   line that has the page's own pill). (Three classes, to win over .button and .button.secondary,
+   which come later.) */
 .browse-tools .button.round-button {
   flex: none;
   justify-content: center;
@@ -332,9 +329,6 @@
 .browse-tools .round-button:active { transform: scale(.97); }
 .browse-tools .button.round-button[aria-expanded="true"],
 .browse-tools .button.round-button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
-.browse-tools .button.search-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
-.browse-tools .button.search-button:hover,
-.browse-tools .button.search-button[aria-expanded="true"] { border-color: var(--accent); background: var(--badge); }
 .browse-tools .round-button svg { width: 20px; height: 20px; }
 .round-button .pin-icon { margin: 0; color: inherit; }
 /* The filters' and the map's buttons say their names and what is on: pills as wide as their

@@ -172,10 +172,11 @@
   {%- if reveal.is_some() || message %}
   <aside class="contact-bar" aria-label="Kontakti">
     {% if let Some(reveal) = reveal %}
-    {#- The phone, "Shfaq numrin", in a pill marked as what is picked is. Turbo submits the form
-        and swaps in the number (or address) from the Turbo Stream response, in its place. -#}
+    {#- The phone, "Shfaq numrin", in a plain pill; the number that takes its place is marked as
+        what is picked is. Turbo submits the form and swaps in the number (or address) from the
+        Turbo Stream response, in its place. -#}
     <form id="phone-reveal" method="post" action="/listing/{{ listing.public_no }}/phone">
-      <button type="submit" class="button reveal-button">
+      <button type="submit" class="button secondary reveal-button">
         {%- match reveal %}{% when Reveal::Phone %}{% include "phone.svg" %}{% when Reveal::Email %}{% include "mail.svg" %}{% endmatch -%}
         <span class="button-label">{{ reveal.label() }}</span></button>
     </form>
