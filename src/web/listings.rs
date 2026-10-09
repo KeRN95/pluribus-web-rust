@@ -33,9 +33,9 @@ use crate::{
 pub const GALLERY_SIZES: &str =
     "(min-width: 1100px) 1068px, (min-width: 960px) calc(100vw - 2rem), (min-width: 792px) 760px, calc(100vw - 2rem)";
 /// The same for every other listing, whose photo stands at the left of its page from 960 px up,
-/// 55% of the page less the gap between the columns (.listing-split, listing.css).
+/// seven twelfths of the page less the 2rem between the columns (.listing-split, listing.css).
 pub const SPLIT_GALLERY_SIZES: &str =
-    "(min-width: 1100px) 565px, (min-width: 960px) calc((100vw - 4.5rem) * .55), (min-width: 792px) 760px, calc(100vw - 2rem)";
+    "(min-width: 1100px) 604px, (min-width: 960px) calc((100vw - 4rem) * .5833), (min-width: 792px) 760px, calc(100vw - 2rem)";
 
 /// The categories whose listings' pages show where they are on a map, under the seller: property
 /// (Prona and those under it) and cars (Makina), which buyers go to see.

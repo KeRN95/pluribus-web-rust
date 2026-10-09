@@ -3734,10 +3734,11 @@ async fn listings_get_photos(pool: PgPool) {
     // side (900 × 600, 600 × 400 and 450 × 300 for the first). The second, 800 px wide, has a
     // small copy and a mini one of its own, and a card copy no smaller than itself, which the page
     // leaves out. A phone's page stands beside its photo from 960 px up, so the photo is sized for
-    // its column, 55% of the page (SPLIT_GALLERY_SIZES; a car's or a property's runs across it).
+    // its column, seven twelfths of the page (SPLIT_GALLERY_SIZES; a car's or a property's runs
+    // across it).
     let (big, small) = (photo_urls[0].trim_end_matches(".jpg"), photo_urls[1].trim_end_matches(".jpg"));
     let sources = [
-        format!(r#"<picture><source type="image/webp" srcset="{big}-mini.webp?2 450w, {big}-small.webp?2 600w, {big}-card.webp?2 900w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="(min-width: 1100px) 565px, (min-width: 960px) calc((100vw - 4.5rem) * .55),"#),
+        format!(r#"<picture><source type="image/webp" srcset="{big}-mini.webp?2 450w, {big}-small.webp?2 600w, {big}-card.webp?2 900w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="(min-width: 1100px) 604px, (min-width: 960px) calc((100vw - 4rem) * .5833),"#),
         format!(r#"<picture><source type="image/webp" srcset="{small}-mini.webp?2 400w, {small}-small.webp?2 533w, {small}.webp 800w" sizes="#),
     ];
     for (url, source) in photo_urls.iter().zip(&sources) {
@@ -5075,8 +5076,8 @@ async fn set_price(pool: &PgPool, number: i64, amount: &str) {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_listing_but_a_cars_or_a_propertys_stands_beside_its_photo(pool: PgPool) {
     // From 960 px up the page is split (listing.css, .listing-split): the photo at the left and
-    // the rest, .listing-side, at its right, the seller's card in it (its photos sized for 55% of
-    // the page, SPLIT_GALLERY_SIZES: listings_get_photos). A car's or a property's page keeps its
+    // the rest, .listing-side, at its right, the seller's card in it (its photos sized for seven
+    // twelfths of the page, SPLIT_GALLERY_SIZES: listings_get_photos). A car's or a property's page keeps its
     // photos across the page, and the map under the seller (wide_photos in listings.rs).
     let phone = html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await;
     assert!(phone.contains(r#"<article class="listing listing-split""#), "{phone}");

@@ -115,13 +115,13 @@
   .listing-media .gallery-photo,
   .listing-media .listing-photo { aspect-ratio: auto; height: min(70vh, 38rem); }
   /* Every other listing's page is split, as the classifieds sites have it: the path over both
-     columns, the photo at the left in a frame taller than wide, three by four, 55% of the page
-     (its blurred copy filling what the photo doesn't), and at its right, in a column as wide as
-     the rest, the title level
+     columns, the photo at the left in a frame taller than wide, three by four, seven twelfths of
+     the page (its blurred copy filling what the photo doesn't), and at its right, in a column of
+     the other five, the title level
      with the photo's top, the kind and the price, the contact bar's two pills across the column
      and the share and the report under them, the details, the description and the seller's
      card; the listings like it under both. */
-  .listing-split { grid-template-columns: minmax(0, 11fr) minmax(0, 9fr); column-gap: 2.5rem; }
+  .listing-split { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: 2rem; }
   .listing-split > :is(.notice, .listing-tags) { grid-column: 1 / -1; }
   .listing-split > .listing-media { grid-column: 1; align-self: start; }
   .listing-split > .listing-side { grid-column: 2; grid-template-columns: minmax(0, 1fr); }
