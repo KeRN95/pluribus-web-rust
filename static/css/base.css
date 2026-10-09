@@ -69,6 +69,14 @@
   --olive-bg: #e6ecdc;
   --olive-button: #6a7d50;
   --olive-button-hover: #5c6d45;
+  --burgundy: #7a1f33;           /* burgundy: Automjete (below) */
+  --burgundy-bg: #f5dfe4;
+  --burgundy-button: #7a1f33;
+  --burgundy-button-hover: #651a2a;
+  --green: #006039;              /* Rolex's green: Prona (below) */
+  --green-bg: #dcefe5;
+  --green-button: #006039;
+  --green-button-hover: #004f2e;
   --red: #d6303e;                /* a bright red: the welcome page's heart, a kept listing's */
   --red-bg: #fbe0e2;
   --yellow: #bb8b1b;             /* and a yellow: the theme's sun, on the dark theme */
@@ -138,6 +146,14 @@
   --olive-bg: #313627;
   --olive-button: #6a7d50;
   --olive-button-hover: #788c5d;
+  --burgundy: #c45270;
+  --burgundy-bg: #3f232b;
+  --burgundy-button: #8f2a46;
+  --burgundy-button-hover: #a8365a;
+  --green: #3fa070;
+  --green-bg: #1f3a2d;
+  --green-button: #0f6a45;
+  --green-button-hover: #1f8457;
   --red: #ef555f;
   --red-bg: #4a2428;
   --yellow: #e2be5a;
@@ -180,6 +196,14 @@
     --olive-bg: #313627;
     --olive-button: #6a7d50;
     --olive-button-hover: #788c5d;
+    --burgundy: #c45270;
+    --burgundy-bg: #3f232b;
+    --burgundy-button: #8f2a46;
+    --burgundy-button-hover: #a8365a;
+    --green: #3fa070;
+    --green-bg: #1f3a2d;
+    --green-button: #0f6a45;
+    --green-button-hover: #1f8457;
     --red: #ef555f;
     --red-bg: #4a2428;
     --yellow: #e2be5a;
@@ -198,12 +222,25 @@
   }
 }
 
-/* Two parts of the site have a colour of their own wherever the rest is coral, on their pages, their
+/* Four parts of the site have a colour of their own wherever the rest is coral, on their pages, their
    own, those of the categories under them and their listings' (the body's data-section,
    base.html): what is picked or open, the buttons, their tints. Elektronikë
    in Claude's blue; Shtëpi / kopsht in Claude's olive, a toned-down green (#788c5d, deeper on the
-   ivory, as the blue is). Set on <body>, under the themes' colours on <html>, so that each theme's
-   own comes through. */
+   ivory, as the blue is); Automjete in burgundy; Prona in Rolex's green (both lighter on the dark
+   theme, their buttons a little less so). Set on <body>, under the themes' colours on <html>, so
+   that each theme's own comes through. */
+body[data-section="automjete"] {
+  --accent: var(--burgundy);
+  --button: var(--burgundy-button);
+  --button-hover: var(--burgundy-button-hover);
+  --badge: var(--burgundy-bg);
+}
+body[data-section="prona"] {
+  --accent: var(--green);
+  --button: var(--green-button);
+  --button-hover: var(--green-button-hover);
+  --badge: var(--green-bg);
+}
 body[data-section="elektronike"] {
   --accent: var(--blue);
   --button: var(--blue-button);
