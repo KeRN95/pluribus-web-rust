@@ -20,13 +20,16 @@
    the price none under them, the line that follows taking it. */
 .listing,
 .listing-side { display: grid; grid-template-columns: minmax(0, 1fr); }
-/* The rows keep together, the page's and the rest's: the page is at least a screen tall (above),
+/* The rows pack at the top, the page's and the rest's: the page is at least a screen tall (above),
    and beside a taller photo (the split page) the rest's box is as tall as the photo, and a grid
    would otherwise spread its rows out over the room, the path's row growing apart from the photo
-   under it on a short listing's page. On a phone the page's rows pack at its top; from 960 px up
-   they stand in the middle of the room (below). */
+   under it on a short listing's page, and the path standing at another height on each listing
+   as one steps through them. The room for a banner over the path (from 960 px up, below) is the
+   same on every listing. */
 .listing,
 .listing-side { align-content: start; }
+/* The banner's room (listing.html): none on a phone. */
+.listing-banner { display: none; }
 .listing > *,
 .listing-side > * { min-width: 0; }
 .listing-side > :is(.listing-details, .listing-description) { margin-top: 1.75rem; }
@@ -122,11 +125,15 @@
    card and the map across the page. */
 @media (min-width: 960px) {
   .listing { max-width: none; }
-  /* A listing shorter than the screen (the page is at least a screen tall, above) stands lower,
-     in the middle of the room it leaves, its path with it, over the photo as ever: half the room
-     over the path, where an ad may stand one day, and half under the listing, "Njoftime të
-     ngjashme" still out of view under that. */
-  .listing { align-content: center; }
+  /* Over the path, room for a banner (listing.html), empty for now and kept for an ad, about a
+     fifth as tall as the photo under it, a gutter between them: so that the path, its buttons
+     and the photo stand at the same height on every listing as one steps through them, the
+     listing's own length making no difference. Across the page a fifth of the photos' height
+     (below); on a split page a fifth of the photo's frame, which is three by four of seven
+     twelfths of the page, so about 45:7 of the page's width, and on a short screen a fifth of
+     the frame's own cap (below). It is in the page, whose min-height takes it in, "Njoftime të
+     ngjashme" still just out of view under a short listing. */
+  .listing-banner { display: block; height: min(14vh, 7.6rem); margin-bottom: var(--gutter); }
   .listing-side > :is(.listing-header, .listing-details, .listing-description) { max-width: 46rem; }
   /* Across the page a photo's frame is wider than the photo, and no taller than most screens
      leave room for: the photo whole in the middle, its blurred copy filling the sides. */
@@ -145,7 +152,8 @@
      the sheet's controller is its). The photo is 541 px then, as the classifieds sites have it. */
   .listing-page:has(> .listing-split) { display: block; max-width: 60rem; margin-inline: auto; }
   .listing-split { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: 2rem; }
-  .listing-split > :is(.notice, .listing-tags) { grid-column: 1 / -1; }
+  .listing-split > :is(.listing-banner, .notice, .listing-tags) { grid-column: 1 / -1; }
+  .listing-split > .listing-banner { height: auto; aspect-ratio: 45 / 7; max-height: calc((100vh - 12.05rem - 1px) / 5); }
   /* The photo and its filmstrip stay put under the top bar (3.55rem and its hairline, base.css,
      and 1rem under it) while the column beside them scrolls, and go with the page once the
      column has all gone by: sticky within their grid row, which the column's height sets. The

@@ -19,6 +19,11 @@
     left in a frame taller than wide, and the rest (.listing-side, below) in a column at its
     right. -#}
 <article class="listing{% if !wide_photos %} listing-split{% endif %}"{% if !own && listing.on_site() %} data-seen-url="/listing/{{ listing.public_no }}/pare"{% endif %}>
+  {#- Room for a banner over the path, from 960 px up about a fifth as tall as the photo
+      (listing.css, .listing-banner): empty for now, kept for an ad, so that the path, its
+      buttons and the photo stand at the same height on every listing as one steps through
+      them. -#}
+  <div class="listing-banner" aria-hidden="true"></div>
   {%- if posted %}
   {#- Posted just now without signing in (post.rs): changing it later takes signing in. -#}
   <p class="notice" role="status">Njoftimi yt u publikua. Për ta ndryshuar ose fshirë më vonë, <a href="/njoftimet-e-mia">hyr</a> me numrin ose email-in që shkruajte.</p>

@@ -1849,6 +1849,14 @@ async fn a_listing_steps_to_its_neighbours_on_its_categorys_page(pool: PgPool) {
     let to_golf = format!(r#"<a class="back-button step-button" href="{golf}" aria-label="Njoftimi i mëparshëm" title="Njoftimi i mëparshëm"><svg data-icon="chevron-left""#);
     let to_mercedes = format!(r#"<a class="back-button step-button" href="{mercedes}" aria-label="Njoftimi tjetër" title="Njoftimi tjetër"><svg data-icon="chevron-right""#);
     let page = html(pool.clone(), golf).await;
+    // Over the path, room for a banner, as tall on every listing (listing.css), so that stepping
+    // through them leaves the path and its buttons where they are: empty for now, kept for an ad.
+    let top = positions(&page, &[
+        r#"<article class="listing""#,
+        r#"<div class="listing-banner" aria-hidden="true"></div>"#,
+        r#"<div class="listing-tags">"#,
+    ]);
+    assert!(top.is_sorted(), "{top:?}");
     let steps = positions(&page, &[
         "Makina</a>",
         r#"<nav class="listing-steps" aria-label="Njoftimet e tjera">"#,
