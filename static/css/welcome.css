@@ -401,7 +401,7 @@
    box wears the glass a card's heart stands on (page.css, .heart-button::before): the site's dark
    colour at 45% over the pills, blurred, with the words in white, rather than the surface. */
 .welcome-search-panel { display: none; position: absolute; top: calc(var(--toggle-top, 0px) + (var(--pill) - 3.7rem - 2px) / 2); right: 0; left: 0; z-index: 9; }
-.welcome-search-panel.is-open { display: block; animation: search-grow .28s cubic-bezier(.2, .8, .2, 1); }
+.welcome-search-panel.is-open { display: block; animation: search-grow .14s cubic-bezier(.2, .8, .2, 1); }
 @keyframes search-grow {
   from { clip-path: inset(calc((3.7rem + 2px - var(--pill)) / 2) var(--toggle-right, 0px) calc((3.7rem + 2px - var(--pill)) / 2) var(--toggle-left, 0px) round 999px); }
   to { clip-path: inset(0 round 999px); }
