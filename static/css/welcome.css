@@ -356,6 +356,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 .circle-icon { flex: none; }
+/* Posting, the listings kept, the conversations and the theme: one group at the categories' end,
+   which goes to the next line whole rather than split, its buttons as far apart as the pills. */
+.welcome-actions { display: flex; flex: none; gap: var(--column-gap); }
 .search-shortcut { --tone: var(--accent); --tone-bg: var(--badge); }
 .plus-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
 .saved-shortcut { --tone: var(--red); --tone-bg: var(--red-bg); }

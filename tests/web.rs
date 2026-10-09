@@ -354,6 +354,9 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     );
     assert!(end.is_sorted(), "{end:?}");
     assert!(end[3] < nav + body[nav..].find("</nav>").unwrap());
+    // Those four are one group, which goes to the next line whole rather than split.
+    let group = body.find(r#"<div class="welcome-actions">"#).unwrap();
+    assert!(group < end[0] && end[3] < group + body[group..].find("</div>").unwrap());
     for gone in ["post-button", "saved-button", "inbox-button", "theme-toggle"] {
         assert!(!body.contains(&format!(r#"class="icon-button {gone}""#)), "{gone}");
     }
