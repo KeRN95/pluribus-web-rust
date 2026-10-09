@@ -3476,11 +3476,14 @@ async fn elektronike_and_shtepi_kopsht_have_colours_of_their_own(pool: PgPool) {
             assert!(rule.contains(&token), "{token} in {rule}");
         }
     }
-    // The welcome page's heart wears the site's one red, a kept listing's heart's, in every part
-    // of the site; its conversations button is plain, no colour's.
+    // The welcome page's heart wears the site's one red, in every part of the site, and a kept
+    // listing's heart has it as its outline round a light red; the conversations button is plain,
+    // no colour's.
     assert!(css.contains(".saved-shortcut{--tone:var(--red);--tone-bg:var(--red-bg);}"));
     assert!(!css.contains(".inbox-shortcut{--tone"));
-    assert!(css.contains(r#".heart-button[aria-pressed="true"] svg{fill:var(--red);stroke:var(--red);"#));
+    let kept = &css[css.find(r#".heart-button[aria-pressed="true"] svg{"#).expect("the kept heart")..];
+    let kept = &kept[..kept.find('}').unwrap()];
+    assert!(kept.contains("fill:color-mix(in srgb,var(--red) 38%,#fff)") && kept.contains("stroke:var(--red)"), "{kept}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
