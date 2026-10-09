@@ -20,11 +20,11 @@
 //! - A category only in a search across every category, by the first word that is none of the
 //!   others, as the thing sought comes first ("kufje për telefon" is headphones). The word names
 //!   the categories whose names are about it, in any of its forms: a name is about its first word
-//!   and those "dhe" joins to it ("Vila dhe shtëpi"), not the words that say of what ("Tapete
-//!   makine" are mats). Of several, the one that takes the kind named, then the one whose name has
-//!   most of the search's words, the most of them as typed, then the shortest name. Two still
-//!   alike name neither ("shtëpi" is Vila dhe shtëpi and Shtëpi dhe kopsht alike, but "shtëpi me
-//!   qira" only the first).
+//!   and those a "/" (or "dhe") joins to it ("Vila / shtëpi"), not the words that say of what
+//!   ("Tapete makine" are mats). Of several, the one that takes the kind named, then the one whose
+//!   name has most of the search's words, the most of them as typed, then the shortest name. Two
+//!   still alike name neither ("shtëpi" is Vila / shtëpi and Shtëpi / kopsht alike, but "shtëpi
+//!   me qira" only the first).
 
 use super::{filters::url, post::zoned, suggestions::PLACE_WORDS};
 use crate::{
@@ -386,11 +386,11 @@ fn read_category<'a>(words: &mut [Word], categories: &'a Categories, kind: Optio
     Some(category)
 }
 
-/// The words a category's name is about, folded: its first and those "dhe" joins to it ("Vila dhe
-/// shtëpi": vila, shtepi), not those that say of what ("Tapete makine": tapete; "Aksesorë për
-/// kafshë": aksesore).
+/// The words a category's name is about, folded: its first and those "dhe" or a "/" joins to it
+/// ("Vila / shtëpi": vila, shtepi; migration 0028), not those that say of what ("Tapete makine":
+/// tapete; "Aksesorë për kafshë": aksesore).
 fn about(name: &str) -> Vec<String> {
-    let words: Vec<String> = format::fold(name)
+    let words: Vec<String> = format::fold(&name.replace('/', " dhe "))
         .split(|c: char| !c.is_alphanumeric())
         .filter(|word| !word.is_empty())
         .map(str::to_string)
@@ -398,7 +398,7 @@ fn about(name: &str) -> Vec<String> {
     (0..words.len()).filter(|at| *at == 0 || words[at - 1] == "dhe").map(|at| words[at].clone()).collect()
 }
 
-/// The words of a category's name that say what it is, folded: "Vila dhe shtëpi" is vila, shtepi.
+/// The words of a category's name that say what it is, folded: "Vila / shtëpi" is vila, shtepi.
 fn name_words(name: &str) -> Vec<String> {
     format::fold(name)
         .split(|c: char| !c.is_alphanumeric())
@@ -527,5 +527,15 @@ mod tests {
         for (a, b) in [("makina", "makineri"), ("audio", "audi"), ("ora", "or")] {
             assert!(!same_word(a, b), "{a} and {b}");
         }
+    }
+
+    #[test]
+    fn a_name_is_about_the_words_a_slash_or_dhe_joins() {
+        assert_eq!(about("Vila / shtëpi"), ["vila", "shtepi"]);
+        assert_eq!(about("Vila dhe shtëpi"), ["vila", "shtepi"]);
+        assert_eq!(about("Shtëpi / kopsht"), ["shtepi", "kopsht"]);
+        // Not the words that say of what.
+        assert_eq!(about("Aksesorë për kafshë"), ["aksesore"]);
+        assert_eq!(about("Tapete makine"), ["tapete"]);
     }
 }

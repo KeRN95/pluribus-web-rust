@@ -354,7 +354,7 @@ pub async fn guess_zone(State(state): State<AppState>, Form(words): Form<ZoneWor
 
 /// The categories listings go into under `parent`, at any depth, as the form's groups: one for
 /// those right under it, labelled with its path ("Automjete"), then one for each subcategory that
-/// has its own ("Automjete › Pjesë dhe aksesorë"). A select can't nest its groups, hence the path.
+/// has its own ("Automjete › Pjesë / aksesorë"). A select can't nest its groups, hence the path.
 fn add_category_groups(
     categories: &Categories,
     parent: &Category,

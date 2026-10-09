@@ -9,7 +9,7 @@ import { Controller } from "@hotwired/stimulus";
 // A list with groups folds, as does a category list (data-picker-tree-value): a group's options, a
 // category's subcategories, show under it once its arrow opens them, the path to the choice open
 // from the start (towns under their county, models under their make). The posting form's groups,
-// "Automjete › Pjesë dhe aksesorë", nest by their path; the other category lists by the leading
+// "Automjete › Pjesë / aksesorë", nest by their path; the other category lists by the leading
 // spaces of category_choices (filters.rs), which give each category's level.
 
 let count = 0;
@@ -213,7 +213,7 @@ export default class extends Controller {
     const root = { children: [] };
     const leaf = (option) => ({ key: option.value, label: option.textContent.trim(), option, children: [] });
     if ([...this.select.children].some((child) => child.tagName === "OPTGROUP")) {
-      // The posting form: groups by path, "Automjete › Pjesë dhe aksesorë" under "Automjete".
+      // The posting form: groups by path, "Automjete › Pjesë / aksesorë" under "Automjete".
       const groups = new Map();
       const node = (path) => {
         if (!groups.has(path)) {

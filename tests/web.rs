@@ -338,7 +338,7 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         .unwrap();
     assert!(panel < body.find(r#"<form class="welcome-form""#).unwrap() && nav < toggle);
     // Beside it, a circle like it that posts a listing; then the categories.
-    let post = body.find(r#"<a class="shortcut circle-shortcut" href="/shto" aria-label="Shto njoftim""#).unwrap();
+    let post = body.find(r#"<a class="shortcut circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#).unwrap();
     assert!(toggle < post && post < body.find(r#"<a class="shortcut" href="/c/automjete">"#).unwrap(), "the search, then the plus");
     assert!(body.contains(r#"data-suggest-target="input" data-panel-target="input""#));
     assert!(body.contains(".welcome-search-panel { display: block; position: static;"));
@@ -349,13 +349,13 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         ("automjete", "Automjete"),
         ("prona", "Prona"),
         ("elektronike", "Elektronikë"),
-        ("shtepi-dhe-kopsht", "Shtëpi dhe kopsht"),
+        ("shtepi-dhe-kopsht", "Shtëpi / kopsht"),
         ("pune", "Punë"),
         ("sherbime", "Shërbime"),
-        ("veshje-dhe-aksesore", "Veshje dhe aksesorë"),
-        ("sport-dhe-hobi", "Sport dhe hobi"),
+        ("veshje-dhe-aksesore", "Veshje / aksesorë"),
+        ("sport-dhe-hobi", "Sport / hobi"),
         ("kafshe-shtepiake", "Kafshë shtëpiake"),
-        ("makineri-dhe-biznes", "Makineri dhe biznes"),
+        ("makineri-dhe-biznes", "Makineri / biznes"),
         ("te-tjera", "Të tjera"),
     ];
     let links: Vec<String> =
@@ -3412,7 +3412,7 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
         ("makina", "Makina"),
         ("motocikleta", "Motoçikleta"),
         ("automjete-tregtare", "Automjete tregtare"),
-        ("pjese-dhe-aksesore", "Pjesë dhe aksesorë"),
+        ("pjese-dhe-aksesore", "Pjesë / aksesorë"),
     ] {
         let pill = &vehicles[vehicles.find(&format!(r#"<a class="shortcut" href="/c/{slug}">"#)).expect(slug)..];
         assert!(pill.starts_with(&format!(r#"<a class="shortcut" href="/c/{slug}"><svg class="shortcut-icon""#)), "{slug}");
@@ -3452,7 +3452,7 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     let head = positions(&gps, &[
         r#"<div class="category-path">"#,
         r#"<a class="shortcut small category-up" href="/c/pjese-dhe-aksesore">"#,
-        r#"<summary class="shortcut small is-selected" aria-label="GPS dhe navigatorë: ndrysho kategorinë" aria-current="page">"#,
+        r#"<summary class="shortcut small is-selected" aria-label="GPS / navigatorë: ndrysho kategorinë" aria-current="page">"#,
         r#"<div class="category-level">"#,
         r#"<a class="shortcut small" href="/c/pjese-kembimi"><svg class="shortcut-icon""#,
         r#"<a class="shortcut small" href="/c/pjese-te-tjera"><svg class="shortcut-icon""#,
@@ -3470,7 +3470,7 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     assert_eq!(get(pool.clone(), "/c/pjese-kembimi").await.status, StatusCode::OK);
     // Every dropdown of categories shows the kinds, a level further in: the search's filter too.
     let search = get(pool, "/search").await.body;
-    assert!(search.contains("<option value=\"gps-dhe-navigatore\">\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}GPS dhe navigatorë</option>"));
+    assert!(search.contains("<option value=\"gps-dhe-navigatore\">\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}GPS / navigatorë</option>"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -3479,7 +3479,7 @@ async fn the_listing_form_offers_categories_at_every_depth(pool: PgPool) {
     let form = get_with_cookie(pool.clone(), "/shto", &ana).await.body;
     // Vehicles: cars and the like in one group, the kinds of parts in the next, under their path.
     let vehicles = form.find(r#"<optgroup label="Automjete">"#).expect("the vehicles group");
-    let parts = form.find(r#"<optgroup label="Automjete › Pjesë dhe aksesorë">"#).expect("the parts group");
+    let parts = form.find(r#"<optgroup label="Automjete › Pjesë / aksesorë">"#).expect("the parts group");
     assert!(vehicles < parts);
     let vehicles_group = &form[vehicles..parts];
     assert!(vehicles_group.contains(r#"<option value="makina""#));
