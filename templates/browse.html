@@ -248,6 +248,16 @@
         {%- endfor %}
       </fieldset>
     </details>
+    {%- if most_viewed.is_some() %}
+
+    {#- Beside the view menu, on a page with "Më të klikuarat": a round button with a rising line
+        that shows it or folds it away, pressed while it shows (most_viewed_controller.js, which
+        keeps the choice in a cookie, so the categories' pages after come the same way). -#}
+    <button type="button" class="button secondary round-button most-viewed-button" aria-controls="most-viewed" aria-pressed="{{ most_viewed_shown }}"
+            aria-label="Më të klikuarat" title="Më të klikuarat" data-controller="most-viewed" data-action="most-viewed#toggle">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+    </button>
+    {%- endif %}
   </div>
 
   {#- The filters' card: over the results under the row on a phone, its name and "Mbyll" at the
@@ -274,8 +284,9 @@
       most this week, the most first, as the welcome page has them for every category
       (db::most_viewed, views.rs): its row of cards that slides sideways (card_row.html), each
       saying how many times it was seen; under the page's buttons, and small whatever size the
-      page's own cards are (.cards-big .results). -#}
-  <section class="most-viewed" data-controller="drag-row" aria-labelledby="most-viewed-heading">
+      page's own cards are (.cards-big .results). Folded away by its button in the row, it stays
+      in the page, hidden, its photos waiting until it shows again. -#}
+  <section class="most-viewed" id="most-viewed"{% if !most_viewed_shown %} hidden{% endif %} data-controller="drag-row" aria-labelledby="most-viewed-heading">
     <h2 id="most-viewed-heading">Më të klikuarat</h2>
     {% call rows::card_row(page) %}
   </section>

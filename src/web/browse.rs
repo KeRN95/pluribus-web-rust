@@ -141,6 +141,10 @@ const BIG_LANDSCAPE_SIZES: &str = "(min-width: 1100px) 392px, (min-width: 960px)
 /// The cookie the view menu sets (cards_controller.js): "small", "big" or "list" (Cards::value).
 const CARDS_COOKIE: &str = "cards";
 
+/// The cookie the button beside the view menu sets (most_viewed_controller.js): "hidden" while the
+/// visitor keeps "Më të klikuarat" folded away on the categories' pages, none while it shows.
+const MOST_VIEWED_COOKIE: &str = "most-viewed";
+
 /// The main categories whose pages, and those of the categories under them, show big cards until
 /// the visitor chooses others there: the photos say the most about a home. The choice made on
 /// them is kept apart ("cards-prona"), so that one made on other pages leaves them as they are.
@@ -403,6 +407,9 @@ struct BrowsePage<'a> {
     /// In a category whose page shows its own most seen (views::has_own_most_viewed), with no
     /// filter on, its listings seen the most this week ("Më të klikuarat"), none before any are.
     most_viewed: Option<ListingPage>,
+    /// Whether "Më të klikuarat" shows, or the visitor folded it away (MOST_VIEWED_COOKIE); its
+    /// button in the row says which.
+    most_viewed_shown: bool,
     page: ListingPage,
     /// With the map's dots asked for (harta=1), a dot for each result, up to db::MAP_POINTS.
     points: Vec<db::MapPoint>,
@@ -756,9 +763,14 @@ async fn browse(
     )?;
     safety::without_hidden(&mut most_viewed, &filter.hidden_accounts);
     // "Më të klikuarat" comes before the results, on the first screen: its first two photos load
-    // straight away, the first before anything else (ListingPage::lead); without it, the results'
-    // first does, but on the map page, whose map comes first.
-    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::row(most_viewed, MOST_VIEWED_IDS, 2).leading());
+    // straight away, the first before anything else (ListingPage::lead); without it, or with it
+    // folded away (MOST_VIEWED_COOKIE), where its photos wait until it is shown again, the
+    // results' first does, but on the map page, whose map comes first.
+    let most_viewed_shown = cookie(&headers, MOST_VIEWED_COOKIE).as_deref() != Some("hidden");
+    let most_viewed = (!most_viewed.is_empty()).then(|| {
+        let row = ListingPage::row(most_viewed, MOST_VIEWED_IDS, if most_viewed_shown { 2 } else { 0 });
+        if most_viewed_shown { row.leading() } else { row }
+    });
     // Counted among at most COUNT_LIMIT + 1 listings, as the count is: past that, numbers would
     // mislead, and the names go alone.
     let counted = count <= db::COUNT_LIMIT;
@@ -778,7 +790,8 @@ async fn browse(
     let count = format::short_listing_count(count, db::COUNT_LIMIT);
     mark_city(&mut rows);
     let page = ListingPage::new(rows, filter.sort, next_url).layout(layout);
-    let page = if most_viewed.is_none() && view != View::Map { page.leading() } else { page };
+    let leads = most_viewed.is_none() || !most_viewed_shown;
+    let page = if leads && view != View::Map { page.leading() } else { page };
     let more_points = points.len() as i64 > db::MAP_POINTS;
     points.truncate(db::MAP_POINTS as usize);
     if view == View::Map {
@@ -914,6 +927,7 @@ async fn browse(
         level,
         cards_cookie,
         most_viewed,
+        most_viewed_shown,
         page,
         points,
         section,

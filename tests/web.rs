@@ -4915,6 +4915,21 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
     assert_eq!(row(&html(pool.clone(), "/c/makina").await), [1001, 1002]);
     assert_eq!(row(&html(pool.clone(), "/c/apartamente").await), [1003]);
     assert_eq!(row(&html(pool.clone(), "/c/vila-dhe-shtepi").await), [1004]);
+    // A round button beside the view menu folds it away, pressed while it shows; the cookie it
+    // sets (most_viewed_controller.js) keeps it folded on the next pages, where it stays in the
+    // page, hidden, its photos waiting, and the results' first photo comes first instead.
+    assert!(vehicles.contains(r#"class="button secondary round-button most-viewed-button" aria-controls="most-viewed" aria-pressed="true""#));
+    assert!(vehicles.contains(r#"<section class="most-viewed" id="most-viewed" data-controller="drag-row" aria-labelledby="most-viewed-heading">"#));
+    assert!(section(&vehicles, "most-viewed-heading").contains(r#"fetchpriority="high""#));
+    let folded = get_with_cookie(pool.clone(), "/c/automjete", "most-viewed=hidden").await.body;
+    assert!(folded.contains(r#"aria-controls="most-viewed" aria-pressed="false""#));
+    assert!(folded.contains(r#"<section class="most-viewed" id="most-viewed" hidden data-controller="drag-row""#));
+    let row_html = section(&folded, "most-viewed-heading");
+    let lazy = |html: &str| html.matches(r#"loading="lazy""#).count();
+    assert!(!row_html.contains(r#"fetchpriority="high""#), "{row_html}");
+    assert!(lazy(row_html) > lazy(section(&vehicles, "most-viewed-heading")), "{row_html}");
+    assert_eq!(folded.matches(r#"fetchpriority="high""#).count(), 1);
+    assert!(section(&folded, "results-heading").contains(r#"fetchpriority="high""#));
     // ...but no other subcategory's, nor a page with a filter or words on, which it would take no
     // notice of.
     assert!(!html(pool.clone(), "/c/telefona").await.contains("Më të klikuarat"));
