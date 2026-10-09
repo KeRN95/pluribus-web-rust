@@ -323,7 +323,8 @@
    open (a category page's own pill, an open menu's button): a tint of its colour, a border of it and its icon in it, the border whole under the
    pointer or a press. Each has its colour (--tone) and its tint (--tone-bg), as listing.css's
    price bubbles have: the search the coral (--accent, --badge), the plus Claude's blue (--blue,
-   --blue-bg), the listings kept a bright red (--red), the conversations Claude's olive (--olive,
+   --blue-bg), the listings kept the burgundy (--burgundy, Automjete's colour; a kept listing's
+   heart on a card is the bright red, page.css), the conversations Claude's olive (--olive,
    Shtëpi / kopsht's colour), and
    the theme the blue under its moon, on the light theme, and a yellow under its sun, on the dark
    (--yellow). Their icons are the pills' size. On a phone a finger's target is bigger than the
@@ -355,7 +356,7 @@
 .welcome-actions { display: flex; flex: none; gap: var(--column-gap); }
 .search-shortcut { --tone: var(--accent); --tone-bg: var(--badge); width: calc(var(--pill) * 1.5); }
 .plus-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
-.saved-shortcut { --tone: var(--red); --tone-bg: var(--red-bg); }
+.saved-shortcut { --tone: var(--burgundy); --tone-bg: var(--burgundy-bg); }
 .inbox-shortcut { --tone: var(--olive); --tone-bg: var(--olive-bg); }
 .theme-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
 :root[data-theme="dark"] .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
