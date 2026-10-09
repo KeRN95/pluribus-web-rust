@@ -238,8 +238,9 @@
     <h2>Detajet</h2>
     {#- Pills that fill each line: a detail's icon (icons.rs), then its name where its value doesn't
         say what it is ("Kati 6", but "6 GB RAM", "Euro 6"), then its value; several values (a car's
-        options) a pill each, with a check. The names are there for screen readers, and as
-        tooltips. -#}
+        options) a pill each, with a check. The category's key facts, those its cards show too,
+        are lit as picked pills are (is-key, listing.css). The names are there for screen
+        readers, and as tooltips. -#}
     <dl class="attributes">
       {% for detail in details %}
       <div class="attribute-group">

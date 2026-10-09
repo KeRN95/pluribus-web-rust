@@ -574,14 +574,16 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
                 icon: look.map(|look| look.icon),
                 named: look.is_none_or(|look| look.reads == Reads::Named),
                 multi: attribute.multi,
+                key: attribute.key,
                 label: attribute.label,
                 values: attribute.shown,
             }
         })
         .collect();
-    // A property's zone in its town comes first among its details.
+    // A property's zone in its town comes first among its details, lit as its cards say it too.
     if let Some(zone) = &listing.zone {
-        let zone = Detail { label: "Zona".to_string(), values: vec![zone.clone()], icon: Some(icons::PIN), named: false, multi: false };
+        let zone =
+            Detail { label: "Zona".to_string(), values: vec![zone.clone()], icon: Some(icons::PIN), named: false, multi: false, key: true };
         details.insert(0, zone);
     }
     // A property or a car: where it is, on a map under the seller.
@@ -672,6 +674,9 @@ pub struct Detail {
     /// beside it ("Kati 6", icons::Reads).
     pub named: bool,
     pub multi: bool,
+    /// One of the category's key facts, which its cards show too (show_in_card; a property's
+    /// zone as well): lit among the details, as a picked pill is.
+    pub key: bool,
 }
 
 impl Detail {

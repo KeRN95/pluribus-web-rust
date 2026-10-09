@@ -59,6 +59,9 @@ pub struct AttributeValue {
     /// Its value as the page shows it; a multi-select's options, each on its own.
     pub shown: Vec<String>,
     pub multi: bool,
+    /// One of the category's key facts: shown on its cards too (show_in_card), and lit among the
+    /// listing's details.
+    pub key: bool,
 }
 
 #[derive(Debug)]
@@ -145,13 +148,13 @@ pub async fn listing_attributes(
 ) -> sqlx::Result<Vec<AttributeValue>> {
     sqlx::query_as!(
         AttributeValue,
-        r#"SELECT code AS "code!", label AS "label!", shown AS "shown!", multi AS "multi!"
+        r#"SELECT code AS "code!", label AS "label!", shown AS "shown!", multi AS "multi!", key AS "key!"
            FROM (
                SELECT a.code, coalesce(eca.label, a.name) AS label,
                       ARRAY[coalesce(o.label, v.value_text, format_attribute_number(v.value_number, a.unit),
                                      CASE v.value_boolean WHEN true THEN coalesce(eca.label, a.name) WHEN false THEN 'Jo' END,
                                      to_char(v.value_date, 'DD.MM.YYYY'))] AS shown,
-                      false AS multi,
+                      false AS multi, eca.show_in_card AS key,
                       eca.sort_order
                FROM listing_attribute_values v
                JOIN attributes a ON a.id = v.attribute_id
@@ -161,14 +164,14 @@ pub async fn listing_attributes(
                WHERE v.listing_id = $1
                UNION ALL
                SELECT a.code, coalesce(eca.label, a.name), array_agg(o.label ORDER BY o.sort_order), true,
-                      eca.sort_order
+                      eca.show_in_card, eca.sort_order
                FROM listing_attribute_options lo
                JOIN attributes a ON a.id = lo.attribute_id
                JOIN effective_category_attributes eca
                  ON eca.category_id = $2 AND eca.attribute_id = lo.attribute_id AND eca.show_in_details
                JOIN attribute_options o ON o.id = lo.option_id
                WHERE lo.listing_id = $1
-               GROUP BY a.id, a.code, a.name, eca.label, eca.sort_order
+               GROUP BY a.id, a.code, a.name, eca.label, eca.show_in_card, eca.sort_order
            ) attrs
            ORDER BY sort_order, label"#,
         listing_id,

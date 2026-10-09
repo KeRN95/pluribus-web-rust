@@ -1877,9 +1877,12 @@ async fn every_detail_has_its_icon_its_categorys_where_that_says_more(pool: PgPo
     let flat = html(pool.clone(), "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
     let start = flat.find(r#"<dl class="attributes">"#).unwrap();
     let details = &flat[start..start + flat[start..].find("</dl>").unwrap()];
-    assert_eq!(details.matches(r#"<dd class="attribute""#).count(), details.matches(r#"<svg class="attribute-icon""#).count());
+    assert_eq!(details.matches(r#"<dd class="attribute"#).count(), details.matches(r#"<svg class="attribute-icon""#).count());
     assert!(details.contains("</svg>2+1</dd>") && details.contains("</svg>I mobiluar</dd>"));
     assert!(details.contains(r#"</svg><span class="attribute-label" aria-hidden="true">Kati</span>4</dd>"#));
+    // The category's key facts, those its cards show (the rooms, the area), are lit; the rest not.
+    assert!(details.contains(r#"<dd class="attribute is-key" title="Dhoma">"#) && details.contains(r#"<dd class="attribute is-key" title="Sipërfaqja">"#), "{details}");
+    assert!(details.contains(r#"<dd class="attribute" title="Kati">"#), "{details}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -1900,7 +1903,10 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     // What kind of listing it is, and its condition, over the price, not among the details.
     assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur · <span class="listing-number">"#));
     assert!(!response.body.contains(">Gjendja</dt>"));
-    assert!(response.body.contains(r#"<dd class="attribute" title="Kilometrazhi"><svg class="attribute-icon""#));
+    // A car's key facts, its mileage and fuel (its year is in the title), are lit; its body type not.
+    assert!(response.body.contains(r#"<dd class="attribute is-key" title="Kilometrazhi"><svg class="attribute-icon""#));
+    assert!(response.body.contains(r#"<dd class="attribute is-key" title="Karburanti">"#));
+    assert!(response.body.contains(r#"<dd class="attribute" title="Karroceria">"#));
     assert!(response.body.contains(r#"<dt class="visually-hidden">Kilometrazhi</dt>"#));
     assert!(response.body.contains("</svg>148\u{a0}000\u{a0}km</dd>"));
     assert!(response.body.contains("</svg>Naftë</dd>"));

@@ -387,32 +387,37 @@
   .actions .button:active { transform: none; }
 }
 
-/* The listing's details as pills, the menus' hairline on the surface, each as wide as what it
-   says, one after another: a detail's icon before its value, or its name, quiet, before it; a
-   car's options a pill each.
-   The groups (a name and its values) leave their pills to the line (display: contents). */
-.attributes { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; }
+/* The listing's details as pills, smaller than the category pills (the text a size down, 14px,
+   their icons 16px), the menus' hairline on the surface, each as wide as what it says, one after
+   another: a detail's icon before its value, or its name, quiet, before it; a car's options a
+   pill each. The category's key facts, those its cards show too (.is-key), are lit as a picked
+   pill is: the accent's tint, a border of the accent, their icon and words in it. The groups (a
+   name and its values) leave their pills to the line (display: contents). */
+.attributes { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0; }
 .attribute-group { display: contents; }
 .attribute {
   display: flex;
   align-items: center;
-  gap: .5rem;
+  gap: .45rem;
   min-width: 0;
   margin: 0;
-  padding: .55rem 1rem;
+  padding: .45rem .85rem;
   border: 1px solid var(--menu-border);
   border-radius: 999px;
   background: var(--surface);
+  font-size: var(--text-sm);
   font-weight: var(--medium);
 }
-.attribute-icon { flex: none; color: var(--muted); }
+.attribute-icon { flex: none; width: 16px; height: 16px; color: var(--muted); }
 .attribute-label { color: var(--muted); font-weight: normal; }
-/* A phone: the details' pills a little smaller (13px, their icons 16px), so more of them share a
-   line. */
+.attribute.is-key { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+.attribute.is-key .attribute-icon,
+.attribute.is-key .attribute-label { color: inherit; }
+/* A phone: smaller still (13px, their icons 15px), so more of them share a line. */
 @media (max-width: 719px) {
   .attributes { gap: .4rem; }
-  .attribute { gap: .4rem; padding: .45rem .8rem; font-size: .93rem; }
-  .attribute-icon { width: 16px; height: 16px; }
+  .attribute { gap: .4rem; padding: .4rem .7rem; font-size: .875rem; }
+  .attribute-icon { width: 15px; height: 15px; }
 }
 /* The listing's number, quietly, under the description. */
 /* The listing's number ends the line under the title, whole on one line. */
