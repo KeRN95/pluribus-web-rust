@@ -54,12 +54,14 @@
       copy, which is in the page and so shows at once, until the photo has loaded too (a photo kept
       before there were any has its card-sized copy blurred). A photo kept as WebP offers its four
       copies in a picture, for the browser to pick the one the screen needs (GALLERY_SIZES), with
-      its JPEG for browsers without WebP. Several make a strip to swipe through one at a time, with
-      a counter in its corner, and arrows for a mouse (gallery_controller.js); the first two load
-      at once, the first ahead of anything else on the page (fetchpriority). -#}
-  <div class="gallery"{% if photos.len() > 1 %} data-controller="gallery"{% endif %}>
+      its JPEG for browsers without WebP. Several make a strip to slide through one at a time, as a
+      big card's photos (slides_controller.js): a finger or a mouse, pressed and moved, slides them,
+      dots over their foot say which shows, a counter in its corner its number, and under a mouse
+      arrows, each near its edge, step them round and round; the first two load at once, the first
+      ahead of anything else on the page (fetchpriority). -#}
+  <div class="gallery"{% if photos.len() > 1 %} data-controller="slides"{% endif %}>
     <div class="listing-photos"
-      {%- if photos.len() > 1 %} data-gallery-target="track" tabindex="0" role="region" aria-label="Fotot e njoftimit"{% endif %}>
+      {%- if photos.len() > 1 %} data-slides-target="track" data-action="scroll->slides#update" tabindex="0" role="region" aria-label="Fotot e njoftimit"{% endif %}>
       {% for photo in photos %}
       <div class="gallery-photo">
         <img class="gallery-backdrop" src="{{ photo.backdrop() }}" alt=""{% if photo.placeholder.is_none() && loop.index > 2 %} loading="lazy"{% endif %}>
@@ -76,13 +78,16 @@
       {% endfor %}
     </div>
     {%- if photos.len() > 1 %}
-    <button type="button" class="gallery-arrow gallery-previous" data-gallery-target="previous" data-action="gallery#previous" aria-label="Foto e mëparshme" disabled>
+    <div class="gallery-dots" data-slides-target="dots" aria-hidden="true">
+      {%- for _ in photos.iter() %}<span{% if loop.first %} class="is-current"{% endif %}></span>{% endfor -%}
+    </div>
+    <button type="button" class="gallery-arrow gallery-previous" data-slides-target="previous" data-action="slides#previous" aria-label="Foto e mëparshme" hidden>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
     </button>
-    <button type="button" class="gallery-arrow gallery-next" data-gallery-target="next" data-action="gallery#next" aria-label="Foto tjetër">
+    <button type="button" class="gallery-arrow gallery-next" data-slides-target="next" data-action="slides#next" aria-label="Foto tjetër" hidden>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
     </button>
-    <span class="gallery-count" data-gallery-target="count">1 / {{ photos.len() }}</span>
+    <span class="gallery-count" data-slides-target="count">1 / {{ photos.len() }}</span>
     {%- endif %}
   </div>
   {% endif %}

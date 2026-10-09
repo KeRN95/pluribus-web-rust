@@ -3748,11 +3748,15 @@ async fn listings_get_photos(pool: PgPool) {
         assert!(img[img.find("<img").unwrap()..].starts_with(&format!(r#"<img src="{url}""#)));
     }
     assert_eq!(page.matches("</picture>").count(), 2);
-    // Two make a strip to swipe through, one at a time, with a counter and arrows.
-    assert!(page.contains(r#"<div class="gallery" data-controller="gallery">"#));
-    assert!(page.contains(r#"data-gallery-target="track" tabindex="0" role="region" aria-label="Fotot e njoftimit""#));
-    assert!(page.contains(r#"<span class="gallery-count" data-gallery-target="count">1 / 2</span>"#));
-    assert!(page.contains(r#"aria-label="Foto e mëparshme" disabled"#) && page.contains(r#"aria-label="Foto tjetër""#));
+    // Two make a strip to slide through, one at a time, as a big card's photos are
+    // (slides_controller.js): the row scrolls, a dot for each photo, the first lit, the counter,
+    // and the arrows, hidden until the controller comes.
+    assert!(page.contains(r#"<div class="gallery" data-controller="slides">"#));
+    assert!(page.contains(r#"data-slides-target="track" data-action="scroll->slides#update" tabindex="0" role="region" aria-label="Fotot e njoftimit""#));
+    assert!(page.contains(r#"<div class="gallery-dots" data-slides-target="dots" aria-hidden="true"><span class="is-current"></span><span></span></div>"#));
+    assert!(page.contains(r#"<span class="gallery-count" data-slides-target="count">1 / 2</span>"#));
+    assert!(page.contains(r#"data-action="slides#previous" aria-label="Foto e mëparshme" hidden>"#));
+    assert!(page.contains(r#"data-action="slides#next" aria-label="Foto tjetër" hidden>"#));
     assert!(page.contains(", foto 2 nga 2\""));
     let photo = get(pool.clone(), photo_urls[0]).await;
     assert_eq!(photo.status, StatusCode::OK);
@@ -3818,7 +3822,7 @@ async fn listings_get_photos(pool: PgPool) {
     assert_eq!(page.matches(r#"<img src="/media/photos/"#).count(), 1);
     // One is just the photo: nothing to swipe or count.
     assert!(page.contains(r#"<div class="gallery">"#));
-    assert!(!page.contains("data-controller=\"gallery\"") && !page.contains("gallery-count") && !page.contains(", foto 1 nga"));
+    assert!(!page.contains(r#"<div class="gallery" data-controller"#) && !page.contains("gallery-count") && !page.contains("gallery-dots") && !page.contains(", foto 1 nga"));
     // The removed one's files are gone, every copy.
     let copies = ["-middle.webp", "-card.webp", "-small.webp", "-mini.webp", "-card.avif", "-small.avif", "-mini.avif"].map(|copy| format!("{big}{copy}"));
     for file in [photo_urls[0].to_string(), format!("{big}.webp")].into_iter().chain(copies) {

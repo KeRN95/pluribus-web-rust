@@ -115,9 +115,10 @@
   border-radius: var(--radius);
 }
 
-/* A listing's photos. Several make a strip to swipe through, one at a time (scroll snapping), with
-   a counter in the corner, the view count's size on its soft dark (page.css, .listing-views), and
-   arrows on screens with a mouse (gallery_controller.js). */
+/* A listing's photos. Several make a strip to slide through, one at a time (scroll snapping), as
+   a big card's do (slides_controller.js), with dots at their foot, a counter in the corner, the
+   view count's size on its soft dark (page.css, .listing-views), and arrows on screens with a
+   mouse. */
 .gallery { position: relative; }
 .listing-photos {
   display: flex;
@@ -195,7 +196,41 @@
   }
   .gallery-previous { left: .7rem; }
   .gallery-next { right: .7rem; }
-  .gallery-arrow:disabled { opacity: 0; pointer-events: none; }
+}
+.gallery-arrow[hidden] { display: none; }
+/* As a big card's (page.css, .card-step): the arrows round and round, each showing only while
+   the mouse is near its edge of the photo, or has the keyboard's focus; the photos dragged by a
+   mouse (slides_controller.js). */
+@media (hover: hover) and (pointer: fine) {
+  .gallery-arrow { opacity: 0; }
+  .gallery.near-previous .gallery-previous,
+  .gallery.near-next .gallery-next,
+  .gallery-arrow:focus-visible { opacity: 1; }
+}
+.listing-photos.is-dragging,
+.listing-photos.is-dragging * { cursor: grabbing; }
+/* At the photo's foot, in the middle, level with the counter: a dot for each photo, the one that
+   shows white, as on a big card (page.css, .card-dots); under a mouse a dot goes to its photo,
+   taking a click a little round it too. */
+.gallery-dots {
+  position: absolute;
+  bottom: calc(var(--over-edge) + (var(--over-photo) - 6px) / 2);
+  left: 50%;
+  display: flex;
+  gap: 6px;
+  translate: -50% 0;
+  pointer-events: none;
+}
+.gallery-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgb(255 255 255 / 55%); box-shadow: 0 0 2px rgb(0 0 0 / 45%); transition: background-color .15s; }
+.gallery-dots .is-current { background: #fff; }
+@media (hover: hover) and (pointer: fine) {
+  .gallery-dots span { position: relative; pointer-events: auto; cursor: pointer; }
+  .gallery-dots span::after { content: ""; position: absolute; inset: -9px -3px; }
+  .gallery-dots span:not(.is-current):hover { background: rgb(255 255 255 / 80%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gallery-arrow,
+  .gallery-dots span { transition: none; }
 }
 /* Above the photo, the category's pills as a category page's head has them (browse.css,
    .category-path); the status after them. */

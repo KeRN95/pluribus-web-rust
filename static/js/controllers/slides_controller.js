@@ -1,13 +1,14 @@
 import { Controller } from "@hotwired/stimulus";
 
-// A big card's photos, side by side in a row that scrolls a photo at a time (page.css, scroll snap):
-// a finger slides through them, and so does a mouse, pressed and moved: let go, the row settles on
-// the photo nearest, or on the next one the way it was flicked, and the click that ends the drag
-// opens no listing. The dots over the photo say which one shows, and under a mouse a click on one
-// goes to its photo. The arrows step, round and round: the next from the last photo goes back to
-// the first, the previous from the first to the last; each shows only while the mouse is near its
-// edge of the photo (near-previous, near-next). A small card shows only its first photo, and none
-// of this.
+// Photos side by side in a row that scrolls a photo at a time (scroll snap): a big card's (page.css)
+// and a listing's on its page (listing.css, .gallery). A finger slides through them, and so does a
+// mouse, pressed and moved: let go, the row settles on the photo nearest, or on the next one the
+// way it was flicked, and the click that ends the drag opens no listing. The dots over the photo
+// say which one shows, and under a mouse a click on one goes to its photo; the listing's counter
+// ("2 / 5") says it too. The arrows step, round and round: the next from the last photo goes back
+// to the first, the previous from the first to the last; each shows only while the mouse is near
+// its edge of the photo (near-previous, near-next). A small card shows only its first photo, and
+// none of this.
 
 // How long a step from one photo to another takes, in milliseconds.
 const STEP_MS = 200;
@@ -19,7 +20,7 @@ const FLICK = 0.3;
 const EDGE = 0.25;
 
 export default class extends Controller {
-  static targets = ["track", "dots", "previous", "next"];
+  static targets = ["track", "dots", "count", "previous", "next"];
 
   connect() {
     const track = this.trackTarget;
@@ -30,10 +31,10 @@ export default class extends Controller {
       [window, "pointercancel", (event) => this.drop(event)],
       [track, "dragstart", (event) => event.preventDefault()],
       [track, "click", (event) => this.swallow(event), { capture: true }],
-      [this.dotsTarget, "click", (event) => this.pick(event)],
       [this.element, "pointermove", (event) => this.near(event)],
       [this.element, "pointerleave", () => this.far()],
     ];
+    if (this.hasDotsTarget) this.listeners.push([this.dotsTarget, "click", (event) => this.pick(event)]);
     for (const [target, name, listener, options] of this.listeners) target.addEventListener(name, listener, options);
     this.update();
   }
@@ -82,7 +83,7 @@ export default class extends Controller {
 
   // A mouse pressed on the photos, and moved past DRAG_FROM: the row follows it, unsnapped.
   grab(event) {
-    if (event.pointerType !== "mouse" || event.button !== 0 || !this.big) return;
+    if (event.pointerType !== "mouse" || event.button !== 0 || !this.sliding) return;
     this.hold = { id: event.pointerId, x: event.clientX, scroll: this.trackTarget.scrollLeft, dragging: false, moves: [] };
   }
 
@@ -133,9 +134,9 @@ export default class extends Controller {
     this.dragged = false;
   }
 
-  // The mouse over the photo: the arrow of the edge it is near shows (page.css).
+  // The mouse over the photo: the arrow of the edge it is near shows (page.css, listing.css).
   near(event) {
-    if (event.pointerType !== "mouse" || !this.big) return;
+    if (event.pointerType !== "mouse" || !this.sliding) return;
     const box = this.element.getBoundingClientRect();
     const zone = box.width * EDGE;
     this.element.classList.toggle("near-previous", event.clientX - box.left < zone);
@@ -146,24 +147,27 @@ export default class extends Controller {
     this.element.classList.remove("near-previous", "near-next");
   }
 
-  // Which photo shows, as the row scrolls: its dot lights up. The arrows, there at either end as
-  // they go round, come with the controller (the page has them hidden until it connects).
+  // Which photo shows, as the row scrolls: its dot lights up, and the counter says its number. The
+  // arrows, there at either end as they go round, come with the controller (the page has them
+  // hidden until it connects).
   update() {
     const index = this.index;
-    [...this.dotsTarget.children].forEach((dot, at) => dot.classList.toggle("is-current", at === index));
+    if (this.hasDotsTarget) [...this.dotsTarget.children].forEach((dot, at) => dot.classList.toggle("is-current", at === index));
+    if (this.hasCountTarget) this.countTarget.textContent = `${index + 1} / ${this.count}`;
     this.previousTarget.hidden = false;
     this.nextTarget.hidden = false;
   }
 
-  // How many photos the card has: a dot each.
+  // How many photos there are: the row's.
   get count() {
-    return this.dotsTarget.children.length;
+    return this.trackTarget.children.length;
   }
 
-  // Big cards only: a small card's photos don't slide, though it has this controller to slide them
-  // once the view menu makes it big (cards_controller.js), and in a row the drag is the row's.
-  get big() {
-    return Boolean(this.element.closest(".cards-big .results"));
+  // A listing's photos always; a card's on a big card only: a small card's photos don't slide,
+  // though it has this controller to slide them once the view menu makes it big
+  // (cards_controller.js), and in a row the drag is the row's.
+  get sliding() {
+    return !this.element.closest(".card") || Boolean(this.element.closest(".cards-big .results"));
   }
 
   get index() {
