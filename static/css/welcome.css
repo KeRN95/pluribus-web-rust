@@ -328,20 +328,21 @@
 
 
 /* The round buttons with the categories' pills (home.html), as tall as the pills beside them
-   (--pill): the search's, leading the first line, as tall as its bigger pills and half as wide
-   again; and after all the pills, as one group, the buttons for posting a listing, the listings
-   kept, the conversations and the theme, which no top bar holds (every page's has the account
-   alone, base.css). Each is marked as the site marks what is picked or open (a category page's own pill, an
-   open menu's button): a tint of its colour, a border of it and its icon in it, the border whole
-   under the pointer or a press. Each has its colour (--tone) and its tint (--tone-bg), as
-   listing.css's price bubbles have: the search the coral (--accent, --badge), the plus Claude's
-   blue (--blue, --blue-bg), the listings kept the burgundy (--burgundy, Automjete's colour; a
-   kept listing's heart on a card is the bright red, page.css), the conversations Claude's olive
-   (--olive, Shtëpi / kopsht's colour), and the theme the blue under its moon, on the light
-   theme, and a yellow under its sun, on the dark (--yellow). Their icons are the pills' size
-   beside them. On a phone a finger's target is bigger than the button, as a pill's is (::after,
-   from the gaps). The search opens its box over its line, the page dimmed under it
-   (.welcome-scrim), as the browse row's does. */
+   (--pill): the search's, leading the first line, half as wide again, and after it the one for
+   posting a listing; and after all the pills, as one group, the buttons for the listings kept,
+   the conversations and the theme, which no top bar holds (every page's has the account alone,
+   base.css). The search, the listings kept and the theme are marked as the site marks what is
+   picked or open (a category page's own pill, an open menu's button): a tint of a colour, a
+   border of it and the icon in it, the border whole under the pointer or a press; each has its
+   colour (--tone) and its tint (--tone-bg), as listing.css's price bubbles have: the search the
+   coral (--accent, --badge), the listings kept the site's one red, the kept hearts' on the cards
+   (--red, page.css), and the theme the blue's tint and border with its moon in the yellow, on the
+   light theme, and the yellow's with its sun in it, on the dark (--yellow). The plus and the
+   conversations are plain (.plain-shortcut), on the surface with the menus' hairline and their
+   icon in the text's colour, as the back button is (browse.css): the colours are kept for what
+   means one. Their icons are the pills' size beside them. On a phone a finger's target is bigger
+   than the button, as a pill's is (::after, from the gaps). The search opens its box over its
+   line, the page dimmed under it (.welcome-scrim), as the browse row's does. */
 .circle-shortcut {
   position: relative;
   display: flex;
@@ -366,10 +367,8 @@
    which goes to the next line whole rather than split, its buttons as far apart as the pills. */
 .welcome-actions { display: flex; flex: none; gap: var(--column-gap); }
 .search-shortcut { --tone: var(--accent); --tone-bg: var(--badge); width: calc(var(--pill) * 1.5); }
-.plus-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
-.saved-shortcut { --tone: var(--burgundy); --tone-bg: var(--burgundy-bg); }
-.inbox-shortcut { --tone: var(--olive); --tone-bg: var(--olive-bg); }
-.theme-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
+.saved-shortcut { --tone: var(--red); --tone-bg: var(--red-bg); }
+.theme-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); color: var(--yellow); }
 :root[data-theme="dark"] .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
@@ -377,6 +376,14 @@
 .circle-shortcut:active { border-color: var(--tone); transform: scale(.94); }
 @media (hover: hover) {
   .circle-shortcut:hover { border-color: var(--tone); }
+}
+/* The plain ones, the back button's kind: the surface, the hairline, the icon in the text's
+   colour; a warm shade under the pointer or a press. The ring round the conversations' count and
+   the kept listings' dot is the surface's then. */
+.plain-shortcut { --tone: var(--text); --tone-bg: var(--surface); border-color: var(--menu-border); }
+.plain-shortcut:active { border-color: var(--menu-border); background: var(--surface-muted); }
+@media (hover: hover) {
+  .plain-shortcut:hover { border-color: var(--menu-border); background: var(--surface-muted); }
 }
 /* The conversations' count of those unread (messages.css), ringed in the button's tint. */
 .inbox-shortcut .inbox-count { box-shadow: 0 0 0 2px var(--tone-bg); }
