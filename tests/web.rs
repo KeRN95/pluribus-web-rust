@@ -2928,6 +2928,42 @@ async fn static_files_have_cache_headers(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
+async fn scripts_come_minified(pool: PgPool) {
+    // Every script a page loads comes minified (web::script): Turbo and Stimulus, kept as written,
+    // in a fraction of their bytes, with their licence notices; the site's own modules without
+    // their comments, with their imports and exports as they were, so the import map and Stimulus
+    // find what they look for.
+    let version = marketplace::web::asset_version();
+    let written = |file: &str| std::fs::read_to_string(file).unwrap();
+    let turbo = get(pool.clone(), "/static/vendor/turbo-8.0.23.js").await;
+    assert_eq!((turbo.status, turbo.content_type.as_deref()), (StatusCode::OK, Some("text/javascript; charset=utf-8")));
+    let source = written("static/vendor/turbo-8.0.23.js");
+    assert!(turbo.body.len() < source.len() / 2, "{} of {}", turbo.body.len(), source.len());
+    assert!(turbo.body.starts_with("/*!\nTurbo 8.0.23\n"), "{}", &turbo.body[..40]);
+    assert!(turbo.body.contains("FrameElement") && turbo.body.contains("customElements.define("), "{}", &turbo.body[..200]);
+    let stimulus = get(pool.clone(), "/static/vendor/stimulus-3.2.2.js").await;
+    let source = written("static/vendor/stimulus-3.2.2.js");
+    assert!(stimulus.body.len() < source.len() * 3 / 5, "{} of {}", stimulus.body.len(), source.len());
+    assert!(stimulus.body.starts_with("/*\nStimulus 3.2.1\n"), "{}", &stimulus.body[..40]);
+    assert!(stimulus.body.contains("Controller"), "{}", &stimulus.body[..200]);
+    let application = get(pool.clone(), &format!("/static/js/application.js?v={version}")).await;
+    assert_eq!(application.content_type.as_deref(), Some("text/javascript; charset=utf-8"));
+    let source = written("static/js/application.js");
+    assert!(application.body.len() < source.len() * 2 / 3, "{} of {}", application.body.len(), source.len());
+    assert!(!application.body.contains("Turbo turns links"), "{}", application.body);
+    for kept in ["from\"@hotwired/turbo\"", "from\"@hotwired/stimulus\"", "\"controllers/heart_controller.js\"", "_controller.js`"] {
+        assert!(application.body.contains(kept), "{kept} in {}", application.body);
+    }
+    let heart = get(pool.clone(), &format!("/static/js/controllers/heart_controller.js?v={version}")).await;
+    assert!(heart.body.contains("export default class extends ") && heart.body.contains("static values={number:Number}"), "{}", heart.body);
+    assert!(heart.body.contains("from\"controllers/signed_in.js\"") && heart.body.contains("connect(){"), "{}", heart.body);
+    // Not a file above static/js, nor any but a script.
+    for uri in ["/static/js/nope.js", "/static/js/../../static/js/application.js", "/static/js/application.js.map", "/static/js/../vendor/turbo-8.0.23.js"] {
+        assert_eq!(get(pool.clone(), uri).await.status, StatusCode::NOT_FOUND, "{uri}");
+    }
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPool) {
     let version = marketplace::web::asset_version();
     assert_eq!(version.len(), 8);
