@@ -4526,15 +4526,18 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
     assert!(order.is_sorted(), "{order:?}");
     assert!(!cars.contains(r#"<a class="shortcut small" href="/c/makina">"#), "not itself");
     assert!(cars.contains("</svg>Motoçikleta</a>"), "the names after the icons");
-    // A round button before them leads beyond them: with two pills, to the welcome page, by its
-    // house; the small pills carry their icons too, the way up's with no arrow of its own, the
-    // page's own before its heading.
+    // First a round back button, leading a level up without scripts; then a round button that
+    // leads beyond the pills: with two pills, to the welcome page, by its house. The small pills
+    // carry their icons too, the way up's with no arrow of its own, the page's own before its
+    // heading.
+    let back = cars.find(r#"<a class="back-button" href="/c/automjete" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#).expect("the back button");
     let home = cars.find(r#"<a class="back-button" href="/" aria-label="Faqja kryesore" title="Faqja kryesore"><svg"#).expect("the house");
-    assert!(home < cars.find(r#"<a class="shortcut small category-up" href="/c/automjete"><svg class="shortcut-icon""#).unwrap());
-    // Three levels down, to the category above the way up, by its icon.
+    assert!(back < home && home < cars.find(r#"<a class="shortcut small category-up" href="/c/automjete"><svg class="shortcut-icon""#).unwrap());
+    // Three levels down, beyond them to the category above the way up, by its icon.
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
+    let back = gps.find(r#"<a class="back-button" href="/c/pjese-dhe-aksesore" aria-label="Kthehu""#).expect("the back button");
     let above = gps.find(r#"<a class="back-button" href="/c/automjete" aria-label="Automjete" title="Automjete"><svg"#).expect("Automjete's");
-    assert!(above < gps.find(r#"<a class="shortcut small category-up" href="/c/pjese-dhe-aksesore">"#).unwrap());
+    assert!(back < above && above < gps.find(r#"<a class="shortcut small category-up" href="/c/pjese-dhe-aksesore">"#).unwrap());
     assert!(!gps.contains("Faqja kryesore"));
     assert!(!cars.contains("up-icon"));
     assert!(cars.contains(r#"</svg><h1>Makina</h1><svg class="chevron""#), "{cars}");
@@ -4548,6 +4551,7 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
     // trail.
     let vehicles = html(pool.clone(), "/c/automjete").await;
     assert!(!vehicles.contains("category-up"));
+    assert!(vehicles.contains(r#"<a class="back-button" href="/" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#), "back to the welcome page without scripts");
     assert!(vehicles.contains(r#"<a class="back-button" href="/" aria-label="Faqja kryesore" title="Faqja kryesore">"#), "the welcome page's house");
     assert!(vehicles.contains("<h1>Automjete</h1>"));
     let at = positions(&vehicles, &[
