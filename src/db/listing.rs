@@ -59,8 +59,8 @@ pub struct AttributeValue {
     /// Its value as the page shows it; a multi-select's options, each on its own.
     pub shown: Vec<String>,
     pub multi: bool,
-    /// One of the category's key facts: shown on its cards too (show_in_card), and lit among the
-    /// listing's details.
+    /// One of the category's key facts: shown on its cards too (show_in_card), and its icon lit
+    /// among the listing's details.
     pub key: bool,
 }
 
