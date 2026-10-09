@@ -141,7 +141,7 @@ const BIG_CARDS_IN: [&str; 1] = ["prona"];
 
 /// The view menu's cookie on a page of `category`, and how its cards show without one.
 fn cards_cookie(categories: &db::Categories, category: Option<&db::Category>) -> (String, Cards) {
-    let main = category.map(|category| categories.ancestors(category).first().copied().unwrap_or(category));
+    let main = category.map(|category| categories.main_of(category));
     match main.filter(|main| BIG_CARDS_IN.contains(&main.slug.as_str())) {
         Some(main) => (format!("{CARDS_COOKIE}-{}", main.slug), Cards::Big),
         None => (CARDS_COOKIE.to_string(), Cards::Small),
@@ -393,6 +393,10 @@ struct BrowsePage<'a> {
     /// with the page: one of them is on, or the kind of listing waiting there is.
     has_more: bool,
     more_open: bool,
+    /// The main category the page is in, its category's own or the one above it, which the page's
+    /// body names (base.html, data-section): Elektronikë's pages are in Claude's blue where the
+    /// rest of the site is coral (base.css).
+    section: Option<String>,
 }
 
 /// How long a category's price quarters, its price's quick choices, are kept before they are
@@ -556,6 +560,8 @@ struct MapPage<'a> {
     points: Vec<db::MapPoint>,
     /// Whether more results have a point than the map shows.
     more_points: bool,
+    /// The main category the page is in (BrowsePage::section).
+    section: Option<String>,
 }
 
 /// How a browse page shows its listings: as a grid with filters, or beside a map.
@@ -619,6 +625,7 @@ async fn browse(
         safety::hidden_accounts(&state, &headers),
     )?;
     let category = category_slug.and_then(|slug| categories.by_slug(slug));
+    let section = category.map(|category| categories.main_of(category).slug.clone());
     let path = match (&page_slug, category, view) {
         (Some(_), None, _) => return not_found().await,
         (Some(slug), Some(_), _) => format!("/c/{slug}"),
@@ -751,7 +758,7 @@ async fn browse(
     points.truncate(db::MAP_POINTS as usize);
     if view == View::Map {
         let chips = filters.chips();
-        return render(MapPage { count, filters: &filters, chips, page, points, more_points });
+        return render(MapPage { count, filters: &filters, chips, page, points, more_points, section });
     }
 
     let heading = match (&filters.q, category) {
@@ -884,5 +891,6 @@ async fn browse(
         most_viewed,
         page,
         points,
+        section,
     })
 }

@@ -63,12 +63,12 @@
   --location: #4a7fb0;           /* Claude blue, deeper on the ivory */
   --blue: #4a7fb0;               /* Claude blue: the welcome page's plus and moon, the back button */
   --blue-bg: #e2ecf6;            /* its tint, as --badge is the coral's */
+  --blue-button: #4a7fb0;        /* the buttons in it, in Elektronikë (below) */
+  --blue-button-hover: #41709b;
   --red: #c1444c;                /* a red as deep as they: the welcome page's heart */
   --red-bg: #f7dee0;
-  --green: #3f8d60;              /* a green: its speech bubble, and Shtëpi / kopsht lit when selected */
+  --green: #3f8d60;              /* a green: its speech bubble */
   --green-bg: #e2f2e8;
-  --neon: #0a7cff;               /* a neon blue: Elektronikë lit when selected */
-  --neon-bg: #e0efff;
   --yellow: #bb8b1b;             /* and a yellow: the theme's sun, on the dark theme */
   --yellow-bg: #f9f2dc;
   --danger: #b42318;
@@ -130,12 +130,12 @@
   --location: #6a9bcc;
   --blue: #6a9bcc;
   --blue-bg: #293642;
+  --blue-button: #4a7fb0;
+  --blue-button-hover: #6a9bcc;
   --red: #d16165;
   --red-bg: #42292b;
   --green: #4ea673;
   --green-bg: #2a4134;
-  --neon: #3db8ff;
-  --neon-bg: #13324a;
   --yellow: #e2be5a;
   --yellow-bg: #463d25;
   --danger: #f97066;
@@ -170,12 +170,12 @@
     --location: #6a9bcc;
     --blue: #6a9bcc;
     --blue-bg: #293642;
+    --blue-button: #4a7fb0;
+    --blue-button-hover: #6a9bcc;
     --red: #d16165;
     --red-bg: #42292b;
     --green: #4ea673;
     --green-bg: #2a4134;
-    --neon: #3db8ff;
-    --neon-bg: #13324a;
     --yellow: #e2be5a;
     --yellow-bg: #463d25;
     --danger: #f97066;
@@ -190,6 +190,17 @@
     --shadow: 0 1px 2px rgb(0 0 0 / 30%);
     --scrim: rgb(0 0 0 / 40%);
   }
+}
+
+/* Elektronikë's pages, its own, those of the categories under it and their listings' (the body's
+   data-section, base.html), are in Claude's blue wherever the rest of the site is coral: what is
+   picked or open, the buttons, their tints, the logo's creature. Set on <body>, under the themes'
+   colours on <html>, so that each theme's own blue comes through. */
+body[data-section="elektronike"] {
+  --accent: var(--blue);
+  --button: var(--blue-button);
+  --button-hover: var(--blue-button-hover);
+  --badge: var(--blue-bg);
 }
 
 * { box-sizing: border-box; }

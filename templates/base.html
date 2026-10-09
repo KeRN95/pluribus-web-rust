@@ -39,7 +39,10 @@
   {{ crate::web::MODULES_HERE|safe }}
   <script type="module" src="/static/js/application.js?v={{ crate::web::asset_version() }}" data-turbo-track="reload"></script>
 </head>
-<body>
+{#- A page in a main category, its own page, those under it and their listings', names it
+    (data-section, the block section): Elektronikë's are in Claude's blue where the rest of the site
+    is coral (base.css). -#}
+<body{% block section %}{% endblock %}>
   <header class="site-header">
     <div class="header-inner">
       {#- The search is the welcome page's pill, and on the browse pages the round button before

@@ -61,6 +61,11 @@ impl Categories {
         ids
     }
 
+    /// The main category it is under, or itself when it is one: the part of the site it is in.
+    pub fn main_of<'a>(&'a self, category: &'a Category) -> &'a Category {
+        self.ancestors(category).first().copied().unwrap_or(category)
+    }
+
     /// The categories above this one, top level first.
     pub fn ancestors(&self, category: &Category) -> Vec<&Category> {
         let mut chain: Vec<&Category> = Vec::new();

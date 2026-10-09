@@ -65,26 +65,6 @@
   background: var(--badge);
   color: var(--accent);
 }
-/* Two categories, selected, are lit in a colour of their own rather than the coral, with a soft
-   glow of it that grows under the pointer: Shtëpi / kopsht in the green, Elektronikë in a neon
-   blue (--neon). Found by their category on their own page (data-category, browse.html) and by
-   their address on a listing's path; anywhere else, the welcome page too, they are pills like the
-   others. */
-.category-path .shortcut.is-selected:is([data-category="shtepi-dhe-kopsht"], [href="/c/shtepi-dhe-kopsht"]) { --tone: var(--green); --tone-bg: var(--green-bg); }
-.category-path .shortcut.is-selected:is([data-category="elektronike"], [href="/c/elektronike"]) { --tone: var(--neon); --tone-bg: var(--neon-bg); }
-.category-path .shortcut.is-selected:is([data-category="shtepi-dhe-kopsht"], [href="/c/shtepi-dhe-kopsht"], [data-category="elektronike"], [href="/c/elektronike"]) {
-  border-color: color-mix(in srgb, var(--tone) 60%, transparent);
-  background: var(--tone-bg);
-  color: var(--tone);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--tone) 35%, transparent);
-  transition: background-color .15s, border-color .15s, box-shadow .2s;
-}
-@media (hover: hover) {
-  .category-path .shortcut.is-selected:is([data-category="shtepi-dhe-kopsht"], [href="/c/shtepi-dhe-kopsht"], [data-category="elektronike"], [href="/c/elektronike"]):hover {
-    border-color: var(--tone);
-    box-shadow: 0 0 18px color-mix(in srgb, var(--tone) 50%, transparent);
-  }
-}
 .category-path h1 { margin: 0; font: inherit; line-height: inherit; }
 
 /* The selected pill shows the other categories at its level as pills after it, on its line, and

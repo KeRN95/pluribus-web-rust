@@ -2,6 +2,8 @@
 
 {% block title %}Kërko në hartë | Pluribus{% endblock %}
 
+{% block section %}{% if let Some(section) = section %} data-section="{{ section }}"{% endif %}{% endblock %}
+
 {% block content %}
 {#- map_controller.js draws the map, its pin in the middle; "Vendos hartën" sets the point, and
     the form reloads only the results panel (a turbo-frame), so the map stays as it is, and the

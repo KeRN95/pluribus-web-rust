@@ -5,6 +5,8 @@
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
+{% block section %}{% if let Some(section) = section %} data-section="{{ section }}"{% endif %}{% endblock %}
+
 {#- Category pills, as the welcome page's main categories: the icon, where there is one, then the
     name. A category's subcategories. -#}
 {%- macro pills(items) -%}
@@ -37,14 +39,13 @@
       {{ parent.name }}</a>
     {%- endif %}
     {%- if level.is_empty() %}
-    {#- Alone at its level: nothing to show, its pill only says where the page is. The pill names
-        its category for the stylesheet, which lights two in their own colours (browse.css). -#}
-    <div class="shortcut small is-selected" aria-current="page"{% if let Some(current) = filters.category %} data-category="{{ current.slug }}"{% endif %}>
+    {#- Alone at its level: nothing to show, its pill only says where the page is. -#}
+    <div class="shortcut small is-selected" aria-current="page">
       {%- if let Some(icon) = heading_icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
       <h1>{{ heading }}</h1></div>
     {%- else %}
     <details class="category-switch" data-controller="disclosure" data-action="turbo:before-morph-attribute->disclosure#keep">
-      <summary class="shortcut small is-selected" aria-label="{{ heading }}: ndrysho kategorinë" aria-current="page"{% if let Some(current) = filters.category %} data-category="{{ current.slug }}"{% endif %}>
+      <summary class="shortcut small is-selected" aria-label="{{ heading }}: ndrysho kategorinë" aria-current="page">
         {%- if let Some(icon) = heading_icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
         <h1>{{ heading }}</h1><svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
     </details>

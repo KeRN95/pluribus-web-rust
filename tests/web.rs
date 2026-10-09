@@ -352,11 +352,6 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     ]);
     assert!(order.is_sorted(), "{order:?}");
     assert_eq!(order[4], post);
-    // No pill lit, as none is picked here: the stylesheet lights Shtëpi / kopsht and Elektronikë
-    // in their own colours only as a page's own, its selected pill.
-    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    let lit: Vec<&str> = css.lines().filter(|line| line.contains("/c/elektronike") || line.contains("/c/shtepi-dhe-kopsht")).collect();
-    assert!(!lit.is_empty() && lit.iter().all(|line| line.contains(".shortcut.is-selected")), "{lit:#?}");
     let end = positions(
         &body,
         &[
@@ -3490,6 +3485,32 @@ async fn nobody_else_can_edit_a_listing(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn elektronikes_pages_are_in_claudes_blue(pool: PgPool) {
+    // A page in a main category names it on its body: Elektronikë's own, a category's under it, a
+    // search in it, its map, and its listings; other categories' theirs, and the welcome page none.
+    for page in [
+        "/c/elektronike",
+        "/c/telefona",
+        "/search?category=elektronike&q=iphone",
+        "/harta?category=elektronike",
+        "/listing/1005-iphone-13-128-gb-si-i-ri",
+    ] {
+        assert!(html(pool.clone(), page).await.contains(r#"<body data-section="elektronike">"#), "{page}");
+    }
+    assert!(html(pool.clone(), "/c/makina").await.contains(r#"<body data-section="automjete">"#));
+    let home = html(pool.clone(), "/").await;
+    assert!(home.contains("<body>") && !home.contains("data-section"));
+    // Elektronikë's are in Claude's blue wherever the rest of the site is coral: what is picked or
+    // open, the buttons, their tints, the logo's creature.
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let rule = &css[css.find(r#"body[data-section="elektronike"] {"#).expect("Elektronikë's colours")..];
+    let rule = &rule[..rule.find('}').unwrap()];
+    for colour in ["--accent: var(--blue);", "--button: var(--blue-button);", "--button-hover: var(--blue-button-hover);", "--badge: var(--blue-bg);"] {
+        assert!(rule.contains(colour), "{colour} in {rule}");
+    }
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     // Automjete lists its four subcategories, each with its icon; the kinds of parts sit under the
     // fourth.
@@ -3533,13 +3554,12 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
 
     // A kind's page: on its line, the way up to its parent, then itself, filled, which shows the
     // other kinds at its level as pills after it, not itself, nor anything above them; no pills
-    // under, as it has no subcategories. Its own pill names its category, for the two the
-    // stylesheet lights in their own colours.
+    // under, as it has no subcategories.
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
     let head = positions(&gps, &[
         r#"<div class="category-path">"#,
         r#"<a class="shortcut small category-up" href="/c/pjese-dhe-aksesore">"#,
-        r#"<summary class="shortcut small is-selected" aria-label="GPS / navigatorë: ndrysho kategorinë" aria-current="page" data-category="gps-dhe-navigatore">"#,
+        r#"<summary class="shortcut small is-selected" aria-label="GPS / navigatorë: ndrysho kategorinë" aria-current="page">"#,
         r#"<div class="category-level">"#,
         r#"<a class="shortcut small" href="/c/pjese-kembimi"><svg class="shortcut-icon""#,
         r#"<a class="shortcut small" href="/c/pjese-te-tjera"><svg class="shortcut-icon""#,
@@ -4626,7 +4646,7 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
         r#"<nav class="category-pills" aria-label="Kategoritë">"#,
         r#"<div class="category-path">"#,
         r#"<a class="shortcut small category-up" href="/c/automjete">"#,
-        r#"<summary class="shortcut small is-selected" aria-label="Makina: ndrysho kategorinë" aria-current="page" data-category="makina">"#,
+        r#"<summary class="shortcut small is-selected" aria-label="Makina: ndrysho kategorinë" aria-current="page">"#,
         r#"</details>"#,
         r#"<div class="category-level">"#,
         r#"<a class="shortcut small" href="/c/motocikleta"><svg class="shortcut-icon""#,

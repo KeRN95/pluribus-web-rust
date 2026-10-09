@@ -5,6 +5,8 @@
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
+{% block section %}{% if let Some(section) = section %} data-section="{{ section }}"{% endif %}{% endblock %}
+
 {% block content %}
 {%- let sheet = signed_in && !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}
 {#- The page, in a box of no size of its own (listing.css), for the message sheet's controller to
