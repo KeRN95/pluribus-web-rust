@@ -86,6 +86,21 @@
   .subcategories .shortcut,
   .shortcut.small { position: relative; gap: .4rem; padding: .45rem .85rem .45rem .7rem; font-size: .9375rem; }
   .back-button { --size: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px); position: relative; }
+  /* Every pill of the path but the page's own is its icon alone, round and as tall as the back
+     button: the way up shows its category's icon, its name still the link's, for screen readers,
+     out of sight (a category's and a listing's alike). One without an icon keeps its name. */
+  .category-path .category-up:has(.shortcut-icon) {
+    flex: none;
+    justify-content: center;
+    width: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px);
+    height: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px);
+    padding: 0;
+    gap: 0;
+    border-radius: 50%;
+    font-size: 0;
+  }
+  /* In the text's colour, as the back button's chevron and the house are. */
+  .category-path .category-up .shortcut-icon { color: var(--text); }
   :is(.subcategories, .category-path) .shortcut::after,
   .back-button::after {
     content: "";
