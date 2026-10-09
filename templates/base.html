@@ -20,10 +20,11 @@
   <link rel="icon" href="/static/img/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
   <link rel="manifest" href="/static/site.webmanifest">
-  {#- Fetch the fonts, Geist (the text's and the logo's) and the headings' Inter, alongside the
+  {#- Fetch the fonts, Geist, the headings' Inter and the logo's Merriweather, alongside the
       stylesheets rather than after it, so text and the logo rarely wait for them. -#}
   <link rel="preload" href="/static/vendor/fonts/geist-v5-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/vendor/fonts/inter-5.3.0-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/vendor/fonts/merriweather-5.3.0-latin-700.woff2" as="font" type="font/woff2" crossorigin>
   {#- The fingerprint changes with the files; Turbo then reloads open pages in full, see
       web::asset_version. -#}
   {%- for sheet in crate::web::STYLESHEETS %}

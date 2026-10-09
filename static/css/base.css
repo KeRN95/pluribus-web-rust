@@ -1,7 +1,7 @@
 /* Warm and quiet: ivory and charcoal with a terracotta accent, soft rounded surfaces, and one
-   typeface, Geist, for everything but the headings: prices and text differ only in weight and
-   colour, and the logo (the name, "pluribus") is Geist at its heaviest. The headings are in Inter
-   Bold. */
+   typeface, Geist, for everything but the headings and the logo: prices and text differ only in
+   weight and colour. The headings are in Inter Bold, and the logo (the name, "pluribus") in
+   Merriweather Bold, a serif as Medium's is. */
 
 /* Geist, Vercel's typeface, free under the SIL Open Font License (fonts/OFL-Geist.txt). A variable
    font, every weight from 100 to 900 in one file, in the Latin subset only, which covers Albanian
@@ -25,6 +25,20 @@
   font-family: "Inter";
   src: url("/static/vendor/fonts/inter-5.3.0-latin-wght.woff2") format("woff2");
   font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+                 U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Merriweather Bold, for the logo alone (.logo): Eben Sorkin's serif, free under the SIL Open Font
+   License (fonts/OFL-Merriweather.txt), from Fontsource 5.3.0, in the Latin subset: 48 KB, served
+   from /static/vendor/, cached for a year and preloaded by base.html. Georgia stands in until it
+   comes. */
+@font-face {
+  font-family: "Merriweather";
+  src: url("/static/vendor/fonts/merriweather-5.3.0-latin-700.woff2") format("woff2");
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
@@ -224,18 +238,17 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* The logo: the welcome page's creature, in the buttons' coral, spinning and changing shape as it
    does there (thinking.svg, .thinking), with its right half behind the name's p, the name in
-   lowercase in the site's own sans serif, Geist, extra bold and drawn a little closer together, as
-   it was before the headings' fonts, in the text's colour: white on the dark theme, and charcoal
-   on the light one, where white would vanish into the ivory. A size up from the text's headings,
-   since a lowercase word stands lower and shorter. */
+   lowercase in Merriweather Bold (above) in the text's colour: white on the dark theme, and
+   charcoal on the light one, where white would vanish into the ivory. A size up from the text's
+   headings, since a lowercase word stands lower and shorter. */
 .logo {
   display: inline-flex;
   align-items: center;
   color: var(--text);
-  font-family: var(--font);
+  font-family: "Merriweather", Georgia, serif;
   font-size: var(--text-2xl);
-  font-weight: var(--heavy);
-  letter-spacing: -0.025em;
+  font-weight: var(--bold);
+  letter-spacing: -0.01em;
   line-height: 1;
   text-decoration: none;
 }
