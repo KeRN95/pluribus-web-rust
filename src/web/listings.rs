@@ -57,6 +57,8 @@ pub struct Slide<'a> {
     pub srcset: Option<String>,
     /// The WebP copies' srcset (photos::srcset), for the picture's source.
     pub webp: Option<String>,
+    /// Before it, the cards' AVIF copies' (photos::avif_srcset), for the browsers that show AVIF.
+    pub avif: Option<String>,
     /// Its tiny copy as a data: URI, behind it while it loads.
     pub placeholder: Option<&'a str>,
 }
@@ -107,28 +109,30 @@ impl ListingCard {
     }
 
     /// The photos a big card slides through, the cover first, each with its copies for the
-    /// browser to pick from (ListingPage::sizes): a WebP photo's four, or the card-sized copy and
-    /// the full one of a photo kept before. A small card shows the first.
+    /// browser to pick from (ListingPage::sizes): a WebP photo's four, and before them the cards'
+    /// two as AVIF, or the card-sized copy and the full one of a photo kept before. A small card
+    /// shows the first.
     pub fn slides(&self) -> impl Iterator<Item = Slide<'_>> {
         self.photos.iter().zip(&self.photos_full).enumerate().map(|(i, (small, full))| {
             match self.photos_webp.get(i).and_then(Option::as_ref) {
-                Some(webp) => Slide {
-                    small,
-                    src: full,
-                    srcset: None,
-                    webp: Some(photos::srcset(
-                        &webp.card,
-                        webp.middle.as_deref(),
-                        &webp.full,
-                        webp.side.map_or(FULL_SIDE, |side| side as u32),
-                    )),
-                    placeholder: webp.placeholder.as_deref(),
-                },
+                Some(webp) => {
+                    let side = webp.side.map_or(FULL_SIDE, |side| side as u32);
+                    let middle = webp.middle.as_deref();
+                    Slide {
+                        small,
+                        src: full,
+                        srcset: None,
+                        webp: Some(photos::srcset(&webp.card, middle, &webp.full, side)),
+                        avif: photos::avif_srcset(&webp.card, middle, &webp.full, side),
+                        placeholder: webp.placeholder.as_deref(),
+                    }
+                }
                 None => Slide {
                     small,
                     src: small,
                     srcset: Some(format!("{small} {CARD_SIDE}w, {full} {FULL_SIDE}w")),
                     webp: None,
+                    avif: None,
                     placeholder: None,
                 },
             }

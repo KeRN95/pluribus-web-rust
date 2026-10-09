@@ -3782,6 +3782,12 @@ async fn listings_get_photos(pool: PgPool) {
         assert_eq!(webp.content_type.as_deref(), Some("image/webp"), "{copy}");
         assert!(webp.body.starts_with("RIFF") && webp.body.chars().take(16).collect::<String>().contains("WEBP"));
     }
+    // And the cards' two as AVIF.
+    for copy in ["-card", "-small"] {
+        let avif = get(pool.clone(), &format!("{big}{copy}.avif")).await;
+        assert_eq!(avif.content_type.as_deref(), Some("image/avif"), "{copy}");
+        assert!(avif.body.contains("ftypavif"), "{copy}");
+    }
     // A photo kept before there were small copies has its own made as it is first asked for,
     // from the card's, and kept.
     let small_key = format!("{}-small.webp", small.trim_start_matches("/media/"));
@@ -3789,12 +3795,23 @@ async fn listings_get_photos(pool: PgPool) {
     media().delete(&small_key).await.unwrap();
     let remade = get(pool.clone(), &format!("{small}-small.webp")).await;
     assert_eq!((remade.status, remade.content_type.as_deref()), (StatusCode::OK, Some("image/webp")));
+    assert_eq!(remade.headers[header::CACHE_CONTROL], "public, max-age=31536000, immutable");
     assert_eq!(remade.body, made);
     assert!(media().get(&small_key).await.unwrap().is_some());
+    // One kept before there were AVIF copies has its WebP twin stand in for one, kept a few
+    // minutes only, until the server's start has made them.
+    media().delete(&format!("{}-small.avif", small.trim_start_matches("/media/"))).await.unwrap();
+    let stand_in = get(pool.clone(), &format!("{small}-small.avif")).await;
+    assert_eq!((stand_in.status, stand_in.content_type.as_deref()), (StatusCode::OK, Some("image/webp")));
+    assert_eq!(stand_in.headers[header::CACHE_CONTROL], "public, max-age=300");
+    assert_eq!(stand_in.body, made);
 
-    // The card offers the cover's copies too, and shows its tiny one until it has loaded.
+    // The card offers the cover's copies too, the cards' AVIF ones first, and shows its tiny one
+    // until it has loaded.
     let cards = get(pool.clone(), "/search?q=Galaxy").await.body;
-    assert!(cards.contains(&format!(r#"<source type="image/webp" srcset="{big}-small.webp 400w, {big}-card.webp 600w, {big}-middle.webp 1200w, {big}.webp 1600w""#)));
+    assert!(cards.contains(&format!(
+        r#"<picture><source type="image/avif" srcset="{big}-small.avif 400w, {big}-card.avif 600w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="{SMALL_SIZES}"><source type="image/webp" srcset="{big}-small.webp 400w, {big}-card.webp 600w, {big}-middle.webp 1200w, {big}.webp 1600w""#
+    )), "{cards}");
     assert!(cards.contains(&format!(r#"<img class="card-photo" src="{big}.jpg""#)));
     assert!(cards.contains(r#"style="background-image: url(data:image/webp;base64,"#));
 
@@ -3815,7 +3832,8 @@ async fn listings_get_photos(pool: PgPool) {
     assert!(page.contains(r#"<div class="gallery">"#));
     assert!(!page.contains("data-controller=\"gallery\"") && !page.contains("gallery-count") && !page.contains(", foto 1 nga"));
     // The removed one's files are gone, every copy.
-    for file in [photo_urls[0].to_string(), format!("{big}.webp"), format!("{big}-middle.webp"), format!("{big}-card.webp"), format!("{big}-small.webp")] {
+    let copies = ["-middle.webp", "-card.webp", "-small.webp", "-card.avif", "-small.avif"].map(|copy| format!("{big}{copy}"));
+    for file in [photo_urls[0].to_string(), format!("{big}.webp")].into_iter().chain(copies) {
         assert_eq!(get(pool.clone(), &file).await.status, StatusCode::NOT_FOUND, "{file}");
     }
     let covers: i64 = sqlx::query_scalar(

@@ -56,9 +56,9 @@ impl Moderators {
     }
 }
 
-/// The application's router. `main` serves it, with photos in the store .env names (the small
-/// copies of those kept before there were any made meanwhile), its moderators, the AI if .env has
-/// a key for it, and the views written every minute.
+/// The application's router. `main` serves it, with photos in the store .env names (the small and
+/// AVIF copies of those kept before there were any made meanwhile), its moderators, the AI if .env
+/// has a key for it, and the views written every minute.
 pub fn app(db: PgPool) -> axum::Router {
     let ai = Ai::from_env();
     if ai.is_none() {
@@ -67,7 +67,7 @@ pub fn app(db: PgPool) -> axum::Router {
     let views = Views::buffered(views::FLUSH_EVERY);
     views.flush_now_and_then(db.clone());
     let media = Media::from_env();
-    media.fill_in_small_copies();
+    media.fill_in_copies();
     web::router(AppState { db, media, moderators: Moderators::from_env(), ai, views })
 }
 

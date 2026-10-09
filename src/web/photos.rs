@@ -15,15 +15,22 @@ use super::{Result, not_found};
 use crate::{
     AppState,
     db::NewPhoto,
-    media::{self, CARD_COPY, CARD_SIDE, MAX_PHOTOS, MAX_UPLOAD_BYTES, MIDDLE_SIDE, Media, Processed, SMALL_COPY, SMALL_SIDE},
+    media::{
+        self, CARD_AVIF, CARD_COPY, CARD_SIDE, MAX_PHOTOS, MAX_UPLOAD_BYTES, MIDDLE_SIDE, Media, Processed, SMALL_AVIF,
+        SMALL_COPY, SMALL_SIDE,
+    },
 };
 
 /// What each of a photo's files adds to its name (photos/ and 32 hex digits): the full WebP, whose
-/// key listing_media keeps, the middle one, the card's, the small one, and the JPEG. The small
-/// one's address is the card's with its own ending (small_url), so listing_media keeps none. Photos
-/// kept before WebP (migration 0025) were a JPEG, whose key it kept, and a JPEG for the card.
-const COPIES: [&str; 5] = [".webp", "-middle.webp", CARD_COPY, SMALL_COPY, ".jpg"];
+/// key listing_media keeps, the middle one, the card's, the small one, the card's and the small one
+/// as AVIF, and the JPEG. The small ones' and the AVIF ones' addresses are the card's with their
+/// own ending (small_url, avif_srcset), so listing_media keeps none. Photos kept before WebP
+/// (migration 0025) were a JPEG, whose key it kept, and a JPEG for the card.
+const COPIES: [&str; 7] = [".webp", "-middle.webp", CARD_COPY, SMALL_COPY, CARD_AVIF, SMALL_AVIF, ".jpg"];
 const EARLIER_CARD: &str = "-card.jpg";
+/// How long browsers may keep an AVIF copy's WebP twin, which stands in for it until it is made
+/// (serve): a few minutes, so that they take the AVIF one once it is there.
+const STAND_IN: &str = "public, max-age=300";
 
 /// The posting and edit forms: their fields, and the photos chosen, if any. The forms are sent
 /// as multipart (enctype in listing_form.html); a plain form, with no photos, is read too.
@@ -89,11 +96,27 @@ pub fn check(photos: &[Bytes], kept: usize, errors: &mut HashMap<String, String>
     }
 }
 
-/// Decodes and resizes them all, off the async threads. Err with the message for the form when one
-/// isn't a photo the site can read.
+/// How many of a form's photos are made at once (process): their AVIF copies take most of a second
+/// each, so eight would take seven one after the other. Each holds a decoded photo, so not more.
+const AT_ONCE: usize = 4;
+
+/// Decodes and resizes them all, off the async threads, a few at once (AT_ONCE, or fewer on fewer
+/// cores), in their order. Err with the message for the form when one isn't a photo the site can
+/// read.
 pub async fn process(photos: Vec<Bytes>) -> Result<std::result::Result<Vec<Processed>, &'static str>> {
     let processed = tokio::task::spawn_blocking(move || {
-        photos.iter().map(|photo| media::process(photo)).collect::<std::result::Result<Vec<_>, _>>()
+        let threads = std::thread::available_parallelism().map_or(1, usize::from).clamp(1, AT_ONCE);
+        let each = photos.len().div_ceil(threads).max(1);
+        std::thread::scope(|scope| {
+            let groups: Vec<_> = photos
+                .chunks(each)
+                .map(|group| scope.spawn(move || group.iter().map(|photo| media::process(photo)).collect::<Vec<_>>()))
+                .collect();
+            groups
+                .into_iter()
+                .flat_map(|group| group.join().expect("making a photo's copies doesn't panic"))
+                .collect::<std::result::Result<Vec<_>, _>>()
+        })
     })
     .await?;
     Ok(processed.map_err(|_| "Një nga fotot nuk u lexua. Zgjidh foto JPG, PNG ose WebP."))
@@ -104,7 +127,8 @@ pub async fn store(media: &Media, processed: Vec<Processed>) -> Result<Vec<NewPh
     let mut stored = Vec::with_capacity(processed.len());
     for photo in processed {
         let name = format!("photos/{:032x}", rand::random::<u128>());
-        let [full_key, middle_key, card_key, small_key, jpeg_key] = COPIES.map(|copy| format!("{name}{copy}"));
+        let [full_key, middle_key, card_key, small_key, card_avif_key, small_avif_key, jpeg_key] =
+            COPIES.map(|copy| format!("{name}{copy}"));
         let size_bytes = photo.full.len() as i64;
         let middle_url = photo.middle.is_some().then(|| media.url(&middle_key));
         let middle = async {
@@ -118,6 +142,8 @@ pub async fn store(media: &Media, processed: Vec<Processed>) -> Result<Vec<NewPh
             middle,
             media.put(&card_key, photo.card),
             media.put(&small_key, photo.small),
+            media.put(&card_avif_key, photo.card_avif),
+            media.put(&small_avif_key, photo.small_avif),
             media.put(&jpeg_key, photo.jpeg),
         )?;
         stored.push(NewPhoto {
@@ -177,26 +203,71 @@ pub fn srcset(card: &str, middle: Option<&str>, full: &str, side: u32) -> String
     copies.join(", ")
 }
 
+/// A WebP photo's copies for a srcset of AVIF ones, which the browsers that show AVIF take before
+/// the WebP ones (`srcset`): the small one and the card's as AVIF, then the middle WebP one and
+/// the full one, which every such browser shows too, for a big card or a screen denser than the
+/// card's copy serves. None for a photo kept before WebP, or from elsewhere.
+pub fn avif_srcset(card: &str, middle: Option<&str>, full: &str, side: u32) -> Option<String> {
+    let name = card.strip_suffix(CARD_COPY)?;
+    let mut copies = Vec::with_capacity(4);
+    if side > SMALL_SIDE {
+        copies.push(format!("{name}{SMALL_AVIF} {SMALL_SIDE}w"));
+    }
+    copies.push(format!("{name}{CARD_AVIF} {}w", side.min(CARD_SIDE)));
+    if side > CARD_SIDE {
+        if let Some(middle) = middle.filter(|_| side > MIDDLE_SIDE) {
+            copies.push(format!("{middle} {MIDDLE_SIDE}w"));
+        }
+        copies.push(format!("{full} {side}w"));
+    }
+    Some(copies.join(", "))
+}
+
+/// The WebP copy of the same size as an AVIF one, which stands in for it until it is made.
+fn webp_twin(key: &str) -> Option<String> {
+    key.strip_suffix(CARD_AVIF)
+        .map(|name| format!("{name}{CARD_COPY}"))
+        .or_else(|| key.strip_suffix(SMALL_AVIF).map(|name| format!("{name}{SMALL_COPY}")))
+}
+
 /// /media/photos/...: a stored photo. Names never change, so browsers may keep them for a year. A
-/// small copy that a photo kept before there were any doesn't have yet is made as it is asked for
-/// (Media::small_copy).
+/// photo kept before there were copies of their kind may lack its small or AVIF ones until the
+/// server's start has made them all (Media::fill_in_copies): a small WebP one asked for before
+/// then is made as it is (Media::make_copy), and an AVIF one, which takes longer, has its WebP twin
+/// stand in for it, kept a few minutes only (STAND_IN).
 pub async fn serve(State(state): State<AppState>, Path(key): Path<String>) -> Result<Response> {
     let safe = key.starts_with("photos/") && key.chars().all(|c| c.is_ascii_alphanumeric() || "/-.".contains(c)) && !key.contains("..");
-    let stored = if safe { state.media.get(&key).await? } else { None };
+    if !safe {
+        return not_found().await;
+    }
+    if let Some(bytes) = state.media.get(&key).await? {
+        return Ok(photo(bytes, &key, media::CACHE_FOR_A_YEAR));
+    }
+    let (key, caching, stored) = match webp_twin(&key) {
+        Some(twin) => {
+            let stored = state.media.get(&twin).await?;
+            (twin, STAND_IN, stored)
+        }
+        None => (key, media::CACHE_FOR_A_YEAR, None),
+    };
     let bytes = match stored {
         Some(bytes) => Some(bytes),
-        None if safe => state.media.small_copy(&key).await.unwrap_or_else(|error| {
-            tracing::warn!(%error, "a photo's small copy could not be made");
+        None => state.media.make_copy(&key).await.unwrap_or_else(|error| {
+            tracing::warn!(%error, "a photo's copy could not be made");
             None
         }),
-        None => None,
     };
-    let Some(bytes) = bytes else {
-        return not_found().await;
-    };
+    match bytes {
+        Some(bytes) => Ok(photo(bytes, &key, caching)),
+        None => not_found().await,
+    }
+}
+
+/// A stored file, with its type and how long it may be kept.
+fn photo(bytes: Bytes, key: &str, caching: &'static str) -> Response {
     let mut response = bytes.into_response();
     let headers = response.headers_mut();
-    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(media::content_type(&key)));
-    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static(media::CACHE_FOR_A_YEAR));
-    Ok(response)
+    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(media::content_type(key)));
+    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static(caching));
+    response
 }
