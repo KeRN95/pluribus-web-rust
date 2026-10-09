@@ -4,7 +4,7 @@ import { signedIn } from "controllers/signed_in.js";
 
 // The heart over a listing's photo (heart.html). Which listings the visitor keeps comes from the
 // server with each page (GET /te-ruajturat/numrat), for every heart on it and those that come later
-// (the next page as it scrolls, the newest listings' row); until it comes, a heart shows what was
+// (the next page as it scrolls); until it comes, a heart shows what was
 // known before. A tap keeps the listing or lets it go at once, every heart for it on the page with
 // it, and tells the server (POST /listing/N/ruaj), one tap after the other; should that fail, the
 // hearts go back. Someone not signed in goes to sign in, and comes back with the listing kept.

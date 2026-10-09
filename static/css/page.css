@@ -31,13 +31,12 @@
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem .75rem; }
 
 /* A row of the same cards that slides sideways (card_row.html): the welcome page's "Më të
-   klikuarat" and "Sapo u shtuan", a category's "Më të klikuarat", a seller's other listings. Each
+   klikuarat", a category's, a seller's other listings. Each
    card as wide as a column of the grid under them, two on a phone, three on a tablet, four on a
    wide screen (the container queries follow the grid's auto-fill), the row sliding sideways a
    card at a time when there are more cards than columns; then the cards narrow a little, so that a
-   quarter of the next one shows at the edge. A row of flex items rather than a grid's columns, so
-   that a card coming in at the front pushes the others along ("Sapo u shtuan", .is-new in
-   welcome.css). The padding, which the margin takes back, keeps a card's hover panel and focus
+   quarter of the next one shows at the edge. A row of flex items rather than a grid's columns.
+   The padding, which the margin takes back, keeps a card's hover panel and focus
    ring clear of the sliding box's edges. No bar under it, on any screen: a finger slides it, the
    next card showing at its edge, and a mouse drags it (drag_row_controller.js): a hand to grab it
    by, closed while it drags, no text to select on the way, no snapping to pull it back to a card

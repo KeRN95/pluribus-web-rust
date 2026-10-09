@@ -66,9 +66,6 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, marketplace::app(db).into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(async {
             tokio::signal::ctrl_c().await.ok();
-            // The welcome page's row of the newest listings keeps a stream open for as long as
-            // the page is open (web/newest.rs): end them, or the server would wait for every one.
-            marketplace::web::close_streams();
         })
         .await?;
     Ok(())

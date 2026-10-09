@@ -22,7 +22,7 @@ use super::{
     filters::{Chip, Field, FieldKind, Filters, Params, PriceChoice, TOWN_COOKIE},
     icons, is_next_page_request,
     listings::Slide,
-    named, newest, not_found, render, safety,
+    named, not_found, render, safety,
     seo::{self, PageMeta},
 };
 use crate::{
@@ -54,10 +54,8 @@ pub struct ListingPage {
 /// What the cards of a page's results, or of a grid, start their ids with.
 pub const LISTING_IDS: &str = "listing";
 
-/// The rows of cards that slide sideways, by the word their cards' ids start with: the welcome
-/// page's newest listings (whose cards also say where they stand in the order, for its stream:
-/// newest_controller.js), the most seen this week, and a seller's other listings under one of theirs.
-pub const NEWEST_IDS: &str = "newest";
+/// The rows of cards that slide sideways, by the word their cards' ids start with: the most seen
+/// this week, and a seller's other listings under one of theirs.
 pub const MOST_VIEWED_IDS: &str = "most-viewed";
 pub const SELLER_IDS: &str = "seller";
 
@@ -190,7 +188,7 @@ impl ListingPage {
     }
 
     /// A row of small cards that slides sideways (card_row.html), its cards' ids starting with
-    /// `card_ids` (NEWEST_IDS...): the first `eager` load their photo straight away.
+    /// `card_ids` (MOST_VIEWED_IDS...): the first `eager` load their photo straight away.
     pub fn row(cards: Vec<ListingCard>, card_ids: &'static str, eager: usize) -> Self {
         Self { cards, next: None, layout: Cards::Small, eager, card_ids, lead: false }
     }
@@ -201,20 +199,13 @@ impl ListingPage {
         self
     }
 
-    /// The welcome page's row of the newest listings, whose cards say where they stand in the
-    /// order (listing_card.html's data-cursor), and which follows new ones (newest_controller.js).
-    pub fn is_newest(&self) -> bool {
-        self.card_ids == NEWEST_IDS
-    }
-
     fn layout(mut self, layout: Cards) -> Self {
         self.layout = layout;
         self
     }
 
     /// How wide its cards' photos show (Cards::sizes): in a row of five cards or more (card_row.html),
-    /// as the newest listings' is, which takes them from its stream one at a time (newest.rs), a
-    /// quarter of the next card showing at its edge, narrower than a column of the grid
+    /// a quarter of the next card showing at its edge, narrower than a column of the grid
     /// (ROW_SIZES); a shorter row's are as wide as the grid's.
     pub fn sizes(&self) -> &'static str {
         if self.full_row() { ROW_SIZES } else { self.layout.sizes() }
@@ -227,7 +218,7 @@ impl ListingPage {
     }
 
     fn full_row(&self) -> bool {
-        self.card_ids == NEWEST_IDS || (self.card_ids != LISTING_IDS && self.cards.len() >= 5)
+        self.card_ids != LISTING_IDS && self.cards.len() >= 5
     }
 
     /// The page's class for how its cards show: none for small ones.
@@ -283,18 +274,13 @@ struct HomePage {
     /// LAST_ON_WELCOME's, after the search's button.
     last: Vec<Shortcut>,
     page: ListingPage,
-    /// The row of the newest listings ("Sapo u shtuan"): the page's first newest::STRIP.
-    newest: ListingPage,
-    /// Where the row's stream of new listings starts: after the newest (none without listings).
-    since: Option<String>,
     /// The listings seen the most this week ("Më të klikuarat"), none before any are.
     most_viewed: Option<ListingPage>,
     meta: PageMeta,
 }
 
-/// The welcome page asks what the visitor is looking for, then shows the newest listings in a row
-/// that follows new ones (web/newest.rs), the most seen this week in another (db::most_viewed),
-/// then all of them, newest first.
+/// The welcome page asks what the visitor is looking for, then shows the most seen this week in a
+/// row (db::most_viewed), then all of them, newest first.
 pub async fn home(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -331,16 +317,13 @@ pub async fn home(
     let before_search = before_search.iter().copied().map(shortcut).collect();
     let last = LAST_ON_WELCOME.iter().filter_map(|slug| categories.by_slug(slug)).map(shortcut).collect();
     let page = ListingPage::new(rows, Sort::Newest, next_url);
-    // Both rows load their first two photos straight away: they are on the first screen. The first
-    // row's first photo comes before anything else (ListingPage::lead): "Më të klikuarat", or
-    // without it the newest.
+    // "Më të klikuarat" loads its first two photos straight away: it is on the first screen, its
+    // first photo before anything else (ListingPage::lead); without it, the listings' first does.
     let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::row(most_viewed, MOST_VIEWED_IDS, 2).leading());
-    let newest = ListingPage::row(page.cards.iter().take(newest::STRIP).cloned().collect(), NEWEST_IDS, 2);
-    let newest = if most_viewed.is_none() { newest.leading() } else { newest };
-    let since = page.cards.first().map(ListingCard::newest_cursor);
+    let page = if most_viewed.is_none() { page.leading() } else { page };
     let origin = seo::origin(&headers);
     let meta = PageMeta::new(&origin, "Pluribus: njoftime në gjithë Shqipërinë", seo::SITE_DESCRIPTION, format!("{origin}/"));
-    render(HomePage { before_plus, before_search, last, page, newest, since, most_viewed, meta })
+    render(HomePage { before_plus, before_search, last, page, most_viewed, meta })
 }
 
 /// A category's icon, as its pill has it (icons.rs): a main category's own, a subcategory's where

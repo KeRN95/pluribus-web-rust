@@ -1,15 +1,11 @@
-{#- A row of listing cards that slides sideways: the welcome page's "Më të klikuarat" and "Sapo u
-    shtuan", a category's "Më të klikuarat", and a seller's other listings under one of theirs. One
+{#- A row of listing cards that slides sideways: the welcome page's "Më të klikuarat", a
+    category's, and a seller's other listings under one of theirs. One
     component wherever it is: the browse pages' small cards (listing_card.html), as many across as
     the grid under them has, a quarter of the next one showing at the edge when there are more
     (.card-row in page.css); a finger slides it, a mouse drags it (drag_row_controller.js). Its
-    cards' ids are the row's own (ListingPage::row). The newest listings' row also follows new ones
-    (newest_controller.js), which a Turbo Stream puts in front of it (newest_stream.html). -#}
+    cards' ids are the row's own (ListingPage::row). -#}
 {%- macro card_row(page) -%}
-<div class="card-row"
-  {%- if page.is_newest() %} id="newest-strip" data-newest-target="strip"
-     data-action="scroll->newest#scrolled pointerdown->newest#grab pointerup@window->newest#drop pointercancel@window->newest#drop"
-  {%- endif %}>
+<div class="card-row">
   {%- for card in page.cards %}{% include "listing_card.html" %}{% endfor %}
 </div>
 {%- endmacro %}

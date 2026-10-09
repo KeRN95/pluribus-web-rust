@@ -1,5 +1,5 @@
 /* The welcome page: the search and its suggestions, the in-page lists that stand in for selects
-  (pickers), the main categories' pills, the newest listings' row. After page.css. */
+  (pickers), the main categories' pills. After page.css. */
 
 /* Welcome page */
 
@@ -441,92 +441,4 @@
 @media (prefers-reduced-motion: reduce) {
   .welcome-search-panel.is-open,
   .welcome-scrim { animation: none; }
-}
-
-/* The welcome page's newest listings (home.html, web/newest.rs): the same row of cards as "Më të
-   klikuarat" over it (.card-row in page.css), which new ones come into at its front. Hidden until
-   it has a card. */
-.newest:not(:has(.card)) { display: none; }
-.newest h2 { display: flex; align-items: center; gap: .6rem; }
-/* Before the heading, a dot in the buttons' colour that pulses: the row is live. The pulse is a
-   copy of the dot that grows to three times its size as it fades, a transform and an opacity,
-   which the GPU animates alone; a growing box-shadow, as it was, had the main thread repaint it
-   every frame. */
-.live-dot {
-  position: relative;
-  flex: none;
-  width: .5rem;
-  height: .5rem;
-  border-radius: 50%;
-  background: var(--button);
-}
-.live-dot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: var(--button);
-  animation: live-pulse 2s ease-out infinite;
-}
-@keyframes live-pulse {
-  from { opacity: .6; transform: scale(1); }
-  to { opacity: 0; transform: scale(3); }
-}
-/* newest_controller.js keeps the cards in view where they are as new ones come in. */
-.newest .card-row { position: relative; overflow-anchor: none; }
-/* A card the stream brings to the front of the row at its start comes in from the edge: its
-   margin, a card and a gap wide to begin with, pulls it out of sight, and as the margin goes the
-   others move along; it fades in. */
-.newest .card-row > .is-new { animation: newest-in .45s cubic-bezier(.2, .8, .2, 1); }
-@keyframes newest-in {
-  from {
-    margin-inline-start: calc((var(--gaps) * var(--gap) - 100%) / var(--across) - var(--gap));
-    opacity: 0;
-  }
-}
-/* While the row is slid along and new listings wait (newest_controller.js): over its start, a fade
-   into the page, and in it a pill in the buttons' coral saying how many have come, which goes back
-   to the start, where they come in. The fade takes no taps; the pill does. */
-.newest-frame { position: relative; }
-.newest-waiting {
-  display: flex;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -.5rem;
-  z-index: 2;
-  align-items: center;
-  width: min(7rem, 40%);
-  padding-left: .5rem;
-  background: linear-gradient(to right, var(--bg) 25%, color-mix(in srgb, var(--bg) 70%, transparent) 60%, transparent);
-  pointer-events: none;
-  animation: waiting-in .25s ease-out;
-}
-.newest-waiting[hidden] { display: none; }
-@keyframes waiting-in { from { opacity: 0; } }
-.newest-waiting-button {
-  display: inline-flex;
-  align-items: center;
-  gap: .2rem;
-  padding: .35rem .7rem .35rem .45rem;
-  border: 0;
-  border-radius: 999px;
-  background: var(--button);
-  color: var(--on-button);
-  font-size: var(--text-xs);
-  font-weight: var(--semibold);
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
-  cursor: pointer;
-  pointer-events: auto;
-  -webkit-tap-highlight-color: transparent;
-}
-.newest-waiting-button:active { transform: scale(.96); }
-@media (hover: hover) {
-  .newest-waiting-button:hover { background: var(--button-hover); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .live-dot::after,
-  .newest .card-row > .is-new,
-  .newest-waiting { animation: none; }
 }

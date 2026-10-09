@@ -99,30 +99,6 @@
 </section>
 {%- endif %}
 
-{#- The newest listings in the same row of cards as "Më të klikuarat" (card_row.html), the newest
-    first, which follows new ones while the page is open: the server sends each as it is posted,
-    no more than two a second, and Turbo puts it in front (<turbo-stream-source>, web/newest.rs);
-    from the ten it starts with, the row grows to the newest thirty (newest_controller.js). While
-    the row is slid along, the new ones wait, and a fade over its start says how many; a tap on it
-    goes back to the start, where they come in. The row is hidden while there are none
-    (welcome.css), and shows with the first. -#}
-<section class="newest" data-controller="newest drag-row"
-         data-action="turbo:before-stream-render@document->newest#arrive turbo:before-cache@document->newest#settle"
-         aria-labelledby="newest-heading">
-  <h2 id="newest-heading"><span class="live-dot" aria-hidden="true"></span>Sapo u shtuan</h2>
-  <div class="newest-frame">
-    {% call rows::card_row(newest) %}
-    <div class="newest-waiting" data-newest-target="waiting" hidden>
-      <button type="button" class="newest-waiting-button" data-action="newest#backToStart">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
-        <span data-newest-target="count"></span>
-      </button>
-    </div>
-  </div>
-  {#- The stream, which newest_controller.js puts in the page once it has loaded. -#}
-  <template data-newest-target="sourceTemplate"><turbo-stream-source src="/te-rejat{% if let Some(since) = since %}?since={{ since }}{% endif %}" data-newest-target="source"></turbo-stream-source></template>
-</section>
-
 <section class="latest" aria-labelledby="latest-heading">
   <h2 id="latest-heading">Njoftimet më të reja</h2>
   {% include "listing_grid.html" %}

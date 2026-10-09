@@ -149,7 +149,6 @@ pub async fn robots(headers: HeaderMap) -> Response {
          Disallow: /moderim\n\
          Disallow: /shto\n\
          Disallow: /sugjerime\n\
-         Disallow: /te-rejat\n\
          Disallow: /listing/*/ndrysho\n\
          \n\
          Sitemap: {}/sitemap.xml\n",

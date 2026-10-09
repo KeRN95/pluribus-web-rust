@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus";
 
-// A row of cards that slides sideways (card_row.html: "Më të klikuarat", "Sapo u shtuan", a seller's
+// A row of cards that slides sideways (card_row.html: "Më të klikuarat", a seller's
 // other listings), moved by a mouse as a finger moves it: pressed on the row and moved, it drags
 // the row along; let go, the row carries on a little the way it was going, and the click that ends
 // the drag opens no card. Not the wheel: these rows sit in long pages, which it scrolls; a

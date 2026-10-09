@@ -1,10 +1,7 @@
 //! Requests through the full router. Each test gets a fresh database with the migrations applied,
 //! plus the fixtures named in its attribute.
 
-use std::{
-    sync::{Arc, Mutex, OnceLock},
-    time::Duration,
-};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use axum::{
     Router,
@@ -434,133 +431,21 @@ async fn bumped_listing_comes_first(pool: PgPool) {
     assert!(house < phone, "the house was bumped after the phone was published");
 }
 
-/// How many listings the welcome page's row shows (web/newest.rs).
-const STRIP_SIZE: usize = 10;
-
-/// Where the newest listing stands in the newest-first order (db::Cursor), after which the
-/// welcome page's row of the newest listings follows new ones.
-async fn newest_cursor(pool: &PgPool) -> String {
-    sqlx::query_scalar(
-        "SELECT (extract(epoch FROM sort_at) * 1000000)::bigint || '_' || id
-         FROM listings WHERE status = 'ACTIVE' ORDER BY sort_at DESC, id DESC LIMIT 1",
-    )
-    .fetch_one(pool)
-    .await
-    .unwrap()
-}
-
-/// The events a stream of server-sent events sends until `count` have come or `wait` has passed:
-/// each one's data, and when it came, from the start.
-async fn events(mut body: Body, count: usize, wait: Duration) -> Vec<(String, Duration)> {
-    let start = tokio::time::Instant::now();
-    let mut text = String::new();
-    let mut events = Vec::new();
-    while events.len() < count {
-        let Ok(Some(Ok(frame))) = tokio::time::timeout_at(start + wait, body.frame()).await else {
-            break;
-        };
-        let Ok(bytes) = frame.into_data() else { continue };
-        text.push_str(std::str::from_utf8(&bytes).unwrap());
-        // An event ends with an empty line; its data is on "data:" lines.
-        while let Some(end) = text.find("\n\n") {
-            let event: String = text.drain(..end + 2).collect();
-            let data: Vec<&str> = event
-                .lines()
-                .filter_map(|line| line.strip_prefix("data:"))
-                .map(|data| data.strip_prefix(' ').unwrap_or(data))
-                .collect();
-            if !data.is_empty() {
-                events.push((data.join("\n"), start.elapsed()));
-            }
-        }
-    }
-    events
-}
-
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
-async fn the_welcome_page_has_the_newest_listings_in_a_row_that_follows_new_ones(pool: PgPool) {
+async fn the_welcome_page_goes_from_its_categories_to_the_newest_listings(pool: PgPool) {
     let body = html(pool.clone(), "/").await;
-    // Under the categories, over the newest listings, the ten they start with, in a row.
-    let row = section(&body, "newest-heading");
-    let latest = card_numbers(section(&body, "latest-heading"));
-    assert_eq!(card_numbers(row), latest[..10]);
-    assert!(body.find(r#"aria-labelledby="newest-heading""#) < body.find(r#"aria-labelledby="latest-heading""#));
-    // The row of cards "Më të klikuarat" has too (card_row.html), its cards' ids its own, apart
-    // from the same listings' cards in the grid under it.
-    assert!(row.contains(r#"<div class="card-row" id="newest-strip""#), "{row}");
-    assert!(row.contains(&format!(r#"<article class="card" id="newest-{}""#, latest[0])), "{row}");
-    // Its cards narrower than the grid's, a quarter of the next one showing at its edge: the
-    // copies the browser picks for their photos follow.
-    assert!(row.contains(&format!(r#"sizes="{ROW_SIZES}""#)) && !row.contains(SMALL_SIZES), "{row}");
-    assert!(section(&body, "latest-heading").contains(&format!(r#"sizes="{SMALL_SIZES}""#)));
-    // With no "Më të klikuarat" over it, its first photo comes before anything else on the page:
-    // on a phone, the biggest thing on the first screen.
+    // Under the categories, with no listing seen yet, the newest listings straight away, in the
+    // grid of the browse pages' small cards: no row of them over it, nor a stream of new ones.
+    assert!(!body.contains("Sapo u shtuan") && !body.contains("/te-rejat") && !body.contains("data-cursor"), "{body}");
+    let latest = section(&body, "latest-heading");
+    assert!(latest.contains(&format!(r#"sizes="{SMALL_SIZES}""#)), "{latest}");
+    // Its first photo comes before anything else on the page: on a phone, the biggest thing on the
+    // first screen.
     assert_eq!(body.matches(r#"fetchpriority="high""#).count(), 1);
-    let first = &row[row.find(r#"<article class="card""#).unwrap()..];
-    assert!(first[..first.find("</article>").unwrap()].contains(r#"fetchpriority="high""#), "{row}");
-    // The row follows the listings that come after its newest.
-    let since = newest_cursor(&pool).await;
-    assert!(row.contains(&format!(r#"data-cursor="{since}""#)), "{row}");
-    // Its stream waits in a template, which newest_controller.js puts in the page once it has
-    // loaded: nothing it brings is needed to show the page.
-    assert!(
-        row.contains(&format!(r#"<template data-newest-target="sourceTemplate"><turbo-stream-source src="/te-rejat?since={since}""#)),
-        "{row}"
-    );
-    // While the row is slid along, a fade over its start says how many new ones wait: none yet.
-    assert!(row.contains(r#"<div class="newest-waiting" data-newest-target="waiting" hidden>"#), "{row}");
-}
-
-#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
-async fn the_row_of_newest_listings_gets_new_ones_no_more_than_two_a_second(pool: PgPool) {
-    let since = newest_cursor(&pool).await;
-    let request = Request::get(format!("/te-rejat?since={since}")).body(Body::empty()).unwrap();
-    let response = app(pool.clone()).oneshot(request).await.unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(response.headers()[header::CONTENT_TYPE], "text/event-stream");
-    // Three listings bumped at once, as if posted...
-    sqlx::query("UPDATE listings SET bumped_at = now() WHERE public_no IN (1003, 1005, 1007)")
-        .execute(&pool)
-        .await
-        .unwrap();
-    let events = events(response.into_body(), 3, Duration::from_secs(5)).await;
-    // ...come each as a Turbo Stream that puts its card in front of the row...
-    let mut numbers: Vec<i64> = events
-        .iter()
-        .map(|(data, _)| {
-            let card = r#"<turbo-stream action="prepend" target="newest-strip"><template><article class="card" id="newest-"#;
-            assert!(data.starts_with(card) && data.ends_with("</article></template></turbo-stream>"), "{data}");
-            card_numbers(data)[0]
-        })
-        .collect();
-    numbers.sort();
-    assert_eq!(numbers, [1003, 1005, 1007]);
-    // ...half a second apart at the least.
-    for pair in events.windows(2) {
-        assert!(pair[1].1 - pair[0].1 >= Duration::from_millis(450), "{:?} then {:?}", pair[0].1, pair[1].1);
-    }
-}
-
-#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
-async fn the_rows_stream_ends_every_few_seconds_and_goes_on_from_the_last_listing_it_sent(pool: PgPool) {
-    // A response ends after a few seconds, so that a proxy which holds it back until then passes
-    // the new listings on, and asks the browser to connect again a second later...
-    let since = newest_cursor(&pool).await;
-    let request = Request::get(format!("/te-rejat?since={since}")).body(Body::empty()).unwrap();
-    let response = app(pool.clone()).oneshot(request).await.unwrap();
-    let start = tokio::time::Instant::now();
-    let body = tokio::time::timeout(Duration::from_secs(10), response.into_body().collect()).await.unwrap().unwrap();
-    assert!(start.elapsed() < Duration::from_secs(6), "{:?}", start.elapsed());
-    assert_eq!(String::from_utf8_lossy(&body.to_bytes()), "retry: 1000\n\n");
-    // ...which says the last listing it got, and the stream goes on from there.
-    sqlx::query("UPDATE listings SET bumped_at = now() WHERE public_no = 1003").execute(&pool).await.unwrap();
-    let request = Request::get("/te-rejat?since=0_00000000-0000-0000-0000-000000000000")
-        .header("last-event-id", &since)
-        .body(Body::empty())
-        .unwrap();
-    let response = app(pool).oneshot(request).await.unwrap();
-    let events = events(response.into_body(), STRIP_SIZE, Duration::from_secs(6)).await;
-    assert_eq!(events.iter().map(|(data, _)| card_numbers(data)[0]).collect::<Vec<_>>(), [1003]);
+    let first = &latest[latest.find(r#"<article class="card""#).unwrap()..];
+    assert!(first[..first.find("</article>").unwrap()].contains(r#"fetchpriority="high""#), "{latest}");
+    // The stream's address is gone.
+    assert_eq!(get(pool, "/te-rejat").await.status, StatusCode::NOT_FOUND);
 }
 
 /// The heart over listing `number`'s photo.
@@ -709,9 +594,8 @@ async fn a_card_links_to_its_listing_through_the_title(pool: PgPool) {
     assert!(body.contains(
         r#"<h2 class="card-title"><a class="card-link" href="/listing/1001-volkswagen-golf-7-2016-nafte">"#
     ));
-    // Every listing once in the grid; the row of the newest over it has cards of its own.
+    // Every listing once in the grid.
     assert_eq!(body.matches(r#"<article class="card" id="listing-"#).count(), 12);
-    assert_eq!(body.matches(r#"<article class="card" id="newest-"#).count(), 10);
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -3021,14 +2905,13 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
         "controllers/signed_in.js",
         "controllers/place_controller.js",
         "controllers/refresh.js",
-        "controllers/newest_controller.js",
-        "controllers/drag_row_controller.js",
         "controllers/inbox_controller.js",
         "controllers/theme_controller.js",
     ] {
         assert!(home.iter().any(|module| module == used), "{used} in {home:?}");
     }
-    for unused in ["controllers/map_controller.js", "controllers/leaflet.js", "controllers/filters_controller.js"] {
+    // Nor, with no listing seen yet and so no row of the most seen, the row's.
+    for unused in ["controllers/map_controller.js", "controllers/leaflet.js", "controllers/filters_controller.js", "controllers/drag_row_controller.js"] {
         assert!(!home.iter().any(|module| module == unused), "{unused} in {home:?}");
     }
     assert_eq!(home.len(), home.iter().collect::<std::collections::HashSet<_>>().len(), "{home:?}");
@@ -3036,7 +2919,6 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     for used in ["controllers/listing_form_controller.js", "controllers/photos_controller.js", "controllers/picker_controller.js"] {
         assert!(form.iter().any(|module| module == used), "{used} in {form:?}");
     }
-    assert!(!form.iter().any(|module| module == "controllers/newest_controller.js"), "{form:?}");
     assert!(body.contains(r#"<link rel="modulepreload" href="/static/vendor/turbo-8.0.23.js">"#));
     // The fingerprint only changes the URL; the file is served as before.
     let css = get(pool, &format!("/static/css/browse.css?v={version}")).await;
@@ -4850,10 +4732,10 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     // The row, over the newest, the most seen first, each saying how many times it was seen, and
     // none that nobody saw.
     let home = html(pool.clone(), "/").await;
-    let row = &home[home.find("Më të klikuarat").unwrap()..home.find(r#"id="newest-heading""#).unwrap()];
+    let row = section(&home, "most-viewed-heading");
     assert_eq!(card_numbers(row), vec![1002, 1001]);
-    // The same row of the same cards as "Sapo u shtuan" under it (card_row.html), its cards' ids
-    // its own; the cards of the grid's, small, those of the browse pages.
+    // A row of cards (card_row.html), its cards' ids its own; the cards of the grid's, small,
+    // those of the browse pages.
     assert!(row.contains(r#"<div class="card-row"><article class="card" id="most-viewed-1002">"#), "{row}");
     // Two cards are as wide as a column of the grid, and their photos are fetched for it; the
     // first one's before anything else on the page.
@@ -4861,11 +4743,7 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     assert_eq!(home.matches(r#"fetchpriority="high""#).count(), 1);
     let first = &row[row.find(r#"<article class="card""#).unwrap()..];
     assert!(first[..first.find("</article>").unwrap()].contains(r#"fetchpriority="high""#), "{row}");
-    let newest = section(&home, "newest-heading");
-    assert!(newest.contains(r#"<div class="card-row" id="newest-strip""#), "{newest}");
-    for cards in [row, newest] {
-        assert!(cards.contains(r#"<h2 class="card-title">"#) && cards.contains(r#"<p class="card-when">"#), "{cards}");
-    }
+    assert!(row.contains(r#"<h2 class="card-title">"#) && row.contains(r#"<p class="card-when">"#), "{row}");
     assert!(row.contains(r#"title="3 shikime këtë javë""#) && row.contains(r#"title="2 shikime këtë javë""#), "{row}");
     assert!(!home[home.find(r#"id="latest-heading""#).unwrap()..].contains("card-views"));
 
@@ -4920,6 +4798,12 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
     assert_eq!(row(&html(pool.clone(), "/c/makina").await), [1001, 1002]);
     assert_eq!(row(&html(pool.clone(), "/c/apartamente").await), [1003]);
     assert_eq!(row(&html(pool.clone(), "/c/vila-dhe-shtepi").await), [1004]);
+    // The welcome page's has all five, a row of five or more, a quarter of the next card showing
+    // at its edge: its photos are fetched narrower than a column of the grid (ROW_SIZES).
+    let home = html(pool.clone(), "/").await;
+    let all = section(&home, "most-viewed-heading");
+    assert_eq!(all.matches(r#"<article class="card""#).count(), 5, "{all}");
+    assert!(all.contains(&format!(r#"sizes="{ROW_SIZES}""#)) && !all.contains(SMALL_SIZES), "{all}");
     // A round button beside the view menu folds it away, pressed while it shows; the cookie it
     // sets (most_viewed_controller.js) keeps it folded on the next pages, where it stays in the
     // page, hidden, its photos waiting, and the results' first photo comes first instead.

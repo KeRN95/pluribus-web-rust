@@ -3,10 +3,8 @@
     there for the map page, which puts a dot on the map for each card. Its id, the listing's
     number, lets a page that refreshes in place (refresh.js) keep each listing's card as it is,
     its photo where it was slid to; in a row of cards beside the results (card_row.html), after
-    the row's own word ("most-viewed-1001"). The newest listings' row's cards also say where they
-    stand in the order, which its stream goes on from when Turbo shows the page again from its
-    cache (newest_controller.js). -#}
-<article class="card" id="{{ page.card_ids }}-{{ card.public_no }}"{% if page.is_newest() %} data-cursor="{{ card.newest_cursor() }}"{% endif %}>
+    the row's own word ("most-viewed-1001"). -#}
+<article class="card" id="{{ page.card_ids }}-{{ card.public_no }}">
   {#- The photo, darkening toward its bottom edge, with the price on it there; the title under it
       (.card-media in page.css); in the list, the photo at the left, the rest beside it. A big card (the view menu, cards_controller.js) has every photo
       in a row to slide through, dots over them saying which shows and, under a pointer, arrows
