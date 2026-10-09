@@ -61,7 +61,7 @@
   --on-button: #ffffff;
   --badge: #f7e4da;
   --location: #4a7fb0;           /* Claude blue, deeper on the ivory */
-  --blue: #4a7fb0;               /* Claude blue: the welcome page's plus */
+  --blue: #4a7fb0;               /* Claude blue: the welcome page's plus, the back button */
   --blue-bg: #e2ecf6;            /* its tint, as --badge is the coral's */
   --danger: #b42318;
   /* A property's square metre against its zone's average: under it, about it, over it. */

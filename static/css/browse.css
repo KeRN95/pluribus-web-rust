@@ -29,7 +29,9 @@
 .subcategories .shortcut-icon { width: 18px; height: 18px; }
 .category-up { color: var(--muted); }
 /* Back, and the way beyond the pills, before them: circles as tall as they are, their icons the
-   welcome page's size (20px; 18 on a phone). */
+   welcome page's size (20px; 18 on a phone). Back itself, the one back_controller.js drives, is
+   marked as the welcome page's plus is: Claude's blue's tint, a border of the blue and its chevron
+   in it, the border whole under the pointer or a press; the way beyond stays plain. */
 .back-button {
   --size: calc(1.55 * var(--text-md) + 1.4rem + 2px);
   display: flex;
@@ -42,12 +44,15 @@
   border-radius: 50%;
   background: var(--surface);
   color: var(--text);
-  transition: background-color .15s, transform .1s;
+  transition: background-color .15s, border-color .15s, transform .1s;
   -webkit-tap-highlight-color: transparent;
 }
+.back-button[data-controller~="back"] { border-color: color-mix(in srgb, var(--blue) 60%, transparent); background: var(--blue-bg); color: var(--blue); }
 .back-button:active { background: var(--surface-muted); transform: scale(.94); }
+.back-button[data-controller~="back"]:active { border-color: var(--blue); background: var(--blue-bg); }
 @media (hover: hover) {
   .back-button:hover { background: var(--surface-muted); }
+  .back-button[data-controller~="back"]:hover { border-color: var(--blue); background: var(--blue-bg); }
 }
 /* The path's icons, the welcome page's size (18px on a phone, below), the selected one's in the
    text's colour. */
@@ -103,7 +108,7 @@
     border-radius: 50%;
     font-size: 0;
   }
-  /* In the text's colour, as the back button's chevron and the house are. */
+  /* In the text's colour, as the house is. */
   .category-path .category-up .shortcut-icon { color: var(--text); }
   :is(.subcategories, .category-path) .shortcut::after,
   .back-button::after {
@@ -256,9 +261,10 @@
 }
 /* The round buttons: only their icons, in the page's own colours, on the surface with the menus'
    hairline, as the listing page's share button is; while what they open is open, on the accent's
-   tint; a press sinks them a little. The search is the site's coral, as the welcome page's is,
-   darker while its box is open. (Three classes, to win over .button and .button.secondary, which
-   come later.) */
+   tint; a press sinks them a little. The search is marked as the welcome page's is: the coral's
+   tint, a border of the coral and its magnifier in it, the border whole under the pointer and
+   while its box is open. (Three classes, to win over .button and .button.secondary, which come
+   later.) */
 .browse-tools .button.round-button {
   flex: none;
   justify-content: center;
@@ -274,9 +280,9 @@
 .browse-tools .round-button:active { transform: scale(.97); }
 .browse-tools .button.round-button[aria-expanded="true"],
 .browse-tools .button.round-button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
-.browse-tools .button.search-button { border-color: transparent; box-shadow: 0 0 14px color-mix(in srgb, var(--button) 55%, transparent); transition: background-color .15s, border-color .15s, transform .1s, box-shadow .2s; }
-.browse-tools .button.search-button:hover { box-shadow: 0 0 20px color-mix(in srgb, var(--button) 75%, transparent); }
-.browse-tools .button.search-button[aria-expanded="true"] { border-color: transparent; background: var(--button-hover); }
+.browse-tools .button.search-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+.browse-tools .button.search-button:hover,
+.browse-tools .button.search-button[aria-expanded="true"] { border-color: var(--accent); background: var(--badge); }
 .browse-tools .round-button svg { width: 18px; height: 18px; }
 .round-button .pin-icon { margin: 0; color: inherit; }
 /* The filters' and the map's buttons say their names and what is on: pills as wide as their
