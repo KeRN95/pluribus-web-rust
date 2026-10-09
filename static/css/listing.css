@@ -2,7 +2,9 @@
 
 /* Listing page */
 
-.listing { max-width: 760px; padding-top: 1.25rem; }
+/* Its path as far below the header as the welcome page's first line and a category page's path,
+   as the page's sides are from the screen's (--gutter). */
+.listing { max-width: 760px; padding-top: var(--gutter); }
 /* Listings like it, under it: the browse pages' grid, as wide as the page, set apart by space
    alone. */
 .related { margin-top: 2.5rem; }
