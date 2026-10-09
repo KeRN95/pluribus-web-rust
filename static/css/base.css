@@ -354,20 +354,28 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   padding: .65rem 1rem;
 }
 
-/* The logo: the name in lowercase in Merriweather Bold (above), the word alone, in the text's
-   colour: white on the dark theme, and charcoal on the light one, where white would vanish into
-   the ivory. A size up from the text's headings, since a lowercase word stands lower and shorter.
-   (The creature, thinking.svg, is the site's icon alone now, in the tab and on home screens.) */
+/* The logo: the name in lowercase in Merriweather Bold (above), the word alone, in a dark shade
+   of the page's colour, the one its section picks (the coral, Elektronikë's blue, Shtëpi /
+   kopsht's olive, Automjete's burgundy; the section rules above set --button and --button-hover
+   on the body, which the word takes from there): on the light theme the buttons' darker shade,
+   the one they take under a pointer, and on the dark theme the buttons' own colour, the one they
+   have on the light theme, where the dark theme's shade would be the lighter one. A size up from
+   the text's headings, since a lowercase word stands lower and shorter. (The creature,
+   thinking.svg, is the site's icon alone now, in the tab and on home screens.) */
 .logo {
   display: inline-flex;
   align-items: center;
-  color: var(--text);
+  color: var(--button-hover);
   font-family: "Merriweather", Georgia, serif;
   font-size: var(--text-2xl);
   font-weight: var(--bold);
   letter-spacing: -0.01em;
   line-height: 1;
   text-decoration: none;
+}
+:root[data-theme="dark"] .logo { color: var(--button); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo { color: var(--button); }
 }
 
 .search {
