@@ -122,8 +122,13 @@
      the page (its blurred copy filling what the photo doesn't), and at its right, in a column of
      the other five, the title level
      with the photo's top, the kind and the price, the contact bar's two pills on a line each,
-     the share and the report beside the first, the details, the description and the seller's
-     card, packed at the column's top; the listings like it under both. */
+     the message's first, the share and the report beside the phone's under it, the details, the
+     description and the seller's card, packed at the column's top; the listings like it under
+     both. */
+  /* The split page is narrower than the site's column: 60rem, in the middle of it, the rows of
+     listings under it with it (the page's box, which is otherwise no box at all, messages.css:
+     the sheet's controller is its). The photo is 541 px then, as the classifieds sites have it. */
+  .listing-page:has(> .listing-split) { display: block; max-width: 60rem; margin-inline: auto; }
   .listing-split { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: 2rem; }
   .listing-split > :is(.notice, .listing-tags) { grid-column: 1 / -1; }
   /* The photo and its filmstrip stay put under the top bar (3.55rem and its hairline, base.css,
@@ -139,12 +144,14 @@
   .listing-split .listing-media .listing-photo { aspect-ratio: 3 / 4; height: auto; max-height: calc(100vh - 12.05rem - 1px); }
   .listing-split .listing-side > :is(.listing-header, .listing-details, .listing-description) { max-width: none; }
   .listing-split .listing-header h1 { margin-top: 0; }
-  /* The bar's two pills on a line each, as wide as the column's first track, the phone's first;
-     the share and the report in the second track beside the phone's, level with it (the circles
-     are .25rem shorter than the pills). The revealed number takes its line with its copy button. */
+  /* The bar's two pills on a line each, as wide as the column's first track, the message's
+     first, the phone's under it (by order; a phone's bar keeps the phone first); the share and
+     the report in the second track beside the phone's, level with it (the circles are .25rem
+     shorter than the pills). The revealed number takes the phone's line with its copy button. */
   .listing-split .listing-side > .contact-bar { grid-column: 1; flex-direction: column; align-items: stretch; margin-right: .5rem; }
-  .listing-split .listing-side > .contact-bar + .actions { grid-column: 2; align-self: start; margin-top: calc(.9rem + .125rem); }
+  .listing-split .listing-side > .contact-bar + .actions { grid-column: 2; align-self: end; margin-bottom: .125rem; }
   .listing-split .contact-bar .button { flex: none; }
+  .listing-split .contact-bar .message-button { order: -1; }
   .listing-split .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
 }
 

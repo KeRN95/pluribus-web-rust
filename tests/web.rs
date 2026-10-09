@@ -3738,7 +3738,7 @@ async fn listings_get_photos(pool: PgPool) {
     // across it).
     let (big, small) = (photo_urls[0].trim_end_matches(".jpg"), photo_urls[1].trim_end_matches(".jpg"));
     let sources = [
-        format!(r#"<picture><source type="image/webp" srcset="{big}-mini.webp?2 450w, {big}-small.webp?2 600w, {big}-card.webp?2 900w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="(min-width: 1100px) 604px, (min-width: 960px) calc((100vw - 4rem) * .5833),"#),
+        format!(r#"<picture><source type="image/webp" srcset="{big}-mini.webp?2 450w, {big}-small.webp?2 600w, {big}-card.webp?2 900w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="(min-width: 992px) 541px, (min-width: 960px) calc((100vw - 4rem) * .5833),"#),
         format!(r#"<picture><source type="image/webp" srcset="{small}-mini.webp?2 400w, {small}-small.webp?2 533w, {small}.webp 800w" sizes="#),
     ];
     for (url, source) in photo_urls.iter().zip(&sources) {
