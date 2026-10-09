@@ -3,7 +3,7 @@
 
 /* Page */
 
-.container { max-width: 1100px; margin: 0 auto; padding: 0 1rem 3rem; }
+.container { max-width: 1100px; margin: 0 auto; padding: 0 var(--gutter) 3rem; }
 
 .categories { display: flex; gap: .5rem; overflow-x: auto; padding: 1rem 0 .25rem; scrollbar-width: none; }
 /* A category page's subcategories: the welcome page's pills (.shortcuts), on as many lines as they

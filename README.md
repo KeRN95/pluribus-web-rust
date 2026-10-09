@@ -430,7 +430,7 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 
 ### Stylesheets
 
-`static/css/`, eight files that `base.html` loads in this order (`web::STYLESHEETS`). The cascade follows it, so a rule meets the others where it would in one file. Colours, sizes and weights are custom properties in `base.css` (`--accent`, `--button`, `--text-sm`, `--semibold`...), with the dark theme's values beside the light theme's.
+`static/css/`, eight files that `base.html` loads in this order (`web::STYLESHEETS`). The cascade follows it, so a rule meets the others where it would in one file. Colours, sizes and weights are custom properties in `base.css` (`--accent`, `--button`, `--text-sm`, `--semibold`...), with the dark theme's values beside the light theme's. `--gutter` (1rem: 14 px on a phone, 16 on a computer) is the room between the page and the screen's sides (`.container`), and as much stands between the header and the first line of the welcome page and of a category page.
 
 | File | What it styles |
 |---|---|

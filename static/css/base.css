@@ -74,6 +74,9 @@
   --shadow: 0 1px 2px rgb(31 30 29 / 5%), 0 4px 16px rgb(31 30 29 / 5%);
   --scrim: rgb(31 30 29 / 20%); /* the page dimmed under what floats over it */
   --radius: 14px;
+  /* The room between the page and the screen's sides (.container), and as much over the first
+     line of the welcome page and of a category page, under the header. */
+  --gutter: 1rem;
   --font-heading: "Inter", "Geist", system-ui, sans-serif;
   --font: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   /* The sizes, every text's but a few fixed ones (form fields 16px at least on phones, which

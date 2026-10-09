@@ -4,7 +4,8 @@
 /* Welcome page */
 
 /* The search and the categories. */
-.welcome { position: relative; padding: 1.75rem 0 .5rem; }
+/* As far below the header as the page's sides are from the screen's (--gutter), on every screen. */
+.welcome { position: relative; padding: var(--gutter) 0 .5rem; }
 .lead { margin: 0 0 1.25rem; color: var(--muted); font-size: var(--text-lg); font-weight: var(--light); line-height: 1.45; }
 
 
@@ -322,9 +323,6 @@
   .welcome .shortcut-icon { width: 18px; height: 18px; }
 }
 
-@media (min-width: 720px) {
-  .welcome { padding-top: 2.75rem; }
-}
 
 /* The round buttons among the categories' pills (home.html), as tall as they are (--pill): first
    the search's, coral as the message box's send button in Claude's app is (.welcome-search), and
