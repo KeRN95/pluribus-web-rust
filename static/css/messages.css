@@ -197,7 +197,8 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
 /* A listing's message sheet (listing.html, message_sheet_controller.js). On a phone, the screen's
    lower half, across it, sliding up from its bottom in a blink, on the page's own colour like the
    conversation page, its top corners rounded and a shadow over the page above; the page under it
-   holds still while it is open. From 720 px up, a popup card from the button instead, under it
+   holds still while it is open, and while the keyboard is up, when the controller puts the sheet
+   onto the keyboard (top, height and bottom inline). From 720 px up, a popup card from the button instead, under it
    (or over it, where the screen has more room there), as the menus open theirs (--top, --left,
    --height). The conversation scrolls inside it, with "Mbyll" at its right edge and its box to
    write in at its foot; its way back to the inbox stays on its own page. */

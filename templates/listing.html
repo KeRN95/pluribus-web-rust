@@ -245,7 +245,7 @@
       <div class="attribute-group">
         <dt class="visually-hidden">{{ detail.label }}</dt>
         {%- for value in detail.values %}
-        <dd class="attribute" title="{{ detail.label }}">
+        <dd class="attribute{% if detail.key %} is-key{% endif %}" title="{{ detail.label }}">
           {%- if detail.multi %}<svg class="attribute-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
           {%- else %}{% if let Some(icon) = detail.icon %}<svg class="attribute-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}
           {%- if detail.named_before(value) %}<span class="attribute-label" aria-hidden="true">{{ detail.label }}</span>{% endif %}{% endif -%}
@@ -360,10 +360,12 @@
     messages.css).
     The button loads the conversation into its frame: the page that starts one, or the one
     already going on (conversation.html, whose frame has the same name), and writing, sending
-    and blocking go on in it without leaving the listing; its messages scroll inside it. -#}
+    and blocking go on in it without leaving the listing; its messages scroll inside it. On a
+    phone the sheet rises onto the keyboard as the box to write in takes the focus, rather than
+    the keyboard pushing the screen up, and comes back down as the focus leaves it. -#}
 <div class="message-sheet" id="message-sheet" role="dialog" aria-modal="true" aria-label="Mesazh për shitësin" hidden
      data-message-sheet-target="sheet"
-     data-action="pointerdown->message-sheet#grab pointermove->message-sheet#drag pointerup->message-sheet#release pointercancel->message-sheet#release">
+     data-action="pointerdown->message-sheet#grab pointermove->message-sheet#drag pointerup->message-sheet#release pointercancel->message-sheet#release focusin->message-sheet#raise focusout->message-sheet#lower">
   {#- The bar at its top, as on an iPhone's sheets, on a phone: dragged down far enough, or
       flicked, it closes the sheet, as the conversation's head does; let go sooner, the sheet goes
       back up. From 720 px up the sheet is a popup from the button, without it. -#}
