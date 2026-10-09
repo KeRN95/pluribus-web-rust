@@ -40,7 +40,7 @@
   appearance: none;
   outline: none;
 }
-.welcome-form input::placeholder { color: var(--muted); }
+.welcome-form input::placeholder { color: var(--muted); text-overflow: ellipsis; }
 /* No clearing cross: the pill keeps only its button, as Claude's box does. */
 .welcome-form input::-webkit-search-cancel-button { appearance: none; }
 .welcome-search {
@@ -276,19 +276,23 @@
 @media (prefers-reduced-motion: reduce) {
   .shortcut:active { transform: none; }
 }
-/* The welcome page's pills, their gaps and their size, which its round buttons (below) take: a pill
-   is its padding, its line and its border tall (--pill), worked out from the same values as the
-   pills, so that the buttons stay as tall as they are as they change; the search's box centres
-   itself on the first line (.welcome-search-panel). Every pill is one size, the category pages'
-   (browse.css, .category-path). */
+/* The welcome page's pills, their gaps and their size, which its search bar and round buttons
+   (below) take: a pill is its padding, its line and its border tall (--pill), worked out from the
+   same values as the pills, so that the bar and the buttons stay as tall as they are as they
+   change. Every pill is one size, the category pages' (browse.css, .category-path). */
 .welcome-start {
   --row-gap: .55rem;
   --column-gap: .55rem;
   --pill-pad: .7rem;
   --pill-font: var(--text-md);
   --pill: calc(2 * var(--pill-pad) + var(--pill-font) * 1.55 + 2px);
-  position: relative;
 }
+/* The row over the categories (home.html): the search bar, which takes the width the buttons
+   leave it, then the round buttons, as tall as the pills under them and as far apart; the bar's
+   magnifier inside it with 3px round it. */
+.welcome-tools { display: flex; align-items: center; gap: var(--column-gap); margin-bottom: var(--row-gap); }
+.welcome-tools .welcome-form { flex: 1 1 auto; min-width: 0; height: var(--pill); padding: 3px 3px 3px 1.2rem; box-shadow: none; }
+.welcome-tools .welcome-search { width: calc(var(--pill) - 8px); height: calc(var(--pill) - 8px); }
 .welcome .shortcuts { gap: var(--row-gap) var(--column-gap); margin-top: 0; }
 .welcome .shortcut {
   padding-top: var(--pill-pad);
@@ -296,10 +300,10 @@
   font-size: var(--pill-font);
   line-height: 1.55;
 }
-/* The first line, a line of its own (flex-basis) however short: the search's button and the four
-   main categories most looked for, Automjete, Prona, Elektronikë and Veshje / aksesorë
-   (home.html), the way into the site before the rest; their pills the others' size (they were a
-   size up once), the button as tall as they are. As far apart as the others. */
+/* The first line of categories, a line of its own (flex-basis) however short: the four main
+   categories most looked for, Automjete, Prona, Elektronikë and Veshje / aksesorë (home.html),
+   the way into the site before the rest; their pills the others' size (they were a size up once,
+   with the search's button before them). As far apart as the others. */
 .welcome-main {
   display: flex;
   flex-wrap: wrap;
@@ -327,22 +331,19 @@
 }
 
 
-/* The round buttons with the categories' pills (home.html), as tall as the pills beside them
-   (--pill): the search's, leading the first line, half as wide again, and after it the one for
-   posting a listing; and after all the pills, as one group, the buttons for the listings kept,
-   the conversations and the theme, which no top bar holds (every page's has the account alone,
-   base.css). The search, the listings kept and the theme are marked as the site marks what is
-   picked or open (a category page's own pill, an open menu's button): a tint of a colour, a
+/* The round buttons in the row with the search (home.html, .welcome-tools), as tall as the
+   categories' pills under them (--pill): the one for posting a listing, two circles wide, then
+   the listings kept, the conversations and the theme, which no top bar holds (every page's has
+   the account alone, base.css). The listings kept and the theme are marked as the site marks what
+   is picked or open (a category page's own pill, an open menu's button): a tint of a colour, a
    border of it and the icon in it, the border whole under the pointer or a press; each has its
-   colour (--tone) and its tint (--tone-bg), as listing.css's price bubbles have: the search the
-   coral (--accent, --badge), the listings kept the site's one red, the kept hearts' on the cards
-   (--red, page.css), and the theme the blue under its moon, on the light theme, and the yellow
-   under its sun, on the dark (--yellow). The plus and the
-   conversations are plain (.plain-shortcut), on the surface with the menus' hairline and their
-   icon in the text's colour, as the back button is (browse.css): the colours are kept for what
-   means one. Their icons are the pills' size beside them. On a phone a finger's target is bigger
-   than the button, as a pill's is (::after, from the gaps). The search opens its box over its
-   line, the page dimmed under it (.welcome-scrim), as the browse row's does. */
+   colour (--tone) and its tint (--tone-bg), as listing.css's price bubbles have: the listings
+   kept the site's one red, the kept hearts' on the cards (--red, page.css), and the theme the
+   blue under its moon, on the light theme, and the yellow under its sun, on the dark (--yellow).
+   The plus and the conversations are plain (.plain-shortcut), on the surface with the menus'
+   hairline and their icon in the text's colour, as the back button is (browse.css): the colours
+   are kept for what means one. Their icons are the pills' size beside them. On a phone a
+   finger's target is bigger than the button, as a pill's is (::after, from the gaps). */
 .circle-shortcut {
   position: relative;
   display: flex;
@@ -363,10 +364,8 @@
   -webkit-tap-highlight-color: transparent;
 }
 .circle-icon { flex: none; }
-/* The plus, the listings kept, the conversations and the theme: one group at the categories' end,
-   which goes to the next line whole rather than split, its buttons as far apart as the pills. */
-.welcome-actions { display: flex; flex: none; gap: var(--column-gap); }
-.search-shortcut { --tone: var(--accent); --tone-bg: var(--badge); width: calc(var(--pill) * 1.5); }
+/* The plus, two circles wide. */
+.plus-shortcut { width: calc(var(--pill) * 2); }
 .saved-shortcut { --tone: var(--red); --tone-bg: var(--red-bg); }
 .theme-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
 :root[data-theme="dark"] .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
@@ -411,53 +410,4 @@
     position: absolute;
     inset: calc(var(--row-gap) / -2 - 1px) calc(var(--column-gap) / -2 - 1px);
   }
-}
-/* Centred on its button's line, the first (--pill, the pills' height; --toggle-top, which
-   panel_controller.js sets as it opens, says where the line is, 0 until then): the box is
-   its button and padding tall (.welcome-form). It
-   grows out of the button: clipped to the button's circle as it opens (--toggle-left and
-   --toggle-right, the button's distance from the line's ends, and as much over and under as the
-   box is taller than the button), then out to the line's ends, over the pills beside it. Open, the
-   box wears glass rather than the surface (base.css, --glass): the text input's colour at 65%
-   over the pills, blurred, the words in the theme's colours; and its suggestions wear the same
-   glass and blur under it, their rows shaded on it. The box's glass is a layer behind it
-   (::before) rather than the box's own background: an element blurred itself blurs for what is
-   inside it only what is inside it, so the suggestions, which hang from the box, would show the
-   page under them sharp. (A card's heart stands on the dark glass whatever the theme, page.css,
-   over a photo.) */
-.welcome-search-panel { display: none; position: absolute; top: calc(var(--toggle-top, 0px) + (var(--pill) - 3.7rem - 2px) / 2); right: 0; left: 0; z-index: 9; }
-.welcome-search-panel.is-open { display: block; animation: search-grow .14s cubic-bezier(.2, .8, .2, 1); }
-@keyframes search-grow {
-  from { clip-path: inset(calc((3.7rem + 2px - var(--pill)) / 2) var(--toggle-right, 0px) calc((3.7rem + 2px - var(--pill)) / 2) var(--toggle-left, 0px) round 999px); }
-  to { clip-path: inset(0 round 999px); }
-}
-.welcome-search-panel.is-open .welcome-form { border-color: transparent; background: none; box-shadow: none; }
-.welcome-search-panel.is-open .welcome-form::before,
-.welcome-search-panel.is-open .suggestions {
-  background: var(--glass);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  box-shadow: none;
-}
-.welcome-search-panel.is-open .welcome-form::before { content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: 999px; }
-.welcome-search-panel.is-open .welcome-form:focus-within,
-.welcome-search-panel.is-open .suggestions { border-color: var(--glass-edge); box-shadow: none; }
-.welcome-search-panel.is-open .welcome-form input,
-.welcome-search-panel.is-open .suggestion { color: var(--on-glass); }
-.welcome-search-panel.is-open .welcome-form input::placeholder,
-.welcome-search-panel.is-open .suggestion-context { color: var(--on-glass-muted); }
-.welcome-search-panel.is-open .suggestion:hover,
-.welcome-search-panel.is-open .suggestion[aria-selected="true"] { background: var(--on-glass-hover); }
-.welcome-scrim { display: none; }
-.welcome-start:has(.welcome-search-panel.is-open) .welcome-scrim {
-  display: block;
-  position: fixed;
-  inset: 0;
-  z-index: 8;
-  background: var(--scrim);
-  animation: fade-in .16s ease-out;
-}
-@media (prefers-reduced-motion: reduce) {
-  .welcome-search-panel.is-open,
-  .welcome-scrim { animation: none; }
 }

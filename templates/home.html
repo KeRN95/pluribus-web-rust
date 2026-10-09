@@ -15,58 +15,33 @@
 <section class="welcome">
   {#- The question, for screen readers: on the page the search and the categories ask it. -#}
   <h1 class="visually-hidden">Çfarë po kërkon?</h1>
-  {#- The search starts as a button leading the categories' first line, in the coral's tint: a tap
-      opens the search box over that line, the page dimmed under it, the box taking the focus so
-      that a phone shows its keyboard (panel_controller.js, as the browse row's round search button
-      does; data-panel-follow-value has it say where the line is); Escape, or a tap on the dim,
-      folds it again. Without JavaScript the box stands over the pills, as it did, and the button
-      is gone (the noscript below). -#}
-  <div class="welcome-start" data-controller="panel" data-panel-follow-value="true"
-       data-action="keydown.esc@document->panel#close turbo:before-cache@document->panel#close">
-  <div class="welcome-search-panel" id="welcome-search-panel" data-panel-target="panel">
-  {#- Words only, searched in every category and town; the results' filters narrow them. Drawn like
-      the message box in Claude's app: a pill with the words in it and, inside it at the end, a
-      round coral button with a magnifier that searches. The text inside says what the field is
-      for; its label stays for screen readers. -#}
+  <div class="welcome-start">
+  {#- One row over the categories (.welcome-tools, welcome.css): the search, then the round buttons
+      no top bar holds (every page's has the account alone, base.html), as tall as the pills under
+      them. The search takes the width the buttons leave it: words only, searched in every
+      category and town, the results' filters narrowing them, drawn like the message box in
+      Claude's app, a pill with the words in it and, inside it at the end, a round coral button
+      with a magnifier that searches (the text inside says what the field is for; its label stays
+      for screen readers). Then the button that posts a listing, two circles wide, plain, on the
+      surface with the menus' hairline as the back button is; the listings kept, marked in the
+      site's red, the kept hearts' (--red); the conversations, plain as the plus; and the theme,
+      in the blue under its moon and the yellow under its sun. -#}
+  <div class="welcome-tools">
   <form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest"
         data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
     <label class="visually-hidden" for="welcome-q">Kërko</label>
     <input id="welcome-q" type="search" name="q" placeholder="Kërko p.sh. Golf 7, apartament 2+1" autocomplete="off" enterkeyhint="search"
-           data-suggest-target="input" data-panel-target="input" data-action="input->suggest#typed focus->suggest#focused keydown->suggest#key">
+           data-suggest-target="input" data-action="input->suggest#typed focus->suggest#focused keydown->suggest#key">
     <button type="submit" class="icon-button welcome-search" aria-label="Kërko" title="Kërko">
       <svg data-icon="search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     </button>
     {#- Suggestions open under the pill as its words are typed (suggest_controller.js). -#}
     <div class="suggestions" id="welcome-suggestions" role="listbox" aria-label="Sugjerime" data-suggest-target="list" hidden></div>
   </form>
-  </div>
-
-  {#- Every main category at once, as pills like the listing page's details: its icon, then its
-      name, every one the category pages' pills' size. First, on a line of their own
-      (.welcome-main, welcome.css), the four most looked for, Automjete, Prona, Elektronikë and
-      Veshje / aksesorë (MAIN_ON_WELCOME in browse.rs), after the search's button, as tall as they
-      are and half as wide again, marked as
-      what is picked is, in the coral's tint with a coral magnifier, and after it the round button
-      that posts a listing, plain, on the surface with the menus' hairline as the back button is;
-      then every other main category, in its order; then, as one group that goes to the next line
-      whole rather than split (.welcome-actions), round buttons no top bar holds (every page's has
-      the account alone, base.html): the listings kept, marked in the site's red, the kept hearts'
-      (--red), the conversations, plain as the plus, and the theme, in the blue under its moon and
-      the yellow under its sun. -#}
-  <nav class="shortcuts" aria-label="Kategoritë">
-    <div class="welcome-main">
-      <button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false" aria-label="Kërko" title="Kërko"
-              data-panel-target="toggle" data-action="panel#toggle">
-        <svg class="circle-icon" data-icon="search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      </button>
       {#- Posting a listing (post.rs). -#}
       <a class="circle-shortcut plain-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim" title="Shto njoftim">
         <svg class="circle-icon" data-icon="plus" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       </a>
-      {%- for shortcut in main %}{% call pill(shortcut) %}{% endfor %}
-    </div>
-    {%- for shortcut in others %}{% call pill(shortcut) %}{% endfor %}
-    <div class="welcome-actions">
       {#- The listings the visitor keeps (saved.rs), with a dot while some dropped their price unseen
           (heart_controller.js). -#}
       <a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat" title="Të ruajturat">
@@ -83,12 +58,21 @@
         <svg class="circle-icon icon-moon" data-icon="moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MOON|safe }}</svg>
         <svg class="circle-icon icon-sun" data-icon="sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SUN|safe }}</svg>
       </button>
+  </div>
+
+  {#- Every main category at once, as pills like the listing page's details: its icon, then its
+      name, every one the category pages' pills' size. First, on a line of their own
+      (.welcome-main, welcome.css), the four most looked for, Automjete, Prona, Elektronikë and
+      Veshje / aksesorë (MAIN_ON_WELCOME in browse.rs); then every other main category, in its
+      order. -#}
+  <nav class="shortcuts" aria-label="Kategoritë">
+    <div class="welcome-main">
+      {%- for shortcut in main %}{% call pill(shortcut) %}{% endfor %}
     </div>
+    {%- for shortcut in others %}{% call pill(shortcut) %}{% endfor %}
   </nav>
-  <div class="welcome-scrim" data-action="click->panel#close"></div>
   </div>
 </section>
-<noscript><style>.welcome-search-panel { display: block; position: static; margin-bottom: 1.25rem; } .welcome .search-shortcut { display: none; }</style></noscript>
 
 {%- if let Some(page) = most_viewed %}
 {#- The listings seen the most this week, the most first (db::most_viewed, views.rs), in a row of
