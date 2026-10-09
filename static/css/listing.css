@@ -636,6 +636,33 @@
 @media (min-width: 720px) {
   .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem 1rem; }
   h1 { font-size: var(--text-3xl); }
+/* Folded (fold_controller.js, on one longer than a dozen lines): a dozen lines, the last three
+   fading out, and under them "Shfaq të gjithë përshkrimin" in the page's colour with a plus, in
+   the middle, which unfolds it. */
+.description-fold.is-folded .description {
+  max-height: calc(1.7em * 12);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 3.5em), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 3.5em), transparent);
+}
+.description-more {
+  display: flex;
+  gap: .3rem;
+  align-items: center;
+  margin: .4rem auto 0;
+  padding: .4rem .7rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: var(--semibold);
+  cursor: pointer;
+}
+.description-more svg { flex: none; }
+@media (hover: hover) {
+  .description-more:hover { background: var(--badge); }
+}
   .listing-header h1 { font-size: var(--text-2xl); }
   .listing-price { font-size: var(--text-3xl); }
 }

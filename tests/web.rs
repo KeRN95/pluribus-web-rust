@@ -4597,6 +4597,11 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
     // heading, which shows the other categories at its level as pills after it, not itself; no
     // pills under, as it has no subcategories; the count by the order's pill; and the trail for
     // search engines (schema.org's BreadcrumbList), in place of a breadcrumb.
+    // The description can fold past a dozen lines (fold_controller.js): its button waits hidden,
+    // and nothing is folded in the page itself.
+    assert!(page.contains(r#"<div class="description-fold" data-controller="fold">"#));
+    assert!(page.contains(r#"<button type="button" class="description-more" data-fold-target="button" data-action="fold#open" hidden>"#));
+    assert!(page.contains("Shfaq të gjithë përshkrimin") && !page.contains("is-folded"));
     let cars = html(pool.clone(), "/c/makina").await;
     let order = positions(&cars, &[
         r#"<nav class="category-pills" aria-label="Kategoritë">"#,
