@@ -28,7 +28,7 @@
 
 /* Two columns on every phone; as many as fit on wider screens. The cards have no box, so the
    space between rows, clearly more than inside a card, is what keeps each one together. */
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem .75rem; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem .75rem; }
 
 /* A row of the same cards that slides sideways (card_row.html): the welcome page's "Më të
    klikuarat" and "Sapo u shtuan", a category's "Më të klikuarat", a seller's other listings. Each
@@ -369,7 +369,7 @@
 .card-dots,
 .card-step { display: none; }
 
-.cards-big .results .grid { grid-template-columns: minmax(0, 1fr); max-width: 40rem; margin-inline: auto; row-gap: 2.75rem; }
+.cards-big .results .grid { grid-template-columns: minmax(0, 1fr); max-width: 40rem; margin-inline: auto; row-gap: 2.5rem; }
 @media (min-width: 960px) {
   .cards-big .results .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; column-gap: 1.5rem; }
 }
@@ -498,7 +498,7 @@
    text's colour with no circle, as no photo is under it. The photo's box (.card-media) gives its
    parts to the card's own grid, its shades and the seller over the photo left out. */
 .card-when { display: none; }
-.cards-list .results .grid { grid-template-columns: minmax(0, 1fr); max-width: 46rem; margin-inline: auto; row-gap: 1.5rem; }
+.cards-list .results .grid { grid-template-columns: minmax(0, 1fr); max-width: 46rem; margin-inline: auto; row-gap: 1.25rem; }
 .cards-list .results .card {
   display: grid;
   grid-template-columns: 8rem minmax(0, 1fr) auto;

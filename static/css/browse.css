@@ -363,10 +363,10 @@
 /* The results' head: their heading; on a search, whose heading is for screen readers, the order's
    pill, a smaller one, opening its menu, on the accent's tint and in the coral while it is open,
    as a picked filter is. */
-.results-head { display: flex; align-items: center; gap: .5rem .75rem; margin: 1.75rem 0 .75rem; }
+.results-head { display: flex; align-items: center; gap: .5rem .75rem; margin: 1.75rem 0 1.25rem; }
 .results-head > .results-heading { min-width: 0; margin: 0; }
 .results-head > .sort-menu { flex: none; }
-.results-head:has(> .results-heading.visually-hidden) { margin: 0 0 .75rem; }
+.results-head:has(> .results-heading.visually-hidden) { margin: 0 0 1.25rem; }
 /* The heading, a heading by its role (it holds the order's menu): an h2's face, size and weight.
    Its order's words quietly marked, in the site's colour with a soft underline, a faint tint
    under a pointer, opening the orders in a menu under them as the order's pill does; the menu in

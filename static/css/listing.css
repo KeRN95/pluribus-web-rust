@@ -442,7 +442,7 @@
 .description-heading { margin: 0 0 .35rem; font-size: var(--text-lg); font-weight: var(--semibold); line-height: 1.35; }
 
 @media (min-width: 720px) {
-  .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.75rem 1rem; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem 1rem; }
   h1 { font-size: var(--text-3xl); }
   .listing-header h1 { font-size: var(--text-2xl); }
   .listing-price { font-size: var(--text-3xl); }
