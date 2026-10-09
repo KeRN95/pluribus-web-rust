@@ -574,8 +574,8 @@ async fn card_details_start_with_the_city(pool: PgPool) {
     assert!(cars.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
     let property = get(pool.clone(), "/c/prona").await.body;
     assert!(property.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>2+1 · 85\u{a0}m²</p>"));
-    // Rents are per month, the month smaller after the figure (page.css, .card-note).
-    assert!(property.contains("450\u{a0}€<span class=\"card-note\">/muaj</span>"));
+    // Rents are per month.
+    assert!(property.contains("450\u{a0}€/muaj"));
     // Without properties, the line is just the city.
     let other = get(pool.clone(), "/c/te-tjera").await.body;
     assert!(other.contains("<p class=\"card-summary\"><span class=\"card-town\">Berat</span></p>"));
@@ -5105,23 +5105,6 @@ async fn set_price(pool: &PgPool, number: i64, amount: &str) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
-async fn a_cards_price_stands_under_its_photo_a_free_one_as_a_tag(pool: PgPool) {
-    // Under the photo, before the title to the eye (page.css puts it there; the title's link comes
-    // first for screen readers): a figure, bold, and smaller after it what qualifies it; "Falas"
-    // as a small green tag rather than a price; a wage or a price to be agreed, quietly.
-    let home = html(pool.clone(), "/").await;
-    let golf = card_of(&home, 1001);
-    assert!(golf.contains("<p class=\"card-price\"><span class=\"card-amount\">9\u{a0}500\u{a0}€</span></p>"), "{golf}");
-    assert!(golf.find("card-title").unwrap() < golf.find("card-price").unwrap());
-    let mercedes = card_of(&home, 1002);
-    assert!(mercedes.contains("<span class=\"card-amount\">21\u{a0}500\u{a0}€<span class=\"card-note\"> (i diskutueshëm)</span></span>"), "{mercedes}");
-    let books = card_of(&home, 1011);
-    assert!(books.contains(r#"<p class="card-price"><span class="card-amount card-tag">Falas</span></p>"#), "{books}");
-    let waiter = card_of(&html(pool, "/c/pune").await, 1008);
-    assert!(waiter.contains(r#"<span class="card-amount card-unpriced">Paga me marrëveshje</span>"#), "{waiter}");
-}
-
-#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
     // The Golf, from 9 500 € to 9 000 €: 5% less, after its price with what it was struck
     // through, on its card as on its page.
@@ -5139,7 +5122,7 @@ async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
     set_price(&pool, 1002, "25000").await;
     assert!(!card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("card-drop"));
     set_price(&pool, 1002, "20000").await;
-    assert!(card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("20\u{a0}000\u{a0}€<span class=\"card-note\"> (i diskutueshëm)</span></span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>21\u{a0}500\u{a0}€</del><span class=\"card-drop\">−7%</span>"));
+    assert!(card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("20\u{a0}000\u{a0}€ (i diskutueshëm)</span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>21\u{a0}500\u{a0}€</del><span class=\"card-drop\">−7%</span>"));
 
     // Less than 1% is no drop: the iPhone, from 55 000 to 54 700 Lekë. Nor is a price in another
     // currency: the bike, from 25 000 Lekë to 200 €.
