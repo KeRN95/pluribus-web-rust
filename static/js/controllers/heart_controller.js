@@ -55,12 +55,12 @@ function answered(answer) {
   showDrops(answer.price_drops);
 }
 
-// The header's heart (base.html), or the welcome page's at the end of its categories (home.html),
-// has a dot while listings the visitor keeps dropped their price since they last looked at
-// /te-ruajturat, and says how many to screen readers; not on that page, which shows them
-// (saved.html) and so has them seen.
+// The welcome page's heart at the end of its categories (home.html) has a dot while listings the
+// visitor keeps dropped their price since they last looked at /te-ruajturat, and says how many to
+// screen readers; not on that page, which shows them (saved.html) and so has them seen. (No top
+// bar has a heart: every page's holds the account alone.)
 function showDrops(count) {
-  const button = document.querySelector(".saved-button, .saved-shortcut");
+  const button = document.querySelector(".saved-shortcut");
   if (!button) return;
   const news = count > 0 && !document.querySelector(".price-drops");
   const label = news ? `Të ruajturat: ${count} me çmim më të ulët` : "Të ruajturat";

@@ -345,9 +345,9 @@
 
 /* The round buttons with the categories' pills (home.html), as tall as the pills beside them
    (--pill): the search's, leading the first line, as tall as its bigger pills and half as wide
-   again; and after all the pills, as one group, the buttons the other pages have in their top
-   bar (base.css): the one that posts a listing, the listings kept, the conversations and the
-   theme. Each is marked as the site marks what is picked or open (a category page's own pill, an
+   again; and after all the pills, as one group, the buttons for posting a listing, the listings
+   kept, the conversations and the theme, which no top bar holds (every page's has the account
+   alone, base.css). Each is marked as the site marks what is picked or open (a category page's own pill, an
    open menu's button): a tint of its colour, a border of it and its icon in it, the border whole
    under the pointer or a press. Each has its colour (--tone) and its tint (--tone-bg), as
    listing.css's price bubbles have: the search the coral (--accent, --badge), the plus Claude's
@@ -397,7 +397,7 @@
 /* The conversations' count of those unread (messages.css), ringed in the button's tint. */
 .inbox-shortcut .inbox-count { box-shadow: 0 0 0 2px var(--tone-bg); }
 /* The listings kept: a dot in the buttons' coral at the heart's top right while some dropped their
-   price unseen, as the top bar's has it (base.css; ::before, as a phone's target is ::after),
+   price unseen (heart_controller.js; ::before, as a phone's target is ::after),
    ringed in the button's tint. */
 .saved-shortcut.has-drops::before {
   content: "";

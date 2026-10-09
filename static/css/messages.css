@@ -1,9 +1,8 @@
 /* Messages (messages.rs): the header's count, the inbox, a conversation and the box to write in. */
 
-/* The header's button for the conversations (base.html, base.css), and the welcome page's at the
-   end of its categories (home.html, welcome.css): how many have messages unread, in the buttons'
-   coral at its top right, ringed in the bar's colour (inbox_controller.js). */
-.inbox-button { position: relative; }
+/* The welcome page's button for the conversations, at the end of its categories (home.html,
+   welcome.css, which rings it in the button's tint): how many have messages unread, in the
+   buttons' coral at its top right (inbox_controller.js). */
 .inbox-count {
   position: absolute;
   top: -.3rem;

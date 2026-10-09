@@ -11,11 +11,6 @@
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
-{#- Posting, the listings kept, the conversations and the theme end the categories here (below), so
-    the top bar has the account alone. -#}
-{% block header_buttons %}{% endblock %}
-{% block theme_toggle %}{% endblock %}
-
 {% block content %}
 <section class="welcome">
   {#- The question, for screen readers: on the page the search and the categories ask it. -#}
@@ -52,8 +47,8 @@
       browse.rs), after the search's button, as tall as they are and half as wide again, marked as
       what is picked is, in the coral's tint with a coral magnifier; then every other main
       category, in its order; then, as one group that goes to the next line whole rather than
-      split (.welcome-actions), the buttons the other pages have in their top bar (base.html): the
-      one that posts a listing, marked so in Claude's blue, the listings kept, in a red, the
+      split (.welcome-actions), round buttons no top bar holds (every page's has the account alone,
+      base.html): the one that posts a listing, marked so in Claude's blue, the listings kept, in a red, the
       conversations, in Claude's olive, and the theme, in the blue under its moon and a yellow
       under its sun. -#}
   <nav class="shortcuts" aria-label="Kategoritë">

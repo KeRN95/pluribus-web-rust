@@ -430,38 +430,16 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .search .icon-button { background: var(--button); color: var(--on-button); }
 .search .icon-button:hover { background: var(--button-hover); }
 
-/* Posting, the listings kept, the conversations, the account and the theme: round buttons on the
-   surface at the top bar's end, the logo's margin taking the room before them. The welcome page's
-   top bar has the account alone: the others end its categories there (home.html, welcome.css). */
+/* The account: a round button on the surface at the top bar's right end, the logo's margin taking
+   the room before it; the bar holds nothing else. Posting, the listings kept, the conversations
+   and the theme are the welcome page's round buttons, at the end of its categories (home.html,
+   welcome.css), and no bar's. */
 .logo { margin-right: auto; }
-.post-button,
-.saved-button,
-.inbox-button,
-.theme-toggle,
 .account-button { background: var(--surface); border-color: var(--border); }
-.post-button:hover,
-.saved-button:hover,
-.inbox-button:hover,
 .account-button:hover { background: var(--surface-muted); }
-/* The listings kept: a dot in the buttons' coral at the heart's top right while some dropped
-   their price unseen (heart_controller.js). */
-.saved-button { position: relative; }
-.saved-button.has-drops::after {
-  content: "";
-  position: absolute;
-  top: .2rem;
-  right: .2rem;
-  width: .55rem;
-  height: .55rem;
-  border-radius: 50%;
-  background: var(--button);
-  box-shadow: 0 0 0 2px var(--surface);
-}
 
-
-.theme-toggle:hover { background: var(--surface-muted); }
-
-/* The toggle shows the theme it switches to: a moon in light mode, a sun in dark mode. */
+/* The theme button (the welcome page's) shows the theme it switches to: a moon in light mode, a
+   sun in dark mode. */
 .icon-sun { display: none; }
 :root[data-theme="dark"] .icon-sun { display: block; }
 :root[data-theme="dark"] .icon-moon { display: none; }
