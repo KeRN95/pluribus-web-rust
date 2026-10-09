@@ -162,25 +162,6 @@ impl ListingCard {
         format::initial(&self.seller_name)
     }
 
-    /// The city at the start of the details line: the listing's municipality, or its location if
-    /// that isn't in one. None when the search is in that city already.
-    pub fn city_label(&self) -> Option<&str> {
-        if self.city_known {
-            return None;
-        }
-        self.city.as_deref().or(self.location_name.as_deref())
-    }
-
-    /// The place at the start of the details line: the zone and the town ("Blloku, Tiranë"), the
-    /// town alone, or the zone alone when the search is in that town already (city_label).
-    pub fn place_label(&self) -> Option<String> {
-        match (&self.zone, self.city_label()) {
-            (Some(zone), Some(city)) => Some(format!("{zone}, {city}")),
-            (Some(zone), None) => Some(zone.clone()),
-            (None, city) => city.map(str::to_string),
-        }
-    }
-
     /// The place under the price in the list, whatever the search is in: the zone and the town
     /// ("Blloku, Tiranë"), or the town alone; the listing's municipality, or its location if that
     /// isn't in one.
@@ -193,12 +174,13 @@ impl ListingCard {
         }
     }
 
-    /// What follows the city on the details line: the distance from the map pin, when there is
-    /// one, then the category's card properties. Without the city, one more property goes in
-    /// first, so the line still says something new: "Apple · 128 GB" rather than "Vlorë · 128 GB".
+    /// The details line, with no town (the list says where under the price, place_text; the cards
+    /// leave it out): the distance from the map pin, when there is one, then one property the
+    /// card doesn't show otherwise, so the line says something new ("Apple · 128 GB"), then the
+    /// category's card properties.
     pub fn details_line(&self) -> String {
         let distance = self.distance_m.map(format::distance);
-        let spare = self.spare_detail.clone().filter(|_| self.city_known);
+        let spare = self.spare_detail.clone();
         let parts: Vec<String> =
             distance.into_iter().chain(spare).chain(self.details.iter().cloned()).collect();
         parts.join(" · ")

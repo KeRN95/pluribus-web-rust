@@ -501,8 +501,8 @@
    photo at the line's left, square, its first alone, 8.8rem on a phone and 12.1rem wider (a tenth
    more than the 8rem and 11rem it had, the lines widened); beside it at the top the price, in the
    text's colour and a size bigger as nothing is under it, under it where it is, the pin and the
-   town, small and muted (.card-place, which the cards leave out; the details line's own town,
-   .card-town, goes in its place), then the title on up to two lines, and at the foot, level with
+   town, small and muted (.card-place, which the cards leave out, so that where a listing is shows
+   in the list alone), then the title on up to two lines, and at the foot, level with
    the photo's bottom, the details line and, at its right, when it was posted (.card-when, which
    the cards leave out). The heart at the top right, on the page, the text's colour with no
    circle, as no photo is under it. The photo's box (.card-media) gives its parts to the card's
@@ -558,7 +558,6 @@
   white-space: nowrap;
 }
 .cards-list .results .card-place .pin-icon { flex: none; width: 1em; height: 1em; margin: 0; color: inherit; vertical-align: 0; }
-.cards-list .results .card-town { display: none; }
 .cards-list .results .card-head { grid-area: 3 / 2; padding: .2rem 0 0; }
 .cards-list .results .card-title {
   display: -webkit-box;

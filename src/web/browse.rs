@@ -682,22 +682,12 @@ async fn browse(
         return Ok(([(header::CACHE_CONTROL, HeaderValue::from_static("no-store"))], Json(body)).into_response());
     }
 
-    // In a search limited to a city, the cards in that city leave it out (ListingCard::city_label).
-    let mark_city = |rows: &mut Vec<ListingCard>| {
-        if let Some(city) = filters.city {
-            for card in rows.iter_mut() {
-                card.city_known = card.city_label() == Some(city.name.as_str());
-            }
-        }
-    };
-
     // Big cards and the list only in the grid: the map page's list stays small, beside the map.
     let (cards_cookie, default_layout) = cards_cookie(&categories, category);
     let layout = if view == View::Grid { cards_layout(&headers, &cards_cookie, default_layout) } else { Cards::Small };
 
     if is_next_page_request(&headers) {
-        let mut rows = db::listing_page(&state.db, &filter).await?;
-        mark_city(&mut rows);
+        let rows = db::listing_page(&state.db, &filter).await?;
         return frame_response(filter.after, &ListingPage::new(rows, filter.sort, next_url).layout(layout));
     }
 
@@ -713,7 +703,7 @@ async fn browse(
         }
         _ => None,
     };
-    let (mut rows, count, mut points, found_in, mut most_viewed, quarters) = tokio::try_join!(
+    let (rows, count, mut points, found_in, mut most_viewed, quarters) = tokio::try_join!(
         db::listing_page(&state.db, &filter),
         db::listing_count(&state.db, &filter),
         async {
@@ -771,7 +761,6 @@ async fn browse(
     let capped = count > db::COUNT_LIMIT;
     let count_number = count;
     let count = format::short_listing_count(count, db::COUNT_LIMIT);
-    mark_city(&mut rows);
     let page = ListingPage::new(rows, filter.sort, next_url).layout(layout);
     let leads = most_viewed.is_none() || !most_viewed_shown;
     let page = if leads && view != View::Map { page.leading() } else { page };

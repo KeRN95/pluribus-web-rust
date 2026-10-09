@@ -564,33 +564,36 @@ async fn category_page_includes_subcategories(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
-async fn card_details_start_with_the_city(pool: PgPool) {
-    // The city, with no pin before it, in a span of its own (the list hides it), then the
-    // category's card properties.
+async fn card_details_leave_the_place_to_the_list(pool: PgPool) {
+    // The details line says no town, in no view: first one property the card doesn't show
+    // otherwise and the title doesn't name, then the category's card properties.
+    let summaries = |body: &str| -> Vec<String> {
+        body.split(r#"<p class="card-summary">"#).skip(1).map(|rest| rest[..rest.find("</p>").unwrap()].to_string()).collect()
+    };
     let cars = get(pool.clone(), "/c/automjete").await.body;
-    assert!(!cars.contains(r#"<p class="card-summary"><svg"#));
-    assert!(cars.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
+    assert!(!cars.contains("card-town"));
+    assert!(cars.contains("<p class=\"card-summary\">Hatchback · 2016 · 148\u{a0}000\u{a0}km · Naftë</p>"), "{:?}", summaries(&cars));
     let property = get(pool.clone(), "/c/prona").await.body;
-    assert!(property.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>2+1 · 85\u{a0}m²</p>"));
+    assert!(
+        summaries(&property).iter().any(|line| line.ends_with("2+1 · 85\u{a0}m²") && !line.contains("Tiranë")),
+        "{:?}",
+        summaries(&property)
+    );
     // Rents are per month.
     assert!(property.contains("450\u{a0}€/muaj"));
-    // Without properties, the line is just the city.
+    // Without properties, the line is empty, and shows nothing (page.css).
     let other = get(pool.clone(), "/c/te-tjera").await.body;
-    assert!(other.contains("<p class=\"card-summary\"><span class=\"card-town\">Berat</span></p>"));
-    // A phone shows its storage on the card; its brand only on its page.
+    assert!(other.contains(r#"<p class="card-summary"></p>"#), "{:?}", summaries(&other));
+    // A phone shows its brand, then its storage.
     let phones = get(pool.clone(), "/c/elektronike").await.body;
-    assert!(phones.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>128 GB</p>"));
-    // Under the price, for the list, where it is: the pin and the town, in every card, in a
-    // search in that town too.
+    assert!(phones.contains(r#"<p class="card-summary">Apple · 128 GB</p>"#), "{:?}", summaries(&phones));
+    // Where it is shows under the price, for the list alone: the pin and the town, in every card,
+    // in a search in that town too.
     assert!(phones.contains(r#"<p class="card-place"><svg class="pin-icon" width="14" height="14""#));
     assert!(phones.contains(r#"aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>Tiranë</p>"#));
-    // Searching in Tirana, the Tirana cards leave the city out and show the brand instead...
-    let in_tirana = get(pool.clone(), "/c/elektronike?city=tirane").await.body;
+    let in_tirana = get(pool, "/c/elektronike?city=tirane").await.body;
     assert!(in_tirana.contains(r#"<p class="card-summary">Apple · 128 GB</p>"#));
     assert!(in_tirana.contains(r#"<circle cx="12" cy="10" r="3"/></svg>Tiranë</p>"#));
-    // ...and a car the first property its title doesn't name: not the make, nor the model.
-    let cars = get(pool, "/c/automjete?city=tirane").await.body;
-    assert!(cars.contains("<p class=\"card-summary\">Hatchback · 2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -610,7 +613,7 @@ async fn a_map_pin_finds_the_listings_within_its_radius_nearest_first(pool: PgPo
     let body = html(pool.clone(), "/search?lat=41.32833&lng=19.81806&radius=10").await;
     assert!(body.contains("Volkswagen Golf 7, 2016, naftë"));
     assert!(!body.contains("Mercedes-Benz C 220, 2018, automatike"));
-    assert!(body.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>0\u{a0}m · 2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
+    assert!(body.contains("<p class=\"card-summary\">0\u{a0}m · Hatchback · 2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
     assert!(body.contains(r#"<a class="filter-chip" href="/search" aria-label="Hiq filtrin Brenda 10 km nga pika">"#));
     assert!(body.contains(r#"<input class="visually-hidden" type="radio" name="sort" value="" form="filter-form" data-action="filters#submit" checked>Më afër</label>"#));
 
@@ -621,7 +624,7 @@ async fn a_map_pin_finds_the_listings_within_its_radius_nearest_first(pool: PgPo
         "Volkswagen Golf 7, 2016, naftë",
     ]);
     assert!(order.is_sorted(), "{order:?}");
-    assert!(body.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>31\u{a0}km · 2016"));
+    assert!(body.contains("<p class=\"card-summary\">31\u{a0}km · Hatchback · 2016"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -3633,11 +3636,11 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
     // alone would read as the part's own.
     assert!(page.contains(r#"</svg><span class="attribute-label" aria-hidden="true">Nga viti</span>2012</dd>"#));
     assert!(page.contains(r#"</svg><span class="attribute-label" aria-hidden="true">Marka e automjetit</span>Volkswagen</dd>"#));
-    // Its card gives the vehicle after the city; a search for the make finds it.
+    // Its card gives the vehicle; a search for the make finds it.
     let path = url.trim_start_matches("http://localhost");
     let parts = get(pool.clone(), "/c/pjese-dhe-aksesore").await.body;
     assert!(parts.contains(&format!(r#"href="{path}">Navigator origjinal për Golf</a>"#)));
-    assert!(parts.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>Volkswagen · Golf</p>"));
+    assert!(parts.contains("<p class=\"card-summary\">Volkswagen · Golf</p>"), "{}", parts.split("card-summary").skip(1).map(|rest| &rest[..rest.find("</p>").unwrap()]).collect::<Vec<_>>().join(" | "));
     assert!(get(pool.clone(), "/search?q=volkswagen+navigator").await.body.contains(path));
 
     // Only the make, or nothing at all: both fine.
@@ -4043,8 +4046,9 @@ async fn a_car_is_posted_with_its_make_model_and_year(pool: PgPool) {
         assert!(page.contains(detail), "{detail}");
     }
     // On its card, in the filters and in search, like the listings already there.
-    let card = "<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>2017 · 120\u{a0}000\u{a0}km · Naftë</p>";
-    assert!(get(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&vehicle_year_min=2017").await.body.contains(card));
+    let card = "<p class=\"card-summary\">Manuale · 2017 · 120\u{a0}000\u{a0}km · Naftë</p>";
+    let found = get(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&vehicle_year_min=2017").await.body;
+    assert!(found.contains(card), "{}", found.split("card-summary").skip(1).map(|rest| &rest[..rest.find("</p>").unwrap()]).collect::<Vec<_>>().join(" | "));
     assert!(get(pool.clone(), "/c/makina?vehicle_features=NAVIGATION").await.body.contains(&url));
     assert!(!get(pool.clone(), "/c/makina?vehicle_fuel=PETROL").await.body.contains(&url));
 
