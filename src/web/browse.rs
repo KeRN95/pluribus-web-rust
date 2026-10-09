@@ -323,6 +323,9 @@ struct BrowsePage<'a> {
     clear_url: String,
     /// On a category page, the category above it, the row's first pill: a way up.
     parent: Option<Subcategory>,
+    /// On a category page three levels down, the category above its parent, which the round button
+    /// before the pills leads to by its icon (the welcome page's house otherwise).
+    above_parent: Option<Subcategory>,
     /// On a category page, its own icon, on its pill.
     heading_icon: Option<&'static str>,
     subcategories: Vec<Subcategory>,
@@ -719,14 +722,16 @@ async fn browse(
             None => "Të gjitha njoftimet".to_string(),
         },
     };
-    // The category above this one, the row's first pill: a way up; and this one's own icon.
-    let parent = match (&page_slug, category) {
-        (Some(_), Some(current)) => current.parent_id.and_then(|id| categories.by_id(id)).map(|above| Subcategory {
-            name: above.name.clone(),
-            url: filters.category_url(above),
-            icon: category_icon(above),
-        }),
-        _ => None,
+    // The category above this one, the row's first pill: a way up; the one above that, which the
+    // round button before the pills leads to; and this one's own icon.
+    let way_up = |of: &db::Category| {
+        of.parent_id.and_then(|id| categories.by_id(id)).map(|above| {
+            (above, Subcategory { name: above.name.clone(), url: filters.category_url(above), icon: category_icon(above) })
+        })
+    };
+    let (parent, above_parent) = match (&page_slug, category.and_then(way_up)) {
+        (Some(_), Some((above, link))) => (Some(link), way_up(above).map(|(_, link)| link)),
+        _ => (None, None),
     };
     let heading_icon = match (&page_slug, category) {
         (Some(_), Some(current)) => category_icon(current),
@@ -828,6 +833,7 @@ async fn browse(
         clear_url: filters.clear_url(),
         filters: &filters,
         parent,
+        above_parent,
         heading_icon,
         subcategories,
         found_in,
