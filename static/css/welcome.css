@@ -336,8 +336,8 @@
    border of it and the icon in it, the border whole under the pointer or a press; each has its
    colour (--tone) and its tint (--tone-bg), as listing.css's price bubbles have: the search the
    coral (--accent, --badge), the listings kept the site's one red, the kept hearts' on the cards
-   (--red, page.css), and the theme the blue's tint and border with its moon in the yellow, on the
-   light theme, and the yellow's with its sun in it, on the dark (--yellow). The plus and the
+   (--red, page.css), and the theme the blue under its moon, on the light theme, and the yellow
+   under its sun, on the dark (--yellow). The plus and the
    conversations are plain (.plain-shortcut), on the surface with the menus' hairline and their
    icon in the text's colour, as the back button is (browse.css): the colours are kept for what
    means one. Their icons are the pills' size beside them. On a phone a finger's target is bigger
@@ -368,7 +368,7 @@
 .welcome-actions { display: flex; flex: none; gap: var(--column-gap); }
 .search-shortcut { --tone: var(--accent); --tone-bg: var(--badge); width: calc(var(--pill) * 1.5); }
 .saved-shortcut { --tone: var(--red); --tone-bg: var(--red-bg); }
-.theme-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); color: var(--yellow); }
+.theme-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
 :root[data-theme="dark"] .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
