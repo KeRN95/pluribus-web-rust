@@ -4,7 +4,7 @@
 
 {% block content %}
 {#- A conversation between a listing's buyer and its seller (messages.rs), or the page that starts
-    one: who with and the listing it is about at the top; the messages, the visitor's own on the
+    one: who with, then the listing it is about, at the top; the messages, the visitor's own on the
     right; then the box to write in, at the bottom of the screen. While the page is open, new
     messages come every few seconds (conversation_controller.js); those shown are read, as the page
     shows and as they come, and the header's count follows. -#}
@@ -16,8 +16,10 @@
   <p class="conversation-back"><a href="/mesazhet" data-turbo-frame="_top">‹ Mesazhet</a></p>
   <header class="conversation-head">
     {%- if let Some(listing) = listing %}
-    {#- The listing leads, its title the heading, beside its photo and over its price, leading to
-        it; who with is a detail under it. -#}
+    {#- Who with first, on a line of their own (in the sheet, with "Mbyll" at its end), a hairline
+        under it; then the listing, its title the heading, beside its photo and over its price,
+        leading to it. -#}
+    <p class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span>{{ other_name }}</p>
     <a class="conversation-listing" href="{{ listing.url }}" data-turbo-frame="_top">
       {%- if let Some(photo) = listing.photo %}
       <img src="{{ photo }}" alt="" width="56" height="56">
@@ -29,7 +31,6 @@
         <span class="conversation-price">{{ listing.price }}</span>
       </div>
     </a>
-    <p class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span>{{ other_name }}</p>
     {%- else %}
     <h1 class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span>{{ other_name }}</h1>
     {%- endif %}

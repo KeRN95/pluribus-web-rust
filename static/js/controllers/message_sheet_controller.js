@@ -6,7 +6,8 @@ import { Controller } from "@hotwired/stimulus";
 // head, dragged down past a quarter of its height or flicked down closes it, sliding the rest of
 // the way, and let go sooner it goes back up. From 720 px up it is a popup card from the button
 // instead: under it, or over it where the screen has more room there, as tall as that room allows,
-// the page brought along to show it whole; a click outside it closes it, as a menu's would.
+// the page brought along to show it whole; a click outside it closes it, as a menu's would, and
+// so does the button that opened it, pressed again.
 // The box to write in takes the focus once the conversation is in, where there is a mouse; on a
 // phone the keyboard waits for a tap in it. "Mbyll", Escape, or Turbo caching the page closes it,
 // empties the frame (its conversation stops asking for new messages) and gives the focus back to
@@ -45,8 +46,14 @@ export default class extends Controller {
     return matchMedia(PHONE).matches;
   }
 
+  // The button that opened the sheet closes it again, rather than loading the conversation anew.
   open(event) {
     if (!this.hasSheetTarget) return;
+    if (!this.sheetTarget.hidden && event.currentTarget === this.button) {
+      event.preventDefault();
+      this.close(event);
+      return;
+    }
     this.button = event.currentTarget;
     if (event.detail) this.button.blur();
     this.sheetTarget.hidden = false;

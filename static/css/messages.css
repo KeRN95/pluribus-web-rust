@@ -70,10 +70,12 @@
 .conversation-back { margin: 1rem 0 0; font-size: var(--text-sm); }
 .conversation-back a { color: var(--muted); text-decoration: none; }
 .conversation-back a:hover { color: var(--text); }
-/* The conversation's head: the listing leads, its photo beside its title, the heading, on up to
-   two lines, and its price under it, all one link to it; who with is a detail under that, their
-   initial in a small circle and their name, quieter. Without a listing, who with is the heading. */
+/* The conversation's head: who with first, their initial in a small circle and their name,
+   quieter, on a line of their own with a hairline under it; then the listing, its photo beside its
+   title, the heading, on up to two lines, and its price under it, all one link to it. Without a
+   listing, who with is the heading. */
 .conversation-head { display: grid; gap: .6rem; margin: .5rem 0 1.25rem; }
+.conversation-head > .conversation-with { padding-bottom: .6rem; border-bottom: 1px solid var(--border); }
 .conversation-listing { display: flex; align-items: center; gap: .8rem; color: inherit; text-decoration: none; }
 .conversation-listing img,
 .conversation-listing .placeholder { flex: none; width: 3.5rem; height: 3.5rem; border-radius: 10px; object-fit: cover; }
@@ -264,7 +266,10 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
 .message-sheet .thread { flex: 1; }
 .message-sheet .conversation-block { margin: .25rem 0 .75rem; }
 .message-sheet .conversation-back { display: none; }
-.message-sheet .conversation-head { margin-top: .25rem; padding-right: 2.75rem; }
+/* In the sheet, "Mbyll" stands at the end of who with's line, which leaves it room; the hairline
+   runs under both. */
+.message-sheet .conversation-head { margin-top: .25rem; }
+.message-sheet .conversation-head > .conversation-with { min-height: 2.25rem; padding-right: 2.75rem; }
 /* On a phone the head drags the sheet down as its bar does; it scrolls nothing itself. */
 @media (max-width: 719px) {
   .message-sheet .conversation-head { touch-action: none; }
@@ -292,5 +297,5 @@ html.sheet-open { overflow: hidden; }
   .message-sheet.opens-up { transform-origin: bottom left; }
   .sheet-grabber { display: none; }
   .sheet-close { top: .7rem; right: .7rem; }
-  .message-sheet .conversation-head { margin-top: .9rem; }
+  .message-sheet .conversation-head { margin-top: .65rem; }
 }
