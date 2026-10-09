@@ -228,6 +228,26 @@
       </div>
     </section>
 
+    {#- After the map, how the cards show: a round button with the icon of the view now, which
+        opens a menu like the order's, the views as rows, each with its icon, the one now ticked
+        (cards_controller.js, which switches at once and keeps the choice in a cookie, so the
+        pages after come the same way); small cards, as many to a line as fit; big ones, one a
+        line, every photo to slide through; or a list, a line each, the photo at its left. A tap
+        outside or Escape closes it (dropdown_controller.js), and it is one of the row's open one
+        at a time (section:open). -#}
+    {%- let current = page.layout %}
+    <details class="sort-menu cards-menu" data-controller="dropdown" data-cards-target="menu"
+             data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
+      <summary class="button secondary round-button cards-button" aria-label="Pamja: {{ current.label() }}" title="Pamja: {{ current.label() }}" data-cards-target="button">
+        {%- for cards in Cards::ALL %}<svg class="cards-icon cards-icon-{{ cards.value() }}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ cards.icon()|safe }}</svg>{% endfor -%}
+      </summary>
+      <fieldset class="sort-options cards-options">
+        <legend class="visually-hidden">Pamja</legend>
+        {%- for cards in Cards::ALL %}
+        <label class="picker-option sort-option"><input class="visually-hidden" type="radio" name="cards" value="{{ cards.value() }}" data-action="change->cards#choose"{% if cards.value() == current.value() %} checked{% endif %}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ cards.icon()|safe }}</svg>{{ cards.label() }}</label>
+        {%- endfor %}
+      </fieldset>
+    </details>
   </div>
 
   {#- The filters' card: over the results under the row on a phone, its name and "Mbyll" at the
@@ -262,7 +282,7 @@
   {%- endif %}
 
   <section class="results" aria-labelledby="results-heading">
-    {#- The listings' heading, the view's pill on its line and the count under it. On a category
+    {#- The listings' heading and the count under it. On a category
         page, to the eye, under "Më të klikuarat" where it is: the order, the category and the
         kind of listing when one is chosen ("Njoftimet më të reja në Makina në shitje",
         browse.rs), the order's words highlighted, which open the orders in a menu under them, as
@@ -290,11 +310,7 @@
         orders in a menu under it, like the in-page dropdowns', the one now ticked; a tap outside
         or Escape closes it (dropdown_controller.js), and it is one of those open one at a time
         (section:open). Picking one sends the filter form (form="filter-form"), so the filters
-        stay. At the line's far right, how the cards show, a menu like the order's, its pill the
-        icon of the one now: small cards, as many to a line as fit; big ones, one a line, every
-        photo to slide through; or a list, a line each, the photo at its left (cards_controller.js,
-        which switches at once and keeps the choice in a cookie, so the pages after come the same
-        way). -#}
+        stay. (How the cards show is the row's last button, above.) -#}
     {%- if listings_place.is_none() %}
     <details class="sort-menu" data-controller="dropdown"
              data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
@@ -307,19 +323,6 @@
       </fieldset>
     </details>
     {%- endif %}
-    {%- let current = page.layout %}
-    <details class="sort-menu cards-menu" data-controller="dropdown" data-cards-target="menu"
-             data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
-      <summary class="small-pill cards-button" aria-label="Pamja: {{ current.label() }}" title="Pamja: {{ current.label() }}" data-cards-target="button">
-        {%- for cards in Cards::ALL %}<svg class="cards-icon cards-icon-{{ cards.value() }}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ cards.icon()|safe }}</svg>{% endfor -%}
-      </summary>
-      <fieldset class="sort-options cards-options">
-        <legend class="visually-hidden">Pamja</legend>
-        {%- for cards in Cards::ALL %}
-        <label class="picker-option sort-option"><input class="visually-hidden" type="radio" name="cards" value="{{ cards.value() }}" data-action="change->cards#choose"{% if cards.value() == current.value() %} checked{% endif %}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ cards.icon()|safe }}</svg>{{ cards.label() }}</label>
-        {%- endfor %}
-      </fieldset>
-    </details>
     </div>
 
     {#- Under the heading, how many, as a pill, then the filters picked, each a chip whose cross

@@ -839,14 +839,16 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         r#"<div class="search-card" data-controller="panel""#,
         r#"<button type="button" class="button secondary round-button labelled filters-open""#,
         r#"<section class="map-card map-hidden""#,
+        // The row's last button, after the map: how the cards show, round, opening its menu.
+        r#"<details class="sort-menu cards-menu" data-controller="dropdown" data-cards-target="menu""#,
+        r#"<summary class="button secondary round-button cards-button" aria-label="Pamja: Kartela të vogla""#,
         r#"<aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">"#,
         r#"<div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>"#,
         r#"<section class="results""#,
-        // The listings' heading, its order's words opening the orders, the view on its line; the
-        // count under it, before the chips.
+        // The listings' heading, its order's words opening the orders; the count under it, before
+        // the chips.
         r#"<div class="results-head">"#,
         r#"<div class="results-heading" id="results-heading" role="heading" aria-level="2">Njoftimet <details class="sort-menu heading-sort" data-controller="dropdown""#,
-        r#"<details class="sort-menu cards-menu" data-controller="dropdown" data-cards-target="menu""#,
         r#"<div class="results-meta">"#,
         r#"<p class="result-count" id="result-count""#,
     ]);
@@ -872,10 +874,10 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     }
     assert!(cars.contains(r#"<article class="card" id="listing-1001">"#));
     // The filters' and the map's buttons say their names and what is on: "Filtrat", with how many
-    // (none yet), and the map's place, "Harta" with none. Under the row, among the smaller pills
-    // before the places, the order says the one now, "Rendit" with it for screen readers and in
-    // its tooltip (the orders' menu opens with no JavaScript), and the cards' size has its icon;
-    // the results' heading, the order again, is for screen readers.
+    // (none yet), and the map's place, "Harta" with none; the cards' view, last in the row, has
+    // its icon alone. On a search the order's pill, a smaller one under the row, says the one
+    // now, "Rendit" with it for screen readers and in its tooltip (the orders' menu opens with no
+    // JavaScript); the results' heading, the order again, is for screen readers.
     assert!(cars.contains(r#"<button type="button" class="button secondary round-button labelled map-button" data-map-target="toggle""#));
     assert!(cars.contains(r#"<span class="button-label">Harta</span>"#));
     assert!(cars.contains(r#"<button type="button" class="button secondary round-button labelled filters-open" aria-controls="filters" aria-expanded="false""#));
@@ -885,8 +887,9 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     assert!(cars.contains(r#"<summary class="heading-sort-button" title="Rendit">më të reja</summary>"#));
     assert!(cars.contains(r#"</details> <span class="heading-place">në Makina</span></div>"#));
     assert!(!cars.contains("small-pill sort-button"));
-    let row = &cars[cars.find(r#"<div class="browse-tools""#).unwrap()..cars.find(r#"<div class="results-head">"#).unwrap()];
-    assert!(!row.contains("cards-button"));
+    let row = &cars[cars.find(r#"<div class="browse-tools""#).unwrap()..cars.find(r#"<aside class="filters""#).unwrap()];
+    assert_eq!(row.matches("cards-button").count(), 1);
+    assert!(!cars[cars.find(r#"<div class="results-head">"#).unwrap()..].contains("cards-menu"));
     let cheap = html(pool.clone(), "/c/makina?sort=price_asc").await;
     assert!(cheap.contains(r#"title="Rendit">më të lira</summary>"#) && cheap.contains(r#"</details> <span class="heading-place">në Makina</span></div>"#));
     assert!(cars.contains("toggle->dropdown#announce"));
@@ -1097,8 +1100,8 @@ async fn the_maps_card_picks_a_town_or_all_of_albania(pool: PgPool) {
     assert!(menu.contains(r#"data-url="/c/makina?city=durres&vehicle_fuel=DIESEL">Durrës</option>"#));
     assert!(!cars.contains("place-pills") && !cars.contains("place-near"));
     let pills = &cars[cars.find(r#"<div class="results-head">"#).unwrap()..cars.find(r#"<div class="grid">"#).unwrap()];
-    // The view's pill alone: the heading says the order.
-    assert_eq!(pills.matches(r#"class="small-pill"#).count(), 1);
+    // No pill under the row: the heading says the order, and the row's last button the view.
+    assert_eq!(pills.matches(r#"class="small-pill"#).count(), 0);
     // The page's town is kept in a cookie for the next pages (place_controller.js), on the page's
     // own element.
     assert!(cars.contains(r#"data-controller="filters cards place""#) && cars.contains(r#"data-place-town-value="""#));
