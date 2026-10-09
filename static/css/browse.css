@@ -140,6 +140,8 @@
 /* The row of buttons as close under the category pills (the subcategories, or the path when it has
    none) as the pills are to each other: .5rem, not the 1rem a heading leaves. */
 .category-pills ~ .browse { margin-top: .5rem; }
+/* Before Prona's pills, the house is filled in Rolex's gold, as the pills are in its green. */
+body[data-section="prona"] .home-icon { color: var(--gold); }
 
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 
@@ -185,7 +187,7 @@
   display: flex;
   align-items: center;
   gap: .55rem;
-  margin: 0 0 .75rem;
+  margin: 0 0 .5rem; /* as far over the count and the chips as the pills over it are from it */
 }
 .map-card { display: contents; }
 .map-card-body,
