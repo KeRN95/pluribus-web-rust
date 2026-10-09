@@ -30,7 +30,8 @@
 .category-up { color: var(--muted); }
 /* Back, and the way beyond the pills, before them: circles as tall as they are, their icons the
    welcome page's size (20px; 18 on a phone). Back itself, the one back_controller.js drives, is
-   marked as the welcome page's plus is: Claude's blue's tint, a border of the blue and its chevron
+   marked as the page's own pill is, in the page's colour (--accent, --badge: the coral, Elektronikë's
+   blue, Shtëpi / kopsht's olive; base.css, data-section): its tint, a border of it and its chevron
    in it, the border whole under the pointer or a press; the way beyond stays plain. */
 .back-button {
   --size: calc(1.55 * var(--text-md) + 1.4rem + 2px);
@@ -47,12 +48,12 @@
   transition: background-color .15s, border-color .15s, transform .1s;
   -webkit-tap-highlight-color: transparent;
 }
-.back-button[data-controller~="back"] { border-color: color-mix(in srgb, var(--blue) 60%, transparent); background: var(--blue-bg); color: var(--blue); }
+.back-button[data-controller~="back"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
 .back-button:active { background: var(--surface-muted); transform: scale(.94); }
-.back-button[data-controller~="back"]:active { border-color: var(--blue); background: var(--blue-bg); }
+.back-button[data-controller~="back"]:active { border-color: var(--accent); background: var(--badge); }
 @media (hover: hover) {
   .back-button:hover { background: var(--surface-muted); }
-  .back-button[data-controller~="back"]:hover { border-color: var(--blue); background: var(--blue-bg); }
+  .back-button[data-controller~="back"]:hover { border-color: var(--accent); background: var(--badge); }
 }
 /* The path's icons, the welcome page's size (18px on a phone, below). The selected pill, the page's
    own, marked as the welcome page's search is: the coral's tint, a border of the coral, and its
