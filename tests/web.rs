@@ -3867,12 +3867,14 @@ async fn listings_get_photos(pool: PgPool) {
     let first = &page[page.find(r#"<img src="/media/photos/"#).unwrap()..];
     assert!(first[..first.find('>').unwrap()].contains(r#" fetchpriority="high""#), "{first}");
     assert_eq!(page.matches("fetchpriority").count(), 1);
-    // Each is kept as WebP in four sizes, which the browser picks between; the second, 800 px
-    // wide, in three.
+    // Each is kept as WebP in four sizes, which the browser picks between, here by their longer
+    // side, as the page shows the photo whole: the cards' two cover a square of their shorter side
+    // (900 × 600 and 600 × 400 for the first). The second, 800 px wide, has a small copy of its
+    // own, and a card copy no smaller than itself, which the page leaves out.
     let (big, small) = (photo_urls[0].trim_end_matches(".jpg"), photo_urls[1].trim_end_matches(".jpg"));
     let sources = [
-        format!(r#"<picture><source type="image/webp" srcset="{big}-small.webp 400w, {big}-card.webp 600w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="(min-width: 1100px) 1068px,"#),
-        format!(r#"<picture><source type="image/webp" srcset="{small}-small.webp 400w, {small}-card.webp 600w, {small}.webp 800w" sizes="#),
+        format!(r#"<picture><source type="image/webp" srcset="{big}-small.webp?2 600w, {big}-card.webp?2 900w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="(min-width: 1100px) 1068px,"#),
+        format!(r#"<picture><source type="image/webp" srcset="{small}-small.webp?2 533w, {small}.webp 800w" sizes="#),
     ];
     for (url, source) in photo_urls.iter().zip(&sources) {
         // Whole in its frame, over a blurred copy of itself: its tiny copy, in the page, a
@@ -3923,12 +3925,20 @@ async fn listings_get_photos(pool: PgPool) {
     assert_eq!(stand_in.headers[header::CACHE_CONTROL], "public, max-age=300");
     assert_eq!(stand_in.body, made);
 
-    // The card offers the cover's copies too, the cards' AVIF ones first, and shows its tiny one
-    // until it has loaded.
+    // The card offers the cover's copies too, the cards' AVIF ones first, each by its shorter
+    // side, which the card's square scales it by, the cards' copies under their new edition's
+    // query, and shows its tiny one until it has loaded.
     let cards = get(pool.clone(), "/search?q=Galaxy").await.body;
     assert!(cards.contains(&format!(
-        r#"<picture><source type="image/avif" srcset="{big}-small.avif 400w, {big}-card.avif 600w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="{SMALL_SIZES}"><source type="image/webp" srcset="{big}-small.webp 400w, {big}-card.webp 600w, {big}-middle.webp 1200w, {big}.webp 1600w""#
+        r#"<picture><source type="image/avif" srcset="{big}-small.avif?2 400w, {big}-card.avif?2 600w, {big}-middle.webp 800w, {big}.webp 1067w" sizes="{SMALL_SIZES}"><source type="image/webp" srcset="{big}-small.webp?2 400w, {big}-card.webp?2 600w, {big}-middle.webp 800w, {big}.webp 1067w" sizes="{SMALL_SIZES}">"#
     )), "{cards}");
+    assert!(cards.contains(&format!(
+        r#"<picture><source type="image/avif" srcset="{small}-small.avif?2 400w, {small}-card.avif?2 600w" sizes="{SMALL_SIZES}"><source type="image/webp" srcset="{small}-small.webp?2 400w, {small}.webp 600w" sizes="{SMALL_SIZES}">"#
+    )), "{cards}");
+    // The query changes nothing in what is served.
+    let with_query = get(pool.clone(), &format!("{big}-small.avif?2")).await;
+    assert_eq!((with_query.status, with_query.content_type.as_deref()), (StatusCode::OK, Some("image/avif")));
+    assert_eq!(with_query.headers[header::CACHE_CONTROL], "public, max-age=31536000, immutable");
     assert!(cards.contains(&format!(r#"<img class="card-photo" src="{big}.jpg""#)));
     assert!(cards.contains(r#"style="background-image: url(data:image/webp;base64,"#));
 

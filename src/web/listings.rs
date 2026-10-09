@@ -61,14 +61,19 @@ pub struct Slide<'a> {
     pub avif: Option<String>,
     /// Its tiny copy as a data: URI, behind it while it loads.
     pub placeholder: Option<&'a str>,
+    /// Wider than tall: a big card's frame, 4:3, cuts it at its sides and scales it by its height
+    /// (ListingPage::sizes_of).
+    pub landscape: bool,
 }
 
 impl Photo {
-    /// A WebP photo's copies for the browser to pick from (GALLERY_SIZES).
+    /// A WebP photo's copies for the browser to pick from on the listing page, which shows it
+    /// whole (GALLERY_SIZES): each by its longer side.
     pub fn webp_srcset(&self) -> Option<String> {
         let full = self.webp_url.as_deref()?;
-        let side = self.width_px.zip(self.height_px).map_or(FULL_SIDE, |(width, height)| width.max(height) as u32);
-        Some(photos::srcset(&self.card_url, self.middle_url.as_deref(), full, side))
+        let (width, height) = photos::Copies::size(self.width_px, self.height_px);
+        let copies = photos::Copies { card: &self.card_url, middle: self.middle_url.as_deref(), full, width, height };
+        Some(photos::srcset(&copies, photos::Measure::Longer))
     }
 
     /// What the frame shows blurred around the photo, and behind it while it loads: its tiny copy,
@@ -109,22 +114,23 @@ impl ListingCard {
     }
 
     /// The photos a big card slides through, the cover first, each with its copies for the
-    /// browser to pick from (ListingPage::sizes): a WebP photo's four, and before them the cards'
-    /// two as AVIF, or the card-sized copy and the full one of a photo kept before. A small card
-    /// shows the first.
+    /// browser to pick from (ListingPage::sizes_of), each by its shorter side, which a card's
+    /// square scales it by: a WebP photo's four, and before them the cards' two as AVIF, or the
+    /// card-sized copy and the full one of a photo kept before. A small card shows the first.
     pub fn slides(&self) -> impl Iterator<Item = Slide<'_>> {
         self.photos.iter().zip(&self.photos_full).enumerate().map(|(i, (small, full))| {
             match self.photos_webp.get(i).and_then(Option::as_ref) {
                 Some(webp) => {
-                    let side = webp.side.map_or(FULL_SIDE, |side| side as u32);
-                    let middle = webp.middle.as_deref();
+                    let (width, height) = photos::Copies::size(webp.width, webp.height);
+                    let copies = photos::Copies { card: &webp.card, middle: webp.middle.as_deref(), full: &webp.full, width, height };
                     Slide {
                         small,
                         src: full,
                         srcset: None,
-                        webp: Some(photos::srcset(&webp.card, middle, &webp.full, side)),
-                        avif: photos::avif_srcset(&webp.card, middle, &webp.full, side),
+                        webp: Some(photos::srcset(&copies, photos::Measure::Shorter)),
+                        avif: photos::avif_srcset(&copies, photos::Measure::Shorter),
                         placeholder: webp.placeholder.as_deref(),
+                        landscape: width > height,
                     }
                 }
                 None => Slide {
@@ -134,6 +140,7 @@ impl ListingCard {
                     webp: None,
                     avif: None,
                     placeholder: None,
+                    landscape: false,
                 },
             }
         })

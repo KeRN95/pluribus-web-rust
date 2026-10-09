@@ -27,10 +27,10 @@
       {%- for slide in card.slides() %}
       <a class="card-slide" href="{{ card.url() }}" tabindex="-1" aria-hidden="true">
         {%- if let Some(webp) = slide.webp %}<picture>
-          {%- if let Some(avif) = slide.avif %}<source type="image/avif" srcset="{{ avif }}" sizes="{{ page.sizes() }}">{% endif -%}
-          <source type="image/webp" srcset="{{ webp }}" sizes="{{ page.sizes() }}">{% endif -%}
+          {%- if let Some(avif) = slide.avif %}<source type="image/avif" srcset="{{ avif }}" sizes="{{ page.sizes_of(slide) }}">{% endif -%}
+          <source type="image/webp" srcset="{{ webp }}" sizes="{{ page.sizes_of(slide) }}">{% endif -%}
         <img class="card-photo" src="{{ slide.src }}"
-        {%- if let Some(srcset) = slide.srcset %} srcset="{{ srcset }}" sizes="{{ page.sizes() }}"{% endif %} alt="" width="480" height="360" decoding="async"
+        {%- if let Some(srcset) = slide.srcset %} srcset="{{ srcset }}" sizes="{{ page.sizes_of(slide) }}"{% endif %} alt="" width="480" height="360" decoding="async"
         {%- if loop.first %}{% if let Some(placeholder) = slide.placeholder %} style="background-image: url({{ placeholder }})"{% endif %}{% endif %}
         {%- if !(eager && loop.first) %} loading="lazy"{% endif %}
         {%- if lead && loop.first %} fetchpriority="high"{% endif %}>

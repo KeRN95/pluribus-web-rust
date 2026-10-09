@@ -20,8 +20,9 @@ use uuid::Uuid;
 use super::{
     Result, cookie,
     filters::{Chip, Field, FieldKind, Filters, Params, PriceChoice, TOWN_COOKIE},
-    icons, is_next_page_request, named, newest, not_found, render,
-    safety,
+    icons, is_next_page_request,
+    listings::Slide,
+    named, newest, not_found, render, safety,
     seo::{self, PageMeta},
 };
 use crate::{
@@ -131,6 +132,12 @@ impl Cards {
 /// from 960px, the gaps between them as the grid's.
 const ROW_SIZES: &str = "(min-width: 1100px) 236px, (min-width: 960px) calc((100vw - 96px) / 4.25), (min-width: 724px) calc((100vw - 80px) / 3.25), (min-width: 720px) calc((100vw - 64px) / 2.25), calc((100vw - 49px) / 2.25)";
 
+/// How wide a big card's photo needs to be when it is wider than tall: the card's frame is 4:3
+/// (page.css, .cards-big), so it cuts a wide photo at its sides and scales it by its height, three
+/// quarters of the frame's width, which the srcset's widths give (the photo's shorter side,
+/// photos::Measure); a tall photo it scales by its width (Cards::sizes).
+const BIG_LANDSCAPE_SIZES: &str = "(min-width: 1100px) 392px, (min-width: 960px) calc((100vw - 56px) * 0.375), (min-width: 720px) 480px, (min-width: 588px) 420px, calc((100vw - 28px) * 0.75)";
+
 /// The cookie the view menu sets (cards_controller.js): "small", "big" or "list" (Cards::value).
 const CARDS_COOKIE: &str = "cards";
 
@@ -206,8 +213,17 @@ impl ListingPage {
     /// quarter of the next card showing at its edge, narrower than a column of the grid
     /// (ROW_SIZES); a shorter row's are as wide as the grid's.
     pub fn sizes(&self) -> &'static str {
-        let full_row = self.card_ids == NEWEST_IDS || (self.card_ids != LISTING_IDS && self.cards.len() >= 5);
-        if full_row { ROW_SIZES } else { self.layout.sizes() }
+        if self.full_row() { ROW_SIZES } else { self.layout.sizes() }
+    }
+
+    /// How wide one of its cards' photos needs to be: as wide as it shows (`sizes`), or, in a big
+    /// card, a photo wider than tall three quarters of that (BIG_LANDSCAPE_SIZES).
+    pub fn sizes_of(&self, slide: &Slide) -> &'static str {
+        if self.layout == Cards::Big && slide.landscape && !self.full_row() { BIG_LANDSCAPE_SIZES } else { self.sizes() }
+    }
+
+    fn full_row(&self) -> bool {
+        self.card_ids == NEWEST_IDS || (self.card_ids != LISTING_IDS && self.cards.len() >= 5)
     }
 
     /// The page's class for how its cards show: none for small ones.

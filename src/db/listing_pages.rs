@@ -68,13 +68,14 @@ pub const DESCRIPTION_EXCERPT: usize = 400;
 
 /// A photo's WebP copies (media.rs), as a card has them: the card's (the small one's address is
 /// it with its own ending, web/photos.rs), the middle one (none for a photo no bigger), the full
-/// one and its longer side, and the tiny one as a data: URI.
+/// one and its size, and the tiny one as a data: URI.
 #[derive(Debug, Clone, Deserialize)]
 pub struct WebpCopies {
     pub card: String,
     pub middle: Option<String>,
     pub full: String,
-    pub side: Option<i32>,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
     pub placeholder: Option<String>,
 }
 
@@ -492,7 +493,7 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH card_attributes AS MATERIALI
                             AND coalesce(m.public_url, m.thumbnail_url) IS NOT NULL), '{}') AS photos_full,
                 coalesce((SELECT json_agg(CASE WHEN m.mime_type = 'image/webp' THEN
                                      json_build_object('card', coalesce(m.thumbnail_url, m.public_url), 'middle', m.middle_url,
-                                                       'full', m.public_url, 'side', greatest(m.width_px, m.height_px),
+                                                       'full', m.public_url, 'width', m.width_px, 'height', m.height_px,
                                                        'placeholder', m.placeholder)
                                  END ORDER BY m.is_cover DESC, m.sort_order)
                           FROM listing_media m

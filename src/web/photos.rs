@@ -16,8 +16,8 @@ use crate::{
     AppState,
     db::NewPhoto,
     media::{
-        self, CARD_AVIF, CARD_COPY, CARD_SIDE, MAX_PHOTOS, MAX_UPLOAD_BYTES, MIDDLE_SIDE, Media, Processed, SMALL_AVIF,
-        SMALL_COPY, SMALL_SIDE,
+        self, CARD_AVIF, CARD_COPY, CARD_SIDE, FULL_SIDE, MAX_PHOTOS, MAX_UPLOAD_BYTES, MIDDLE_SIDE, Media, Processed,
+        SMALL_AVIF, SMALL_COPY, SMALL_SIDE,
     },
 };
 
@@ -184,43 +184,103 @@ pub fn small_url(card: &str) -> Option<String> {
     card.strip_suffix(CARD_COPY).map(|name| format!("{name}{SMALL_COPY}"))
 }
 
+/// A WebP photo's copies as a page names them in a srcset (`srcset`, `avif_srcset`): the card's
+/// address, the middle one's (none for a photo no bigger), the full one's, and the full copy's
+/// size, from which each copy's follows (media::cover_size, fit_size).
+pub struct Copies<'a> {
+    pub card: &'a str,
+    pub middle: Option<&'a str>,
+    pub full: &'a str,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl Copies<'_> {
+    /// A photo's size as listing_media keeps it, or, for one whose size wasn't kept, a square of
+    /// FULL_SIDE, which names the copies as a square photo's.
+    pub fn size(width: Option<i32>, height: Option<i32>) -> (u32, u32) {
+        match (width.and_then(|w| u32::try_from(w).ok()), height.and_then(|h| u32::try_from(h).ok())) {
+            (Some(width), Some(height)) if width > 0 && height > 0 => (width, height),
+            _ => (FULL_SIDE, FULL_SIDE),
+        }
+    }
+}
+
+/// Which side of a copy a srcset gives as its width, which the browser sets against the `sizes`
+/// the page says and its screen's density: the shorter one for a card, which cuts the photo to a
+/// square (page.css, object-fit: cover) and so scales it by that side, a wide photo by its height;
+/// the longer one on the listing page, which shows the photo whole.
+#[derive(Clone, Copy)]
+pub enum Measure {
+    Shorter,
+    Longer,
+}
+
+impl Measure {
+    fn of(self, (width, height): (u32, u32)) -> u32 {
+        match self {
+            Measure::Shorter => width.min(height),
+            Measure::Longer => width.max(height),
+        }
+    }
+}
+
+/// Whether a copy of one size has fewer pixels along its sides than one of another: the copies
+/// of a photo share its shape.
+fn smaller(size: (u32, u32), than: (u32, u32)) -> bool {
+    size.0.max(size.1) < than.0.max(than.1)
+}
+
+/// What the pages add to the cards' copies' addresses (`srcset`, `avif_srcset`): the copies were
+/// made again on 2026-10-09, sized by their shorter side, under the names they had, which browsers
+/// keep for a year (media::CACHE_FOR_A_YEAR), so the pages name them with a query the old ones
+/// hadn't, and a browser that kept the old ones fetches the new. The server serves a photo by its
+/// path, whatever the query.
+const CARD_COPIES_EDITION: &str = "?2";
+
 /// A WebP photo's copies for a srcset, the small one, the card's, the middle one and the full one,
-/// each with its longer side as its width: photos are made by it, and it is about what a tall
-/// photo needs too, shown whole on a listing page or cut square on a card. `side` is the full
-/// copy's longer side; a copy no smaller than it isn't there, or is left out.
-pub fn srcset(card: &str, middle: Option<&str>, full: &str, side: u32) -> String {
-    let mut copies = Vec::with_capacity(4);
-    if let Some(small) = small_url(card).filter(|_| side > SMALL_SIDE) {
-        copies.push(format!("{small} {SMALL_SIDE}w"));
+/// each with the side `by` names as its width. A copy no smaller than the full one, which a small
+/// photo's card copy is, is left out.
+pub fn srcset(copies: &Copies, by: Measure) -> String {
+    let full = (copies.width, copies.height);
+    let mut listed = Vec::with_capacity(4);
+    let small = media::cover_size(copies.width, copies.height, SMALL_SIDE);
+    if let Some(url) = small_url(copies.card).filter(|_| smaller(small, full)) {
+        listed.push((format!("{url}{CARD_COPIES_EDITION}"), small));
     }
-    if side > CARD_SIDE {
-        copies.push(format!("{card} {CARD_SIDE}w"));
+    let card = media::cover_size(copies.width, copies.height, CARD_SIDE);
+    if smaller(card, full) {
+        listed.push((format!("{}{CARD_COPIES_EDITION}", copies.card), card));
     }
-    if let Some(middle) = middle.filter(|_| side > MIDDLE_SIDE) {
-        copies.push(format!("{middle} {MIDDLE_SIDE}w"));
+    if let Some(middle) = copies.middle {
+        listed.push((middle.to_string(), media::fit_size(copies.width, copies.height, MIDDLE_SIDE)));
     }
-    copies.push(format!("{full} {side}w"));
-    copies.join(", ")
+    listed.push((copies.full.to_string(), full));
+    listed.iter().map(|(url, size)| format!("{url} {}w", by.of(*size))).collect::<Vec<_>>().join(", ")
 }
 
 /// A WebP photo's copies for a srcset of AVIF ones, which the browsers that show AVIF take before
 /// the WebP ones (`srcset`): the small one and the card's as AVIF, then the middle WebP one and
 /// the full one, which every such browser shows too, for a big card or a screen denser than the
-/// card's copy serves. None for a photo kept before WebP, or from elsewhere.
-pub fn avif_srcset(card: &str, middle: Option<&str>, full: &str, side: u32) -> Option<String> {
-    let name = card.strip_suffix(CARD_COPY)?;
-    let mut copies = Vec::with_capacity(4);
-    if side > SMALL_SIDE {
-        copies.push(format!("{name}{SMALL_AVIF} {SMALL_SIDE}w"));
+/// card's copy serves; those no bigger than the card's AVIF copy are left out. None for a photo
+/// kept before WebP, or from elsewhere.
+pub fn avif_srcset(copies: &Copies, by: Measure) -> Option<String> {
+    let name = copies.card.strip_suffix(CARD_COPY)?;
+    let full = (copies.width, copies.height);
+    let card = media::cover_size(copies.width, copies.height, CARD_SIDE);
+    let small = media::cover_size(copies.width, copies.height, SMALL_SIDE);
+    let mut listed = Vec::with_capacity(4);
+    if smaller(small, card) {
+        listed.push((format!("{name}{SMALL_AVIF}{CARD_COPIES_EDITION}"), small));
     }
-    copies.push(format!("{name}{CARD_AVIF} {}w", side.min(CARD_SIDE)));
-    if side > CARD_SIDE {
-        if let Some(middle) = middle.filter(|_| side > MIDDLE_SIDE) {
-            copies.push(format!("{middle} {MIDDLE_SIDE}w"));
+    listed.push((format!("{name}{CARD_AVIF}{CARD_COPIES_EDITION}"), card));
+    if smaller(card, full) {
+        if let Some(middle) = copies.middle {
+            listed.push((middle.to_string(), media::fit_size(copies.width, copies.height, MIDDLE_SIDE)));
         }
-        copies.push(format!("{full} {side}w"));
+        listed.push((copies.full.to_string(), full));
     }
-    Some(copies.join(", "))
+    Some(listed.iter().map(|(url, size)| format!("{url} {}w", by.of(*size))).collect::<Vec<_>>().join(", "))
 }
 
 /// The WebP copy of the same size as an AVIF one, which stands in for it until it is made.
