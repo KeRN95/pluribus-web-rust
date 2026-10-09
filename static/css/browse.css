@@ -140,8 +140,14 @@
 /* The row of buttons as close under the category pills (the subcategories, or the path when it has
    none) as the pills are to each other: .5rem, not the 1rem a heading leaves. */
 .category-pills ~ .browse { margin-top: .5rem; }
-/* Before Prona's pills, the house is filled in Rolex's gold, as the pills are in its green. */
-body[data-section="prona"] .home-icon { color: var(--gold); }
+/* Before Prona's pills, the house's button is marked in Rolex's gold, as the back button beside it
+   is in Prona's green: the gold's tint, a border of the gold and the house filled in it, the
+   border whole under the pointer or a press. */
+body[data-section="prona"] .back-button:has(.home-icon) { border-color: color-mix(in srgb, var(--gold) 60%, transparent); background: var(--gold-bg); color: var(--gold); }
+body[data-section="prona"] .back-button:has(.home-icon):active { border-color: var(--gold); background: var(--gold-bg); }
+@media (hover: hover) {
+  body[data-section="prona"] .back-button:has(.home-icon):hover { border-color: var(--gold); background: var(--gold-bg); }
+}
 
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 

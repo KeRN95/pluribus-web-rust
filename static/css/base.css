@@ -75,6 +75,7 @@
   --burgundy-button-hover: #651a2a;
   --green: #006039;              /* Rolex's green: Prona (below) */
   --gold: #a37e2c;               /* Rolex's gold: the house before Prona's pills (browse.css) */
+  --gold-bg: #f4ecd6;            /* its tint */
   --green-bg: #dcefe5;
   --green-button: #006039;
   --green-button-hover: #004f2e;
@@ -165,7 +166,7 @@
   --burgundy-button-hover: #a8365a;
   --green: #3fa070;
   --green-bg: #1f3a2d;
-  --gold: #cfa94a;
+  --gold: #cfa94a; --gold-bg: #3e3520;
   --green-button: #0f6a45;
   --green-button-hover: #1f8457;
   --navy: #8ea4e6;
@@ -224,7 +225,7 @@
     --burgundy-button-hover: #a8365a;
     --green: #3fa070;
     --green-bg: #1f3a2d;
-    --gold: #cfa94a;
+    --gold: #cfa94a; --gold-bg: #3e3520;
     --green-button: #0f6a45;
     --green-button-hover: #1f8457;
     --navy: #8ea4e6;
