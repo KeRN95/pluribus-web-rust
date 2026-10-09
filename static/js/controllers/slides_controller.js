@@ -4,8 +4,10 @@ import { Controller } from "@hotwired/stimulus";
 // a finger slides through them, and so does a mouse, pressed and moved: let go, the row settles on
 // the photo nearest, or on the next one the way it was flicked, and the click that ends the drag
 // opens no listing. The dots over the photo say which one shows, and under a mouse a click on one
-// goes to its photo. The arrows step, each showing only while the mouse is near its edge of the
-// photo (near-previous, near-next). A small card shows only its first photo, and none of this.
+// goes to its photo. The arrows step, round and round: the next from the last photo goes back to
+// the first, the previous from the first to the last; each shows only while the mouse is near its
+// edge of the photo (near-previous, near-next). A small card shows only its first photo, and none
+// of this.
 
 // How long a step from one photo to another takes, in milliseconds.
 const STEP_MS = 200;
@@ -42,11 +44,11 @@ export default class extends Controller {
   }
 
   previous() {
-    this.go(this.index - 1);
+    this.go((this.index - 1 + this.count) % this.count);
   }
 
   next() {
-    this.go(this.index + 1);
+    this.go((this.index + 1) % this.count);
   }
 
   // A dot clicked: its photo.
@@ -144,13 +146,18 @@ export default class extends Controller {
     this.element.classList.remove("near-previous", "near-next");
   }
 
-  // Which photo shows, as the row scrolls: its dot lights up, and an arrow goes at either end.
+  // Which photo shows, as the row scrolls: its dot lights up. The arrows, there at either end as
+  // they go round, come with the controller (the page has them hidden until it connects).
   update() {
     const index = this.index;
-    const dots = [...this.dotsTarget.children];
-    dots.forEach((dot, at) => dot.classList.toggle("is-current", at === index));
-    this.previousTarget.hidden = index <= 0;
-    this.nextTarget.hidden = index >= dots.length - 1;
+    [...this.dotsTarget.children].forEach((dot, at) => dot.classList.toggle("is-current", at === index));
+    this.previousTarget.hidden = false;
+    this.nextTarget.hidden = false;
+  }
+
+  // How many photos the card has: a dot each.
+  get count() {
+    return this.dotsTarget.children.length;
   }
 
   // Big cards only: a small card's photos don't slide, though it has this controller to slide them
