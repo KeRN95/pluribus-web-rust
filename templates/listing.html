@@ -167,8 +167,8 @@
   <aside class="listing-contact" aria-label="Kontakti">
   <div class="actions">
     {% if let Some(reveal) = reveal %}
-    {#- A phone in a circle (an envelope for a seller who signed in by e-mail), named for screen
-        readers and in a tooltip. Turbo submits the form and swaps in the number (or address) from
+    {#- A phone in a pill marked as what is picked is (an envelope for a seller who signed in by
+        e-mail), named for screen readers and in a tooltip. Turbo submits the form and swaps in the number (or address) from
         the Turbo Stream response. -#}
     <form id="phone-reveal" method="post" action="/listing/{{ listing.public_no }}/phone">
       <button type="submit" class="button reveal-button" aria-label="{{ reveal.label() }}" title="{{ reveal.label() }}">
@@ -177,7 +177,7 @@
     </form>
     {% endif %}
     {%- if !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}
-    {#- A speech bubble in a coral circle beside the phone: a message to the seller, which takes
+    {#- A speech bubble in a pill like it beside the phone: a message to the seller, which takes
         signing in first (messages.rs); signed in, the conversation opens in the sheet under it. -#}
     <a class="button reveal-button" href="/listing/{{ listing.public_no }}/mesazh" aria-label="Shkruaji shitësit" title="Shkruaji shitësit"
        {%- if sheet %} data-turbo-frame="conversation" data-turbo-prefetch="false" data-action="message-sheet#open"{% endif %}>

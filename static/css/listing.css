@@ -344,11 +344,29 @@
 .actions .button { border-radius: 999px; transition: background-color .15s, transform .1s; }
 .actions .button:active { transform: scale(.97); }
 .actions .button.secondary { gap: .45rem; border-color: var(--menu-border); }
-/* The way to the seller's number: a phone in a coral circle (an envelope for an e-mail address).
-   Once tapped, the number takes its place, after the same icon, with a button beside it that
-   copies it (copy_controller.js). */
-.reveal-button { justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; border-radius: 50%; }
+/* The way to the seller's number, a phone (an envelope for an e-mail address), and to a message,
+   a speech bubble: pills a little taller than the circles beside them, half as wide again as they
+   are tall, marked as the site marks what is picked (a category page's own pill, the welcome
+   page's search): the coral's tint, a border of the coral and the icon in it, the border whole
+   under the pointer or a press. Once tapped, the number takes the phone's place, after the same
+   icon, marked alike, with a button beside it that copies it (copy_controller.js). The seller's
+   card at the foot has the two again, small circles marked the same (.seller-contact). */
+.reveal-button { justify-content: center; width: 4.65rem; height: 3.1rem; padding: 0; }
 .reveal-contact { gap: .45rem; }
+.actions .reveal-contact { height: 3.1rem; padding: 0 1.2rem 0 1.05rem; }
+.button.reveal-button,
+.button.reveal-contact {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background: var(--badge);
+  color: var(--accent);
+  transition: border-color .15s, transform .1s;
+}
+.button.reveal-button:active,
+.button.reveal-contact:active { border-color: var(--accent); }
+@media (hover: hover) {
+  .button.reveal-button:hover,
+  .button.reveal-contact:hover { border-color: var(--accent); background: var(--badge); }
+}
 .contact-icon { flex: none; }
 .contact-revealed { display: flex; gap: .5rem; }
 /* The copy and share buttons: an icon in a circle on the surface, with the menus' hairline, as
