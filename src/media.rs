@@ -4,22 +4,27 @@
 //!
 //! Every photo is decoded and written out again, which also drops what phones keep inside them,
 //! the place a photo was taken included. It is kept as WebP, about a third lighter than JPEG at the
-//! same quality, in three sizes: the full one for the listing page on big screens, a middle one for
-//! phones and big cards, and the card's. Pages name all three and the browser picks the one its
-//! screen needs (srcset). A JPEG of the full one, by mozjpeg, is for what doesn't show WebP: link
-//! previews, and old browsers. A tiny copy, a few hundred bytes, goes in the pages themselves (a
-//! data: URI), blurred behind the photo while it loads and around it where it doesn't fill its
-//! frame.
+//! same quality, in four sizes: the full one for the listing page on big screens, a middle one for
+//! phones and big cards, the card's, and a small one for cards on a computer's screen and phones'
+//! narrower ones. Pages name them all and the browser picks the one its screen needs (srcset). A
+//! JPEG of the full one, by mozjpeg, is for what doesn't show WebP: link previews, and old
+//! browsers. A tiny copy, a few hundred bytes, goes in the pages themselves (a data: URI), blurred
+//! behind the photo while it loads and around it where it doesn't fill its frame.
+//!
+//! Photos kept before there were small copies get theirs from their card's: all of them in the
+//! background as the server starts (Media::fill_in_small_copies), and any one asked for before
+//! then as it is (Media::small_copy).
 //!
 //! The site serves the files itself, from /media/..., so they work wherever the site does; or a CDN
 //! does, from the address MEDIA_URL gives (README, "Photos"). Each is stored with its type and a
 //! year's caching, which the store, or a CDN in front of it, sends with it.
 
-use std::{io::Cursor, sync::Arc};
+use std::{collections::HashSet, io::Cursor, sync::Arc};
 
 use anyhow::Context;
 use axum::body::Bytes;
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
+use futures_util::TryStreamExt;
 use image::{
     DynamicImage, ImageDecoder, ImageReader, Limits, codecs::jpeg::JpegEncoder, imageops::FilterType,
     metadata::Orientation,
@@ -34,12 +39,17 @@ use sha2::{Digest, Sha256};
 pub const MAX_PHOTOS: usize = 8;
 /// One photo as sent. Phones send them smaller: photos_controller.js shrinks them first.
 pub const MAX_UPLOAD_BYTES: usize = 15 * 1024 * 1024;
-/// The longest side of each copy: the full photo, the middle one, the card's, and the tiny one in
-/// the pages.
+/// The longest side of each copy: the full photo, the middle one, the card's, the small one, and the
+/// tiny one in the pages.
 pub const FULL_SIDE: u32 = 1600;
 pub const MIDDLE_SIDE: u32 = 1200;
 pub const CARD_SIDE: u32 = 600;
+pub const SMALL_SIDE: u32 = 400;
 const PLACEHOLDER_SIDE: u32 = 16;
+/// What the card's copy and the small one add to a photo's name (web/photos.rs, COPIES): the small
+/// one's name is the card's with the one for the other.
+pub const CARD_COPY: &str = "-card.webp";
+pub const SMALL_COPY: &str = "-small.webp";
 /// libwebp's quality, out of 100, for the copies and for the tiny one, which is blurred anyway;
 /// mozjpeg's for the JPEG, which with its trellis quantisation looks as a plain encoder's 85 does.
 const WEBP_QUALITY: f32 = 80.0;
@@ -135,6 +145,63 @@ impl Media {
             Err(error) => Err(error).with_context(|| format!("deleting {key}")),
         }
     }
+
+    /// The small copy kept under `key` (a name ending in SMALL_COPY), made now from its card's
+    /// copy and kept, for a photo kept before there were small copies whose own isn't made yet
+    /// (fill_in_small_copies); None when the name isn't a small copy's or there is no card's copy
+    /// by it. Another asking for it at the same time makes the same file.
+    pub async fn small_copy(&self, key: &str) -> anyhow::Result<Option<Bytes>> {
+        let Some(name) = key.strip_suffix(SMALL_COPY) else {
+            return Ok(None);
+        };
+        let Some(card) = self.get(&format!("{name}{CARD_COPY}")).await? else {
+            return Ok(None);
+        };
+        let small = tokio::task::spawn_blocking(move || small_from_card(&card))
+            .await?
+            .map_err(|_| anyhow::anyhow!("{name}{CARD_COPY} isn't a photo"))?;
+        self.put(key, small.clone()).await?;
+        Ok(Some(Bytes::from(small)))
+    }
+
+    /// Makes the small copy of every photo in the store that lacks one, from its card's copy, one
+    /// after the other: the photos kept before there were small copies. How many it made.
+    pub async fn make_missing_small_copies(&self) -> anyhow::Result<usize> {
+        let keys: HashSet<String> = self
+            .store
+            .list(Some(&Path::from("photos")))
+            .map_ok(|meta| meta.location.to_string())
+            .try_collect()
+            .await
+            .context("listing the photos")?;
+        let mut made = 0;
+        for name in keys.iter().filter_map(|key| key.strip_suffix(CARD_COPY)) {
+            let small = format!("{name}{SMALL_COPY}");
+            if keys.contains(&small) {
+                continue;
+            }
+            // One that can't be made leaves the others to be.
+            match self.small_copy(&small).await {
+                Ok(Some(_)) => made += 1,
+                Ok(None) => {}
+                Err(error) => tracing::warn!(%error, "a photo's small copy could not be made"),
+            }
+        }
+        Ok(made)
+    }
+
+    /// make_missing_small_copies in the background, which the pages needn't wait for: until a
+    /// photo's small copy is made, the first to ask for it has it made (web/photos.rs, serve).
+    pub fn fill_in_small_copies(&self) {
+        let media = self.clone();
+        tokio::spawn(async move {
+            match media.make_missing_small_copies().await {
+                Ok(0) => {}
+                Ok(made) => tracing::info!(made, "made the small copies of the photos kept before there were any"),
+                Err(error) => tracing::warn!(%error, "could not make the small copies photos lack"),
+            }
+        });
+    }
 }
 
 /// A stored file's type, from its name.
@@ -149,6 +216,7 @@ pub struct Processed {
     pub full: Vec<u8>,
     pub middle: Option<Vec<u8>>,
     pub card: Vec<u8>,
+    pub small: Vec<u8>,
     pub jpeg: Vec<u8>,
     pub placeholder: String,
     pub width: u32,
@@ -166,17 +234,25 @@ pub fn process(bytes: &[u8]) -> Result<Processed, NotAPhoto> {
     let full = DynamicImage::from(shrink(decode(bytes)?, FULL_SIDE).into_rgb8());
     let middle = (full.width().max(full.height()) > MIDDLE_SIDE).then(|| shrink(full.clone(), MIDDLE_SIDE));
     let card = shrink(middle.clone().unwrap_or_else(|| full.clone()), CARD_SIDE);
-    let placeholder = webp(&shrink(card.clone(), PLACEHOLDER_SIDE), PLACEHOLDER_QUALITY)?;
+    let small = shrink(card.clone(), SMALL_SIDE);
+    let placeholder = webp(&shrink(small.clone(), PLACEHOLDER_SIDE), PLACEHOLDER_QUALITY)?;
     Ok(Processed {
         full: webp(&full, WEBP_QUALITY)?,
         middle: middle.map(|middle| webp(&middle, WEBP_QUALITY)).transpose()?,
         card: webp(&card, WEBP_QUALITY)?,
+        small: webp(&small, WEBP_QUALITY)?,
         jpeg: jpeg(&full)?,
         placeholder: format!("data:image/webp;base64,{}", BASE64.encode(placeholder)),
         width: full.width(),
         height: full.height(),
         sha256: Sha256::digest(bytes).into(),
     })
+}
+
+/// The small copy of a photo kept before there were small copies, from its card's (a WebP), as
+/// `process` makes it. Slow work too.
+pub fn small_from_card(card: &[u8]) -> Result<Vec<u8>, NotAPhoto> {
+    webp(&shrink(decode(card)?, SMALL_SIDE), WEBP_QUALITY)
 }
 
 /// A JPEG copy no longer than `side` on its longer side, turned the way the camera held it: what
@@ -271,13 +347,14 @@ mod tests {
     }
 
     #[test]
-    fn photos_come_out_as_webp_in_three_sizes_with_a_jpeg_and_a_tiny_copy() {
+    fn photos_come_out_as_webp_in_four_sizes_with_a_jpeg_and_a_tiny_copy() {
         use image::ImageFormat::{Jpeg, WebP};
         let processed = process(&sample_jpeg(3000, 2000)).unwrap();
         assert_eq!((processed.width, processed.height), (1600, 1067));
         assert_eq!(size_of(&processed.full), (1600, 1067, WebP));
         assert_eq!(size_of(processed.middle.as_deref().unwrap()), (1200, 800, WebP));
         assert_eq!(size_of(&processed.card), (600, 400, WebP));
+        assert_eq!(size_of(&processed.small), (400, 267, WebP));
         assert_eq!(size_of(&processed.jpeg), (1600, 1067, Jpeg));
         // mozjpeg's, progressive: its frame starts with 0xFFC2 rather than a baseline's 0xFFC0.
         assert!(processed.jpeg.windows(2).any(|marker| marker == [0xFF, 0xC2]));
@@ -289,8 +366,36 @@ mod tests {
         assert_eq!((small.width, small.height), (1000, 750));
         assert!(small.middle.is_none());
         assert_eq!(size_of(&small.card), (600, 450, WebP));
+        assert_eq!(size_of(&small.small), (400, 300, WebP));
         let tiny = process(&sample_jpeg(400, 300)).unwrap();
         assert_eq!(size_of(&tiny.card), (400, 300, WebP));
+        assert_eq!(size_of(&tiny.small), (400, 300, WebP));
+    }
+
+    #[tokio::test]
+    async fn photos_kept_before_there_were_small_copies_get_theirs() {
+        let media = Media::in_memory();
+        let card = process(&sample_jpeg(1000, 750)).unwrap().card;
+        media.put("photos/old-card.webp", card.clone()).await.unwrap();
+        media.put("photos/new-card.webp", card).await.unwrap();
+        media.put("photos/new-small.webp", vec![1, 2, 3]).await.unwrap();
+        media.put("photos/broken-card.webp", b"not a photo".to_vec()).await.unwrap();
+        // All at once, from the card's copy: the one that has its own keeps it, and one that isn't
+        // a photo leaves the others to be made.
+        assert_eq!(media.make_missing_small_copies().await.unwrap(), 1);
+        let small = media.get("photos/old-small.webp").await.unwrap().unwrap();
+        assert_eq!(size_of(&small), (400, 300, image::ImageFormat::WebP));
+        assert_eq!(media.get("photos/new-small.webp").await.unwrap().as_deref(), Some(&[1, 2, 3][..]));
+        assert!(media.get("photos/broken-small.webp").await.unwrap().is_none());
+        assert_eq!(media.make_missing_small_copies().await.unwrap(), 0);
+        // Or one asked for before then, kept as it is made; nothing for a photo with no card's copy,
+        // or a file that isn't a small copy.
+        media.delete("photos/old-small.webp").await.unwrap();
+        assert_eq!(media.small_copy("photos/old-small.webp").await.unwrap(), Some(small));
+        assert!(media.get("photos/old-small.webp").await.unwrap().is_some());
+        assert!(media.small_copy("photos/gone-small.webp").await.unwrap().is_none());
+        assert!(media.small_copy("photos/old-card.webp").await.unwrap().is_none());
+        assert!(media.small_copy("photos/broken-small.webp").await.is_err());
     }
 
     #[test]

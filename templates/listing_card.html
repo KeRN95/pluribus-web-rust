@@ -18,7 +18,7 @@
     {%- else %}
     {#- The first row's first photos load straight away; the rest wait until they come near the
         screen. Each photo is a link to the listing too, since in a big card the photos lie over
-        the title's stretched link, to be slid through. A photo kept as WebP offers its three
+        the title's stretched link, to be slid through. A photo kept as WebP offers its four
         copies in a picture, with its JPEG for browsers without WebP, and the first shows its tiny
         copy until it has loaded. -#}
     <div class="card-slides"{% if card.photos.len() > 1 %} data-slides-target="track" data-action="scroll->slides#update"{% endif %}>

@@ -70,8 +70,9 @@ pub struct Photo {
     /// before WebP.
     pub card_url: String,
     /// A photo kept as WebP: the full copy and the middle one (none for a photo no bigger), which
-    /// the browser picks between with the card's (srcset), and the tiny one as a data: URI, which
-    /// the page blurs behind it.
+    /// the browser picks between with the card's and the small one, whose address is the card's
+    /// with its own ending (srcset, web/photos.rs), and the tiny one as a data: URI, which the page
+    /// blurs behind it.
     pub webp_url: Option<String>,
     pub middle_url: Option<String>,
     pub placeholder: Option<String>,

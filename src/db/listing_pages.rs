@@ -66,8 +66,9 @@ pub struct ListingCard {
 /// How much of a description a card carries, in characters.
 pub const DESCRIPTION_EXCERPT: usize = 400;
 
-/// A photo's WebP copies (media.rs), as a card has them: the card's, the middle one (none for a
-/// photo no bigger), the full one and its longer side, and the tiny one as a data: URI.
+/// A photo's WebP copies (media.rs), as a card has them: the card's (the small one's address is
+/// it with its own ending, web/photos.rs), the middle one (none for a photo no bigger), the full
+/// one and its longer side, and the tiny one as a data: URI.
 #[derive(Debug, Clone, Deserialize)]
 pub struct WebpCopies {
     pub card: String,

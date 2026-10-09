@@ -104,17 +104,28 @@ impl Cards {
     }
 
     /// How wide a card's photo shows, for the browser to pick the copy it fetches (srcset in
-    /// listing_card.html): a column of the grid; for a big card the line, no wider than 40rem, and
-    /// half the page's 1100px on a wide screen; in the list, the photo at the line's left.
-    /// cards_controller.js switches between them as the view menu switches the cards.
+    /// listing_card.html), as page.css lays the cards out in the page (.container: 1100px at most,
+    /// 1rem in from the screen's sides, a rem 14px on a phone): a column of the grid, two on a
+    /// phone, three from 724px, four from 960px, .75rem apart on a phone and 1rem wider; for a big
+    /// card the line, no wider than 40rem, and half of it, less 1.5rem between them, from 960px; in
+    /// the list, the photo at the line's left, 8rem on a phone and 11rem wider. In pixels: a sizes
+    /// attribute's rem is always 16px. Just what the cards are, so that a phone's browser doesn't
+    /// take a copy bigger than its screen needs: Safari takes the first copy as sharp as the screen
+    /// at least, and on an iPhone took the middle one for every small card when this said half the
+    /// screen. cards_controller.js switches between them as the view menu switches the cards.
     pub fn sizes(self) -> &'static str {
         match self {
-            Cards::Small => "(min-width: 720px) 260px, 50vw",
-            Cards::Big => "(min-width: 960px) 535px, (min-width: 720px) 40rem, 100vw",
-            Cards::List => "(min-width: 720px) 176px, 128px",
+            Cards::Small => "(min-width: 1100px) 255px, (min-width: 960px) calc((100vw - 80px) / 4), (min-width: 724px) calc((100vw - 64px) / 3), (min-width: 720px) calc((100vw - 48px) / 2), calc((100vw - 38px) / 2)",
+            Cards::Big => "(min-width: 1100px) 522px, (min-width: 960px) calc((100vw - 56px) / 2), (min-width: 720px) 640px, (min-width: 588px) 560px, calc(100vw - 28px)",
+            Cards::List => "(min-width: 720px) 176px, 112px",
         }
     }
 }
+
+/// How wide a card shows in a row of five or more that slides sideways (.card-row in page.css), as
+/// Cards::sizes says it for the grid: 2.25 cards across the page on a phone, 3.25 from 724px, 4.25
+/// from 960px, the gaps between them as the grid's.
+const ROW_SIZES: &str = "(min-width: 1100px) 236px, (min-width: 960px) calc((100vw - 96px) / 4.25), (min-width: 724px) calc((100vw - 80px) / 3.25), (min-width: 720px) calc((100vw - 64px) / 2.25), calc((100vw - 49px) / 2.25)";
 
 /// The cookie the view menu sets (cards_controller.js): "small", "big" or "list" (Cards::value).
 const CARDS_COOKIE: &str = "cards";
@@ -180,8 +191,13 @@ impl ListingPage {
         self
     }
 
+    /// How wide its cards' photos show (Cards::sizes): in a row of five cards or more (card_row.html),
+    /// as the newest listings' is, which takes them from its stream one at a time (newest.rs), a
+    /// quarter of the next card showing at its edge, narrower than a column of the grid
+    /// (ROW_SIZES); a shorter row's are as wide as the grid's.
     pub fn sizes(&self) -> &'static str {
-        self.layout.sizes()
+        let full_row = self.card_ids == NEWEST_IDS || (self.card_ids != LISTING_IDS && self.cards.len() >= 5);
+        if full_row { ROW_SIZES } else { self.layout.sizes() }
     }
 
     /// The page's class for how its cards show: none for small ones.

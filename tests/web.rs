@@ -470,6 +470,10 @@ async fn the_welcome_page_has_the_newest_listings_in_a_row_that_follows_new_ones
     // from the same listings' cards in the grid under it.
     assert!(row.contains(r#"<div class="card-row" id="newest-strip""#), "{row}");
     assert!(row.contains(&format!(r#"<article class="card" id="newest-{}""#, latest[0])), "{row}");
+    // Its cards narrower than the grid's, a quarter of the next one showing at its edge: the
+    // copies the browser picks for their photos follow.
+    assert!(row.contains(&format!(r#"sizes="{ROW_SIZES}""#)) && !row.contains(SMALL_SIZES), "{row}");
+    assert!(section(&body, "latest-heading").contains(&format!(r#"sizes="{SMALL_SIZES}""#)));
     // The row follows the listings that come after its newest.
     let since = newest_cursor(&pool).await;
     assert!(row.contains(&format!(r#"data-cursor="{since}""#)), "{row}");
@@ -897,6 +901,14 @@ async fn prona_shows_big_cards_until_the_visitor_chooses_small_ones_there(pool: 
     assert!(get_with_cookie(pool, "/c/automjete", "cards=big").await.body.contains(big));
 }
 
+/// How wide the cards' photos show, for the browser to pick a copy (Cards::sizes in browse.rs): a
+/// column of the grid, a big card, the list's photo, and a card in a row of five or more
+/// (ROW_SIZES).
+const SMALL_SIZES: &str = "(min-width: 1100px) 255px, (min-width: 960px) calc((100vw - 80px) / 4), (min-width: 724px) calc((100vw - 64px) / 3), (min-width: 720px) calc((100vw - 48px) / 2), calc((100vw - 38px) / 2)";
+const BIG_SIZES: &str = "(min-width: 1100px) 522px, (min-width: 960px) calc((100vw - 56px) / 2), (min-width: 720px) 640px, (min-width: 588px) 560px, calc(100vw - 28px)";
+const LIST_SIZES: &str = "(min-width: 720px) 176px, 112px";
+const ROW_SIZES: &str = "(min-width: 1100px) 236px, (min-width: 960px) calc((100vw - 96px) / 4.25), (min-width: 724px) calc((100vw - 80px) / 3.25), (min-width: 720px) calc((100vw - 64px) / 2.25), calc((100vw - 49px) / 2.25)";
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn big_cards_slide_through_every_photo(pool: PgPool) {
     // Two more photos for the Golf, after its cover.
@@ -915,7 +927,7 @@ async fn big_cards_slide_through_every_photo(pool: PgPool) {
     let small = get(pool.clone(), "/c/makina").await.body;
     assert!(small.contains(r#"<div class="browse" data-controller="filters cards place""#));
     assert!(small.contains(r#"aria-label="Pamja: Kartela të vogla""#));
-    assert!(small.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
+    assert!(small.contains(&format!(r#"sizes="{SMALL_SIZES}""#)));
 
     // Big ones, from the cookie the view menu sets: every photo, the cover first, each with its
     // full copy for the browser to pick, and the dots and arrows to slide through them.
@@ -923,7 +935,7 @@ async fn big_cards_slide_through_every_photo(pool: PgPool) {
     let big = send(pool.clone(), request).await.body;
     assert!(big.contains(r#"<div class="browse cards-big" data-controller="filters cards place""#));
     assert!(big.contains(r#"aria-label="Pamja: Kartela të mëdha""#));
-    assert!(!big.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
+    assert!(!big.contains(&format!(r#"sizes="{SMALL_SIZES}""#)));
     assert_eq!(big.matches(r#"<div class="card-media" data-controller="slides">"#).count(), 1, "only the Golf has more than one");
     let golf = &big[big.find(r#"<div class="card-media" data-controller="slides">"#).unwrap()..];
     let golf = &golf[..golf.find("</article>").unwrap()];
@@ -931,7 +943,7 @@ async fn big_cards_slide_through_every_photo(pool: PgPool) {
     assert_eq!(golf.matches(r#"<a class="card-slide""#).count(), 3);
     let cover = golf.find("photo-1591230740238").unwrap();
     assert!(cover < golf.find("card-1.jpg").unwrap() && golf.find("card-1.jpg").unwrap() < golf.find("card-2.jpg").unwrap());
-    assert!(golf.contains(r#"srcset="https://example.com/card-2.jpg 600w, https://example.com/full-2.jpg 1600w" sizes="(min-width: 960px) 535px, (min-width: 720px) 40rem, 100vw""#));
+    assert!(golf.contains(&format!(r#"srcset="https://example.com/card-2.jpg 600w, https://example.com/full-2.jpg 1600w" sizes="{BIG_SIZES}""#)));
     assert_eq!(golf.matches(r#"<span class="is-current"></span><span></span><span></span>"#).count(), 1, "a dot for each photo");
     // Over the photo's top left, who sells it, their initial in a circle, and since when they are
     // a user.
@@ -940,7 +952,7 @@ async fn big_cards_slide_through_every_photo(pool: PgPool) {
 
     // The next pages come the same way, and the map page's list stays small.
     let pinned = Request::get("/harta").header("cookie", "cards=big").body(Body::empty()).unwrap();
-    assert!(send(pool, pinned).await.body.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
+    assert!(send(pool, pinned).await.body.contains(&format!(r#"sizes="{SMALL_SIZES}""#)));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -957,7 +969,7 @@ async fn the_list_shows_a_line_for_each_listing(pool: PgPool) {
     ]);
     assert!(options.is_sorted(), "{options:?}");
     assert!(menu.contains("</svg>Kartela të vogla</label>") && menu.contains("</svg>Listë</label>"));
-    assert!(cars.contains(r#"data-cards-list-value="(min-width: 720px) 176px, 128px""#));
+    assert!(cars.contains(&format!(r#"data-cards-list-value="{LIST_SIZES}""#)));
 
     // Chosen, from its cookie: the page says so, the photos fetched for the line's left, each
     // card saying when it was posted after its details line (page.css leaves that out of cards).
@@ -966,7 +978,7 @@ async fn the_list_shows_a_line_for_each_listing(pool: PgPool) {
     assert!(list.contains(r#"<div class="browse cards-list" data-controller="filters cards place""#));
     assert!(list.contains(r#"aria-label="Pamja: Listë""#));
     assert!(list.contains(r#"value="list" data-action="change->cards#choose" checked>"#));
-    assert!(list.contains(r#"sizes="(min-width: 720px) 176px, 128px""#));
+    assert!(list.contains(&format!(r#"sizes="{LIST_SIZES}""#)));
     let golf = &list[list.find(r#"<article class="card" id="listing-1001">"#).unwrap()..];
     let golf = &golf[..golf.find("</article>").unwrap()];
     assert!(golf.contains("Naftë</p>\n    <p class=\"card-when\">"));
@@ -975,7 +987,7 @@ async fn the_list_shows_a_line_for_each_listing(pool: PgPool) {
     assert!(get_with_cookie(pool.clone(), "/c/prona", "cards=list").await.body.contains(r#"<div class="browse cards-big""#));
     assert!(get_with_cookie(pool.clone(), "/c/prona", "cards-prona=list").await.body.contains(r#"<div class="browse cards-list""#));
     let map = Request::get("/harta").header("cookie", "cards=list").body(Body::empty()).unwrap();
-    assert!(send(pool, map).await.body.contains(r#"sizes="(min-width: 720px) 260px, 50vw""#));
+    assert!(send(pool, map).await.body.contains(&format!(r#"sizes="{SMALL_SIZES}""#)));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -3717,12 +3729,12 @@ async fn listings_get_photos(pool: PgPool) {
     let first = &page[page.find(r#"<img src="/media/photos/"#).unwrap()..];
     assert!(first[..first.find('>').unwrap()].contains(r#" fetchpriority="high""#), "{first}");
     assert_eq!(page.matches("fetchpriority").count(), 1);
-    // Each is kept as WebP in three sizes, which the browser picks between; the second, 800 px
-    // wide, in two.
+    // Each is kept as WebP in four sizes, which the browser picks between; the second, 800 px
+    // wide, in three.
     let (big, small) = (photo_urls[0].trim_end_matches(".jpg"), photo_urls[1].trim_end_matches(".jpg"));
     let sources = [
-        format!(r#"<picture><source type="image/webp" srcset="{big}-card.webp 600w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="(min-width: 1100px) 1068px,"#),
-        format!(r#"<picture><source type="image/webp" srcset="{small}-card.webp 600w, {small}.webp 800w" sizes="#),
+        format!(r#"<picture><source type="image/webp" srcset="{big}-small.webp 400w, {big}-card.webp 600w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="(min-width: 1100px) 1068px,"#),
+        format!(r#"<picture><source type="image/webp" srcset="{small}-small.webp 400w, {small}-card.webp 600w, {small}.webp 800w" sizes="#),
     ];
     for (url, source) in photo_urls.iter().zip(&sources) {
         // Whole in its frame, over a blurred copy of itself: its tiny copy, in the page, a
@@ -3744,15 +3756,24 @@ async fn listings_get_photos(pool: PgPool) {
     let photo = get(pool.clone(), photo_urls[0]).await;
     assert_eq!(photo.status, StatusCode::OK);
     assert_eq!(photo.content_type.as_deref(), Some("image/jpeg"));
-    for copy in ["", "-middle", "-card"] {
+    for copy in ["", "-middle", "-card", "-small"] {
         let webp = get(pool.clone(), &format!("{big}{copy}.webp")).await;
         assert_eq!(webp.content_type.as_deref(), Some("image/webp"), "{copy}");
         assert!(webp.body.starts_with("RIFF") && webp.body.chars().take(16).collect::<String>().contains("WEBP"));
     }
+    // A photo kept before there were small copies has its own made as it is first asked for,
+    // from the card's, and kept.
+    let small_key = format!("{}-small.webp", small.trim_start_matches("/media/"));
+    let made = get(pool.clone(), &format!("{small}-small.webp")).await.body;
+    media().delete(&small_key).await.unwrap();
+    let remade = get(pool.clone(), &format!("{small}-small.webp")).await;
+    assert_eq!((remade.status, remade.content_type.as_deref()), (StatusCode::OK, Some("image/webp")));
+    assert_eq!(remade.body, made);
+    assert!(media().get(&small_key).await.unwrap().is_some());
 
     // The card offers the cover's copies too, and shows its tiny one until it has loaded.
     let cards = get(pool.clone(), "/search?q=Galaxy").await.body;
-    assert!(cards.contains(&format!(r#"<source type="image/webp" srcset="{big}-card.webp 600w, {big}-middle.webp 1200w, {big}.webp 1600w""#)));
+    assert!(cards.contains(&format!(r#"<source type="image/webp" srcset="{big}-small.webp 400w, {big}-card.webp 600w, {big}-middle.webp 1200w, {big}.webp 1600w""#)));
     assert!(cards.contains(&format!(r#"<img class="card-photo" src="{big}.jpg""#)));
     assert!(cards.contains(r#"style="background-image: url(data:image/webp;base64,"#));
 
@@ -3773,7 +3794,7 @@ async fn listings_get_photos(pool: PgPool) {
     assert!(page.contains(r#"<div class="gallery">"#));
     assert!(!page.contains("data-controller=\"gallery\"") && !page.contains("gallery-count") && !page.contains(", foto 1 nga"));
     // The removed one's files are gone, every copy.
-    for file in [photo_urls[0].to_string(), format!("{big}.webp"), format!("{big}-middle.webp"), format!("{big}-card.webp")] {
+    for file in [photo_urls[0].to_string(), format!("{big}.webp"), format!("{big}-middle.webp"), format!("{big}-card.webp"), format!("{big}-small.webp")] {
         assert_eq!(get(pool.clone(), &file).await.status, StatusCode::NOT_FOUND, "{file}");
     }
     let covers: i64 = sqlx::query_scalar(
@@ -4659,6 +4680,8 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     // The same row of the same cards as "Sapo u shtuan" under it (card_row.html), its cards' ids
     // its own; the cards of the grid's, small, those of the browse pages.
     assert!(row.contains(r#"<div class="card-row"><article class="card" id="most-viewed-1002">"#), "{row}");
+    // Two cards are as wide as a column of the grid, and their photos are fetched for it.
+    assert!(row.contains(&format!(r#"sizes="{SMALL_SIZES}""#)), "{row}");
     let newest = section(&home, "newest-heading");
     assert!(newest.contains(r#"<div class="card-row" id="newest-strip""#), "{newest}");
     for cards in [row, newest] {

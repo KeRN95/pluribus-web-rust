@@ -15,13 +15,14 @@ use super::{Result, not_found};
 use crate::{
     AppState,
     db::NewPhoto,
-    media::{self, CARD_SIDE, MAX_PHOTOS, MAX_UPLOAD_BYTES, MIDDLE_SIDE, Media, Processed},
+    media::{self, CARD_COPY, CARD_SIDE, MAX_PHOTOS, MAX_UPLOAD_BYTES, MIDDLE_SIDE, Media, Processed, SMALL_COPY, SMALL_SIDE},
 };
 
 /// What each of a photo's files adds to its name (photos/ and 32 hex digits): the full WebP, whose
-/// key listing_media keeps, the middle one, the card's, and the JPEG. Photos kept before WebP
-/// (migration 0025) were a JPEG, whose key it kept, and a JPEG for the card.
-const COPIES: [&str; 4] = [".webp", "-middle.webp", "-card.webp", ".jpg"];
+/// key listing_media keeps, the middle one, the card's, the small one, and the JPEG. The small
+/// one's address is the card's with its own ending (small_url), so listing_media keeps none. Photos
+/// kept before WebP (migration 0025) were a JPEG, whose key it kept, and a JPEG for the card.
+const COPIES: [&str; 5] = [".webp", "-middle.webp", CARD_COPY, SMALL_COPY, ".jpg"];
 const EARLIER_CARD: &str = "-card.jpg";
 
 /// The posting and edit forms: their fields, and the photos chosen, if any. The forms are sent
@@ -103,7 +104,7 @@ pub async fn store(media: &Media, processed: Vec<Processed>) -> Result<Vec<NewPh
     let mut stored = Vec::with_capacity(processed.len());
     for photo in processed {
         let name = format!("photos/{:032x}", rand::random::<u128>());
-        let [full_key, middle_key, card_key, jpeg_key] = COPIES.map(|copy| format!("{name}{copy}"));
+        let [full_key, middle_key, card_key, small_key, jpeg_key] = COPIES.map(|copy| format!("{name}{copy}"));
         let size_bytes = photo.full.len() as i64;
         let middle_url = photo.middle.is_some().then(|| media.url(&middle_key));
         let middle = async {
@@ -116,6 +117,7 @@ pub async fn store(media: &Media, processed: Vec<Processed>) -> Result<Vec<NewPh
             media.put(&full_key, photo.full),
             middle,
             media.put(&card_key, photo.card),
+            media.put(&small_key, photo.small),
             media.put(&jpeg_key, photo.jpeg),
         )?;
         stored.push(NewPhoto {
@@ -150,12 +152,21 @@ pub async fn delete(media: &Media, keys: &[String]) {
     }
 }
 
-/// A WebP photo's copies for a srcset, the card's, the middle one and the full one, each with its
-/// longer side as its width: photos are made by it, and it is about what a tall photo needs too,
-/// shown whole on a listing page or cut square on a card. `side` is the full copy's longer side;
-/// a copy no smaller than it isn't there, or is left out.
+/// The address of a WebP photo's small copy, from its card's: in the same place, with the small
+/// one's ending. None for a card's copy from before WebP, or from elsewhere.
+pub fn small_url(card: &str) -> Option<String> {
+    card.strip_suffix(CARD_COPY).map(|name| format!("{name}{SMALL_COPY}"))
+}
+
+/// A WebP photo's copies for a srcset, the small one, the card's, the middle one and the full one,
+/// each with its longer side as its width: photos are made by it, and it is about what a tall
+/// photo needs too, shown whole on a listing page or cut square on a card. `side` is the full
+/// copy's longer side; a copy no smaller than it isn't there, or is left out.
 pub fn srcset(card: &str, middle: Option<&str>, full: &str, side: u32) -> String {
-    let mut copies = Vec::with_capacity(3);
+    let mut copies = Vec::with_capacity(4);
+    if let Some(small) = small_url(card).filter(|_| side > SMALL_SIDE) {
+        copies.push(format!("{small} {SMALL_SIDE}w"));
+    }
     if side > CARD_SIDE {
         copies.push(format!("{card} {CARD_SIDE}w"));
     }
@@ -166,10 +177,21 @@ pub fn srcset(card: &str, middle: Option<&str>, full: &str, side: u32) -> String
     copies.join(", ")
 }
 
-/// /media/photos/...: a stored photo. Names never change, so browsers may keep them for a year.
+/// /media/photos/...: a stored photo. Names never change, so browsers may keep them for a year. A
+/// small copy that a photo kept before there were any doesn't have yet is made as it is asked for
+/// (Media::small_copy).
 pub async fn serve(State(state): State<AppState>, Path(key): Path<String>) -> Result<Response> {
     let safe = key.starts_with("photos/") && key.chars().all(|c| c.is_ascii_alphanumeric() || "/-.".contains(c)) && !key.contains("..");
-    let Some(bytes) = (if safe { state.media.get(&key).await? } else { None }) else {
+    let stored = if safe { state.media.get(&key).await? } else { None };
+    let bytes = match stored {
+        Some(bytes) => Some(bytes),
+        None if safe => state.media.small_copy(&key).await.unwrap_or_else(|error| {
+            tracing::warn!(%error, "a photo's small copy could not be made");
+            None
+        }),
+        None => None,
+    };
+    let Some(bytes) = bytes else {
         return not_found().await;
     };
     let mut response = bytes.into_response();

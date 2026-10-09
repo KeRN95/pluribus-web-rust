@@ -107,7 +107,7 @@ impl ListingCard {
     }
 
     /// The photos a big card slides through, the cover first, each with its copies for the
-    /// browser to pick from (ListingPage::sizes): a WebP photo's three, or the card-sized copy and
+    /// browser to pick from (ListingPage::sizes): a WebP photo's four, or the card-sized copy and
     /// the full one of a photo kept before. A small card shows the first.
     pub fn slides(&self) -> impl Iterator<Item = Slide<'_>> {
         self.photos.iter().zip(&self.photos_full).enumerate().map(|(i, (small, full))| {
