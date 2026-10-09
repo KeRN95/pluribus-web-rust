@@ -9,14 +9,17 @@
   {#- A page that says nothing of its own (meta.html): the site's description. #}
   <meta name="description" content="{{ crate::web::seo::SITE_DESCRIPTION }}">
   {%- endblock %}
-  <script>
-    // Apply a saved theme before the first paint, so the page never flashes the wrong one.
-    try {
-      const theme = localStorage.getItem("theme");
-      if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
-    } catch {}
-  </script>
+  {#- Apply a saved theme before the first paint, so the page never flashes the wrong one. The
+      script is web::THEME_SCRIPT, whose hash the Content-Security-Policy lets run. -#}
+  <script>{{ crate::web::THEME_SCRIPT|safe }}</script>
   <meta name="view-transition" content="same-origin">
+  {#- The site's icon, the logo's creature: a favicon.ico (16, 32 and 48 px) for browsers that
+      want one, the SVG for those that take it, a 180 px one on the ivory for iPhones' home
+      screens, and the manifest's for Android's (static/img/). -#}
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/static/img/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+  <link rel="manifest" href="/static/site.webmanifest">
   {#- Fetch the fonts, Geist and the headings' and logo's Inter, alongside the stylesheets rather than after
       it, so text and the logo rarely wait for them. -#}
   <link rel="preload" href="/static/vendor/fonts/geist-v5-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -27,25 +30,13 @@
   <link rel="stylesheet" href="/static/css/{{ sheet }}.css?v={{ crate::web::asset_version() }}" data-turbo-track="reload">
   {%- endfor %}
   {#- Each module at its address with the fingerprint, which browsers keep for good (web::
-      cache_headers); then all of them preloaded at once, rather than application.js first and
-      what it imports after (web::js_modules). -#}
-  <script type="importmap">
-    {
-      "imports": {
-        "@hotwired/turbo": "/static/vendor/turbo-8.0.23.js",
-        "@hotwired/stimulus": "/static/vendor/stimulus-3.2.2.js",
-        {%- for module in crate::web::js_modules() %}{% if module.starts_with("controllers/") %}
-        "{{ module }}": "/static/js/{{ module }}?v={{ crate::web::asset_version() }}",
-        {%- endif %}{% endfor %}
-        "controllers/": "/static/js/controllers/"
-      }
-    }
-  </script>
-  <link rel="modulepreload" href="/static/vendor/turbo-8.0.23.js">
-  <link rel="modulepreload" href="/static/vendor/stimulus-3.2.2.js">
-  {%- for module in crate::web::js_modules() %}
-  <link rel="modulepreload" href="/static/js/{{ module }}?v={{ crate::web::asset_version() }}">
-  {%- endfor %}
+      cache_headers, web::import_map); then those the page uses preloaded at once, rather than
+      application.js first and what it imports after: web::render puts them where MODULES_HERE
+      is, application.js and the controllers the page names. -#}
+  <script type="importmap">{{ crate::web::import_map()|safe }}</script>
+  <link rel="modulepreload" href="{{ crate::web::TURBO|safe }}">
+  <link rel="modulepreload" href="{{ crate::web::STIMULUS|safe }}">
+  {{ crate::web::MODULES_HERE|safe }}
   <script type="module" src="/static/js/application.js?v={{ crate::web::asset_version() }}" data-turbo-track="reload"></script>
 </head>
 <body>

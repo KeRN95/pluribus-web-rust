@@ -1,65 +1,48 @@
 // Turbo turns links and forms into fetch requests; Stimulus attaches small controllers to HTML.
 import { FetchMethod, FetchRequest } from "@hotwired/turbo";
 import { Application } from "@hotwired/stimulus";
-import AiFillController from "controllers/ai_fill_controller.js";
-import BackController from "controllers/back_controller.js";
-import CardsController from "controllers/cards_controller.js";
-import ConversationController from "controllers/conversation_controller.js";
-import CopyController from "controllers/copy_controller.js";
-import DisclosureController from "controllers/disclosure_controller.js";
-import DragRowController from "controllers/drag_row_controller.js";
-import DropdownController from "controllers/dropdown_controller.js";
-import FiltersController from "controllers/filters_controller.js";
-import GalleryController from "controllers/gallery_controller.js";
+// What every page needs whatever controllers it names: the hearts' module asks with each page which
+// listings are kept, for the header's heart too; the town's, to forget it (below); refresh.js, the
+// filled-in fields of a GET form (below).
 import HeartController from "controllers/heart_controller.js";
-import InboxController from "controllers/inbox_controller.js";
-import ListingFormController from "controllers/listing_form_controller.js";
-import ListingMapController from "controllers/listing_map_controller.js";
-import LoanController from "controllers/loan_controller.js";
-import MapController from "controllers/map_controller.js";
-import MessageSheetController from "controllers/message_sheet_controller.js";
-import NarrowController from "controllers/narrow_controller.js";
-import NewestController from "controllers/newest_controller.js";
-import PanelController from "controllers/panel_controller.js";
-import PickerController from "controllers/picker_controller.js";
 import PlaceController, { forgetTown } from "controllers/place_controller.js";
-import PhotosController from "controllers/photos_controller.js";
-import PriceRangeController from "controllers/price_range_controller.js";
-import ShareController from "controllers/share_controller.js";
-import SlidesController from "controllers/slides_controller.js";
-import SuggestController from "controllers/suggest_controller.js";
-import ThemeController from "controllers/theme_controller.js";
 import { filledIn } from "controllers/refresh.js";
 
+// The other controllers load as the page names them: the first element with data-controller="map"
+// brings controllers/map_controller.js, and Stimulus then connects it to every such element, now and
+// later. A page fetches only the controllers it uses; those its HTML names come preloaded with it
+// (web::render), and a part of the page that comes later (a frame, a stream, the next page Turbo
+// shows) brings its own. A module's address is in the import map, with the fingerprint.
 const application = Application.start();
-application.register("ai-fill", AiFillController);
-application.register("back", BackController);
-application.register("cards", CardsController);
-application.register("conversation", ConversationController);
-application.register("copy", CopyController);
-application.register("disclosure", DisclosureController);
-application.register("drag-row", DragRowController);
-application.register("dropdown", DropdownController);
-application.register("filters", FiltersController);
-application.register("gallery", GalleryController);
+const requested = new Set(["heart", "place"]);
 application.register("heart", HeartController);
-application.register("inbox", InboxController);
-application.register("listing-form", ListingFormController);
-application.register("listing-map", ListingMapController);
-application.register("loan", LoanController);
-application.register("map", MapController);
-application.register("message-sheet", MessageSheetController);
-application.register("narrow", NarrowController);
-application.register("newest", NewestController);
-application.register("panel", PanelController);
-application.register("picker", PickerController);
 application.register("place", PlaceController);
-application.register("photos", PhotosController);
-application.register("price-range", PriceRangeController);
-application.register("share", ShareController);
-application.register("slides", SlidesController);
-application.register("suggest", SuggestController);
-application.register("theme", ThemeController);
+
+function load(identifier) {
+  if (requested.has(identifier)) return;
+  requested.add(identifier);
+  import(`controllers/${identifier.replaceAll("-", "_")}_controller.js`)
+    .then((module) => application.register(identifier, module.default))
+    .catch((error) => {
+      requested.delete(identifier);
+      console.error(`The "${identifier}" controller did not load`, error);
+    });
+}
+
+function loadWithin(element) {
+  const named = element.querySelectorAll("[data-controller]");
+  for (const each of element.matches("[data-controller]") ? [element, ...named] : named) {
+    for (const identifier of each.dataset.controller.split(/\s+/)) if (identifier) load(identifier);
+  }
+}
+
+loadWithin(document.documentElement);
+new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    if (mutation.type === "attributes") loadWithin(mutation.target);
+    for (const node of mutation.addedNodes) if (node.nodeType === Node.ELEMENT_NODE) loadWithin(node);
+  }
+}).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-controller"] });
 
 // A link that drops the town (the town's chip, "Kërko në gjithë Shqipërinë") forgets it too, before
 // Turbo follows it, so the page it opens doesn't open in it again (place_controller.js). Such links are

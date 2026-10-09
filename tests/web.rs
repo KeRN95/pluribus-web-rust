@@ -49,6 +49,7 @@ struct TestResponse {
     content_type: Option<String>,
     /// Set-Cookie headers, as "name=value" without their attributes.
     cookies: Vec<String>,
+    headers: axum::http::HeaderMap,
     body: String,
 }
 
@@ -81,8 +82,9 @@ async fn send_to(app: Router, request: Request<Body>) -> TestResponse {
         .iter()
         .map(|value| value.to_str().unwrap().split(';').next().unwrap().to_string())
         .collect();
+    let headers = response.headers().clone();
     let body = response.into_body().collect().await.unwrap().to_bytes();
-    TestResponse { status, location, content_type, cookies, body: String::from_utf8_lossy(&body).into_owned() }
+    TestResponse { status, location, content_type, cookies, headers, body: String::from_utf8_lossy(&body).into_owned() }
 }
 
 async fn get(pool: PgPool, uri: &str) -> TestResponse {
@@ -2766,22 +2768,126 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     assert!(body.contains(&format!(
         r#"<script type="module" src="/static/js/application.js?v={version}" data-turbo-track="reload"></script>"#
     )));
-    // Every module at its address with the fingerprint, which browsers keep, and all of them
-    // preloaded at once, rather than application.js first and what it imports after.
+    // Every module at its address with the fingerprint, which browsers keep; those the page uses
+    // preloaded at once, rather than application.js first and what it imports after: application.js
+    // and what it imports, and the controllers the page names, with theirs. No others.
     let modules = marketplace::web::js_modules();
     assert_eq!(modules[0], "application.js");
-    assert!(modules.iter().any(|module| module == "controllers/heart_controller.js"));
-    for module in modules {
-        assert!(body.contains(&format!(r#"<link rel="modulepreload" href="/static/js/{module}?v={version}">"#)), "{module}");
-        if module.starts_with("controllers/") {
-            assert!(body.contains(&format!(r#""{module}": "/static/js/{module}?v={version}","#)), "{module}");
-        }
+    for module in modules.iter().filter(|module| module.starts_with("controllers/")) {
+        assert!(body.contains(&format!(r#""{module}": "/static/js/{module}?v={version}""#)), "{module}");
     }
+    let preloads = |body: &str| -> Vec<String> {
+        body.split(r#"<link rel="modulepreload" href="/static/js/"#)
+            .skip(1)
+            .map(|rest| rest.split('?').next().unwrap().to_string())
+            .collect()
+    };
+    let home = preloads(&body);
+    for used in [
+        "application.js",
+        "controllers/heart_controller.js",
+        "controllers/signed_in.js",
+        "controllers/place_controller.js",
+        "controllers/refresh.js",
+        "controllers/newest_controller.js",
+        "controllers/drag_row_controller.js",
+        "controllers/inbox_controller.js",
+        "controllers/theme_controller.js",
+    ] {
+        assert!(home.iter().any(|module| module == used), "{used} in {home:?}");
+    }
+    for unused in ["controllers/map_controller.js", "controllers/leaflet.js", "controllers/filters_controller.js"] {
+        assert!(!home.iter().any(|module| module == unused), "{unused} in {home:?}");
+    }
+    assert_eq!(home.len(), home.iter().collect::<std::collections::HashSet<_>>().len(), "{home:?}");
+    let form = preloads(&get(pool.clone(), "/shto").await.body);
+    for used in ["controllers/listing_form_controller.js", "controllers/photos_controller.js", "controllers/picker_controller.js"] {
+        assert!(form.iter().any(|module| module == used), "{used} in {form:?}");
+    }
+    assert!(!form.iter().any(|module| module == "controllers/newest_controller.js"), "{form:?}");
     assert!(body.contains(r#"<link rel="modulepreload" href="/static/vendor/turbo-8.0.23.js">"#));
     // The fingerprint only changes the URL; the file is served as before.
     let css = get(pool, &format!("/static/css/browse.css?v={version}")).await;
     assert_eq!(css.status, StatusCode::OK);
     assert!(css.body.contains(".results-meta"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn the_site_has_its_icon(pool: PgPool) {
+    let body = get(pool.clone(), "/").await.body;
+    for link in [
+        r#"<link rel="icon" href="/favicon.ico" sizes="32x32">"#,
+        r#"<link rel="icon" href="/static/img/icon.svg" type="image/svg+xml">"#,
+        r#"<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">"#,
+        r#"<link rel="manifest" href="/static/site.webmanifest">"#,
+    ] {
+        assert!(body.contains(link), "{link}");
+    }
+    // Where browsers look without asking the page.
+    let favicon = get(pool.clone(), "/favicon.ico").await;
+    assert_eq!(favicon.status, StatusCode::OK);
+    assert_eq!(favicon.content_type.as_deref(), Some("image/x-icon"));
+    assert_eq!(favicon.headers[header::CACHE_CONTROL], "no-cache");
+    // The manifest's icons are there.
+    let manifest = get(pool.clone(), "/static/site.webmanifest").await;
+    assert_eq!(manifest.status, StatusCode::OK);
+    let manifest: Value = serde_json::from_str(&manifest.body).unwrap();
+    for icon in manifest["icons"].as_array().unwrap() {
+        let src = icon["src"].as_str().unwrap();
+        let response = get(pool.clone(), src).await;
+        assert_eq!(response.status, StatusCode::OK, "{src}");
+        assert_eq!(response.content_type.as_deref(), Some("image/png"), "{src}");
+    }
+    for icon in ["/static/img/icon.svg", "/static/img/apple-touch-icon.png"] {
+        assert_eq!(get(pool.clone(), icon).await.status, StatusCode::OK, "{icon}");
+    }
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn responses_tell_browsers_how_to_keep_the_site_safe(pool: PgPool) {
+    use base64::Engine;
+    use sha2::Digest;
+
+    for uri in [
+        "/",
+        "/listing/1001-volkswagen-golf-7-2016-nafte",
+        "/shto",
+        "/nuk-ka-faqe",
+        "/static/css/base.css",
+        "/favicon.ico",
+    ] {
+        let response = get(pool.clone(), uri).await;
+        let headers = &response.headers;
+        assert_eq!(headers[header::X_CONTENT_TYPE_OPTIONS], "nosniff", "{uri}");
+        assert_eq!(headers[header::X_FRAME_OPTIONS], "DENY", "{uri}");
+        assert_eq!(headers[header::REFERRER_POLICY], "strict-origin-when-cross-origin", "{uri}");
+        assert_eq!(headers["cross-origin-opener-policy"], "same-origin", "{uri}");
+        let permissions = headers["permissions-policy"].to_str().unwrap();
+        assert!(permissions.contains("camera=()") && permissions.contains("geolocation=(self)"), "{uri}");
+        let policy = headers[header::CONTENT_SECURITY_POLICY].to_str().unwrap();
+        for directive in ["default-src 'self'", "object-src 'none'", "frame-ancestors 'none'", "form-action 'self'"] {
+            assert!(policy.contains(directive), "{uri}: {directive}");
+        }
+        if !response.content_type.as_deref().unwrap_or_default().starts_with("text/html") {
+            continue;
+        }
+        // Every script in the page itself runs by its hash; scripts' files come from the site. JSON
+        // for search engines isn't run, and needs none.
+        let script_src = policy.split(';').find(|directive| directive.trim().starts_with("script-src")).unwrap();
+        assert!(!script_src.contains("unsafe-inline") && !script_src.contains("unsafe-eval"), "{script_src}");
+        let mut inline = 0;
+        for script in response.body.split("<script").skip(1) {
+            let (attributes, rest) = script.split_once('>').unwrap();
+            if attributes.contains("src=") || attributes.contains("application/ld+json") {
+                continue;
+            }
+            let text = rest.split("</script>").next().unwrap();
+            let hash = base64::engine::general_purpose::STANDARD.encode(sha2::Sha256::digest(text));
+            assert!(script_src.contains(&format!("'sha256-{hash}'")), "{uri}: <script{attributes}> isn't allowed");
+            inline += 1;
+        }
+        assert_eq!(inline, 2, "{uri}: the theme and the import map");
+    }
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
