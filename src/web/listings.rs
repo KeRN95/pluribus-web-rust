@@ -347,6 +347,9 @@ struct ListingShow {
     category: Subcategory,
     /// The category above its own, the pill before it: a way up. None for a main category.
     parent: Option<Subcategory>,
+    /// Three levels down, the category above that one, which the round button before the pills
+    /// leads to by its icon (the welcome page's house otherwise), as on a category page.
+    above_parent: Option<Subcategory>,
     details: Vec<Detail>,
     photos: Vec<Photo>,
     /// The reveal button's label, when the seller's phone number or e-mail can be shown.
@@ -500,13 +503,17 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let price_drop = price_drop(price_was, listing.price_amount, &listing.currency);
     let views = (views > 0).then(|| format::number(Decimal::from(views)));
     let category = categories.by_slug(&listing.category_slug);
-    // Its category and the one above it as pills, as a category page's head has them.
+    // Its category and the one above it as pills, as a category page's head has them, and the one
+    // above that, where there is one, for the round button before them.
     let pill = |category: &db::Category| Subcategory {
         name: category.name.clone(),
         url: format!("/c/{}", category.slug),
         icon: category_icon(category),
     };
-    let parent = category.and_then(|category| category.parent_id).and_then(|id| categories.by_id(id)).map(pill);
+    let above = |of: &db::Category| of.parent_id.and_then(|id| categories.by_id(id));
+    let parent_category = category.and_then(above);
+    let parent = parent_category.map(pill);
+    let above_parent = parent_category.and_then(above).map(pill);
     let category_pill = match category {
         Some(category) => pill(category),
         None => Subcategory { name: listing.category_name.clone(), url: format!("/c/{}", listing.category_slug), icon: None },
@@ -581,6 +588,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             listing,
             category: category_pill,
             parent,
+            above_parent,
             details,
             photos,
             reveal,

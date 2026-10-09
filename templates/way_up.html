@@ -1,0 +1,13 @@
+{#- The round button after back on a category page's path and a listing's (browse.html,
+    listing.html): the way beyond the pills, by its icon. Three levels down, the category above the
+    way up's pill (Automjete's car before Pjesë / aksesorë and GPS / navigatorë); otherwise, with
+    two pills or one, the welcome page, by its house, filled so as not to be taken for Prona's house
+    in strokes beside it. The page gives above_parent. -#}
+{%- if let Some(above) = above_parent %}
+<a class="back-button" href="{{ above.url }}" aria-label="{{ above.name }}" title="{{ above.name }}">
+  {%- if let Some(icon) = above.icon %}<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>
+  {%- else %}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{% endif -%}
+</a>
+{%- else %}
+<a class="back-button" href="/" aria-label="Faqja kryesore" title="Faqja kryesore"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{{ crate::web::icons::HOME|safe }}</svg></a>
+{%- endif %}

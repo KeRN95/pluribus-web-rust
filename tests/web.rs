@@ -1856,7 +1856,7 @@ async fn every_detail_has_its_icon_its_categorys_where_that_says_more(pool: PgPo
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn listing_page_shows_price_and_attributes(pool: PgPool) {
-    let response = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await;
+    let response = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
     assert_eq!(response.status, StatusCode::OK);
     assert!(response.body.contains("9\u{a0}500\u{a0}€"));
     // Each detail a pill, its icon before its value; its name for screen readers and as a
@@ -1879,18 +1879,36 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("</svg>Hatchback</dd>"));
     assert!(response.body.contains("</svg>ABS</dd>") && response.body.contains("</svg>Kondicioner</dd>"));
     // Its category in pills, as a category page's head has them, after a round back button that
-    // leads to its category without scripts: the category above it, quieter, a way up, and its
-    // own, filled, each with its icon and leading to its page.
-    positions(&response.body, &[
+    // leads to its category without scripts and, as there, the round way beyond the pills, here the
+    // welcome page's house: the category above it, quieter, a way up, and its own, filled, each
+    // with its icon and leading to its page.
+    let path = positions(&response.body, &[
         r#"<nav class="category-path listing-path" aria-label="Kategoria e njoftimit">"#,
         r#"<a class="back-button" href="/c/makina" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#,
+        r#"<a class="back-button" href="/" aria-label="Faqja kryesore" title="Faqja kryesore"><svg"#,
         r#"<a class="shortcut small category-up" href="/c/automjete"><svg class="shortcut-icon""#,
         r#"<a class="shortcut small is-selected" href="/c/makina"><svg class="shortcut-icon""#,
         "Makina</a>",
     ]);
+    assert!(path[..5].is_sorted(), "{path:?}");
     assert!(!response.body.contains("breadcrumbs"));
     let html = response.body.replace("&#38;", "&");
     assert!(html.contains("photo-1591230740238-e9a71182b67c?auto=format&fit=crop&w=1200"));
+    // Three levels down, the way beyond leads to the category above the way up, by its icon, as a
+    // category page's does; no house.
+    sqlx::query("UPDATE listings SET category_id = (SELECT id FROM categories WHERE slug = 'gps-dhe-navigatore') WHERE public_no = 1001")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let gps = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
+    let path = positions(&gps, &[
+        r#"<a class="back-button" href="/c/gps-dhe-navigatore" aria-label="Kthehu""#,
+        r#"<a class="back-button" href="/c/automjete" aria-label="Automjete" title="Automjete"><svg"#,
+        r#"<a class="shortcut small category-up" href="/c/pjese-dhe-aksesore"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut small is-selected" href="/c/gps-dhe-navigatore">"#,
+    ]);
+    assert!(path.is_sorted(), "{path:?}");
+    assert!(!gps.contains("Faqja kryesore"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
