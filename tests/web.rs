@@ -5596,11 +5596,20 @@ async fn a_blocked_sellers_listings_leave_the_pages_of_whoever_blocked_them(pool
     // Blocking takes being signed in.
     assert!(!html(pool.clone(), golf).await.contains("Blloko shitësin"));
     let besnik = session_for(&pool, "22222222-2222-4222-8222-222222222222").await;
-    assert!(get_with_cookie(pool.clone(), golf, &besnik).await.body.contains(r#"<form method="post" action="/listing/1001/blloko" data-turbo-confirm="#));
+    // The listing's page offers no block: the report's thanks do, once Besnik has reported it.
+    assert!(!get_with_cookie(pool.clone(), golf, &besnik).await.body.contains("/listing/1001/blloko"));
+    let report = "/listing/1001/raporto";
+    assert!(!get_with_cookie(pool.clone(), report, &besnik).await.body.contains("Blloko shitësin"));
+    post_form(pool.clone(), report, &[("reason", "SPAM"), ("details", "")], Some(&besnik)).await;
+    let thanks = get_with_cookie(pool.clone(), report, &besnik).await.body;
+    assert!(thanks.contains("Faleminderit!") && thanks.contains("Nëse s'do ta shohësh më këtë shitës, bllokoje:"), "{thanks}");
+    assert!(thanks.contains(r#"<form method="post" action="/listing/1001/blloko">"#) && thanks.contains("</svg>Blloko shitësin</button>"));
 
-    // Besnik blocks Ana, who sells the Golf, the iPhone and three more.
+    // Besnik blocks Ana, who sells the Golf, the iPhone and three more: the thanks say so then.
     let blocked = post_form(pool.clone(), "/listing/1001/blloko", &[("blloko", "1")], Some(&besnik)).await;
-    assert_eq!(blocked.location.as_deref(), Some("/listing/1001"));
+    assert_eq!(blocked.location.as_deref(), Some("/listing/1001/raporto"));
+    let thanks = get_with_cookie(pool.clone(), report, &besnik).await.body;
+    assert!(thanks.contains("E ke bllokuar edhe shitësin") && !thanks.contains("Blloko shitësin"), "{thanks}");
     // Her listings leave his pages: the welcome page, a category's, a search, those under another
     // listing; others still see them.
     let anas = [1001, 1005, 1007, 1010, 1012];
@@ -5615,9 +5624,10 @@ async fn a_blocked_sellers_listings_leave_the_pages_of_whoever_blocked_them(pool
     assert!(!his("/search?q=golf").await.contains(&1001));
     assert!(card_numbers(&html(pool.clone(), mercedes).await).contains(&1001), "the Golf is like the Mercedes");
     assert!(!his(mercedes).await.contains(&1001));
-    // Her listing's own page, which he can still open, says so, with the way back.
+    // Her listing's own page, which he can still open, says so, and where to let her be again.
     let page = get_with_cookie(pool.clone(), golf, &besnik).await.body;
-    assert!(page.contains("E ke bllokuar këtë shitës") && page.contains("Zhblloko shitësin"));
+    assert!(page.contains("E ke bllokuar këtë shitës") && page.contains(r#"E zhbllokon te <a href="/njoftimet-e-mia">Njoftimet e mia</a>."#));
+    assert!(!page.contains("Zhblloko shitësin") && !page.contains("listing-safety"));
 
     // "Njoftimet e mia" lists her, to let be again.
     let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &besnik).await.body;

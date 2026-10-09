@@ -14,7 +14,24 @@
   <p><a class="button" href="/llogaria">Hyr</a></p>
   {%- when ReportState::Done %}
   <p class="notice" role="status">Faleminderit! Moderatorët do ta shohin raportimin tënd.</p>
+  {%- if blocked %}
+  {#- The seller blocked too, from here or from a conversation: said, with where to let them be
+      again. -#}
+  <p>E ke bllokuar edhe shitësin: njoftimet që ka vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit. E zhbllokon te <a href="/njoftimet-e-mia">Njoftimet e mia</a>.</p>
   <p><a class="button secondary" href="{{ url }}">Kthehu te njoftimi</a></p>
+  {%- else %}
+  {#- Having reported the listing, the visitor can block its seller too (safety::block,
+      user_blocks): the seller's listings leave their pages, and neither writes to the other. The
+      listing's page offers no block of its own. -#}
+  <p>Nëse s'do ta shohësh më këtë shitës, bllokoje: njoftimet që ka vënë nuk do të të dalin më te faqet e njoftimeve, dhe nuk do t'i shkruani dot njëri-tjetrit. E zhbllokon kur të duash te „Njoftimet e mia“.</p>
+  <div class="form-actions">
+    <form method="post" action="/listing/{{ public_no }}/blloko">
+      <input type="hidden" name="blloko" value="1">
+      <button type="submit" class="button secondary"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BLOCK|safe }}</svg>Blloko shitësin</button>
+    </form>
+    <a class="button secondary" href="{{ url }}">Kthehu te njoftimi</a>
+  </div>
+  {%- endif %}
   {%- when ReportState::Form %}
   <form class="account-form" method="post" action="/listing/{{ public_no }}/raporto">
     {#- One reason, each with what it covers. -#}

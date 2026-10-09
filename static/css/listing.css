@@ -376,26 +376,9 @@
 .listing-price { margin: 0; font-size: 1.75rem; line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
 /* What follows the price ("/muaj", "(i diskutueshëm)"), half its size. */
 .price-note { font-size: .5em; letter-spacing: normal; }
-/* Under the buttons, quietly, as links are: blocking the seller (safety.rs), for someone signed
-   in; and once blocked, a line that says so. Reporting is a button among the others. */
-.listing-safety { display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; margin-top: 1.25rem; }
-.listing-safety form { display: contents; }
-.quiet-action {
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: var(--text-sm);
-  text-decoration: none;
-  cursor: pointer;
-}
-.quiet-action:hover { color: var(--text); text-decoration: underline; }
-.quiet-action svg { flex: none; }
-.blocked-note { margin: .5rem 0 0; color: var(--muted); font-size: var(--text-sm); }
+/* Under the buttons, quietly: that the visitor blocked the seller (from a report's thanks,
+   report.html), with where to let them be again. Reporting is a button among the others. */
+.blocked-note { margin: 1rem 0 0; color: var(--muted); font-size: var(--text-sm); }
 /* A price that dropped lately (price_drop.html): what it was, struck through, quietly, and by how
    much in a green pill, as the zone's bubble says a square metre is cheap for it. */
 .price-was {

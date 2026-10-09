@@ -73,6 +73,8 @@ struct ReportPage {
     reason: String,
     details: String,
     error: Option<&'static str>,
+    /// The visitor blocked the seller already: the thanks say so, in place of offering to.
+    blocked: bool,
 }
 
 impl ReportPage {
@@ -86,14 +88,16 @@ impl ReportPage {
             reason: String::new(),
             details: String::new(),
             error: None,
+            blocked: false,
         }
     }
 }
 
 /// GET /listing/{number}/raporto: what is wrong with the listing, for the moderators, from someone
-/// signed in, whom it thanks once sent. Someone who isn't is asked to sign in first, and comes
-/// back here after (saved::back_after_sign_in). Not for the listing's own seller, nor a listing
-/// that isn't on the site, unless to thank whoever reported it.
+/// signed in, whom it thanks once sent, offering to block the seller too (`block`), or saying that
+/// they are blocked. Someone who isn't is asked to sign in first, and comes back here after
+/// (saved::back_after_sign_in). Not for the listing's own seller, nor a listing that isn't on the
+/// site, unless to thank whoever reported it.
 pub async fn report_page(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
     let Some(target) = db::report_target(&state.db, public_no).await? else {
         return not_found().await;
@@ -114,7 +118,9 @@ pub async fn report_page(State(state): State<AppState>, headers: HeaderMap, Path
         (Some(_), true) => ReportState::Done,
         (Some(_), false) => ReportState::Form,
     };
-    let mut response = render(ReportPage::new(&target, page_state))?;
+    let blocked =
+        page_state == ReportState::Done && hidden_accounts(&state, &headers).await?.contains(&target.created_by_user_id);
+    let mut response = render(ReportPage { blocked, ..ReportPage::new(&target, page_state) })?;
     if user.is_none() {
         let back = saved::back_after_sign_in(&headers, &format!("/listing/{public_no}/raporto"));
         response.headers_mut().append(header::SET_COOKIE, back);
@@ -186,7 +192,8 @@ pub struct BlockForm {
 }
 
 /// POST /listing/{number}/blloko: blocks the seller behind the listing for the signed-in user
-/// (blloko=1), or lets them be again (blloko=0), and goes back to the listing, which says so.
+/// (blloko=1), or lets them be again (blloko=0), from the report page's thanks, which it goes back
+/// to, and which say so then.
 pub async fn block(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -199,7 +206,7 @@ pub async fn block(
     if !db::set_blocked(&state.db, user.id, public_no, form.blloko != "0").await? {
         return not_found().await;
     }
-    Ok(Redirect::to(&format!("/listing/{public_no}")).into_response())
+    Ok(Redirect::to(&format!("/listing/{public_no}/raporto")).into_response())
 }
 
 /// POST /llogaria/zhblloko/{id}: lets someone the user blocked be again, from "Njoftimet e mia",
