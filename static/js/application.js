@@ -156,6 +156,18 @@ document.addEventListener("turbo:load", () => {
   if (url) navigator.sendBeacon(url);
 });
 
+// On a touch screen, no cross-fade between pages: for it the browser draws both pages whole and
+// fades a tenth of a second, during which the page takes no taps, and a phone's slower CPU draws
+// that out (a visit rendered in 40 ms without it on a phone's layout, 160 with, on a computer); the
+// new page comes at once instead. The meta base.html asks for it with is taken off each page as it
+// shows (the next page's head brings it back, and loses it again), so that no visit has it on its
+// current side, which Turbo needs as well as the new one.
+if (matchMedia("(pointer: coarse)").matches) {
+  const dropViewTransition = () => document.head.querySelector('meta[name="view-transition"]')?.remove();
+  dropViewTransition();
+  document.addEventListener("turbo:load", dropViewTransition);
+}
+
 // Going back or forward, Turbo shows its copy of the page with the cross-fade base.html asks for
 // (view transitions). Where the browser has animated the change itself, as iOS does under a swipe
 // from the screen's edge, that would be a second change, from the page left to the page come back

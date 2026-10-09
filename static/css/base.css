@@ -251,7 +251,8 @@ h2 { margin: 1.75rem 0 .75rem; font-size: var(--text-xl); line-height: 1.25; }
 
 /* Pages change with the browser's cross-fade (view transitions, base.html), but quickly: its own
    takes a quarter of a second, during which the page takes no taps, and each click felt slow for
-   it. Visitors who ask for less motion get the new page at once. */
+   it. Visitors who ask for less motion get the new page at once, as do touch screens
+   (application.js, which takes the meta off there). */
 ::view-transition-group(*),
 ::view-transition-old(*),
 ::view-transition-new(*) { animation-duration: .1s; }
