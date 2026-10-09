@@ -65,8 +65,10 @@
   --blue-bg: #e2ecf6;            /* its tint, as --badge is the coral's */
   --red: #c1444c;                /* a red as deep as they: the welcome page's heart */
   --red-bg: #f7dee0;
-  --green: #3f8d60;              /* a green: its speech bubble */
+  --green: #3f8d60;              /* a green: its speech bubble, and Shtëpi / kopsht lit */
   --green-bg: #e2f2e8;
+  --neon: #0a7cff;               /* a neon blue: Elektronikë lit */
+  --neon-bg: #e0efff;
   --yellow: #bb8b1b;             /* and a yellow: the theme's sun, on the dark theme */
   --yellow-bg: #f9f2dc;
   --danger: #b42318;
@@ -132,6 +134,8 @@
   --red-bg: #42292b;
   --green: #4ea673;
   --green-bg: #2a4134;
+  --neon: #3db8ff;
+  --neon-bg: #13324a;
   --yellow: #e2be5a;
   --yellow-bg: #463d25;
   --danger: #f97066;
@@ -170,6 +174,8 @@
     --red-bg: #42292b;
     --green: #4ea673;
     --green-bg: #2a4134;
+    --neon: #3db8ff;
+    --neon-bg: #13324a;
     --yellow: #e2be5a;
     --yellow-bg: #463d25;
     --danger: #f97066;

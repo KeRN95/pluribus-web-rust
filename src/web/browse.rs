@@ -245,10 +245,16 @@ pub struct Shortcut {
     pub icon: &'static str,
 }
 
+/// The main categories the welcome page puts last, after its search's button, in this order.
+const LAST_ON_WELCOME: [&str; 2] = ["automjete", "prona"];
+
 #[derive(Template)]
 #[template(path = "home.html")]
 struct HomePage {
+    /// Every main category but LAST_ON_WELCOME's, in their order, before the search's button.
     shortcuts: Vec<Shortcut>,
+    /// LAST_ON_WELCOME's, after it.
+    last: Vec<Shortcut>,
     page: ListingPage,
     /// The row of the newest listings ("Sapo u shtuan"): the page's first newest::STRIP.
     newest: ListingPage,
@@ -283,15 +289,18 @@ pub async fn home(
         state.views.most_viewed(&state.db, None),
     )?;
     safety::without_hidden(&mut most_viewed, &hidden);
-    // Every main category, in its order, with its icon.
+    // Every main category, in its order, with its icon; Automjete and Prona after the search.
+    let shortcut = |category: &db::Category| Shortcut {
+        name: category.name.clone(),
+        url: format!("/c/{}", category.slug),
+        icon: icons::main_category(&category.slug),
+    };
     let shortcuts = categories
         .top_level()
-        .map(|category| Shortcut {
-            name: category.name.clone(),
-            url: format!("/c/{}", category.slug),
-            icon: icons::main_category(&category.slug),
-        })
+        .filter(|category| !LAST_ON_WELCOME.contains(&category.slug.as_str()))
+        .map(shortcut)
         .collect();
+    let last = LAST_ON_WELCOME.iter().filter_map(|slug| categories.by_slug(slug)).map(shortcut).collect();
     let page = ListingPage::new(rows, Sort::Newest, next_url);
     // Both rows load their first two photos straight away: they are on the first screen. The first
     // row's first photo comes before anything else (ListingPage::lead): "Më të klikuarat", or
@@ -302,7 +311,7 @@ pub async fn home(
     let since = page.cards.first().map(ListingCard::newest_cursor);
     let origin = seo::origin(&headers);
     let meta = PageMeta::new(&origin, "Pluribus: njoftime në gjithë Shqipërinë", seo::SITE_DESCRIPTION, format!("{origin}/"));
-    render(HomePage { shortcuts, page, newest, since, most_viewed, meta })
+    render(HomePage { shortcuts, last, page, newest, since, most_viewed, meta })
 }
 
 /// A category's icon, as its pill has it (icons.rs): a main category's own, a subcategory's where

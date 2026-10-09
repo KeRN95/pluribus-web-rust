@@ -329,20 +329,29 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(body.contains(r#"<div class="suggestions" id="welcome-suggestions" role="listbox""#));
     // The search button is a magnifier inside the field's pill, as in Claude's app.
     assert!(body.contains(r#"<button type="submit" class="icon-button welcome-search" aria-label="Kërko""#));
-    // The field waits in a panel that the first of the categories' pills opens, a coral "Kërko",
-    // and takes the focus as it opens; without JavaScript it stands open and the pill is gone.
+    // The field waits in a panel that a coral "Kërko" among the categories' pills opens, over that
+    // button's line, and takes the focus as it opens; without JavaScript it stands open and the
+    // button is gone.
     let panel = body.find(r#"<div class="welcome-search-panel" id="welcome-search-panel" data-panel-target="panel">"#).unwrap();
     let nav = body.find(r#"<nav class="shortcuts" aria-label="Kategoritë">"#).unwrap();
     let toggle = body
         .find(r#"<button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false""#)
         .unwrap();
     assert!(panel < body.find(r#"<form class="welcome-form""#).unwrap() && nav < toggle);
-    // The search's round button comes first among the categories; after them one that posts a
-    // listing, then the listings kept, the conversations and the theme, which the other pages have
-    // in their top bar: here it has the account alone.
+    assert!(body.contains(r#"<div class="welcome-start" data-controller="panel" data-panel-follow-value="true""#));
+    // The search's button comes after the categories but Automjete and Prona, which follow it; after
+    // them one that posts a listing, then the listings kept, the conversations and the theme, which
+    // the other pages have in their top bar: here it has the account alone.
     let post = body.find(r#"<a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#).unwrap();
-    assert!(toggle < body.find(r#"<a class="shortcut" href="/c/automjete">"#).unwrap(), "the search first");
-    assert!(body.find(r#"<a class="shortcut" href="/c/te-tjera">"#).unwrap() < post, "the plus after the categories");
+    let order = positions(&body, &[
+        r#"<a class="shortcut" href="/c/te-tjera">"#,
+        r#"<button type="button" class="circle-shortcut search-shortcut""#,
+        r#"<a class="shortcut" href="/c/automjete">"#,
+        r#"<a class="shortcut" href="/c/prona">"#,
+        r#"<a class="circle-shortcut plus-shortcut""#,
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
+    assert_eq!(order[4], post);
     let end = positions(
         &body,
         &[
@@ -369,11 +378,9 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(body.contains(r#"data-suggest-target="input" data-panel-target="input""#));
     assert!(body.contains(".welcome-search-panel { display: block; position: static;"));
     assert!(!body.contains(r#"name="city""#) && !body.contains(r#"name="category""#));
-    // A shortcut to every main category, in their order, each its icon before its name; no more
-    // listing-like cards.
+    // A shortcut to every main category, in their order but Automjete and Prona last, each its icon
+    // before its name; no more listing-like cards.
     let main = [
-        ("automjete", "Automjete"),
-        ("prona", "Prona"),
         ("elektronike", "Elektronikë"),
         ("shtepi-dhe-kopsht", "Shtëpi / kopsht"),
         ("pune", "Punë"),
@@ -383,6 +390,8 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         ("kafshe-shtepiake", "Kafshë shtëpiake"),
         ("makineri-dhe-biznes", "Makineri / biznes"),
         ("te-tjera", "Të tjera"),
+        ("automjete", "Automjete"),
+        ("prona", "Prona"),
     ];
     let links: Vec<String> =
         main.iter().map(|(slug, _)| format!(r#"<a class="shortcut" href="/c/{slug}">"#)).collect();

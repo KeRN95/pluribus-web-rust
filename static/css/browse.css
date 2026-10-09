@@ -54,14 +54,16 @@
   .back-button:hover { background: var(--surface-muted); }
   .back-button[data-controller~="back"]:hover { border-color: var(--blue); background: var(--blue-bg); }
 }
-/* The path's icons, the welcome page's size (18px on a phone, below), the selected one's in the
-   text's colour. */
+/* The path's icons, the welcome page's size (18px on a phone, below). The selected pill, the page's
+   own, marked as the welcome page's search is: the coral's tint, a border of the coral, and its
+   icon and name in the coral. */
 .category-path .shortcut-icon,
 .back-button svg { width: 20px; height: 20px; }
 .category-path .is-selected .shortcut-icon { color: inherit; }
 .category-path .shortcut.is-selected {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
   background: var(--badge);
+  color: var(--accent);
 }
 .category-path h1 { margin: 0; font: inherit; line-height: inherit; }
 
@@ -72,9 +74,11 @@
 .category-switch .shortcut.is-selected { padding-right: .7rem; cursor: pointer; }
 .category-switch summary { list-style: none; }
 .category-switch summary::-webkit-details-marker { display: none; }
-.category-switch .chevron { flex: none; color: var(--muted); transition: transform .15s; }
+.category-switch .chevron { flex: none; color: inherit; transition: transform .15s; }
 .category-switch[open] .chevron { transform: rotate(180deg); }
-.category-switch summary:hover .chevron { color: var(--text); }
+@media (hover: hover) {
+  .category-switch summary:hover { border-color: var(--accent); }
+}
 .category-level { display: none; }
 .category-switch[open] + .category-level { display: contents; }
 @media (prefers-reduced-motion: no-preference) {
@@ -260,8 +264,9 @@
   .browse-scrim { animation: none; }
 }
 /* The round buttons: only their icons, in the page's own colours, on the surface with the menus'
-   hairline, as the listing page's share button is; while what they open is open, on the accent's
-   tint; a press sinks them a little. The search is marked as the welcome page's is: the coral's
+   hairline, as the listing page's share button is; while what they open is open, marked as a
+   selected pill is, on the accent's tint, their icon and words in the coral; a press sinks them a
+   little. The search is marked as the welcome page's is: the coral's
    tint, a border of the coral and its magnifier in it, the border whole under the pointer and
    while its box is open. (Three classes, to win over .button and .button.secondary, which come
    later.) */
@@ -279,7 +284,7 @@
 .browse-tools .round-button::-webkit-details-marker { display: none; }
 .browse-tools .round-button:active { transform: scale(.97); }
 .browse-tools .button.round-button[aria-expanded="true"],
-.browse-tools .button.round-button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+.browse-tools .button.round-button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
 .browse-tools .button.search-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
 .browse-tools .button.search-button:hover,
 .browse-tools .button.search-button[aria-expanded="true"] { border-color: var(--accent); background: var(--badge); }
@@ -301,10 +306,12 @@
 }
 .browse-tools .labelled svg { flex: none; width: 18px; height: 18px; }
 .browse-tools .button.map-button { flex: 0 1 auto; }
-/* Their icons are the category pills': outlines in the muted colour, the text's under the pointer
-   or while what they open is open; the map's pin keeps the location colour once a place is set. */
+/* Their icons are the category pills': outlines in the muted colour, the text's under the pointer,
+   the coral with their words while what they open is open; the map's pin keeps the location
+   colour once a place is set. */
 .browse-tools .labelled svg { color: var(--muted); transition: color .15s; }
-.browse-tools .labelled[aria-expanded="true"] svg { color: var(--text); }
+.browse-tools .labelled[aria-expanded="true"] svg,
+.browse-tools .labelled[aria-expanded="true"]:hover svg { color: inherit; }
 @media (hover: hover) {
   .browse-tools .labelled:hover svg { color: var(--text); }
 }
@@ -337,7 +344,7 @@
   .browse-tools .round-button:active { transform: none; }
 }
 /* The results' head: their heading, and on its line, at the far right, how the cards show, a
-   smaller pill opening its menu, on the accent's tint while it is open, as a picked filter is. On
+   smaller pill opening its menu, on the accent's tint and in the coral while it is open, as a picked filter is. On
    a search, whose heading is for screen readers, the order's pill leads the line instead. */
 .results-head { display: flex; align-items: center; gap: .5rem .75rem; margin: 1.75rem 0 .75rem; }
 .results-head > .results-heading { min-width: 0; margin: 0; }
@@ -427,7 +434,7 @@
 .cards-options .sort-option { display: flex; align-items: center; gap: .55rem; }
 .cards-options .sort-option > svg { flex: none; }
 .sort-menu[open] > .sort-button,
-.cards-menu[open] > .cards-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+.cards-menu[open] > .cards-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
 @media (hover: hover) {
   .small-pill:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
   .sort-menu[open] > .sort-button:hover,
@@ -478,7 +485,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   user-select: none;
 }
 .filter-form .check input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.filter-form .check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+.filter-form .check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
 .filter-form .check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (hover: hover) {
   .filter-form .check:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
@@ -591,7 +598,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   transition: background-color .15s, border-color .15s;
   -webkit-tap-highlight-color: transparent;
 }
-.price-choice[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+.price-choice[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
 @media (hover: hover) {
   .price-choice:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
   .price-choice[aria-pressed="true"]:hover { border-color: var(--accent); }

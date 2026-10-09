@@ -1,6 +1,14 @@
 {% extends "base.html" %}
 {%- import "card_row.html" as rows %}
 
+{#- A main category's pill, like the listing page's details: its icon, then its name. -#}
+{%- macro pill(shortcut) %}
+    <a class="shortcut" href="{{ shortcut.url }}">
+      <svg class="shortcut-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ shortcut.icon|safe }}</svg>
+      {{- shortcut.name -}}
+    </a>
+{%- endmacro %}
+
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
 {#- Posting, the listings kept, the conversations and the theme end the categories here (below), so
@@ -12,12 +20,13 @@
 <section class="welcome">
   {#- The question, for screen readers: on the page the search and the categories ask it. -#}
   <h1 class="visually-hidden">Çfarë po kërkon?</h1>
-  {#- The search starts as a round button before the categories' pills, in the coral's tint: a tap
-      opens the search box over their first line, the page dimmed under it, the box
-      taking the focus so that a phone shows its keyboard (panel_controller.js, as the browse row's
-      round search button does); Escape, or a tap on the dim, folds it again. Without JavaScript
-      the box stands over the pills, as it did, and the button is gone (the noscript below). -#}
-  <div class="welcome-start" data-controller="panel"
+  {#- The search starts as a button among the categories' pills, after most of them, in the coral's
+      tint: a tap opens the search box over the button's own line, the page dimmed under it, the
+      box taking the focus so that a phone shows its keyboard (panel_controller.js, as the browse
+      row's round search button does; data-panel-follow-value has it say where the line is);
+      Escape, or a tap on the dim, folds it again. Without JavaScript the box stands over the
+      pills, as it did, and the button is gone (the noscript below). -#}
+  <div class="welcome-start" data-controller="panel" data-panel-follow-value="true"
        data-action="keydown.esc@document->panel#close turbo:before-cache@document->panel#close">
   <div class="welcome-search-panel" id="welcome-search-panel" data-panel-target="panel">
   {#- Words only, searched in every category and town; the results' filters narrow them. Drawn like
@@ -38,23 +47,20 @@
   </div>
 
   {#- Every main category at once, as pills like the listing page's details: its icon, then its
-      name. First, a round button as tall as they are, the search's, marked as what is picked is,
-      in the coral's tint with a coral magnifier; after them, one that posts a listing, marked so in
-      Claude's blue, then the listings kept, marked so in a red, the conversations, in a green, and
-      the theme, in the blue under its moon and a yellow under its sun: the other pages have these
-      in their top bar (base.html). Those four are one group, which goes to the next line whole
-      rather than split (.welcome-actions). -#}
+      name; Shtëpi / kopsht lit in green and Elektronikë in a neon blue (welcome.css). After most of
+      them, a button as tall as they are and a little wider, the search's, marked as what is picked
+      is, in the coral's tint with a coral magnifier; then Automjete and Prona (LAST_ON_WELCOME in
+      browse.rs); then one that posts a listing, marked so in Claude's blue, the listings kept,
+      marked so in a red, the conversations, in a green, and the theme, in the blue under its moon
+      and a yellow under its sun: the other pages have these in their top bar (base.html). Those
+      four are one group, which goes to the next line whole rather than split (.welcome-actions). -#}
   <nav class="shortcuts" aria-label="Kategoritë">
+    {%- for shortcut in shortcuts %}{% call pill(shortcut) %}{% endfor %}
     <button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false" aria-label="Kërko" title="Kërko"
             data-panel-target="toggle" data-action="panel#toggle">
       <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     </button>
-    {%- for shortcut in shortcuts %}
-    <a class="shortcut" href="{{ shortcut.url }}">
-      <svg class="shortcut-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ shortcut.icon|safe }}</svg>
-      {{- shortcut.name -}}
-    </a>
-    {%- endfor %}
+    {%- for shortcut in last %}{% call pill(shortcut) %}{% endfor %}
     <div class="welcome-actions">
       <a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim" title="Shto njoftim">
         <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
