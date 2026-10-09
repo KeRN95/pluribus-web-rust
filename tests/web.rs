@@ -4593,7 +4593,8 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
         "<h2>Detajet</h2>",
         "<h2>Përshkrimi</h2>",
-        r#"<section class="seller-section" aria-label="Shitësi">"#,
+        r#"<section class="seller-section" aria-labelledby="seller-heading">"#,
+        r#"<h2 id="seller-heading">Shitësi</h2>"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="seller-name">Ana</span>"#,
         r#"<span class="seller-summary">Në Pluribus që nga "#,
@@ -5150,7 +5151,7 @@ async fn a_listing_but_a_cars_or_a_propertys_stands_beside_its_photo(pool: PgPoo
     assert!(phone.contains(r#"<article class="listing listing-split""#), "{phone}");
     let side = &phone[phone.find(r#"<div class="listing-side">"#).unwrap()..];
     let article_end = side.find("</article>").unwrap();
-    assert!(side.find(r#"<section class="seller-section" aria-label="Shitësi">"#).unwrap() < article_end);
+    assert!(side.find(r#"<section class="seller-section" aria-labelledby="seller-heading">"#).unwrap() < article_end);
     assert!(side[..article_end].contains(r#"<h2>Përshkrimi</h2>"#) && !phone.contains("listing-map-section"));
     let golf = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
     assert!(!golf.contains("listing-split") && golf.contains(r#"<div class="listing-side">"#));

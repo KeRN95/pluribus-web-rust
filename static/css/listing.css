@@ -26,7 +26,7 @@
 .listing > *,
 .listing-side > * { min-width: 0; }
 .listing-side > :is(.listing-details, .listing-description) { margin-top: 1.75rem; }
-.listing-side > :is(.listing-details, .listing-description) > h2 { margin-top: 0; }
+.listing-side > :is(.listing-details, .listing-description, .seller-section) > h2 { margin-top: 0; }
 @media (min-width: 720px) {
   .listing-side { grid-template-columns: auto minmax(0, 1fr); }
   .listing-side > * { grid-column: 1 / -1; }
@@ -42,10 +42,11 @@
 .section-head h2 { margin: 0; }
 .section-head a { font-size: var(--text-sm); font-weight: var(--semibold); text-underline-offset: .2em; }
 /* Who sells it, under the description, as far under it as the details and the description stand
-   under what is over them (1.75rem; it stood 2.5rem under once), in a card like the posting form's
-   (the menus' hairline on the surface), across the page, or the column beside the photo on a
-   split page (below): the seller (posting.css, .seller), leading to their profile, their name and
-   summary cut short where the line is too short. The ways to reach them are the buttons under
+   under what is over them (1.75rem; it stood 2.5rem under once), under a heading of its own,
+   "Shitësi", as they have theirs (the heading keeps no margin over it, like theirs, above), in a
+   card like the posting form's (the menus' hairline on the surface), across the page, or the
+   column beside the photo on a split page (below): the seller (posting.css, .seller), leading to
+   their profile, their name and summary cut short where the line is too short. The ways to reach them are the buttons under
    the price alone. On a phone the contact bar settles between the description and the card (the
    card and the map come after it in the grid, by order), a band from edge to edge (below), and
    the card keeps the 2.5rem under it, so that it stands clear of the band. */

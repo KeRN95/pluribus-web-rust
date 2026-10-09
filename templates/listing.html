@@ -328,12 +328,13 @@
     </div>
   </section>
 
-{#- Who sells it, under the description, in a card of their own, across the page or the column
-    beside the photo: a small initial, the name, "Numër i verifikuar" when the number (or address)
-    it shows is one they signed in with (safety.rs), and since when and how many listings, leading
-    to their profile (listing.css, .seller-head). The ways to reach them are the buttons under the
-    price alone. -#}
-<section class="seller-section" aria-label="Shitësi">
+{#- Who sells it, under the description, under a heading of its own as the details and the
+    description have theirs, in a card across the page or the column beside the photo: a small
+    initial, the name, "Numër i verifikuar" when the number (or address) it shows is one they
+    signed in with (safety.rs), and since when and how many listings, leading to their profile
+    (listing.css, .seller-head). The ways to reach them are the buttons under the price alone. -#}
+<section class="seller-section" aria-labelledby="seller-heading">
+  <h2 id="seller-heading">Shitësi</h2>
   <div class="seller-head">
     <a class="seller" href="{{ listing.seller_url }}">
       <span class="avatar" aria-hidden="true">{{ listing.seller_initial() }}</span>
