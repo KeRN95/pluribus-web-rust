@@ -337,7 +337,7 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(panel < body.find(r#"<form class="welcome-form""#).unwrap() && nav < toggle);
     assert!(body.contains(r#"<div class="welcome-start" data-controller="panel" data-panel-follow-value="true""#));
     // The search's button leads the categories' first line, then Automjete, Prona, Elektronikë and
-    // Veshje / aksesorë, bigger, on that line of their own (.welcome-main); then every other
+    // Veshje / aksesorë, on that line of their own (.welcome-main); then every other
     // category in its order; and after them, as one group, the buttons the other pages have in
     // their top bar, the plus first, then the listings kept, the conversations and the theme:
     // here the top bar has the account alone.
@@ -1808,23 +1808,23 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("</svg>Hatchback</dd>"));
     assert!(response.body.contains("</svg>ABS</dd>") && response.body.contains("</svg>Kondicioner</dd>"));
     // Its category in pills, as a category page's head has them, after a round back button that
-    // leads to its category without scripts and, as there, the round way beyond the pills, here the
-    // welcome page's house: the category above it, quieter, a way up, and its own, filled, each
-    // with its icon and leading to its page.
+    // leads to its category without scripts, and no house (the logo leads to the welcome page):
+    // the category above it, quieter, a way up, and its own, filled, each with its icon and
+    // leading to its page.
     let path = positions(&response.body, &[
         r#"<nav class="category-path listing-path" aria-label="Kategoria e njoftimit">"#,
         r#"<a class="back-button" href="/c/makina" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#,
-        r#"<a class="back-button" href="/" aria-label="Faqja kryesore" title="Faqja kryesore"><svg"#,
         r#"<a class="shortcut small category-up" href="/c/automjete"><svg class="shortcut-icon""#,
         r#"<a class="shortcut small is-selected" href="/c/makina"><svg class="shortcut-icon""#,
         "Makina</a>",
     ]);
-    assert!(path[..5].is_sorted(), "{path:?}");
+    assert!(path[..4].is_sorted(), "{path:?}");
+    assert!(!response.body.contains("Faqja kryesore"));
     assert!(!response.body.contains("breadcrumbs"));
     let html = response.body.replace("&#38;", "&");
     assert!(html.contains("photo-1591230740238-e9a71182b67c?auto=format&fit=crop&w=1200"));
-    // Three levels down, the way beyond leads to the category above the way up, by its icon, as a
-    // category page's does; no house.
+    // Three levels down, a round way beyond the pills leads to the category above the way up, by
+    // its icon, as a category page's does.
     sqlx::query("UPDATE listings SET category_id = (SELECT id FROM categories WHERE slug = 'gps-dhe-navigatore') WHERE public_no = 1001")
         .execute(&pool)
         .await
@@ -4571,14 +4571,16 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
     assert!(order.is_sorted(), "{order:?}");
     assert!(!cars.contains(r#"<a class="shortcut small" href="/c/makina">"#), "not itself");
     assert!(cars.contains("</svg>Motoçikleta</a>"), "the names after the icons");
-    // First a round back button, leading a level up without scripts; then a round button that
-    // leads beyond the pills: with two pills, to the welcome page, by its house. The small pills
-    // carry their icons too, the way up's with no arrow of its own, the page's own before its
-    // heading.
+    // First a round back button, leading a level up without scripts; with two pills no other
+    // button before them (the house that led to the welcome page is gone: the logo leads there).
+    // The small pills carry their icons too, the way up's with no arrow of its own, the page's
+    // own before its heading.
     let back = cars.find(r#"<a class="back-button" href="/c/automjete" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#).expect("the back button");
-    let home = cars.find(r#"<a class="back-button" href="/" aria-label="Faqja kryesore" title="Faqja kryesore"><svg"#).expect("the house");
-    assert!(back < home && home < cars.find(r#"<a class="shortcut small category-up" href="/c/automjete"><svg class="shortcut-icon""#).unwrap());
-    // Three levels down, beyond them to the category above the way up, by its icon.
+    assert!(!cars.contains("Faqja kryesore"));
+    assert!(back < cars.find(r#"<a class="shortcut small category-up" href="/c/automjete"><svg class="shortcut-icon""#).unwrap());
+    assert_eq!(cars[..cars.find("category-up").unwrap()].matches("back-button").count(), 1, "back alone before the pills");
+    // Three levels down, a round button beyond back leads to the category above the way up, by
+    // its icon.
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
     let back = gps.find(r#"<a class="back-button" href="/c/pjese-dhe-aksesore" aria-label="Kthehu""#).expect("the back button");
     let above = gps.find(r#"<a class="back-button" href="/c/automjete" aria-label="Automjete" title="Automjete"><svg"#).expect("Automjete's");
@@ -4597,7 +4599,7 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
     let vehicles = html(pool.clone(), "/c/automjete").await;
     assert!(!vehicles.contains("category-up"));
     assert!(vehicles.contains(r#"<a class="back-button" href="/" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#), "back to the welcome page without scripts");
-    assert!(vehicles.contains(r#"<a class="back-button" href="/" aria-label="Faqja kryesore" title="Faqja kryesore">"#), "the welcome page's house");
+    assert!(!vehicles.contains("Faqja kryesore"), "no house: the logo leads to the welcome page");
     assert!(vehicles.contains("<h1>Automjete</h1>"));
     let at = positions(&vehicles, &[
         r#"<a class="shortcut small" href="/search">Të gjitha njoftimet</a>"#,

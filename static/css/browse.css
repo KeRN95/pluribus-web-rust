@@ -29,11 +29,12 @@
 .subcategories .shortcut { gap: .5rem; padding: .6rem .95rem .6rem .85rem; font-size: calc(var(--text-md) * .94); }
 .subcategories .shortcut-icon { width: 18px; height: 18px; }
 .category-up { color: var(--muted); }
-/* Back, and the way beyond the pills, before them: circles as tall as they are, their icons the
-   welcome page's size (20px; 18 on a phone), both plain, on the surface with the menus' hairline:
-   the chevron says back, the house or the category's icon says where the other leads, and the
+/* Back, and three levels down the way beyond the pills, before them: circles as tall as they are,
+   their icons the welcome page's size (20px; 18 on a phone), both plain, on the surface with the
+   menus' hairline: the chevron says back, the category's icon says where the other leads, and the
    page's own pill after them is the line's one marked thing. (Back wore the page's colour's tint
-   once, as that pill does: one tinted thing more on a line with the search's circle beside it.) */
+   once, as that pill does: one tinted thing more on a line with the search's circle beside it;
+   and the welcome page's house stood after it once, where the logo leads too.) */
 .back-button {
   --size: calc(1.55 * var(--text-md) + 1.4rem + 2px);
   display: flex;

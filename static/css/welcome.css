@@ -278,18 +278,15 @@
 }
 /* The welcome page's pills, their gaps and their size, which its round buttons (below) take: a pill
    is its padding, its line and its border tall (--pill), worked out from the same values as the
-   pills, so that the buttons stay as tall as they are as they change. The first line's are bigger
-   (--main-pad, --main-font, and --pill-main from them; .welcome-main, below, takes them as its
-   own), the search's box centring itself on that line (.welcome-search-panel). */
+   pills, so that the buttons stay as tall as they are as they change; the search's box centres
+   itself on the first line (.welcome-search-panel). Every pill is one size, the category pages'
+   (browse.css, .category-path). */
 .welcome-start {
   --row-gap: .55rem;
   --column-gap: .55rem;
   --pill-pad: .7rem;
   --pill-font: var(--text-md);
   --pill: calc(2 * var(--pill-pad) + var(--pill-font) * 1.55 + 2px);
-  --main-pad: .85rem;
-  --main-font: var(--text-lg);
-  --pill-main: calc(2 * var(--main-pad) + var(--main-font) * 1.55 + 2px);
   position: relative;
 }
 .welcome .shortcuts { gap: var(--row-gap) var(--column-gap); margin-top: 0; }
@@ -301,22 +298,14 @@
 }
 /* The first line, a line of its own (flex-basis) however short: the search's button and the four
    main categories most looked for, Automjete, Prona, Elektronikë and Veshje / aksesorë
-   (home.html), the way into the site before the rest; their pills a size up (--text-lg, 18px,
-   where the others' are 16; .85rem over and under the name rather than .7, a little more at its
-   sides), their icons 22px rather than 20, their names in the semibold rather than the medium;
-   the button as tall as they are. As far apart as the others. */
+   (home.html), the way into the site before the rest; their pills the others' size (they were a
+   size up once), the button as tall as they are. As far apart as the others. */
 .welcome-main {
-  --pill-pad: var(--main-pad);
-  --pill-font: var(--main-font);
-  --pill: var(--pill-main);
   display: flex;
   flex-wrap: wrap;
   flex-basis: 100%;
   gap: var(--row-gap) var(--column-gap);
 }
-.welcome-main .shortcut { padding-right: 1.3rem; padding-left: 1.15rem; font-weight: var(--semibold); }
-.welcome-main .shortcut-icon,
-.welcome-main .circle-icon { width: 22px; height: 22px; }
 /* Phones: the welcome page's categories smaller, so that three stand on a line where two did and
    the listings come sooner: less room round the name, the name and its icon a touch smaller, the
    gaps closer. Narrow phones, and phones with their text set larger, gain the most. A category
@@ -326,7 +315,7 @@
    lines stand a little further apart than the pills on a line, so that a pill about 35 px tall is
    about 43 to the touch (41 on the narrowest phones), and three still fit on a line. */
 @media (max-width: 719px) {
-  .welcome-start { --column-gap: .45rem; --pill-pad: .45rem; --pill-font: .9375rem; --main-pad: .55rem; --main-font: 1.0625rem; }
+  .welcome-start { --column-gap: .45rem; --pill-pad: .45rem; --pill-font: .9375rem; }
   .welcome .shortcut { position: relative; gap: .4rem; padding: var(--pill-pad) .85rem var(--pill-pad) .7rem; font-size: var(--pill-font); }
   /* From the border's outer edge. */
   .welcome .shortcut::after {
@@ -335,11 +324,6 @@
     inset: calc(var(--row-gap) / -2 - 1px) calc(var(--column-gap) / -2 - 1px);
   }
   .welcome .shortcut-icon { width: 18px; height: 18px; }
-  /* The first line's a size up again: 15px names (14.9) where the others' are 13, their icons
-     20px where the others' are 18, about 40 px tall where the others are 35. */
-  .welcome-main .shortcut { padding-right: 1rem; padding-left: .85rem; }
-  .welcome-main .shortcut-icon,
-  .welcome-main .circle-icon { width: 20px; height: 20px; }
 }
 
 
@@ -421,8 +405,8 @@
     inset: calc(var(--row-gap) / -2 - 1px) calc(var(--column-gap) / -2 - 1px);
   }
 }
-/* Centred on its button's line, the first, whose pills are the bigger (--pill-main; --toggle-top,
-   which panel_controller.js sets as it opens, says where the line is, 0 until then): the box is
+/* Centred on its button's line, the first (--pill, the pills' height; --toggle-top, which
+   panel_controller.js sets as it opens, says where the line is, 0 until then): the box is
    its button and padding tall (.welcome-form). It
    grows out of the button: clipped to the button's circle as it opens (--toggle-left and
    --toggle-right, the button's distance from the line's ends, and as much over and under as the
@@ -434,10 +418,10 @@
    inside it only what is inside it, so the suggestions, which hang from the box, would show the
    page under them sharp. (A card's heart stands on the dark glass whatever the theme, page.css,
    over a photo.) */
-.welcome-search-panel { display: none; position: absolute; top: calc(var(--toggle-top, 0px) + (var(--pill-main) - 3.7rem - 2px) / 2); right: 0; left: 0; z-index: 9; }
+.welcome-search-panel { display: none; position: absolute; top: calc(var(--toggle-top, 0px) + (var(--pill) - 3.7rem - 2px) / 2); right: 0; left: 0; z-index: 9; }
 .welcome-search-panel.is-open { display: block; animation: search-grow .14s cubic-bezier(.2, .8, .2, 1); }
 @keyframes search-grow {
-  from { clip-path: inset(calc((3.7rem + 2px - var(--pill-main)) / 2) var(--toggle-right, 0px) calc((3.7rem + 2px - var(--pill-main)) / 2) var(--toggle-left, 0px) round 999px); }
+  from { clip-path: inset(calc((3.7rem + 2px - var(--pill)) / 2) var(--toggle-right, 0px) calc((3.7rem + 2px - var(--pill)) / 2) var(--toggle-left, 0px) round 999px); }
   to { clip-path: inset(0 round 999px); }
 }
 .welcome-search-panel.is-open .welcome-form { border-color: transparent; background: none; box-shadow: none; }

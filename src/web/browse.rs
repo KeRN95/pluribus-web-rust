@@ -363,7 +363,7 @@ struct BrowsePage<'a> {
     /// On a category page, the category above it, the row's first pill: a way up.
     parent: Option<Subcategory>,
     /// On a category page three levels down, the category above its parent, which the round button
-    /// before the pills leads to by its icon (the welcome page's house otherwise).
+    /// before the pills leads to by its icon (no such button otherwise).
     above_parent: Option<Subcategory>,
     /// On a category page, its own icon, on its pill.
     heading_icon: Option<&'static str>,

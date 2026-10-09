@@ -657,10 +657,6 @@ pub const SUN: &str = r#"<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2
 /// A paper plane: sending a message (conversation.html).
 pub const SEND: &str = r#"<path d="m21 3-6.5 18-4-7.5-7.5-4Z"/><path d="M21 3 10.5 13.5"/>"#;
 
-/// A house, filled, its door cut out: the welcome page, at the start of a category page's pills
-/// (browse.html). Filled, so as not to be taken for Prona's house, drawn in strokes, beside it.
-pub const HOME: &str = r#"<path d="M12 3.6 20 10.3v9.2a1.5 1.5 0 0 1-1.5 1.5h-4v-4.5a1.5 1.5 0 0 0-1.5-1.5h-2a1.5 1.5 0 0 0-1.5 1.5V21h-4A1.5 1.5 0 0 1 4 19.5v-9.2Z"/>"#;
-
 /// Other things, and a category without an icon of its own yet: a box.
 const BOX: &str = r#"<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5"/><path d="M12 12v9"/>"#;
 

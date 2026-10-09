@@ -371,7 +371,7 @@ struct ListingShow {
     /// The category above its own, the pill before it: a way up. None for a main category.
     parent: Option<Subcategory>,
     /// Three levels down, the category above that one, which the round button before the pills
-    /// leads to by its icon (the welcome page's house otherwise), as on a category page.
+    /// leads to by its icon (no such button otherwise), as on a category page.
     above_parent: Option<Subcategory>,
     details: Vec<Detail>,
     photos: Vec<Photo>,
