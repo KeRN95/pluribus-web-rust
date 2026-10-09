@@ -33,27 +33,23 @@
   </div>
 
   {#- Every main category at once, as pills like the listing page's details: its icon, then its
-      name; before them, a pill two lines of them tall, which they flow round (no space between
-      them, which would show as one in that flow), drawn like the message box in Claude's app as
-      the search's own pill is, with two round buttons in it as that box has: the search's, coral
-      as its send button, and the one that posts a listing, as the header's "+" does, plain as
-      the box's "+". -#}
+      name. First, a round button as tall as they are, the search's, coral as the message box's
+      send button in Claude's app is; last, one that posts a listing, as the header's "+" does,
+      plain as that box's "+". -#}
   <nav class="shortcuts" aria-label="Kategoritë">
-    <div class="welcome-actions">
-      <button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false" aria-label="Kërko" title="Kërko"
-              data-panel-target="toggle" data-action="panel#toggle">
-        <svg class="circle-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      </button>
-      <a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim" title="Shto njoftim">
-        <svg class="circle-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      </a>
-    </div>
-    {%- for shortcut in shortcuts -%}
+    <button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false" aria-label="Kërko" title="Kërko"
+            data-panel-target="toggle" data-action="panel#toggle">
+      <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    </button>
+    {%- for shortcut in shortcuts %}
     <a class="shortcut" href="{{ shortcut.url }}">
       <svg class="shortcut-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ shortcut.icon|safe }}</svg>
       {{- shortcut.name -}}
     </a>
     {%- endfor %}
+    <a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim" title="Shto njoftim">
+      <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </a>
   </nav>
   <div class="welcome-scrim" data-action="click->panel#close"></div>
   </div>

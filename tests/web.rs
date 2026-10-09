@@ -337,10 +337,11 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         .find(r#"<button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false""#)
         .unwrap();
     assert!(panel < body.find(r#"<form class="welcome-form""#).unwrap() && nav < toggle);
-    assert!(nav < body.find(r#"<div class="welcome-actions">"#).unwrap(), "in a pill of their own");
-    // Beside it, in the same pill, a circle that posts a listing; then the categories.
+    // The search's round button comes first among the categories, and one that posts a listing last.
     let post = body.find(r#"<a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#).unwrap();
-    assert!(toggle < post && post < body.find(r#"<a class="shortcut" href="/c/automjete">"#).unwrap(), "the search, then the plus");
+    assert!(toggle < body.find(r#"<a class="shortcut" href="/c/automjete">"#).unwrap(), "the search first");
+    assert!(body.find(r#"<a class="shortcut" href="/c/te-tjera">"#).unwrap() < post, "the plus last");
+    assert!(post < nav + body[nav..].find("</nav>").unwrap());
     assert!(body.contains(r#"data-suggest-target="input" data-panel-target="input""#));
     assert!(body.contains(".welcome-search-panel { display: block; position: static;"));
     assert!(!body.contains(r#"name="city""#) && !body.contains(r#"name="category""#));
