@@ -349,9 +349,10 @@
 }
 
 /* A card's photos: in a small card the first alone. In a big one (the view button) every photo in
-   a row that a finger slides through a photo at a time (slides_controller.js), over the title's
-   stretched link, each photo a link itself; over them the shades, the price and the seller over
-   those, then the dots, at the right, and under a pointer the arrows. The rest of the card a size bigger, the photo 4:3,
+   a row that a finger, or a mouse pressed and moved, slides through a photo at a time
+   (slides_controller.js), over the title's stretched link, each photo a link itself; over them the
+   shades, the price and the seller over those, then the dots, at the right, which a mouse can
+   click, and under a mouse the arrows, each near its edge. The rest of the card a size bigger, the photo 4:3,
    one card a line, no wider than 40rem, in the middle; on a wide screen two a line, across the
    page. */
 .card-slides {
@@ -383,6 +384,9 @@
 .cards-big .results .card-slides::-webkit-scrollbar { display: none; }
 .cards-big .results .card-slide { scroll-snap-align: start; scroll-snap-stop: always; }
 .cards-big .results .card-slide + .card-slide { display: block; }
+.cards-big .results .card-slides.is-dragging,
+.cards-big .results .card-slides.is-dragging * { cursor: grabbing; }
+.cards-big .results .card:has(.card-slides.is-dragging) { outline: none; }
 .cards-big .results .card-media::after {
   z-index: 3;
   background:
@@ -429,8 +433,21 @@
 }
 .card-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgb(255 255 255 / 55%); box-shadow: 0 0 2px rgb(0 0 0 / 45%); transition: background-color .15s; }
 .card-dots .is-current { background: #fff; }
+/* Under a mouse a dot goes to its photo (slides_controller.js), taking a click a little round it
+   too, up to halfway to the next. */
+@media (hover: hover) and (pointer: fine) {
+  .cards-big .results .card-dots span { position: relative; pointer-events: auto; cursor: pointer; }
+  .cards-big .results .card-dots span::after { content: ""; position: absolute; inset: -9px -2.5px; }
+  .cards-big .results .card-dots span:not(.is-current):hover { background: rgb(255 255 255 / 80%); }
+}
+/* The arrows, under a mouse: an arrow in white on a small soft dark circle, as the heart's
+   (::before), each showing only while the mouse is near its edge of the photo (near-previous,
+   near-next, slides_controller.js), or has the keyboard's focus. The button is bigger than its
+   circle, and takes a click a little way round itself too (::after), so that one just off it
+   steps the photos rather than opening the listing. */
 @media (hover: hover) {
   .cards-big .results .card-step {
+    position: relative;
     display: grid;
     place-items: center;
     grid-area: 1 / 1;
@@ -441,19 +458,27 @@
     margin: 0 .75rem;
     padding: 0;
     border: 0;
-    border-radius: 50%;
-    background: rgb(255 255 255 / 90%);
-    color: #1f1e1d;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+    background: none;
+    color: #fff;
     cursor: pointer;
     opacity: 0;
     transition: opacity .15s;
   }
-  /* The arrow takes a click a little way round its circle too, so that one just off it steps the
-     photos rather than opening the listing. */
-  .cards-big .results .card-step { position: relative; }
+  .cards-big .results .card-step::before {
+    content: "";
+    position: absolute;
+    inset: .3rem;
+    border-radius: 50%;
+    background: rgb(38 38 36 / 45%);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    transition: background-color .15s;
+  }
+  .cards-big .results .card-step:hover::before { background: rgb(38 38 36 / 65%); }
+  .cards-big .results .card-step svg { position: relative; width: 15px; height: 15px; }
   .cards-big .results .card-step::after { content: ""; position: absolute; inset: -.6rem; border-radius: 50%; }
-  .cards-big .results .card:hover .card-step,
+  .cards-big .results .near-previous .card-previous,
+  .cards-big .results .near-next .card-next,
   .cards-big .results .card-step:focus-visible { opacity: 1; }
   .card-previous { justify-self: start; }
   .card-next { justify-self: end; }
@@ -461,7 +486,8 @@
 .cards-big .results .card-step[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .card-dots span,
-  .cards-big .results .card-step { transition: none; }
+  .cards-big .results .card-step,
+  .cards-big .results .card-step::before { transition: none; }
 }
 
 /* The list (the view menu): a line each, one under another, no wider than 46rem, in the middle.
