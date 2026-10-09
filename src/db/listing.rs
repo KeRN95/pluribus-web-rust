@@ -352,3 +352,37 @@ pub async fn reveal_contact(db: &PgPool, public_no: i64) -> sqlx::Result<Option<
 
     Ok(Some(contact))
 }
+
+/// A listing's neighbour on its category's page, the one before it or the one after it: its
+/// number and its slug, which make its address.
+#[derive(Debug, sqlx::FromRow)]
+pub struct Neighbour {
+    pub public_no: i64,
+    pub slug: String,
+}
+
+/// The listings either side of one on its category's page, for the round buttons at the right end
+/// of its path (listing.html): the one before it and the one after it, in that page's own order,
+/// newest first (sort_at, then id, as listing_pages.rs orders the page, which the category's index
+/// serves), among the active listings in its category but for those of the accounts the visitor
+/// hides (safety.rs). None where the list ends; a listing no longer on the list itself still has
+/// those either side of where it was.
+pub async fn listing_neighbours(
+    db: &PgPool,
+    listing_id: Uuid,
+    category_id: Uuid,
+    hidden: &[Uuid],
+) -> sqlx::Result<(Option<Neighbour>, Option<Neighbour>)> {
+    const PREVIOUS: &str = "SELECT l.public_no, l.slug FROM listings l
+         WHERE l.category_id = $1 AND l.status = 'ACTIVE' AND l.created_by_user_id <> ALL($3)
+           AND (l.sort_at, l.id) > (SELECT o.sort_at, o.id FROM listings o WHERE o.id = $2)
+         ORDER BY l.sort_at, l.id LIMIT 1";
+    const NEXT: &str = "SELECT l.public_no, l.slug FROM listings l
+         WHERE l.category_id = $1 AND l.status = 'ACTIVE' AND l.created_by_user_id <> ALL($3)
+           AND (l.sort_at, l.id) < (SELECT o.sort_at, o.id FROM listings o WHERE o.id = $2)
+         ORDER BY l.sort_at DESC, l.id DESC LIMIT 1";
+    let step = |sql: &'static str| {
+        sqlx::query_as::<_, Neighbour>(sql).bind(category_id).bind(listing_id).bind(hidden.to_vec()).fetch_optional(db)
+    };
+    tokio::try_join!(step(PREVIOUS), step(NEXT))
+}

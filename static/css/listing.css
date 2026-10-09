@@ -364,6 +364,12 @@
 .listing-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
 .listing-tags .badge { margin-left: 0; }
 .listing-path { align-self: auto; }
+/* At the line's right end, three round buttons like the back one (browse.css, .back-button), the
+   path's gap apart: to the category's list, and to the listing before this one on it and the one
+   after it. One with nowhere to go stays, greyed, so the three keep their places. On a phone the
+   path's finger targets, half the gaps round each (browse.css, --row-gap and --column-gap). */
+.listing-steps { --row-gap: .4rem; --column-gap: .4rem; display: flex; gap: var(--column-gap); margin-left: auto; }
+.listing-steps .is-off { opacity: .35; pointer-events: none; }
 /* The price is the headline: on a phone a little over the title's size (24.5px), from a tablet up
    a size over it (--text-3xl, below), the title under it either way. */
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: var(--text-2xl); }

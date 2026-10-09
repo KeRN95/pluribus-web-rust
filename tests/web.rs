@@ -1836,6 +1836,53 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_listing_steps_to_its_neighbours_on_its_categorys_page(pool: PgPool) {
+    // At the right end of the path, after its pills, three round buttons like the back one: to
+    // the category's list, to the listing before this one on it and to the one after it, in the
+    // list's own order, newest first. The Golf is Makina's newest, so it has nothing before it,
+    // the button there greyed and no link, and the Mercedes after it; the Mercedes has the Golf
+    // before it and nothing after.
+    let golf = "/listing/1001-volkswagen-golf-7-2016-nafte";
+    let mercedes = "/listing/1002-mercedes-benz-c-220-2018-automatike";
+    let off_before = r#"<span class="back-button step-button is-off" aria-hidden="true"><svg data-icon="chevron-left""#;
+    let off_after = r#"<span class="back-button step-button is-off" aria-hidden="true"><svg data-icon="chevron-right""#;
+    let to_golf = format!(r#"<a class="back-button step-button" href="{golf}" aria-label="Njoftimi i mëparshëm" title="Njoftimi i mëparshëm"><svg data-icon="chevron-left""#);
+    let to_mercedes = format!(r#"<a class="back-button step-button" href="{mercedes}" aria-label="Njoftimi tjetër" title="Njoftimi tjetër"><svg data-icon="chevron-right""#);
+    let page = html(pool.clone(), golf).await;
+    let steps = positions(&page, &[
+        "Makina</a>",
+        r#"<nav class="listing-steps" aria-label="Njoftimet e tjera">"#,
+        r#"<a class="back-button list-button" href="/c/makina" aria-label="Lista e njoftimeve" title="Lista e njoftimeve"><svg data-icon="list""#,
+        off_before,
+        &to_mercedes,
+    ]);
+    assert!(steps.is_sorted(), "{steps:?}");
+    assert!(!page.contains("Njoftimi i mëparshëm"));
+    let page = html(pool.clone(), mercedes).await;
+    let steps = positions(&page, &[&to_golf, off_after]);
+    assert!(steps.is_sorted(), "{steps:?}");
+    assert!(!page.contains("Njoftimi tjetër"));
+    // Sold, the Golf is off the list, so the Mercedes has nothing before it; the Golf's own page
+    // still steps to those either side of where it was.
+    sqlx::query("UPDATE listings SET status = 'SOLD', sold_at = now() WHERE public_no = 1001").execute(&pool).await.unwrap();
+    let page = html(pool.clone(), mercedes).await;
+    assert!(page.contains(off_before) && !page.contains(&to_golf));
+    assert!(html(pool.clone(), golf).await.contains(&to_mercedes));
+    sqlx::query("UPDATE listings SET status = 'ACTIVE', sold_at = NULL WHERE public_no = 1001").execute(&pool).await.unwrap();
+    // Bumped, the Mercedes goes first: the Golf then has it before, and nothing after.
+    sqlx::query("UPDATE listings SET bumped_at = now() WHERE public_no = 1002").execute(&pool).await.unwrap();
+    let page = html(pool.clone(), golf).await;
+    let mercedes_before = to_mercedes.replace("Njoftimi tjetër", "Njoftimi i mëparshëm").replace("chevron-right", "chevron-left");
+    assert!(page.contains(&mercedes_before) && page.contains(off_after));
+    // For Besnik, who blocked Ana, her Golf isn't on the list: the Mercedes has nothing after it.
+    let besnik = session_for(&pool, "22222222-2222-4222-8222-222222222222").await;
+    post_form(pool.clone(), "/listing/1001/blloko", &[("blloko", "1")], Some(&besnik)).await;
+    let golf_after = to_golf.replace("Njoftimi i mëparshëm", "Njoftimi tjetër").replace("chevron-left", "chevron-right");
+    assert!(html(pool.clone(), mercedes).await.contains(&golf_after));
+    assert!(get_with_cookie(pool.clone(), mercedes, &besnik).await.body.contains(off_after));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     let car = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
     // A bubble beside the price, like the price per square metre's, which opens the calculator in a

@@ -384,6 +384,11 @@ struct ListingShow {
     /// Three levels down, the category above that one, which the round button before the pills
     /// leads to by its icon (no such button otherwise), as on a category page.
     above_parent: Option<Subcategory>,
+    /// The listings either side of it on its category's page, the one before it and the one after
+    /// it (db::listing_neighbours), for the round buttons at the right end of the path, after the
+    /// one to the list; a button with nowhere to go stays, greyed.
+    previous: Option<db::Neighbour>,
+    next: Option<db::Neighbour>,
     details: Vec<Detail>,
     photos: Vec<Photo>,
     /// The reveal button's label, when the seller's phone number or e-mail can be shown.
@@ -535,6 +540,8 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         db::price_was(&state.db, listing.id),
         safety::hidden_accounts(&state, &headers),
     )?;
+    // Its neighbours on its category's page, among the listings the visitor sees there.
+    let (previous, next) = db::listing_neighbours(&state.db, listing.id, listing.category_id, &hidden).await?;
     let price_drop = price_drop(price_was, listing.price_amount, &listing.currency);
     let views = (views > 0).then(|| format::number(Decimal::from(views)));
     let category = categories.by_slug(&listing.category_slug);
@@ -623,6 +630,8 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             category: category_pill,
             parent,
             above_parent,
+            previous,
+            next,
             details,
             photos,
             reveal,
