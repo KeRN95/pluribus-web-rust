@@ -154,12 +154,15 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
 // A finger gives a tap's page only the tap's own length of a head start, about a tenth of a
 // second, where a mouse resting on a link gives a click's most of a second; and a page's round
 // trip is longer than a tap (some 150 ms through the site's tunnel). So on a touch screen the
-// pages behind the links in view are fetched ahead while the page sits idle: the cards' listings,
-// the categories' pills (the welcome page's, a category page's path and subcategories), any link
-// Turbo would fetch ahead under a mouse (aheadable), two at a time, at most twelve a page, quietly
-// (priority low), each kept half a minute for the visit a tap makes (above, as the touch's own).
-// Not where the visitor asks to save data, nor on a connection the browser calls slow
-// (navigator.connection), nor a page kept already.
+// pages behind the links in view are fetched ahead within 300 ms of coming into view, sooner
+// when the page sits idle (requestIdleCallback with that timeout; a page busy with its photos
+// would otherwise hold them off for seconds): the cards' listings, the categories' pills (the
+// welcome page's, a category page's path and subcategories), any link Turbo would fetch ahead
+// under a mouse (aheadable), two at a time, at most twelve a page, quietly (priority low), each
+// kept half a minute for the visit a tap makes (above, as the touch's own). Not where the visitor
+// asks to save data, nor on a connection the browser calls slow (navigator.connection), nor a
+// page kept already.
+const AHEAD_WITHIN = 300;
 const AHEAD_IN_VIEW = ".card-link, .shortcut";
 const kept = new Map();
 const keptAhead = (href) => {
@@ -174,7 +177,9 @@ let inView = null;
 let waiting = [];
 let fetching = 0;
 let left = 0;
-const idle = window.requestIdleCallback ?? ((task) => setTimeout(task, 200));
+const idle = window.requestIdleCallback
+  ? (task) => requestIdleCallback(task, { timeout: AHEAD_WITHIN })
+  : (task) => setTimeout(task, AHEAD_WITHIN);
 function fetchAhead() {
   while (fetching < 2 && left > 0 && waiting.length) {
     const link = waiting.shift();
