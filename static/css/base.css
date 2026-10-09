@@ -61,6 +61,7 @@
   --on-button: #ffffff;
   --badge: #f7e4da;
   --location: #4a7fb0;           /* Claude blue, deeper on the ivory */
+  --blue: #4a7fb0;               /* Claude blue: the welcome page's plus */
   --danger: #b42318;
   /* A property's square metre against its zone's average: under it, about it, over it. */
   --below: #566a3c;
@@ -118,6 +119,7 @@
   --on-button: #ffffff;
   --badge: #43302a;
   --location: #6a9bcc;
+  --blue: #6a9bcc;
   --danger: #f97066;
   --below: #a3b887;
   --below-bg: #2b3322;
@@ -148,6 +150,7 @@
     --on-button: #ffffff;
     --badge: #43302a;
     --location: #6a9bcc;
+    --blue: #6a9bcc;
     --danger: #f97066;
     --below: #a3b887;
     --below-bg: #2b3322;

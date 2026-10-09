@@ -9,28 +9,29 @@
 .results-header h1 { margin: 0; font-size: var(--text-xl); font-weight: var(--medium); }
 /* The words searched in place of misspelt ones take a line of their own, under the heading. */
 .search-corrections { flex-basis: 100%; margin: .5rem 0 0; color: var(--muted); }
-/* A category page's head: on a line of their own, small, the category above it, quieter, with a
-   "‹", a way up, and the page's own, filled as the row's buttons are when set, the heading at the
-   pill's size with a chevron, which shows the other categories at its level as pills after it;
-   under them, when it has any, its subcategories as pills like the welcome page's (welcome.css,
-   .shortcut). A listing's page has the first two (listing.html, .listing-path), its category's
-   pill a link. As far below the header as the page's sides are from the screen's (--gutter). */
+/* A category page's head: on a line of their own, pills the welcome page's size on every screen
+   (welcome.css, .shortcut; on a phone as there, below), after the back button and the way beyond
+   them: the category above it, quieter, a way up, and the page's own, filled as the row's buttons
+   are when set, the heading at the pill's size with a chevron, which shows the other categories at
+   its level as pills after it; under them, when it has any, its subcategories as pills like the
+   welcome page's. A listing's page has the back button and the first two (listing.html,
+   .listing-path), its category's pill a link. As far below the header as the page's sides are
+   from the screen's (--gutter). */
 .category-pills { display: flex; flex-direction: column; align-items: flex-start; gap: .5rem; margin: var(--gutter) 0 0; }
 .category-path { display: flex; flex-wrap: wrap; align-items: center; align-self: stretch; gap: .4rem; }
 /* The subcategories as close under the small pills as their own rows are to each other: one
    group. (A search within a category has them under its heading instead, with room above.) */
 .subcategories { display: flex; flex-wrap: wrap; gap: .5rem; }
 .category-pills > .subcategories { margin: 0; }
-/* The subcategories' pills a touch smaller than the welcome page's main categories: between the
-   row's buttons and the small pills over them. */
+/* The subcategories' pills a touch smaller than the welcome page's main categories and the path's
+   over them, as big as the row's buttons under them (--row, below). */
 .subcategories .shortcut { gap: .5rem; padding: .6rem .95rem .6rem .85rem; font-size: calc(var(--text-md) * .94); }
 .subcategories .shortcut-icon { width: 18px; height: 18px; }
-.shortcut.small { gap: .4rem; padding: .55rem .9rem .55rem .8rem; font-size: calc(var(--text-md) * .9); }
 .category-up { color: var(--muted); }
-/* Back, before the small pills: a circle as tall as they are, to the page before
-   (back_controller.js). */
+/* Back, and the way beyond the pills, before them: circles as tall as they are, their icons the
+   welcome page's size (20px; 18 on a phone). */
 .back-button {
-  --size: calc(1.55 * .9 * var(--text-md) + 1.1rem + 2px);
+  --size: calc(1.55 * var(--text-md) + 1.4rem + 2px);
   display: flex;
   flex: none;
   align-items: center;
@@ -48,9 +49,10 @@
 @media (hover: hover) {
   .back-button:hover { background: var(--surface-muted); }
 }
-/* The small pills' icons, a size down from the subcategories', the selected one's in the text's
-   colour. */
-.category-path .shortcut-icon { width: 16px; height: 16px; }
+/* The path's icons, the welcome page's size (18px on a phone, below), the selected one's in the
+   text's colour. */
+.category-path .shortcut-icon,
+.back-button svg { width: 20px; height: 20px; }
 .category-path .is-selected .shortcut-icon { color: inherit; }
 .category-path .shortcut.is-selected {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
@@ -73,8 +75,8 @@
 @media (prefers-reduced-motion: no-preference) {
   .category-switch[open] + .category-level > .shortcut { animation: menu-in .14s ease-out; }
 }
-/* Phones: the category pills the welcome page's size (welcome.css), the path's small pills (a
-   listing's too) and the subcategories' alike, about 35 px tall; the back button as tall as they
+/* Phones: the path's pills (a listing's too) the welcome page's size there (welcome.css), as on
+   every screen, and the subcategories' alike, about 35 px tall; the back button as tall as they
    are, and the row's buttons as big as the pills over them (--row, below), as everywhere. As on
    the welcome page, a finger's target is bigger than the pill it sees: half the gaps round each
    pill, and round the back button (::after, part of the link, from the border's outer edge), its
@@ -86,6 +88,8 @@
   .subcategories .shortcut,
   .shortcut.small { position: relative; gap: .4rem; padding: .45rem .85rem .45rem .7rem; font-size: .9375rem; }
   .back-button { --size: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px); position: relative; }
+  .category-path .shortcut-icon,
+  .back-button svg { width: 18px; height: 18px; }
   /* Every pill of the path but the page's own is its icon alone, round and as tall as the back
      button: the way up shows its category's icon, its name still the link's, for screen readers,
      out of sight (a category's and a listing's alike). One without an icon keeps its name. */
