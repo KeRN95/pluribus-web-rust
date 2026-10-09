@@ -53,6 +53,10 @@ const LIBRARIES = {
     url: (name) => `https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/${name}.svg`,
     column: 2,
     attributes: { viewBox: "0 0 256 256", fill: "currentColor", stroke: "none" },
+    // Filled: said in the element's own style too, which the stylesheet's rules for a stroked
+    // icon (a card's heart: fill transparent, a white stroke) would otherwise undo, leaving a
+    // hairline of the 256-unit box.
+    style: { fill: "currentColor", stroke: "none" },
   },
   heroicons: { url: (name) => `https://unpkg.com/heroicons@2.2.0/24/outline/${name}.svg`, column: 3, attributes: { "stroke-width": "1.5" } },
 };
@@ -145,6 +149,7 @@ const fetched = new Map();
 // Each <svg> as the site drew it, to put back.
 const own = new WeakMap();
 const ATTRIBUTES = ["viewBox", "fill", "stroke", "stroke-width"];
+const STYLED = ["fill", "stroke"];
 
 // The key of an <svg> the trial swaps: its data-icon; a category pill's, by its link's slug; the
 // page's own pill's, by the page's path; a view's, by its class. None for the rest.
@@ -170,6 +175,7 @@ function restore(svg) {
     if (value === null) svg.removeAttribute(at);
     else svg.setAttribute(at, value);
   }
+  for (const property of STYLED) svg.style[property] = "";
   delete svg.dataset.drawnBy;
   own.delete(svg);
 }
@@ -313,6 +319,7 @@ export default class extends Controller {
       if (value === null || value === undefined) svg.removeAttribute(at);
       else svg.setAttribute(at, value);
     }
+    for (const property of STYLED) svg.style[property] = library.style?.[property] ?? "";
     svg.innerHTML = file.inner;
     svg.dataset.drawnBy = `${libraryName}:${name}`;
   }
