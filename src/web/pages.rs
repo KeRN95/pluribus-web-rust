@@ -21,7 +21,15 @@ pub const PAGES: [(&str, &str); 5] = [
 ];
 
 /// When the terms and the privacy page last changed, as they say at their top.
-const UPDATED: &str = "8 tetor 2026";
+const TERMS_UPDATED: &str = "8 tetor 2026";
+const PRIVACY_UPDATED: &str = "9 tetor 2026";
+
+/// A setting from .env, when it is set: CONTACT_EMAIL, the address the contact and privacy pages
+/// give; OPERATOR, who runs the site (a person's name, or a company's), whom the privacy page names
+/// as the one responsible for the data.
+fn setting(name: &str) -> Option<String> {
+    std::env::var(name).ok().map(|value| value.trim().to_string()).filter(|value| !value.is_empty())
+}
 
 fn meta(headers: &HeaderMap, path: &str, title: &str, description: &str) -> PageMeta {
     let origin = seo::origin(headers);
@@ -77,7 +85,7 @@ pub async fn terms(headers: HeaderMap) -> Result<Response> {
             "Kushtet e përdorimit",
             "Çfarë lejohet dhe çfarë jo në Pluribus: llogaria, njoftimet, mesazhet, moderimi dhe përgjegjësia.",
         ),
-        updated: UPDATED,
+        updated: TERMS_UPDATED,
     })
 }
 
@@ -86,6 +94,9 @@ pub async fn terms(headers: HeaderMap) -> Result<Response> {
 struct Privacy {
     meta: PageMeta,
     updated: &'static str,
+    /// Who runs the site (OPERATOR), and the address to write to (CONTACT_EMAIL), when they are set.
+    operator: Option<String>,
+    email: Option<String>,
 }
 
 pub async fn privacy(headers: HeaderMap) -> Result<Response> {
@@ -96,7 +107,9 @@ pub async fn privacy(headers: HeaderMap) -> Result<Response> {
             "Privatësia",
             "Cilat të dhëna mban Pluribus, pse, kush tjetër i merr, sa kohë, dhe si i sheh, i ndryshon ose i fshin.",
         ),
-        updated: UPDATED,
+        updated: PRIVACY_UPDATED,
+        operator: setting("OPERATOR"),
+        email: setting("CONTACT_EMAIL"),
     })
 }
 
@@ -109,9 +122,8 @@ struct Contact {
 }
 
 pub async fn contact(headers: HeaderMap) -> Result<Response> {
-    let email = std::env::var("CONTACT_EMAIL").ok().map(|email| email.trim().to_string()).filter(|email| !email.is_empty());
     render(Contact {
         meta: meta(&headers, "/kontakt", "Kontakt", "Si i shkruan Pluribus: për llogarinë, për një njoftim, për një ide."),
-        email,
+        email: setting("CONTACT_EMAIL"),
     })
 }

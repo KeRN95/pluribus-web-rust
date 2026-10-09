@@ -205,8 +205,8 @@ struct ListingFormPage {
     /// "Plotëso pjesën tjetër me AI": on a new listing's form, when the AI is set up.
     ai_fill: bool,
     /// A new listing's form: "Zona" follows the zone its title or description names (guess_zone,
-    /// listing_form_controller.js).
-    guess_zone: bool,
+    /// listing_form_controller.js), and its foot names the terms it is posted under.
+    new_listing: bool,
 }
 
 impl ListingFormPage {
@@ -318,7 +318,7 @@ fn page(
         started: now(),
         photos: Vec::new(),
         ai_fill: false,
-        guess_zone: matches!(purpose, Purpose::New),
+        new_listing: matches!(purpose, Purpose::New),
     }
 }
 

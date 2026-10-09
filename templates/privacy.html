@@ -5,12 +5,24 @@
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
 {% block content %}
-{#- What the site keeps of its visitors and why (web/pages.rs): what the code does, said plainly.
-    When that changes (what is kept, who else gets it, for how long), change this page too. -#}
+{#- What the site keeps of its visitors and why (web/pages.rs): what the code does, said plainly,
+    as Albania's law on personal data (no. 124/2024, as the GDPR does) asks a site to say it: who
+    is responsible, what is kept, for what and on what ground, who else gets it and where, for how
+    long, and the visitor's rights, a complaint to the Commissioner among them. Who runs the site
+    and the address to write to come from .env (OPERATOR, CONTACT_EMAIL). When any of it changes
+    (what is kept, who else gets it, for how long), change this page too, and its date
+    (PRIVACY_UPDATED). -#}
 <article class="text-page">
   <h1>Privatësia</h1>
   <p class="updated">Përditësuar më {{ updated }}</p>
-  <p class="lead">Pluribus mban aq të dhëna sa i duhen për të funksionuar, dhe i thotë hapur. Ja cilat janë, pse, kush tjetër i merr, dhe si i kontrollon.</p>
+  <p class="lead">Pluribus mban aq të dhëna sa i duhen për të funksionuar, dhe i thotë hapur. Ja kush i mban, cilat janë, pse, kush tjetër i merr, sa kohë, dhe si i kontrollon.</p>
+
+  <h2>Kush i mban</h2>
+  <p>
+    {%- if let Some(operator) = operator %}Pluribus e drejton {{ operator }}, që vendos si mbahen të dhënat e tua dhe përgjigjet për to.
+    {%- else %}Të dhënat e tua i mban ai që e drejton Pluribus, i cili vendos si mbahen dhe përgjigjet për to.{% endif %}
+    {%- if let Some(email) = email %} Për çdo pyetje a kërkesë rreth tyre, na shkruaj te <a href="mailto:{{ email }}">{{ email }}</a>.
+    {%- else %} Për çdo pyetje a kërkesë rreth tyre, shiko <a href="/kontakt">Kontakt</a>.{% endif %}</p>
 
   <h2>Çfarë mbajmë</h2>
   <ul>
@@ -22,23 +34,40 @@
     <li>Shikimet e njoftimeve numërohen për ditë, pa ruajtur kush i pa: një shikim i përsëritur brenda pak kohe njihet nga një hash i adresës dhe i shfletuesit, që mbahet vetëm në kujtesën e serverit.</li>
   </ul>
 
+  <h2>Pse, dhe mbi çfarë baze</h2>
+  <ul>
+    <li><strong>Për shërbimin që kërkon.</strong> Llogaria, njoftimet, fotot, mesazhet, të ruajturat dhe bllokimet mbahen që Pluribus të bëjë atë që i kërkon, sipas <a href="/kushtet">kushteve të përdorimit</a> që pranon kur hyn ose publikon.</li>
+    <li><strong>Për ta mbajtur faqen të sigurt dhe të dobishme.</strong> Kufijtë e kodeve dhe të publikimeve, raportimet, moderimi dhe numërimi i shikimeve bëhen në interesin e ligjshëm që Pluribus të mos keqpërdoret, dhe që shitësit të shohin si ecin njoftimet e tyre.</li>
+    <li><strong>Vetëm kur e kërkon ti.</strong> Plotësimi me AI ndodh vetëm kur shtyp butonin e tij, për atë formë.</li>
+    <li><strong>Kur e kërkon ligji.</strong> Ua japim autoriteteve vetëm kur ligji na detyron.</li>
+  </ul>
+
   <h2>Cookies dhe shfletuesi</h2>
-  <p>Pluribus përdor cookies të vetat: <code>session</code> (hyrja), <code>llogari</code> (që faqet të dinë se ke hyrë, pa pyetur serverin), <code>qyteti</code> (qyteti që zgjodhe), <code>cards</code> (kartela të mëdha a të vogla) dhe pak të përkohshme gjatë hyrjes dhe publikimit. Tema e errët mbahet në shfletuesin tënd. Nuk ka cookies gjurmimi a reklamash, dhe asnjë analitikë të palëve të treta.</p>
+  <p>Pluribus përdor cookies të vetat: <code>session</code> (hyrja), <code>llogari</code> (që faqet të dinë se ke hyrë, pa pyetur serverin), <code>qyteti</code> (qyteti që zgjodhe), <code>cards</code> (kartela të mëdha a të vogla) dhe pak të përkohshme gjatë hyrjes dhe publikimit. Tema e errët mbahet në shfletuesin tënd. Nuk ka cookies gjurmimi a reklamash, dhe asnjë analitikë të palëve të treta. Të gjitha i duhen faqes për të punuar ose kujtojnë zgjedhjet e tua, ndaj nuk të kërkojmë pëlqim për to.</p>
 
   <h2>Kush tjetër i merr</h2>
   <ul>
+    <li>Faqja shërbehet përmes Cloudflare, që i përcjell kërkesat te serveri dhe e mbron nga sulmet: për këtë sheh adresën IP dhe faqet që hap.</li>
     <li>Kodi i hyrjes dërgohet përmes një shërbimi email-i ose përmes WhatsApp (Meta), që marrin adresën ose numrin për ta dorëzuar.</li>
     <li>Fotot ruhen te një shërbim ruajtjeje skedarësh, nga ku i shfaqin faqet.</li>
     <li>Harta ngarkon pllakat nga OpenStreetMap: kur hap hartën, shfletuesi yt lidhet me serverët e tyre.</li>
     <li>Nëse përdor „Plotëso pjesën tjetër me AI“, titulli, përshkrimi dhe fotot e asaj forme i dërgohen Anthropic për t'u lexuar, dhe për asgjë tjetër nga ana jonë.</li>
-    <li>Nuk i shesim të dhënat e tua dhe nuk i japim për reklama. Ua japim autoriteteve vetëm kur e kërkon ligji.</li>
+    <li>Nuk i shesim të dhënat e tua dhe nuk i japim për reklama.</li>
   </ul>
+  <p>Disa prej tyre, si Anthropic, Cloudflare dhe Meta, i përpunojnë të dhënat jashtë Shqipërisë, kryesisht në Shtetet e Bashkuara. Secilit i dërgojmë vetëm aq sa i duhet për punën që bën për Pluribus.</p>
 
   <h2>Sa kohë</h2>
-  <p>Kodet skadojnë pas 10 minutash dhe sesionet pas 30 ditësh. Një njoftim që fshin nuk shfaqet më askund, por rreshti i tij mbetet për historinë e faqes dhe për raportimet. Mesazhet mbeten sa kohë ekzistojnë llogaritë e të dyve.</p>
+  <p>Kodet skadojnë pas 10 minutash, dhe çdo kërkesë për kod, me kontaktin dhe adresën IP, fshihet pas një dite. Sesionet skadojnë pas 30 ditësh. Një njoftim që fshin nuk shfaqet më askund, por rreshti i tij mbetet për historinë e faqes dhe për raportimet. Mesazhet mbeten sa kohë ekzistojnë llogaritë e të dyve.</p>
 
   <h2>Të drejtat e tua</h2>
-  <p>Mund të kërkosh të shohësh të dhënat që mbajmë për ty, t'i ndreqësh, ose të fshish llogarinë: <a href="/kontakt">na shkruaj</a> nga numri ose email-i i llogarisë. Kur fshihet llogaria, numri, email-i dhe emri hiqen dhe njoftimet e tua mbyllen; mesazhet që ke shkëmbyer mbeten për palën tjetër, me „Përdorues i fshirë“ në vend të emrit tënd.</p>
+  <p>Mund të kërkosh të shohësh të dhënat që mbajmë për ty, t'i ndreqësh, t'i marrësh në një formë që e lexon një kompjuter, të kundërshtosh ose të kufizosh një përdorim të tyre, ose të fshish llogarinë: {% if let Some(email) = email %}na shkruaj te <a href="mailto:{{ email }}">{{ email }}</a>{% else %}<a href="/kontakt">na shkruaj</a>{% endif %} nga numri ose email-i i llogarisë, që të të njohim. Të përgjigjemi brenda 30 ditëve. Kur fshihet llogaria, numri, email-i dhe emri hiqen dhe njoftimet e tua mbyllen; mesazhet që ke shkëmbyer mbeten për palën tjetër, me „Përdorues i fshirë“ në vend të emrit tënd.</p>
+  <p>Nëse mendon se nuk i mbajmë mirë të dhënat e tua, mund të ankohesh te Komisioneri për të Drejtën e Informimit dhe Mbrojtjen e të Dhënave Personale (<a href="https://www.idp.al" rel="noopener">idp.al</a>).</p>
+
+  <h2>Mosha</h2>
+  <p>Pluribus është për të rriturit: për të hapur llogari duhet të jesh të paktën 18 vjeç.</p>
+
+  <h2>Kur ndryshon kjo faqe</h2>
+  <p>Kur ndryshon diçka në mënyrën si mbahen të dhënat, ndryshon edhe kjo faqe, dhe data në krye të saj.</p>
 
   <p>Shiko edhe <a href="/kushtet">kushtet e përdorimit</a>.</p>
 </article>

@@ -2696,6 +2696,44 @@ async fn the_footer_leads_to_the_pages_about_the_site(pool: PgPool) {
     assert!(!pages.iter().any(|(path, ..)| robots.contains(&format!("Disallow: {path}"))));
 }
 
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn the_privacy_page_says_what_the_law_asks_and_the_site_keeps_to_it(pool: PgPool) {
+    // Who is responsible, on what ground each use rests, who else gets the data and where, for how
+    // long, and the rights, a complaint to the Commissioner among them.
+    let privacy = html(pool.clone(), "/privatesia").await;
+    for said in [
+        "<h2>Kush i mban</h2>",
+        "<h2>Pse, dhe mbi çfarë baze</h2>",
+        "Faqja shërbehet përmes Cloudflare",
+        "jashtë Shqipërisë, kryesisht në Shtetet e Bashkuara",
+        "fshihet pas një dite",
+        "Të përgjigjemi brenda 30 ditëve.",
+        r#"(<a href="https://www.idp.al" rel="noopener">idp.al</a>)"#,
+        "duhet të jesh të paktën 18 vjeç",
+    ] {
+        assert!(privacy.contains(said), "{said}");
+    }
+    // Where people hand over what it keeps, a line says the terms they accept and where the
+    // privacy page is: signing in and a new listing, not an edit.
+    let note = r#"pranon <a href="/kushtet">kushtet e përdorimit</a>. Si i mbajmë të dhënat e tua: <a href="/privatesia">Privatësia</a>."#;
+    assert!(html(pool.clone(), "/llogaria").await.contains(note));
+    assert!(html(pool.clone(), "/shto").await.contains(note));
+
+    // The sign-in codes asked for over a day ago go, with the contacts and addresses they were
+    // asked from; those of today stay, for the limits.
+    sqlx::query(
+        "INSERT INTO login_codes (contact, code_hash, client_ip, expires_at, created_at)
+         VALUES ('+355690000101', '\\x00', '203.0.113.9', now() - interval '47 hours', now() - interval '2 days'),
+                ('+355690000102', '\\x00', '203.0.113.9', now() + interval '10 minutes', now())",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert_eq!(marketplace::db::forget_old_codes(&pool).await.unwrap(), 1);
+    let left: Vec<String> = sqlx::query_scalar("SELECT contact FROM login_codes").fetch_all(&pool).await.unwrap();
+    assert_eq!(left, ["+355690000102"]);
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn next_page_loads_as_a_turbo_frame(pool: PgPool) {
     sqlx::query(

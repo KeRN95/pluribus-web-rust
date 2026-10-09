@@ -5,8 +5,9 @@ use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use tracing_subscriber::EnvFilter;
 
 /// How often the words search corrects typos from (db::refresh_search_words) and what a square
-/// metre costs in each zone (db::refresh_zone_prices) are rebuilt. The words take a couple of
-/// seconds for 100 000 listings, and searches go on meanwhile.
+/// metre costs in each zone (db::refresh_zone_prices) are rebuilt, and the sign-in codes over a day
+/// old forgotten (db::forget_old_codes). The words take a couple of seconds for 100 000 listings,
+/// and searches go on meanwhile.
 const REFRESH_EVERY: Duration = Duration::from_secs(15 * 60);
 
 #[tokio::main]
@@ -32,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
     // Search fixes typos and finds words' other forms from the words listings use, and a
     // property's page compares its price per square metre with its zone's: figures over all the
     // listings, rebuilt now and then every REFRESH_EVERY, so that they follow the listings posted
-    // meanwhile.
+    // meanwhile. Old sign-in codes go at the same pace.
     tokio::spawn({
         let db = db.clone();
         async move {
@@ -44,6 +45,11 @@ async fn main() -> anyhow::Result<()> {
                 }
                 if let Err(error) = marketplace::db::refresh_zone_prices(&db).await {
                     tracing::warn!(%error, "could not refresh what a square metre costs in each zone");
+                }
+                // Sign-in codes asked for over a day ago go, with the contacts and addresses (IPs)
+                // they were asked from, as the privacy page promises.
+                if let Err(error) = marketplace::db::forget_old_codes(&db).await {
+                    tracing::warn!(%error, "could not forget the old sign-in codes");
                 }
             }
         }

@@ -22,7 +22,7 @@
       With the AI set up, a new listing's form fills itself in from what the seller wrote
       (ai_fill_controller.js, which takes the photos picked from photos_controller.js). -#}
   <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data"
-        data-controller="listing-form narrow{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% endif %}{% if guess_zone %} data-listing-form-guess-value="true"{% endif %}>
+        data-controller="listing-form narrow{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% endif %}{% if new_listing %} data-listing-form-guess-value="true"{% endif %}>
     {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
 
     {#- No labels in sight: each field says what it is inside it, as its placeholder or a list's
@@ -207,6 +207,11 @@
       {% if let Some(url) = cancel_url %}<a class="button secondary" href="{{ url }}">Anulo</a>{% endif %}
     </div>
   </form>
+  {%- if new_listing %}
+  {#- Where the seller hands their listing and contact over: the terms it goes up under, and how the
+      site keeps what they give (pages.rs). -#}
+  <p class="account-note">Duke publikuar, pranon <a href="/kushtet">kushtet e përdorimit</a>. Si i mbajmë të dhënat e tua: <a href="/privatesia">Privatësia</a>.</p>
+  {%- endif %}
 
   {%- if signed_in_as.is_some() %}
   <form class="account-note" action="/dil" method="post">

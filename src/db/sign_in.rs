@@ -58,6 +58,14 @@ pub async fn create_login_code(
     .await
 }
 
+/// Forgets the sign-in codes asked for more than a day ago, used or not, with the contact and the
+/// network (client IP) they were asked from, as the privacy page says: the limits look back an hour
+/// (code_requests) and a code lasts minutes, so nothing needs them after that. How many went.
+pub async fn forget_old_codes(db: &PgPool) -> sqlx::Result<u64> {
+    let done = sqlx::query!("DELETE FROM login_codes WHERE created_at < now() - interval '1 day'").execute(db).await?;
+    Ok(done.rows_affected())
+}
+
 /// A code that never went out (the provider refused it): gone, so it neither waits nor counts.
 pub async fn delete_login_code(db: &PgPool, id: Uuid) -> sqlx::Result<()> {
     sqlx::query!("DELETE FROM login_codes WHERE id = $1", id).execute(db).await.map(|_| ())
