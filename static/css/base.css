@@ -73,16 +73,10 @@
   --burgundy-bg: #f5dfe4;
   --burgundy-button: #7a1f33;
   --burgundy-button-hover: #651a2a;
-  --green: #006039;              /* Rolex's green: Prona (below) */
-  --gold: #a37e2c;               /* Rolex's gold: the house before Prona's pills (browse.css) */
-  --gold-bg: #f4ecd6;            /* its tint */
-  --green-bg: #dcefe5;
-  --green-button: #006039;
-  --green-button-hover: #004f2e;
-  --navy: #05164d;               /* Lufthansa's blue, a deep navy: Punë (below) */
-  --navy-bg: #dde3f2;
-  --navy-button: #05164d;
-  --navy-button-hover: #0b2470;
+  --darkred: #9b1b1b;            /* a dark red: Automjete (below) */
+  --darkred-bg: #f6dcdc;
+  --darkred-button: #9b1b1b;
+  --darkred-button-hover: #821616;
   --red: #d6303e;                /* a bright red: a kept listing's heart (the welcome page's heart is the burgundy) */
   --red-bg: #fbe0e2;
   --yellow: #bb8b1b;             /* and a yellow: the theme's sun, on the dark theme */
@@ -164,15 +158,10 @@
   --burgundy-bg: #3f232b;
   --burgundy-button: #8f2a46;
   --burgundy-button-hover: #a8365a;
-  --green: #3fa070;
-  --green-bg: #1f3a2d;
-  --gold: #cfa94a; --gold-bg: #3e3520;
-  --green-button: #0f6a45;
-  --green-button-hover: #1f8457;
-  --navy: #8ea4e6;
-  --navy-bg: #1f2846;
-  --navy-button: #1f3a8a;
-  --navy-button-hover: #2d4ca8;
+  --darkred: #e0605f;
+  --darkred-bg: #432223;
+  --darkred-button: #a42424;
+  --darkred-button-hover: #c02c2c;
   --red: #ef555f;
   --red-bg: #4a2428;
   --yellow: #e2be5a;
@@ -223,15 +212,10 @@
     --burgundy-bg: #3f232b;
     --burgundy-button: #8f2a46;
     --burgundy-button-hover: #a8365a;
-    --green: #3fa070;
-    --green-bg: #1f3a2d;
-    --gold: #cfa94a; --gold-bg: #3e3520;
-    --green-button: #0f6a45;
-    --green-button-hover: #1f8457;
-    --navy: #8ea4e6;
-    --navy-bg: #1f2846;
-    --navy-button: #1f3a8a;
-    --navy-button-hover: #2d4ca8;
+    --darkred: #e0605f;
+    --darkred-bg: #432223;
+    --darkred-button: #a42424;
+    --darkred-button-hover: #c02c2c;
     --red: #ef555f;
     --red-bg: #4a2428;
     --yellow: #e2be5a;
@@ -256,34 +240,34 @@
 
 /* Five parts of the site have a colour of their own wherever the rest is coral, on their pages, their
    own, those of the categories under them and their listings' (the body's data-section,
-   base.html): what is picked or open, the buttons, their tints. Elektronikë
-   in Claude's blue; Shtëpi / kopsht in Claude's olive, a toned-down green (#788c5d, deeper on the
-   ivory, as the blue is); Automjete in burgundy; Prona in Rolex's green; Punë in Lufthansa's
-   blue, a deep navy (the three lighter on the dark theme, their buttons a little less so). Set on <body>, under the themes' colours on <html>, so
-   that each theme's own comes through. */
+   base.html): what is picked or open, the buttons, their tints. Elektronikë and Punë in Claude's
+   blue; Shtëpi / kopsht and Prona in Claude's olive, a toned-down green (#788c5d, deeper on the
+   ivory, as the blue is); Automjete in a dark red (lighter on the dark theme, its buttons a little
+   less so). Set on <body>, under the themes' colours on <html>, so that each theme's own comes
+   through. */
 body[data-section="automjete"] {
-  --accent: var(--burgundy);
-  --button: var(--burgundy-button);
-  --button-hover: var(--burgundy-button-hover);
-  --badge: var(--burgundy-bg);
-}
-body[data-section="prona"] {
-  --accent: var(--green);
-  --button: var(--green-button);
-  --button-hover: var(--green-button-hover);
-  --badge: var(--green-bg);
-}
-body[data-section="pune"] {
-  --accent: var(--navy);
-  --button: var(--navy-button);
-  --button-hover: var(--navy-button-hover);
-  --badge: var(--navy-bg);
+  --accent: var(--darkred);
+  --button: var(--darkred-button);
+  --button-hover: var(--darkred-button-hover);
+  --badge: var(--darkred-bg);
 }
 body[data-section="elektronike"] {
   --accent: var(--blue);
   --button: var(--blue-button);
   --button-hover: var(--blue-button-hover);
   --badge: var(--blue-bg);
+}
+body[data-section="pune"] {
+  --accent: var(--blue);
+  --button: var(--blue-button);
+  --button-hover: var(--blue-button-hover);
+  --badge: var(--blue-bg);
+}
+body[data-section="prona"] {
+  --accent: var(--olive);
+  --button: var(--olive-button);
+  --button-hover: var(--olive-button-hover);
+  --badge: var(--olive-bg);
 }
 body[data-section="shtepi-dhe-kopsht"] {
   --accent: var(--olive);
