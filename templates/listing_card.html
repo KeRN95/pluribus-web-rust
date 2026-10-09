@@ -5,8 +5,8 @@
     its photo where it was slid to; in a row of cards beside the results (card_row.html), after
     the row's own word ("most-viewed-1001"). -#}
 <article class="card" id="{{ page.card_ids }}-{{ card.public_no }}">
-  {#- The photo, darkening toward its bottom edge, with the price on it there; the title under it
-      (.card-media in page.css); in the list, the photo at the left, the rest beside it. A big card (the view menu, cards_controller.js) has every photo
+  {#- The photo; under it the price, then the title (.card-media in page.css); in the list, the
+      photo at the left, the rest beside it. A big card (the view menu, cards_controller.js) has every photo
       in a row to slide through, dots over them saying which shows and, under a pointer, arrows
       (slides_controller.js); a small one shows the first. -#}
   {%- let eager = loop.index <= page.eager %}
@@ -63,9 +63,12 @@
         (page.css). -#}
     <p class="card-description">{{ description }}</p>
     {%- endif %}
-    {#- The price; one that dropped lately is followed, as on the listing's page, by what it was,
-        struck through, and by how much, in a green pill (page.css). -#}
-    <p class="card-price"><span class="card-amount">{{ card.price_display() }}</span>
+    {#- The price, under the photo (page.css): a figure in bold, and smaller after it what
+        qualifies it, "/muaj", "(i diskutueshëm)" (price_note); "Falas" as a small green tag
+        rather than a price, and a price to be agreed, or a wage, quietly (price_class); one that
+        dropped lately is followed, as on the listing's page, by what it was, struck through, and
+        by how much, in a green pill. -#}
+    <p class="card-price"><span class="card-amount{{ card.price_class() }}">{{ card.price_main() }}{% let note = card.price_note() %}{% if !note.is_empty() %}<span class="card-note">{{ note }}</span>{% endif %}</span>
       {%- if let Some((percent, was)) = card.price_drop() %}<del class="card-was"><span class="visually-hidden">Çmimi ishte </span>{{ was }}</del><span class="card-drop">−{{ percent }}%</span>{% endif %}</p>
     {%- if let Some(place) = card.place_text() %}
     {#- In the list, under the price, where it is: the pin and the zone and town ("Blloku, Tiranë"),

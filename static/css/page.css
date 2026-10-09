@@ -84,10 +84,10 @@
   .card-row:has(> .card:nth-child(5)) { --across: 4.25; --gaps: 4; }
 }
 
-/* A listing card: no box of its own, just the photo with all four corners rounded and the price
-   on its dark lower edge, then under it, on the page, the title in Geist and a quiet details
-   line. Under a pointer it gets one (::before): a panel in the site's muted colour, a little
-   larger than the card and rounded to match, behind the photo and the text. */
+/* A listing card: no box of its own, just the photo with all four corners rounded, then under it,
+   on the page, the price in bold, the title in Geist and a quiet details line. Under a pointer it
+   gets one (::before): a panel in the site's muted colour, a little larger than the card and
+   rounded to match, behind the photo and the text. */
 .card {
   display: flex;
   position: relative;
@@ -119,9 +119,9 @@
   .card::before { transition: none; }
 }
 
-/* The photo fills the top of the card, square, as it is, and the title and price sit under it. A
-   grid of two rows: the photo's space (::before), then the title and price. Nothing here is
-   positioned, so the title's link still stretches over the whole card (.card-link). */
+/* The photo fills the top of the card, square, as it is, and the price and the title sit under
+   it. A grid of three rows: the photo's space (::before), then the price, then the title. Nothing
+   here is positioned, so the title's link still stretches over the whole card (.card-link). */
 .card-media { display: grid; grid-template-columns: minmax(0, 1fr); }
 .card-media::before { content: ""; grid-area: 1 / 1; aspect-ratio: 1; }
 /* height 0 with min-height 100%: the photo takes the row's height without setting it. Until it has
@@ -139,28 +139,10 @@
 }
 .placeholder { background: linear-gradient(135deg, var(--placeholder-from), var(--placeholder-to)); }
 
-/* The photo as it is, but for a soft shade in its bottom left corner, behind the price: the site's
-   dark colour (the dark theme's page), 60% in the corner and fading out toward the middle of the
-   photo, with the price on it in the site's light colour (the light theme's page). The same in
-   both themes. */
-.card-media::after {
-  content: "";
-  grid-area: 1 / 1;
-  border-radius: var(--radius);
-  background: radial-gradient(ellipse 85% 50% at 0% 100%, rgb(38 38 36 / 60%), rgb(38 38 36 / 30%) 55%, transparent);
-  pointer-events: none;
-}
-.card-media .card-price {
-  grid-area: 1 / 1;
-  align-self: end;
-  z-index: 1;
-  padding: 0 .85rem .55rem;
-  color: #f5f4ee;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 55%), 0 0 6px rgb(0 0 0 / 25%);
-}
-
-/* The title, under the photo. */
-.card-head { grid-area: 2 / 1; padding: .55rem .15rem 0; }
+/* Under the photo, the price (its text below), on the page rather than on the photo's dark lower
+   edge, where it fought a busy picture; then the title. */
+.card-media .card-price { grid-area: 2 / 1; padding: .55rem .15rem 0; }
+.card-head { grid-area: 3 / 1; padding: .15rem .15rem 0; }
 
 /* The title link covers the whole card, so a tap anywhere opens the listing. The card shows the
    focus ring, since the title alone would be a small target to outline. */
@@ -279,14 +261,15 @@
 /* Under the photo, the details line. The body fills the rest of the card. */
 .card-body { display: flex; flex: 1; flex-direction: column; padding: 0 .15rem .35rem; }
 
-/* One line, ending in "…" when longer; screen readers still get the whole title. A step over the
-   details line under it (.95rem: 13.3px on a phone against its 11.2), so that the town there
-   doesn't read nearly as large as the title. */
+/* One line, ending in "…" when longer; screen readers still get the whole title. Under the price,
+   which is the bolder, in the medium weight. A step over the details line under it (.95rem:
+   13.3px on a phone against its 11.2), so that the town there doesn't read nearly as large as the
+   title. */
 .card-title {
   margin: 0;
   overflow: hidden;
   font-size: .95rem;
-  font-weight: var(--semibold);
+  font-weight: var(--medium);
   letter-spacing: -.015em;
   line-height: 1.3;
   text-overflow: ellipsis;
@@ -294,17 +277,17 @@
 }
 
 /* A price that dropped lately (listing_card.html), as the listing's page has it: after it, what
-   it was, struck through, a touch smaller and fainter, then by how much, in the listing page's pill,
-   green on light green, on the photo as off it. Where the line is short, what it was gives way first,
-   ending in "…", then the price; the pill always shows. */
+   it was, struck through, a touch smaller and in the muted colour, then by how much, in the
+   listing page's pill, green on light green, a touch smaller too. Where the line is short, what
+   it was gives way first, ending in "…", then the price; the pill always shows. */
 .card-amount { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .card-was {
   flex: 0 100 auto;
   min-width: 0;
   overflow: hidden;
+  color: var(--muted);
   font-size: .85em;
   font-weight: var(--medium);
-  opacity: .8;
   text-overflow: ellipsis;
 }
 .card-drop {
@@ -314,21 +297,41 @@
   border-radius: 999px;
   background: var(--below-bg);
   color: var(--below);
+  font-size: .85em;
   font-weight: var(--bold);
   line-height: 1.45;
-  text-shadow: none;
 }
+/* "Falas", a free listing (ListingCard::price_class), is a tag rather than a price: small, in the
+   green of a good price on its tint, as the drop's pill is; and a price to be agreed ("Çmimi me
+   marrëveshje") or a wage is said quietly, in the muted colour at the details' size, as it is no
+   figure to compare. */
+.card-tag {
+  flex: none;
+  padding: .1rem .55rem;
+  border-radius: 999px;
+  background: var(--below-bg);
+  color: var(--below);
+  font-size: var(--text-sm);
+  font-weight: var(--semibold);
+  line-height: 1.45;
+}
+.card-unpriced { color: var(--muted); font-size: var(--text-sm); font-weight: var(--medium); }
+/* What qualifies a price ("/muaj", "(i diskutueshëm)"), after the figure: smaller, in the medium
+   weight and the muted colour, as the listing's page sets it under the figure, so that the figure
+   stands out and a phone's narrow card keeps more of it. */
+.card-note { color: var(--muted); font-size: .8em; font-weight: var(--medium); }
 
-/* One line; a price too long for the card ends in "…". */
+/* The price, under the photo: bold, in the text's colour, the heaviest thing on the card, as the
+   eye looks for it first. One line; a price too long for the card ends in "…". */
 .card-price {
   display: flex;
   align-items: baseline;
   gap: .4rem;
   margin: 0;
   overflow: hidden;
-  color: var(--accent);
-  font-size: var(--text-xs);
-  font-weight: var(--semibold);
+  color: var(--text);
+  font-size: var(--text-md);
+  font-weight: var(--bold);
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -349,11 +352,11 @@
 
 /* A card's photos: in a small card the first alone. In a big one (the view button) every photo in
    a row that a finger, or a mouse pressed and moved, slides through a photo at a time
-   (slides_controller.js), over the title's stretched link, each photo a link itself; over them the
-   shades, the price and the seller over those, then the dots, at the right, which a mouse can
-   click, and under a mouse the arrows, each near its edge. The rest of the card a size bigger, the photo 4:3,
-   one card a line, no wider than 40rem, in the middle; on a wide screen two a line, across the
-   page. */
+   (slides_controller.js), over the title's stretched link, each photo a link itself; over them a
+   shade at the top and the seller on it, then the dots, at the right, which a mouse can click,
+   and under a mouse the arrows, each near its edge. The rest of the card a size bigger, the photo
+   4:3, one card a line, no wider than 40rem, in the middle; on a wide screen two a line, across
+   the page. */
 .card-slides {
   display: flex;
   grid-area: 1 / 1;
@@ -386,17 +389,22 @@
 .cards-big .results .card-slides.is-dragging,
 .cards-big .results .card-slides.is-dragging * { cursor: grabbing; }
 .cards-big .results .card:has(.card-slides.is-dragging) { outline: none; }
+/* A soft shade in the photo's top left corner, behind the seller: the site's dark colour (the
+   dark theme's page), 55% in the corner and fading out toward the middle of the photo, the same
+   in both themes. */
 .cards-big .results .card-media::after {
+  content: "";
+  grid-area: 1 / 1;
   z-index: 3;
-  background:
-    radial-gradient(ellipse 70% 30% at 0% 0%, rgb(38 38 36 / 55%), rgb(38 38 36 / 25%) 55%, transparent),
-    radial-gradient(ellipse 85% 50% at 0% 100%, rgb(38 38 36 / 60%), rgb(38 38 36 / 30%) 55%, transparent);
+  border-radius: var(--radius);
+  background: radial-gradient(ellipse 70% 30% at 0% 0%, rgb(38 38 36 / 55%), rgb(38 38 36 / 25%) 55%, transparent);
+  pointer-events: none;
 }
-.cards-big .results .card-media .card-price { z-index: 4; }
-.cards-big .results .card-media .card-price { padding: 0 1rem .75rem; font-size: var(--text-lg); }
-/* Its seller at the top left, as the price at the bottom: their initial in a small circle, as on
-   the listing page, then the name and under it, smaller, since when they are a user, on a shade
-   of their own; small, so as not to cover the photo; every touch goes through to the photo. */
+.cards-big .results .card-media .card-price { padding-top: .7rem; font-size: var(--text-lg); }
+/* Its seller at the top left, on the shade: their initial in a small circle, as on the listing
+   page, then the name and under it, smaller, since when they are a user, in the site's light
+   colour (the light theme's page); small, so as not to cover the photo; every touch goes through
+   to the photo. */
 .card-seller { display: none; }
 .cards-big .results .card-seller {
   display: flex;
@@ -417,7 +425,7 @@
 .card-seller .avatar { width: 1.5rem; height: 1.5rem; font-size: .75rem; box-shadow: 0 1px 3px rgb(0 0 0 / 30%); text-shadow: none; }
 .card-seller-text { display: grid; min-width: 0; }
 .card-seller-name { font-size: var(--text-xs); font-weight: var(--semibold); }
-.cards-big .results .card-head { padding-top: .7rem; }
+.cards-big .results .card-head { padding-top: .2rem; }
 .cards-big .results .card-title { font-size: var(--text-md); }
 .cards-big .results .card-summary { font-size: var(--text-sm); }
 .cards-big .results .card-dots {
@@ -491,9 +499,9 @@
 
 /* The list (the view menu): a line each, one under another, the whole of the page's width. The
    photo at the line's left, square, its first alone, 8.8rem on a phone and 12.1rem wider (a tenth
-   more than the 8rem and 11rem it had, the lines widened); beside it at the top the price, in the
-   text's colour and a size bigger as nothing is under it, under it where it is, the pin and the
-   town, small and muted (.card-place, which the cards leave out; the details line's own town,
+   more than the 8rem and 11rem it had, the lines widened); beside it at the top the price, as the
+   cards have it under their photo, under it where it is, the pin and the town, small and muted
+   (.card-place, which the cards leave out; the details line's own town,
    .card-town, goes in its place), then the title on up to two lines, and at the foot, level with
    the photo's bottom, the details line and, at its right, when it was posted (.card-when, which
    the cards leave out). The heart at the top right, on the page, the text's colour with no
@@ -512,8 +520,7 @@
   .cards-list .results .card { grid-template-columns: 12.1rem minmax(0, 1fr) auto; column-gap: 1.1rem; }
 }
 .cards-list .results .card-media { display: contents; }
-.cards-list .results .card-media::before,
-.cards-list .results .card-media::after { content: none; }
+.cards-list .results .card-media::before { content: none; }
 .cards-list .results .card-slides,
 .cards-list .results .card-media > .card-photo {
   grid-column: 1;
@@ -523,18 +530,7 @@
   min-height: 0;
   aspect-ratio: 1;
 }
-.cards-list .results .card-media .card-price {
-  grid-area: 1 / 2;
-  align-self: start;
-  z-index: auto;
-  padding: .1rem 0 0;
-  color: var(--text);
-  font-size: var(--text-md);
-  font-weight: var(--bold);
-  text-shadow: none;
-}
-/* Off the photo, the old price is the muted text's. */
-.cards-list .results .card-was { color: var(--muted); opacity: 1; }
+.cards-list .results .card-media .card-price { grid-area: 1 / 2; align-self: start; padding: .1rem 0 0; }
 /* Where it is, under the price: the pin the size of its letters, in their muted colour. */
 .cards-list .results .card-media .card-place {
   display: flex;

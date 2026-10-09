@@ -97,6 +97,27 @@ impl ListingCard {
         format::price(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
     }
 
+    /// The price itself; what follows it, smaller on the card as on the page, is price_note.
+    pub fn price_main(&self) -> String {
+        format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).0
+    }
+
+    /// What qualifies the price: "/muaj", " (i diskutueshëm)"; empty when nothing does.
+    pub fn price_note(&self) -> String {
+        format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).1
+    }
+
+    /// The class the card's price takes beside .card-amount (page.css): a free listing's "Falas"
+    /// is a tag rather than a price (.card-tag), and a price to be agreed, or a wage, is said
+    /// quietly (.card-unpriced); a figure takes none.
+    pub fn price_class(&self) -> &'static str {
+        match (self.price_type.as_str(), self.price_amount) {
+            ("FREE", _) => " card-tag",
+            ("ON_REQUEST", _) | (_, None) => " card-unpriced",
+            _ => "",
+        }
+    }
+
     /// What the list's card shows of its description: all of it, or, when it is longer than
     /// db::DESCRIPTION_EXCERPT, that much, cut at a word and ending in "…".
     pub fn description_excerpt(&self) -> String {
