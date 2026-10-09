@@ -22,7 +22,7 @@
       With the AI set up, a new listing's form fills itself in from what the seller wrote
       (ai_fill_controller.js, which takes the photos picked from photos_controller.js). -#}
   <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data"
-        data-controller="listing-form narrow{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% endif %}>
+        data-controller="listing-form narrow{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% endif %}{% if guess_zone %} data-listing-form-guess-value="true"{% endif %}>
     {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
 
     {#- No labels in sight: each field says what it is inside it, as its placeholder or a list's
@@ -31,13 +31,15 @@
         description and the photos, then the rest, which the AI can fill in from them. -#}
     <div class="field">
       <label class="visually-hidden" for="title">Titulli</label>
-      <input id="title" name="title" value="{{ form.title }}" required minlength="5" maxlength="120" placeholder="Titulli, p.sh. Golf 7, 2016, naftë">
+      <input id="title" name="title" value="{{ form.title }}" required minlength="5" maxlength="120" placeholder="Titulli, p.sh. Golf 7, 2016, naftë"
+             data-listing-form-target="title" data-action="change->listing-form#guessZone">
       {% if let Some(error) = self.error("title") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
 
     <div class="field">
       <label class="visually-hidden" for="description">Përshkrimi</label>
-      <textarea id="description" name="description" rows="6" required minlength="10" maxlength="5000" placeholder="Përshkrimi">{{ form.description }}</textarea>
+      <textarea id="description" name="description" rows="6" required minlength="10" maxlength="5000" placeholder="Përshkrimi"
+                data-listing-form-target="description" data-action="change->listing-form#guessZone">{{ form.description }}</textarea>
       {% if let Some(error) = self.error("description") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
 
@@ -149,7 +151,7 @@
       <div class="field">
         <label class="visually-hidden" for="city">Qyteti</label>
         <div class="picker" data-controller="picker">
-        <select id="city" name="city" required data-listing-form-target="city" data-action="listing-form#zoneShown">
+        <select id="city" name="city" required data-listing-form-target="city" data-action="listing-form#zoneShown listing-form#guessZone">
           <option value="">Qyteti</option>
           {% for group in cities %}
           <optgroup label="{{ group.label }}">
@@ -161,7 +163,9 @@
         {% if let Some(error) = self.error("city") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
       {#- A property's zone in its town ("Blloku"), where the town has known ones: only the chosen
-          town's (narrow_controller.js), and only for property (listing_form_controller.js). -#}
+          town's (narrow_controller.js), and only for property (listing_form_controller.js). On a
+          new listing, the one its title or description names, picked for the seller until they
+          pick one (listing_form_controller.js, guessZone). -#}
       <div class="field" data-listing-form-target="zoneField"{% if !zone_shown %} hidden{% endif %}>
         <label class="visually-hidden" for="zone">Zona</label>
         <div class="picker" data-controller="picker">

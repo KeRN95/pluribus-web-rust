@@ -2143,9 +2143,11 @@ async fn a_property_says_its_zone(pool: PgPool) {
     assert!(in_tirana.contains(&card));
     assert!(html(pool.clone(), "/search?q=blloku").await.contains(&card));
 
-    // The edit form has it chosen.
+    // The edit form has it chosen, and leaves it to the seller: only a new listing's form picks
+    // the zone its words name (a_new_listings_zone_follows_its_words).
     let edit = get_with_cookie(pool.clone(), &format!("/listing/{number}/ndrysho"), &seller).await.body;
     assert!(edit.contains(r#"<option value="blloku" selected>Blloku</option>"#));
+    assert!(!edit.contains("data-listing-form-guess-value"));
 
     // A phone has no zone: it sits in the town.
     let phone = post_form(pool.clone(), "/shto", &fields("telefona", "tirane", "blloku", "Samsung Galaxy S21, 128 GB"), Some(&seller)).await;
@@ -2158,6 +2160,32 @@ async fn a_property_says_its_zone(pool: PgPool) {
     .await
     .unwrap();
     assert_eq!(place, "MUNICIPALITY");
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_new_listings_zone_follows_its_words(pool: PgPool) {
+    // The form asks for it as the seller writes (listing_form_controller.js).
+    assert!(get(pool.clone(), "/shto").await.body.contains(r#"data-listing-form-guess-value="true""#));
+    let guess = |fields: Vec<(&'static str, &'static str)>| {
+        let pool = pool.clone();
+        async move {
+            let answer = post_form(pool, "/shto/zona", &fields, None).await;
+            assert_eq!(answer.status, StatusCode::OK);
+            serde_json::from_str::<Value>(&answer.body).unwrap()
+        }
+    };
+    // In the town chosen, the zone the title names, in any of its forms...
+    let words = |title, description, city| vec![("title", title), ("description", description), ("city", city)];
+    assert_eq!(guess(words("Apartament 2+1 në Bllok", "Me ashensor, i mobiluar.", "tirane")).await, json!({"city": "tirane", "zone": "blloku"}));
+    // ...or else the description, the title first.
+    assert_eq!(guess(words("Apartament 2+1", "Ndodhet te Komuna e Parisit.", "tirane")).await, json!({"city": "tirane", "zone": "komuna-e-parisit"}));
+    assert_eq!(guess(words("Apartament në Plazh", "Larg qendrës.", "durres")).await, json!({"city": "durres", "zone": "plazh"}));
+    // With no town chosen, a zone with its town, which is picked too.
+    assert_eq!(guess(words("Shitet apartament 2+1", "Ndodhet në Plazh, Durrës.", "")).await, json!({"city": "durres", "zone": "plazh"}));
+    // A zone with no town to say whose, another town's, or none at all: nothing.
+    assert_eq!(guess(words("Apartament pranë plazhit", "Me pamje nga deti.", "")).await, json!({}));
+    assert_eq!(guess(words("Apartament në Bllok", "Me ashensor.", "durres")).await, json!({}));
+    assert_eq!(guess(words("Volkswagen Golf 7", "Naftë, 2016.", "tirane")).await, json!({}));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

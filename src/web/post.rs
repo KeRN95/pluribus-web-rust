@@ -9,17 +9,19 @@ use std::{
 
 use askama::Template;
 use axum::{
+    Form, Json,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
 use rust_decimal::Decimal;
+use serde::Deserialize;
 
 use super::{
     Result,
     account::{ClientIp, MIN_FORM_SECONDS, SignInPage, cookie_header, current_user, display_name, now, redirect_with_cookies},
     filters::{self, Choice, ChoiceGroup, parse_number},
-    not_found,
+    named, not_found,
     photos::{self, Submission},
     properties::{self, PropertyField},
     render,
@@ -36,6 +38,9 @@ use crate::{
 
 /// At most this many listings a day from one account.
 const POSTS_PER_DAY: i64 = 5;
+/// The longest title and description a listing takes, in characters.
+const MAX_TITLE_CHARS: usize = 120;
+const MAX_DESCRIPTION_CHARS: usize = 5000;
 /// Links in a listing; spam is mostly links.
 const MAX_LINKS: usize = 2;
 
@@ -199,6 +204,9 @@ struct ListingFormPage {
     photos: Vec<OwnPhoto>,
     /// "Plotëso pjesën tjetër me AI": on a new listing's form, when the AI is set up.
     ai_fill: bool,
+    /// A new listing's form: "Zona" follows the zone its title or description names (guess_zone,
+    /// listing_form_controller.js).
+    guess_zone: bool,
 }
 
 impl ListingFormPage {
@@ -310,7 +318,38 @@ fn page(
         started: now(),
         photos: Vec::new(),
         ai_fill: false,
+        guess_zone: matches!(purpose, Purpose::New),
     }
+}
+
+/// What a new listing's form says when it asks for its zone (guess_zone): what the seller wrote,
+/// and the town they chose, if any.
+#[derive(Deserialize)]
+pub struct ZoneWords {
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    description: String,
+    #[serde(default)]
+    city: String,
+}
+
+/// POST /shto/zona: the zone a new listing's title or description names, with its town, as JSON
+/// ({"city": "tirane", "zone": "blloku"}), or {} for none (named::zone_in), which the form picks
+/// while the seller hasn't (listing_form_controller.js): in the town chosen, or, with none chosen,
+/// in a town the words name too ("Blloku, Tiranë"). The title first: a description may name the
+/// places nearby too. As much of the words as the form takes, and no more.
+pub async fn guess_zone(State(state): State<AppState>, Form(words): Form<ZoneWords>) -> Result<Response> {
+    let cities = db::cities(&state.db).await?;
+    let town = cities.iter().find(|city| city.slug == words.city);
+    let title: String = words.title.chars().take(MAX_TITLE_CHARS).collect();
+    let description: String = words.description.chars().take(MAX_DESCRIPTION_CHARS).collect();
+    let found = [title, description].iter().find_map(|text| named::zone_in(text, town, &cities));
+    let body = match found {
+        Some((city, zone)) => serde_json::json!({ "city": city.slug, "zone": zone.slug }),
+        None => serde_json::json!({}),
+    };
+    Ok(Json(body).into_response())
 }
 
 /// The categories listings go into under `parent`, at any depth, as the form's groups: one for
@@ -471,12 +510,12 @@ fn check<'a>(
 
     let title = form.title.trim();
     let description = form.description.trim();
-    if !(5..=120).contains(&title.chars().count()) {
+    if !(5..=MAX_TITLE_CHARS).contains(&title.chars().count()) {
         fail(errors, "title", "Titulli duhet të ketë 5 deri në 120 shkronja.");
     } else if link_count(title) > 0 {
         fail(errors, "title", "Titulli nuk mund të ketë lidhje.");
     }
-    if !(10..=5000).contains(&description.chars().count()) {
+    if !(10..=MAX_DESCRIPTION_CHARS).contains(&description.chars().count()) {
         fail(errors, "description", "Përshkrimi duhet të ketë 10 deri në 5000 shkronja.");
     } else if link_count(description) > MAX_LINKS {
         fail(errors, "description", "Përshkrimi mund të ketë deri në 2 lidhje.");

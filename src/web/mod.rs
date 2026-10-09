@@ -74,6 +74,7 @@ pub fn router(state: AppState) -> Router {
         .route("/media/{*key}", get(photos::serve))
         .route("/shto/fushat", get(properties::fields_for_category))
         .route("/shto/ploteso", post(ai_fill::fill).layer(with_photos()))
+        .route("/shto/zona", post(post::guess_zone))
         .route("/njoftimet-e-mia", get(post::my_listings))
         .route("/te-ruajturat", get(saved::page))
         .route("/te-ruajturat/numrat", get(saved::numbers))

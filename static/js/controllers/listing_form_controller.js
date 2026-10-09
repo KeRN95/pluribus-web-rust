@@ -6,18 +6,35 @@ import { Controller } from "@hotwired/stimulus";
 // car's make, model and year), which reload in their frame when the category changes; a model
 // follows its make (narrow_controller.js). "Falas" and "Me marrëveshje" need no amount. A
 // property says its zone in the town, where the town has known ones, and the zones follow the
-// town (narrow_controller.js). The server checks all of it again; without JavaScript every option
+// town (narrow_controller.js). On a new listing the zone its title or description names is picked
+// for the seller (guessZone). The server checks all of it again; without JavaScript every option
 // simply shows.
 export default class extends Controller {
   static targets = [
     "category", "type", "typeField", "conditionField", "currency", "priceType", "amountField", "properties",
-    "city", "zone", "zoneField",
+    "city", "zone", "zoneField", "title", "description",
   ];
+  // guess: a new listing's form, whose zone follows what the seller writes.
+  static values = { guess: Boolean };
 
   connect() {
     this.categoryChanged({ initial: true });
     this.priceTypeChanged();
     this.currencyTarget.addEventListener("change", () => { this.currencyChosen = true; });
+    // A field the form filled in itself (guessZone) loses its tint as the seller changes it, and a
+    // zone the seller (or the AI) picks stands: the words no longer move it; so does one the form
+    // comes back with, sent before.
+    this.zonePicked = Boolean(this.zoneTarget.value);
+    this.picked = (event) => {
+      if (this.guessing) return;
+      event.target.closest(".field")?.classList.remove("ai-filled");
+      if (event.target === this.zoneTarget) this.zonePicked = true;
+    };
+    this.element.addEventListener("change", this.picked);
+  }
+
+  disconnect() {
+    this.element.removeEventListener("change", this.picked);
   }
 
   categoryChanged(event) {
@@ -34,6 +51,45 @@ export default class extends Controller {
     if (event?.initial) return;
     if (!this.currencyChosen && option?.dataset.currency) this.currencyTarget.value = option.dataset.currency;
     this.propertiesTarget.src = `/shto/fushat?category=${encodeURIComponent(option?.value ?? "")}`;
+    this.guessZone();
+  }
+
+  // "Zona" from what the seller wrote, on a new listing's form, as the title or the description is
+  // left, the town picked or the category changed: the zone of the town picked that they name, or,
+  // with no town picked, one they name with its town ("Blloku, Tiranë"), which is picked too (POST
+  // /shto/zona, named.rs). Either is tinted as the AI's fields are, and the zone follows the words
+  // as they change, until the seller, or the AI, picks one. Not for a category whose listings have
+  // no zone, once one is chosen.
+  async guessZone() {
+    const category = this.categoryTarget.selectedOptions[0];
+    if (!this.guessValue || this.guessing || this.zonePicked || (category?.value && !("zoned" in category.dataset))) return;
+    const body = new URLSearchParams({
+      title: this.titleTarget.value,
+      description: this.descriptionTarget.value,
+      city: this.cityTarget.value,
+    });
+    const asked = (this.asked = body.toString());
+    const answer = await fetch("/shto/zona", { method: "POST", body, headers: { Accept: "application/json" } })
+      .then((response) => (response.ok ? response.json() : null))
+      .catch(() => null);
+    // Only the latest answer, and none once the seller has picked a zone meanwhile.
+    if (!answer || this.asked !== asked || this.zonePicked) return;
+    this.guessing = true;
+    try {
+      if (answer.city && !this.cityTarget.value) {
+        this.cityTarget.value = answer.city;
+        this.cityTarget.dispatchEvent(new Event("change", { bubbles: true }));
+        this.cityTarget.closest(".field")?.classList.add("ai-filled");
+      }
+      const zone = answer.city && answer.city === this.cityTarget.value ? answer.zone : "";
+      if (this.zoneTarget.value !== zone) {
+        this.zoneTarget.value = zone;
+        this.zoneTarget.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      this.zoneTarget.closest(".field")?.classList.toggle("ai-filled", Boolean(zone));
+    } finally {
+      this.guessing = false;
+    }
   }
 
   // "Zona": for property, in a town with zones of its own.
