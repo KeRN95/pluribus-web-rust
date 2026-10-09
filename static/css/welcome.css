@@ -297,18 +297,10 @@
   .welcome-card { padding: .75rem 0 0; }
 }
 
-/* The welcome page's newest listings, under its categories (home.html, web/newest.rs): the browse
-   pages' cards in one row that slides sideways a card at a time, as the seller's other listings
-   do under a listing (.seller-listings), but smaller than the cards under them, and their type
-   too: two and three quarters across on a phone, so that most of the next one shows at the edge,
-   four and a quarter on a tablet, and five and a quarter on a wide screen. A row of flex items
-   rather than a grid's columns, so that a card coming in at the front pushes the others along
-   (.is-new). The padding, which the margin takes back, keeps a card's hover panel and focus ring
-   clear of the sliding box's edges. No bar under it, on any screen: a finger slides it, and a
-   mouse drags it (newest_controller.js); the wheel scrolls the page. Hidden until it has a
-   card. */
-.newest { container-type: inline-size; }
-.newest:not(:has(.newest-card)) { display: none; }
+/* The welcome page's newest listings (home.html, web/newest.rs): the same row of cards as "Më të
+   klikuarat" over it (.card-row in page.css), which new ones come into at its front. Hidden until
+   it has a card. */
+.newest:not(:has(.card)) { display: none; }
 .newest h2 { display: flex; align-items: center; gap: .6rem; }
 /* Before the heading, a dot in the buttons' colour that pulses: the row is live. The pulse is a
    copy of the dot that grows to three times its size as it fades, a transform and an opacity,
@@ -334,65 +326,17 @@
   from { opacity: .6; transform: scale(1); }
   to { opacity: 0; transform: scale(3); }
 }
-.newest-strip {
-  --across: 2.75;
-  --gaps: 2;
-  --gap: .75rem;
-  display: flex;
-  position: relative;
-  gap: var(--gap);
-  margin: -.5rem;
-  padding: .5rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
-  overflow-anchor: none; /* newest_controller.js keeps the cards in view where they are */
-  scroll-snap-type: x mandatory;
-  scroll-padding-inline: .5rem;
-  scrollbar-width: none;
-}
-.newest-strip::-webkit-scrollbar { display: none; }
-.newest-strip > .card {
-  flex: none;
-  width: calc((100% - var(--gaps) * var(--gap)) / var(--across));
-  scroll-snap-align: start;
-}
-/* The title a size under the grid's, still a step over the details line, and the price nearer the
-   photo's corner. */
-.newest-strip .card-title { font-size: var(--text-sm); }
-.newest-strip .card-head { padding-top: .4rem; }
-.newest-strip .card-media .card-price { padding: 0 .55rem .45rem; }
-.newest-strip .card-summary { margin-top: .1rem; }
-.newest-strip .heart { padding: 0; }
-.newest-strip .heart-button { --circle: 1.2rem; --reach: .3rem; }
-.newest-strip .heart-button svg { width: 10px; height: 10px; }
+/* newest_controller.js keeps the cards in view where they are as new ones come in. */
+.newest .card-row { position: relative; overflow-anchor: none; }
 /* A card the stream brings to the front of the row at its start comes in from the edge: its
    margin, a card and a gap wide to begin with, pulls it out of sight, and as the margin goes the
    others move along; it fades in. */
-.newest-strip > .is-new { animation: newest-in .45s cubic-bezier(.2, .8, .2, 1); }
+.newest .card-row > .is-new { animation: newest-in .45s cubic-bezier(.2, .8, .2, 1); }
 @keyframes newest-in {
   from {
     margin-inline-start: calc((var(--gaps) * var(--gap) - 100%) / var(--across) - var(--gap));
     opacity: 0;
   }
-}
-@media (min-width: 720px) {
-  .newest-strip { --gap: 1rem; }
-}
-/* With a mouse, the row moves freely as the mouse drags it: snapping would pull it back to a card
-   at every step. A hand to grab it by, closed while it drags, and no text
-   to select on the way; nor does the card it was grabbed by look pressed. */
-@media (hover: hover) and (pointer: fine) {
-  .newest-strip { scroll-snap-type: none; cursor: grab; user-select: none; }
-  .newest-strip.is-dragging,
-  .newest-strip.is-dragging * { cursor: grabbing; }
-  .newest-strip.is-dragging .card:active { outline: none; }
-}
-@container (692px <= width < 928px) {
-  .newest-strip { --across: 4.25; --gaps: 4; }
-}
-@container (width >= 928px) {
-  .newest-strip { --across: 5.25; --gaps: 5; }
 }
 /* While the row is slid along and new listings wait (newest_controller.js): over its start, a fade
    into the page, and in it a pill in the buttons' coral saying how many have come, which goes back
@@ -437,6 +381,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .live-dot::after,
-  .newest-strip > .is-new,
+  .newest .card-row > .is-new,
   .newest-waiting { animation: none; }
 }

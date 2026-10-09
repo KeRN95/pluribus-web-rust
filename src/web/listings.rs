@@ -13,7 +13,7 @@ use rust_decimal::{Decimal, RoundingStrategy, prelude::ToPrimitive};
 use super::{
     Result,
     account::{ClientIp, cookie_header, current_user},
-    browse::{ListingPage, Subcategory, category_icon, verified_label},
+    browse::{ListingPage, SELLER_IDS, Subcategory, category_icon, verified_label},
     cookie, not_found,
     icons::{self, Reads},
     photos,
@@ -550,7 +550,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
     let seller_more = from_seller.len() as i64 > db::FROM_SELLER;
     from_seller.truncate(db::FROM_SELLER as usize);
-    let seller_page = (!from_seller.is_empty()).then(|| ListingPage::related(from_seller));
+    let seller_page = (!from_seller.is_empty()).then(|| ListingPage::row(from_seller, SELLER_IDS, 0));
     let page = ListingPage::related(related);
     let meta = listing_meta(&seo::origin(&headers), &listing, &photos);
     let mut response =

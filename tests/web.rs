@@ -427,7 +427,10 @@ async fn the_welcome_page_has_the_newest_listings_in_a_row_that_follows_new_ones
     let latest = card_numbers(section(&body, "latest-heading"));
     assert_eq!(card_numbers(row), latest[..10]);
     assert!(body.find(r#"aria-labelledby="newest-heading""#) < body.find(r#"aria-labelledby="latest-heading""#));
-    assert!(row.contains(&format!(r#"<article class="card newest-card" id="newest-{}""#, latest[0])), "{row}");
+    // The row of cards "Më të klikuarat" has too (card_row.html), its cards' ids its own, apart
+    // from the same listings' cards in the grid under it.
+    assert!(row.contains(r#"<div class="card-row" id="newest-strip""#), "{row}");
+    assert!(row.contains(&format!(r#"<article class="card" id="newest-{}""#, latest[0])), "{row}");
     // The row follows the listings that come after its newest.
     let since = newest_cursor(&pool).await;
     assert!(row.contains(&format!(r#"data-cursor="{since}""#)), "{row}");
@@ -453,7 +456,7 @@ async fn the_row_of_newest_listings_gets_new_ones_no_more_than_two_a_second(pool
     let mut numbers: Vec<i64> = events
         .iter()
         .map(|(data, _)| {
-            let card = r#"<turbo-stream action="prepend" target="newest-strip"><template><article class="card newest-card""#;
+            let card = r#"<turbo-stream action="prepend" target="newest-strip"><template><article class="card" id="newest-"#;
             assert!(data.starts_with(card) && data.ends_with("</article></template></turbo-stream>"), "{data}");
             card_numbers(data)[0]
         })
@@ -634,7 +637,9 @@ async fn a_card_links_to_its_listing_through_the_title(pool: PgPool) {
     assert!(body.contains(
         r#"<h2 class="card-title"><a class="card-link" href="/listing/1001-volkswagen-golf-7-2016-nafte">"#
     ));
-    assert_eq!(body.matches(r#"<article class="card""#).count(), 12);
+    // Every listing once in the grid; the row of the newest over it has cards of its own.
+    assert_eq!(body.matches(r#"<article class="card" id="listing-"#).count(), 12);
+    assert_eq!(body.matches(r#"<article class="card" id="newest-"#).count(), 10);
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -4399,6 +4404,14 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     let home = html(pool.clone(), "/").await;
     let row = &home[home.find("Më të klikuarat").unwrap()..home.find(r#"id="newest-heading""#).unwrap()];
     assert_eq!(card_numbers(row), vec![1002, 1001]);
+    // The same row of the same cards as "Sapo u shtuan" under it (card_row.html), its cards' ids
+    // its own; the cards of the grid's, small, those of the browse pages.
+    assert!(row.contains(r#"<div class="card-row"><article class="card" id="most-viewed-1002">"#), "{row}");
+    let newest = section(&home, "newest-heading");
+    assert!(newest.contains(r#"<div class="card-row" id="newest-strip""#), "{newest}");
+    for cards in [row, newest] {
+        assert!(cards.contains(r#"<h2 class="card-title">"#) && cards.contains(r#"<p class="card-when">"#), "{cards}");
+    }
     assert!(row.contains(r#"title="3 shikime këtë javë""#) && row.contains(r#"title="2 shikime këtë javë""#), "{row}");
     assert!(!home[home.find(r#"id="latest-heading""#).unwrap()..].contains("card-views"));
 

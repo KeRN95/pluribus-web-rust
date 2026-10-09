@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{%- import "card_row.html" as rows %}
 
 {% block title %}{{ listing.title }} | Pluribus{% endblock %}
 
@@ -310,8 +311,9 @@
 
 {%- if let Some(page) = seller_page %}
 {#- The seller's other listings, newest first, when this isn't their only one (db::seller_listings):
-    cards like the related ones under them, but in one row that slides sideways when they don't all
-    fit (.seller-listings), and a link to all of them on the seller's profile when there are more. -#}
+    cards like the related ones under them, but in the row of cards that slides sideways
+    (card_row.html), as the welcome page's are, and a link to all of them on the seller's profile
+    when there are more. -#}
 <section class="related seller-listings" data-controller="drag-row" aria-labelledby="seller-heading">
   <div class="section-head">
     <h2 id="seller-heading">Më shumë nga ky {% if listing.seller_is_business() %}biznes{% else %}përdorues{% endif %}</h2>
@@ -319,7 +321,7 @@
     <a href="{{ listing.seller_url }}">Shiko të gjitha ({{ listing.seller_listings }})</a>
     {%- endif %}
   </div>
-  {% include "listing_grid.html" %}
+  {% call rows::card_row(page) %}
 </section>
 {%- endif %}
 

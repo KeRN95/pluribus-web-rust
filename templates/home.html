@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{%- import "card_row.html" as rows %}
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
@@ -38,33 +39,27 @@
 </section>
 
 {%- if let Some(page) = most_viewed %}
-{#- The listings seen the most this week, the most first (db::most_viewed, views.rs): cards like
-    the seller's other listings under a listing, in one row that slides sideways (.most-viewed),
-    each saying how many times it was seen. -#}
+{#- The listings seen the most this week, the most first (db::most_viewed, views.rs), in a row of
+    cards that slides sideways (card_row.html), each saying how many times it was seen. -#}
 <section class="most-viewed" data-controller="drag-row" aria-labelledby="most-viewed-heading">
   <h2 id="most-viewed-heading">Më të klikuarat</h2>
-  {% include "listing_grid.html" %}
+  {% call rows::card_row(page) %}
 </section>
 {%- endif %}
 
-{#- The newest listings in a row that slides sideways, the newest first, which follows new ones
-    while the page is open: the server sends each as it is posted, no more than two a second, and
-    Turbo puts it in front (<turbo-stream-source>, web/newest.rs); from the ten it starts with, the
-    row grows to the newest thirty (newest_controller.js). While the row is slid along, the new ones wait, and a fade over its
-    start says how many; a tap on it goes back to the start, where they come in. The row is hidden
-    while there are none (welcome.css), and shows with the first. -#}
+{#- The newest listings in the same row of cards as "Më të klikuarat" (card_row.html), the newest
+    first, which follows new ones while the page is open: the server sends each as it is posted,
+    no more than two a second, and Turbo puts it in front (<turbo-stream-source>, web/newest.rs);
+    from the ten it starts with, the row grows to the newest thirty (newest_controller.js). While
+    the row is slid along, the new ones wait, and a fade over its start says how many; a tap on it
+    goes back to the start, where they come in. The row is hidden while there are none
+    (welcome.css), and shows with the first. -#}
 <section class="newest" data-controller="newest drag-row"
          data-action="turbo:before-stream-render@document->newest#arrive turbo:before-cache@document->newest#settle"
          aria-labelledby="newest-heading">
   <h2 id="newest-heading"><span class="live-dot" aria-hidden="true"></span>Sapo u shtuan</h2>
   <div class="newest-frame">
-    <div class="newest-strip" id="newest-strip" data-newest-target="strip" data-drag-row-target="row"
-         data-action="scroll->newest#scrolled pointerdown->newest#grab pointerup@window->newest#drop pointercancel@window->newest#drop">
-      {%- for card in page.cards.iter().take(*strip) %}
-      {%- let eager = loop.index <= 2 %}
-      {% include "newest_card.html" %}
-      {%- endfor %}
-    </div>
+    {% call rows::card_row(newest) %}
     <div class="newest-waiting" data-newest-target="waiting" hidden>
       <button type="button" class="newest-waiting-button" data-action="newest#backToStart">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>

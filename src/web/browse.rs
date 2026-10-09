@@ -40,7 +40,21 @@ pub struct ListingPage {
     /// How many cards load their photo straight away, the first row's; the rest wait until they
     /// come near the screen (listing_card.html).
     pub eager: usize,
+    /// What its cards' ids start with, "listing" ("listing-1001"), or for a row of cards beside a
+    /// page's results (card_row.html) the row's own word (ROW_IDS), so that a listing in both is
+    /// two cards, each with an id of its own.
+    pub card_ids: &'static str,
 }
+
+/// What the cards of a page's results, or of a grid, start their ids with.
+pub const LISTING_IDS: &str = "listing";
+
+/// The rows of cards that slide sideways, by the word their cards' ids start with: the welcome
+/// page's newest listings (whose cards also say where they stand in the order, for its stream:
+/// newest_controller.js), the most seen this week, and a seller's other listings under one of theirs.
+pub const NEWEST_IDS: &str = "newest";
+pub const MOST_VIEWED_IDS: &str = "most-viewed";
+pub const SELLER_IDS: &str = "seller";
 
 /// How a browse page shows its listings (the view menu, cards_controller.js): small cards, as many
 /// to a line as fit; big ones, one a line, every photo to slide through; or a list, a line each,
@@ -140,14 +154,25 @@ impl ListingPage {
             let cursor = Cursor::after(sort, last);
             NextPage { frame_id: frame_id(&cursor), url: next_url(&cursor.encode()) }
         });
-        Self { cards: rows, next, layout: Cards::Small, eager: 4 }
+        Self { cards: rows, next, layout: Cards::Small, eager: 4, card_ids: LISTING_IDS }
     }
 
-    /// The cards under a listing's page, the seller's other listings and those like it
-    /// (db::seller_listings, db::related_listings): small, none of them loaded before they come
-    /// near the screen, as they come after the listing.
+    /// The listings like one, under its page (db::related_listings): small, none of them loaded
+    /// before they come near the screen, as they come after the listing.
     pub fn related(cards: Vec<ListingCard>) -> Self {
-        Self { cards, next: None, layout: Cards::Small, eager: 0 }
+        Self { cards, next: None, layout: Cards::Small, eager: 0, card_ids: LISTING_IDS }
+    }
+
+    /// A row of small cards that slides sideways (card_row.html), its cards' ids starting with
+    /// `card_ids` (NEWEST_IDS...): the first `eager` load their photo straight away.
+    pub fn row(cards: Vec<ListingCard>, card_ids: &'static str, eager: usize) -> Self {
+        Self { cards, next: None, layout: Cards::Small, eager, card_ids }
+    }
+
+    /// The welcome page's row of the newest listings, whose cards say where they stand in the
+    /// order (listing_card.html's data-cursor), and which follows new ones (newest_controller.js).
+    pub fn is_newest(&self) -> bool {
+        self.card_ids == NEWEST_IDS
     }
 
     fn layout(mut self, layout: Cards) -> Self {
@@ -199,8 +224,8 @@ pub struct Shortcut {
 struct HomePage {
     shortcuts: Vec<Shortcut>,
     page: ListingPage,
-    /// How many of the page's cards, the newest, the row of the newest listings shows.
-    strip: usize,
+    /// The row of the newest listings ("Sapo u shtuan"): the page's first newest::STRIP.
+    newest: ListingPage,
     /// Where the row's stream of new listings starts: after the newest (none without listings).
     since: Option<String>,
     /// The listings seen the most this week ("Më të klikuarat"), none before any are.
@@ -242,12 +267,13 @@ pub async fn home(
         })
         .collect();
     let page = ListingPage::new(rows, Sort::Newest, next_url);
-    let strip = page.cards.len().min(newest::STRIP);
+    // Both rows load their first two photos straight away: they are on the first screen.
+    let newest = ListingPage::row(page.cards.iter().take(newest::STRIP).cloned().collect(), NEWEST_IDS, 2);
     let since = page.cards.first().map(ListingCard::newest_cursor);
-    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::related(most_viewed));
+    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::row(most_viewed, MOST_VIEWED_IDS, 2));
     let origin = seo::origin(&headers);
     let meta = PageMeta::new(&origin, "Pluribus: njoftime në gjithë Shqipërinë", seo::SITE_DESCRIPTION, format!("{origin}/"));
-    render(HomePage { shortcuts, page, strip, since, most_viewed, meta })
+    render(HomePage { shortcuts, page, newest, since, most_viewed, meta })
 }
 
 /// A category's icon, as its pill has it (icons.rs): a main category's own, a subcategory's where
@@ -656,7 +682,7 @@ async fn browse(
         },
     )?;
     safety::without_hidden(&mut most_viewed, &filter.hidden_accounts);
-    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::related(most_viewed));
+    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::row(most_viewed, MOST_VIEWED_IDS, 0));
     // Counted among at most COUNT_LIMIT + 1 listings, as the count is: past that, numbers would
     // mislead, and the names go alone.
     let counted = count <= db::COUNT_LIMIT;

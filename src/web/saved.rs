@@ -16,7 +16,7 @@ use uuid::Uuid;
 use super::{
     Result, cookie,
     account::{cookie_header, current_user, redirect_with_cookies},
-    browse::ListingPage,
+    browse::{LISTING_IDS, ListingPage},
     not_found, render,
 };
 use crate::{AppState, db, format};
@@ -125,7 +125,7 @@ pub async fn page(State(state): State<AppState>, headers: HeaderMap) -> Result<R
         }
         None => (false, Vec::new(), Vec::new()),
     };
-    render(SavedPage { signed_in, drops, page: ListingPage { cards, next: None, layout: Default::default(), eager: 4 } })
+    render(SavedPage { signed_in, drops, page: ListingPage { cards, next: None, layout: Default::default(), eager: 4, card_ids: LISTING_IDS } })
 }
 
 #[derive(Deserialize)]

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{%- import "card_row.html" as rows %}
 
 {% block title %}{{ heading }} | Pluribus{% endblock %}
 
@@ -245,12 +246,12 @@
   {%- if let Some(page) = most_viewed %}
   {#- In every main category and a few big subcategories, with no filter on, their listings seen the
       most this week, the most first, as the welcome page has them for every category
-      (db::most_viewed, views.rs): cards in
-      one row that slides sideways (.most-viewed), each saying how many times it was seen; under the
-      page's buttons, and small whatever size the page's own cards are (.cards-big .results). -#}
+      (db::most_viewed, views.rs): its row of cards that slides sideways (card_row.html), each
+      saying how many times it was seen; under the page's buttons, and small whatever size the
+      page's own cards are (.cards-big .results). -#}
   <section class="most-viewed" data-controller="drag-row" aria-labelledby="most-viewed-heading">
     <h2 id="most-viewed-heading">Më të klikuarat</h2>
-    {% include "listing_grid.html" %}
+    {% call rows::card_row(page) %}
   </section>
   {%- endif %}
 

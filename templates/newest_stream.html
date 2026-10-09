@@ -1,4 +1,6 @@
 {#- A listing posted while the welcome page is open, for the front of its row of the newest
-    (home.html): a Turbo Stream, which the server sends as an event (web/newest.rs). -#}
-{%- let eager = false -%}
-<turbo-stream action="prepend" target="newest-strip"><template>{% include "newest_card.html" %}</template></turbo-stream>
+    (home.html): the row's own card (listing_card.html, as card_row.html has it), in a Turbo
+    Stream, which the server sends as an event (web/newest.rs). Its id is the listing's number, so
+    that Turbo, given a card for the same listing again (bumped), moves it to the front rather than
+    showing it twice. -#}
+<turbo-stream action="prepend" target="newest-strip"><template>{% for card in page.cards %}{% include "listing_card.html" %}{% endfor %}</template></turbo-stream>

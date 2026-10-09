@@ -20,7 +20,11 @@ use time::OffsetDateTime;
 use tokio::{sync::watch, time::Instant};
 use uuid::Uuid;
 
-use super::{filters::Params, safety};
+use super::{
+    browse::{ListingPage, NEWEST_IDS},
+    filters::Params,
+    safety,
+};
 use crate::{
     AppState,
     db::{self, Cursor, ListingCard, Sort},
@@ -66,11 +70,11 @@ impl ListingCard {
     }
 }
 
-/// A new listing's card, for the front of the row.
+/// A new listing's card, for the front of the row: the row's own (ListingPage::row), alone.
 #[derive(Template)]
 #[template(path = "newest_stream.html")]
-struct NewestStream<'a> {
-    card: &'a ListingCard,
+struct NewestStream {
+    page: ListingPage,
 }
 
 /// GET /te-rejat?since=<cursor>: the listings posted after the one the page's row starts with,
@@ -144,11 +148,12 @@ impl Follower {
             if now >= self.next_send {
                 if let Some(card) = self.waiting.pop_front() {
                     self.next_send = now + SEND_EVERY;
-                    match (NewestStream { card: &card }).render() {
+                    let id = card.newest_cursor();
+                    match (NewestStream { page: ListingPage::row(vec![card], NEWEST_IDS, 0) }).render() {
                         // Each line a "data:" line of its own. The templates' lines may end in
                         // CR LF, and a CR would end a line of the event early.
                         Ok(html) => {
-                            let event = Event::default().id(card.newest_cursor()).data(html.replace('\r', ""));
+                            let event = Event::default().id(id).data(html.replace('\r', ""));
                             return Some((event, self));
                         }
                         Err(error) => tracing::warn!(%error, "could not render a new listing's card"),
