@@ -13,7 +13,7 @@ use rust_decimal::{Decimal, RoundingStrategy, prelude::ToPrimitive};
 use super::{
     Result,
     account::{ClientIp, cookie_header, current_user},
-    browse::{ListingPage, SELLER_IDS, Subcategory, category_icon, verified_label},
+    browse::{ListingPage, Subcategory, category_icon, verified_label},
     cookie, not_found,
     icons::{self, Reads},
     photos,
@@ -384,11 +384,6 @@ struct ListingShow {
     views: Option<String>,
     /// Posted just now without signing in: the page says it is up, and how to change it later.
     posted: bool,
-    /// The seller's other listings, over the related ones (db::seller_listings); None when this
-    /// is their only one. The page names them `page` too while it shows them.
-    seller_page: Option<ListingPage>,
-    /// The seller has more than those: a link leads to all of them.
-    seller_more: bool,
     /// For a property or a car, where it is, on a map under the seller.
     map: Option<ListingMap>,
     /// Listings like it, under it (db::related_listings): `page`, the name listing_card.html
@@ -515,13 +510,11 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     if key != canonical {
         return Ok(Redirect::permanent(&format!("/listing/{canonical}")).into_response());
     }
-    // One more of the seller's listings than the page shows says whether they have more.
-    let (attributes, photos, contact, categories, mut from_seller, mut related, views, price_was, hidden) = tokio::try_join!(
+    let (attributes, photos, contact, categories, mut related, views, price_was, hidden) = tokio::try_join!(
         db::listing_attributes(&state.db, listing.id, listing.category_id),
         db::listing_photos(&state.db, listing.id),
         db::visible_contact(&state.db, listing.id),
         db::categories(&state.db),
-        db::seller_listings(&state.db, listing.id, db::FROM_SELLER + 1),
         db::related_listings(&state.db, listing.id, db::RELATED),
         db::listing_views(&state.db, listing.id),
         db::price_was(&state.db, listing.id),
@@ -558,17 +551,14 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         SellerContact::Phone(_) => Reveal::Phone,
         SellerContact::Email(_) => Reveal::Email,
     });
-    // Whether the contact it shows is verified; whether the visitor blocked its seller, whose
-    // other listings then go, as do those of any seller they blocked among the related ones.
+    // Whether the contact it shows is verified; whether the visitor blocked its seller; the
+    // listings of any seller they blocked go from the related ones.
     let verified = match (listing.contact_verified, &reveal) {
         (true, Some(Reveal::Phone)) => verified_label(Some("PHONE")),
         (true, Some(Reveal::Email)) => verified_label(Some("EMAIL")),
         _ => None,
     };
     let blocked = hidden.contains(&listing.created_by_user_id);
-    if blocked {
-        from_seller.clear();
-    }
     safety::without_hidden(&mut related, &hidden);
     let hidden_note = match listing.status.as_str() {
         "SUSPENDED" => Some("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë."),
@@ -607,9 +597,6 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     };
     // Said once: the cookie that says so (post.rs) goes with this answer.
     let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
-    let seller_more = from_seller.len() as i64 > db::FROM_SELLER;
-    from_seller.truncate(db::FROM_SELLER as usize);
-    let seller_page = (!from_seller.is_empty()).then(|| ListingPage::row(from_seller, SELLER_IDS, 0));
     let page = ListingPage::related(related);
     let meta = listing_meta(&seo::origin(&headers), &listing, &photos);
     let mut response =
@@ -624,8 +611,6 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             reveal,
             own,
             posted,
-            seller_page,
-            seller_more,
             map,
             page,
             views,

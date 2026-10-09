@@ -89,10 +89,6 @@
 @media (min-width: 960px) {
   .listing-map { aspect-ratio: auto; height: min(35vh, 19rem); }
 }
-/* Their other listings follow the seller's line, or the map under it, closely. */
-:is(.seller-section, .listing-map-section) + .seller-listings { margin-top: .25rem; }
-:is(.seller-section, .listing-map-section) + .seller-listings .section-head { margin-top: 1rem; }
-/* Their row of cards slides sideways as the welcome page's do (.card-row in page.css). */
 
 /* Wide screens: the photos across the page, and under them, as on a phone, the title, the price,
    the buttons, the details and the description, in a column at the page's left as wide as a line

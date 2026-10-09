@@ -54,10 +54,9 @@ pub struct ListingPage {
 /// What the cards of a page's results, or of a grid, start their ids with.
 pub const LISTING_IDS: &str = "listing";
 
-/// The rows of cards that slide sideways, by the word their cards' ids start with: the most seen
-/// this week, and a seller's other listings under one of theirs.
+/// The row of cards that slides sideways, by the word its cards' ids start with: the most seen
+/// this week.
 pub const MOST_VIEWED_IDS: &str = "most-viewed";
-pub const SELLER_IDS: &str = "seller";
 
 /// How a browse page shows its listings (the view menu, cards_controller.js): small cards, as many
 /// to a line as fit; big ones, one a line, every photo to slide through; or a list, a line each,

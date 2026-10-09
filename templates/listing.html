@@ -317,22 +317,6 @@
 </section>
 {%- endif %}
 
-{%- if let Some(page) = seller_page %}
-{#- The seller's other listings, newest first, when this isn't their only one (db::seller_listings):
-    cards like the related ones under them, but in the row of cards that slides sideways
-    (card_row.html), as the welcome page's are, and a link to all of them on the seller's profile
-    when there are more. -#}
-<section class="related seller-listings" data-controller="drag-row" aria-labelledby="seller-heading">
-  <div class="section-head">
-    <h2 id="seller-heading">Më shumë nga ky {% if listing.seller_is_business() %}biznes{% else %}përdorues{% endif %}</h2>
-    {%- if seller_more %}
-    <a href="{{ listing.seller_url }}">Shiko të gjitha ({{ listing.seller_listings }})</a>
-    {%- endif %}
-  </div>
-  {% call rows::card_row(page) %}
-</section>
-{%- endif %}
-
 {%- if !page.cards.is_empty() %}
 {#- Listings like this one, from other sellers (db::related_listings): the browse pages' cards,
     under the listing as wide as the page. -#}
