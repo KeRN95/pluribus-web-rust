@@ -844,13 +844,13 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         r#"<summary class="button secondary round-button cards-button" aria-label="Pamja: Kartela të vogla""#,
         r#"<aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">"#,
         r#"<div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>"#,
-        r#"<section class="results""#,
-        // The listings' heading, its order's words opening the orders; the count under it, before
-        // the chips.
-        r#"<div class="results-head">"#,
-        r#"<div class="results-heading" id="results-heading" role="heading" aria-level="2">Njoftimet <details class="sort-menu heading-sort" data-controller="dropdown""#,
+        // Under the row, the count, before the chips; then the listings' heading, its order's
+        // words opening the orders.
         r#"<div class="results-meta">"#,
         r#"<p class="result-count" id="result-count""#,
+        r#"<section class="results""#,
+        r#"<div class="results-head">"#,
+        r#"<div class="results-heading" id="results-heading" role="heading" aria-level="2">Njoftimet <details class="sort-menu heading-sort" data-controller="dropdown""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
     for listener in ["panel#foldFor", "filters#foldFor", "map#foldFor", "dropdown#foldFor", "filters#fit"] {

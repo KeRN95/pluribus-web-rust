@@ -279,6 +279,25 @@
   {#- Under what the row opened, the page dimmed (browse.css); a tap on it folds that again. -#}
   <div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>
 
+  {#- Under the row, how many, as a pill, then the filters picked, each a chip whose cross drops
+      it, all marked as the page's own category pill is, smaller (browse.css). The count says
+      thousands as "k" ("3k njoftime", format::short_listing_count): counted up to 1 000 with the
+      page, and once it shows further, up to 10 000, when it stopped there (data-capped,
+      filters_controller.js); data-show is what the button at the foot of the filters says. -#}
+  <div class="results-meta">
+    <p class="result-count" id="result-count" data-show="{{ show_label }}"{% if capped %} data-capped{% endif %}>{{ count }}</p>
+    {% if !chips.is_empty() %}
+    <ul class="active-filters" aria-label="Filtrat e zgjedhur">
+      {% for chip in chips %}
+      <li><a class="filter-chip" href="{{ chip.url }}" aria-label="Hiq filtrin {{ chip.label }}"{% if chip.forgets_town %} data-forget-town data-turbo-prefetch="false"{% endif %}>{{ chip.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></li>
+      {% endfor %}
+      {%- if on > 0 %}
+      <li><a class="clear-filters" href="{{ clear_url }}">Pastro filtrat</a></li>
+      {%- endif %}
+    </ul>
+    {% endif %}
+  </div>
+
   {%- if let Some(page) = most_viewed %}
   {#- In every main category and a few big subcategories, with no filter on, their listings seen the
       most this week, the most first, as the welcome page has them for every category
@@ -293,7 +312,7 @@
   {%- endif %}
 
   <section class="results" aria-labelledby="results-heading">
-    {#- The listings' heading and the count under it. On a category
+    {#- The listings' heading (the count and the chips are under the row, above). On a category
         page, to the eye, under "Më të klikuarat" where it is: the order, the category and the
         kind of listing when one is chosen ("Njoftimet më të reja në Makina në shitje",
         browse.rs), the order's words highlighted, which open the orders in a menu under them, as
@@ -334,25 +353,6 @@
       </fieldset>
     </details>
     {%- endif %}
-    </div>
-
-    {#- Under the heading, how many, as a pill, then the filters picked, each a chip whose cross
-        drops it. The count says thousands as "k" ("3k njoftime", format::short_listing_count):
-        counted up to 1 000 with the page, and once it shows further, up to 10 000, when it stopped
-        there (data-capped, filters_controller.js); data-show is what the button at the foot of the
-        filters says. -#}
-    <div class="results-meta">
-      <p class="result-count" id="result-count" data-show="{{ show_label }}"{% if capped %} data-capped{% endif %}>{{ count }}</p>
-      {% if !chips.is_empty() %}
-      <ul class="active-filters" aria-label="Filtrat e zgjedhur">
-        {% for chip in chips %}
-        <li><a class="filter-chip" href="{{ chip.url }}" aria-label="Hiq filtrin {{ chip.label }}"{% if chip.forgets_town %} data-forget-town data-turbo-prefetch="false"{% endif %}>{{ chip.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></li>
-        {% endfor %}
-        {%- if on > 0 %}
-        <li><a class="clear-filters" href="{{ clear_url }}">Pastro filtrat</a></li>
-        {%- endif %}
-      </ul>
-      {% endif %}
     </div>
 
     {% include "listing_grid.html" %}
