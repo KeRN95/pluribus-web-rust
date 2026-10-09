@@ -322,27 +322,6 @@
   }
   .welcome .shortcut-icon { width: 18px; height: 18px; }
 }
-/* Two categories lit in a colour of their own, marked as the round buttons are (below), with a
-   soft glow of it that grows under the pointer: Shtëpi / kopsht in the green, Elektronikë in a
-   neon blue (--neon). */
-.welcome .shortcut[href="/c/shtepi-dhe-kopsht"] { --tone: var(--green); --tone-bg: var(--green-bg); }
-.welcome .shortcut[href="/c/elektronike"] { --tone: var(--neon); --tone-bg: var(--neon-bg); }
-.welcome .shortcut:is([href="/c/shtepi-dhe-kopsht"], [href="/c/elektronike"]) {
-  border-color: color-mix(in srgb, var(--tone) 60%, transparent);
-  background: var(--tone-bg);
-  color: var(--tone);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--tone) 35%, transparent);
-  transition: background-color .15s, border-color .15s, box-shadow .2s, transform .1s;
-}
-.welcome .shortcut:is([href="/c/shtepi-dhe-kopsht"], [href="/c/elektronike"]) .shortcut-icon { color: inherit; }
-.welcome .shortcut:is([href="/c/shtepi-dhe-kopsht"], [href="/c/elektronike"]):active { border-color: var(--tone); background: var(--tone-bg); }
-@media (hover: hover) {
-  .welcome .shortcut:is([href="/c/shtepi-dhe-kopsht"], [href="/c/elektronike"]):hover {
-    border-color: var(--tone);
-    background: var(--tone-bg);
-    box-shadow: 0 0 18px color-mix(in srgb, var(--tone) 50%, transparent);
-  }
-}
 
 
 /* The round buttons among the categories' pills (home.html), as tall as they are (--pill): the
