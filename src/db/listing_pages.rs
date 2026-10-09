@@ -41,10 +41,13 @@ pub struct ListingCard {
     /// The category's card properties in order, e.g. ["2016", "148 000 km", "Naftë"].
     pub details: Vec<String>,
     /// The first property the listing page shows that the card doesn't and the title doesn't
-    /// mention, e.g. a phone's brand, which leads the card's details line. Only a chosen option: a
-    /// bare number ("2003") says nothing on a card.
+    /// mention, e.g. a phone's brand: what the card shows instead of the city when the search is
+    /// in that city already. Only a chosen option: a bare number ("2003") says nothing on a card.
     pub spare_detail: Option<String>,
     pub sort_at: OffsetDateTime,
+    /// Set when the search is limited to the listing's own city, which the card then leaves out.
+    #[sqlx(skip)]
+    pub city_known: bool,
     /// How many times its page was seen this week, on the cards of "Më të klikuarat" alone
     /// (most_viewed), which show it over the photo.
     #[sqlx(default)]
