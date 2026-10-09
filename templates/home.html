@@ -7,8 +7,14 @@
 <section class="welcome">
   {#- The question, for screen readers: on the page the search and the categories ask it. -#}
   <h1 class="visually-hidden">Çfarë po kërkon?</h1>
-  <div class="welcome-card">
-
+  {#- The search starts as the first of the categories' pills, a coral one about as wide as two
+      of them: a tap opens the search box over their first line, the page dimmed under it, the box
+      taking the focus so that a phone shows its keyboard (panel_controller.js, as the browse row's
+      round search button does); Escape, or a tap on the dim, folds it again. Without JavaScript
+      the box stands over the pills, as it did, and the button is gone (the noscript below). -#}
+  <div class="welcome-start" data-controller="panel"
+       data-action="keydown.esc@document->panel#close turbo:before-cache@document->panel#close">
+  <div class="welcome-search-panel" id="welcome-search-panel" data-panel-target="panel">
   {#- Words only, searched in every category and town; the results' filters narrow them. Drawn like
       the message box in Claude's app: a pill with the words in it and, inside it at the end, a
       round coral button with a magnifier that searches. The text inside says what the field is
@@ -17,7 +23,7 @@
         data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
     <label class="visually-hidden" for="welcome-q">Kërko</label>
     <input id="welcome-q" type="search" name="q" placeholder="Kërko p.sh. Golf 7, apartament 2+1" autocomplete="off" enterkeyhint="search"
-           data-suggest-target="input" data-action="input->suggest#typed focus->suggest#focused keydown->suggest#key">
+           data-suggest-target="input" data-panel-target="input" data-action="input->suggest#typed focus->suggest#focused keydown->suggest#key">
     <button type="submit" class="icon-button welcome-search" aria-label="Kërko" title="Kërko">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     </button>
@@ -27,16 +33,24 @@
   </div>
 
   {#- Every main category at once, as pills like the listing page's details: its icon, then its
-      name. -#}
+      name; before them, the search's circle, two lines of them tall, which they flow round (no
+      space between them, which would show as one in that flow). -#}
   <nav class="shortcuts" aria-label="Kategoritë">
-    {%- for shortcut in shortcuts %}
+    <button type="button" class="shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false" aria-label="Kërko" title="Kërko"
+            data-panel-target="toggle" data-action="panel#toggle">
+      <svg class="shortcut-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    </button>
+    {%- for shortcut in shortcuts -%}
     <a class="shortcut" href="{{ shortcut.url }}">
       <svg class="shortcut-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ shortcut.icon|safe }}</svg>
       {{- shortcut.name -}}
     </a>
     {%- endfor %}
   </nav>
+  <div class="welcome-scrim" data-action="click->panel#close"></div>
+  </div>
 </section>
+<noscript><style>.welcome-search-panel { display: block; position: static; margin-bottom: 1.25rem; } .welcome .search-shortcut { display: none; }</style></noscript>
 
 {%- if let Some(page) = most_viewed %}
 {#- The listings seen the most this week, the most first (db::most_viewed, views.rs), in a row of

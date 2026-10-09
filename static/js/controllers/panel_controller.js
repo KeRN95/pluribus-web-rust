@@ -1,8 +1,9 @@
 import { Controller } from "@hotwired/stimulus";
 
-// A panel that a round button in the browse row opens under it and folds again: the search box.
-// It is one of the row's, which are open one at a time (section:open), as the filters and the map
-// are. Opened, its box takes the focus, so that a phone shows its keyboard at once.
+// A panel that a round button opens and folds again: the search box, the browse row's under the row
+// (one of the row's, which are open one at a time, section:open, as the filters and the map are),
+// and the welcome page's over its categories (home.html). Opened, its box takes the focus, so that
+// a phone shows its keyboard at once.
 export default class extends Controller {
   static targets = ["toggle", "panel", "input"];
 

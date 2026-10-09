@@ -7,8 +7,6 @@
 .welcome { position: relative; padding: 1.75rem 0 .5rem; }
 .lead { margin: 0 0 1.25rem; color: var(--muted); font-size: var(--text-lg); font-weight: var(--light); line-height: 1.45; }
 
-/* The welcome section: the search and the categories, straight on the page, no box of their own. */
-.welcome-card { padding: .5rem 0 0; }
 
 /* The logo's creature (thinking.svg), in the buttons' coral: a star of 13 soft tentacles that sway,
    melts into a small, roundish amoeba, as an amoeba is when it is small, that wobbles and spins
@@ -64,11 +62,6 @@
 .welcome-search:active { transform: scale(.94); }
 @media (prefers-reduced-motion: reduce) {
   .welcome-search:active { transform: none; }
-}
-
-/* Phones: the section's own padding is smaller. */
-@media (max-width: 719px) {
-  .welcome-card { padding: .25rem 0 0; }
 }
 
 /* Suggestions under a search box as its words are typed (suggest_controller.js): a list like the
@@ -291,6 +284,31 @@
 @media (prefers-reduced-motion: reduce) {
   .shortcut:active { transform: none; }
 }
+/* On the welcome page the pills flow round the search's circle (below) as a line of text flows
+   round a picture: inline, their gaps margins, the first two lines after the circle and the rest
+   under it. A pill is its padding, its line and its border tall (--pill), and the circle two of
+   them and the gap between their lines (--circle), from the same values as the pills, so that it
+   stays two lines tall as they change. The gap the margins leave at the end of each line, and
+   under the last, goes into the box's own negative margins: a flex gap leaves none there. */
+.welcome-start {
+  --row-gap: .55rem;
+  --column-gap: .55rem;
+  --pill-pad: .7rem;
+  --pill-font: var(--text-md);
+  --pill: calc(2 * var(--pill-pad) + var(--pill-font) * 1.55 + 2px);
+  --circle: calc(2 * var(--pill) + var(--row-gap));
+  position: relative;
+}
+.welcome .shortcuts { display: flow-root; margin: 0 calc(-1 * var(--column-gap)) calc(-1 * var(--row-gap)) 0; }
+.welcome .shortcut {
+  display: inline-flex;
+  vertical-align: top;
+  margin: 0 var(--column-gap) var(--row-gap) 0;
+  padding-top: var(--pill-pad);
+  padding-bottom: var(--pill-pad);
+  font-size: var(--pill-font);
+  line-height: 1.55;
+}
 /* Phones: the welcome page's categories smaller, so that three stand on a line where two did and
    the listings come sooner: less room round the name, the name and its icon a touch smaller, the
    gaps closer. Narrow phones, and phones with their text set larger, gain the most. A category
@@ -300,8 +318,8 @@
    lines stand a little further apart than the pills on a line, so that a pill about 35 px tall is
    about 43 to the touch (41 on the narrowest phones), and three still fit on a line. */
 @media (max-width: 719px) {
-  .welcome .shortcuts { --row-gap: .55rem; --column-gap: .45rem; gap: var(--row-gap) var(--column-gap); }
-  .welcome .shortcut { position: relative; gap: .4rem; padding: .45rem .85rem .45rem .7rem; font-size: .9375rem; }
+  .welcome-start { --column-gap: .45rem; --pill-pad: .45rem; --pill-font: .9375rem; }
+  .welcome .shortcut { position: relative; gap: .4rem; padding: var(--pill-pad) .85rem var(--pill-pad) .7rem; font-size: var(--pill-font); }
   /* From the border's outer edge. */
   .welcome .shortcut::after {
     content: "";
@@ -313,7 +331,53 @@
 
 @media (min-width: 720px) {
   .welcome { padding-top: 2.75rem; }
-  .welcome-card { padding: .75rem 0 0; }
+}
+
+/* The search, before the categories' pills (home.html): a coral circle two lines of them tall
+   (--circle), the magnifier in the buttons' colour, with a soft glow of its coral that grows under
+   the pointer, as the browse row's round search button has. It floats at the start, the first two
+   lines of pills beside it, a pixel short of two lines with its gap, so that the third starts
+   under it whatever the rounding. It opens the search box over it and the first line, the page
+   dimmed under it (.welcome-scrim), as the browse row's do. */
+.welcome .search-shortcut {
+  float: left;
+  width: var(--circle);
+  height: var(--circle);
+  margin: 0 var(--column-gap) calc(var(--row-gap) - 1px) 0;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+  border-radius: 50%;
+  background: var(--button);
+  color: var(--on-button);
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--button) 55%, transparent);
+  transition: background-color .15s, box-shadow .2s, transform .1s;
+}
+.welcome .search-shortcut .shortcut-icon { width: calc(var(--circle) * .36); height: calc(var(--circle) * .36); }
+.welcome .search-shortcut .shortcut-icon,
+.welcome .search-shortcut:active .shortcut-icon { color: inherit; }
+.welcome .search-shortcut:active { background: var(--button-hover); }
+@media (hover: hover) {
+  .welcome .search-shortcut:hover { background: var(--button-hover); box-shadow: 0 0 20px color-mix(in srgb, var(--button) 75%, transparent); }
+  .welcome .search-shortcut:hover .shortcut-icon { color: inherit; }
+}
+/* Centred on the circle: the box is its button and padding tall (.welcome-form). */
+.welcome-search-panel { display: none; position: absolute; top: calc((var(--circle) - 3.7rem - 2px) / 2); right: 0; left: 0; z-index: 9; }
+.welcome-search-panel.is-open { display: block; animation: menu-in .16s ease-out; }
+.welcome-scrim { display: none; }
+.welcome-start:has(.welcome-search-panel.is-open) .welcome-scrim {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  background: var(--scrim);
+  animation: fade-in .16s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-search-panel.is-open,
+  .welcome-scrim { animation: none; }
 }
 
 /* The welcome page's newest listings (home.html, web/newest.rs): the same row of cards as "Më të
