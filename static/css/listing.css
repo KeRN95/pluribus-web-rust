@@ -649,16 +649,16 @@
   border: 0;
   border-radius: 999px;
   background: none;
-/* The button waits with the hidden attribute until the controller finds the description long
-   enough to fold: its display rule above would show it regardless (an author's display beats the
-   browser's rule for the attribute), so the attribute wins here. It showed under two lines once. */
-.description-more[hidden] { display: none; }
   color: var(--accent);
   font: inherit;
   font-weight: var(--semibold);
   cursor: pointer;
 }
 .description-more svg { flex: none; }
+/* The button waits with the hidden attribute until the controller finds the description long
+   enough to fold: its display rule above would show it regardless (an author's display beats the
+   browser's rule for the attribute), so the attribute wins here. It showed under two lines once. */
+.description-more[hidden] { display: none; }
 @media (hover: hover) {
   .description-more:hover { background: var(--badge); }
 }
