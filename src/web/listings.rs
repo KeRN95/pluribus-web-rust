@@ -181,6 +181,18 @@ impl ListingCard {
         }
     }
 
+    /// The place under the price in the list, whatever the search is in: the zone and the town
+    /// ("Blloku, Tiranë"), or the town alone; the listing's municipality, or its location if that
+    /// isn't in one.
+    pub fn place_text(&self) -> Option<String> {
+        let city = self.city.as_deref().or(self.location_name.as_deref());
+        match (&self.zone, city) {
+            (Some(zone), Some(city)) => Some(format!("{zone}, {city}")),
+            (Some(zone), None) => Some(zone.clone()),
+            (None, city) => city.map(str::to_string),
+        }
+    }
+
     /// What follows the city on the details line: the distance from the map pin, when there is
     /// one, then the category's card properties. Without the city, one more property goes in
     /// first, so the line still says something new: "Apple · 128 GB" rather than "Vlorë · 128 GB".

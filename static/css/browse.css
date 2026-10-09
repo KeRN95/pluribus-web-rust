@@ -302,9 +302,8 @@
 .round-button .pin-icon { margin: 0; color: inherit; }
 /* The filters' and the map's buttons say their names and what is on: pills as wide as their
    words rather than circles, the path's pills' size (their room and text). "Filtrat" has how many
-   filters are on in a coral circle after it; the map has its place ("Tiranë · 10 km"), its pin in
-   the location colour once one is set, and is the one to give up width on a narrow phone, its
-   words ending in "…". */
+   filters are on in a coral circle after it; the map has its place ("Tiranë · 10 km") and is the
+   one to give up width on a narrow phone, its words ending in "…". */
 .browse-tools .button.round-button.labelled {
   width: auto;
   min-width: 0;
@@ -324,15 +323,14 @@
 }
 .browse-tools .button.map-button { flex: 0 1 auto; }
 /* Their icons are the category pills': outlines in the muted colour, the text's under the pointer,
-   the coral with their words while what they open is open; the map's pin keeps the location
-   colour once a place is set. */
+   the coral with their words while what they open is open; the map's pin the same whether a
+   place is set or not. */
 .browse-tools .labelled svg { color: var(--muted); transition: color .15s; }
 .browse-tools .labelled[aria-expanded="true"] svg,
 .browse-tools .labelled[aria-expanded="true"]:hover svg { color: inherit; }
 @media (hover: hover) {
   .browse-tools .labelled:hover svg { color: var(--text); }
 }
-.browse-tools .map-button.is-set .map-icon { color: var(--location); }
 .button-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .button-count {
   flex: none;

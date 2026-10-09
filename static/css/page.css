@@ -492,17 +492,20 @@
 /* The list (the view menu): a line each, one under another, the whole of the page's width. The
    photo at the line's left, square, its first alone, 8.8rem on a phone and 12.1rem wider (a tenth
    more than the 8rem and 11rem it had, the lines widened); beside it at the top the price, in the
-   text's colour and a size bigger as nothing is under it, then the title on up to two lines, and
-   at the foot, level with the photo's bottom, the details line and, at its right, when it was
-   posted (.card-when, which the cards leave out). The heart at the top right, on the page, the
-   text's colour with no circle, as no photo is under it. The photo's box (.card-media) gives its
-   parts to the card's own grid, its shades and the seller over the photo left out. */
-.card-when { display: none; }
+   text's colour and a size bigger as nothing is under it, under it where it is, the pin and the
+   town, small and muted (.card-place, which the cards leave out; the details line's own town,
+   .card-town, goes in its place), then the title on up to two lines, and at the foot, level with
+   the photo's bottom, the details line and, at its right, when it was posted (.card-when, which
+   the cards leave out). The heart at the top right, on the page, the text's colour with no
+   circle, as no photo is under it. The photo's box (.card-media) gives its parts to the card's
+   own grid, its shades and the seller over the photo left out. */
+.card-when,
+.card-place { display: none; }
 .cards-list .results .grid { grid-template-columns: minmax(0, 1fr); row-gap: 1.25rem; }
 .cards-list .results .card {
   display: grid;
   grid-template-columns: 8.8rem minmax(0, 1fr) auto;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto auto auto 1fr auto;
   column-gap: .85rem;
 }
 @media (min-width: 720px) {
@@ -532,7 +535,23 @@
 }
 /* Off the photo, the old price is the muted text's. */
 .cards-list .results .card-was { color: var(--muted); opacity: 1; }
-.cards-list .results .card-head { grid-area: 2 / 2; padding: .2rem 0 0; }
+/* Where it is, under the price: the pin the size of its letters, in their muted colour. */
+.cards-list .results .card-media .card-place {
+  display: flex;
+  grid-area: 2 / 2;
+  gap: .2em;
+  align-items: center;
+  margin: 0;
+  padding: .15rem 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.cards-list .results .card-place .pin-icon { flex: none; width: 1em; height: 1em; margin: 0; color: inherit; vertical-align: 0; }
+.cards-list .results .card-town { display: none; }
+.cards-list .results .card-head { grid-area: 3 / 2; padding: .2rem 0 0; }
 .cards-list .results .card-title {
   display: -webkit-box;
   font-size: var(--text-sm);
@@ -548,7 +567,7 @@
 .card-description { display: none; }
 .cards-list .results .card-description {
   display: -webkit-box;
-  grid-area: 3 / 2 / 4 / 4;
+  grid-area: 4 / 2 / 5 / 4;
   align-self: start;
   margin: 0;
   padding: .3rem 0 0;
@@ -574,7 +593,7 @@
 }
 .cards-list .results .card-body {
   flex-direction: row;
-  grid-area: 4 / 2 / 5 / 4;
+  grid-area: 5 / 2 / 6 / 4;
   align-items: baseline;
   gap: .75rem;
   padding: .5rem 0 .1rem;
@@ -587,8 +606,8 @@
 }
 
 /* The location pin (templates/pin.svg), on a listing's map and beside "Afër meje" and
-   "Vendndodhja ime" (the cards' town has none): in Claude's blue, lighter in the dark theme. Sized
-   with the text. */
+   "Vendndodhja ime" (the list's town has its own, in its letters' colour): in Claude's blue,
+   lighter in the dark theme. Sized with the text. */
 .pin-icon {
   width: 1.1em;
   height: 1.1em;
