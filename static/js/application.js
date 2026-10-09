@@ -154,15 +154,15 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
 // A finger gives a tap's page only the tap's own length of a head start, about a tenth of a
 // second, where a mouse resting on a link gives a click's most of a second; and a page's round
 // trip is longer than a tap (some 150 ms through the site's tunnel). So on a touch screen the
-// pages behind the links in view are fetched ahead within 300 ms of coming into view, sooner
-// when the page sits idle (requestIdleCallback with that timeout; a page busy with its photos
-// would otherwise hold them off for seconds): the cards' listings, the categories' pills (the
-// welcome page's, a category page's path and subcategories), any link Turbo would fetch ahead
-// under a mouse (aheadable), two at a time, at most twelve a page, quietly (priority low), each
-// kept half a minute for the visit a tap makes (above, as the touch's own). Not where the visitor
-// asks to save data, nor on a connection the browser calls slow (navigator.connection), nor a
-// page kept already.
-const AHEAD_WITHIN = 300;
+// page behind a link is fetched ahead once the link has been on screen for 75 ms: one the
+// visitor stops on, not every one a swipe flicks past (a link that leaves sooner starts its wait
+// again when it comes back). The cards' listings, the categories' pills (the welcome page's, a
+// category page's path and subcategories), any link Turbo would fetch ahead under a mouse
+// (aheadable), two at a time, the next as one finishes, at most twelve a page, quietly (priority
+// low), each kept half a minute for the visit a tap makes (above, as the touch's own). Not where
+// the visitor asks to save data, nor on a connection the browser calls slow
+// (navigator.connection), nor a page kept already, nor a waiting link that has left the screen.
+const AHEAD_AFTER = 75;
 const AHEAD_IN_VIEW = ".card-link, .shortcut";
 const kept = new Map();
 const keptAhead = (href) => {
@@ -177,12 +177,14 @@ let inView = null;
 let waiting = [];
 let fetching = 0;
 let left = 0;
-const idle = window.requestIdleCallback
-  ? (task) => requestIdleCallback(task, { timeout: AHEAD_WITHIN })
-  : (task) => setTimeout(task, AHEAD_WITHIN);
+// The links on screen, each with the timer that queues it once it has stayed AHEAD_AFTER.
+const onScreen = new Map();
 function fetchAhead() {
   while (fetching < 2 && left > 0 && waiting.length) {
     const link = waiting.shift();
+    if (!onScreen.has(link)) continue;
+    inView?.unobserve(link);
+    onScreen.delete(link);
     const url = new URL(link.href);
     if (!aheadable(link) || keptAhead(url.href) || (touched && fresh() && touched.url === url.href)) continue;
     const request = new FetchRequest(ahead, FetchMethod.get, url, new URLSearchParams(), link);
@@ -195,30 +197,41 @@ function fetchAhead() {
     touching = false;
     done.catch(() => {}).finally(() => {
       fetching--;
-      idle(fetchAhead);
+      fetchAhead();
     });
   }
 }
-function watchLinksInView() {
+function stopWatching() {
   inView?.disconnect();
   inView = null;
   waiting = [];
+  for (const timer of onScreen.values()) clearTimeout(timer);
+  onScreen.clear();
+}
+function watchLinksInView() {
+  stopWatching();
   if (!matchMedia("(pointer: coarse)").matches || !dataIsCheap()) return;
   left = 12;
   inView = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-      if (!entry.isIntersecting) continue;
-      inView.unobserve(entry.target);
-      waiting.push(entry.target);
+    for (const { target: link, isIntersecting } of entries) {
+      if (isIntersecting && !onScreen.has(link)) {
+        onScreen.set(link, setTimeout(() => {
+          waiting.push(link);
+          fetchAhead();
+        }, AHEAD_AFTER));
+      } else if (!isIntersecting && onScreen.has(link)) {
+        clearTimeout(onScreen.get(link));
+        onScreen.delete(link);
+        waiting = waiting.filter((other) => other !== link);
+      }
     }
-    if (waiting.length) idle(fetchAhead);
-  }, { rootMargin: "25%" });
+  });
   for (const link of document.querySelectorAll(AHEAD_IN_VIEW)) {
     if (link.matches("a[href]") && aheadable(link)) inView.observe(link);
   }
 }
 document.addEventListener("turbo:load", watchLinksInView);
-document.addEventListener("turbo:before-visit", () => { inView?.disconnect(); waiting = []; });
+document.addEventListener("turbo:before-visit", stopWatching);
 
 // A listing's page, once Turbo shows it, says it was seen (listings.rs, seen), for the welcome
 // page's "Më të klikuarat"; the kept listings' page, that the price drops it shows were seen
