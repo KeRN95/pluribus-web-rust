@@ -213,15 +213,20 @@ async fn security_headers(request: Request, next: Next) -> Response {
 /// form's previews). Requests go to the site alone. No plugins, no `<base>` elsewhere, no form
 /// sent to another site, and no other site framing a page (`frame-ancestors`). A script added to a
 /// page later needs its hash here, or a file of its own under /static/js. While typefaces are
-/// being tried (type_trial), Google Fonts' stylesheets and files are let in too.
+/// being tried (type_trial), Google Fonts' stylesheets and files are let in too, and the icon
+/// libraries' files from unpkg.
 fn content_security_policy() -> &'static HeaderValue {
     static POLICY: OnceLock<HeaderValue> = OnceLock::new();
     POLICY.get_or_init(|| {
         let hash = |script: &str| format!("'sha256-{}'", BASE64.encode(Sha256::digest(script)));
-        let (styles, fonts) = if type_trial() { (" https://fonts.googleapis.com", " https://fonts.gstatic.com") } else { ("", "") };
+        let (styles, fonts, icons) = if type_trial() {
+            (" https://fonts.googleapis.com", " https://fonts.gstatic.com", " https://unpkg.com")
+        } else {
+            ("", "", "")
+        };
         let policy = format!(
             "default-src 'self'; script-src 'self' {} {}; style-src 'self' 'unsafe-inline'{styles}; \
-             img-src 'self' https: data: blob:; font-src 'self'{fonts}; connect-src 'self'; object-src 'none'; \
+             img-src 'self' https: data: blob:; font-src 'self'{fonts}; connect-src 'self'{icons}; object-src 'none'; \
              base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
             hash(THEME_SCRIPT),
             hash(import_map()),
@@ -230,10 +235,11 @@ fn content_security_policy() -> &'static HeaderValue {
     })
 }
 
-/// Trying typefaces (TYPE_TRIAL=true in .env): the top bar has a button, "Aa", whose panel picks
-/// the headings' and the text's typeface from a list, the site's own and Google Fonts', and their
-/// weights (base.html, type_trial_controller.js), for the visitor's own browser alone. Only
-/// while the site's look is being settled.
+/// Trying typefaces and icons (TYPE_TRIAL=true in .env): the top bar has a button, "Aa", whose
+/// panel picks the headings' and the text's typeface from a list, the site's own and Google
+/// Fonts', and their weights, and an icon library in place of the site's own drawings (base.html,
+/// type_trial_controller.js), for the visitor's own browser alone. Only while the site's look is
+/// being settled.
 pub fn type_trial() -> bool {
     std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true")
 }

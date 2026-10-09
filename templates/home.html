@@ -34,7 +34,7 @@
     <input id="welcome-q" type="search" name="q" placeholder="Kërko p.sh. Golf 7, apartament 2+1" autocomplete="off" enterkeyhint="search"
            data-suggest-target="input" data-panel-target="input" data-action="input->suggest#typed focus->suggest#focused keydown->suggest#key">
     <button type="submit" class="icon-button welcome-search" aria-label="Kërko" title="Kërko">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <svg data-icon="search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     </button>
     {#- Suggestions open under the pill as its words are typed (suggest_controller.js). -#}
     <div class="suggestions" id="welcome-suggestions" role="listbox" aria-label="Sugjerime" data-suggest-target="list" hidden></div>
@@ -57,11 +57,11 @@
     <div class="welcome-main">
       <button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false" aria-label="Kërko" title="Kërko"
               data-panel-target="toggle" data-action="panel#toggle">
-        <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <svg class="circle-icon" data-icon="search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       </button>
       {#- Posting a listing (post.rs). -#}
       <a class="circle-shortcut plain-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim" title="Shto njoftim">
-        <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <svg class="circle-icon" data-icon="plus" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       </a>
       {%- for shortcut in main %}{% call pill(shortcut) %}{% endfor %}
     </div>
@@ -70,18 +70,18 @@
       {#- The listings the visitor keeps (saved.rs), with a dot while some dropped their price unseen
           (heart_controller.js). -#}
       <a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat" title="Të ruajturat">
-        <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg>
+        <svg class="circle-icon" data-icon="heart" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg>
       </a>
       {#- The visitor's conversations (messages.rs), with how many have messages unread in a coral
           circle at its top right (inbox_controller.js). -#}
       <a class="circle-shortcut plain-shortcut inbox-shortcut" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">
-        <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
+        <svg class="circle-icon" data-icon="message-circle" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
         <span class="inbox-count" data-inbox-target="count" hidden></span>
       </a>
       {#- The theme it switches to: a moon on the light one, a sun on the dark (theme_controller.js). -#}
       <button type="button" class="circle-shortcut theme-shortcut" data-controller="theme" data-action="theme#toggle" aria-label="Tema e errët" aria-pressed="false" title="Tema e errët">
-        <svg class="circle-icon icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MOON|safe }}</svg>
-        <svg class="circle-icon icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SUN|safe }}</svg>
+        <svg class="circle-icon icon-moon" data-icon="moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MOON|safe }}</svg>
+        <svg class="circle-icon icon-sun" data-icon="sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SUN|safe }}</svg>
       </button>
     </div>
   </nav>

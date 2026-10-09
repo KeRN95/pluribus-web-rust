@@ -78,7 +78,7 @@
     {%- if let Some(views) = card.views_display() %}
     {#- On "Më të klikuarat", how many times its page was seen this week: an eye and the number on
         a dark pill like the heart's circle, at the photo's top left. -#}
-    <p class="card-views" title="{{ views }} shikime këtë javë"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::EYE|safe }}</svg><span class="visually-hidden">Shikime këtë javë: </span>{{ views }}</p>
+    <p class="card-views" title="{{ views }} shikime këtë javë"><svg data-icon="eye" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::EYE|safe }}</svg><span class="visually-hidden">Shikime këtë javë: </span>{{ views }}</p>
     {%- endif %}
   </div>
   {#- The details line, which starts with the city, with no pin before it, then the distance from

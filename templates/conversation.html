@@ -64,7 +64,7 @@
         placeholder="Shkruaj një mesazh…" data-conversation-target="body"
         data-action="input->conversation#grow keydown->conversation#key">{{ body }}</textarea>
       <button type="submit" class="button composer-send" aria-label="Dërgo" title="Dërgo">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SEND|safe }}</svg>
+        <svg data-icon="send" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SEND|safe }}</svg>
       </button>
     </div>
   </form>

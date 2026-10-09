@@ -72,6 +72,19 @@
             <label class="type-range">Teksti<input type="range" name="textWeight" min="300" max="900" step="100" data-type-trial-target="field" data-action="input->type-trial#change"><output>400</output></label>
             <label class="type-range">I theksuar<input type="range" name="strongWeight" min="300" max="900" step="100" data-type-trial-target="field" data-action="input->type-trial#change"><output>600</output></label>
           </fieldset>
+          {#- An icon library in place of the site's own drawings, for the icons that have a name
+              in it (the categories' by their slug, the rest by data-icon; the details' stay the
+              site's own): fetched from unpkg as picked. -#}
+          <fieldset class="type-group">
+            <legend>Ikonat</legend>
+            <select class="type-font" name="iconLibrary" aria-label="Ikonat" data-type-trial-target="field" data-action="type-trial#change">
+              <option value="pluribus">Pluribus (të vetat)</option>
+              <option value="lucide">Lucide</option>
+              <option value="tabler">Tabler</option>
+              <option value="phosphor">Phosphor</option>
+              <option value="heroicons">Heroicons</option>
+            </select>
+          </fieldset>
           <button type="submit" class="button secondary type-reset">Rikthe</button>
         </form>
       </details>
@@ -81,7 +94,7 @@
           the theme are the welcome page's round buttons, at the end of its categories
           (home.html), and no top bar's. -#}
       <a class="icon-button account-button" href="/llogaria" aria-label="Llogaria" title="Llogaria">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+        <svg data-icon="user" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
       </a>
     </div>
   </header>
