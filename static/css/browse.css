@@ -24,7 +24,7 @@
 .subcategories { display: flex; flex-wrap: wrap; gap: .5rem; }
 .category-pills > .subcategories { margin: 0; }
 /* The subcategories' pills a touch smaller than the welcome page's main categories and the path's
-   over them, as big as the row's buttons under them (--row, below). */
+   over them, and than the row's buttons under them. */
 .subcategories .shortcut { gap: .5rem; padding: .6rem .95rem .6rem .85rem; font-size: calc(var(--text-md) * .94); }
 .subcategories .shortcut-icon { width: 18px; height: 18px; }
 .category-up { color: var(--muted); }
@@ -86,7 +86,7 @@
 }
 /* Phones: the path's pills (a listing's too) the welcome page's size there (welcome.css), as on
    every screen, and the subcategories' alike, about 35 px tall; the back button as tall as they
-   are, and the row's buttons as big as the pills over them (--row, below), as everywhere. As on
+   are, and the row's buttons as big as the back button (--row, below), as everywhere. As on
    the welcome page, a finger's target is bigger than the pill it sees: half the gaps round each
    pill, and round the back button (::after, part of the link, from the border's outer edge), its
    neighbours' meeting it halfway; the subcategories' lines stand as far apart as the welcome
@@ -127,11 +127,12 @@
    the round buttons' size, --drop the room between the row and what opens under it; both measure
    where the filters' card goes too, under the row (below). Wide, the filters are a column beside
    the rest instead (at the end). */
-/* --row is the subcategory pills' height (.subcategories .shortcut: a line of their text, .6rem
-   over and under it, the hairline), so the row's buttons are as big as the pills over them. */
-.browse { --row: calc(1.55 * .94 * var(--text-md) + 1.2rem + 2px); --drop: .75rem; position: relative; margin-top: 1rem; }
-/* Phones: as the subcategory pills there (above, the welcome page's size), a line of their text
-   and .45rem over and under it. */
+/* --row is the path's round buttons' size (.back-button: the welcome page's pills, a line of their
+   text, .7rem over and under it, the hairline), so the row's buttons are as big as the back button
+   over them, their icons the same size (20px; 18 on a phone). */
+.browse { --row: calc(1.55 * var(--text-md) + 1.4rem + 2px); --drop: .75rem; position: relative; margin-top: 1rem; }
+/* Phones: as the path's buttons there (above, the welcome page's size), a line of their text and
+   .45rem over and under it. */
 @media (max-width: 719px) {
   .browse { --row: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px); }
 }
@@ -289,23 +290,30 @@
 .browse-tools .button.search-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
 .browse-tools .button.search-button:hover,
 .browse-tools .button.search-button[aria-expanded="true"] { border-color: var(--accent); background: var(--badge); }
-.browse-tools .round-button svg { width: 18px; height: 18px; }
+.browse-tools .round-button svg { width: 20px; height: 20px; }
 .round-button .pin-icon { margin: 0; color: inherit; }
 /* The filters' and the map's buttons say their names and what is on: pills as wide as their
-   words rather than circles. "Filtrat" has how many filters are on in a coral circle after it;
-   the map has its place ("Tiranë · 10 km"), its pin in the location colour once one is set, and is
-   the one to give up width on a narrow phone, its words ending in "…". */
+   words rather than circles, the path's pills' size (their room and text). "Filtrat" has how many
+   filters are on in a coral circle after it; the map has its place ("Tiranë · 10 km"), its pin in
+   the location colour once one is set, and is the one to give up width on a narrow phone, its
+   words ending in "…". */
 .browse-tools .button.round-button.labelled {
   width: auto;
   min-width: 0;
-  gap: .5rem;
-  padding: 0 .95rem 0 .85rem;
+  gap: .55rem;
+  padding: 0 1.1rem 0 1rem;
   border-radius: 999px;
-  font-size: calc(var(--text-md) * .94);
+  font-size: var(--text-md);
   font-weight: var(--medium);
   white-space: nowrap;
 }
-.browse-tools .labelled svg { flex: none; width: 18px; height: 18px; }
+.browse-tools .labelled svg { flex: none; width: 20px; height: 20px; }
+/* Phones: the path's size there, its icons 18px, the pills' room and text the path's pills'. */
+@media (max-width: 719px) {
+  .browse-tools .round-button svg,
+  .browse-tools .labelled svg { width: 18px; height: 18px; }
+  .browse-tools .button.round-button.labelled { gap: .4rem; padding: 0 .85rem 0 .7rem; font-size: .9375rem; }
+}
 .browse-tools .button.map-button { flex: 0 1 auto; }
 /* Their icons are the category pills': outlines in the muted colour, the text's under the pointer,
    the coral with their words while what they open is open; the map's pin keeps the location
