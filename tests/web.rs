@@ -379,6 +379,9 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         for gone in ["post-button", "saved-button", "inbox-button", "theme-toggle"] {
             assert!(!page.contains(gone), "{gone}");
         }
+        // The typeface panel ("Aa") stands there only while TYPE_TRIAL is on (.env).
+        let trial = std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true");
+        assert_eq!(page.contains(r#"<details class="type-menu" data-controller="dropdown type-trial""#), trial);
         let bar = &page[page.find(r#"<header class="site-header">"#).unwrap()..page.find("</header>").unwrap()];
         assert_eq!(bar.matches("icon-button").count(), 1, "{bar}");
         assert!(bar.contains(r#"<a class="icon-button account-button" href="/llogaria""#));
@@ -3499,8 +3502,10 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     assert!(!level.contains(r#"href="/c/gps-dhe-navigatore""#), "not itself: {level}");
     assert!(!level.contains(r#"href="/c/automjete""#) && !level.contains("Të gjitha njoftimet"), "{level}");
     assert!(!gps.contains(r#"<nav class="subcategories""#), "no subcategories, no pills under");
-    // Every branch closes; the other three </details> are its pill's own, the order's and the view's.
-    assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - 3, "balanced");
+    // Every branch closes; the other three </details> are its pill's own, the order's and the view's
+    // (and the typeface panel's, while TYPE_TRIAL is on).
+    let others = 3 + gps.matches("<details class=\"type-menu\"").count();
+    assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - others, "balanced");
 
     // The old address still works.
     assert_eq!(get(pool.clone(), "/c/pjese-kembimi").await.status, StatusCode::OK);

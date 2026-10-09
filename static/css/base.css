@@ -298,12 +298,12 @@ b, strong { font-weight: var(--bold); }
 h1,
 h2 {
   font-family: var(--font-heading);
-  font-weight: var(--bold);
+  font-weight: var(--heading-weight, var(--bold));
   letter-spacing: -0.015em;
 }
 
 h1 { margin: 1.5rem 0 1rem; font-size: var(--text-2xl); line-height: 1.15; }
-h2 { margin: 1.75rem 0 .75rem; font-size: var(--text-xl); line-height: 1.25; }
+h2 { margin: 1.75rem 0 .75rem; font-size: var(--text-xl); font-weight: var(--subheading-weight, var(--heading-weight, var(--bold))); line-height: 1.25; }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 ::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
@@ -437,6 +437,39 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .logo { margin-right: auto; }
 .account-button { background: var(--surface); border-color: var(--border); }
 .account-button:hover { background: var(--surface-muted); }
+/* Trying typefaces (TYPE_TRIAL=true; base.html, type_trial_controller.js): "Aa" before the
+   account, a round button like it, marked as an open menu is while its panel shows; the panel
+   under the bar's right end, a card like the menus', with the headings' and the text's lists and
+   their weight sliders, each slider's number after it, and "Rikthe". The headings' weights come
+   from it as --heading-weight and --subheading-weight (h1 and h2, above), the text's as --regular
+   and --semibold. */
+.type-menu { position: relative; }
+.type-menu > summary { list-style: none; cursor: pointer; background: var(--surface); border-color: var(--border); font-size: var(--text-sm); font-weight: var(--semibold); }
+.type-menu > summary::-webkit-details-marker { display: none; }
+.type-menu > summary:hover { background: var(--surface-muted); }
+.type-menu[open] > summary { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+.type-panel {
+  position: absolute;
+  top: calc(100% + .5rem);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: .9rem;
+  width: 19rem;
+  max-width: calc(100vw - 2 * var(--gutter));
+  padding: 1rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.type-group { display: grid; gap: .5rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+.type-group legend { padding: 0; margin-bottom: .2rem; font-size: var(--text-sm); font-weight: var(--semibold); }
+.type-font { width: 100%; padding: .4rem .5rem; border: 1px solid var(--menu-border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: var(--text-sm); }
+.type-range { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr) 2.2rem; gap: .5rem; align-items: center; color: var(--muted); font-size: var(--text-xs); }
+.type-range input { width: 100%; margin: 0; accent-color: var(--accent); }
+.type-range output { color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
+.type-reset { justify-self: start; }
 
 /* The theme button (the welcome page's) shows the theme it switches to: a moon in light mode, a
    sun in dark mode. */

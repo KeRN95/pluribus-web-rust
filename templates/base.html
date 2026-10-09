@@ -52,6 +52,30 @@
           from page to page (data-turbo-permanent), so that its colour, the page's section's,
           slides to the next page's rather than changing at once (base.css, .logo). -#}
       <a class="logo" id="logo" href="/" data-turbo-permanent><span class="logo-word">pluribus</span></a>
+      {%- if crate::web::type_trial() %}
+      {#- Trying typefaces (TYPE_TRIAL=true, web::type_trial): "Aa" opens a panel that picks the
+          headings' typeface and the text's, the site's own and Google Fonts', and their weights,
+          for this browser alone (type_trial_controller.js, which fills the lists; base.css,
+          .type-menu). A menu like the browse row's, folding on a tap outside or Escape. -#}
+      <details class="type-menu" data-controller="dropdown type-trial" data-action="turbo:before-cache@document->dropdown#close">
+        <summary class="icon-button type-button" aria-label="Shkronjat" title="Shkronjat">Aa</summary>
+        <form class="type-panel" data-action="submit->type-trial#reset">
+          <fieldset class="type-group">
+            <legend>Titujt</legend>
+            <select class="type-font" name="headingFont" aria-label="Shkronjat e titujve" data-type-trial-target="field" data-action="type-trial#change"></select>
+            <label class="type-range">Titulli<input type="range" name="headingWeight" min="300" max="900" step="100" data-type-trial-target="field" data-action="input->type-trial#change"><output>700</output></label>
+            <label class="type-range">Nëntitulli<input type="range" name="subheadingWeight" min="300" max="900" step="100" data-type-trial-target="field" data-action="input->type-trial#change"><output>700</output></label>
+          </fieldset>
+          <fieldset class="type-group">
+            <legend>Teksti</legend>
+            <select class="type-font" name="textFont" aria-label="Shkronjat e tekstit" data-type-trial-target="field" data-action="type-trial#change"></select>
+            <label class="type-range">Teksti<input type="range" name="textWeight" min="300" max="900" step="100" data-type-trial-target="field" data-action="input->type-trial#change"><output>400</output></label>
+            <label class="type-range">I theksuar<input type="range" name="strongWeight" min="300" max="900" step="100" data-type-trial-target="field" data-action="input->type-trial#change"><output>600</output></label>
+          </fieldset>
+          <button type="submit" class="button secondary type-reset">Rikthe</button>
+        </form>
+      </details>
+      {%- endif %}
       {#- The account alone at the bar's right end: creating one, or for a signed-in visitor, their
           listings (account.rs, account_page). Posting, the listings kept, the conversations and
           the theme are the welcome page's round buttons, at the end of its categories
