@@ -162,6 +162,15 @@
   .listing-split .contact-bar:has(.message-button) :is(.reveal-button, .contact-revealed),
   .listing-split .contact-bar:has(.message-button):not(:has(.reveal-button, .contact-revealed)) .message-button { width: calc(100% - 6.7rem); }
   .listing-split .listing-side > .contact-bar:has(.message-button) + .actions { grid-column: 2; align-self: start; margin-top: -2.975rem; margin-bottom: .125rem; }
+  /* The seller's own view: the phone's pill across the column but for the share's circle, which
+     stands beside it at the line's end, level with it, as the circles do for anyone else (it
+     leaves the row under, which it would not fit, by standing out of it); and under them their
+     own buttons, Ndrysho, Çaktivizo and Fshi, each with its icon, on a line of their own, as wide
+     as their words. */
+  .listing-split .listing-side > .contact-bar:has(+ .actions .danger) { grid-column: 1 / -1; margin-right: 0; }
+  .listing-split .contact-bar:has(+ .actions .danger) :is(.reveal-button, .contact-revealed) { width: calc(100% - 3.35rem); }
+  .listing-split .listing-side > .contact-bar + .actions:has(.danger) { grid-column: 1 / -1; position: relative; align-self: auto; margin-top: .6rem; margin-bottom: 0; }
+  .listing-split .actions:has(.danger) .share-button { position: absolute; top: -3.575rem; right: 0; }
   .listing-split .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
 }
 

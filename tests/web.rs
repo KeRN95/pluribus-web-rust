@@ -3306,8 +3306,8 @@ async fn sellers_edit_their_own_listings(pool: PgPool) {
     let no = post_listing(&pool, &ana).await;
     let url = format!("/listing/{no}-samsung-galaxy-s21-128-gb");
 
-    // The seller sees "Ndrysho" on their listing; others don't.
-    let edit_link = format!(r#"<a class="button secondary" href="/listing/{no}/ndrysho">Ndrysho</a>"#);
+    // The seller sees "Ndrysho" on their listing, with its pencil; others don't.
+    let edit_link = format!(r#"<a class="button secondary" href="/listing/{no}/ndrysho"><svg class="button-icon""#);
     assert!(get_with_cookie(pool.clone(), &url, &ana).await.body.contains(&edit_link));
     assert!(!get(pool.clone(), &url).await.body.contains(&edit_link));
 
