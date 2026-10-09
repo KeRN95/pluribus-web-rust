@@ -60,13 +60,6 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
   url.search = filledIn(url.searchParams).toString();
 });
 
-// The welcome page's amoeba (thinking.svg) changes shape with SVG animation, which CSS can't stop;
-// for visitors who ask for less motion it stands still.
-document.addEventListener("turbo:load", () => {
-  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  for (const svg of document.querySelectorAll("svg.thinking")) svg.pauseAnimations();
-});
-
 // A tapped card keeps its border (page.css, .card.pressed) while its listing loads; the copy of the
 // page Turbo keeps for going back loses it. Only its links open it: a big card's arrows step through
 // its photos. iOS only shows :active where a touch listener is.

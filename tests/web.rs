@@ -317,11 +317,11 @@ async fn home_page_lists_categories(pool: PgPool) {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     let body = get(pool.clone(), "/").await.body;
-    // The question is for screen readers alone, with no line under it; the logo's creature moves
-    // in the logo alone, not behind the search too, which on phones had it drawn twice each frame.
+    // The question is for screen readers alone, with no line under it; the creature of the site's
+    // icon is on no page (it was the logo's, and once stood behind the search too).
     assert!(body.contains(r#"<h1 class="visually-hidden">Çfarë po kërkon?</h1>"#));
     assert!(!body.contains("Shkruaj atë që të duhet"));
-    assert_eq!(body.matches(r#"<svg class="thinking""#).count(), 1);
+    assert!(!body.contains(r#"<svg class="thinking""#));
     // Words only: no city, no category; the results' filters narrow them. Suggestions open under
     // the words as they are typed.
     assert!(body.contains(r#"<form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest""#));
@@ -2742,12 +2742,11 @@ async fn each_kind_of_thing_asks_for_what_fits_it(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_site_is_called_pluribus(pool: PgPool) {
-    // The logo is the welcome page's creature, moving, and the name in lowercase, in a typeface of
-    // its own that comes with the page; it stays from page to page. The pages' titles and the
-    // footer say the name.
+    // The logo is the name in lowercase, the word alone, in a typeface of its own that comes with
+    // the page. The pages' titles and the footer say the name.
     let home = html(pool.clone(), "/").await;
-    assert!(home.contains(r#"<a class="logo" id="logo" href="/" data-turbo-permanent><svg class="thinking""#));
-    assert!(home.contains(r#"<span class="logo-word">pluribus</span></a>"#));
+    assert!(home.contains(r#"<a class="logo" id="logo" href="/"><span class="logo-word">pluribus</span></a>"#));
+    assert!(!home.contains("thinking"));
     assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
     for font in ["inter-5.3.0-latin-wght.woff2", "merriweather-5.3.0-latin-700.woff2"] {
         assert!(home.contains(&format!(
@@ -3559,7 +3558,7 @@ async fn elektronike_and_shtepi_kopsht_have_colours_of_their_own(pool: PgPool) {
     let home = html(pool.clone(), "/").await;
     assert!(home.contains("<body>") && !home.contains("data-section"));
     // Elektronikë's are in Claude's blue and Shtëpi / kopsht's in its olive wherever the rest of
-    // the site is coral: what is picked or open, the buttons, their tints, the logo's creature.
+    // the site is coral: what is picked or open, the buttons, their tints.
     // (The stylesheet comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for (section, colour) in [("elektronike", "blue"), ("shtepi-dhe-kopsht", "olive")] {

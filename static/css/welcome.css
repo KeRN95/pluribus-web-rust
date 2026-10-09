@@ -9,15 +9,6 @@
 .lead { margin: 0 0 1.25rem; color: var(--muted); font-size: var(--text-lg); font-weight: var(--light); line-height: 1.45; }
 
 
-/* The logo's creature (thinking.svg), in the buttons' coral: a star of 13 soft tentacles that sway,
-   melts into a small, roundish amoeba, as an amoeba is when it is small, that wobbles and spins
-   quickly, and back, spinning all the while. Shapes and spin are SVG's own animation, which
-   Safari runs too; application.js stops them for visitors who ask for less motion. It is in the
-   logo (.logo) alone: each frame of it is the main thread's work, which a second, large one
-   behind the welcome page's search doubled on phones. */
-.thinking { flex: none; color: var(--button); }
-.amoeba { fill: currentColor; }
-
 /* The search, drawn like the message box in Claude's app: a pill on the surface with the menus'
    hairline and a soft shadow, the words in it, and inside it at the end a round coral button
    with a magnifier, like Claude's send button. While it is being typed in, its edge darkens and

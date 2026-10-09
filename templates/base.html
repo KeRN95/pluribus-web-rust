@@ -13,7 +13,7 @@
       script is web::THEME_SCRIPT, whose hash the Content-Security-Policy lets run. -#}
   <script>{{ crate::web::THEME_SCRIPT|safe }}</script>
   <meta name="view-transition" content="same-origin">
-  {#- The site's icon, the logo's creature: a favicon.ico (16, 32 and 48 px) for browsers that
+  {#- The site's icon, the creature (thinking.svg, standing still): a favicon.ico (16, 32 and 48 px) for browsers that
       want one, the SVG for those that take it, a 180 px one on the ivory for iPhones' home
       screens, and the manifest's for Android's (static/img/). -#}
   <link rel="icon" href="/favicon.ico" sizes="32x32">
@@ -47,10 +47,9 @@
     <div class="header-inner">
       {#- The search is the welcome page's pill, and on the browse pages the round button before
           the filters. -#}
-      {#- The logo: the welcome page's creature (thinking.svg), half of it behind the name's p, and
-          the name in lowercase. Turbo keeps it from page to page (data-turbo-permanent), so the
-          creature goes on moving rather than starting over with each page. -#}
-      <a class="logo" id="logo" href="/" data-turbo-permanent>{% include "thinking.svg" %}<span class="logo-word">pluribus</span></a>
+      {#- The logo: the name in lowercase, in Merriweather, the word alone (the creature of
+          thinking.svg is the site's icon, above, and no longer in the header). -#}
+      <a class="logo" id="logo" href="/"><span class="logo-word">pluribus</span></a>
       {#- Posting, the listings kept and the conversations, and after the account the theme: the
           welcome page has them at the end of its categories instead, and its top bar the account
           alone (home.html, which leaves these blocks empty). -#}
