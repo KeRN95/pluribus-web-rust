@@ -3870,14 +3870,15 @@ async fn listings_get_photos(pool: PgPool) {
     let first = &page[page.find(r#"<img src="/media/photos/"#).unwrap()..];
     assert!(first[..first.find('>').unwrap()].contains(r#" fetchpriority="high""#), "{first}");
     assert_eq!(page.matches("fetchpriority").count(), 1);
-    // Each is kept as WebP in four sizes, which the browser picks between, here by their longer
-    // side, as the page shows the photo whole: the cards' two cover a square of their shorter side
-    // (900 × 600 and 600 × 400 for the first). The second, 800 px wide, has a small copy of its
-    // own, and a card copy no smaller than itself, which the page leaves out.
+    // Each is kept as WebP in five sizes, which the browser picks between, here by their longer
+    // side, as the page shows the photo whole: the cards' three cover a square of their shorter
+    // side (900 × 600, 600 × 400 and 450 × 300 for the first). The second, 800 px wide, has a
+    // small copy and a mini one of its own, and a card copy no smaller than itself, which the page
+    // leaves out.
     let (big, small) = (photo_urls[0].trim_end_matches(".jpg"), photo_urls[1].trim_end_matches(".jpg"));
     let sources = [
-        format!(r#"<picture><source type="image/webp" srcset="{big}-small.webp?2 600w, {big}-card.webp?2 900w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="(min-width: 1100px) 1068px,"#),
-        format!(r#"<picture><source type="image/webp" srcset="{small}-small.webp?2 533w, {small}.webp 800w" sizes="#),
+        format!(r#"<picture><source type="image/webp" srcset="{big}-mini.webp?2 450w, {big}-small.webp?2 600w, {big}-card.webp?2 900w, {big}-middle.webp 1200w, {big}.webp 1600w" sizes="(min-width: 1100px) 1068px,"#),
+        format!(r#"<picture><source type="image/webp" srcset="{small}-mini.webp?2 400w, {small}-small.webp?2 533w, {small}.webp 800w" sizes="#),
     ];
     for (url, source) in photo_urls.iter().zip(&sources) {
         // Whole in its frame, over a blurred copy of itself: its tiny copy, in the page, a
@@ -3899,13 +3900,13 @@ async fn listings_get_photos(pool: PgPool) {
     let photo = get(pool.clone(), photo_urls[0]).await;
     assert_eq!(photo.status, StatusCode::OK);
     assert_eq!(photo.content_type.as_deref(), Some("image/jpeg"));
-    for copy in ["", "-middle", "-card", "-small"] {
+    for copy in ["", "-middle", "-card", "-small", "-mini"] {
         let webp = get(pool.clone(), &format!("{big}{copy}.webp")).await;
         assert_eq!(webp.content_type.as_deref(), Some("image/webp"), "{copy}");
         assert!(webp.body.starts_with("RIFF") && webp.body.chars().take(16).collect::<String>().contains("WEBP"));
     }
-    // And the cards' two as AVIF.
-    for copy in ["-card", "-small"] {
+    // And the cards' three as AVIF.
+    for copy in ["-card", "-small", "-mini"] {
         let avif = get(pool.clone(), &format!("{big}{copy}.avif")).await;
         assert_eq!(avif.content_type.as_deref(), Some("image/avif"), "{copy}");
         assert!(avif.body.contains("ftypavif"), "{copy}");
@@ -3933,10 +3934,10 @@ async fn listings_get_photos(pool: PgPool) {
     // query, and shows its tiny one until it has loaded.
     let cards = get(pool.clone(), "/search?q=Galaxy").await.body;
     assert!(cards.contains(&format!(
-        r#"<picture><source type="image/avif" srcset="{big}-small.avif?2 400w, {big}-card.avif?2 600w, {big}-middle.webp 800w, {big}.webp 1067w" sizes="{SMALL_SIZES}"><source type="image/webp" srcset="{big}-small.webp?2 400w, {big}-card.webp?2 600w, {big}-middle.webp 800w, {big}.webp 1067w" sizes="{SMALL_SIZES}">"#
+        r#"<picture><source type="image/avif" srcset="{big}-mini.avif?2 300w, {big}-small.avif?2 400w, {big}-card.avif?2 600w, {big}-middle.webp 800w, {big}.webp 1067w" sizes="{SMALL_SIZES}"><source type="image/webp" srcset="{big}-mini.webp?2 300w, {big}-small.webp?2 400w, {big}-card.webp?2 600w, {big}-middle.webp 800w, {big}.webp 1067w" sizes="{SMALL_SIZES}">"#
     )), "{cards}");
     assert!(cards.contains(&format!(
-        r#"<picture><source type="image/avif" srcset="{small}-small.avif?2 400w, {small}-card.avif?2 600w" sizes="{SMALL_SIZES}"><source type="image/webp" srcset="{small}-small.webp?2 400w, {small}.webp 600w" sizes="{SMALL_SIZES}">"#
+        r#"<picture><source type="image/avif" srcset="{small}-mini.avif?2 300w, {small}-small.avif?2 400w, {small}-card.avif?2 600w" sizes="{SMALL_SIZES}"><source type="image/webp" srcset="{small}-mini.webp?2 300w, {small}-small.webp?2 400w, {small}.webp 600w" sizes="{SMALL_SIZES}">"#
     )), "{cards}");
     // The query changes nothing in what is served.
     let with_query = get(pool.clone(), &format!("{big}-small.avif?2")).await;
@@ -3962,7 +3963,7 @@ async fn listings_get_photos(pool: PgPool) {
     assert!(page.contains(r#"<div class="gallery">"#));
     assert!(!page.contains("data-controller=\"gallery\"") && !page.contains("gallery-count") && !page.contains(", foto 1 nga"));
     // The removed one's files are gone, every copy.
-    let copies = ["-middle.webp", "-card.webp", "-small.webp", "-card.avif", "-small.avif"].map(|copy| format!("{big}{copy}"));
+    let copies = ["-middle.webp", "-card.webp", "-small.webp", "-mini.webp", "-card.avif", "-small.avif", "-mini.avif"].map(|copy| format!("{big}{copy}"));
     for file in [photo_urls[0].to_string(), format!("{big}.webp")].into_iter().chain(copies) {
         assert_eq!(get(pool.clone(), &file).await.status, StatusCode::NOT_FOUND, "{file}");
     }

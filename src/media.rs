@@ -4,35 +4,38 @@
 //!
 //! Every photo is decoded and written out again, which also drops what phones keep inside them,
 //! the place a photo was taken included. It is kept as WebP, about a third lighter than JPEG at the
-//! same quality, in four sizes: the full one for the listing page on big screens, a middle one for
-//! phones and big cards, the card's, and a small one for cards on a computer's screen and phones'
-//! narrower ones. The first two are sized by their longer side, for a photo shown whole; the
-//! cards' two by their shorter one, for the square a card cuts a photo to, which scales it by that
-//! side (page.css, object-fit: cover): a card's copy of a 3:2 photo is 900 × 600, a small one's
-//! 600 × 400. The cards' two are AVIF too, a fifth lighter again, for the browsers that show it.
-//! Pages name them all and the browser picks the one its screen needs (srcset, web/photos.rs). A
-//! JPEG of the full one, by mozjpeg, is for what doesn't show WebP: link previews, and old
-//! browsers. A tiny copy, a few hundred bytes, goes in the pages themselves (a data: URI), blurred
-//! behind the photo while it loads and around it where it doesn't fill its frame.
+//! same quality, in five sizes: the full one for the listing page on big screens, a middle one for
+//! phones and big cards, and three for the cards: the card's, for dense screens, a small one, and
+//! a mini one for cards on a plain screen. The first two are sized by their longer side, for a
+//! photo shown whole; the cards' three by their shorter one, for the square a card cuts a photo
+//! to, which scales it by that side (page.css, object-fit: cover): a card's copy of a 3:2 photo is
+//! 900 × 600, a small one's 600 × 400, a mini one's 450 × 300. The cards' three are AVIF too, a
+//! fifth lighter again, for the browsers that show it; a photo full of fine texture, whose AVIF
+//! copy comes out heavy, has it made at a lower quality (AVIF_BUDGET). Pages name them all and the
+//! browser picks the one its screen needs (srcset, web/photos.rs). A JPEG of the full one, by
+//! mozjpeg, is for what doesn't show WebP: link previews, and old browsers. A tiny copy, a few
+//! hundred bytes, goes in the pages themselves (a data: URI), blurred behind the photo while it
+//! loads and around it where it doesn't fill its frame.
 //!
-//! Photos kept before there were small copies, or AVIF ones, get theirs from their WebP ones, and
-//! those kept while the cards' copies were sized by their longer side (600 × 400 for a 3:2 photo,
-//! which a card stretched) get theirs made again: all of them in the background as the server
-//! starts (Media::fill_in_copies); before then a small WebP one asked for is made as it is
-//! (Media::make_copy), and an AVIF one's WebP twin stands in (web/photos.rs, serve).
+//! Photos kept before there were small, mini or AVIF copies get theirs from their WebP ones, and
+//! those kept before the cards' copies were made as they are now (CARD_COPIES_EDITION: sized by
+//! their longer side, 600 × 400 for a 3:2 photo, which a card stretched; or heavier than
+//! AVIF_BUDGET) get theirs made again: all of them in the background as the server starts
+//! (Media::fill_in_copies); before then a WebP one asked for is made as it is (Media::make_copy),
+//! and an AVIF one's WebP twin stands in (web/photos.rs, serve).
 //!
 //! The site serves the files itself, from /media/..., so they work wherever the site does; or a CDN
 //! does, from the address MEDIA_URL gives (README, "Photos"). Each is stored with its type and a
 //! year's caching, which the store, or a CDN in front of it, sends with it.
 
-use std::{collections::HashSet, io::Cursor, sync::Arc};
+use std::{collections::HashMap, io::Cursor, sync::Arc};
 
 use anyhow::Context;
 use axum::body::Bytes;
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use futures_util::TryStreamExt;
 use image::{
-    DynamicImage, ExtendedColorType, ImageDecoder, ImageEncoder, ImageReader, Limits,
+    DynamicImage, ExtendedColorType, ImageDecoder, ImageEncoder, ImageReader, Limits, RgbaImage,
     codecs::{avif::AvifEncoder, jpeg::JpegEncoder},
     imageops::FilterType,
     metadata::Orientation,
@@ -52,24 +55,37 @@ pub const MAX_UPLOAD_BYTES: usize = 15 * 1024 * 1024;
 pub const FULL_SIDE: u32 = 1600;
 pub const MIDDLE_SIDE: u32 = 1200;
 const PLACEHOLDER_SIDE: u32 = 16;
-/// The shorter side of the card's copy and the small one: the square each covers at full
-/// sharpness, as a card cuts a photo to one (cover_size). Their longer side is no more than twice
-/// that, for a panorama.
+/// The shorter side of the card's copy, the small one and the mini one: the square each covers
+/// at full sharpness, as a card cuts a photo to one (cover_size). Their longer side is no more
+/// than twice that, for a panorama. The card's serves a dense screen (a card of 161 px on a phone
+/// of three pixels to a point, 255 on a laptop of two), the small one a middling one (a phone's
+/// two to a point, a laptop's 1.25), the mini one a plain screen (a card of 255 or 300 px at one
+/// pixel to a point), each with the pixels it needs and not many more.
 pub const CARD_SIDE: u32 = 600;
 pub const SMALL_SIDE: u32 = 400;
+pub const MINI_SIDE: u32 = 300;
 /// How many photos' copies the server's start makes at once (make_missing_copies): their AVIF
 /// copies take most of a second each.
 const AT_ONCE: usize = 4;
-/// The file kept in the store once the start has looked at every photo's card copy and remade
-/// those from before the cards' copies were sized by their shorter side (make_missing_copies),
-/// so that later starts needn't read them all again.
-const CARDS_REMADE: &str = "photos/cards-by-the-shorter-side.txt";
-/// What the card's copy and the small one add to a photo's name, as WebP and as AVIF (web/photos.rs,
-/// COPIES): the others' names are the card's WebP one's with their own ending.
+/// The rules the cards' copies are made by, numbered: 2 since 2026-10-09, when they came to be
+/// sized by their shorter side, with a mini one and a weight an AVIF one may not go over. Pages
+/// name the cards' copies with it (web/photos.rs, CARD_COPIES_EDITION), since the copies were
+/// made again under their old names, which browsers keep for a year; and a file in the store,
+/// `scan_note`, says the start has looked at every photo's copies and brought them to it, so that
+/// later starts needn't read them all again. Change it whenever the rules change.
+pub const CARD_COPIES_EDITION: &str = "2";
+
+fn scan_note() -> String {
+    format!("photos/card-copies-edition-{CARD_COPIES_EDITION}.txt")
+}
+/// What the cards' copies add to a photo's name, as WebP and as AVIF (web/photos.rs, COPIES): the
+/// others' names are the card's WebP one's with their own ending.
 pub const CARD_COPY: &str = "-card.webp";
 pub const SMALL_COPY: &str = "-small.webp";
+pub const MINI_COPY: &str = "-mini.webp";
 pub const CARD_AVIF: &str = "-card.avif";
 pub const SMALL_AVIF: &str = "-small.avif";
+pub const MINI_AVIF: &str = "-mini.avif";
 /// libwebp's quality, out of 100, for the copies and for the tiny one, which is blurred anyway;
 /// mozjpeg's for the JPEG, which with its trellis quantisation looks as a plain encoder's 85 does.
 const WEBP_QUALITY: f32 = 80.0;
@@ -81,6 +97,15 @@ const WEBP_QUALITY: f32 = 80.0;
 /// at 10, a third of the time, the files are a fifth heavier.
 const AVIF_QUALITY: u8 = 78;
 const AVIF_SPEED: u8 = 6;
+/// What an AVIF copy may weigh at AVIF_QUALITY, in bytes a pixel: a photo full of fine texture
+/// (gravel, leaves, an engine) comes out four or five times as heavy as a plain one at the same
+/// quality (0.18 bytes a pixel against 0.04), and its texture hides what a lower quality takes
+/// away, so a copy heavier than this is made again at AVIF_TEXTURE_QUALITY, about three tenths
+/// lighter (over five of the site's photos, 72 took a tenth off 78's bytes, 66 a fifth, 60 three
+/// tenths and 55 four tenths; a textured photo's 0.18 bytes a pixel came to 0.13 at 60). Lighthouse
+/// holds a photo to about 0.17 bytes over the pixels a card shows of it, the middle square.
+const AVIF_BUDGET: f64 = 0.14;
+const AVIF_TEXTURE_QUALITY: u8 = 60;
 const PLACEHOLDER_QUALITY: f32 = 40.0;
 const JPEG_QUALITY: f32 = 80.0;
 /// The AI's copies (small_copy) are made as quickly as they can be, by the image crate's encoder.
@@ -175,13 +200,13 @@ impl Media {
     }
 
     /// The copy kept under `key`, made now and kept, for a photo kept before there were copies of
-    /// its kind: its small WebP one (SMALL_COPY) or an AVIF one (CARD_AVIF, SMALL_AVIF), from its
-    /// full WebP copy as `process` makes them, or from the card's when it has no full one. None
-    /// when the name is no such copy's, or there is no such photo. Another asking for it at the
-    /// same time makes the same file.
+    /// its kind, or whose copy is from before the rules it is made by now: one of LATER_COPIES,
+    /// from its full WebP copy as `process` makes them, or from the card's when it has no full
+    /// one. None when the name is no such copy's, or there is no such photo. Another asking for it
+    /// at the same time makes the same file.
     pub async fn make_copy(&self, key: &str) -> anyhow::Result<Option<Bytes>> {
         let Some((name, ending)) =
-            [SMALL_COPY, CARD_AVIF, SMALL_AVIF].into_iter().find_map(|ending| Some((key.strip_suffix(ending)?, ending)))
+            LATER_COPIES.into_iter().find_map(|(ending, _)| Some((key.strip_suffix(ending)?, ending)))
         else {
             return Ok(None);
         };
@@ -200,56 +225,58 @@ impl Media {
     }
 
     /// Makes the copies the photos in the store lack (make_copy), and makes again the card copies
-    /// from before the cards' copies were sized by their shorter side, with the three others from
-    /// them (remake_old_card_copies): the photos kept before there were copies of their kind.
-    /// AT_ONCE photos at a time. Once every photo has been looked at, a file in the store says so
-    /// (CARDS_REMADE), so that later starts needn't read their card copies again; a start cut
-    /// short before then takes up where it left. How many copies it made.
+    /// from before the rules they are made by now (remake_card_copies): the photos kept before
+    /// there were copies of their kind, or the rules. AT_ONCE photos at a time. Once every photo
+    /// has been looked at, a file in the store says so (scan_note), so that later starts needn't
+    /// read their card copies again; a start cut short before then takes up where it left. How
+    /// many copies it made.
     pub async fn make_missing_copies(&self) -> anyhow::Result<usize> {
-        let keys: HashSet<String> = self
+        let kept: HashMap<String, u64> = self
             .store
             .list(Some(&Path::from("photos")))
-            .map_ok(|meta| meta.location.to_string())
+            .map_ok(|meta| (meta.location.to_string(), meta.size))
             .try_collect()
             .await
             .context("listing the photos")?;
-        let remaking = !keys.contains(CARDS_REMADE);
-        let names: Vec<String> = keys.iter().filter_map(|key| key.strip_suffix(CARD_COPY)).map(str::to_string).collect();
-        let keys = Arc::new(keys);
+        let scanning = !kept.contains_key(&scan_note());
+        let names: Vec<String> = kept.keys().filter_map(|key| key.strip_suffix(CARD_COPY)).map(str::to_string).collect();
+        let kept = Arc::new(kept);
         let mut tasks = tokio::task::JoinSet::new();
         let mut made = 0;
         for name in names {
             if tasks.len() >= AT_ONCE {
                 made += tasks.join_next().await.expect("a photo's copies are being made")?;
             }
-            let (media, keys) = (self.clone(), Arc::clone(&keys));
-            tasks.spawn(async move { media.fill_in(&name, &keys, remaking).await });
+            let (media, kept) = (self.clone(), Arc::clone(&kept));
+            tasks.spawn(async move { media.fill_in(&name, &kept, scanning).await });
         }
         while let Some(done) = tasks.join_next().await {
             made += done?;
         }
-        if remaking {
-            let note = "Every photo's card copies have been looked at, and those from before the cards' copies were sized by their shorter side made again (media.rs).\n";
-            self.put(CARDS_REMADE, note.as_bytes().to_vec()).await?;
+        if scanning {
+            let note = format!(
+                "Every photo's card copies have been looked at, and those from before edition {CARD_COPIES_EDITION} of the rules they are made by (media.rs) made again.\n"
+            );
+            self.put(&scan_note(), note.into_bytes()).await?;
         }
         Ok(made)
     }
 
-    /// One photo's copies, for make_missing_copies: its old card copies made again when they are
-    /// such, else those it lacks made. How many were made; one that can't be is logged, and leaves
-    /// the others to be.
-    async fn fill_in(&self, name: &str, keys: &HashSet<String>, remaking: bool) -> usize {
-        if remaking {
-            match self.remake_old_card_copies(name).await {
-                Ok(Some(made)) => return made,
-                Ok(None) => {}
+    /// One photo's copies, for make_missing_copies: those from before the rules made again when
+    /// the start is looking (`scanning`), then those it lacks made. How many were made; one that
+    /// can't be is logged, and leaves the others to be.
+    async fn fill_in(&self, name: &str, kept: &HashMap<String, u64>, scanning: bool) -> usize {
+        let mut made = 0;
+        if scanning {
+            match self.remake_card_copies(name, kept).await {
+                Ok((remade, true)) => return remade,
+                Ok((remade, false)) => made += remade,
                 Err(error) => tracing::warn!(%error, "a photo's card copies could not be made again"),
             }
         }
-        let mut made = 0;
-        for ending in [SMALL_COPY, SMALL_AVIF, CARD_AVIF] {
+        for (ending, _) in LATER_COPIES {
             let key = format!("{name}{ending}");
-            if keys.contains(&key) {
+            if kept.contains_key(&key) {
                 continue;
             }
             match self.make_copy(&key).await {
@@ -261,36 +288,51 @@ impl Media {
         made
     }
 
-    /// The four card copies of a photo whose card copy is from before the cards' copies were sized
-    /// by their shorter side (its longer side CARD_SIDE and its shorter side less), made again from
-    /// its full copy and kept: Some(4). None for one sized as they are now, which is told by the
-    /// first bytes of the card copy, or one without a full copy to make them from, whose copies
-    /// stay as they are.
-    async fn remake_old_card_copies(&self, name: &str) -> anyhow::Result<Option<usize>> {
+    /// A photo's card copies from before the rules they are made by now, made again and kept: all
+    /// six from the full copy (card_copies) when the card copy is sized by its longer side (CARD_SIDE,
+    /// and its shorter side less), which the first bytes of the card copy tell, and then true, for
+    /// nothing else needs making; else each AVIF one heavier than AVIF_BUDGET on its own
+    /// (make_copy), and false. How many were made. Nothing for a photo without a full copy to make
+    /// them from, or whose card copy can't be read.
+    async fn remake_card_copies(&self, name: &str, kept: &HashMap<String, u64>) -> anyhow::Result<(usize, bool)> {
         let card_key = format!("{name}{CARD_COPY}");
         let head = self
             .store
             .get_range(&Path::from(card_key.as_str()), 0..WEBP_HEADER as u64)
             .await
             .with_context(|| format!("reading {card_key}"))?;
-        let old = webp_dimensions(&head).is_some_and(|(width, height)| width.max(height) == CARD_SIDE && width.min(height) < CARD_SIDE);
-        if !old {
-            return Ok(None);
-        }
-        let Some(full) = self.get(&format!("{name}.webp")).await? else {
-            return Ok(None);
+        let Some((width, height)) = webp_dimensions(&head) else {
+            return Ok((0, false));
         };
-        let copies = tokio::task::spawn_blocking(move || card_copies(&full))
-            .await?
-            .map_err(|_| anyhow::anyhow!("{name}'s full copy isn't a photo"))?;
-        let [small_key, card_avif_key, small_avif_key] = [SMALL_COPY, CARD_AVIF, SMALL_AVIF].map(|ending| format!("{name}{ending}"));
-        tokio::try_join!(
-            self.put(&card_key, copies.card),
-            self.put(&small_key, copies.small),
-            self.put(&card_avif_key, copies.card_avif),
-            self.put(&small_avif_key, copies.small_avif),
-        )?;
-        Ok(Some(4))
+        if width.max(height) == CARD_SIDE && width.min(height) < CARD_SIDE {
+            let Some(full) = self.get(&format!("{name}.webp")).await? else {
+                return Ok((0, false));
+            };
+            let copies = tokio::task::spawn_blocking(move || card_copies(&full))
+                .await?
+                .map_err(|_| anyhow::anyhow!("{name}'s full copy isn't a photo"))?;
+            let [small_key, mini_key, card_avif_key, small_avif_key, mini_avif_key] =
+                [SMALL_COPY, MINI_COPY, CARD_AVIF, SMALL_AVIF, MINI_AVIF].map(|ending| format!("{name}{ending}"));
+            tokio::try_join!(
+                self.put(&card_key, copies.card),
+                self.put(&small_key, copies.small),
+                self.put(&mini_key, copies.mini),
+                self.put(&card_avif_key, copies.card_avif),
+                self.put(&small_avif_key, copies.small_avif),
+                self.put(&mini_avif_key, copies.mini_avif),
+            )?;
+            return Ok((6, true));
+        }
+        let mut made = 0;
+        for (ending, side) in LATER_COPIES.iter().filter(|(ending, _)| ending.ends_with(".avif")) {
+            let key = format!("{name}{ending}");
+            let Some(bytes) = kept.get(&key) else { continue };
+            let (copy_width, copy_height) = cover_size(width, height, *side);
+            if *bytes as f64 > f64::from(copy_width * copy_height) * AVIF_BUDGET {
+                made += usize::from(self.make_copy(&key).await?.is_some());
+            }
+        }
+        Ok((made, false))
     }
 
     /// make_missing_copies in the background, which the pages needn't wait for: until then, the
@@ -352,8 +394,10 @@ pub struct Processed {
     pub middle: Option<Vec<u8>>,
     pub card: Vec<u8>,
     pub small: Vec<u8>,
+    pub mini: Vec<u8>,
     pub card_avif: Vec<u8>,
     pub small_avif: Vec<u8>,
+    pub mini_avif: Vec<u8>,
     pub jpeg: Vec<u8>,
     pub placeholder: String,
     pub width: u32,
@@ -372,14 +416,17 @@ pub fn process(bytes: &[u8]) -> Result<Processed, NotAPhoto> {
     let middle = (full.width().max(full.height()) > MIDDLE_SIDE).then(|| fit(full.clone(), MIDDLE_SIDE));
     let card = cover(&full, CARD_SIDE);
     let small = cover(&full, SMALL_SIDE);
-    let placeholder = webp(&shrink(small.clone(), PLACEHOLDER_SIDE), PLACEHOLDER_QUALITY)?;
+    let mini = cover(&full, MINI_SIDE);
+    let placeholder = webp(&shrink(mini.clone(), PLACEHOLDER_SIDE), PLACEHOLDER_QUALITY)?;
     Ok(Processed {
         full: webp(&full, WEBP_QUALITY)?,
         middle: middle.map(|middle| webp(&middle, WEBP_QUALITY)).transpose()?,
         card: webp(&card, WEBP_QUALITY)?,
         small: webp(&small, WEBP_QUALITY)?,
+        mini: webp(&mini, WEBP_QUALITY)?,
         card_avif: avif(&card)?,
         small_avif: avif(&small)?,
+        mini_avif: avif(&mini)?,
         jpeg: jpeg(&full)?,
         placeholder: format!("data:image/webp;base64,{}", BASE64.encode(placeholder)),
         width: full.width(),
@@ -388,40 +435,49 @@ pub fn process(bytes: &[u8]) -> Result<Processed, NotAPhoto> {
     })
 }
 
-/// A photo's four card copies, the card's and the small one as WebP and as AVIF, from one of its
-/// WebP copies, the full one, or the card's for a photo without one, as `process` makes them: for
-/// the photos kept before the cards' copies were sized by their shorter side
-/// (Media::remake_old_card_copies). Slow work too.
+/// A photo's six card copies, the card's, the small one and the mini one as WebP and as AVIF,
+/// from one of its WebP copies, the full one, or the card's for a photo without one, as `process`
+/// makes them: for the photos kept before the cards' copies were sized by their shorter side
+/// (Media::remake_card_copies). Slow work too.
 pub struct CardCopies {
     pub card: Vec<u8>,
     pub small: Vec<u8>,
+    pub mini: Vec<u8>,
     pub card_avif: Vec<u8>,
     pub small_avif: Vec<u8>,
+    pub mini_avif: Vec<u8>,
 }
 
 pub fn card_copies(webp_copy: &[u8]) -> Result<CardCopies, NotAPhoto> {
     let photo = decode(webp_copy)?;
     let card = cover(&photo, CARD_SIDE);
     let small = cover(&photo, SMALL_SIDE);
+    let mini = cover(&photo, MINI_SIDE);
     Ok(CardCopies {
         card: webp(&card, WEBP_QUALITY)?,
         small: webp(&small, WEBP_QUALITY)?,
+        mini: webp(&mini, WEBP_QUALITY)?,
         card_avif: avif(&card)?,
         small_avif: avif(&small)?,
+        mini_avif: avif(&mini)?,
     })
 }
 
-/// The copy named by `ending` (SMALL_COPY, CARD_AVIF, SMALL_AVIF) of a photo kept before there
-/// were copies of its kind (Media::make_copy), from one of its WebP copies, the full one or the
-/// card's, as `process` makes it. Slow work too.
+/// The copies a photo kept before may lack, or have from before the rules they are made by now
+/// (Media::make_copy, make_missing_copies): every card copy but the card's WebP one, which every
+/// WebP photo has, with the square each covers.
+const LATER_COPIES: [(&str, u32); 5] =
+    [(MINI_COPY, MINI_SIDE), (SMALL_COPY, SMALL_SIDE), (MINI_AVIF, MINI_SIDE), (SMALL_AVIF, SMALL_SIDE), (CARD_AVIF, CARD_SIDE)];
+
+/// The copy named by `ending` (LATER_COPIES) of a photo kept before there were copies of its kind
+/// (Media::make_copy), from one of its WebP copies, the full one or the card's, as `process`
+/// makes it. Slow work too.
 pub fn copy_from(webp_copy: &[u8], ending: &str) -> Result<Vec<u8>, NotAPhoto> {
-    let photo = decode(webp_copy)?;
-    match ending {
-        SMALL_COPY => webp(&cover(&photo, SMALL_SIDE), WEBP_QUALITY),
-        CARD_AVIF => avif(&cover(&photo, CARD_SIDE)),
-        SMALL_AVIF => avif(&cover(&photo, SMALL_SIDE)),
-        _ => Err(NotAPhoto),
-    }
+    let Some((_, side)) = LATER_COPIES.iter().find(|(name, _)| *name == ending) else {
+        return Err(NotAPhoto);
+    };
+    let copy = cover(&decode(webp_copy)?, *side);
+    if ending.ends_with(".avif") { avif(&copy) } else { webp(&copy, WEBP_QUALITY) }
 }
 
 /// A JPEG copy no longer than `side` on its longer side, turned the way the camera held it: what
@@ -517,13 +573,23 @@ fn webp(image: &DynamicImage, quality: f32) -> Result<Vec<u8>, NotAPhoto> {
     }
 }
 
-/// Lossy AVIF, by rav1e, as ravif writes it (AVIF_QUALITY, AVIF_SPEED). Given as RGBA, opaque,
-/// which ravif writes without an alpha channel just as it writes RGB: its RGB path is inlined into
-/// this crate, which the tests' builds don't optimise, and there it took twenty times as long.
+/// Lossy AVIF, by rav1e, as ravif writes it (AVIF_QUALITY, AVIF_SPEED), or, for a copy that comes
+/// out heavier than AVIF_BUDGET at that quality, a photo full of fine texture, at
+/// AVIF_TEXTURE_QUALITY. Given as RGBA, opaque, which ravif writes without an alpha channel just
+/// as it writes RGB: its RGB path is inlined into this crate, which the tests' builds don't
+/// optimise, and there it took twenty times as long.
 fn avif(image: &DynamicImage) -> Result<Vec<u8>, NotAPhoto> {
     let rgba = image.to_rgba8();
+    let usual = avif_at(&rgba, AVIF_QUALITY)?;
+    if usual.len() as f64 <= f64::from(rgba.width() * rgba.height()) * AVIF_BUDGET {
+        return Ok(usual);
+    }
+    avif_at(&rgba, AVIF_TEXTURE_QUALITY)
+}
+
+fn avif_at(rgba: &RgbaImage, quality: u8) -> Result<Vec<u8>, NotAPhoto> {
     let mut out = Vec::new();
-    AvifEncoder::new_with_speed_quality(&mut out, AVIF_SPEED, AVIF_QUALITY)
+    AvifEncoder::new_with_speed_quality(&mut out, AVIF_SPEED, quality)
         .write_image(rgba.as_raw(), rgba.width(), rgba.height(), ExtendedColorType::Rgba8)
         .map_err(|_| NotAPhoto)?;
     Ok(out)
@@ -580,17 +646,19 @@ mod tests {
     }
 
     #[test]
-    fn photos_come_out_as_webp_in_four_sizes_the_cards_as_avif_too_with_a_jpeg_and_a_tiny_copy() {
+    fn photos_come_out_as_webp_in_five_sizes_the_cards_as_avif_too_with_a_jpeg_and_a_tiny_copy() {
         use image::ImageFormat::{Jpeg, WebP};
         let processed = process(&sample_jpeg(3000, 2000)).unwrap();
         assert_eq!((processed.width, processed.height), (1600, 1067));
         assert_eq!(size_of(&processed.full), (1600, 1067, WebP));
         assert_eq!(size_of(processed.middle.as_deref().unwrap()), (1200, 800, WebP));
-        // The cards' two cover a square of their shorter side.
+        // The cards' three cover a square of their shorter side.
         assert_eq!(size_of(&processed.card), (900, 600, WebP));
         assert_eq!(size_of(&processed.small), (600, 400, WebP));
+        assert_eq!(size_of(&processed.mini), (450, 300, WebP));
         assert_eq!(avif_size(&processed.card_avif), Some((900, 600)));
         assert_eq!(avif_size(&processed.small_avif), Some((600, 400)));
+        assert_eq!(avif_size(&processed.mini_avif), Some((450, 300)));
         assert_eq!(size_of(&processed.jpeg), (1600, 1067, Jpeg));
         // mozjpeg's, progressive: its frame starts with 0xFFC2 rather than a baseline's 0xFFC0.
         assert!(processed.jpeg.windows(2).any(|marker| marker == [0xFF, 0xC2]));
@@ -601,19 +669,40 @@ mod tests {
         let tall = process(&sample_jpeg(2000, 3000)).unwrap();
         assert_eq!(size_of(&tall.card), (600, 900, WebP));
         assert_eq!(size_of(&tall.small), (400, 600, WebP));
+        assert_eq!(size_of(&tall.mini), (300, 450, WebP));
         // Small photos aren't made bigger, and need no middle copy.
         let small = process(&sample_jpeg(1000, 750)).unwrap();
         assert_eq!((small.width, small.height), (1000, 750));
         assert!(small.middle.is_none());
         assert_eq!(size_of(&small.card), (800, 600, WebP));
         assert_eq!(size_of(&small.small), (533, 400, WebP));
+        assert_eq!(size_of(&small.mini), (400, 300, WebP));
         let tiny = process(&sample_jpeg(400, 300)).unwrap();
         assert_eq!(size_of(&tiny.card), (400, 300, WebP));
         assert_eq!(size_of(&tiny.small), (400, 300, WebP));
+        assert_eq!(size_of(&tiny.mini), (400, 300, WebP));
         // A panorama's longer side is no more than twice the square's.
         let wide = process(&sample_jpeg(4000, 1000)).unwrap();
         assert_eq!(size_of(&wide.card), (1200, 300, WebP));
         assert_eq!(size_of(&wide.small), (800, 200, WebP));
+        assert_eq!(size_of(&wide.mini), (600, 150, WebP));
+    }
+
+    #[test]
+    fn a_textured_photos_avif_copy_is_made_at_a_lower_quality() {
+        use rand::Rng;
+        // Noise is the finest texture there is: at the usual quality its copy comes out far
+        // heavier than the budget, so it is made at the lower one, which takes bytes off; a plain
+        // photo's stays at the usual quality.
+        let mut rng = rand::rng();
+        let noise = DynamicImage::ImageRgb8(image::RgbImage::from_fn(300, 200, |_, _| image::Rgb(rng.random())));
+        let usual = avif_at(&noise.to_rgba8(), AVIF_QUALITY).unwrap();
+        assert!(usual.len() as f64 > 300.0 * 200.0 * AVIF_BUDGET, "{}", usual.len());
+        let budgeted = avif(&noise).unwrap();
+        assert!(budgeted.len() < usual.len() * 9 / 10, "{} of {}", budgeted.len(), usual.len());
+        assert_eq!(avif_size(&budgeted), Some((300, 200)));
+        let plain = DynamicImage::new_rgb8(300, 200);
+        assert_eq!(avif(&plain).unwrap(), avif_at(&plain.to_rgba8(), AVIF_QUALITY).unwrap());
     }
 
     #[test]
@@ -658,32 +747,42 @@ mod tests {
         let old_card = webp(&shrink(decode(&photo.full).unwrap(), CARD_SIDE), WEBP_QUALITY).unwrap();
         assert_eq!(size_of(&old_card), (600, 450, WebP));
         media.put("photos/old-card.webp", old_card.clone()).await.unwrap();
-        media.put("photos/old.webp", photo.full).await.unwrap();
-        media.put("photos/newer-card.webp", photo.card).await.unwrap();
+        media.put("photos/old.webp", photo.full.clone()).await.unwrap();
+        media.put("photos/newer-card.webp", photo.card.clone()).await.unwrap();
         media.put("photos/newer-small.webp", vec![1, 2, 3]).await.unwrap();
         media.put("photos/lone-card.webp", old_card).await.unwrap();
         media.put("photos/broken-card.webp", b"not a photo".to_vec()).await.unwrap();
-        // All at once: the old one's four made again, the newer one's AVIF two (it keeps the small
-        // copy it has), the lone one's three from its card copy, and the one that isn't a photo
-        // leaves the others to be made.
-        assert_eq!(media.make_missing_copies().await.unwrap(), 4 + 2 + 3);
+        // And one sized as they are now whose card's AVIF copy weighs more than the budget, from
+        // before there was one.
+        media.put("photos/heavy-card.webp", photo.card).await.unwrap();
+        media.put("photos/heavy.webp", photo.full).await.unwrap();
+        media.put("photos/heavy-card.avif", vec![0; 100_000]).await.unwrap();
+        // All at once: the old one's six made again, the newer one's AVIF three and mini one (it
+        // keeps the small copy it has), the lone one's five from its card copy, the heavy one's
+        // card AVIF again and its four others, and the one that isn't a photo leaves the others to
+        // be made.
+        assert_eq!(media.make_missing_copies().await.unwrap(), 6 + 4 + 5 + 5);
         let card = media.get("photos/old-card.webp").await.unwrap().unwrap();
         assert_eq!(size_of(&card), (800, 600, WebP));
         let small = media.get("photos/old-small.webp").await.unwrap().unwrap();
         assert_eq!(size_of(&small), (533, 400, WebP));
+        assert_eq!(size_of(&media.get("photos/old-mini.webp").await.unwrap().unwrap()), (400, 300, WebP));
         assert_eq!(media.get("photos/newer-small.webp").await.unwrap().as_deref(), Some(&[1, 2, 3][..]));
-        for (name, card_size, small_size) in [("old", (800, 600), (533, 400)), ("newer", (800, 600), (533, 400)), ("lone", (600, 450), (533, 400))] {
+        for (name, card_size) in [("old", (800, 600)), ("newer", (800, 600)), ("lone", (600, 450)), ("heavy", (800, 600))] {
             let card = media.get(&format!("photos/{name}-card.avif")).await.unwrap().unwrap();
             assert_eq!(avif_size(&card), Some(card_size), "{name}");
             let small = media.get(&format!("photos/{name}-small.avif")).await.unwrap().unwrap();
-            assert_eq!(avif_size(&small), Some(small_size), "{name}");
+            assert_eq!(avif_size(&small), Some((533, 400)), "{name}");
+            let mini = media.get(&format!("photos/{name}-mini.avif")).await.unwrap().unwrap();
+            assert_eq!(avif_size(&mini), Some((400, 300)), "{name}");
         }
         let lone = media.get("photos/lone-card.webp").await.unwrap().unwrap();
         assert_eq!(size_of(&lone), (600, 450, WebP));
         assert_eq!(size_of(&media.get("photos/lone-small.webp").await.unwrap().unwrap()), (533, 400, WebP));
+        assert!(media.get("photos/heavy-card.avif").await.unwrap().unwrap().len() < 100_000);
         assert!(media.get("photos/broken-small.webp").await.unwrap().is_none());
         // Looked at once: a file in the store says so, and the next start makes nothing.
-        let note = media.get(CARDS_REMADE).await.unwrap().unwrap();
+        let note = media.get("photos/card-copies-edition-2.txt").await.unwrap().unwrap();
         assert!(note.starts_with(b"Every photo's card copies"));
         assert_eq!(media.make_missing_copies().await.unwrap(), 0);
         // Or one asked for before then, kept as it is made; nothing for a photo with no card's copy,

@@ -16,17 +16,17 @@ use crate::{
     AppState,
     db::NewPhoto,
     media::{
-        self, CARD_AVIF, CARD_COPY, CARD_SIDE, FULL_SIDE, MAX_PHOTOS, MAX_UPLOAD_BYTES, MIDDLE_SIDE, Media, Processed,
-        SMALL_AVIF, SMALL_COPY, SMALL_SIDE,
+        self, CARD_AVIF, CARD_COPY, CARD_SIDE, FULL_SIDE, MAX_PHOTOS, MAX_UPLOAD_BYTES, MIDDLE_SIDE, MINI_AVIF, MINI_COPY,
+        MINI_SIDE, Media, Processed, SMALL_AVIF, SMALL_COPY, SMALL_SIDE,
     },
 };
 
 /// What each of a photo's files adds to its name (photos/ and 32 hex digits): the full WebP, whose
-/// key listing_media keeps, the middle one, the card's, the small one, the card's and the small one
-/// as AVIF, and the JPEG. The small ones' and the AVIF ones' addresses are the card's with their
-/// own ending (small_url, avif_srcset), so listing_media keeps none. Photos kept before WebP
-/// (migration 0025) were a JPEG, whose key it kept, and a JPEG for the card.
-const COPIES: [&str; 7] = [".webp", "-middle.webp", CARD_COPY, SMALL_COPY, CARD_AVIF, SMALL_AVIF, ".jpg"];
+/// key listing_media keeps, the middle one, the card's, the small one, the mini one, those three
+/// as AVIF, and the JPEG. The small, mini and AVIF ones' addresses are the card's with their own
+/// ending (card_copy_url, srcset, avif_srcset), so listing_media keeps none. Photos kept before
+/// WebP (migration 0025) were a JPEG, whose key it kept, and a JPEG for the card.
+const COPIES: [&str; 9] = [".webp", "-middle.webp", CARD_COPY, SMALL_COPY, MINI_COPY, CARD_AVIF, SMALL_AVIF, MINI_AVIF, ".jpg"];
 const EARLIER_CARD: &str = "-card.jpg";
 /// How long browsers may keep an AVIF copy's WebP twin, which stands in for it until it is made
 /// (serve): a few minutes, so that they take the AVIF one once it is there.
@@ -127,7 +127,7 @@ pub async fn store(media: &Media, processed: Vec<Processed>) -> Result<Vec<NewPh
     let mut stored = Vec::with_capacity(processed.len());
     for photo in processed {
         let name = format!("photos/{:032x}", rand::random::<u128>());
-        let [full_key, middle_key, card_key, small_key, card_avif_key, small_avif_key, jpeg_key] =
+        let [full_key, middle_key, card_key, small_key, mini_key, card_avif_key, small_avif_key, mini_avif_key, jpeg_key] =
             COPIES.map(|copy| format!("{name}{copy}"));
         let size_bytes = photo.full.len() as i64;
         let middle_url = photo.middle.is_some().then(|| media.url(&middle_key));
@@ -142,8 +142,10 @@ pub async fn store(media: &Media, processed: Vec<Processed>) -> Result<Vec<NewPh
             middle,
             media.put(&card_key, photo.card),
             media.put(&small_key, photo.small),
+            media.put(&mini_key, photo.mini),
             media.put(&card_avif_key, photo.card_avif),
             media.put(&small_avif_key, photo.small_avif),
+            media.put(&mini_avif_key, photo.mini_avif),
             media.put(&jpeg_key, photo.jpeg),
         )?;
         stored.push(NewPhoto {
@@ -176,12 +178,6 @@ pub async fn delete(media: &Media, keys: &[String]) {
             }
         }
     }
-}
-
-/// The address of a WebP photo's small copy, from its card's: in the same place, with the small
-/// one's ending. None for a card's copy from before WebP, or from elsewhere.
-pub fn small_url(card: &str) -> Option<String> {
-    card.strip_suffix(CARD_COPY).map(|name| format!("{name}{SMALL_COPY}"))
 }
 
 /// A WebP photo's copies as a page names them in a srcset (`srcset`, `avif_srcset`): the card's
@@ -231,26 +227,26 @@ fn smaller(size: (u32, u32), than: (u32, u32)) -> bool {
     size.0.max(size.1) < than.0.max(than.1)
 }
 
-/// What the pages add to the cards' copies' addresses (`srcset`, `avif_srcset`): the copies were
-/// made again on 2026-10-09, sized by their shorter side, under the names they had, which browsers
-/// keep for a year (media::CACHE_FOR_A_YEAR), so the pages name them with a query the old ones
-/// hadn't, and a browser that kept the old ones fetches the new. The server serves a photo by its
-/// path, whatever the query.
-const CARD_COPIES_EDITION: &str = "?2";
+/// The address of one of the cards' copies as a page names it: with the query of the rules the
+/// copies are made by (media::CARD_COPIES_EDITION), since they were made again on 2026-10-09
+/// under the names they had, which browsers keep for a year (media::CACHE_FOR_A_YEAR), and so a
+/// browser that kept the old ones fetches the new. The server serves a photo by its path,
+/// whatever the query.
+fn card_copy_url(name: &str, ending: &str) -> String {
+    format!("{name}{ending}?{}", media::CARD_COPIES_EDITION)
+}
 
-/// A WebP photo's copies for a srcset, the small one, the card's, the middle one and the full one,
-/// each with the side `by` names as its width. A copy no smaller than the full one, which a small
-/// photo's card copy is, is left out.
+/// A WebP photo's copies for a srcset, the mini one, the small one, the card's, the middle one and
+/// the full one, each with the side `by` names as its width. A copy no smaller than the full one,
+/// which a small photo's card copy is, is left out.
 pub fn srcset(copies: &Copies, by: Measure) -> String {
     let full = (copies.width, copies.height);
-    let mut listed = Vec::with_capacity(4);
-    let small = media::cover_size(copies.width, copies.height, SMALL_SIDE);
-    if let Some(url) = small_url(copies.card).filter(|_| smaller(small, full)) {
-        listed.push((format!("{url}{CARD_COPIES_EDITION}"), small));
-    }
-    let card = media::cover_size(copies.width, copies.height, CARD_SIDE);
-    if smaller(card, full) {
-        listed.push((format!("{}{CARD_COPIES_EDITION}", copies.card), card));
+    let mut listed = Vec::with_capacity(5);
+    for (ending, side) in [(MINI_COPY, MINI_SIDE), (SMALL_COPY, SMALL_SIDE), (CARD_COPY, CARD_SIDE)] {
+        let size = media::cover_size(copies.width, copies.height, side);
+        if let Some(name) = copies.card.strip_suffix(CARD_COPY).filter(|_| smaller(size, full)) {
+            listed.push((card_copy_url(name, ending), size));
+        }
     }
     if let Some(middle) = copies.middle {
         listed.push((middle.to_string(), media::fit_size(copies.width, copies.height, MIDDLE_SIDE)));
@@ -260,20 +256,22 @@ pub fn srcset(copies: &Copies, by: Measure) -> String {
 }
 
 /// A WebP photo's copies for a srcset of AVIF ones, which the browsers that show AVIF take before
-/// the WebP ones (`srcset`): the small one and the card's as AVIF, then the middle WebP one and
-/// the full one, which every such browser shows too, for a big card or a screen denser than the
-/// card's copy serves; those no bigger than the card's AVIF copy are left out. None for a photo
-/// kept before WebP, or from elsewhere.
+/// the WebP ones (`srcset`): the mini one, the small one and the card's as AVIF, then the middle
+/// WebP one and the full one, which every such browser shows too, for a big card or a screen
+/// denser than the card's copy serves; those no bigger than the card's AVIF copy are left out.
+/// None for a photo kept before WebP, or from elsewhere.
 pub fn avif_srcset(copies: &Copies, by: Measure) -> Option<String> {
     let name = copies.card.strip_suffix(CARD_COPY)?;
     let full = (copies.width, copies.height);
     let card = media::cover_size(copies.width, copies.height, CARD_SIDE);
-    let small = media::cover_size(copies.width, copies.height, SMALL_SIDE);
-    let mut listed = Vec::with_capacity(4);
-    if smaller(small, card) {
-        listed.push((format!("{name}{SMALL_AVIF}{CARD_COPIES_EDITION}"), small));
+    let mut listed = Vec::with_capacity(5);
+    for (ending, side) in [(MINI_AVIF, MINI_SIDE), (SMALL_AVIF, SMALL_SIDE)] {
+        let size = media::cover_size(copies.width, copies.height, side);
+        if smaller(size, card) {
+            listed.push((card_copy_url(name, ending), size));
+        }
     }
-    listed.push((format!("{name}{CARD_AVIF}{CARD_COPIES_EDITION}"), card));
+    listed.push((card_copy_url(name, CARD_AVIF), card));
     if smaller(card, full) {
         if let Some(middle) = copies.middle {
             listed.push((middle.to_string(), media::fit_size(copies.width, copies.height, MIDDLE_SIDE)));
@@ -285,9 +283,9 @@ pub fn avif_srcset(copies: &Copies, by: Measure) -> Option<String> {
 
 /// The WebP copy of the same size as an AVIF one, which stands in for it until it is made.
 fn webp_twin(key: &str) -> Option<String> {
-    key.strip_suffix(CARD_AVIF)
-        .map(|name| format!("{name}{CARD_COPY}"))
-        .or_else(|| key.strip_suffix(SMALL_AVIF).map(|name| format!("{name}{SMALL_COPY}")))
+    [(CARD_AVIF, CARD_COPY), (SMALL_AVIF, SMALL_COPY), (MINI_AVIF, MINI_COPY)]
+        .into_iter()
+        .find_map(|(avif, webp)| key.strip_suffix(avif).map(|name| format!("{name}{webp}")))
 }
 
 /// /media/photos/...: a stored photo. Names never change, so browsers may keep them for a year. A
