@@ -5,20 +5,25 @@
 /* Its path as far below the header as the welcome page's first line and a category page's path,
    as the page's sides are from the screen's (--gutter). */
 .listing { max-width: 760px; padding-top: var(--gutter); }
-/* Its parts one under another in a grid rather than the flow, so that on a phone the contact bar
-   can go to the page's foot and stay at the screen's bottom, and from 720 px up stand beside the
-   share and the report on one line (.contact-bar, .actions, below). A grid's margins don't
-   collapse: the sections' headings keep no margin over them, the sections taking it, and the
-   buttons under the price none under them, the line that follows taking it. */
-.listing { display: grid; grid-template-columns: minmax(0, 1fr); }
-.listing > * { min-width: 0; }
-.listing > :is(.listing-details, .listing-description) { margin-top: 1.75rem; }
-.listing > :is(.listing-details, .listing-description) > h2 { margin-top: 0; }
+/* Its parts in grids rather than the flow: the page's (its notices, its path, its photos and the
+   rest, .listing-side) and the rest's (the title and the price, the contact bar, the share and the
+   report, the details, the description, the seller's card and the map), so that on a phone the
+   contact bar can go to the rest's foot and stay at the screen's bottom, from 720 px up stand
+   beside the share and the report on one line (.contact-bar, .actions, below), and from 960 px up
+   the rest can stand beside the photo (.listing-split, below). A grid's margins don't collapse:
+   the sections' headings keep no margin over them, the sections taking it, and the buttons under
+   the price none under them, the line that follows taking it. */
+.listing,
+.listing-side { display: grid; grid-template-columns: minmax(0, 1fr); }
+.listing > *,
+.listing-side > * { min-width: 0; }
+.listing-side > :is(.listing-details, .listing-description) { margin-top: 1.75rem; }
+.listing-side > :is(.listing-details, .listing-description) > h2 { margin-top: 0; }
 @media (min-width: 720px) {
-  .listing { grid-template-columns: auto minmax(0, 1fr); }
-  .listing > * { grid-column: 1 / -1; }
-  .listing > .contact-bar { grid-column: 1; margin-right: .5rem; }
-  .listing > .contact-bar + .actions { grid-column: 2; align-self: center; }
+  .listing-side { grid-template-columns: auto minmax(0, 1fr); }
+  .listing-side > * { grid-column: 1 / -1; }
+  .listing-side > .contact-bar { grid-column: 1; margin-right: .5rem; }
+  .listing-side > .contact-bar + .actions { grid-column: 2; align-self: center; }
 }
 /* Listings like it, under it: the browse pages' grid, as wide as the page, set apart by space
    alone. */
@@ -30,14 +35,16 @@
 .section-head a { font-size: var(--text-sm); font-weight: var(--semibold); text-underline-offset: .2em; }
 /* Who sells it, under the description, as far under it as the details and the description stand
    under what is over them (1.75rem; it stood 2.5rem under once), in a card like the posting form's
-   (the menus' hairline on the surface), across the page: the seller (posting.css, .seller),
-   leading to their profile, their name and summary cut short where the line is too short. The
-   ways to reach them are the buttons under the price alone. On a phone the contact bar settles
-   between the description and the card, a band from edge to edge (below), and the card keeps the
-   2.5rem under it, so that it stands clear of the band. */
+   (the menus' hairline on the surface), across the page, or the column beside the photo on a
+   split page (below): the seller (posting.css, .seller), leading to their profile, their name and
+   summary cut short where the line is too short. The ways to reach them are the buttons under
+   the price alone. On a phone the contact bar settles between the description and the card (the
+   card and the map come after it in the grid, by order), a band from edge to edge (below), and
+   the card keeps the 2.5rem under it, so that it stands clear of the band. */
 .seller-section { margin-top: 1.75rem; }
 @media (max-width: 719px) {
   .seller-section { margin-top: 2.5rem; }
+  .listing-side > :is(.seller-section, .listing-map-section) { order: 2; }
 }
 .seller-head {
   display: flex;
@@ -96,16 +103,36 @@
   .listing-map { aspect-ratio: auto; height: min(35vh, 19rem); }
 }
 
-/* Wide screens: the photos across the page, and under them, as on a phone, the title, the price,
-   the buttons, the details and the description, in a column at the page's left as wide as a line
-   reads well. */
+/* Wide screens, a car's or a property's page (wide_photos in listings.rs): the photos across the
+   page, and under them, as on a phone, the title, the price, the buttons, the details and the
+   description, in a column at the page's left as wide as a line reads well, then the seller's
+   card and the map across the page. */
 @media (min-width: 960px) {
   .listing { max-width: none; }
-  .listing > :is(.listing-header, .listing-details, .listing-description) { max-width: 46rem; }
+  .listing-side > :is(.listing-header, .listing-details, .listing-description) { max-width: 46rem; }
   /* Across the page a photo's frame is wider than the photo, and no taller than most screens
      leave room for: the photo whole in the middle, its blurred copy filling the sides. */
   .listing-media .gallery-photo,
   .listing-media .listing-photo { aspect-ratio: auto; height: min(70vh, 38rem); }
+  /* Every other listing's page is split, as the classifieds sites have it: the path over both
+     columns, the photo at the left in a square frame, 55% of the page (its blurred copy filling
+     what the photo doesn't), and at its right, in a column as wide as the rest, the title level
+     with the photo's top, the kind and the price, the contact bar's two pills across the column
+     and the share and the report under them, the details, the description and the seller's
+     card; the listings like it under both. */
+  .listing-split { grid-template-columns: minmax(0, 11fr) minmax(0, 9fr); column-gap: 2.5rem; }
+  .listing-split > :is(.notice, .listing-tags) { grid-column: 1 / -1; }
+  .listing-split > .listing-media { grid-column: 1; align-self: start; }
+  .listing-split > .listing-side { grid-column: 2; grid-template-columns: minmax(0, 1fr); }
+  .listing-split .listing-media .gallery-photo,
+  .listing-split .listing-media .listing-photo { aspect-ratio: 1; height: auto; }
+  .listing-split .listing-side > :is(.listing-header, .listing-details, .listing-description) { max-width: none; }
+  .listing-split .listing-header h1 { margin-top: 0; }
+  .listing-split .listing-side > .contact-bar { grid-column: 1 / -1; margin-right: 0; }
+  .listing-split .listing-side > .contact-bar + .actions { grid-column: 1 / -1; align-self: auto; }
+  .listing-split .contact-bar .button { flex: 1 1 0; }
+  .listing-split .contact-bar .contact-revealed { flex: 1 1 auto; }
+  .listing-split .contact-bar .button.icon-circle { flex: none; }
 }
 
 .listing-photo {

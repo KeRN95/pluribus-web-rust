@@ -32,6 +32,10 @@ use crate::{
 /// as wide as the page on a wide screen (listing.css), up to 760px on others.
 pub const GALLERY_SIZES: &str =
     "(min-width: 1100px) 1068px, (min-width: 960px) calc(100vw - 2rem), (min-width: 792px) 760px, calc(100vw - 2rem)";
+/// The same for every other listing, whose photo stands at the left of its page from 960 px up,
+/// 55% of the page less the gap between the columns (.listing-split, listing.css).
+pub const SPLIT_GALLERY_SIZES: &str =
+    "(min-width: 1100px) 565px, (min-width: 960px) calc((100vw - 4.5rem) * .55), (min-width: 792px) 760px, calc(100vw - 2rem)";
 
 /// The categories whose listings' pages show where they are on a map, under the seller: property
 /// (Prona and those under it) and cars (Makina), which buyers go to see.
@@ -386,6 +390,10 @@ struct ListingShow {
     posted: bool,
     /// For a property or a car, where it is, on a map under the seller.
     map: Option<ListingMap>,
+    /// A property's or a car's page (MAPPED) has its photos across the page from 960 px up; every
+    /// other listing's is split there, the photo at the left and the rest at its right
+    /// (.listing-split, listing.css), its photos sized for that (SPLIT_GALLERY_SIZES).
+    wide_photos: bool,
     /// Listings like it, under it (db::related_listings): `page`, the name listing_card.html
     /// reads its cards by.
     page: ListingPage,
@@ -589,9 +597,10 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             Detail { label: "Zona".to_string(), values: vec![zone.clone()], icon: Some(icons::PIN), named: false, multi: false, key: true };
         details.insert(0, zone);
     }
-    // A property or a car: where it is, on a map under the seller.
+    // A property or a car: its photos across the page, and where it is, on a map under the seller.
+    let wide_photos = slugs.iter().any(|slug| MAPPED.contains(slug));
     let map = match (listing.latitude, listing.longitude) {
-        (Some(latitude), Some(longitude)) if slugs.iter().any(|slug| MAPPED.contains(slug)) => {
+        (Some(latitude), Some(longitude)) if wide_photos => {
             Some(ListingMap { latitude, longitude, place: listing.location_name.clone().unwrap_or_default() })
         }
         _ => None,
@@ -613,6 +622,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             own,
             posted,
             map,
+            wide_photos,
             page,
             views,
             meta,
