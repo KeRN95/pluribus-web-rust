@@ -8,7 +8,8 @@ import { signedIn } from "controllers/signed_in.js";
 // known before. A tap keeps the listing or lets it go at once, every heart for it on the page with
 // it, and tells the server (POST /listing/N/ruaj), one tap after the other; should that fail, the
 // hearts go back. Someone not signed in goes to sign in, and comes back with the listing kept.
-// The same answer says how many kept listings dropped their price unseen, for the header's heart.
+// The same answer says how many kept listings dropped their price unseen, for the header's heart
+// (the welcome page's, at the end of its categories).
 // Someone not signed in keeps nothing, and the page doesn't ask (signed_in.js).
 let kept = new Set();
 let asking = null;
@@ -33,11 +34,12 @@ function answered(answer) {
   showDrops(answer.price_drops);
 }
 
-// The header's heart (base.html) has a dot while listings the visitor keeps dropped their price
-// since they last looked at /te-ruajturat, and says how many to screen readers; not on that page,
-// which shows them (saved.html) and so has them seen.
+// The header's heart (base.html), or the welcome page's at the end of its categories (home.html),
+// has a dot while listings the visitor keeps dropped their price since they last looked at
+// /te-ruajturat, and says how many to screen readers; not on that page, which shows them
+// (saved.html) and so has them seen.
 function showDrops(count) {
-  const button = document.querySelector(".saved-button");
+  const button = document.querySelector(".saved-button, .saved-shortcut");
   if (!button) return;
   const news = count > 0 && !document.querySelector(".price-drops");
   const label = news ? `Të ruajturat: ${count} me çmim më të ulët` : "Të ruajturat";

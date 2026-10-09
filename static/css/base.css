@@ -307,9 +307,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .search .icon-button { background: var(--button); color: var(--on-button); }
 .search .icon-button:hover { background: var(--button-hover); }
 
-/* Posting, the listings kept, the account and the theme: round buttons on the surface at the top
-   bar's end. */
-.post-button { margin-left: auto; }
+/* Posting, the listings kept, the conversations, the account and the theme: round buttons on the
+   surface at the top bar's end, the logo's margin taking the room before them. The welcome page's
+   top bar has the account alone: the others end its categories there (home.html, welcome.css). */
+.logo { margin-right: auto; }
 .post-button,
 .saved-button,
 .inbox-button,

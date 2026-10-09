@@ -625,8 +625,9 @@ const DOOR: &str = r#"<path d="M5.5 21V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v17"/><pa
 /// An eye: how many times a listing was seen (listing_card.html, listing.html, my_listings.html).
 pub const EYE: &str = r#"<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>"#;
 
-/// A heart: the listings a visitor keeps (the header's button in base.html, heart.html over a
-/// listing's photo), and how many keep a seller's listing (my_listings.html).
+/// A heart: the listings a visitor keeps (the header's button in base.html, the welcome page's at
+/// the end of its categories in home.html, heart.html over a listing's photo), and how many keep a
+/// seller's listing (my_listings.html).
 pub const HEART: &str = r#"<path d="M12 20.3 4.6 13.1A4.9 4.9 0 0 1 11.5 6.2l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/>"#;
 
 /// A flag: reporting a listing (listing.html).
@@ -642,9 +643,16 @@ pub const VERIFIED: &str = r#"<path d="M12 3 4.5 6v5.5c0 4.5 3.2 8.3 7.5 9.5 4.3
 /// many times it was shown (my_listings.html).
 pub const CALL: &str = r#"<path d="M5 4h3.2l1.6 4.2-2.1 1.4a11 11 0 0 0 6.7 6.7l1.4-2.1 4.2 1.6V19a2 2 0 0 1-2.2 2A17 17 0 0 1 3 6.2 2 2 0 0 1 5 4Z"/>"#;
 
-/// A speech bubble: messages (the header's button in base.html, and the button on a listing's
-/// page that writes to its seller).
+/// A speech bubble: messages (the header's button in base.html, the welcome page's at the end of
+/// its categories in home.html, and the button on a listing's page that writes to its seller).
 pub const CHAT: &str = r#"<path d="M20.5 11.5a8 8 0 0 1-11.6 7.2L4 20l1.3-4.4A8 8 0 1 1 20.5 11.5Z"/>"#;
+
+/// A crescent moon: the theme's button on the light theme, which switches to the dark one (the
+/// header's in base.html, the welcome page's at the end of its categories in home.html).
+pub const MOON: &str = r#"<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/>"#;
+
+/// A sun: the theme's button on the dark theme, which switches back to the light one.
+pub const SUN: &str = r#"<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>"#;
 
 /// A paper plane: sending a message (conversation.html).
 pub const SEND: &str = r#"<path d="m21 3-6.5 18-4-7.5-7.5-4Z"/><path d="M21 3 10.5 13.5"/>"#;

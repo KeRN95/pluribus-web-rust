@@ -316,7 +316,7 @@ async fn home_page_lists_categories(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
-    let body = get(pool, "/").await.body;
+    let body = get(pool.clone(), "/").await.body;
     // The question is for screen readers alone, with no line under it; the logo's creature moves
     // in the logo alone, not behind the search too, which on phones had it drawn twice each frame.
     assert!(body.contains(r#"<h1 class="visually-hidden">Çfarë po kërkon?</h1>"#));
@@ -337,11 +337,32 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         .find(r#"<button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false""#)
         .unwrap();
     assert!(panel < body.find(r#"<form class="welcome-form""#).unwrap() && nav < toggle);
-    // The search's round button comes first among the categories, and one that posts a listing last.
+    // The search's round button comes first among the categories; after them one that posts a
+    // listing, then the listings kept, the conversations and the theme, which the other pages have
+    // in their top bar: here it has the account alone.
     let post = body.find(r#"<a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#).unwrap();
     assert!(toggle < body.find(r#"<a class="shortcut" href="/c/automjete">"#).unwrap(), "the search first");
-    assert!(body.find(r#"<a class="shortcut" href="/c/te-tjera">"#).unwrap() < post, "the plus last");
-    assert!(post < nav + body[nav..].find("</nav>").unwrap());
+    assert!(body.find(r#"<a class="shortcut" href="/c/te-tjera">"#).unwrap() < post, "the plus after the categories");
+    let end = positions(
+        &body,
+        &[
+            r#"<a class="circle-shortcut plus-shortcut" href="/shto""#,
+            r#"<a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#,
+            r#"<a class="circle-shortcut inbox-shortcut" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">"#,
+            r#"<button type="button" class="circle-shortcut theme-shortcut" data-controller="theme" data-action="theme#toggle""#,
+        ],
+    );
+    assert!(end.is_sorted(), "{end:?}");
+    assert!(end[3] < nav + body[nav..].find("</nav>").unwrap());
+    for gone in ["post-button", "saved-button", "inbox-button", "theme-toggle"] {
+        assert!(!body.contains(&format!(r#"class="icon-button {gone}""#)), "{gone}");
+    }
+    assert!(body.contains(r#"<a class="icon-button account-button" href="/llogaria""#));
+    let cars = get(pool.clone(), "/c/automjete").await.body;
+    for kept in ["post-button", "saved-button", "inbox-button", "account-button", "theme-toggle"] {
+        assert!(cars.contains(&format!(r#"class="icon-button {kept}""#)), "{kept}");
+    }
+    assert!(!cars.contains("circle-shortcut"));
     assert!(body.contains(r#"data-suggest-target="input" data-panel-target="input""#));
     assert!(body.contains(".welcome-search-panel { display: block; position: static;"));
     assert!(!body.contains(r#"name="city""#) && !body.contains(r#"name="category""#));
@@ -530,11 +551,12 @@ fn tap_heart(number: &str, keep: &str, cookie: Option<&str>) -> Request<Body> {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn every_listing_has_a_heart_over_its_photo(pool: PgPool) {
     // On every card, the newest listings' row's too, and on the listing's page; the top bar leads to
-    // the listings kept.
+    // the listings kept, and on the welcome page the end of its categories.
     let home = get(pool.clone(), "/").await.body;
     assert_eq!(home.matches(r#"<form class="heart""#).count(), home.matches(r#"<article class="card"#).count());
-    assert!(home.contains(r#"<a class="icon-button saved-button" href="/te-ruajturat" aria-label="Të ruajturat""#));
+    assert!(home.contains(r#"<a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#));
     let cars = get(pool.clone(), "/c/automjete").await.body;
+    assert!(cars.contains(r#"<a class="icon-button saved-button" href="/te-ruajturat" aria-label="Të ruajturat""#));
     assert!(cars.contains(&heart(1001)));
     assert_eq!(cars.matches(r#"<form class="heart""#).count(), cars.matches(r#"<article class="card"#).count());
     let listing = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
@@ -5200,8 +5222,10 @@ async fn writing_to_a_seller_takes_signing_in_first(pool: PgPool) {
     let inbox = get(pool.clone(), "/mesazhet").await.body;
     assert!(inbox.contains("Hyr në llogari për t'u shkruar shitësve"));
     assert_eq!(get(pool.clone(), "/mesazhet/numri").await.body, r#"{"unread":0}"#);
-    // Every page's header has the button to the conversations.
-    assert!(get(pool.clone(), "/").await.body.contains(r#"<a class="icon-button inbox-button" href="/mesazhet""#));
+    // Every page has the button to the conversations: in the top bar, and on the welcome page at the
+    // end of its categories.
+    assert!(get(pool.clone(), "/c/automjete").await.body.contains(r#"<a class="icon-button inbox-button" href="/mesazhet""#));
+    assert!(get(pool.clone(), "/").await.body.contains(r#"<a class="circle-shortcut inbox-shortcut" href="/mesazhet""#));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

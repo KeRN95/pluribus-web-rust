@@ -1,10 +1,11 @@
 import { Controller } from "@hotwired/stimulus";
 import { signedIn } from "controllers/signed_in.js";
 
-// The header's button for the conversations (base.html): how many have messages the visitor hasn't
-// read, in a coral circle at its top right, asked for with each page (GET /mesazhet/numri) and
-// again once a conversation's page has read some (conversation_controller.js), and said to screen
-// readers. Someone not signed in has none, and the page doesn't ask (signed_in.js).
+// The header's button for the conversations (base.html), or the welcome page's at the end of its
+// categories (home.html): how many have messages the visitor hasn't read, in a coral circle at its
+// top right, asked for with each page (GET /mesazhet/numri) and again once a conversation's page
+// has read some (conversation_controller.js), and said to screen readers. Someone not signed in
+// has none, and the page doesn't ask (signed_in.js).
 export default class extends Controller {
   static targets = ["count"];
 
