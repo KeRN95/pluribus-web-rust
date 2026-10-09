@@ -144,14 +144,24 @@
   .listing-split .listing-media .listing-photo { aspect-ratio: 3 / 4; height: auto; max-height: calc(100vh - 12.05rem - 1px); }
   .listing-split .listing-side > :is(.listing-header, .listing-details, .listing-description) { max-width: none; }
   .listing-split .listing-header h1 { margin-top: 0; }
-  /* The bar's two pills on a line each, as wide as the column's first track, the message's
-     first, the phone's under it (by order; a phone's bar keeps the phone first); the share and
-     the report in the second track beside the phone's, level with it (the circles are .25rem
-     shorter than the pills). The revealed number takes the phone's line with its copy button. */
+  /* The bar's pills on a line each, the message's first, the phone's under it (by order; a
+     phone's bar keeps the phone first). The seller's own view, with the phone alone and their
+     own buttons after it: the bar in the first track, the buttons in the second, level with it
+     (the circles are .25rem shorter than the pills). */
   .listing-split .listing-side > .contact-bar { grid-column: 1; flex-direction: column; align-items: stretch; margin-right: .5rem; }
   .listing-split .listing-side > .contact-bar + .actions { grid-column: 2; align-self: end; margin-bottom: .125rem; }
   .listing-split .contact-bar .button { flex: none; }
   .listing-split .contact-bar .message-button { order: -1; }
+  /* Anyone else's view, with the message pill: the bar across both tracks, the message as wide
+     as the phone and the two circles together; the phone, or the message where the seller has
+     no number to show, leaves the circles their room (two of 2.85rem, .5rem apart and .5rem
+     from the pill), and the circles come up from the row under the bar to stand level with that
+     last line, the row left with no height of its own (the margins add up to none). The
+     revealed number takes the phone's room with its copy button. */
+  .listing-split .listing-side > .contact-bar:has(.message-button) { grid-column: 1 / -1; margin-right: 0; }
+  .listing-split .contact-bar:has(.message-button) :is(.reveal-button, .contact-revealed),
+  .listing-split .contact-bar:has(.message-button):not(:has(.reveal-button, .contact-revealed)) .message-button { width: calc(100% - 6.7rem); }
+  .listing-split .listing-side > .contact-bar:has(.message-button) + .actions { grid-column: 2; align-self: start; margin-top: -2.975rem; margin-bottom: .125rem; }
   .listing-split .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
 }
 
