@@ -247,11 +247,12 @@
 .gallery-arrow[hidden] { display: none; }
 /* As a big card's (page.css, .card-step): the arrows round and round, each showing only while
    the mouse is near its edge of the photo, or has the keyboard's focus; the photos dragged by a
-   mouse (slides_controller.js). */
+   mouse (slides_controller.js, which marks the media box, its own element, as the mouse nears
+   an edge: near-previous, near-next). */
 @media (hover: hover) and (pointer: fine) {
   .gallery-arrow { opacity: 0; }
-  .gallery.near-previous .gallery-previous,
-  .gallery.near-next .gallery-next,
+  .listing-media.near-previous .gallery-previous,
+  .listing-media.near-next .gallery-next,
   .gallery-arrow:focus-visible { opacity: 1; }
 }
 .listing-photos.is-dragging,
