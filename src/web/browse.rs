@@ -256,23 +256,17 @@ pub struct Shortcut {
     pub icon: &'static str,
 }
 
-/// The main categories the welcome page puts last, after its search's button, in this order.
-const LAST_ON_WELCOME: [&str; 4] = ["automjete", "prona", "elektronike", "veshje-dhe-aksesore"];
-
-/// The main category the welcome page's button that posts a listing follows, among those before
-/// its search's button: after them all without it.
-const PLUS_AFTER_ON_WELCOME: &str = "sport-dhe-hobi";
+/// The main categories the welcome page leads with, in this order: a line of their own after its
+/// search's button, in bigger pills than the others'.
+const MAIN_ON_WELCOME: [&str; 4] = ["automjete", "prona", "elektronike", "veshje-dhe-aksesore"];
 
 #[derive(Template)]
 #[template(path = "home.html")]
 struct HomePage {
-    /// Every main category but LAST_ON_WELCOME's, in their order, up to PLUS_AFTER_ON_WELCOME's,
-    /// before the button that posts a listing.
-    before_plus: Vec<Shortcut>,
-    /// The others of them, after that button and before the search's.
-    before_search: Vec<Shortcut>,
-    /// LAST_ON_WELCOME's, after the search's button.
-    last: Vec<Shortcut>,
+    /// MAIN_ON_WELCOME's, the first line, after the search's button.
+    main: Vec<Shortcut>,
+    /// Every other main category, in their order, after them.
+    others: Vec<Shortcut>,
     page: ListingPage,
     /// The listings seen the most this week ("Më të klikuarat"), none before any are.
     most_viewed: Option<ListingPage>,
@@ -302,20 +296,16 @@ pub async fn home(
         state.views.most_viewed(&state.db, None),
     )?;
     safety::without_hidden(&mut most_viewed, &hidden);
-    // Every main category, in its order, with its icon; the button that posts a listing after Sport
-    // / hobi, and Automjete, Prona, Elektronikë and Veshje / aksesorë after the search.
+    // Every main category with its icon: Automjete, Prona, Elektronikë and Veshje / aksesorë
+    // first, on a line of their own after the search's button, then the others in their order.
     let shortcut = |category: &db::Category| Shortcut {
         name: category.name.clone(),
         url: format!("/c/{}", category.slug),
         icon: icons::main_category(&category.slug),
     };
-    let first: Vec<&db::Category> =
-        categories.top_level().filter(|category| !LAST_ON_WELCOME.contains(&category.slug.as_str())).collect();
-    let plus_at = first.iter().position(|category| category.slug == PLUS_AFTER_ON_WELCOME).map_or(first.len(), |at| at + 1);
-    let (before_plus, before_search) = first.split_at(plus_at);
-    let before_plus = before_plus.iter().copied().map(shortcut).collect();
-    let before_search = before_search.iter().copied().map(shortcut).collect();
-    let last = LAST_ON_WELCOME.iter().filter_map(|slug| categories.by_slug(slug)).map(shortcut).collect();
+    let main = MAIN_ON_WELCOME.iter().filter_map(|slug| categories.by_slug(slug)).map(shortcut).collect();
+    let others =
+        categories.top_level().filter(|category| !MAIN_ON_WELCOME.contains(&category.slug.as_str())).map(shortcut).collect();
     let page = ListingPage::new(rows, Sort::Newest, next_url);
     // "Më të klikuarat" loads its first two photos straight away: it is on the first screen, its
     // first photo before anything else (ListingPage::lead); without it, the listings' first does.
@@ -323,7 +313,7 @@ pub async fn home(
     let page = if most_viewed.is_none() { page.leading() } else { page };
     let origin = seo::origin(&headers);
     let meta = PageMeta::new(&origin, "Pluribus: njoftime në gjithë Shqipërinë", seo::SITE_DESCRIPTION, format!("{origin}/"));
-    render(HomePage { before_plus, before_search, last, page, most_viewed, meta })
+    render(HomePage { main, others, page, most_viewed, meta })
 }
 
 /// A category's icon, as its pill has it (icons.rs): a main category's own, a subcategory's where

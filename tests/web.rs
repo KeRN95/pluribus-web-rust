@@ -336,40 +336,41 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         .unwrap();
     assert!(panel < body.find(r#"<form class="welcome-form""#).unwrap() && nav < toggle);
     assert!(body.contains(r#"<div class="welcome-start" data-controller="panel" data-panel-follow-value="true""#));
-    // The button that posts a listing comes after Sport / hobi, among the pills; the search's after
-    // the categories but Automjete, Prona, Elektronikë and Veshje / aksesorë, which follow it;
-    // after them the listings kept, the conversations and the theme, which the other pages have in
-    // their top bar with the plus: here it has the account alone.
-    let post = body.find(r#"<a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#).unwrap();
-    let order = positions(&body, &[
-        r#"<a class="shortcut" href="/c/sport-dhe-hobi">"#,
-        r#"<a class="circle-shortcut plus-shortcut""#,
-        r#"<a class="shortcut" href="/c/kafshe-shtepiake">"#,
-        r#"<a class="shortcut" href="/c/te-tjera">"#,
+    // The search's button leads the categories' first line, then Automjete, Prona, Elektronikë and
+    // Veshje / aksesorë, bigger, on that line of their own (.welcome-main); then every other
+    // category in its order; and after them, as one group, the buttons the other pages have in
+    // their top bar, the plus first, then the listings kept, the conversations and the theme:
+    // here the top bar has the account alone.
+    let first = &body[body.find(r#"<div class="welcome-main">"#).unwrap()..];
+    let first = &first[..first.find("</div>").unwrap()];
+    let line = positions(first, &[
         r#"<button type="button" class="circle-shortcut search-shortcut""#,
         r#"<a class="shortcut" href="/c/automjete">"#,
         r#"<a class="shortcut" href="/c/prona">"#,
         r#"<a class="shortcut" href="/c/elektronike">"#,
         r#"<a class="shortcut" href="/c/veshje-dhe-aksesore">"#,
-        r#"<a class="circle-shortcut saved-shortcut""#,
+    ]);
+    assert!(line.is_sorted(), "{line:?}");
+    assert_eq!(first.matches(r#"<a class="shortcut""#).count(), 4, "{first}");
+    assert!(!first.contains("plus-shortcut"), "{first}");
+    let order = positions(&body, &[
+        r#"<div class="welcome-main">"#,
+        r#"<a class="shortcut" href="/c/shtepi-dhe-kopsht">"#,
+        r#"<a class="shortcut" href="/c/sport-dhe-hobi">"#,
+        r#"<a class="shortcut" href="/c/kafshe-shtepiake">"#,
+        r#"<a class="shortcut" href="/c/te-tjera">"#,
+        r#"<div class="welcome-actions">"#,
+        r#"<a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#,
+        r#"<a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#,
+        r#"<a class="circle-shortcut inbox-shortcut" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">"#,
+        r#"<button type="button" class="circle-shortcut theme-shortcut" data-controller="theme" data-action="theme#toggle""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
-    assert_eq!(order[1], post);
-    let end = positions(
-        &body,
-        &[
-            r#"<a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#,
-            r#"<a class="circle-shortcut inbox-shortcut" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">"#,
-            r#"<button type="button" class="circle-shortcut theme-shortcut" data-controller="theme" data-action="theme#toggle""#,
-        ],
-    );
-    assert!(end.is_sorted(), "{end:?}");
-    assert!(end[2] < nav + body[nav..].find("</nav>").unwrap());
-    // Those three are one group, which goes to the next line whole rather than split; the plus
-    // isn't in it.
-    let group = body.find(r#"<div class="welcome-actions">"#).unwrap();
-    assert!(group < end[0] && end[2] < group + body[group..].find("</div>").unwrap());
-    assert!(post < group);
+    assert!(order[9] < nav + body[nav..].find("</nav>").unwrap());
+    // Those four are one group, which goes to the next line whole rather than split.
+    let group = &body[order[5]..];
+    let group = &group[..group.find("</div>").unwrap()];
+    assert_eq!(group.matches("circle-shortcut").count(), 4, "{group}");
     for gone in ["post-button", "saved-button", "inbox-button", "theme-toggle"] {
         assert!(!body.contains(&format!(r#"class="icon-button {gone}""#)), "{gone}");
     }
@@ -382,9 +383,14 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(body.contains(r#"data-suggest-target="input" data-panel-target="input""#));
     assert!(body.contains(".welcome-search-panel { display: block; position: static;"));
     assert!(!body.contains(r#"name="city""#) && !body.contains(r#"name="category""#));
-    // A shortcut to every main category, in their order but Automjete, Prona, Elektronikë and
-    // Veshje / aksesorë last, each its icon before its name; no more listing-like cards.
+    // A shortcut to every main category: Automjete, Prona, Elektronikë and Veshje / aksesorë
+    // first, then the others in their order, each its icon before its name; no more listing-like
+    // cards.
     let main = [
+        ("automjete", "Automjete"),
+        ("prona", "Prona"),
+        ("elektronike", "Elektronikë"),
+        ("veshje-dhe-aksesore", "Veshje / aksesorë"),
         ("shtepi-dhe-kopsht", "Shtëpi / kopsht"),
         ("pune", "Punë"),
         ("sherbime", "Shërbime"),
@@ -392,10 +398,6 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         ("kafshe-shtepiake", "Kafshë shtëpiake"),
         ("makineri-dhe-biznes", "Makineri / biznes"),
         ("te-tjera", "Të tjera"),
-        ("automjete", "Automjete"),
-        ("prona", "Prona"),
-        ("elektronike", "Elektronikë"),
-        ("veshje-dhe-aksesore", "Veshje / aksesorë"),
     ];
     let links: Vec<String> =
         main.iter().map(|(slug, _)| format!(r#"<a class="shortcut" href="/c/{slug}">"#)).collect();

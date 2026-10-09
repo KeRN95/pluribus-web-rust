@@ -20,12 +20,12 @@
 <section class="welcome">
   {#- The question, for screen readers: on the page the search and the categories ask it. -#}
   <h1 class="visually-hidden">Çfarë po kërkon?</h1>
-  {#- The search starts as a button among the categories' pills, after most of them, in the coral's
-      tint: a tap opens the search box over the button's own line, the page dimmed under it, the
-      box taking the focus so that a phone shows its keyboard (panel_controller.js, as the browse
-      row's round search button does; data-panel-follow-value has it say where the line is);
-      Escape, or a tap on the dim, folds it again. Without JavaScript the box stands over the
-      pills, as it did, and the button is gone (the noscript below). -#}
+  {#- The search starts as a button leading the categories' first line, in the coral's tint: a tap
+      opens the search box over that line, the page dimmed under it, the box taking the focus so
+      that a phone shows its keyboard (panel_controller.js, as the browse row's round search button
+      does; data-panel-follow-value has it say where the line is); Escape, or a tap on the dim,
+      folds it again. Without JavaScript the box stands over the pills, as it did, and the button
+      is gone (the noscript below). -#}
   <div class="welcome-start" data-controller="panel" data-panel-follow-value="true"
        data-action="keydown.esc@document->panel#close turbo:before-cache@document->panel#close">
   <div class="welcome-search-panel" id="welcome-search-panel" data-panel-target="panel">
@@ -47,26 +47,29 @@
   </div>
 
   {#- Every main category at once, as pills like the listing page's details: its icon, then its
-      name. After Sport / hobi a button as tall as they are, the one that posts a listing, marked
-      so in Claude's blue (PLUS_AFTER_ON_WELCOME in browse.rs); after most of the others one a
-      little wider, the search's, marked as what is picked is, in the coral's tint with a coral
-      magnifier; then Automjete, Prona, Elektronikë and Veshje / aksesorë (LAST_ON_WELCOME); then
-      the listings kept, marked so in a red, the conversations, in Claude's olive, and the theme,
-      in the blue under its moon and a yellow under its sun: the other pages have these and the
-      plus in their top bar (base.html). Those three are one group, which goes to the next line
-      whole rather than split (.welcome-actions). -#}
+      name. First, on a line of their own and bigger (.welcome-main, welcome.css), the four most
+      looked for, Automjete, Prona, Elektronikë and Veshje / aksesorë (MAIN_ON_WELCOME in
+      browse.rs), after the search's button, as tall as they are and half as wide again, marked as
+      what is picked is, in the coral's tint with a coral magnifier; then every other main
+      category, in its order; then, as one group that goes to the next line whole rather than
+      split (.welcome-actions), the buttons the other pages have in their top bar (base.html): the
+      one that posts a listing, marked so in Claude's blue, the listings kept, in a red, the
+      conversations, in Claude's olive, and the theme, in the blue under its moon and a yellow
+      under its sun. -#}
   <nav class="shortcuts" aria-label="Kategoritë">
-    {%- for shortcut in before_plus %}{% call pill(shortcut) %}{% endfor %}
-    <a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim" title="Shto njoftim">
-      <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-    </a>
-    {%- for shortcut in before_search %}{% call pill(shortcut) %}{% endfor %}
-    <button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false" aria-label="Kërko" title="Kërko"
-            data-panel-target="toggle" data-action="panel#toggle">
-      <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-    </button>
-    {%- for shortcut in last %}{% call pill(shortcut) %}{% endfor %}
+    <div class="welcome-main">
+      <button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false" aria-label="Kërko" title="Kërko"
+              data-panel-target="toggle" data-action="panel#toggle">
+        <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      {%- for shortcut in main %}{% call pill(shortcut) %}{% endfor %}
+    </div>
+    {%- for shortcut in others %}{% call pill(shortcut) %}{% endfor %}
     <div class="welcome-actions">
+      {#- Posting a listing (post.rs). -#}
+      <a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim" title="Shto njoftim">
+        <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </a>
       {#- The listings the visitor keeps (saved.rs), with a dot while some dropped their price unseen
           (heart_controller.js). -#}
       <a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat" title="Të ruajturat">

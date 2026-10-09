@@ -278,13 +278,18 @@
 }
 /* The welcome page's pills, their gaps and their size, which its round buttons (below) take: a pill
    is its padding, its line and its border tall (--pill), worked out from the same values as the
-   pills, so that the buttons stay as tall as they are as they change. */
+   pills, so that the buttons stay as tall as they are as they change. The first line's are bigger
+   (--main-pad, --main-font, and --pill-main from them; .welcome-main, below, takes them as its
+   own), the search's box centring itself on that line (.welcome-search-panel). */
 .welcome-start {
   --row-gap: .55rem;
   --column-gap: .55rem;
   --pill-pad: .7rem;
   --pill-font: var(--text-md);
   --pill: calc(2 * var(--pill-pad) + var(--pill-font) * 1.55 + 2px);
+  --main-pad: .85rem;
+  --main-font: var(--text-lg);
+  --pill-main: calc(2 * var(--main-pad) + var(--main-font) * 1.55 + 2px);
   position: relative;
 }
 .welcome .shortcuts { gap: var(--row-gap) var(--column-gap); margin-top: 0; }
@@ -294,6 +299,24 @@
   font-size: var(--pill-font);
   line-height: 1.55;
 }
+/* The first line, a line of its own (flex-basis) however short: the search's button and the four
+   main categories most looked for, Automjete, Prona, Elektronikë and Veshje / aksesorë
+   (home.html), the way into the site before the rest; their pills a size up (--text-lg, 18px,
+   where the others' are 16; .85rem over and under the name rather than .7, a little more at its
+   sides), their icons 22px rather than 20, their names in the semibold rather than the medium;
+   the button as tall as they are. As far apart as the others. */
+.welcome-main {
+  --pill-pad: var(--main-pad);
+  --pill-font: var(--main-font);
+  --pill: var(--pill-main);
+  display: flex;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+  gap: var(--row-gap) var(--column-gap);
+}
+.welcome-main .shortcut { padding-right: 1.3rem; padding-left: 1.15rem; font-weight: var(--semibold); }
+.welcome-main .shortcut-icon,
+.welcome-main .circle-icon { width: 22px; height: 22px; }
 /* Phones: the welcome page's categories smaller, so that three stand on a line where two did and
    the listings come sooner: less room round the name, the name and its icon a touch smaller, the
    gaps closer. Narrow phones, and phones with their text set larger, gain the most. A category
@@ -303,7 +326,7 @@
    lines stand a little further apart than the pills on a line, so that a pill about 35 px tall is
    about 43 to the touch (41 on the narrowest phones), and three still fit on a line. */
 @media (max-width: 719px) {
-  .welcome-start { --column-gap: .45rem; --pill-pad: .45rem; --pill-font: .9375rem; }
+  .welcome-start { --column-gap: .45rem; --pill-pad: .45rem; --pill-font: .9375rem; --main-pad: .55rem; --main-font: 1.0625rem; }
   .welcome .shortcut { position: relative; gap: .4rem; padding: var(--pill-pad) .85rem var(--pill-pad) .7rem; font-size: var(--pill-font); }
   /* From the border's outer edge. */
   .welcome .shortcut::after {
@@ -312,24 +335,29 @@
     inset: calc(var(--row-gap) / -2 - 1px) calc(var(--column-gap) / -2 - 1px);
   }
   .welcome .shortcut-icon { width: 18px; height: 18px; }
+  /* The first line's a size up again: 15px names (14.9) where the others' are 13, their icons
+     20px where the others' are 18, about 40 px tall where the others are 35. */
+  .welcome-main .shortcut { padding-right: 1rem; padding-left: .85rem; }
+  .welcome-main .shortcut-icon,
+  .welcome-main .circle-icon { width: 20px; height: 20px; }
 }
 
 
-/* The round buttons among the categories' pills (home.html), as tall as they are (--pill): the one
-   that posts a listing, after Sport / hobi; the search's, after most of the pills and before
-   Automjete, Prona, Elektronikë and Veshje / aksesorë, half as wide again as it is tall; and
-   after the pills the listings kept, the conversations and the theme, which the other pages have
-   in their top bar with the plus (base.css). Each is marked as the site marks what is picked or
-   open (a category page's own pill, an open menu's button): a tint of its colour, a border of it and its icon in it, the border whole under the
-   pointer or a press. Each has its colour (--tone) and its tint (--tone-bg), as listing.css's
-   price bubbles have: the search the coral (--accent, --badge), the plus Claude's blue (--blue,
-   --blue-bg), the listings kept the burgundy (--burgundy, Automjete's colour; a kept listing's
-   heart on a card is the bright red, page.css), the conversations Claude's olive (--olive,
-   Shtëpi / kopsht's colour), and
-   the theme the blue under its moon, on the light theme, and a yellow under its sun, on the dark
-   (--yellow). Their icons are the pills' size. On a phone a finger's target is bigger than the
-   button, as a pill's is (::after, from the gaps). The search opens its box over its own line,
-   the page dimmed under it (.welcome-scrim), as the browse row's does. */
+/* The round buttons with the categories' pills (home.html), as tall as the pills beside them
+   (--pill): the search's, leading the first line, as tall as its bigger pills and half as wide
+   again; and after all the pills, as one group, the buttons the other pages have in their top
+   bar (base.css): the one that posts a listing, the listings kept, the conversations and the
+   theme. Each is marked as the site marks what is picked or open (a category page's own pill, an
+   open menu's button): a tint of its colour, a border of it and its icon in it, the border whole
+   under the pointer or a press. Each has its colour (--tone) and its tint (--tone-bg), as
+   listing.css's price bubbles have: the search the coral (--accent, --badge), the plus Claude's
+   blue (--blue, --blue-bg), the listings kept the burgundy (--burgundy, Automjete's colour; a
+   kept listing's heart on a card is the bright red, page.css), the conversations Claude's olive
+   (--olive, Shtëpi / kopsht's colour), and the theme the blue under its moon, on the light
+   theme, and a yellow under its sun, on the dark (--yellow). Their icons are the pills' size
+   beside them. On a phone a finger's target is bigger than the button, as a pill's is (::after,
+   from the gaps). The search opens its box over its line, the page dimmed under it
+   (.welcome-scrim), as the browse row's does. */
 .circle-shortcut {
   position: relative;
   display: flex;
@@ -350,9 +378,8 @@
   -webkit-tap-highlight-color: transparent;
 }
 .circle-icon { flex: none; }
-/* The listings kept, the conversations and the theme: one group at the categories' end, which goes
-   to the next line whole rather than split, its buttons as far apart as the pills. (The plus
-   stands among the pills, after Sport / hobi.) */
+/* The plus, the listings kept, the conversations and the theme: one group at the categories' end,
+   which goes to the next line whole rather than split, its buttons as far apart as the pills. */
 .welcome-actions { display: flex; flex: none; gap: var(--column-gap); }
 .search-shortcut { --tone: var(--accent); --tone-bg: var(--badge); width: calc(var(--pill) * 1.5); }
 .plus-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
@@ -394,8 +421,9 @@
     inset: calc(var(--row-gap) / -2 - 1px) calc(var(--column-gap) / -2 - 1px);
   }
 }
-/* Centred on the line its button stands on (--toggle-top, which panel_controller.js sets as it
-   opens; the first line until then): the box is its button and padding tall (.welcome-form). It
+/* Centred on its button's line, the first, whose pills are the bigger (--pill-main; --toggle-top,
+   which panel_controller.js sets as it opens, says where the line is, 0 until then): the box is
+   its button and padding tall (.welcome-form). It
    grows out of the button: clipped to the button's circle as it opens (--toggle-left and
    --toggle-right, the button's distance from the line's ends, and as much over and under as the
    box is taller than the button), then out to the line's ends, over the pills beside it. Open, the
@@ -406,10 +434,10 @@
    inside it only what is inside it, so the suggestions, which hang from the box, would show the
    page under them sharp. (A card's heart stands on the dark glass whatever the theme, page.css,
    over a photo.) */
-.welcome-search-panel { display: none; position: absolute; top: calc(var(--toggle-top, 0px) + (var(--pill) - 3.7rem - 2px) / 2); right: 0; left: 0; z-index: 9; }
+.welcome-search-panel { display: none; position: absolute; top: calc(var(--toggle-top, 0px) + (var(--pill-main) - 3.7rem - 2px) / 2); right: 0; left: 0; z-index: 9; }
 .welcome-search-panel.is-open { display: block; animation: search-grow .14s cubic-bezier(.2, .8, .2, 1); }
 @keyframes search-grow {
-  from { clip-path: inset(calc((3.7rem + 2px - var(--pill)) / 2) var(--toggle-right, 0px) calc((3.7rem + 2px - var(--pill)) / 2) var(--toggle-left, 0px) round 999px); }
+  from { clip-path: inset(calc((3.7rem + 2px - var(--pill-main)) / 2) var(--toggle-right, 0px) calc((3.7rem + 2px - var(--pill-main)) / 2) var(--toggle-left, 0px) round 999px); }
   to { clip-path: inset(0 round 999px); }
 }
 .welcome-search-panel.is-open .welcome-form { border-color: transparent; background: none; box-shadow: none; }
