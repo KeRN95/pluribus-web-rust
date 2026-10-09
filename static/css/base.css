@@ -93,6 +93,13 @@
   --placeholder-to: #e8e6dc;
   --shadow: 0 1px 2px rgb(31 30 29 / 5%), 0 4px 16px rgb(31 30 29 / 5%);
   --scrim: rgb(31 30 29 / 20%); /* the page dimmed under what floats over it */
+  /* Glass: the welcome page's open search and its suggestions, over the pills (welcome.css): the
+     theme's light or dark at 45%, blurred, with its edge and the words and their shading on it. */
+  --glass: rgb(255 255 255 / 45%);
+  --glass-edge: rgb(20 20 19 / 18%);
+  --on-glass: var(--text);
+  --on-glass-muted: var(--muted);
+  --on-glass-hover: rgb(20 20 19 / 7%);
   --radius: 14px;
   /* The room between the page and the screen's sides (.container), and as much over the first
      line of the welcome page and of a category page, under the header. */
@@ -169,6 +176,11 @@
   --placeholder-to: #3c3b36;
   --shadow: 0 1px 2px rgb(0 0 0 / 30%);
   --scrim: rgb(0 0 0 / 40%);
+  --glass: rgb(38 38 36 / 45%);
+  --glass-edge: rgb(255 255 255 / 25%);
+  --on-glass: #fff;
+  --on-glass-muted: rgb(255 255 255 / 72%);
+  --on-glass-hover: rgb(255 255 255 / 10%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -219,6 +231,11 @@
     --placeholder-to: #3c3b36;
     --shadow: 0 1px 2px rgb(0 0 0 / 30%);
     --scrim: rgb(0 0 0 / 40%);
+    --glass: rgb(38 38 36 / 45%);
+    --glass-edge: rgb(255 255 255 / 25%);
+    --on-glass: #fff;
+    --on-glass-muted: rgb(255 255 255 / 72%);
+    --on-glass-hover: rgb(255 255 255 / 10%);
   }
 }
 
