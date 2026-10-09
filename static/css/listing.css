@@ -20,8 +20,12 @@
    the price none under them, the line that follows taking it. */
 .listing,
 .listing-side { display: grid; grid-template-columns: minmax(0, 1fr); }
-/* The rest's rows pack at its top: beside a taller photo (the split page) the rest's box is as
-   tall as the photo, and a grid would otherwise spread its rows out over the room. */
+/* The rows pack at the top, the page's and the rest's: the page is at least a screen tall (above),
+   and beside a taller photo (the split page) the rest's box is as tall as the photo, and a grid
+   would otherwise spread its rows out over the room, the path's row growing and pushing the photo
+   and the rest down toward the screen's middle on a short listing's page. From 960 px up the room
+   goes over the seller's card instead (below). */
+.listing,
 .listing-side { align-content: start; }
 .listing > *,
 .listing-side > * { min-width: 0; }
@@ -129,8 +133,8 @@
      the other five, the title level
      with the photo's top, the kind and the price, the contact bar's two pills on a line each,
      the message's first, the share and the report beside the phone's under it, the details, the
-     description and the seller's card, packed at the column's top; the listings like it under
-     both. */
+     description and the seller's card, packed at the column's top (the card at its foot when
+     the listing leaves room, below); the listings like it under both. */
   /* The split page is narrower than the site's column: 60rem, in the middle of it, the rows of
      listings under it with it (the page's box, which is otherwise no box at all, messages.css:
      the sheet's controller is its). The photo is 541 px then, as the classifieds sites have it. */
@@ -150,6 +154,27 @@
   .listing-split .listing-media .listing-photo { aspect-ratio: 3 / 4; height: auto; max-height: calc(100vh - 12.05rem - 1px); }
   .listing-split .listing-side > :is(.listing-header, .listing-details, .listing-description) { max-width: none; }
   .listing-split .listing-header h1 { margin-top: 0; }
+  /* A listing shorter than the screen (the page is at least a screen tall, above): the room it
+     leaves goes over the seller's card, which so stands at the screen's foot, as far over its
+     edge as "Njoftime të ngjashme" stands under the page, the section out of view under it; a
+     longer one has no room to give. The column is at least as tall as the screen leaves under
+     the path: the screen less the header (3.55rem and its hairline, base.css), the page's padding
+     over the path, the path's line (the back button's size, browse.css) and the room under it,
+     and that gap (2.5rem), in svh as the page's own min-height; its rows are as tall as what is
+     in them (more rows than its parts need), and the one before the card takes the room (1fr,
+     which grows to the min-height). The column stands at its row's top rather than stretching to
+     the photo's height, so that a photo and filmstrip running past the screen's edge (on a short
+     screen) don't take the card past it too. A notice over the path (just posted, or off the
+     site) moves the column down by a height the sum can't know: the card then stays under the
+     description. */
+  .listing-split > .listing-side {
+    align-self: start;
+    grid-template-rows: repeat(12, auto) 1fr [seller] auto;
+    min-height: calc(100vh - 3.55rem - 1px - var(--gutter) - (1.55 * var(--text-md) + 1.4rem + 2px) - .75rem - 2.5rem);
+    min-height: calc(100svh - 3.55rem - 1px - var(--gutter) - (1.55 * var(--text-md) + 1.4rem + 2px) - .75rem - 2.5rem);
+  }
+  .listing-split > .listing-side > .seller-section { grid-row: seller; }
+  .listing-split:has(> .notice) > .listing-side { min-height: 0; }
   /* The bar's pills on a line each, the message's first, the phone's under it (by order; a
      phone's bar keeps the phone first). The seller's own view, with the phone alone and their
      own buttons after it: the bar in the first track, the buttons in the second, level with it
