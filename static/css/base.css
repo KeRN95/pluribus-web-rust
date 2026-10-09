@@ -69,10 +69,8 @@
   --olive-bg: #e6ecdc;
   --olive-button: #6a7d50;
   --olive-button-hover: #5c6d45;
-  --red: #c1444c;                /* a red as deep as they: the welcome page's heart */
+  --red: #c1444c;                /* a red as deep as they: the welcome page's heart, a kept listing's */
   --red-bg: #f7dee0;
-  --green: #3f8d60;              /* a green: its speech bubble */
-  --green-bg: #e2f2e8;
   --yellow: #bb8b1b;             /* and a yellow: the theme's sun, on the dark theme */
   --yellow-bg: #f9f2dc;
   --danger: #b42318;
@@ -142,8 +140,6 @@
   --olive-button-hover: #788c5d;
   --red: #d16165;
   --red-bg: #42292b;
-  --green: #4ea673;
-  --green-bg: #2a4134;
   --yellow: #e2be5a;
   --yellow-bg: #463d25;
   --danger: #f97066;
@@ -186,8 +182,6 @@
     --olive-button-hover: #788c5d;
     --red: #d16165;
     --red-bg: #42292b;
-    --green: #4ea673;
-    --green-bg: #2a4134;
     --yellow: #e2be5a;
     --yellow-bg: #463d25;
     --danger: #f97066;

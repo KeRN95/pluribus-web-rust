@@ -3520,6 +3520,10 @@ async fn elektronike_and_shtepi_kopsht_have_colours_of_their_own(pool: PgPool) {
             assert!(rule.contains(&token), "{token} in {rule}");
         }
     }
+    // The welcome page's conversations button wears the olive too; a kept listing's heart is the
+    // welcome page heart's red, in every part of the site.
+    assert!(css.contains(".inbox-shortcut { --tone: var(--olive); --tone-bg: var(--olive-bg); }"));
+    assert!(css.contains(r#".heart-button[aria-pressed="true"] svg { fill: var(--red); stroke: var(--red); }"#));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

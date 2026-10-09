@@ -332,7 +332,8 @@
    button): a tint of its colour, a border of it and its icon in it, the border whole under the
    pointer or a press. Each has its colour (--tone) and its tint (--tone-bg), as listing.css's
    price bubbles have: the search the coral (--accent, --badge), the plus Claude's blue (--blue,
-   --blue-bg), the listings kept a red as deep (--red), the conversations a green (--green), and
+   --blue-bg), the listings kept a red as deep (--red), the conversations Claude's olive (--olive,
+   Shtëpi / kopsht's colour), and
    the theme the blue under its moon, on the light theme, and a yellow under its sun, on the dark
    (--yellow). Their icons are the pills' size. On a phone a finger's target is bigger than the
    button, as a pill's is (::after, from the gaps). The search opens its box over its own line,
@@ -363,7 +364,7 @@
 .search-shortcut { --tone: var(--accent); --tone-bg: var(--badge); width: calc(var(--pill) * 1.5); }
 .plus-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
 .saved-shortcut { --tone: var(--red); --tone-bg: var(--red-bg); }
-.inbox-shortcut { --tone: var(--green); --tone-bg: var(--green-bg); }
+.inbox-shortcut { --tone: var(--olive); --tone-bg: var(--olive-bg); }
 .theme-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
 :root[data-theme="dark"] .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
 @media (prefers-color-scheme: dark) {
