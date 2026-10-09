@@ -233,8 +233,10 @@
 }
 /* On "Më të klikuarat", how many times a listing's page was seen this week: an eye and the
    number, white on a soft dark pill like the heart's circle, in the photo's top left corner. On
-   the listing's page, how many times in all, at the heart's left, level with its circle; the line
-   about the listing in the other corner leaves room for both. */
+   the listing's page, how many times in all, at the heart's left. There everything over the photos
+   is this pill's size and on its soft dark (--over-photo): the line about the listing in the
+   other top corner, which leaves room for both, the heart's circle, as tall as the pill is, and
+   the photo counter at the bottom; each as far from the photo's edges. */
 .card-views {
   grid-area: 1 / 1;
   align-self: start;
@@ -242,7 +244,8 @@
   z-index: 6;
   margin: .45rem;
 }
-.listing-views { position: absolute; top: calc(1.6rem - .7rem); right: 2.95rem; z-index: 2; height: 1.4rem; margin: 0; }
+.listing-media { --over-photo: 1.4rem; --over-edge: .7rem; }
+.listing-views { position: absolute; top: var(--over-edge); right: calc(var(--over-edge) + var(--over-photo) + .4rem); z-index: 2; height: var(--over-photo); margin: 0; }
 .card-views,
 .listing-views {
   display: flex;
@@ -262,11 +265,11 @@
 }
 .card-views svg,
 .listing-views svg { flex: none; }
-.listing-media .heart { position: absolute; top: .3rem; right: .3rem; z-index: 2; }
-.listing-media .heart-button { --circle: 2rem; --reach: .3rem; }
-.listing-media .heart-button svg { width: 17px; height: 17px; }
-.listing-media:has(.heart) .listing-meta { max-width: calc(100% - 4.5rem); }
-.listing-media:has(.listing-views) .listing-meta { max-width: calc(100% - 10rem); }
+.listing-media .heart { position: absolute; top: calc(var(--over-edge) - .3rem); right: calc(var(--over-edge) - .3rem); z-index: 2; }
+.listing-media .heart-button { --circle: var(--over-photo); --reach: .3rem; }
+.listing-media .heart-button svg { width: 13px; height: 13px; }
+.listing-media:has(.heart) .listing-meta { max-width: calc(100% - 2 * var(--over-edge) - var(--over-photo) - .4rem); }
+.listing-media:has(.listing-views) .listing-meta { max-width: calc(100% - 9.5rem); }
 @media (prefers-reduced-motion: reduce) {
   .heart-button,
   .heart-button::before { transition: none; }
@@ -570,23 +573,27 @@
 /* A quiet line on the listing page: over the price, what kind of listing, and its condition. */
 .card-meta { margin: .25rem 0 0; color: var(--muted); font-size: var(--text-sm); }
 .listing-kind { margin: 0 0 .2rem; }
-/* Over the photo's top corner, where and when, in a pill like the photo counter's in the other
-   corner: the site's dark colour, see-through, and the date in bold; on one line, a long town
-   ending in "…" before it wraps. */
+/* Over the photo's top corner, where and when, in a pill like the view count's in the other
+   corner (above): its size, its soft dark, and the date in bold; on one line, a long town ending
+   in "…" before it wraps. */
 .listing-media { position: relative; }
 .listing-meta {
   position: absolute;
-  top: .7rem;
-  left: .7rem;
+  top: var(--over-edge);
+  left: var(--over-edge);
   z-index: 1;
-  max-width: calc(100% - 1.4rem);
+  max-width: calc(100% - 2 * var(--over-edge));
+  height: var(--over-photo);
   margin: 0;
-  padding: .2rem .65rem;
+  padding: 0 .65rem;
   border-radius: 999px;
   overflow: hidden;
-  background: rgb(38 38 36 / 60%);
-  color: #faf9f5;
+  background: rgb(38 38 36 / 45%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: #fff;
   font-size: var(--text-xs);
+  line-height: var(--over-photo);
   text-overflow: ellipsis;
   white-space: nowrap;
   pointer-events: none;

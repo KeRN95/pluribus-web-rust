@@ -112,8 +112,8 @@
 }
 
 /* A listing's photos. Several make a strip to swipe through, one at a time (scroll snapping), with
-   a counter in the corner, the site's dark colour behind it as on the cards' prices, and arrows on
-   screens with a mouse (gallery_controller.js). */
+   a counter in the corner, the view count's size on its soft dark (page.css, .listing-views), and
+   arrows on screens with a mouse (gallery_controller.js). */
 .gallery { position: relative; }
 .listing-photos {
   display: flex;
@@ -155,14 +155,19 @@
 .listing-photos:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .gallery-count {
   position: absolute;
-  right: .7rem;
-  bottom: .7rem;
-  padding: .2rem .6rem;
+  right: var(--over-edge);
+  bottom: var(--over-edge);
+  display: flex;
+  align-items: center;
+  height: var(--over-photo);
+  padding: 0 .55rem;
   border-radius: 999px;
-  background: rgb(38 38 36 / 60%);
-  color: #faf9f5;
+  background: rgb(38 38 36 / 45%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: #fff;
   font-size: var(--text-xs);
-  font-weight: var(--medium);
+  font-weight: var(--semibold);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
