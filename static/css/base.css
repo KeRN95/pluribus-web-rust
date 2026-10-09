@@ -1,7 +1,7 @@
 /* Warm and quiet: ivory and charcoal with a terracotta accent, soft rounded surfaces, and one
    typeface, Geist, for everything but the headings and the logo: prices and text differ only in
    weight and colour. The headings are in Inter Bold, and the logo (the name, "pluribus") in
-   Merriweather Bold, a serif as Medium's is. */
+   Playfair Display SemiBold, a high-contrast serif of the kind Medium's wordmark is set in. */
 
 /* Geist, Vercel's typeface, free under the SIL Open Font License (fonts/OFL-Geist.txt). A variable
    font, every weight from 100 to 900 in one file, in the Latin subset only, which covers Albanian
@@ -31,14 +31,14 @@
                  U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Merriweather Bold, for the logo alone (.logo): Eben Sorkin's serif, free under the SIL Open Font
-   License (fonts/OFL-Merriweather.txt), from Fontsource 5.3.0, in the Latin subset: 48 KB, served
-   from /static/vendor/, cached for a year and preloaded by base.html. Georgia stands in until it
-   comes. */
+/* Playfair Display SemiBold, for the logo alone (.logo): Claus Eggers Sørensen's display serif,
+   thin hairlines on heavy stems, free under the SIL Open Font License (fonts/OFL-Playfair-
+   Display.txt), from Fontsource 5.3.0, in the Latin subset: 23 KB, served from /static/vendor/,
+   cached for a year and preloaded by base.html. Georgia stands in until it comes. */
 @font-face {
-  font-family: "Merriweather";
-  src: url("/static/vendor/fonts/merriweather-5.3.0-latin-700.woff2") format("woff2");
-  font-weight: 700;
+  font-family: "Playfair Display";
+  src: url("/static/vendor/fonts/playfair-display-5.3.0-latin-600.woff2") format("woff2");
+  font-weight: 600;
   font-style: normal;
   font-display: swap;
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
@@ -354,7 +354,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   padding: .65rem 1rem;
 }
 
-/* The logo: the name in lowercase in Merriweather Bold (above), the word alone, in a dark shade
+/* The logo: the name in lowercase in Playfair Display SemiBold (above; its hairlines would thin
+   out at this size in the medium weight), the word alone, in a dark shade
    of the page's colour, the one its section picks (the coral, Elektronikë's blue, Shtëpi /
    kopsht's olive, Automjete's burgundy; the section rules above set --button and --button-hover
    on the body, which the word takes from there): on the light theme the buttons' darker shade,
@@ -368,9 +369,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   display: inline-flex;
   align-items: center;
   color: var(--button-hover);
-  font-family: "Merriweather", Georgia, serif;
+  font-family: "Playfair Display", Georgia, serif;
   font-size: var(--text-2xl);
-  font-weight: var(--bold);
+  font-weight: var(--semibold);
   letter-spacing: -0.01em;
   line-height: 1;
   text-decoration: none;

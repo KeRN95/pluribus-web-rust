@@ -2646,7 +2646,7 @@ async fn the_site_is_called_pluribus(pool: PgPool) {
     assert!(home.contains(r#"<a class="logo" id="logo" href="/" data-turbo-permanent><span class="logo-word">pluribus</span></a>"#));
     assert!(!home.contains("thinking"));
     assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
-    for font in ["inter-5.3.0-latin-wght.woff2", "merriweather-5.3.0-latin-700.woff2"] {
+    for font in ["inter-5.3.0-latin-wght.woff2", "playfair-display-5.3.0-latin-600.woff2"] {
         assert!(home.contains(&format!(
             r#"<link rel="preload" href="/static/vendor/fonts/{font}" as="font" type="font/woff2" crossorigin>"#
         )));
