@@ -3567,7 +3567,7 @@ async fn elektronike_and_shtepi_kopsht_have_colours_of_their_own(pool: PgPool) {
     // the site is coral: what is picked or open, the buttons, their tints.
     // (The stylesheet comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    for (section, colour) in [("elektronike", "blue"), ("shtepi-dhe-kopsht", "olive"), ("automjete", "burgundy"), ("prona", "green")] {
+    for (section, colour) in [("elektronike", "blue"), ("shtepi-dhe-kopsht", "olive"), ("automjete", "burgundy"), ("prona", "green"), ("pune", "navy")] {
         let rule = &css[css.find(&format!(r#"body[data-section="{section}"]{{"#)).expect(section)..];
         let rule = &rule[..rule.find('}').unwrap()];
         for token in [
