@@ -236,6 +236,13 @@ fn card_copy_url(name: &str, ending: &str) -> String {
     format!("{name}{ending}?{}", media::CARD_COPIES_EDITION)
 }
 
+/// The mini copy's address, from a photo's card copy's: a thumbnail in the filmstrip under the
+/// photos on a listing's page (listing.html, Photo::thumb). None for a photo kept before WebP,
+/// whose card copy stands in.
+pub fn mini_url(card: &str) -> Option<String> {
+    card.strip_suffix(CARD_COPY).map(|name| card_copy_url(name, MINI_COPY))
+}
+
 /// A WebP photo's copies for a srcset, the mini one, the small one, the card's, the middle one and
 /// the full one, each with the side `by` names as its width. A copy no smaller than the full one,
 /// which a small photo's card copy is, is left out.

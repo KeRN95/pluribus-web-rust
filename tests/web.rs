@@ -3721,12 +3721,13 @@ async fn listings_get_photos(pool: PgPool) {
     let no = url.trim_start_matches("/listing/").split('-').next().unwrap().to_string();
 
     // The listing shows both, the first as its cover, and serves them: the full one 1600 px wide,
-    // as a JPEG for browsers without WebP and link previews.
+    // as a JPEG for browsers without WebP and link previews (the filmstrip's thumbnails under
+    // them, the mini copies, aside).
     let page = get(pool.clone(), &url).await.body;
     let photo_urls: Vec<&str> = page.match_indices(r#"<img src="/media/photos/"#).map(|(at, _)| {
         let start = at + r#"<img src=""#.len();
         &page[start..start + page[start..].find('"').unwrap()]
-    }).collect();
+    }).filter(|url| !url.ends_with("-mini.webp?2")).collect();
     assert_eq!(photo_urls.len(), 2, "{page}");
     assert!(photo_urls.iter().all(|url| url.ends_with(".jpg")), "{photo_urls:?}");
     assert!(page.contains(r#"width="1600" height="1067""#));
@@ -3760,10 +3761,17 @@ async fn listings_get_photos(pool: PgPool) {
     // Two make a strip to slide through, one at a time, as a big card's photos are
     // (slides_controller.js): the row scrolls, a dot for each photo, the first lit, the counter,
     // and the arrows, hidden until the controller comes.
-    assert!(page.contains(r#"<div class="gallery" data-controller="slides">"#));
+    assert!(page.contains(r#"<div class="listing-media" data-controller="slides">"#));
     assert!(page.contains(r#"data-slides-target="track" data-action="scroll->slides#update" tabindex="0" role="region" aria-label="Fotot e njoftimit""#));
     assert!(page.contains(r#"<div class="gallery-dots" data-slides-target="dots" aria-hidden="true"><span class="is-current"></span><span></span></div>"#));
     assert!(page.contains(r#"<span class="gallery-count" data-slides-target="count">1 / 2</span>"#));
+    // Under the photos, a filmstrip of them: each photo's mini copy in a square, the first marked
+    // as the one that shows, a tap on any going to its photo; and arrows to step the strip, hidden
+    // until the controller finds more thumbnails than fit.
+    assert!(page.contains(r#"<div class="thumb-strip" data-slides-target="thumbs" data-action="scroll->slides#scrolled">"#));
+    assert!(page.contains(&format!(r#"<button type="button" class="gallery-thumb is-current" aria-current="true" data-action="slides#pick" aria-label="Foto 1 nga 2"><img src="{big}-mini.webp?2" alt="" width="72" height="72" loading="lazy" decoding="async"></button>"#)), "{page}");
+    assert!(page.contains(&format!(r#"<button type="button" class="gallery-thumb" data-action="slides#pick" aria-label="Foto 2 nga 2"><img src="{small}-mini.webp?2""#)));
+    assert!(page.contains(r#"<button type="button" class="thumb-step thumb-next" data-slides-target="thumbsNext" data-action="slides#thumbsOn" aria-label="Fotot e tjera" hidden>"#));
     assert!(page.contains(r#"data-action="slides#previous" aria-label="Foto e mëparshme" hidden>"#));
     assert!(page.contains(r#"data-action="slides#next" aria-label="Foto tjetër" hidden>"#));
     assert!(page.contains(", foto 2 nga 2\""));
@@ -3831,7 +3839,7 @@ async fn listings_get_photos(pool: PgPool) {
     assert_eq!(page.matches(r#"<img src="/media/photos/"#).count(), 1);
     // One is just the photo: nothing to swipe or count.
     assert!(page.contains(r#"<div class="gallery">"#));
-    assert!(!page.contains(r#"<div class="gallery" data-controller"#) && !page.contains("gallery-count") && !page.contains("gallery-dots") && !page.contains(", foto 1 nga"));
+    assert!(!page.contains(r#"data-controller="slides""#) && !page.contains("gallery-thumbs") && !page.contains("gallery-count") && !page.contains("gallery-dots") && !page.contains(", foto 1 nga"));
     // The removed one's files are gone, every copy.
     let copies = ["-middle.webp", "-card.webp", "-small.webp", "-mini.webp", "-card.avif", "-small.avif", "-mini.avif"].map(|copy| format!("{big}{copy}"));
     for file in [photo_urls[0].to_string(), format!("{big}.webp")].into_iter().chain(copies) {

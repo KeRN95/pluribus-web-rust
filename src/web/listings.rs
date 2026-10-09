@@ -85,6 +85,12 @@ impl Photo {
     pub fn backdrop(&self) -> &str {
         self.placeholder.as_deref().unwrap_or(&self.card_url)
     }
+
+    /// Its thumbnail in the filmstrip under the photos (listing.html, .gallery-thumbs): the mini
+    /// copy of a photo kept as WebP, else its card-sized copy.
+    pub fn thumb(&self) -> String {
+        photos::mini_url(&self.card_url).unwrap_or_else(|| self.card_url.clone())
+    }
 }
 
 impl ListingCard {

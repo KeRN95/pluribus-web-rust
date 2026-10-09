@@ -8,7 +8,10 @@ import { Controller } from "@hotwired/stimulus";
 // ("2 / 5") says it too. The arrows step, round and round: the next from the last photo goes back
 // to the first, the previous from the first to the last; each shows only while the mouse is near
 // its edge of the photo (near-previous, near-next). A small card shows only its first photo, and
-// none of this.
+// none of this. A listing's page has a filmstrip of its photos under them too (listing.html,
+// .gallery-thumbs): each thumbnail goes to its photo, the one that shows is marked and kept in
+// view as the photos slide, and under a mouse an arrow at either end steps the strip by most of
+// its width, each there while the strip can go that way.
 
 // How long a step from one photo to another takes, in milliseconds.
 const STEP_MS = 200;
@@ -20,7 +23,7 @@ const FLICK = 0.3;
 const EDGE = 0.25;
 
 export default class extends Controller {
-  static targets = ["track", "dots", "count", "previous", "next"];
+  static targets = ["track", "dots", "count", "previous", "next", "thumbs", "thumbsPrevious", "thumbsNext"];
 
   connect() {
     const track = this.trackTarget;
@@ -37,10 +40,17 @@ export default class extends Controller {
     if (this.hasDotsTarget) this.listeners.push([this.dotsTarget, "click", (event) => this.pick(event)]);
     for (const [target, name, listener, options] of this.listeners) target.addEventListener(name, listener, options);
     this.update();
+    // The filmstrip's arrows follow its width, once it has one and as it changes (a page laid out
+    // before it shows has none yet).
+    if (this.hasThumbsTarget) {
+      this.watcher = new ResizeObserver(() => this.scrolled());
+      this.watcher.observe(this.thumbsTarget);
+    }
   }
 
   disconnect() {
     for (const [target, name, listener, options] of this.listeners ?? []) target.removeEventListener(name, listener, options);
+    this.watcher?.disconnect();
     cancelAnimationFrame(this.frame);
   }
 
@@ -52,10 +62,47 @@ export default class extends Controller {
     this.go((this.index + 1) % this.count);
   }
 
-  // A dot clicked: its photo.
+  // A dot, or a thumbnail in the filmstrip, clicked: its photo, by its place among its fellows.
   pick(event) {
-    const dot = event.target.closest("span");
-    if (dot) this.go([...this.dotsTarget.children].indexOf(dot));
+    const item = event.target.closest(".gallery-thumb, span");
+    if (item) this.go([...item.parentElement.children].indexOf(item));
+  }
+
+  // The filmstrip's arrows: most of its width back, or on, smoothly unless motion is unwanted.
+  thumbsBack() {
+    this.stepThumbs(-1);
+  }
+
+  thumbsOn() {
+    this.stepThumbs(1);
+  }
+
+  stepThumbs(way) {
+    const strip = this.thumbsTarget;
+    strip.scrollBy({ left: way * strip.clientWidth * 0.8, behavior: this.quick ? "auto" : "smooth" });
+  }
+
+  // The filmstrip scrolled, or its width changed: each arrow shows while the strip can go its way,
+  // so a strip whose thumbnails all fit has none.
+  scrolled() {
+    if (!this.hasThumbsTarget) return;
+    const strip = this.thumbsTarget;
+    this.thumbsPreviousTarget.hidden = strip.scrollLeft <= 1;
+    this.thumbsNextTarget.hidden = strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 1;
+  }
+
+  // The thumbnail of the photo that shows, kept in view: the strip slides just far enough, and
+  // the page itself not at all.
+  show(thumb) {
+    const strip = this.thumbsTarget;
+    const left = thumb.offsetLeft - strip.clientLeft;
+    const behavior = this.quick ? "auto" : "smooth";
+    if (left < strip.scrollLeft) strip.scrollTo({ left, behavior });
+    else if (left + thumb.offsetWidth > strip.scrollLeft + strip.clientWidth) strip.scrollTo({ left: left + thumb.offsetWidth - strip.clientWidth, behavior });
+  }
+
+  get quick() {
+    return matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
   // To a photo, quicker than the browser's own smooth scrolling: STEP_MS, slowing at the end, the
@@ -134,10 +181,11 @@ export default class extends Controller {
     this.dragged = false;
   }
 
-  // The mouse over the photo: the arrow of the edge it is near shows (page.css, listing.css).
+  // The mouse over the photo: the arrow of the edge it is near shows (page.css, listing.css). The
+  // photo's own box, not the controller's, which on a listing's page holds the filmstrip too.
   near(event) {
     if (event.pointerType !== "mouse" || !this.sliding) return;
-    const box = this.element.getBoundingClientRect();
+    const box = this.trackTarget.getBoundingClientRect();
     const zone = box.width * EDGE;
     this.element.classList.toggle("near-previous", event.clientX - box.left < zone);
     this.element.classList.toggle("near-next", box.right - event.clientX < zone);
@@ -147,12 +195,21 @@ export default class extends Controller {
     this.element.classList.remove("near-previous", "near-next");
   }
 
-  // Which photo shows, as the row scrolls: its dot lights up, and the counter says its number. The
-  // arrows, there at either end as they go round, come with the controller (the page has them
-  // hidden until it connects).
+  // Which photo shows, as the row scrolls: its dot lights up, its thumbnail in the filmstrip is
+  // marked and kept in view, and the counter says its number. The arrows, there at either end as
+  // they go round, come with the controller (the page has them hidden until it connects).
   update() {
     const index = this.index;
     if (this.hasDotsTarget) [...this.dotsTarget.children].forEach((dot, at) => dot.classList.toggle("is-current", at === index));
+    if (this.hasThumbsTarget) {
+      const thumbs = [...this.thumbsTarget.children];
+      thumbs.forEach((thumb, at) => {
+        thumb.classList.toggle("is-current", at === index);
+        if (at === index) thumb.setAttribute("aria-current", "true");
+        else thumb.removeAttribute("aria-current");
+      });
+      if (thumbs[index]) this.show(thumbs[index]);
+    }
     if (this.hasCountTarget) this.countTarget.textContent = `${index + 1} / ${this.count}`;
     this.previousTarget.hidden = false;
     this.nextTarget.hidden = false;
