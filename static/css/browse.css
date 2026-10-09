@@ -143,25 +143,25 @@
 
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 
-/* A filter picked, as a chip: marked as the page's own category pill is (the accent's tint, a
-   border of the accent, its words in it), small, its cross after its words. */
+/* A filter picked, as a chip: plain, in no colour, as the order's pill is (the surface, the menus'
+   hairline, its words in the text's colour), small, its cross after its words. */
 .filter-chip {
   display: inline-flex;
   align-items: center;
   gap: .35rem;
   padding: .3rem .55rem .3rem .8rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  border: 1px solid var(--menu-border);
   border-radius: 999px;
-  background: var(--badge);
-  color: var(--accent);
+  background: var(--surface);
+  color: var(--text);
   font-size: var(--text-sm);
   font-weight: var(--medium);
   text-decoration: none;
-  transition: border-color .15s;
+  transition: background-color .15s, border-color .15s;
 }
 .filter-chip svg { opacity: .65; }
 @media (hover: hover) {
-  .filter-chip:hover { border-color: var(--accent); }
+  .filter-chip:hover { border-color: var(--border-strong); background: var(--surface-muted); }
   .filter-chip:hover svg { opacity: 1; }
 }
 .clear-filters { padding: .3rem .4rem; color: var(--muted); font-size: var(--text-sm); }
@@ -185,7 +185,7 @@
   display: flex;
   align-items: center;
   gap: .55rem;
-  margin: 0 0 .5rem; /* as far over the count and the chips as the pills over it are from it */
+  margin: 0 0 1rem; /* the count and the chips a little apart under it, twice as far as the pills over it */
 }
 .map-card { display: contents; }
 .map-card-body,
@@ -397,19 +397,19 @@
   .heading-sort-button:hover { background: var(--badge); }
 }
 .results-heading .sort-options { font-family: var(--font); font-size: var(--text-md); font-weight: var(--regular); letter-spacing: normal; line-height: 1.55; }
-/* Under the row, how many the page found as a pill ("3k njoftime"), marked as the page's own
-   category pill is, small, then the filters picked, their chips (above) flowing on the same
-   lines; over "Më të klikuarat" and the listings' heading. */
+/* Under the row, a little apart from it, how many the page found as a pill ("3k njoftime"), plain
+   as the chips, its words quieter, then the filters picked, their chips (above) flowing on the
+   same lines; over "Më të klikuarat" and the listings' heading. */
 .results-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; }
 .results-meta > .active-filters { display: contents; }
 .results-meta > .result-count {
   display: inline-flex;
   align-items: center;
   padding: .3rem .8rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  border: 1px solid var(--menu-border);
   border-radius: 999px;
-  background: var(--badge);
-  color: var(--accent);
+  background: var(--surface);
+  color: var(--muted);
   font-size: var(--text-sm);
   font-weight: var(--medium);
   font-variant-numeric: tabular-nums;
