@@ -5,6 +5,21 @@
 /* Its path as far below the header as the welcome page's first line and a category page's path,
    as the page's sides are from the screen's (--gutter). */
 .listing { max-width: 760px; padding-top: var(--gutter); }
+/* Its parts one under another in a grid rather than the flow, so that on a phone the contact bar
+   can go to the page's foot and stay at the screen's bottom, and from 720 px up stand beside the
+   share and the report on one line (.contact-bar, .actions, below). A grid's margins don't
+   collapse: the sections' headings keep no margin over them, the sections taking it, and the
+   buttons under the price none under them, the line that follows taking it. */
+.listing { display: grid; grid-template-columns: minmax(0, 1fr); }
+.listing > * { min-width: 0; }
+.listing > :is(.listing-details, .listing-description) { margin-top: 1.75rem; }
+.listing > :is(.listing-details, .listing-description) > h2 { margin-top: 0; }
+@media (min-width: 720px) {
+  .listing { grid-template-columns: auto minmax(0, 1fr); }
+  .listing > * { grid-column: 1 / -1; }
+  .listing > .contact-bar { grid-column: 1; margin-right: .5rem; }
+  .listing > .contact-bar + .actions { grid-column: 2; align-self: center; }
+}
 /* Listings like it, under it: the browse pages' grid, as wide as the page, set apart by space
    alone. */
 .related { margin-top: 2.5rem; }
@@ -84,7 +99,7 @@
    reads well. */
 @media (min-width: 960px) {
   .listing { max-width: none; }
-  .listing > :is(.listing-header, .listing-contact, .listing-details, .listing-description) { max-width: 46rem; }
+  .listing > :is(.listing-header, .listing-details, .listing-description) { max-width: 46rem; }
   /* Across the page a photo's frame is wider than the photo, and no taller than most screens
      leave room for: the photo whole in the middle, its blurred copy filling the sides. */
   .listing-media .gallery-photo,
@@ -193,7 +208,7 @@
 .price-note { font-size: .5em; letter-spacing: normal; }
 /* Under the buttons, quietly, as links are: blocking the seller (safety.rs), for someone signed
    in; and once blocked, a line that says so. Reporting is a button among the others. */
-.listing-safety { display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; margin-top: .85rem; }
+.listing-safety { display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; margin-top: 1.25rem; }
 .listing-safety form { display: contents; }
 .quiet-action {
   display: inline-flex;
@@ -304,7 +319,10 @@
 .loan-message { color: var(--text); }
 
 .badge { margin-left: .4rem; padding: .2rem .65rem; border-radius: 999px; background: var(--badge); font-size: var(--text-sm); font-weight: var(--semibold); }
-.actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .9rem 0 1.25rem; }
+/* The share and the report, and a seller's own buttons, under the price: from 720 px up on the
+   contact bar's line, after it (the grid above), on a phone under the price alone, the bar being
+   at the screen's foot there. */
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .9rem 0 0; }
 
 /* Buttons as Claude's: a 10px corner, medium weight, the coral filled with white words, a press that
    sinks them a little; the secondary ones on the surface with a hairline, a darker one under the pointer. */
@@ -330,28 +348,33 @@
 .button.secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
 .button.secondary:hover { background: var(--surface-muted); border-color: var(--border-strong); }
 
-/* The listing's actions drawn like Claude's: pills, a press sinks them a little; the main one, the
-   seller's number, filled in the site's colour, the rest on the surface with the menus'
-   hairline. */
-.actions .button { border-radius: 999px; transition: background-color .15s, transform .1s; }
-.actions .button:active { transform: scale(.97); }
+/* The listing's actions drawn like Claude's: pills, a press sinks them a little; the share and the
+   report, and a seller's own buttons, on the surface with the menus' hairline. */
+.actions .button,
+.contact-bar .button { border-radius: 999px; transition: background-color .15s, border-color .15s, transform .1s; }
+.actions .button:active,
+.contact-bar .button:active { transform: scale(.97); }
 .actions .button.secondary { gap: .45rem; border-color: var(--menu-border); }
-/* The way to the seller's number, a phone (an envelope for an e-mail address), and to a message,
-   a speech bubble: pills a little taller than the circles beside them, half as wide again as they
-   are tall, marked as the site marks what is picked (a category page's own pill, the welcome
-   page's search): the coral's tint, a border of the coral and the icon in it, the border whole
-   under the pointer or a press. Once tapped, the number takes the phone's place, after the same
-   icon, marked alike, with a button beside it that copies it (copy_controller.js). The seller's
-   card at the foot has the two again, small circles marked the same (.seller-contact). */
-.reveal-button { justify-content: center; width: 4.65rem; height: 3.1rem; padding: 0; }
-.reveal-contact { gap: .45rem; }
-.actions .reveal-contact { height: 3.1rem; padding: 0 1.2rem 0 1.05rem; }
+/* How to reach the seller (listing.html, .contact-bar): the phone, "Shfaq numrin" (an envelope,
+   "Shfaq email-in", for a seller who signed in by e-mail), and a message, "Shkruaji shitësit", a
+   speech bubble: wide pills that say their names, a little taller than the circles beside them,
+   the way to the seller being what the page is for. The message is filled in the page's colour,
+   as the site's main buttons are (.button's own look), and the phone marked as the site marks
+   what is picked (a category page's own pill, the welcome page's search): the coral's tint, a
+   border of the coral and its icon and words in it, the border whole under the pointer or a
+   press. Once tapped, the number takes the phone's place, after the same icon, marked alike,
+   with a button beside it that copies it (copy_controller.js). From 720 px up the two stand
+   under the price on one line with the share and the report, before them; on a phone they are a
+   bar at the foot of the screen (below). */
+.contact-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .9rem; }
+.contact-bar form { display: contents; }
+.contact-bar .button { justify-content: center; gap: .5rem; height: 3.1rem; padding: 0 1.3rem 0 1.1rem; font-weight: var(--semibold); white-space: nowrap; }
+.contact-bar .button-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .button.reveal-button,
 .button.reveal-contact {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
   background: var(--badge);
   color: var(--accent);
-  transition: border-color .15s, transform .1s;
 }
 .button.reveal-button:active,
 .button.reveal-contact:active { border-color: var(--accent); }
@@ -360,18 +383,45 @@
   .button.reveal-contact:hover { border-color: var(--accent); background: var(--badge); }
 }
 .contact-icon { flex: none; }
-.contact-revealed { display: flex; gap: .5rem; }
-/* The copy and share buttons: an icon in a circle on the surface, with the menus' hairline, as
-   tall as the coral one; a check for a moment once they copy (copy_controller.js,
+.contact-revealed { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+/* The copy and share buttons: an icon in a circle on the surface, with the menus' hairline, a
+   little shorter than the pills; a check for a moment once they copy (copy_controller.js,
    share_controller.js). */
-.actions .button.icon-circle { justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; }
+.actions .button.icon-circle,
+.contact-bar .button.icon-circle { flex: none; justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; }
+/* Phones: the bar at the foot of the page (last in the grid, by order), which stays at the
+   screen's bottom while the listing scrolls (sticky) and settles after the description, so that
+   the way to the seller is at hand wherever the reader is, as the apps have it: from the screen's
+   edge to its edge, a hairline over it on the page's colour, clear of the phone's home bar; over
+   the page but under the sticky header and the message sheet (z-index 7). Each pill takes half of
+   it; once the number shows, it takes the room and the message keeps its icon alone. */
+@media (max-width: 719px) {
+  .contact-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 7;
+    order: 1;
+    margin: 1.5rem calc(-1 * var(--gutter)) 0;
+    padding: .6rem var(--gutter) calc(.6rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .contact-bar .button { flex: 1 1 0; padding: 0 .9rem; }
+  .contact-bar .contact-revealed { flex: 1 1 auto; }
+  .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
+  .contact-bar:has(.contact-revealed) .message-button { flex: none; width: 3.1rem; padding: 0; }
+  .contact-bar:has(.contact-revealed) .message-button .button-label { display: none; }
+  .contact-bar .button.icon-circle { flex: none; }
+}
 .icon-circle .icon-copied,
 .icon-circle.is-copied .icon-copy,
 .icon-circle.is-copied .icon-link { display: none; }
 .icon-circle.is-copied .icon-copied { display: block; color: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
-  .actions .button { transition: none; }
-  .actions .button:active { transform: none; }
+  .actions .button,
+  .contact-bar .button { transition: none; }
+  .actions .button:active,
+  .contact-bar .button:active { transform: none; }
 }
 
 /* The listing's details as pills, smaller than the category pills (the text a size down, 14px,

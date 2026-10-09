@@ -3235,7 +3235,10 @@ async fn a_signed_in_seller_posts_a_listing(pool: PgPool) {
     let page = get(pool.clone(), &url).await.body;
     assert!(page.contains("<h1>Samsung Galaxy S21, 128 GB</h1>"));
     assert!(page.contains("32\u{a0}000\u{a0}Lekë"));
-    assert!(page.contains(r#"<button type="submit" class="button reveal-button" aria-label="Shfaq numrin" title="Shfaq numrin"><svg class="contact-icon""#));
+    // A wide pill that says its name, in the contact bar under the price.
+    assert!(page.contains(r#"<aside class="contact-bar" aria-label="Kontakti">"#));
+    assert!(page.contains(r#"<button type="submit" class="button reveal-button"><svg class="contact-icon""#));
+    assert!(page.contains(r#"</svg><span class="button-label">Shfaq numrin</span></button>"#));
     let public_no = url.trim_start_matches("/listing/").split('-').next().unwrap();
     let reveal = post_form(pool.clone(), &format!("/listing/{public_no}/phone"), &[], None).await;
     assert!(reveal.body.contains("+355 69 111 2233"), "the seller's own number");
@@ -3310,7 +3313,7 @@ async fn sellers_who_sign_in_by_email_get_an_email_button(pool: PgPool) {
     let started = started();
     let posted = post_form(pool.clone(), "/shto", &listing_fields(("", ""), &started), Some(&besa)).await;
     let url = posted.location.unwrap();
-    assert!(get(pool.clone(), &url).await.body.contains(r#"aria-label="Shfaq email-in""#));
+    assert!(get(pool.clone(), &url).await.body.contains(r#"</svg><span class="button-label">Shfaq email-in</span></button>"#));
     let public_no = url.trim_start_matches("/listing/").split('-').next().unwrap();
     let reveal = post_form(pool, &format!("/listing/{public_no}/phone"), &[], None).await;
     assert!(reveal.body.contains(r#"href="mailto:besa@example.com"><svg class="contact-icon""#));
@@ -4541,10 +4544,10 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // A private seller: Ana, with the five fixture listings she sells.
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
-    // The category above the photo; the title and the price under it; then the buttons, the share
-    // one a link in a circle; then the details and the description; then her initial, her name,
-    // since when and how many listings, leading to her profile, with the buttons again, small, at
-    // the other end of her line; then her other listings.
+    // The category above the photo; the title and the price under it; then the contact bar, the
+    // phone and the message, wide pills; then the share, a link in a circle, and the report; then
+    // the details and the description; then her initial, her name, since when and how many
+    // listings, leading to her profile; then her other listings.
     let order = positions(&page, &[
         r#"<nav class="category-path listing-path""#,
         r#"<div class="gallery">"#,
@@ -4552,11 +4555,11 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur · "#,
         r#"<p class="listing-price">"#,
-        r#"<aside class="listing-contact" aria-label="Kontakti">"#,
-        r#"<div class="actions">"#,
+        r#"<aside class="contact-bar" aria-label="Kontakti">"#,
         r#"<form id="phone-reveal" method="post""#,
-        r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
         "</aside>",
+        r#"<div class="actions">"#,
+        r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
         "<h2>Detajet</h2>",
         "<h2>Përshkrimi</h2>",
         r#"<section class="seller-section" aria-label="Shitësi">"#,
@@ -5275,8 +5278,10 @@ async fn a_buyer_writes_to_a_seller_who_answers(pool: PgPool) {
     // in the listing's sheet, in its frame; signed out, the button leads to the page, which asks
     // to sign in first, and there is no sheet.
     let theirs = get_with_cookie(pool.clone(), listing, &buyer).await.body;
-    let to_sheet = r#"href="/listing/1001/mesazh" aria-label="Shkruaji shitësit" title="Shkruaji shitësit" data-turbo-frame="conversation" data-turbo-prefetch="false" data-action="message-sheet#open">"#;
+    let to_sheet = r#"<a class="button message-button" href="/listing/1001/mesazh" data-turbo-frame="conversation" data-turbo-prefetch="false" data-action="message-sheet#open">"#;
     assert_eq!(theirs.matches(to_sheet).count(), 1, "{theirs}");
+    // A wide pill that says its name, beside the phone's in the contact bar.
+    assert!(theirs.contains(r#"<span class="button-label">Shkruaji shitësit</span></a>"#));
     assert!(theirs.contains(r#"<div class="message-sheet" id="message-sheet" role="dialog" aria-modal="true""#));
     assert!(theirs.contains(r#"<turbo-frame id="conversation" data-message-sheet-target="frame""#));
     let anyone = get(pool.clone(), listing).await.body;
