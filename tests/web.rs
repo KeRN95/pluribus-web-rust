@@ -2972,6 +2972,12 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     // comments, no lines.
     assert_eq!(body.matches(r#"<link rel="stylesheet""#).count(), 1);
     assert!(body.contains(&format!(r#"<link rel="stylesheet" href="/static/css/site.css?v={version}" data-turbo-track="reload">"#)));
+    // Named in a Link header too, to preload: Cloudflare sends it as Early Hints, before the page.
+    let page = get(pool.clone(), "/").await;
+    assert_eq!(
+        page.headers.get("link").and_then(|value| value.to_str().ok()),
+        Some(format!("</static/css/site.css?v={version}>; rel=preload; as=style").as_str())
+    );
     let site = get(pool.clone(), &format!("/static/css/site.css?v={version}")).await;
     assert_eq!((site.status, site.content_type.as_deref()), (StatusCode::OK, Some("text/css; charset=utf-8")));
     assert!(!site.body.contains("/*") && !site.body.contains('\n'));

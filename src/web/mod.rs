@@ -553,18 +553,38 @@ impl IntoResponse for AppError {
 pub type Result<T, E = AppError> = std::result::Result<T, E>;
 
 /// Renders an Askama template as an HTML response; a whole page (base.html) with the modules it
-/// uses preloaded in its head (`module_preloads`). Every page says it may differ with the request's
-/// `Turbo-Frame` (Vary): the infinite scroll's next page answers a frame's request with the frame
-/// alone and any other with the whole page, at the same address (`is_next_page_request`), so a cache
-/// must keep the two apart, or it could give the frame to a visitor or a search engine asking for
-/// the page.
+/// uses preloaded in its head (`module_preloads`), and its stylesheet named in a `Link` header
+/// (`stylesheet_link`). Every page says it may differ with the request's `Turbo-Frame` (Vary):
+/// the infinite scroll's next page answers a frame's request with the frame alone and any other
+/// with the whole page, at the same address (`is_next_page_request`), so a cache must keep the two
+/// apart, or it could give the frame to a visitor or a search engine asking for the page.
 pub fn render(template: impl Template) -> Result<Response> {
     let mut html = template.render()?;
-    if let Some(at) = html.find(MODULES_HERE) {
+    let whole_page = html.find(MODULES_HERE);
+    if let Some(at) = whole_page {
         let preloads = module_preloads(&html);
         html.replace_range(at..at + MODULES_HERE.len(), &preloads);
     }
-    Ok(([(header::VARY, HeaderValue::from_static("Turbo-Frame"))], Html(html)).into_response())
+    let mut response = ([(header::VARY, HeaderValue::from_static("Turbo-Frame"))], Html(html)).into_response();
+    if whole_page.is_some() {
+        response.headers_mut().insert(header::LINK, stylesheet_link().clone());
+    }
+    Ok(response)
+}
+
+/// A whole page's `Link` header: its stylesheet (site_css) to preload. A page shows nothing until
+/// its stylesheet has come, and the browser only learns of it once it reads the page's head, a
+/// second round trip after the page's own (Lighthouse's "render-blocking request", 130 ms of its
+/// estimate through the tunnel). Cloudflare, in front of a domain of the site's own, turns this
+/// header into a 103 Early Hints answer, sent before the origin has built the page, so the browser
+/// fetches the stylesheet meanwhile; browsers also start a preload as the final headers arrive,
+/// before the body. Quick tunnels (trycloudflare.com) pass it on as a header alone.
+fn stylesheet_link() -> &'static HeaderValue {
+    static LINK: OnceLock<HeaderValue> = OnceLock::new();
+    LINK.get_or_init(|| {
+        HeaderValue::from_str(&format!("</static/css/site.css?v={}>; rel=preload; as=style", asset_version()))
+            .expect("a fingerprint is hexadecimal")
+    })
 }
 
 /// Renders a Turbo Stream: instructions Turbo applies to the page that made the request.
