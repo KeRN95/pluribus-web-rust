@@ -675,7 +675,7 @@ pub struct Detail {
     pub named: bool,
     pub multi: bool,
     /// One of the category's key facts, which its cards show too (show_in_card; a property's
-    /// zone as well): its icon lit in the accent among the details.
+    /// zone as well): its icon lit among the details, in a small round pill of its own.
     pub key: bool,
 }
 

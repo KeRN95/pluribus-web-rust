@@ -60,7 +60,7 @@ pub struct AttributeValue {
     pub shown: Vec<String>,
     pub multi: bool,
     /// One of the category's key facts: shown on its cards too (show_in_card), and its icon lit
-    /// among the listing's details.
+    /// among the listing's details, in a small round pill of its own.
     pub key: bool,
 }
 

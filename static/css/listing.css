@@ -390,9 +390,11 @@
 /* The listing's details as pills, smaller than the category pills (the text a size down, 14px,
    their icons 16px), the menus' hairline on the surface, each as wide as what it says, one after
    another: a detail's icon before its value, or its name, quiet, before it; a car's options a
-   pill each. The category's key facts, those its cards show too (.is-key), have their icon lit in
-   the accent, the pill itself as the others. The groups (a name and its values) leave their
-   pills to the line (display: contents). */
+   pill each. The category's key facts, those its cards show too (.is-key), have their icon lit as
+   a picked pill is, in a small round one of its own: the accent's tint, a border of the accent,
+   the icon in it (its padding taken back by its margins, so that the pill stays as tall as the
+   others, the circle a little into the pill's left room); the pill itself as the others. The
+   groups (a name and its values) leave their pills to the line (display: contents). */
 .attributes { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0; }
 .attribute-group { display: contents; }
 .attribute {
@@ -410,7 +412,15 @@
 }
 .attribute-icon { flex: none; width: 16px; height: 16px; color: var(--muted); }
 .attribute-label { color: var(--muted); font-weight: normal; }
-.attribute.is-key .attribute-icon { color: var(--accent); }
+.attribute.is-key .attribute-icon {
+  box-sizing: content-box;
+  margin: -5px -1px -5px -4px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  border-radius: 50%;
+  background: var(--badge);
+  color: var(--accent);
+}
 /* A phone: smaller still (13px, their icons 15px), so more of them share a line. */
 @media (max-width: 719px) {
   .attributes { gap: .4rem; }
