@@ -294,7 +294,8 @@ html.sheet-open { overflow: hidden; }
     width: 25rem;
     height: var(--height, 32rem);
     border: 1px solid var(--menu-border);
-    border-radius: var(--radius);
+    /* As round as the box to write in at its foot (.composer textarea). */
+    border-radius: 22px;
     background: var(--bg);
     box-shadow: var(--menu-shadow);
     transform-origin: top left;
