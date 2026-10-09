@@ -383,7 +383,7 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         let trial = std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true");
         assert_eq!(page.contains(r#"<details class="type-menu" data-controller="dropdown type-trial""#), trial);
         let bar = &page[page.find(r#"<header class="site-header">"#).unwrap()..page.find("</header>").unwrap()];
-        assert_eq!(bar.matches("icon-button").count(), 1, "{bar}");
+        assert_eq!(bar.matches("icon-button").count(), 1 + usize::from(trial), "{bar}");
         assert!(bar.contains(r#"<a class="icon-button account-button" href="/llogaria""#));
     }
     assert!(!cars.contains("circle-shortcut"));
@@ -4376,7 +4376,13 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     ];
     for (uri, selects) in pages {
         let page = get_with_cookie(pool.clone(), uri, &ana).await.body;
-        let found: Vec<usize> = page.match_indices("<select").map(|(at, _)| at).collect();
+        // The typeface panel's two lists (TYPE_TRIAL, base.html) are the browser's own: not the
+        // page's forms'.
+        let found: Vec<usize> = page
+            .match_indices("<select")
+            .map(|(at, _)| at)
+            .filter(|at| !page[*at..*at + page[*at..].find('>').unwrap()].contains(r#"class="type-font""#))
+            .collect();
         assert_eq!(found.len(), selects, "{uri}");
         for at in found {
             let tag = &page[at..at + page[at..].find('>').unwrap()];
@@ -4595,7 +4601,6 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
         r#"<div class="category-path">"#,
         r#"<a class="shortcut small category-up" href="/c/automjete">"#,
         r#"<summary class="shortcut small is-selected" aria-label="Makina: ndrysho kategorinë" aria-current="page">"#,
-        r#"</details>"#,
         r#"<div class="category-level">"#,
         r#"<a class="shortcut small" href="/c/motocikleta"><svg class="shortcut-icon""#,
         r#"<a class="shortcut small" href="/c/pjese-dhe-aksesore"><svg class="shortcut-icon""#,
