@@ -291,6 +291,15 @@
 @media (prefers-reduced-motion: reduce) {
   .shortcut:active { transform: none; }
 }
+/* Phones: the welcome page's categories smaller, so that three stand on a line where two did and
+   the listings come sooner: less room round the name, the name and its icon a touch smaller, the
+   gaps closer. Narrow phones, and phones with their text set larger, gain the most. A category
+   page's pills keep their size (browse.css), which its buttons follow. */
+@media (max-width: 719px) {
+  .welcome .shortcuts { gap: .45rem; }
+  .welcome .shortcut { gap: .4rem; padding: .45rem .85rem .45rem .7rem; font-size: .9375rem; }
+  .welcome .shortcut-icon { width: 18px; height: 18px; }
+}
 
 @media (min-width: 720px) {
   .welcome { padding-top: 2.75rem; }
