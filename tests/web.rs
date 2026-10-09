@@ -3486,6 +3486,18 @@ async fn elektronike_and_shtepi_kopsht_have_colours_of_their_own(pool: PgPool) {
     assert!(kept.contains("fill:color-mix(in srgb,var(--red) 65%,#fff)") && kept.contains("stroke:var(--red)"), "{kept}");
 }
 
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn a_short_descriptions_fold_button_stays_hidden(pool: PgPool) {
+    // The button that unfolds a long description waits with the hidden attribute until the
+    // controller finds the description long (fold_controller.js). Its own display rule would
+    // override the attribute and show it under a two-line description too, so the stylesheet
+    // hides it again by the attribute.
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let shown = css.find(".description-more{").expect("the button's rule");
+    let hidden = css.find(".description-more[hidden]{display:none;}").expect("the hidden rule");
+    assert!(shown < hidden, "the hidden rule comes after the button's, to win");
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     // Automjete lists its four subcategories, each with its icon; the kinds of parts sit under the
