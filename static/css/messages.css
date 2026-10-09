@@ -139,6 +139,8 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
   background: var(--input);
   color: var(--text);
   font: inherit;
+  /* 16px at least, or an iPhone zooms the page into the box as it takes the focus. */
+  font-size: max(16px, var(--text-md));
   line-height: 1.4;
   resize: none;
 }
