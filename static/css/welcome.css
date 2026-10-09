@@ -326,18 +326,16 @@
 
 /* The round buttons among the categories' pills (home.html), as tall as they are (--pill): first
    the search's, and after the pills the one that posts a listing, the listings kept, the
-   conversations and the theme, which the other pages have in their top bar (base.css). All but
-   the conversations' are marked as the site marks what is picked or open (a category page's own
-   pill, an open menu's button): a tint of their colour, a border of it and their icon in it, the
-   border whole under the pointer or a press. Each has its colour (--tone) and its tint
-   (--tone-bg), as listing.css's price bubbles have: the search the coral (--accent, --badge), the
-   plus Claude's blue (--blue, --blue-bg), the listings kept a red as deep (--red), and the theme
-   the blue under its moon, on the light theme, and a yellow under its sun, on the dark (--yellow).
-   The conversations' stays plain: the pills' hairline on the surface, its bubble in the text's
-   colour, the warm shade under the pointer or a press. Their icons are the pills' size. On a
-   phone a finger's target is bigger than the button, as a pill's is (::after, from the gaps). The
-   search opens its box over the first line, the page dimmed under it (.welcome-scrim), as the
-   browse row's does. */
+   conversations and the theme, which the other pages have in their top bar (base.css). Each is
+   marked as the site marks what is picked or open (a category page's own pill, an open menu's
+   button): a tint of its colour, a border of it and its icon in it, the border whole under the
+   pointer or a press. Each has its colour (--tone) and its tint (--tone-bg), as listing.css's
+   price bubbles have: the search the coral (--accent, --badge), the plus Claude's blue (--blue,
+   --blue-bg), the listings kept a red as deep (--red), the conversations a green (--green), and
+   the theme the blue under its moon, on the light theme, and a yellow under its sun, on the dark
+   (--yellow). Their icons are the pills' size. On a phone a finger's target is bigger than the
+   button, as a pill's is (::after, from the gaps). The search opens its box over the first line,
+   the page dimmed under it (.welcome-scrim), as the browse row's does. */
 .circle-shortcut {
   position: relative;
   display: flex;
@@ -347,10 +345,10 @@
   width: var(--pill);
   height: var(--pill);
   padding: 0;
-  border: 1px solid var(--menu-border);
+  border: 1px solid color-mix(in srgb, var(--tone) 60%, transparent);
   border-radius: 50%;
-  background: var(--surface);
-  color: var(--text);
+  background: var(--tone-bg);
+  color: var(--tone);
   font: inherit;
   text-decoration: none;
   cursor: pointer;
@@ -361,23 +359,18 @@
 .search-shortcut { --tone: var(--accent); --tone-bg: var(--badge); }
 .plus-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
 .saved-shortcut { --tone: var(--red); --tone-bg: var(--red-bg); }
+.inbox-shortcut { --tone: var(--green); --tone-bg: var(--green-bg); }
 .theme-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
 :root[data-theme="dark"] .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
 }
-:is(.search-shortcut, .plus-shortcut, .saved-shortcut, .theme-shortcut) {
-  border-color: color-mix(in srgb, var(--tone) 60%, transparent);
-  background: var(--tone-bg);
-  color: var(--tone);
-}
-.circle-shortcut:active { transform: scale(.94); }
-:is(.search-shortcut, .plus-shortcut, .saved-shortcut, .theme-shortcut):active { border-color: var(--tone); }
-.inbox-shortcut:active { background: var(--surface-muted); }
+.circle-shortcut:active { border-color: var(--tone); transform: scale(.94); }
 @media (hover: hover) {
-  :is(.search-shortcut, .plus-shortcut, .saved-shortcut, .theme-shortcut):hover { border-color: var(--tone); }
-  .inbox-shortcut:hover { background: var(--surface-muted); }
+  .circle-shortcut:hover { border-color: var(--tone); }
 }
+/* The conversations' count of those unread (messages.css), ringed in the button's tint. */
+.inbox-shortcut .inbox-count { box-shadow: 0 0 0 2px var(--tone-bg); }
 /* The listings kept: a dot in the buttons' coral at the heart's top right while some dropped their
    price unseen, as the top bar's has it (base.css; ::before, as a phone's target is ::after),
    ringed in the button's tint. */
