@@ -43,7 +43,9 @@
     (data-section, the block section): Elektronikë's are in Claude's blue and Shtëpi / kopsht's in
     its olive where the rest of the site is coral (base.css). -#}
 <body{% block section %}{% endblock %}>
-  <header class="site-header">
+  {#- The header keeps to the screen's top as the page scrolls, out of the way while the page
+      scrolls down and back as it scrolls up (base.css, header_controller.js). -#}
+  <header class="site-header" data-controller="header" data-action="turbo:before-cache@document->header#show">
     <div class="header-inner">
       {#- The search is the welcome page's pill, and on the browse pages the round button before
           the filters. -#}

@@ -275,7 +275,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 .turbo-progress-bar { background: var(--accent); }
 
-/* Header */
+/* Header: it keeps to the screen's top as the page scrolls, and slides up out of sight while the
+   page scrolls down, back as it scrolls up (header_controller.js, is-hidden): by a transform, so
+   the page under it never shifts, and it keeps its place at the page's top. */
 
 .site-header {
   position: sticky;
@@ -284,6 +286,11 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
+  transition: transform .2s ease-out;
+}
+.site-header.is-hidden { transform: translateY(-100%); }
+@media (prefers-reduced-motion: reduce) {
+  .site-header { transition: none; }
 }
 
 .header-inner {
