@@ -113,6 +113,7 @@ pub fn router(state: AppState) -> Router {
         // Where browsers and apps look for a site's icon without asking the page (base.html names
         // it, with the SVG, the home screens' and the manifest's).
         .route_service("/favicon.ico", ServeFile::new("static/img/favicon.ico"))
+        .route("/static/css/site.css", get(site_css))
         .nest_service("/static", ServeDir::new("static"))
         .fallback(not_found)
         .layer(middleware::from_fn(same_site_posts))
@@ -223,11 +224,67 @@ fn content_security_policy() -> &'static HeaderValue {
 /// asking again.
 const KEEP: &str = "public, max-age=31536000, immutable";
 
-/// The site's stylesheets in static/css/, in the order base.html loads them, which the cascade
-/// follows: base.css (the colours, the type, the header), page.css (the cards, form fields),
-/// welcome.css, browse.css, map.css, posting.css, listing.css and messages.css, each its part of
-/// the site.
+/// The site's stylesheets in static/css/, in the order pages get them (site_css), which the
+/// cascade follows: base.css (the colours, the type, the header), page.css (the cards, form
+/// fields), welcome.css, browse.css, map.css, posting.css, listing.css and messages.css, each its
+/// part of the site.
 pub const STYLESHEETS: [&str; 8] = ["base", "page", "welcome", "browse", "map", "posting", "listing", "messages"];
+
+/// /static/css/site.css, the only stylesheet pages load (base.html): STYLESHEETS one after the
+/// other, in their order, without their comments, which are half their bytes (38 KB gzipped with
+/// them, 18 without). A page waits for its stylesheets before it shows anything, and one request
+/// is quicker than eight: Lighthouse counted 300 ms for the eight through the tunnel. Read from
+/// disk each time it is asked for, as the files themselves are, so that a change shows at once;
+/// at the fingerprinted address browsers keep it for good (cache_headers).
+async fn site_css() -> Response {
+    let mut css = String::new();
+    for sheet in STYLESHEETS {
+        match tokio::fs::read_to_string(format!("static/css/{sheet}.css")).await {
+            Ok(text) => css.push_str(&without_comments(&text)),
+            Err(error) => tracing::error!(%error, sheet, "a stylesheet could not be read"),
+        }
+    }
+    ([(header::CONTENT_TYPE, "text/css; charset=utf-8")], css).into_response()
+}
+
+/// CSS without its comments, and without the lines they leave empty. What is in quotes stays as it
+/// is. The site's comments stand on lines of their own or end them, never between two values,
+/// where taking one out would join them.
+fn without_comments(css: &str) -> String {
+    let mut out = String::with_capacity(css.len());
+    let mut chars = css.chars().peekable();
+    let mut quote = None;
+    while let Some(c) = chars.next() {
+        match quote {
+            Some(open) => {
+                out.push(c);
+                if c == '\\' {
+                    out.extend(chars.next());
+                } else if c == open {
+                    quote = None;
+                }
+            }
+            None if c == '"' || c == '\'' => {
+                quote = Some(c);
+                out.push(c);
+            }
+            None if c == '/' && chars.peek() == Some(&'*') => {
+                chars.next();
+                let mut last = None;
+                for c in chars.by_ref() {
+                    if last == Some('*') && c == '/' {
+                        break;
+                    }
+                    last = Some(c);
+                }
+            }
+            None => out.push(c),
+        }
+    }
+    let mut lines: Vec<&str> = out.lines().map(str::trim_end).filter(|line| !line.is_empty()).collect();
+    lines.push("");
+    lines.join("\n")
+}
 
 /// A fingerprint of the site's own CSS and JavaScript, which base.html adds to their URLs. Turbo
 /// keeps the stylesheet and scripts of the first page a visitor opens while they move around the
@@ -453,4 +510,19 @@ pub async fn not_found() -> Result<Response> {
 async fn health(State(state): State<AppState>) -> Result<&'static str> {
     db::ping(&state.db).await?;
     Ok("ok")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::without_comments;
+
+    #[test]
+    fn the_stylesheet_goes_without_its_comments() {
+        let css = "/* The page. */\n.a { color: red; } /* red */\n\n/* Two\n   lines. */\n.b::before { content: \"/* kept */\"; }\n\
+                   .c { background: url('a/*b.svg'); }\n/**/.d {}\n.e { content: \"\\\"/*\"; }\n";
+        assert_eq!(
+            without_comments(css),
+            ".a { color: red; }\n.b::before { content: \"/* kept */\"; }\n.c { background: url('a/*b.svg'); }\n.d {}\n.e { content: \"\\\"/*\"; }\n"
+        );
+    }
 }

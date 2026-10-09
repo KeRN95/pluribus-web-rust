@@ -477,6 +477,11 @@ async fn the_welcome_page_has_the_newest_listings_in_a_row_that_follows_new_ones
     // copies the browser picks for their photos follow.
     assert!(row.contains(&format!(r#"sizes="{ROW_SIZES}""#)) && !row.contains(SMALL_SIZES), "{row}");
     assert!(section(&body, "latest-heading").contains(&format!(r#"sizes="{SMALL_SIZES}""#)));
+    // With no "Më të klikuarat" over it, its first photo comes before anything else on the page:
+    // on a phone, the biggest thing on the first screen.
+    assert_eq!(body.matches(r#"fetchpriority="high""#).count(), 1);
+    let first = &row[row.find(r#"<article class="card""#).unwrap()..];
+    assert!(first[..first.find("</article>").unwrap()].contains(r#"fetchpriority="high""#), "{row}");
     // The row follows the listings that come after its newest.
     let since = newest_cursor(&pool).await;
     assert!(row.contains(&format!(r#"data-cursor="{since}""#)), "{row}");
@@ -2871,8 +2876,10 @@ async fn static_files_have_cache_headers(pool: PgPool) {
     let kept = "public, max-age=31536000, immutable";
     for (uri, policy) in [
         (format!("/static/css/base.css?v={version}"), kept),
+        (format!("/static/css/site.css?v={version}"), kept),
         (format!("/static/js/controllers/heart_controller.js?v={version}"), kept),
         ("/static/css/base.css?v=00000000".to_string(), "no-cache"),
+        ("/static/css/site.css".to_string(), "no-cache"),
     ] {
         let response = app(pool.clone()).oneshot(Request::get(uri.as_str()).body(Body::empty()).unwrap()).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK, "{uri}");
@@ -2905,12 +2912,20 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     let version = marketplace::web::asset_version();
     assert_eq!(version.len(), 8);
     let body = get(pool.clone(), "/").await.body;
-    // The stylesheets in their order, which the cascade follows.
+    // One stylesheet, the site's eight in their order, which the cascade follows, without their
+    // comments.
+    assert_eq!(body.matches(r#"<link rel="stylesheet""#).count(), 1);
+    assert!(body.contains(&format!(r#"<link rel="stylesheet" href="/static/css/site.css?v={version}" data-turbo-track="reload">"#)));
+    let site = get(pool.clone(), &format!("/static/css/site.css?v={version}")).await;
+    assert_eq!((site.status, site.content_type.as_deref()), (StatusCode::OK, Some("text/css; charset=utf-8")));
+    assert!(!site.body.contains("/*"));
     let sheets: Vec<usize> = marketplace::web::STYLESHEETS
         .iter()
         .map(|sheet| {
-            body.find(&format!(r#"<link rel="stylesheet" href="/static/css/{sheet}.css?v={version}" data-turbo-track="reload">"#))
-                .unwrap_or_else(|| panic!("{sheet}"))
+            let css = std::fs::read_to_string(format!("static/css/{sheet}.css")).unwrap();
+            let first = css.lines().find(|line| line.contains('{') && !line.starts_with(['/', '*', ' '])).unwrap();
+            let first = first.split("/*").next().unwrap().trim_end();
+            site.body.find(first).unwrap_or_else(|| panic!("{sheet}: {first}"))
         })
         .collect();
     assert!(sheets.is_sorted(), "{sheets:?}");
@@ -4719,8 +4734,12 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     // The same row of the same cards as "Sapo u shtuan" under it (card_row.html), its cards' ids
     // its own; the cards of the grid's, small, those of the browse pages.
     assert!(row.contains(r#"<div class="card-row"><article class="card" id="most-viewed-1002">"#), "{row}");
-    // Two cards are as wide as a column of the grid, and their photos are fetched for it.
+    // Two cards are as wide as a column of the grid, and their photos are fetched for it; the
+    // first one's before anything else on the page.
     assert!(row.contains(&format!(r#"sizes="{SMALL_SIZES}""#)), "{row}");
+    assert_eq!(home.matches(r#"fetchpriority="high""#).count(), 1);
+    let first = &row[row.find(r#"<article class="card""#).unwrap()..];
+    assert!(first[..first.find("</article>").unwrap()].contains(r#"fetchpriority="high""#), "{row}");
     let newest = section(&home, "newest-heading");
     assert!(newest.contains(r#"<div class="card-row" id="newest-strip""#), "{newest}");
     for cards in [row, newest] {

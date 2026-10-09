@@ -125,7 +125,7 @@ pub async fn page(State(state): State<AppState>, headers: HeaderMap) -> Result<R
         }
         None => (false, Vec::new(), Vec::new()),
     };
-    render(SavedPage { signed_in, drops, page: ListingPage { cards, next: None, layout: Default::default(), eager: 4, card_ids: LISTING_IDS } })
+    render(SavedPage { signed_in, drops, page: ListingPage { cards, next: None, layout: Default::default(), eager: 4, card_ids: LISTING_IDS, lead: false } })
 }
 
 #[derive(Deserialize)]

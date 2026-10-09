@@ -44,6 +44,10 @@ pub struct ListingPage {
     /// page's results (card_row.html) the row's own word (ROW_IDS), so that a listing in both is
     /// two cards, each with an id of its own.
     pub card_ids: &'static str,
+    /// Whether its first photo is the page's first, which on a phone is the biggest thing on the
+    /// first screen (what Lighthouse times as its largest contentful paint): the browser fetches
+    /// it before the others (fetchpriority, listing_card.html).
+    pub lead: bool,
 }
 
 /// What the cards of a page's results, or of a grid, start their ids with.
@@ -165,19 +169,25 @@ impl ListingPage {
             let cursor = Cursor::after(sort, last);
             NextPage { frame_id: frame_id(&cursor), url: next_url(&cursor.encode()) }
         });
-        Self { cards: rows, next, layout: Cards::Small, eager: 4, card_ids: LISTING_IDS }
+        Self { cards: rows, next, layout: Cards::Small, eager: 4, card_ids: LISTING_IDS, lead: false }
     }
 
     /// The listings like one, under its page (db::related_listings): small, none of them loaded
     /// before they come near the screen, as they come after the listing.
     pub fn related(cards: Vec<ListingCard>) -> Self {
-        Self { cards, next: None, layout: Cards::Small, eager: 0, card_ids: LISTING_IDS }
+        Self { cards, next: None, layout: Cards::Small, eager: 0, card_ids: LISTING_IDS, lead: false }
     }
 
     /// A row of small cards that slides sideways (card_row.html), its cards' ids starting with
     /// `card_ids` (NEWEST_IDS...): the first `eager` load their photo straight away.
     pub fn row(cards: Vec<ListingCard>, card_ids: &'static str, eager: usize) -> Self {
-        Self { cards, next: None, layout: Cards::Small, eager, card_ids }
+        Self { cards, next: None, layout: Cards::Small, eager, card_ids, lead: false }
+    }
+
+    /// The page's first cards, whose first photo the browser fetches first (lead).
+    fn leading(mut self) -> Self {
+        self.lead = true;
+        self
     }
 
     /// The welcome page's row of the newest listings, whose cards say where they stand in the
@@ -283,10 +293,13 @@ pub async fn home(
         })
         .collect();
     let page = ListingPage::new(rows, Sort::Newest, next_url);
-    // Both rows load their first two photos straight away: they are on the first screen.
+    // Both rows load their first two photos straight away: they are on the first screen. The first
+    // row's first photo comes before anything else (ListingPage::lead): "Më të klikuarat", or
+    // without it the newest.
+    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::row(most_viewed, MOST_VIEWED_IDS, 2).leading());
     let newest = ListingPage::row(page.cards.iter().take(newest::STRIP).cloned().collect(), NEWEST_IDS, 2);
+    let newest = if most_viewed.is_none() { newest.leading() } else { newest };
     let since = page.cards.first().map(ListingCard::newest_cursor);
-    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::row(most_viewed, MOST_VIEWED_IDS, 2));
     let origin = seo::origin(&headers);
     let meta = PageMeta::new(&origin, "Pluribus: njoftime në gjithë Shqipërinë", seo::SITE_DESCRIPTION, format!("{origin}/"));
     render(HomePage { shortcuts, page, newest, since, most_viewed, meta })
@@ -701,7 +714,10 @@ async fn browse(
         },
     )?;
     safety::without_hidden(&mut most_viewed, &filter.hidden_accounts);
-    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::row(most_viewed, MOST_VIEWED_IDS, 0));
+    // "Më të klikuarat" comes before the results, on the first screen: its first two photos load
+    // straight away, the first before anything else (ListingPage::lead); without it, the results'
+    // first does, but on the map page, whose map comes first.
+    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::row(most_viewed, MOST_VIEWED_IDS, 2).leading());
     // Counted among at most COUNT_LIMIT + 1 listings, as the count is: past that, numbers would
     // mislead, and the names go alone.
     let counted = count <= db::COUNT_LIMIT;
@@ -721,6 +737,7 @@ async fn browse(
     let count = format::short_listing_count(count, db::COUNT_LIMIT);
     mark_city(&mut rows);
     let page = ListingPage::new(rows, filter.sort, next_url).layout(layout);
+    let page = if most_viewed.is_none() && view != View::Map { page.leading() } else { page };
     let more_points = points.len() as i64 > db::MAP_POINTS;
     points.truncate(db::MAP_POINTS as usize);
     if view == View::Map {

@@ -12,6 +12,8 @@
       in a row to slide through, dots over them saying which shows and, under a pointer, arrows
       (slides_controller.js); a small one shows the first. -#}
   {%- let eager = loop.index <= page.eager %}
+  {#- The page's first photo, before anything else (ListingPage::lead). -#}
+  {%- let lead = page.lead && loop.first %}
   <div class="card-media"{% if card.photos.len() > 1 %} data-controller="slides"{% endif %}>
     {%- if card.photos.is_empty() %}
     <div class="card-photo placeholder" aria-hidden="true"></div>
@@ -30,7 +32,8 @@
         <img class="card-photo" src="{{ slide.src }}"
         {%- if let Some(srcset) = slide.srcset %} srcset="{{ srcset }}" sizes="{{ page.sizes() }}"{% endif %} alt="" width="480" height="360" decoding="async"
         {%- if loop.first %}{% if let Some(placeholder) = slide.placeholder %} style="background-image: url({{ placeholder }})"{% endif %}{% endif %}
-        {%- if !(eager && loop.first) %} loading="lazy"{% endif %}>
+        {%- if !(eager && loop.first) %} loading="lazy"{% endif %}
+        {%- if lead && loop.first %} fetchpriority="high"{% endif %}>
         {%- if slide.webp.is_some() %}</picture>{% endif %}</a>
       {%- endfor %}
     </div>

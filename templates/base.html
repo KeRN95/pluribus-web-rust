@@ -25,11 +25,10 @@
   <link rel="preload" href="/static/vendor/fonts/geist-v5-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/vendor/fonts/inter-5.3.0-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/vendor/fonts/merriweather-5.3.0-latin-700.woff2" as="font" type="font/woff2" crossorigin>
-  {#- The fingerprint changes with the files; Turbo then reloads open pages in full, see
-      web::asset_version. -#}
-  {%- for sheet in crate::web::STYLESHEETS %}
-  <link rel="stylesheet" href="/static/css/{{ sheet }}.css?v={{ crate::web::asset_version() }}" data-turbo-track="reload">
-  {%- endfor %}
+  {#- The site's stylesheets as one, in their order and without their comments (web::site_css):
+      one request before the page shows rather than eight. The fingerprint changes with the files;
+      Turbo then reloads open pages in full, see web::asset_version. -#}
+  <link rel="stylesheet" href="/static/css/site.css?v={{ crate::web::asset_version() }}" data-turbo-track="reload">
   {#- Each module at its address with the fingerprint, which browsers keep for good (web::
       cache_headers, web::import_map); then those the page uses preloaded at once, rather than
       application.js first and what it imports after: web::render puts them where MODULES_HERE
