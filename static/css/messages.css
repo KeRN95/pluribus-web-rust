@@ -162,7 +162,6 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
   .composer-send svg { transition: none; }
 }
 .composer-error { margin: 0 0 .5rem; }
-.composer .field-hint { margin-top: .5rem; }
 .quick-messages { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .65rem; }
 .quick-message {
   padding: .4rem .85rem;
