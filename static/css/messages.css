@@ -225,6 +225,9 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
    (120 times a second where it refreshes so), on a layer of its own while it is dragged. */
 .message-sheet { transition: transform .15s ease-out; }
 .message-sheet.is-dragging { transition: none; will-change: transform; }
+/* Raised onto the keyboard (message_sheet_controller.js, raise), it eases the rest of the way as
+   the keyboard settles, and back down as the keyboard goes. */
+.message-sheet.is-raised { transition: transform .15s ease-out, top .2s ease-out, height .2s ease-out; }
 /* The bar at its top, as on an iPhone's sheets: a short rounded line, in a strip as wide as the
    sheet and tall enough for a finger to take, which drags the sheet down to close it. */
 .sheet-grabber {
@@ -238,7 +241,7 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
 .sheet-grabber::before { content: ""; width: 2.5rem; height: 5px; border-radius: 999px; background: var(--border-strong); }
 .message-sheet.is-dragging .sheet-grabber { cursor: grabbing; }
 @media (prefers-reduced-motion: reduce) {
-  .message-sheet { transition: none; }
+  .message-sheet, .message-sheet.is-raised { transition: none; }
 }
 @keyframes sheet-in { from { transform: translateY(100%); } }
 @media (prefers-reduced-motion: reduce) {

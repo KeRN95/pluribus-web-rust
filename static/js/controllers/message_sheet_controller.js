@@ -10,21 +10,30 @@ import { Controller } from "@hotwired/stimulus";
 // so does the button that opened it, pressed again.
 // The box to write in takes the focus once the conversation is in, where there is a mouse; on a
 // phone the keyboard waits for a tap in it. The keyboard would push the whole screen up to show
-// the box, the page and all: instead the sheet rises to the screen's top as the box takes the focus
-// (raise), before the keyboard comes, so the box stands above where it will be and the browser has
-// nothing to push; then, as the screen's visible part settles (visualViewport, fit), the sheet
-// comes down onto the keyboard, its foot at the keyboard's top and as tall as it was, or as the
-// room allows, the page under it unmoved; and it goes back to the lower half as the focus leaves
-// the box (lower). "Mbyll", Escape, or Turbo caching the page closes it, empties the frame (its
-// conversation stops asking for new messages) and gives the focus back to the button, for a
-// keyboard; a tap or a click leaves the button without the focus, and so without a ring. A
-// response that isn't a conversation (the sign-in page, once the session ran out) opens as a page
-// of its own.
+// the box, the page and all: instead the sheet rises in the same moment as the box takes the focus
+// (raise), before the keyboard comes, onto where the keyboard will be: as high as the keyboard was
+// the last time it was up on this screen (KEYBOARD), or a little higher than an iPhone's comes
+// until it has been; so the box stands clear of the keyboard and the browser has nothing to push.
+// Once the keyboard is up (visualViewport, follow) the sheet eases the rest of the way onto it,
+// its foot at the keyboard's top and as tall as it was, or as the room allows, the page under it
+// unmoved; and it eases back to the lower half as the focus leaves the box (lower). "Mbyll",
+// Escape, or Turbo caching the page closes it, empties the frame (its conversation stops asking
+// for new messages) and gives the focus back to the button, for a keyboard; a tap or a click
+// leaves the button without the focus, and so without a ring. A response that isn't a conversation
+// (the sign-in page, once the session ran out) opens as a page of its own.
 const PHONE = "(max-width: 719px)";
 const WIDTH = 400; // the popup's, in px: 25rem
 const TALLEST = 520;
 const SHORTEST = 360;
 const GAP = 8;
+// The keyboard's height, in localStorage by the screen's width (its way round), from the last time
+// it was up; until then, a little over what an iPhone's comes to with its row of suggestions
+// (between 42 and 46 per cent of the screen), so that the sheet stands clear whatever the phone.
+const KEYBOARD = "keyboard";
+const KEYBOARD_GUESS = 0.48;
+// The screen's visible part shorter than the screen by less than this is the browser's toolbar
+// coming or going, not the keyboard.
+const KEYBOARD_LEAST = 100;
 
 export default class extends Controller {
   static targets = ["sheet", "body", "frame"];
@@ -97,27 +106,59 @@ export default class extends Controller {
     this.frameTarget.querySelector("textarea")?.focus({ preventScroll: true });
   }
 
-  // The box taking the focus, on a phone: the sheet up to the screen's top, as tall as it was, in
-  // the same moment, before the keyboard comes up (the focus comes first), so the box stands above
-  // where the keyboard will be and the browser needn't push the screen up to show it. Then the
-  // sheet follows the screen's visible part as the keyboard settles (fit).
+  // The box taking the focus, on a phone: the sheet up onto where the keyboard will be, as tall as
+  // it was, in the same moment, before the keyboard comes up (the focus comes first), so the box
+  // stands above the keyboard and the browser needn't push the screen up to show it. Laid out there
+  // before it is told to ease (is-raised), so that this move is at once and only what follows
+  // eases: onto the keyboard where it comes (follow), and down again (lower).
   raise(event) {
-    if (!this.phone || !event.target.matches("textarea, input")) return;
-    if (!this.raised) {
-      this.raised = true;
-      this.height = this.sheetTarget.offsetHeight;
-      visualViewport?.addEventListener("resize", this.fit);
-      visualViewport?.addEventListener("scroll", this.fit);
-    }
-    this.put(GAP, this.height);
+    if (!this.phone || !event.target.matches("textarea, input") || this.raised) return;
+    const sheet = this.sheetTarget;
+    this.raised = true;
+    this.keyboardSeen = false;
+    this.height = sheet.offsetHeight;
+    clearTimeout(this.easing);
+    visualViewport?.addEventListener("resize", this.fit);
+    visualViewport?.addEventListener("scroll", this.fit);
+    this.put(Math.max(GAP, innerHeight - this.keyboard - this.height), this.height);
+    sheet.offsetHeight; // the layout, with the sheet there
+    sheet.classList.add("is-raised");
   }
 
-  // The sheet onto the keyboard: its foot at the visible part's bottom, as tall as it was or as
-  // the room above allows; the visible part is the whole screen again once the keyboard is down,
-  // which puts the sheet back at its lower half.
+  // The keyboard's height on this screen, the last time it was up (KEYBOARD), or the guess.
+  get keyboard() {
+    let kept;
+    try {
+      kept = Number(localStorage.getItem(`${KEYBOARD}:${innerWidth}`));
+    } catch {}
+    return kept || Math.round(innerHeight * KEYBOARD_GUESS);
+  }
+
+  remember(keyboard) {
+    try {
+      localStorage.setItem(`${KEYBOARD}:${innerWidth}`, String(keyboard));
+    } catch {}
+  }
+
+  // The sheet onto the keyboard, once the screen's visible part has shrunk by it: its foot at the
+  // visible part's bottom, as tall as it was or as the room above allows, and the keyboard's
+  // height remembered for the next rise. The visible part whole again while the box keeps the
+  // focus is the keyboard put away by the phone (Android's back button): the sheet goes down and
+  // the box lets the focus go, so that the next tap brings both up again. A change too small to
+  // be the keyboard's, the browser's toolbar, moves nothing.
   follow() {
     if (!this.raised) return;
     const view = visualViewport;
+    const keyboard = innerHeight - view.height;
+    if (keyboard < KEYBOARD_LEAST) {
+      if (this.keyboardSeen) {
+        this.lower();
+        document.activeElement?.blur();
+      }
+      return;
+    }
+    this.keyboardSeen = true;
+    this.remember(keyboard);
     const height = Math.min(this.height, view.height - GAP);
     this.put(Math.max(view.offsetTop + GAP, view.offsetTop + view.height - height), height);
   }
@@ -133,8 +174,9 @@ export default class extends Controller {
     if (atEnd) body.scrollTop = body.scrollHeight;
   }
 
-  // The focus leaving the box, and so the keyboard going: the sheet back to the screen's lower
-  // half (messages.css). Not for the focus moving within the sheet, to "Mbyll" by a tab.
+  // The focus leaving the box, and so the keyboard going: the sheet eased back to the screen's
+  // lower half (messages.css), and then plain again, so that the next rise is at once. Not for
+  // the focus moving within the sheet, to "Mbyll" by a tab.
   lower(event) {
     if (!this.raised || (event?.relatedTarget && this.sheetTarget.contains(event.relatedTarget))) return;
     this.raised = false;
@@ -142,6 +184,8 @@ export default class extends Controller {
     visualViewport?.removeEventListener("scroll", this.fit);
     const sheet = this.sheetTarget;
     sheet.style.top = sheet.style.height = sheet.style.bottom = "";
+    clearTimeout(this.easing);
+    this.easing = setTimeout(() => sheet.classList.remove("is-raised"), 250);
   }
 
   missing(event) {
@@ -219,6 +263,7 @@ export default class extends Controller {
 
   disconnect() {
     if (this.hasSheetTarget) this.lower();
+    clearTimeout(this.easing);
     document.documentElement.classList.remove("sheet-open");
     document.removeEventListener("click", this.outside);
     if (this.hasSheetTarget) this.sheetTarget.removeEventListener("click", this.afterDrag, true);
