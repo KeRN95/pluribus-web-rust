@@ -61,8 +61,12 @@
   --on-button: #ffffff;
   --badge: #f7e4da;
   --location: #4a7fb0;           /* Claude blue, deeper on the ivory */
-  --blue: #4a7fb0;               /* Claude blue: the welcome page's plus, the back button */
+  --blue: #4a7fb0;               /* Claude blue: the welcome page's plus and moon, the back button */
   --blue-bg: #e2ecf6;            /* its tint, as --badge is the coral's */
+  --red: #c1444c;                /* a red as deep as they: the welcome page's heart */
+  --red-bg: #f7dee0;
+  --yellow: #bb8b1b;             /* and a yellow: the theme's sun, on the dark theme */
+  --yellow-bg: #f9f2dc;
   --danger: #b42318;
   /* A property's square metre against its zone's average: under it, about it, over it. */
   --below: #566a3c;
@@ -122,6 +126,10 @@
   --location: #6a9bcc;
   --blue: #6a9bcc;
   --blue-bg: #293642;
+  --red: #d16165;
+  --red-bg: #42292b;
+  --yellow: #e2be5a;
+  --yellow-bg: #463d25;
   --danger: #f97066;
   --below: #a3b887;
   --below-bg: #2b3322;
@@ -154,6 +162,10 @@
     --location: #6a9bcc;
     --blue: #6a9bcc;
     --blue-bg: #293642;
+    --red: #d16165;
+    --red-bg: #42292b;
+    --yellow: #e2be5a;
+    --yellow-bg: #463d25;
     --danger: #f97066;
     --below: #a3b887;
     --below-bg: #2b3322;
