@@ -334,11 +334,12 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     let panel = body.find(r#"<div class="welcome-search-panel" id="welcome-search-panel" data-panel-target="panel">"#).unwrap();
     let nav = body.find(r#"<nav class="shortcuts" aria-label="Kategoritë">"#).unwrap();
     let toggle = body
-        .find(r#"<button type="button" class="shortcut circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false""#)
+        .find(r#"<button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false""#)
         .unwrap();
     assert!(panel < body.find(r#"<form class="welcome-form""#).unwrap() && nav < toggle);
-    // Beside it, a circle like it that posts a listing; then the categories.
-    let post = body.find(r#"<a class="shortcut circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#).unwrap();
+    assert!(nav < body.find(r#"<div class="welcome-actions">"#).unwrap(), "in a pill of their own");
+    // Beside it, in the same pill, a circle that posts a listing; then the categories.
+    let post = body.find(r#"<a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#).unwrap();
     assert!(toggle < post && post < body.find(r#"<a class="shortcut" href="/c/automjete">"#).unwrap(), "the search, then the plus");
     assert!(body.contains(r#"data-suggest-target="input" data-panel-target="input""#));
     assert!(body.contains(".welcome-search-panel { display: block; position: static;"));
@@ -366,8 +367,8 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     for (_, name) in main {
         assert!(body.contains(&format!("</svg>{name}</a>")), "{name}");
     }
-    // Each with its icon, and the two circles theirs: the magnifier and the plus.
-    assert_eq!(body.matches(r#"<a class="shortcut""#).count() + 2, body.matches(r#"<svg class="shortcut-icon""#).count());
+    // Each with its icon.
+    assert_eq!(body.matches(r#"<a class="shortcut""#).count(), body.matches(r#"<svg class="shortcut-icon""#).count());
     assert!(!body.contains(r#"class="tile""#));
 }
 
