@@ -339,36 +339,40 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         .unwrap();
     assert!(panel < body.find(r#"<form class="welcome-form""#).unwrap() && nav < toggle);
     assert!(body.contains(r#"<div class="welcome-start" data-controller="panel" data-panel-follow-value="true""#));
-    // The search's button comes after the categories but Automjete, Prona, Elektronikë and Veshje /
-    // aksesorë, which follow it; after them one that posts a listing, then the listings kept, the
-    // conversations and the theme, which the other pages have in their top bar: here it has the
-    // account alone.
+    // The button that posts a listing comes after Sport / hobi, among the pills; the search's after
+    // the categories but Automjete, Prona, Elektronikë and Veshje / aksesorë, which follow it;
+    // after them the listings kept, the conversations and the theme, which the other pages have in
+    // their top bar with the plus: here it has the account alone.
     let post = body.find(r#"<a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#).unwrap();
     let order = positions(&body, &[
+        r#"<a class="shortcut" href="/c/sport-dhe-hobi">"#,
+        r#"<a class="circle-shortcut plus-shortcut""#,
+        r#"<a class="shortcut" href="/c/kafshe-shtepiake">"#,
         r#"<a class="shortcut" href="/c/te-tjera">"#,
         r#"<button type="button" class="circle-shortcut search-shortcut""#,
         r#"<a class="shortcut" href="/c/automjete">"#,
         r#"<a class="shortcut" href="/c/prona">"#,
         r#"<a class="shortcut" href="/c/elektronike">"#,
         r#"<a class="shortcut" href="/c/veshje-dhe-aksesore">"#,
-        r#"<a class="circle-shortcut plus-shortcut""#,
+        r#"<a class="circle-shortcut saved-shortcut""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
-    assert_eq!(order[6], post);
+    assert_eq!(order[1], post);
     let end = positions(
         &body,
         &[
-            r#"<a class="circle-shortcut plus-shortcut" href="/shto""#,
             r#"<a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#,
             r#"<a class="circle-shortcut inbox-shortcut" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">"#,
             r#"<button type="button" class="circle-shortcut theme-shortcut" data-controller="theme" data-action="theme#toggle""#,
         ],
     );
     assert!(end.is_sorted(), "{end:?}");
-    assert!(end[3] < nav + body[nav..].find("</nav>").unwrap());
-    // Those four are one group, which goes to the next line whole rather than split.
+    assert!(end[2] < nav + body[nav..].find("</nav>").unwrap());
+    // Those three are one group, which goes to the next line whole rather than split; the plus
+    // isn't in it.
     let group = body.find(r#"<div class="welcome-actions">"#).unwrap();
-    assert!(group < end[0] && end[3] < group + body[group..].find("</div>").unwrap());
+    assert!(group < end[0] && end[2] < group + body[group..].find("</div>").unwrap());
+    assert!(post < group);
     for gone in ["post-button", "saved-button", "inbox-button", "theme-toggle"] {
         assert!(!body.contains(&format!(r#"class="icon-button {gone}""#)), "{gone}");
     }

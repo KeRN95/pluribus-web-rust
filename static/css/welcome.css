@@ -324,12 +324,12 @@
 }
 
 
-/* The round buttons among the categories' pills (home.html), as tall as they are (--pill): the
-   search's, after most of the pills and before Automjete, Prona, Elektronikë and Veshje /
-   aksesorë, half as wide again as it is tall; and after the pills the one that posts a listing,
-   the listings kept, the conversations and the theme, which the other pages have in their top
-   bar (base.css). Each is marked as the site marks what is picked or open (a category page's own pill, an open menu's
-   button): a tint of its colour, a border of it and its icon in it, the border whole under the
+/* The round buttons among the categories' pills (home.html), as tall as they are (--pill): the one
+   that posts a listing, after Sport / hobi; the search's, after most of the pills and before
+   Automjete, Prona, Elektronikë and Veshje / aksesorë, half as wide again as it is tall; and
+   after the pills the listings kept, the conversations and the theme, which the other pages have
+   in their top bar with the plus (base.css). Each is marked as the site marks what is picked or
+   open (a category page's own pill, an open menu's button): a tint of its colour, a border of it and its icon in it, the border whole under the
    pointer or a press. Each has its colour (--tone) and its tint (--tone-bg), as listing.css's
    price bubbles have: the search the coral (--accent, --badge), the plus Claude's blue (--blue,
    --blue-bg), the listings kept a red as deep (--red), the conversations Claude's olive (--olive,
@@ -358,8 +358,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 .circle-icon { flex: none; }
-/* Posting, the listings kept, the conversations and the theme: one group at the categories' end,
-   which goes to the next line whole rather than split, its buttons as far apart as the pills. */
+/* The listings kept, the conversations and the theme: one group at the categories' end, which goes
+   to the next line whole rather than split, its buttons as far apart as the pills. (The plus
+   stands among the pills, after Sport / hobi.) */
 .welcome-actions { display: flex; flex: none; gap: var(--column-gap); }
 .search-shortcut { --tone: var(--accent); --tone-bg: var(--badge); width: calc(var(--pill) * 1.5); }
 .plus-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }

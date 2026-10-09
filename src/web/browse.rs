@@ -248,12 +248,19 @@ pub struct Shortcut {
 /// The main categories the welcome page puts last, after its search's button, in this order.
 const LAST_ON_WELCOME: [&str; 4] = ["automjete", "prona", "elektronike", "veshje-dhe-aksesore"];
 
+/// The main category the welcome page's button that posts a listing follows, among those before
+/// its search's button: after them all without it.
+const PLUS_AFTER_ON_WELCOME: &str = "sport-dhe-hobi";
+
 #[derive(Template)]
 #[template(path = "home.html")]
 struct HomePage {
-    /// Every main category but LAST_ON_WELCOME's, in their order, before the search's button.
-    shortcuts: Vec<Shortcut>,
-    /// LAST_ON_WELCOME's, after it.
+    /// Every main category but LAST_ON_WELCOME's, in their order, up to PLUS_AFTER_ON_WELCOME's,
+    /// before the button that posts a listing.
+    before_plus: Vec<Shortcut>,
+    /// The others of them, after that button and before the search's.
+    before_search: Vec<Shortcut>,
+    /// LAST_ON_WELCOME's, after the search's button.
     last: Vec<Shortcut>,
     page: ListingPage,
     /// The row of the newest listings ("Sapo u shtuan"): the page's first newest::STRIP.
@@ -289,18 +296,19 @@ pub async fn home(
         state.views.most_viewed(&state.db, None),
     )?;
     safety::without_hidden(&mut most_viewed, &hidden);
-    // Every main category, in its order, with its icon; Automjete, Prona, Elektronikë and Veshje /
-    // aksesorë after the search.
+    // Every main category, in its order, with its icon; the button that posts a listing after Sport
+    // / hobi, and Automjete, Prona, Elektronikë and Veshje / aksesorë after the search.
     let shortcut = |category: &db::Category| Shortcut {
         name: category.name.clone(),
         url: format!("/c/{}", category.slug),
         icon: icons::main_category(&category.slug),
     };
-    let shortcuts = categories
-        .top_level()
-        .filter(|category| !LAST_ON_WELCOME.contains(&category.slug.as_str()))
-        .map(shortcut)
-        .collect();
+    let first: Vec<&db::Category> =
+        categories.top_level().filter(|category| !LAST_ON_WELCOME.contains(&category.slug.as_str())).collect();
+    let plus_at = first.iter().position(|category| category.slug == PLUS_AFTER_ON_WELCOME).map_or(first.len(), |at| at + 1);
+    let (before_plus, before_search) = first.split_at(plus_at);
+    let before_plus = before_plus.iter().copied().map(shortcut).collect();
+    let before_search = before_search.iter().copied().map(shortcut).collect();
     let last = LAST_ON_WELCOME.iter().filter_map(|slug| categories.by_slug(slug)).map(shortcut).collect();
     let page = ListingPage::new(rows, Sort::Newest, next_url);
     // Both rows load their first two photos straight away: they are on the first screen. The first
@@ -312,7 +320,7 @@ pub async fn home(
     let since = page.cards.first().map(ListingCard::newest_cursor);
     let origin = seo::origin(&headers);
     let meta = PageMeta::new(&origin, "Pluribus: njoftime në gjithë Shqipërinë", seo::SITE_DESCRIPTION, format!("{origin}/"));
-    render(HomePage { shortcuts, last, page, newest, since, most_viewed, meta })
+    render(HomePage { before_plus, before_search, last, page, newest, since, most_viewed, meta })
 }
 
 /// A category's icon, as its pill has it (icons.rs): a main category's own, a subcategory's where

@@ -47,24 +47,26 @@
   </div>
 
   {#- Every main category at once, as pills like the listing page's details: its icon, then its
-      name. After most of them, a button as tall as they are and a little wider, the search's,
-      marked as what is picked is, in the coral's tint with a coral magnifier; then Automjete,
-      Prona, Elektronikë and Veshje / aksesorë (LAST_ON_WELCOME in browse.rs); then one that posts
-      a listing, marked so in Claude's blue, the listings kept, marked so in a red, the
-      conversations, in Claude's olive, and the theme, in the blue under its moon and a yellow under
-      its sun: the other pages have these in their top bar (base.html). Those four are one group,
-      which goes to the next line whole rather than split (.welcome-actions). -#}
+      name. After Sport / hobi a button as tall as they are, the one that posts a listing, marked
+      so in Claude's blue (PLUS_AFTER_ON_WELCOME in browse.rs); after most of the others one a
+      little wider, the search's, marked as what is picked is, in the coral's tint with a coral
+      magnifier; then Automjete, Prona, Elektronikë and Veshje / aksesorë (LAST_ON_WELCOME); then
+      the listings kept, marked so in a red, the conversations, in Claude's olive, and the theme,
+      in the blue under its moon and a yellow under its sun: the other pages have these and the
+      plus in their top bar (base.html). Those three are one group, which goes to the next line
+      whole rather than split (.welcome-actions). -#}
   <nav class="shortcuts" aria-label="Kategoritë">
-    {%- for shortcut in shortcuts %}{% call pill(shortcut) %}{% endfor %}
+    {%- for shortcut in before_plus %}{% call pill(shortcut) %}{% endfor %}
+    <a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim" title="Shto njoftim">
+      <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </a>
+    {%- for shortcut in before_search %}{% call pill(shortcut) %}{% endfor %}
     <button type="button" class="circle-shortcut search-shortcut" aria-controls="welcome-search-panel" aria-expanded="false" aria-label="Kërko" title="Kërko"
             data-panel-target="toggle" data-action="panel#toggle">
       <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     </button>
     {%- for shortcut in last %}{% call pill(shortcut) %}{% endfor %}
     <div class="welcome-actions">
-      <a class="circle-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim" title="Shto njoftim">
-        <svg class="circle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      </a>
       {#- The listings the visitor keeps (saved.rs), with a dot while some dropped their price unseen
           (heart_controller.js). -#}
       <a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat" title="Të ruajturat">
