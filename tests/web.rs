@@ -2641,7 +2641,7 @@ async fn the_site_is_called_pluribus(pool: PgPool) {
     // The logo is the name in lowercase, the word alone, in a typeface of its own that comes with
     // the page. The pages' titles and the footer say the name.
     let home = html(pool.clone(), "/").await;
-    assert!(home.contains(r#"<a class="logo" id="logo" href="/"><span class="logo-word">pluribus</span></a>"#));
+    assert!(home.contains(r#"<a class="logo" id="logo" href="/" data-turbo-permanent><span class="logo-word">pluribus</span></a>"#));
     assert!(!home.contains("thinking"));
     assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
     for font in ["inter-5.3.0-latin-wght.woff2", "merriweather-5.3.0-latin-700.woff2"] {

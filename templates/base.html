@@ -48,8 +48,10 @@
       {#- The search is the welcome page's pill, and on the browse pages the round button before
           the filters. -#}
       {#- The logo: the name in lowercase, in Merriweather, the word alone (the creature of
-          thinking.svg is the site's icon, above, and no longer in the header). -#}
-      <a class="logo" id="logo" href="/"><span class="logo-word">pluribus</span></a>
+          thinking.svg is the site's icon, above, and no longer in the header). Turbo keeps it
+          from page to page (data-turbo-permanent), so that its colour, the page's section's,
+          slides to the next page's rather than changing at once (base.css, .logo). -#}
+      <a class="logo" id="logo" href="/" data-turbo-permanent><span class="logo-word">pluribus</span></a>
       {#- Posting, the listings kept and the conversations, and after the account the theme: the
           welcome page has them at the end of its categories instead, and its top bar the account
           alone (home.html, which leaves these blocks empty). -#}

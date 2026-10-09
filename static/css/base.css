@@ -361,7 +361,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    the one they take under a pointer, and on the dark theme the buttons' own colour, the one they
    have on the light theme, where the dark theme's shade would be the lighter one. A size up from
    the text's headings, since a lowercase word stands lower and shorter. (The creature,
-   thinking.svg, is the site's icon alone now, in the tab and on home screens.) */
+   thinking.svg, is the site's icon alone now, in the tab and on home screens.) The word stays
+   from page to page (data-turbo-permanent, base.html), so as a page of another section comes its
+   colour slides to that section's rather than changing at once, and so with the theme. */
 .logo {
   display: inline-flex;
   align-items: center;
@@ -372,10 +374,14 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   letter-spacing: -0.01em;
   line-height: 1;
   text-decoration: none;
+  transition: color .45s ease;
 }
 :root[data-theme="dark"] .logo { color: var(--button); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .logo { color: var(--button); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo { transition: none; }
 }
 
 .search {
