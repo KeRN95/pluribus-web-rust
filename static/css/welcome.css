@@ -295,13 +295,19 @@
    the listings come sooner: less room round the name, the name and its icon a touch smaller, the
    gaps closer. Narrow phones, and phones with their text set larger, gain the most. A category
    page's pills keep their size (browse.css), which its buttons follow. A finger's target is bigger
-   than the pill it sees: half the gap round each pill (::after, which is part of the link), so a
-   pill is about 40 px tall to the touch while it looks 34, and its neighbours' targets meet it
-   halfway, with no overlap and no gap between them. */
+   than the pill it sees: half the gaps round each pill (::after, which is part of the link), so
+   that its neighbours' targets meet it halfway, with no overlap and no gap between them. The
+   lines stand a little further apart than the pills on a line, so that a pill about 35 px tall is
+   44 to the touch (42 on the narrowest phones), as Apple asks, and three still fit on a line. */
 @media (max-width: 719px) {
-  .welcome .shortcuts { --gap: .45rem; gap: var(--gap); }
+  .welcome .shortcuts { --row-gap: .65rem; --column-gap: .45rem; gap: var(--row-gap) var(--column-gap); }
   .welcome .shortcut { position: relative; gap: .4rem; padding: .45rem .85rem .45rem .7rem; font-size: .9375rem; }
-  .welcome .shortcut::after { content: ""; position: absolute; inset: calc(var(--gap) / -2 - 1px); } /* from the border's outer edge */
+  /* From the border's outer edge. */
+  .welcome .shortcut::after {
+    content: "";
+    position: absolute;
+    inset: calc(var(--row-gap) / -2 - 1px) calc(var(--column-gap) / -2 - 1px);
+  }
   .welcome .shortcut-icon { width: 18px; height: 18px; }
 }
 
