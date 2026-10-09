@@ -312,26 +312,29 @@
 .badge { margin-left: .4rem; padding: .2rem .65rem; border-radius: 999px; background: var(--badge); font-size: var(--text-sm); font-weight: var(--semibold); }
 .actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .9rem 0 1.25rem; }
 
+/* Buttons as Claude's: a 10px corner, medium weight, the coral filled with white words, a press that
+   sinks them a little; the secondary ones on the surface with a hairline, a darker one under the pointer. */
 .button {
   display: inline-flex;
   align-items: center;
-  padding: .6rem 1.1rem;
+  padding: .55rem 1.1rem;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--button);
   color: var(--on-button);
   font: inherit;
-  font-weight: var(--semibold);
+  font-weight: var(--medium);
   text-decoration: none;
   cursor: pointer;
-  transition: background-color .15s;
+  transition: background-color .15s, border-color .15s, transform .1s;
   /* No flash of the browser's own colour over it as a finger taps it; its press shows instead. */
   -webkit-tap-highlight-color: transparent;
 }
 
 .button:hover { background: var(--button-hover); }
+.button:active { transform: scale(.98); }
 .button.secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
-.button.secondary:hover { background: var(--surface-muted); }
+.button.secondary:hover { background: var(--surface-muted); border-color: var(--border-strong); }
 
 /* The listing's actions drawn like Claude's: pills, a press sinks them a little; the main one, the
    seller's number, filled in the site's colour, the rest on the surface with the menus'

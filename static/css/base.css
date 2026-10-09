@@ -32,30 +32,30 @@
 
 :root {
   color-scheme: light;
-  --bg: #f5f4ee;
-  --surface: #fdfcf9;
-  --surface-muted: #eeece3;
+  --bg: #faf9f5;                /* Pampas */
+  --surface: #ffffff;
+  --surface-muted: #f0eee6;
   --input: #ffffff;
-  --text: #1f1e1d;
-  --muted: #6e6d66;
-  --border: #e4e1d7;
-  --border-strong: #cfcbbf;
-  --accent: #c96442;            /* logo and focus rings */
-  --button: #d97757;            /* Claude's coral, as in the dark theme */
-  --button-hover: #c96442;
+  --text: #141413;
+  --muted: #5e5d59;
+  --border: #e8e6dc;
+  --border-strong: #d1cfc5;
+  --accent: #c96442;            /* Clay: logo and focus rings */
+  --button: #c6613f;
+  --button-hover: #ae5530;
   --on-button: #ffffff;
-  --badge: #f6e1d3;
-  --location: #05164d;          /* Lufthansa blue; Claude's coral in the dark theme */
+  --badge: #f7e4da;
+  --location: #4a7fb0;           /* Claude blue, deeper on the ivory */
   --danger: #b42318;
   /* A property's square metre against its zone's average: under it, about it, over it. */
-  --below: #1b6e37;
-  --below-bg: #e2f3e6;
+  --below: #566a3c;
+  --below-bg: #e9eee0;
   --near: #7a5900;
   --near-bg: #fbefc6;
   --above: #b42318;
   --above-bg: #fbe5e1;
-  --placeholder-from: #ece9df;
-  --placeholder-to: #e2ded2;
+  --placeholder-from: #f0eee6;
+  --placeholder-to: #e8e6dc;
   --shadow: 0 1px 2px rgb(31 30 29 / 5%), 0 4px 16px rgb(31 30 29 / 5%);
   --scrim: rgb(31 30 29 / 20%); /* the page dimmed under what floats over it */
   --radius: 14px;
@@ -87,22 +87,22 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #262624;
-  --surface: #302f2c;
-  --surface-muted: #3a3935;
+  --surface: #30302e;
+  --surface-muted: #3a3a37;
   --input: #262624;
-  --text: #f2f0e8;
-  --muted: #b3b0a5;
-  --border: #3f3e3a;
+  --text: #faf9f5;
+  --muted: #b0aea5;
+  --border: #3d3d3a;
   --border-strong: #57554f;
   --accent: #d97757;
-  --button: #d97757;
-  --button-hover: #e38a6c;
-  --on-button: #1f1e1d;
-  --badge: #4a382e;
-  --location: #d97757;
+  --button: #c6613f;
+  --button-hover: #d97757;
+  --on-button: #ffffff;
+  --badge: #43302a;
+  --location: #6a9bcc;
   --danger: #f97066;
-  --below: #7fd498;
-  --below-bg: #26402f;
+  --below: #a3b887;
+  --below-bg: #2b3322;
   --near: #f0c75a;
   --near-bg: #463b1f;
   --above: #fb8a80;
@@ -117,22 +117,22 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #262624;
-    --surface: #302f2c;
-    --surface-muted: #3a3935;
+    --surface: #30302e;
+    --surface-muted: #3a3a37;
     --input: #262624;
-    --text: #f2f0e8;
-    --muted: #b3b0a5;
-    --border: #3f3e3a;
+    --text: #faf9f5;
+    --muted: #b0aea5;
+    --border: #3d3d3a;
     --border-strong: #57554f;
     --accent: #d97757;
-    --button: #d97757;
-    --button-hover: #e38a6c;
-    --on-button: #1f1e1d;
-    --badge: #4a382e;
-    --location: #d97757;
+    --button: #c6613f;
+    --button-hover: #d97757;
+    --on-button: #ffffff;
+    --badge: #43302a;
+    --location: #6a9bcc;
     --danger: #f97066;
-    --below: #7fd498;
-    --below-bg: #26402f;
+    --below: #a3b887;
+    --below-bg: #2b3322;
     --near: #f0c75a;
     --near-bg: #463b1f;
     --above: #fb8a80;

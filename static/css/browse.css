@@ -82,6 +82,9 @@
 /* --row is the subcategory pills' height (.subcategories .shortcut: a line of their text, .6rem
    over and under it, the hairline), so the row's buttons are as big as the pills over them. */
 .browse { --row: calc(1.55 * .94 * var(--text-md) + 1.2rem + 2px); --drop: .75rem; position: relative; margin-top: 1rem; }
+/* The row of buttons as close under the category pills (the subcategories, or the path when it has
+   none) as the pills are to each other: .5rem, not the 1rem a heading leaves. */
+.category-pills ~ .browse { margin-top: .5rem; }
 
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 
@@ -227,7 +230,8 @@
 .browse-tools .round-button:active { transform: scale(.97); }
 .browse-tools .button.round-button[aria-expanded="true"],
 .browse-tools .button.round-button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
-.browse-tools .button.search-button { border-color: transparent; }
+.browse-tools .button.search-button { border-color: transparent; box-shadow: 0 0 14px color-mix(in srgb, var(--button) 55%, transparent); transition: background-color .15s, border-color .15s, transform .1s, box-shadow .2s; }
+.browse-tools .button.search-button:hover { box-shadow: 0 0 20px color-mix(in srgb, var(--button) 75%, transparent); }
 .browse-tools .button.search-button[aria-expanded="true"] { border-color: transparent; background: var(--button-hover); }
 .browse-tools .round-button svg { width: 18px; height: 18px; }
 .round-button .pin-icon { margin: 0; color: inherit; }
@@ -247,7 +251,14 @@
 }
 .browse-tools .labelled svg { flex: none; width: 18px; height: 18px; }
 .browse-tools .button.map-button { flex: 0 1 auto; }
-.browse-tools .map-button.is-set .pin-icon { color: var(--location); }
+/* Their icons are the category pills': outlines in the muted colour, the text's under the pointer
+   or while what they open is open; the map's pin keeps the location colour once a place is set. */
+.browse-tools .labelled svg { color: var(--muted); transition: color .15s; }
+.browse-tools .labelled[aria-expanded="true"] svg { color: var(--text); }
+@media (hover: hover) {
+  .browse-tools .labelled:hover svg { color: var(--text); }
+}
+.browse-tools .map-button.is-set .map-icon { color: var(--location); }
 .button-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .button-count {
   flex: none;
@@ -580,3 +591,4 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .empty-state .empty { flex-basis: 100%; margin: 0 0 .25rem; }
 /* "Shfaq N njoftime" brings the results' heading to the top, clear of the sticky header. */
 .results-heading { scroll-margin-top: 5rem; }
+

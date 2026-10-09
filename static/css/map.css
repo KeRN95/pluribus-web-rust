@@ -166,7 +166,7 @@
 .map-results .result-count { margin: 0 0 .75rem; }
 .map-note { margin: -.5rem 0 .75rem; color: var(--muted); font-size: var(--text-sm); }
 
-/* The pin, in the location colour: Lufthansa blue, or coral in the dark theme. It stands fixed in
+/* The pin, in the location colour: Claude's blue, lighter in the dark theme. It stands fixed in
    the middle of the map, its tip on it, and the map moves under it, as on Facebook's
    (map_controller.js): it lifts a little while the map moves and sets down when it stops, its
    shadow staying on the spot. Over the tiles, the circle and the dots; under the popups, which
