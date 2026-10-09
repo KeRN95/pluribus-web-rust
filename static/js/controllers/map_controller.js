@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 import { refreshFor, refreshTo } from "controllers/refresh.js";
 import { locate } from "controllers/locate.js";
 import { forgetTown } from "controllers/place_controller.js";
+import { loadLeaflet, tiles } from "controllers/leaflet.js";
 
 // A map of the results, as Facebook's: its pin stays in the middle and the map moves under it,
 // on the point set before, the town picked, or Tirana's middle (filters.rs, map_start). Round the
@@ -17,9 +18,8 @@ import { forgetTown } from "controllers/place_controller.js";
 // in place (refresh.js), which keeps the category and the filters, the card open as it is and the
 // map as Leaflet drew it (keep), its dots following the new results (reloadPoints). Each result
 // gets a dot on the map: those within the circle once a point is set. Leaflet draws the map with
-// OpenStreetMap's tiles.
+// OpenStreetMap's tiles (leaflet.js).
 
-const LEAFLET = "/static/vendor/leaflet-1.9.4";
 const TIRANA = [41.3275, 19.8187];
 // From this zoom on (streets readable), or from the closest the circle allows if that is further
 // out, results show one by one and open on a tap; further out they are grouped by squares of the
@@ -37,22 +37,6 @@ const SETTLE_MS = 400;
 // twice as long at each zoom after: at a latitude, a pixel is this times its cosine over 256 * 2^zoom.
 const EQUATOR = 40075016.686;
 const PIN = '<svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>';
-
-// Leaflet is only fetched on pages with a map, and only once: its script and its stylesheet.
-let leaflet;
-function loadLeaflet() {
-  leaflet ??= new Promise((resolve, reject) => {
-    const style = Object.assign(document.createElement("link"), { rel: "stylesheet", href: `${LEAFLET}/leaflet.css` });
-    const script = Object.assign(document.createElement("script"), { src: `${LEAFLET}/leaflet.js` });
-    let waiting = 2;
-    const loaded = () => { if (--waiting === 0) resolve(window.L); };
-    const failed = () => { leaflet = undefined; reject(new Error("Leaflet did not load")); };
-    style.onload = script.onload = loaded;
-    style.onerror = script.onerror = failed;
-    document.head.append(style, script);
-  });
-  return leaflet;
-}
 
 export default class extends Controller {
   static targets = [
@@ -107,10 +91,7 @@ export default class extends Controller {
     });
     // In a card the + and − sit at the bottom right, clear of the pills over the map's top (map.css).
     if (this.lazyValue) L.control.zoom({ position: "bottomright" }).addTo(this.map);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(this.map);
+    tiles(L).addTo(this.map);
     this.dots = L.layerGroup().addTo(this.map);
     this.map.on("zoomend", () => this.drawPoints());
 

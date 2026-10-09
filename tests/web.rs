@@ -2159,6 +2159,23 @@ async fn a_property_says_its_zone(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_property_or_a_car_shows_where_it_is_on_a_map_under_its_seller(pool: PgPool) {
+    // The flat and the Golf, in Tirana: a map round their point, the town's, the town named over it,
+    // under the seller's card.
+    for uri in ["/listing/1003-apartament-2-1-me-qira-ne-tirane", "/listing/1001-volkswagen-golf-7-2016-nafte"] {
+        let page = html(pool.clone(), uri).await;
+        let map = page.find(r#"<section class="listing-map-section" aria-label="Vendndodhja">"#).unwrap_or_else(|| panic!("{uri}"));
+        assert!(page.find(r#"<section class="seller-section""#).unwrap() < map, "{uri}");
+        let section = &page[map..map + page[map..].find("</section>").unwrap()];
+        assert!(section.contains(r#"<div class="listing-map" data-controller="listing-map""#), "{section}");
+        assert!(section.contains(r#"data-listing-map-latitude-value="41.328333" data-listing-map-longitude-value="19.818056""#), "{section}");
+        assert!(section.contains("</svg>Tiranë</p>"), "{section}");
+    }
+    // A phone's page has none.
+    assert!(!html(pool, "/listing/1005-iphone-13-128-gb-si-i-ri").await.contains("listing-map"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_property_in_a_zone_compares_its_square_metre_with_the_zones(pool: PgPool) {
     // Eleven flats on sale in Blloku, 100 m² each: ten from 700 to 1 200 € a square metre, and one
     // at 5 000 € as a mistyped price would have it. The zone's average leaves out the cheapest and

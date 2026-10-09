@@ -33,6 +33,19 @@ use crate::{
 pub const GALLERY_SIZES: &str =
     "(min-width: 1100px) 1068px, (min-width: 960px) calc(100vw - 2rem), (min-width: 792px) 760px, calc(100vw - 2rem)";
 
+/// The categories whose listings' pages show where they are on a map, under the seller: property
+/// (Prona and those under it) and cars (Makina), which buyers go to see.
+const MAPPED: [&str; 2] = ["prona", "makina"];
+
+/// Where a property or a car is, on the map under its seller (listing_map_controller.js): its
+/// point, which is its place's (its town's, for a zone without one of its own), so a circle round
+/// it rather than a pin; and the place's name, "Blloku, Tiranë".
+pub struct ListingMap {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub place: String,
+}
+
 /// A photo on a card, with the copies the browser may pick from.
 pub struct Slide<'a> {
     /// Its card-sized copy, WebP for a photo kept as WebP.
@@ -350,6 +363,8 @@ struct ListingShow {
     seller_page: Option<ListingPage>,
     /// The seller has more than those: a link leads to all of them.
     seller_more: bool,
+    /// For a property or a car, where it is, on a map under the seller.
+    map: Option<ListingMap>,
     /// Listings like it, under it (db::related_listings): `page`, the name listing_card.html
     /// reads its cards by.
     page: ListingPage,
@@ -546,6 +561,13 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         let zone = Detail { label: "Zona".to_string(), values: vec![zone.clone()], icon: Some(icons::PIN), named: false, multi: false };
         details.insert(0, zone);
     }
+    // A property or a car: where it is, on a map under the seller.
+    let map = match (listing.latitude, listing.longitude) {
+        (Some(latitude), Some(longitude)) if slugs.iter().any(|slug| MAPPED.contains(slug)) => {
+            Some(ListingMap { latitude, longitude, place: listing.location_name.clone().unwrap_or_default() })
+        }
+        _ => None,
+    };
     // Said once: the cookie that says so (post.rs) goes with this answer.
     let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
     let seller_more = from_seller.len() as i64 > db::FROM_SELLER;
@@ -566,6 +588,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             posted,
             seller_page,
             seller_more,
+            map,
             page,
             views,
             meta,

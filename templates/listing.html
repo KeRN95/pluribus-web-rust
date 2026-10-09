@@ -309,6 +309,22 @@
   </div>
 </section>
 
+{%- if let Some(map) = map %}
+{#- Where a property or a car is, under its seller: a map half as tall as the photos over it
+    (listing.css), which loads as it comes near the screen (listing_map_controller.js). Its point
+    is its place's, its town's for a zone without one of its own, so a circle round it says where
+    rather than a pin; the place's name over the map's top left. -#}
+<section class="listing-map-section" aria-label="Vendndodhja">
+  <div class="listing-map" data-controller="listing-map"
+       data-listing-map-latitude-value="{{ map.latitude }}" data-listing-map-longitude-value="{{ map.longitude }}">
+    <div class="map-canvas listing-map-canvas" data-listing-map-target="canvas"></div>
+    {%- if !map.place.is_empty() %}
+    <p class="listing-map-place">{% include "pin.svg" %}{{ map.place }}</p>
+    {%- endif %}
+  </div>
+</section>
+{%- endif %}
+
 {%- if let Some(page) = seller_page %}
 {#- The seller's other listings, newest first, when this isn't their only one (db::seller_listings):
     cards like the related ones under them, but in the row of cards that slides sideways

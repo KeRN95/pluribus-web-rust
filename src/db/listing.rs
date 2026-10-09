@@ -28,6 +28,9 @@ pub struct ListingDetail {
     pub location_name: Option<String>,
     /// The zone in the town it is in, for a property that says one.
     pub zone: Option<String>,
+    /// Its point on the map: its place's, the town's for a zone without one (posting.rs).
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
     /// What a square metre costs in its zone on average, in euros, among the zone's sales in its
     /// category (zone_area_prices), and how many sales that is; None outside a zone, or where too
     /// few listings make an average.
@@ -97,6 +100,7 @@ pub async fn listing_by_public_no(
                        THEN loc.name || ', ' || (SELECT town.name FROM locations town WHERE town.id = location_municipality(loc.id))
                        ELSE loc.name END AS "location_name?",
                   CASE WHEN loc.location_type = 'AREA' THEN loc.name END AS "zone?",
+                  l.latitude::float8 AS "latitude?", l.longitude::float8 AS "longitude?",
                   zone_price.average_eur AS "zone_average_eur?", zone_price.listings AS "zone_listings?",
                   (SELECT r.eur_rate FROM exchange_rates r WHERE r.currency = l.currency) AS "eur_rate?",
                   l.published_at,
