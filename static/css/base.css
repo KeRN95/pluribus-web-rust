@@ -69,8 +69,8 @@
   --olive-bg: #e6ecdc;
   --olive-button: #6a7d50;
   --olive-button-hover: #5c6d45;
-  --red: #c1444c;                /* a red as deep as they: the welcome page's heart, a kept listing's */
-  --red-bg: #f7dee0;
+  --red: #d6303e;                /* a bright red: the welcome page's heart, a kept listing's */
+  --red-bg: #fbe0e2;
   --yellow: #bb8b1b;             /* and a yellow: the theme's sun, on the dark theme */
   --yellow-bg: #f9f2dc;
   --danger: #b42318;
@@ -138,8 +138,8 @@
   --olive-bg: #313627;
   --olive-button: #6a7d50;
   --olive-button-hover: #788c5d;
-  --red: #d16165;
-  --red-bg: #42292b;
+  --red: #ef555f;
+  --red-bg: #4a2428;
   --yellow: #e2be5a;
   --yellow-bg: #463d25;
   --danger: #f97066;
@@ -180,8 +180,8 @@
     --olive-bg: #313627;
     --olive-button: #6a7d50;
     --olive-button-hover: #788c5d;
-    --red: #d16165;
-    --red-bg: #42292b;
+    --red: #ef555f;
+    --red-bg: #4a2428;
     --yellow: #e2be5a;
     --yellow-bg: #463d25;
     --danger: #f97066;
