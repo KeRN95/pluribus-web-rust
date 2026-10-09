@@ -89,6 +89,8 @@
 .report-reason .field-hint { margin: 0; }
 /* "Njoftimet e mia": the sellers the user blocked, each with its button to let them be again. */
 .blocked-heading { margin: 2rem 0 .2rem; font-size: var(--text-xl); }
+/* "Dil nga llogaria", the page's last thing, a little apart from what is over it. */
+.sign-out { margin-top: 2.5rem; }
 .blocked-sellers { display: grid; gap: .45rem; margin: .7rem 0 0; padding: 0; list-style: none; }
 .blocked-seller {
   display: flex;

@@ -3359,10 +3359,13 @@ async fn sellers_edit_their_own_listings(pool: PgPool) {
     assert_eq!(bad.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert!(bad.body.contains("Titulli duhet të ketë 5 deri në 120 shkronja."));
 
-    // "Njoftimet e mia" lists it, with its edit link.
+    // "Njoftimet e mia" lists it, with its edit link; the page ends in signing out.
     let mine = get_with_cookie(pool, "/njoftimet-e-mia", &ana).await.body;
     assert!(mine.contains("Samsung Galaxy S21, 256 GB"));
     assert!(mine.contains(&format!(r#"href="/listing/{no}/ndrysho""#)));
+    let out = mine.find(r#"<form class="sign-out" action="/dil" method="post">"#).expect("signing out");
+    assert!(mine[out..].contains(r#"<button type="submit" class="button secondary">Dil nga llogaria</button>"#));
+    assert!(out > mine.find(r#"href="/shto""#).unwrap(), "last on the page");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

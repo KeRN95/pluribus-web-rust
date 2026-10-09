@@ -96,5 +96,10 @@
     {%- endfor %}
   </ul>
   {%- endif %}
+  {#- Last, signing out (account::sign_out, /dil): the session ends and the welcome page comes,
+      as the posting form's note offers too. -#}
+  <form class="sign-out" action="/dil" method="post">
+    <button type="submit" class="button secondary">Dil nga llogaria</button>
+  </form>
 </section>
 {% endblock %}
