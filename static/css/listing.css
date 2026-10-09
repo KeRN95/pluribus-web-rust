@@ -32,8 +32,13 @@
    under what is over them (1.75rem; it stood 2.5rem under once), in a card like the posting form's
    (the menus' hairline on the surface), across the page: the seller (posting.css, .seller),
    leading to their profile, their name and summary cut short where the line is too short. The
-   ways to reach them are the buttons under the price alone. */
+   ways to reach them are the buttons under the price alone. On a phone the contact bar settles
+   between the description and the card, a band from edge to edge (below), and the card keeps the
+   2.5rem under it, so that it stands clear of the band. */
 .seller-section { margin-top: 1.75rem; }
+@media (max-width: 719px) {
+  .seller-section { margin-top: 2.5rem; }
+}
 .seller-head {
   display: flex;
   align-items: center;
