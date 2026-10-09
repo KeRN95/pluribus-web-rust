@@ -77,9 +77,10 @@ const TILES: [(&str, &str); 8] = [
     ("vehicle_color", icons::PALETTE),
 ];
 
-/// What a car's title is made of (listing_generated_title, migration 0015): its listing page
-/// leaves them out of the details, since the title says them.
-pub const TITLE_CODES: [&str; 4] = ["vehicle_make", "vehicle_model", "vehicle_body_type", "vehicle_color"];
+/// What a car's title says as the details would (listing_generated_title, migration 0027: "Volkswagen
+/// Golf 1.6, 2016"): its listing page leaves them out of the details. Its engine stays among them,
+/// the title having it only to a tenth of a litre.
+pub const TITLE_CODES: [&str; 3] = ["vehicle_make", "vehicle_model", "vehicle_year"];
 
 /// A car's body types, each the car's side, facing right, its windows and its wheels, drawn in
 /// strokes in a box twice as wide as it is tall (48 by 24 units), every car on the same ground:

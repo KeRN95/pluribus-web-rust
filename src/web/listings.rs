@@ -540,7 +540,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         "REJECTED" => Some("Moderatorët e hoqën këtë njoftim nga faqja."),
         _ => None,
     };
-    // A car's title says its make, model, body type and colour: its details leave them out.
+    // A car's title says its make, model and year: its details leave them out.
     let titled = listing.heading.is_some();
     let mut details: Vec<Detail> = attributes
         .into_iter()
