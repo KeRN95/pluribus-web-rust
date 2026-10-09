@@ -20,11 +20,8 @@
 .seller-section { margin-top: 2.5rem; }
 .seller-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: .5rem 1.25rem;
-  width: fit-content;
-  max-width: 100%;
   padding: .5rem .75rem .5rem .5rem;
   border: 1px solid var(--menu-border);
   border-radius: 16px;
@@ -34,21 +31,14 @@
 .seller-head .seller { flex: 1 1 0; min-width: 0; margin: 0; }
 /* The verified check, beside the name on its line (page.css, .verified). */
 .seller-head .verified { margin-left: .15rem; vertical-align: -.15em; }
-.seller-contact { display: flex; flex: none; align-items: center; gap: .4rem; margin-left: auto; }
-.seller-contact form { display: contents; }
-.seller-contact .button { border-radius: 999px; transition: background-color .15s, transform .1s; }
-.seller-contact .button:active { transform: scale(.97); }
-.seller-contact .button.small { justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; }
-.seller-contact .button.secondary { border-color: var(--menu-border); }
-.seller-contact .button.reveal-contact { gap: .35rem; padding: .45rem .85rem; font-size: var(--text-sm); white-space: nowrap; }
-.seller-contact svg { width: 16px; height: 16px; }
 /* Where a property or a car is, under the seller (listing_map_controller.js): a map half as tall as
    the photos over it, as wide as they are on a phone (6:5 there, so 12:5 here), and on a wide
-   screen half their height across the page's column, rounded like them, with the hairline round
-   the map pages' (.map-canvas, whose dark theme it shares); its grey until it loads. Over its top
-   left, the place's name in a pill like the photo counter's; Leaflet's + and − at its bottom
-   right, over its credit. Its layers stay in its own stacking order, under the sticky header. */
-.listing-map-section { max-width: 760px; margin-top: 1.25rem; }
+   screen half their height across the page, as wide as the seller's card over it, rounded like
+   them, with the hairline round the map pages' (.map-canvas, whose dark theme it shares); its
+   grey until it loads. Over its top left, the place's name in a pill like the photo counter's;
+   Leaflet's + and − at its bottom right, over its credit. Its layers stay in its own stacking
+   order, under the sticky header. */
+.listing-map-section { margin-top: 1.25rem; }
 .listing-map {
   position: relative;
   z-index: 0;
