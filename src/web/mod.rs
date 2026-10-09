@@ -399,14 +399,18 @@ impl IntoResponse for AppError {
 pub type Result<T, E = AppError> = std::result::Result<T, E>;
 
 /// Renders an Askama template as an HTML response; a whole page (base.html) with the modules it
-/// uses preloaded in its head (`module_preloads`).
+/// uses preloaded in its head (`module_preloads`). Every page says it may differ with the request's
+/// `Turbo-Frame` (Vary): the infinite scroll's next page answers a frame's request with the frame
+/// alone and any other with the whole page, at the same address (`is_next_page_request`), so a cache
+/// must keep the two apart, or it could give the frame to a visitor or a search engine asking for
+/// the page.
 pub fn render(template: impl Template) -> Result<Response> {
     let mut html = template.render()?;
     if let Some(at) = html.find(MODULES_HERE) {
         let preloads = module_preloads(&html);
         html.replace_range(at..at + MODULES_HERE.len(), &preloads);
     }
-    Ok(Html(html).into_response())
+    Ok(([(header::VARY, HeaderValue::from_static("Turbo-Frame"))], Html(html)).into_response())
 }
 
 /// Renders a Turbo Stream: instructions Turbo applies to the page that made the request.
@@ -417,7 +421,7 @@ pub fn render_stream(template: impl Template) -> Result<Response> {
 
 /// Infinite scroll: Turbo loading a next-page `<turbo-frame id="page-…">`, which only needs the
 /// frame. (Other frames, like the map page's results, get the whole page; Turbo takes the frame
-/// out of it.)
+/// out of it.) The answer then differs with this header, which `render` tells caches (Vary).
 pub fn is_next_page_request(headers: &HeaderMap) -> bool {
     headers
         .get("turbo-frame")

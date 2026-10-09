@@ -2756,13 +2756,24 @@ async fn next_page_loads_as_a_turbo_frame(pool: PgPool) {
         .header("turbo-frame", &frame_id)
         .body(Body::empty())
         .unwrap();
-    let next = send(pool, request).await;
+    let next = send(pool.clone(), request).await;
     assert_eq!(next.status, StatusCode::OK);
     assert!(next.body.starts_with(&format!(r#"<turbo-frame id="{frame_id}""#)));
     assert!(!next.body.contains("<html"));
     // 42 listings: 24 on the first page, the remaining 18 here, and no further page.
     assert_eq!(next.body.matches(r#"class="card""#).count(), 18);
     assert!(!next.body.contains("Shfaq më shumë"));
+
+    // The same address, asked for without the frame (a search engine, a link opened anew), is the
+    // whole page: both answers say they differ with Turbo-Frame, so that a cache keeps them apart.
+    let vary = |response: &TestResponse| {
+        response.headers.get_all(header::VARY).iter().map(|value| value.to_str().unwrap().to_ascii_lowercase()).collect::<Vec<_>>()
+    };
+    assert!(vary(&next).iter().any(|value| value.contains("turbo-frame")), "{:?}", vary(&next));
+    let whole = get(pool, &src).await;
+    assert_eq!(whole.status, StatusCode::OK);
+    assert!(whole.body.contains("<html") && whole.body.contains(r#"<link rel="canonical""#));
+    assert!(vary(&whole).iter().any(|value| value.contains("turbo-frame")), "{:?}", vary(&whole));
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
