@@ -69,6 +69,7 @@ pub fn router(state: AppState) -> Router {
         .route("/listing/{key}", get(listings::show))
         .route("/listing/{public_no}/phone", post(listings::reveal_phone))
         .route("/listing/{public_no}/pare", post(listings::seen))
+        .route("/listing/{public_no}/te-ngjashme", get(listings::related))
         .route("/listing/{public_no}/ruaj", post(saved::save))
         .route("/listing/{public_no}/raporto", get(safety::report_page).post(safety::report))
         .route("/listing/{public_no}/blloko", post(safety::block))

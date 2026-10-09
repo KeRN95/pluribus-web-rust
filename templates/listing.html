@@ -319,7 +319,8 @@
 
 {%- if !page.cards.is_empty() %}
 {#- Listings like this one, from other sellers (db::related_listings): the browse pages' cards,
-    under the listing as wide as the page. -#}
+    under the listing as wide as the page, eight at a time, the next eight fetched as the last
+    come into view (next_page.html; listings::related). -#}
 <section class="related" aria-labelledby="related-heading">
   <h2 id="related-heading">Njoftime të ngjashme</h2>
   {% include "listing_grid.html" %}

@@ -2008,6 +2008,28 @@ async fn a_listing_shows_listings_like_it(pool: PgPool) {
     let related = &related[..related.find("</section>").unwrap()];
     assert!(related.contains(r#"<h2 id="related-heading">Njoftime të ngjashme</h2>"#));
     assert_eq!(card_numbers(related), vec![golf_a, golf_b, audi, 1002]);
+    // Four being all of them, no frame asks for more. The frame's answer, from the third on, in
+    // the frame the page would have named, with no frame after it either; from the first, all
+    // four. Asked for as a page, it leads back to the listing.
+    assert!(!related.contains("page-related-"), "{related}");
+    let frame = |from: i64| {
+        let pool = pool.clone();
+        async move {
+            let request = Request::get(format!("/listing/1001/te-ngjashme?nga={from}"))
+                .header("turbo-frame", format!("page-related-{from}"))
+                .body(Body::empty())
+                .unwrap();
+            send(pool, request).await.body
+        }
+    };
+    let rest = frame(2).await;
+    assert!(rest.starts_with(r#"<turbo-frame id="page-related-2" target="_top">"#), "{rest}");
+    assert_eq!(card_numbers(&rest), vec![audi, 1002]);
+    assert!(!rest.contains("page-related-4"));
+    assert_eq!(card_numbers(&frame(0).await), vec![golf_a, golf_b, audi, 1002]);
+    let page = get(pool.clone(), "/listing/1001/te-ngjashme?nga=2").await;
+    assert_eq!(page.status, StatusCode::SEE_OTHER);
+    assert_eq!(page.location.as_deref(), Some("/listing/1001"));
 
     // A listing alone in its category has nothing under it.
     let dog = html(pool, "/listing/1009-kelysh-labrador-3-muajsh").await;

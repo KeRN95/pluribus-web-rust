@@ -181,9 +181,10 @@ impl ListingPage {
     }
 
     /// The listings like one, under its page (db::related_listings): small, none of them loaded
-    /// before they come near the screen, as they come after the listing.
-    pub fn related(cards: Vec<ListingCard>) -> Self {
-        Self { cards, next: None, layout: Cards::Small, eager: 0, card_ids: LISTING_IDS, lead: false }
+    /// before they come near the screen, as they come after the listing; `next` fetches the
+    /// ones after these as the last come into view (listings::related).
+    pub fn related(cards: Vec<ListingCard>, next: Option<NextPage>) -> Self {
+        Self { cards, next, layout: Cards::Small, eager: 0, card_ids: LISTING_IDS, lead: false }
     }
 
     /// A row of small cards that slides sideways (card_row.html), its cards' ids starting with
@@ -243,7 +244,12 @@ struct ListingFrame<'a> {
 }
 
 fn frame_response(after: Option<Cursor>, page: &ListingPage) -> Result<Response> {
-    let frame_id = after.as_ref().map(frame_id).unwrap_or_default();
+    frame(after.as_ref().map(frame_id).unwrap_or_default(), page)
+}
+
+/// The cards of `page` inside the frame `frame_id`, for any page's infinite scroll (the browse
+/// pages', a listing's related ones').
+pub fn frame(frame_id: String, page: &ListingPage) -> Result<Response> {
     render(ListingFrame { frame_id, page })
 }
 

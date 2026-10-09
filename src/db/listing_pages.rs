@@ -629,18 +629,21 @@ pub async fn add_views(db: &PgPool, numbers: &[i64], views: &[i64]) -> sqlx::Res
     Ok(())
 }
 
-/// How many related listings a listing's page shows under it.
+/// How many related listings a listing's page shows under it at a time: the next as many load as
+/// the last come into view (listings::related).
 pub const RELATED: i64 = 8;
 
 /// Listings like this one, for under its page: from other sellers, at most two from any one, the
-/// most alike first. As the big sites do it, on a small scale: a few hundred candidates come
+/// most alike first, `limit` of them from the `offset`th (the page's next frames ask from where
+/// it left off; the ranking holds still enough between two requests, its newness part moving by
+/// the day). As the big sites do it, on a small scale: a few hundred candidates come
 /// cheaply off the category's indexes (the closest in price either way, the nearest, the newest,
 /// and those sharing a narrow choice, such as the model), and a score ranks them: the choices
 /// shared (a model, picked under its make, three; any other, a make, a fuel, a colour, a half, so
 /// that many small likenesses don't outweigh the price), the price (three at the same, none at
 /// half or double), the place (two at the same, none 50 km away) and how new it is (one today,
 /// none two months on).
-pub async fn related_listings(db: &PgPool, listing_id: Uuid, limit: i64) -> sqlx::Result<Vec<ListingCard>> {
+pub async fn related_listings(db: &PgPool, listing_id: Uuid, limit: i64, offset: i64) -> sqlx::Result<Vec<ListingCard>> {
     let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
     query.push(
         "NULL::float8 AS distance_m
@@ -727,6 +730,8 @@ pub async fn related_listings(db: &PgPool, listing_id: Uuid, limit: i64) -> sqlx
              LIMIT ",
     );
     query.push_bind(limit);
+    query.push(" OFFSET ");
+    query.push_bind(offset);
     query.push(") l LEFT JOIN locations loc ON loc.id = l.location_id ORDER BY l.related_score DESC, l.id");
     query.build_query_as().fetch_all(db).await
 }

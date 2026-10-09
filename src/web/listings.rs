@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 
 use askama::Template;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, RawQuery, State},
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Redirect, Response},
 };
@@ -13,8 +13,8 @@ use rust_decimal::{Decimal, RoundingStrategy, prelude::ToPrimitive};
 use super::{
     Result,
     account::{ClientIp, cookie_header, current_user},
-    browse::{ListingPage, Subcategory, category_icon, verified_label},
-    cookie, not_found,
+    browse::{self, ListingPage, NextPage, Subcategory, category_icon, verified_label},
+    cookie, is_next_page_request, not_found,
     icons::{self, Reads},
     photos,
     post::POSTED_COOKIE,
@@ -515,7 +515,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         db::listing_photos(&state.db, listing.id),
         db::visible_contact(&state.db, listing.id),
         db::categories(&state.db),
-        db::related_listings(&state.db, listing.id, db::RELATED),
+        db::related_listings(&state.db, listing.id, db::RELATED + 1, 0),
         db::listing_views(&state.db, listing.id),
         db::price_was(&state.db, listing.id),
         safety::hidden_accounts(&state, &headers),
@@ -559,6 +559,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         _ => None,
     };
     let blocked = hidden.contains(&listing.created_by_user_id);
+    let related_next = related_next(&mut related, listing.public_no, 0);
     safety::without_hidden(&mut related, &hidden);
     let hidden_note = match listing.status.as_str() {
         "SUSPENDED" => Some("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë."),
@@ -597,7 +598,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     };
     // Said once: the cookie that says so (post.rs) goes with this answer.
     let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
-    let page = ListingPage::related(related);
+    let page = ListingPage::related(related, related_next);
     let meta = listing_meta(&seo::origin(&headers), &listing, &photos);
     let mut response =
         render(ListingShow {
@@ -740,6 +741,53 @@ pub async fn seen(
 {agent}", ip.unwrap_or_default());
     state.views.record(&state.db, public_no, &visitor).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// `related` holds up to RELATED + 1 listings like one, from the `offset`th; the extra one only
+/// shows that more exist: the frame that fetches them, from where these leave off, or None.
+fn related_next(related: &mut Vec<ListingCard>, public_no: i64, offset: i64) -> Option<NextPage> {
+    let more = related.len() as i64 > db::RELATED;
+    related.truncate(db::RELATED as usize);
+    more.then(|| {
+        let from = offset + db::RELATED;
+        NextPage { frame_id: format!("page-related-{from}"), url: format!("/listing/{public_no}/te-ngjashme?nga={from}") }
+    })
+}
+
+/// The next listings like one, from the `nga`th (RELATED of them, and the frame for the next),
+/// as its page's last come into view: the infinite scroll of "Njoftime të ngjashme", as the
+/// browse pages'. Asked for as a page rather than a frame (its link, without scripts), it leads
+/// back to the listing.
+pub async fn related(
+    State(state): State<AppState>,
+    Path(public_no): Path<i64>,
+    RawQuery(query): RawQuery,
+    headers: HeaderMap,
+) -> Result<Response> {
+    if !is_next_page_request(&headers) {
+        return Ok(Redirect::to(&format!("/listing/{public_no}")).into_response());
+    }
+    let Some(listing) = db::listing_by_public_no(&state.db, public_no).await? else {
+        return not_found().await;
+    };
+    if !listing.on_site() {
+        return not_found().await;
+    }
+    let offset = query
+        .as_deref()
+        .into_iter()
+        .flat_map(|query| query.split('&'))
+        .find_map(|pair| pair.strip_prefix("nga="))
+        .and_then(|from| from.parse::<i64>().ok())
+        .filter(|from| *from >= 0)
+        .unwrap_or(0);
+    let (mut related, hidden) = tokio::try_join!(
+        db::related_listings(&state.db, listing.id, db::RELATED + 1, offset),
+        safety::hidden_accounts(&state, &headers),
+    )?;
+    let next = related_next(&mut related, public_no, offset);
+    safety::without_hidden(&mut related, &hidden);
+    browse::frame(format!("page-related-{offset}"), &ListingPage::related(related, next))
 }
 
 /// Swaps the button for the seller's number (a tap calls it) or e-mail address.
