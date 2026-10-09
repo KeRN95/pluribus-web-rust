@@ -3174,7 +3174,7 @@ async fn a_signed_in_seller_posts_a_listing(pool: PgPool) {
     assert!(page.contains("<h1>Samsung Galaxy S21, 128 GB</h1>"));
     assert!(page.contains("32\u{a0}000\u{a0}Lekë"));
     // A wide pill that says its name, in the contact bar under the price.
-    assert!(page.contains(r#"<aside class="contact-bar" aria-label="Kontakti">"#));
+    assert!(page.contains(r#"<aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">"#));
     assert!(page.contains(r#"<button type="submit" class="button secondary reveal-button"><svg class="contact-icon""#));
     assert!(page.contains(r#"</svg><span class="button-label">Shfaq numrin</span></button>"#));
     let public_no = url.trim_start_matches("/listing/").split('-').next().unwrap();
@@ -4493,7 +4493,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur · "#,
         r#"<p class="listing-price">"#,
-        r#"<aside class="contact-bar" aria-label="Kontakti">"#,
+        r#"<aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">"#,
         r#"<form id="phone-reveal" method="post""#,
         "</aside>",
         r#"<div class="actions">"#,

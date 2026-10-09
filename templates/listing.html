@@ -164,12 +164,13 @@
   {#- How to reach the seller, under the price: the phone (an envelope for a seller who signed in
       by e-mail) and a message, wide pills that say their names, the way to the seller being what
       the page is for; on a phone a bar at the foot of the screen, which stays while the listing
-      scrolls (listing.css, .contact-bar). Then, beside them from 720 px up and under the price
-      alone on a phone, the share and the report, circles (.actions). The seller themselves come
-      after the description, over their other listings (below). -#}
+      scrolls, a slight shadow over it while it floats (listing.css, .contact-bar;
+      sticky_controller.js). Then, beside them from 720 px up and under the price alone on a
+      phone, the share and the report, circles (.actions). The seller themselves come after the
+      description (below). -#}
   {%- let message = !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}
   {%- if reveal.is_some() || message %}
-  <aside class="contact-bar" aria-label="Kontakti">
+  <aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">
     {% if let Some(reveal) = reveal %}
     {#- The phone, "Shfaq numrin", in a plain pill; the number that takes its place is marked as
         what is picked is. Turbo submits the form and swaps in the number (or address) from the

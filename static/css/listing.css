@@ -398,7 +398,9 @@
    the way to the seller is at hand wherever the reader is, as the apps have it: from the screen's
    edge to its edge, a hairline over it on the page's colour, clear of the phone's home bar; over
    the page but under the sticky header and the message sheet (z-index 7). Each pill takes half of
-   it; once the number shows, it takes the room and the message keeps its icon alone. */
+   it; once the number shows, it takes the room and the message keeps its icon alone. While it
+   floats over the page a slight shadow rises from it (.is-stuck, sticky_controller.js), gone once
+   it settles in its place. */
 @media (max-width: 719px) {
   .contact-bar {
     position: sticky;
@@ -409,7 +411,9 @@
     padding: .6rem var(--gutter) calc(.6rem + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border);
     background: var(--bg);
+    transition: box-shadow .15s;
   }
+  .contact-bar.is-stuck { box-shadow: 0 -2px 6px rgb(0 0 0 / 6%), 0 -8px 20px rgb(0 0 0 / 8%); }
   .contact-bar .button { flex: 1 1 0; padding: 0 .9rem; }
   .contact-bar .contact-revealed { flex: 1 1 auto; }
   .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
