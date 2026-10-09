@@ -332,18 +332,17 @@
 
 
 /* The round buttons in the row with the search (home.html, .welcome-tools), as tall as the
-   categories' pills under them (--pill): the one for posting a listing, two circles wide, then
-   the listings kept, the conversations and the theme, which no top bar holds (every page's has
-   the account alone, base.css). The listings kept and the theme are marked as the site marks what
-   is picked or open (a category page's own pill, an open menu's button): a tint of a colour, a
-   border of it and the icon in it, the border whole under the pointer or a press; each has its
-   colour (--tone) and its tint (--tone-bg), as listing.css's price bubbles have: the listings
-   kept the site's one red, the kept hearts' on the cards (--red, page.css), and the theme the
-   blue under its moon, on the light theme, and the yellow under its sun, on the dark (--yellow).
-   The plus and the conversations are plain (.plain-shortcut), on the surface with the menus'
-   hairline and their icon in the text's colour, as the back button is (browse.css): the colours
-   are kept for what means one. Their icons are the pills' size beside them. On a phone a
-   finger's target is bigger than the button, as a pill's is (::after, from the gaps). */
+   categories' pills under them (--pill): the one for posting a listing, then the listings kept,
+   the conversations and the theme, which no top bar holds (every page's has the account alone,
+   base.css). The theme is marked as the site marks what is picked or open (a category page's own
+   pill, an open menu's button): a tint of a colour, a border of it and the icon in it, the border
+   whole under the pointer or a press, its colour (--tone) and its tint (--tone-bg) as
+   listing.css's price bubbles have them: the blue under its moon, on the light theme, and the
+   yellow under its sun, on the dark (--yellow). The plus, the listings kept and the conversations
+   are plain (.plain-shortcut), on the surface with the menus' hairline and their icon in the
+   text's colour, as the back button is (browse.css): the one colour means one thing. Their icons
+   are the pills' size beside them. On a phone a finger's target is bigger than the button, as a
+   pill's is (::after, from the gaps). */
 .circle-shortcut {
   position: relative;
   display: flex;
@@ -364,9 +363,6 @@
   -webkit-tap-highlight-color: transparent;
 }
 .circle-icon { flex: none; }
-/* The plus, two circles wide. */
-.plus-shortcut { width: calc(var(--pill) * 2); }
-.saved-shortcut { --tone: var(--red); --tone-bg: var(--red-bg); }
 .theme-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
 :root[data-theme="dark"] .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
 @media (prefers-color-scheme: dark) {

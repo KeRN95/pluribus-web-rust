@@ -22,10 +22,9 @@
       category and town, the results' filters narrowing them, drawn like the message box in
       Claude's app, a pill with the words in it and, inside it at the end, a round coral button
       with a magnifier that searches (the text inside says what the field is for; its label stays
-      for screen readers). Then the button that posts a listing, two circles wide, plain, on the
-      surface with the menus' hairline as the back button is; the listings kept, marked in the
-      site's red, the kept hearts' (--red); the conversations, plain as the plus; and the theme,
-      in the blue under its moon and the yellow under its sun. -#}
+      for screen readers). Then the button that posts a listing, plain, on the surface with the
+      menus' hairline as the back button is; the listings kept and the conversations, plain as
+      the plus; and the theme, in the blue under its moon and the yellow under its sun. -#}
   <div class="welcome-tools">
   <form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest"
         data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
@@ -44,7 +43,7 @@
       </a>
       {#- The listings the visitor keeps (saved.rs), with a dot while some dropped their price unseen
           (heart_controller.js). -#}
-      <a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat" title="Të ruajturat">
+      <a class="circle-shortcut plain-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat" title="Të ruajturat">
         <svg class="circle-icon" data-icon="heart" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg>
       </a>
       {#- The visitor's conversations (messages.rs), with how many have messages unread in a coral

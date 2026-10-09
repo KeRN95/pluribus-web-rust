@@ -335,7 +335,7 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         r#"<div class="welcome-tools">"#,
         r#"<form class="welcome-form""#,
         r#"<a class="circle-shortcut plain-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#,
-        r#"<a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#,
+        r#"<a class="circle-shortcut plain-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#,
         r#"<a class="circle-shortcut plain-shortcut inbox-shortcut" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">"#,
         r#"<button type="button" class="circle-shortcut theme-shortcut" data-controller="theme" data-action="theme#toggle""#,
     ]);
@@ -472,7 +472,7 @@ async fn every_listing_has_a_heart_over_its_photo(pool: PgPool) {
     // round button at the end of its categories leads to the listings kept, and no top bar does.
     let home = get(pool.clone(), "/").await.body;
     assert_eq!(home.matches(r#"<form class="heart""#).count(), home.matches(r#"<article class="card"#).count());
-    assert!(home.contains(r#"<a class="circle-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#));
+    assert!(home.contains(r#"<a class="circle-shortcut plain-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#));
     let cars = get(pool.clone(), "/c/automjete").await.body;
     assert!(!cars.contains("saved-button"));
     assert!(cars.contains(&heart(1001)));
@@ -3476,14 +3476,13 @@ async fn elektronike_and_shtepi_kopsht_have_colours_of_their_own(pool: PgPool) {
             assert!(rule.contains(&token), "{token} in {rule}");
         }
     }
-    // The welcome page's heart wears the site's one red, in every part of the site, and a kept
-    // listing's heart has it as its outline round a fill a little lighter than it; the
-    // conversations button is plain, no colour's.
-    assert!(css.contains(".saved-shortcut{--tone:var(--red);--tone-bg:var(--red-bg);}"));
-    assert!(!css.contains(".inbox-shortcut{--tone"));
+    // A kept listing's heart is filled with the site's one red, in every part of the site, lined
+    // thinly in white over a photo; the welcome page's heart and conversations buttons are plain,
+    // no colour's.
+    assert!(!css.contains(".saved-shortcut{--tone") && !css.contains(".inbox-shortcut{--tone"));
     let kept = &css[css.find(r#".heart-button[aria-pressed="true"] svg{"#).expect("the kept heart")..];
     let kept = &kept[..kept.find('}').unwrap()];
-    assert!(kept.contains("fill:color-mix(in srgb,var(--red) 65%,#fff)") && kept.contains("stroke:var(--red)"), "{kept}");
+    assert!(kept.contains("fill:var(--red)") && kept.contains("stroke:#fff"), "{kept}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

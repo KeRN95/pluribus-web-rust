@@ -77,7 +77,7 @@
   --darkred-bg: #f6dcdc;
   --darkred-button: #9b1b1b;
   --darkred-button-hover: #821616;
-  --red: #d6303e;                /* a bright red: a kept listing's heart (the welcome page's heart is the burgundy) */
+  --red: #e0203a;                /* a bright red: a kept listing's heart */
   --red-bg: #fbe0e2;
   --yellow: #bb8b1b;             /* and a yellow: the theme's sun, on the dark theme */
   --yellow-bg: #f9f2dc;
@@ -162,7 +162,7 @@
   --darkred-bg: #432223;
   --darkred-button: #a42424;
   --darkred-button-hover: #c02c2c;
-  --red: #ef555f;
+  --red: #ff4f5e;
   --red-bg: #4a2428;
   --yellow: #e2be5a;
   --yellow-bg: #463d25;
@@ -216,7 +216,7 @@
     --darkred-bg: #432223;
     --darkred-button: #a42424;
     --darkred-button-hover: #c02c2c;
-    --red: #ef555f;
+    --red: #ff4f5e;
     --red-bg: #4a2428;
     --yellow: #e2be5a;
     --yellow-bg: #463d25;

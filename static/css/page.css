@@ -204,22 +204,25 @@
   position: absolute;
   inset: var(--reach);
   border-radius: 50%;
-  background: rgb(38 38 36 / 45%);
+  background: rgb(38 38 36 / 55%);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   transition: background-color .15s;
 }
+/* The heart's line pure white, a little heavier, on a circle a little darker, so that it reads
+   white rather than grey over the blur; kept, filled with the red itself and lined thinly in
+   white, so that it stands out on any photo. */
 .heart-button svg {
   position: relative;
   width: 13px;
   height: 13px;
   fill: transparent;
   stroke: currentColor;
-  stroke-width: 2.2;
+  stroke-width: 2.4;
   stroke-linejoin: round;
   transition: fill .15s, stroke .15s;
 }
-.heart-button[aria-pressed="true"] svg { fill: color-mix(in srgb, var(--red) 65%, #fff); stroke: var(--red); }
+.heart-button[aria-pressed="true"] svg { fill: var(--red); stroke: #fff; stroke-width: 1.6; }
 .heart-button.is-beating svg { animation: heart-beat .35s ease-out; }
 @keyframes heart-beat { 45% { transform: scale(1.3); } }
 .heart-button:active { transform: scale(.9); }
@@ -582,7 +585,7 @@
 .cards-list .results .heart-button { --circle: 2rem; --reach: .3rem; color: var(--text); }
 .cards-list .results .heart-button::before { background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .cards-list .results .heart-button svg { width: 19px; height: 19px; }
-.cards-list .results .heart-button[aria-pressed="true"] svg { fill: color-mix(in srgb, var(--red) 65%, #fff); stroke: var(--red); stroke-width: 2.2; }
+.cards-list .results .heart-button[aria-pressed="true"] svg { fill: var(--red); stroke: var(--red); stroke-width: 2.2; }
 @media (hover: hover) {
   .cards-list .results .heart-button:hover::before { background: var(--surface-muted); }
 }
