@@ -11,8 +11,28 @@ import { signedIn } from "controllers/signed_in.js";
 // The same answer says how many kept listings dropped their price unseen, for the header's heart
 // (the welcome page's, at the end of its categories).
 // Someone not signed in keeps nothing, and the page doesn't ask (signed_in.js).
-let kept = new Set();
+// What is known is kept in the browser too (localStorage, STORE), so that a page opened afresh, not
+// only one Turbo shows, has its hearts as they were with its photos, before the answer comes; it
+// goes once no one is signed in. A browser that won't keep it just waits for the answer.
+const STORE = "kept-listings";
+let kept = new Set(signedIn() ? stored() : []);
 let asking = null;
+
+function stored() {
+  try {
+    const numbers = JSON.parse(localStorage.getItem(STORE));
+    return Array.isArray(numbers) ? numbers : [];
+  } catch {
+    return [];
+  }
+}
+
+function store() {
+  try {
+    if (kept.size) localStorage.setItem(STORE, JSON.stringify([...kept]));
+    else localStorage.removeItem(STORE);
+  } catch {}
+}
 
 function ask() {
   if (!signedIn()) {
@@ -28,6 +48,7 @@ function ask() {
 
 function answered(answer) {
   kept = new Set(answer.numbers);
+  store();
   for (const heart of document.querySelectorAll(".heart[data-heart-number-value]")) {
     show(heart, kept.has(Number(heart.dataset.heartNumberValue)));
   }
@@ -93,6 +114,7 @@ export default class extends Controller {
   mark(number, keep) {
     if (keep) kept.add(number);
     else kept.delete(number);
+    store();
     for (const heart of document.querySelectorAll(`.heart[data-heart-number-value="${number}"]`)) show(heart, keep);
   }
 
