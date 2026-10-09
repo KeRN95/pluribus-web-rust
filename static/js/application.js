@@ -124,7 +124,7 @@ document.addEventListener("touchstart", (event) => {
   const link = event.touches.length === 1 && event.target.closest?.("a[href]");
   if (!link || !aheadable(link)) return;
   const url = new URL(link.href);
-  if (fresh() && touched.url === url.href) return;
+  if ((fresh() && touched.url === url.href) || keptAhead(url.href)) return;
   touched?.request.cancel();
   const request = new FetchRequest(ahead, FetchMethod.get, url, new URLSearchParams(), link);
   request.fetchOptions.priority = "high";
@@ -142,11 +142,78 @@ document.addEventListener("touchmove", (event) => {
   touched = null;
 }, { passive: true });
 document.addEventListener("turbo:before-fetch-request", (event) => {
-  if (touching || !touched) return;
+  if (touching) return;
   const { url, fetchOptions } = event.detail;
-  if (fresh() && fetchOptions.method === "GET" && url.href === touched.url) event.detail.fetchRequest = touched.request;
+  if (fetchOptions.method !== "GET") return;
+  if (touched && fresh() && url.href === touched.url) event.detail.fetchRequest = touched.request;
+  else if (keptAhead(url.href)) event.detail.fetchRequest = kept.get(url.href).request;
   touched = null;
+  kept.delete(url.href);
 }, true);
+
+// A finger gives a tap's page only the tap's own length of a head start, about a tenth of a
+// second, where a mouse resting on a link gives a click's most of a second; and a page's round
+// trip is longer than a tap (some 150 ms through the site's tunnel). So on a touch screen the
+// pages behind the links in view are fetched ahead while the page sits idle: the cards' listings,
+// the categories' pills (the welcome page's, a category page's path and subcategories), any link
+// Turbo would fetch ahead under a mouse (aheadable), two at a time, at most twelve a page, quietly
+// (priority low), each kept half a minute for the visit a tap makes (above, as the touch's own).
+// Not where the visitor asks to save data, nor on a connection the browser calls slow
+// (navigator.connection), nor a page kept already.
+const AHEAD_IN_VIEW = ".card-link, .shortcut";
+const kept = new Map();
+const keptAhead = (href) => {
+  const page = kept.get(href);
+  if (page && Date.now() - page.at < 30_000) return true;
+  kept.delete(href);
+  return false;
+};
+const connection = navigator.connection;
+const dataIsCheap = () => !connection?.saveData && (!connection?.effectiveType || connection.effectiveType === "4g");
+let inView = null;
+let waiting = [];
+let fetching = 0;
+let left = 0;
+const idle = window.requestIdleCallback ?? ((task) => setTimeout(task, 200));
+function fetchAhead() {
+  while (fetching < 2 && left > 0 && waiting.length) {
+    const link = waiting.shift();
+    const url = new URL(link.href);
+    if (!aheadable(link) || keptAhead(url.href) || (touched && fresh() && touched.url === url.href)) continue;
+    const request = new FetchRequest(ahead, FetchMethod.get, url, new URLSearchParams(), link);
+    request.fetchOptions.priority = "low";
+    kept.set(url.href, { request, at: Date.now() });
+    left--;
+    fetching++;
+    touching = true;
+    const done = request.perform();
+    touching = false;
+    done.catch(() => {}).finally(() => {
+      fetching--;
+      idle(fetchAhead);
+    });
+  }
+}
+function watchLinksInView() {
+  inView?.disconnect();
+  inView = null;
+  waiting = [];
+  if (!matchMedia("(pointer: coarse)").matches || !dataIsCheap()) return;
+  left = 12;
+  inView = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      inView.unobserve(entry.target);
+      waiting.push(entry.target);
+    }
+    if (waiting.length) idle(fetchAhead);
+  }, { rootMargin: "25%" });
+  for (const link of document.querySelectorAll(AHEAD_IN_VIEW)) {
+    if (link.matches("a[href]") && aheadable(link)) inView.observe(link);
+  }
+}
+document.addEventListener("turbo:load", watchLinksInView);
+document.addEventListener("turbo:before-visit", () => { inView?.disconnect(); waiting = []; });
 
 // A listing's page, once Turbo shows it, says it was seen (listings.rs, seen), for the welcome
 // page's "Më të klikuarat"; the kept listings' page, that the price drops it shows were seen
