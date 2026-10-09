@@ -73,6 +73,26 @@
 @media (prefers-reduced-motion: no-preference) {
   .category-switch[open] + .category-level > .shortcut { animation: menu-in .14s ease-out; }
 }
+/* Phones: the category pills the welcome page's size (welcome.css), the path's small pills (a
+   listing's too) and the subcategories' alike, about 35 px tall; the back button as tall as they
+   are, and the row's buttons as big as the pills over them (--row, below), as everywhere. As on
+   the welcome page, a finger's target is bigger than the pill it sees: half the gaps round each
+   pill, and round the back button (::after, part of the link, from the border's outer edge), its
+   neighbours' meeting it halfway; the subcategories' lines stand as far apart as the welcome
+   page's. */
+@media (max-width: 719px) {
+  .subcategories { --row-gap: .55rem; --column-gap: .45rem; gap: var(--row-gap) var(--column-gap); }
+  .category-path { --row-gap: .4rem; --column-gap: .4rem; }
+  .subcategories .shortcut,
+  .shortcut.small { position: relative; gap: .4rem; padding: .45rem .85rem .45rem .7rem; font-size: .9375rem; }
+  .back-button { --size: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px); position: relative; }
+  :is(.subcategories, .category-path) .shortcut::after,
+  .back-button::after {
+    content: "";
+    position: absolute;
+    inset: calc(var(--row-gap) / -2 - 1px) calc(var(--column-gap) / -2 - 1px);
+  }
+}
 .result-count { margin: 0; color: var(--muted); }
 
 /* The browse page (browse.html): the row of buttons, the places under it, what is found. --row is
@@ -82,6 +102,11 @@
 /* --row is the subcategory pills' height (.subcategories .shortcut: a line of their text, .6rem
    over and under it, the hairline), so the row's buttons are as big as the pills over them. */
 .browse { --row: calc(1.55 * .94 * var(--text-md) + 1.2rem + 2px); --drop: .75rem; position: relative; margin-top: 1rem; }
+/* Phones: as the subcategory pills there (above, the welcome page's size), a line of their text
+   and .45rem over and under it. */
+@media (max-width: 719px) {
+  .browse { --row: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px); }
+}
 /* The row of buttons as close under the category pills (the subcategories, or the path when it has
    none) as the pills are to each other: .5rem, not the 1rem a heading leaves. */
 .category-pills ~ .browse { margin-top: .5rem; }
