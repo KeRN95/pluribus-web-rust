@@ -77,6 +77,7 @@ mod notices;
 mod searches;
 mod expiry;
 mod notifications;
+mod rates;
 
 pub use categories::*;
 pub use properties::*;
@@ -94,6 +95,7 @@ pub use notices::*;
 pub use searches::*;
 pub use expiry::*;
 pub use notifications::*;
+pub use rates::*;
 
 #[cfg(test)]
 mod tests {

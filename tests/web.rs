@@ -1573,6 +1573,67 @@ async fn price_filter_converts_currencies(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_bank_of_albanias_euro_rate_reprices_the_listings_in_leke(pool: PgPool) {
+    use marketplace::db;
+    use rust_decimal::Decimal;
+    let number = |text: &str| text.parse::<Decimal>().unwrap();
+    let day = time::Date::from_calendar_date(2026, time::Month::October, 9).unwrap();
+    let iphone = "iPhone 13, 128 GB, si i ri";
+    let euros = |pool: PgPool, no: i64| async move {
+        sqlx::query_scalar::<_, Decimal>("SELECT price_normalized FROM listings WHERE public_no = $1")
+            .bind(no)
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+    };
+    // The placeholder: 100 lekë a euro, every price worked out at it.
+    let seeded = db::euro_rate(&pool).await.unwrap();
+    assert_eq!((seeded.lek_per_eur, seeded.rate_date, seeded.reprice_due), (number("100.00"), None, false));
+    assert_eq!(marketplace::rates::reprice(&pool).await.unwrap(), 0);
+    // Every listing last changed a day ago (which the trigger lets a statement say only so).
+    let mut tx = pool.begin().await.unwrap();
+    sqlx::query("SELECT set_config('app.keep_updated_at', 'on', true)").execute(&mut *tx).await.unwrap();
+    sqlx::query("UPDATE listings SET updated_at = now() - interval '1 day'").execute(&mut *tx).await.unwrap();
+    tx.commit().await.unwrap();
+
+    // The official 91.65 is taken; the listings priced in lekë are due to be worked out again.
+    assert!(db::take_euro_rate(&pool, number("91.65"), day).await.unwrap());
+    let taken = db::euro_rate(&pool).await.unwrap();
+    assert_eq!((taken.eur_rate, taken.lek_per_eur, taken.rate_date, taken.reprice_due), (number("0.01091107"), number("91.65"), Some(day), true));
+
+    // Worked out again: every one priced in lekë (the iPhone's 55 000 Lekë is 600,11 € now, not
+    // 550), those in euros as they were, and none of them changed as far as its updated_at, which
+    // the sitemaps give, says.
+    let in_leke: i64 = sqlx::query_scalar("SELECT count(*) FROM listings WHERE currency = 'ALL' AND price_amount IS NOT NULL")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(marketplace::rates::reprice(&pool).await.unwrap(), in_leke as u64);
+    assert_eq!(euros(pool.clone(), 1005).await, number("600.11"));
+    assert_eq!(euros(pool.clone(), 1001).await, number("9500.00"));
+    let untouched: bool = sqlx::query_scalar("SELECT bool_and(updated_at < now() - interval '23 hours') FROM listings").fetch_one(&pool).await.unwrap();
+    assert!(untouched);
+    assert!(!db::euro_rate(&pool).await.unwrap().reprice_due);
+    assert_eq!(marketplace::rates::reprice(&pool).await.unwrap(), 0);
+    // The price filter in euros goes by it.
+    assert!(!get(pool.clone(), "/c/elektronike?price_max=600&currency=EUR").await.body.contains(iphone));
+    assert!(get(pool.clone(), "/c/elektronike?price_max=601&currency=EUR").await.body.contains(iphone));
+
+    // A rate a few hundredths off isn't worth rewriting the prices for; half a percent off is.
+    assert!(!db::take_euro_rate(&pool, number("91.40"), day).await.unwrap());
+    assert!(db::take_euro_rate(&pool, number("91.10"), day).await.unwrap());
+    marketplace::rates::reprice(&pool).await.unwrap();
+    assert_eq!(euros(pool.clone(), 1005).await, number("603.73"));
+    // A listing edited meanwhile changes as ever.
+    sqlx::query("UPDATE listings SET title = title WHERE public_no = 1005").execute(&pool).await.unwrap();
+    let edited: bool = sqlx::query_scalar("SELECT updated_at > now() - interval '1 minute' FROM listings WHERE public_no = 1005")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert!(edited);
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_price_is_a_slider_with_two_ends(pool: PgPool) {
     // Without a price, the ends stand at the edges: no limit either way, and the fields to type
     // the prices in are empty.
