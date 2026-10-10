@@ -121,32 +121,30 @@
     <button type="button" class="gallery-arrow gallery-next" data-slides-target="next" data-action="slides#next" aria-label="Foto tjetër" hidden>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
     </button>
-    {#- The counter is a button too: it shows the filmstrip under the photos, which starts hidden,
-        and hides it again (slides_controller.js, toggleThumbs). -#}
+    {#- The counter is a button too: it shows the filmstrip over the photos' foot, which starts
+        hidden, and hides it again (slides_controller.js, toggleThumbs). -#}
     <button type="button" class="gallery-count" data-action="slides#toggleThumbs" aria-controls="listing-thumbs" aria-expanded="false" title="Të gjitha fotot"><span class="visually-hidden">Të gjitha fotot: </span><span data-slides-target="count">1 / {{ photos.len() }}</span></button>
+    {#- Over the photos' foot, just above the counter, a filmstrip of them, hidden until the
+        counter is clicked, which hides it again: each photo's mini copy in a small square, the
+        one that shows outlined in white, as the dots mark theirs (they give it their place
+        meanwhile), a tap on any going to its photo; more than fit slide sideways, the one that
+        shows kept in view, and under a mouse an arrow at either end steps the strip, each there
+        while it can go that way (slides_controller.js, listing.css). -#}
+    <div class="gallery-thumbs" id="listing-thumbs" data-slides-target="filmstrip" hidden>
+      <div class="thumb-strip" data-slides-target="thumbs" data-action="scroll->slides#scrolled">
+        {%- for photo in photos %}
+        <button type="button" class="gallery-thumb{% if loop.first %} is-current{% endif %}"{% if loop.first %} aria-current="true"{% endif %} data-action="slides#pick" aria-label="Foto {{ loop.index }} nga {{ photos.len() }}"><img src="{{ photo.thumb() }}" alt="" width="72" height="72" loading="lazy" decoding="async"></button>
+        {%- endfor %}
+      </div>
+      <button type="button" class="thumb-step thumb-previous" data-slides-target="thumbsPrevious" data-action="slides#thumbsBack" aria-label="Fotot e mëparshme" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <button type="button" class="thumb-step thumb-next" data-slides-target="thumbsNext" data-action="slides#thumbsOn" aria-label="Fotot e tjera" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
     {%- endif %}
   </div>
-  {%- if photos.len() > 1 %}
-  {#- Under the photos, a filmstrip of them, as the classifieds sites have it, hidden until the
-      counter over the photo is clicked, which hides it again: each photo's mini copy in a square,
-      the one that shows outlined in the page's colour, a tap on any going to its photo; more than
-      fit slide sideways, the one that shows kept in view, and under a mouse an arrow at either
-      end steps the strip, each there while it can go that way (slides_controller.js,
-      listing.css). -#}
-  <div class="gallery-thumbs" id="listing-thumbs" data-slides-target="filmstrip" hidden>
-    <div class="thumb-strip" data-slides-target="thumbs" data-action="scroll->slides#scrolled">
-      {%- for photo in photos %}
-      <button type="button" class="gallery-thumb{% if loop.first %} is-current{% endif %}"{% if loop.first %} aria-current="true"{% endif %} data-action="slides#pick" aria-label="Foto {{ loop.index }} nga {{ photos.len() }}"><img src="{{ photo.thumb() }}" alt="" width="72" height="72" loading="lazy" decoding="async"></button>
-      {%- endfor %}
-    </div>
-    <button type="button" class="thumb-step thumb-previous" data-slides-target="thumbsPrevious" data-action="slides#thumbsBack" aria-label="Fotot e mëparshme" hidden>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
-    </button>
-    <button type="button" class="thumb-step thumb-next" data-slides-target="thumbsNext" data-action="slides#thumbsOn" aria-label="Fotot e tjera" hidden>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
-    </button>
-  </div>
-  {%- endif %}
   {% endif %}
   {#- Over the photo's top corner, on one line: where it is and when it went up, the date in bold
       ("Publikuar më" for screen readers). Its number is under the description. -#}

@@ -165,10 +165,10 @@
   /* The photo and its filmstrip stay put under the top bar (3.55rem and its hairline, base.css,
      and 1rem under it) while the column beside them scrolls, and go with the page once the
      column has all gone by: sticky within their grid row, which the column's height sets. The
-     frame is no taller than the screen leaves room for under the bar, with the strip (5.5rem
-     with its room over it) and 1rem under that, so that the strip stays in sight while they
-     stand still; a wide screen that is short gets a wider frame, its blurred copy filling the
-     sides, as across the page. */
+     frame is no taller than the screen leaves room for under the bar, less 6.5rem (the 5.5rem
+     the filmstrip took under it before it went over the photo's foot, and 1rem), so that the
+     photo stays in sight whole while it stands still; a wide screen that is short gets a wider
+     frame, its blurred copy filling the sides, as across the page. */
   .listing-split > .listing-media { grid-column: 1; align-self: start; position: sticky; top: calc(4.55rem + 1px); }
   .listing-split > .listing-side { grid-column: 2; grid-template-columns: minmax(0, 1fr) auto; }
   .listing-split .listing-media .gallery-photo,
@@ -207,7 +207,7 @@
 }
 
 /* A car's page (car_page in listings.rs; .listing-car), laid out as FINN has its: the path, then
-   the photos across the page, four by three, with the filmstrip under them, and from 960 px up two
+   the photos across the page, four by three, with the filmstrip over their foot, and from 960 px up two
    columns under those. At the left the title and the kind, the car's key facts in a row (the
    year, the mileage, the gearbox and the fuel, each with its icon, its name quiet over its value;
    .key-facts), the description, the other details in a grid, a name over its value with its
@@ -323,8 +323,8 @@
   transform: scale(1.15);
 }
 .listing-photos:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-/* The counter, a button (listing.html): a click shows the filmstrip under the photos, or hides it
-   again (slides_controller.js, toggleThumbs). On the soft dark as the other pills over the photo,
+/* The counter, a button (listing.html): a click shows the filmstrip over the photos' foot, or
+   hides it again (slides_controller.js, toggleThumbs). On the soft dark as the other pills over the photo,
    darker under a mouse as the heart's circle is, and while the strip shows, light with dark
    figures, as the photos' arrows are; it takes a tap a little round it too (::after), as small as
    it is. */
@@ -417,20 +417,36 @@
   .gallery-count,
   .gallery-dots span { transition: none; }
 }
-/* Under the photos, a filmstrip of them (listing.html, .gallery-thumbs), as the classifieds sites
-   have it, hidden until the counter over the photo shows it (above): each photo's mini copy cut to a square, 4.5rem across (3.5 on a phone), rounded, the
-   one that shows outlined in the page's colour just outside its edge; a tap on any goes to its
-   photo (slides_controller.js, pick). The strip slides sideways with no bar when there are more
-   than fit, its sides padded for the outline, which its overflow would cut, the one that shows
-   kept in view (show); and under a mouse an arrow at either end, round on the surface like the
-   photos' arrows, steps it by most of its width, each there while the strip can go that way
-   (scrolled; thumbsBack, thumbsOn). */
-.gallery-thumbs { position: relative; margin-top: .6rem; }
+/* Over the photos' foot, just above the counter, a filmstrip of them (listing.html,
+   .gallery-thumbs), hidden until the counter shows it (above): in the middle, as wide as its
+   thumbnails or the photo less its edges, on the soft dark of the pills over the photo, its
+   corners rounded to match the thumbnails'. Each photo's mini copy cut to a small square, 2.75rem
+   across (2.25 on a phone), rounded, a little dimmed but the one that shows, outlined in white
+   just outside its edge as the dots mark theirs; the dots give the strip their place meanwhile.
+   A tap on any goes to its photo (slides_controller.js, pick). The strip slides sideways with no
+   bar when there are more than fit, its sides padded for the outline, which its overflow would
+   cut, the one that shows kept in view (show); and under a mouse a small arrow at either end,
+   light like the photos' arrows, steps it by most of its width, each there while the strip can
+   go that way (scrolled; thumbsBack, thumbsOn). */
+.gallery-thumbs {
+  position: absolute;
+  bottom: calc(var(--over-edge) + var(--over-photo) + .45rem);
+  left: 50%;
+  width: max-content;
+  max-width: calc(100% - 2 * var(--over-edge));
+  padding: .3rem;
+  border-radius: 14px;
+  background: rgb(38 38 36 / 45%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  translate: -50% 0;
+}
 .gallery-thumbs[hidden] { display: none; }
+.gallery:has(> .gallery-thumbs:not([hidden])) .gallery-dots { display: none; }
 .thumb-strip {
   position: relative;
   display: flex;
-  gap: .5rem;
+  gap: .35rem;
   padding: 3px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -439,19 +455,25 @@
 .thumb-strip::-webkit-scrollbar { display: none; }
 .gallery-thumb {
   flex: none;
-  width: 4.5rem;
-  height: 4.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
-  background: var(--surface-muted);
+  background: rgb(255 255 255 / 15%);
   cursor: pointer;
+  opacity: .75;
+  transition: opacity .15s;
   -webkit-tap-highlight-color: transparent;
 }
 .gallery-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.gallery-thumb.is-current { opacity: 1; }
 .gallery-thumb.is-current,
-.gallery-thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gallery-thumb:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+@media (hover: hover) {
+  .gallery-thumb:hover { opacity: 1; }
+}
 .thumb-step { display: none; }
 @media (hover: hover) and (pointer: fine) {
   .thumb-step {
@@ -459,24 +481,27 @@
     top: 50%;
     display: grid;
     place-items: center;
-    width: 2rem;
-    height: 2rem;
+    width: 1.6rem;
+    height: 1.6rem;
     padding: 0;
-    border: 1px solid var(--menu-border);
+    border: 0;
     border-radius: 50%;
-    background: var(--surface);
+    background: rgb(250 249 245 / 90%);
     box-shadow: var(--shadow);
-    color: var(--text);
+    color: #262624;
     cursor: pointer;
     translate: 0 -50%;
   }
-  .thumb-previous { left: .35rem; }
-  .thumb-next { right: .35rem; }
-  .thumb-step:hover { background: var(--surface-muted); }
+  .thumb-previous { left: .15rem; }
+  .thumb-next { right: .15rem; }
+  .thumb-step:hover { background: #faf9f5; }
 }
 .thumb-step[hidden] { display: none; }
 @media (max-width: 719px) {
-  .gallery-thumb { width: 3.5rem; height: 3.5rem; }
+  .gallery-thumb { width: 2.25rem; height: 2.25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gallery-thumb { transition: none; }
 }
 /* Above the photo, the category's pills as a category page's head has them (browse.css,
    .category-path); the status after them. */

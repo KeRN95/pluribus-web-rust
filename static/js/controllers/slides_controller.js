@@ -8,7 +8,7 @@ import { Controller } from "@hotwired/stimulus";
 // ("2 / 5") says it too. The arrows step, round and round: the next from the last photo goes back
 // to the first, the previous from the first to the last; each shows only while the mouse is near
 // its edge of the photo (near-previous, near-next). A small card shows only its first photo, and
-// none of this. A listing's page has a filmstrip of its photos under them too (listing.html,
+// none of this. A listing's page has a filmstrip of its photos over their foot too (listing.html,
 // .gallery-thumbs), hidden until its counter is clicked, which hides it again: each thumbnail goes
 // to its photo, the one that shows is marked and kept in view as the photos slide, and under a
 // mouse an arrow at either end steps the strip by most of its width, each there while the strip
