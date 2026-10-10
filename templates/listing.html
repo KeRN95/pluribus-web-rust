@@ -22,11 +22,10 @@
     (.listing-split): the photo at the left in a frame taller than wide, and the rest
     (.listing-side, below) in a column at its right. -#}
 <article class="listing{% if car_page %} listing-car{% else if !wide_photos %} listing-split{% endif %}"{% if !own && listing.on_site() %} data-seen-url="/listing/{{ listing.public_no }}/pare"{% endif %}>
-  {#- Room for a banner over the path from 960 px up (listing.css, .listing-banner): empty for
-      now, kept for an ad, so that the path, its buttons and the photo stand at the same height
-      on every listing as one steps through them; about a fifth as tall as the photo on a
-      property's page, and on a split page half of what the screen leaves, the listing in its
-      middle. None on a car's page. -#}
+  {#- Room for a banner over a split page's path from 960 px up (listing.css, .listing-banner):
+      empty for now, kept for an ad, half of what the screen leaves, so that the listing stands in
+      its middle and the path, its buttons and the photo at the same height on every listing as
+      one steps through them. None on a car's page or a property's, which start at the top. -#}
   <div class="listing-banner" aria-hidden="true"></div>
   {%- if posted %}
   {#- Posted just now without signing in (post.rs): changing it later takes signing in. -#}

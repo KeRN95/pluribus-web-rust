@@ -28,7 +28,8 @@
    same on every listing. */
 .listing,
 .listing-side { align-content: start; }
-/* The banner's room (listing.html): none on a phone. */
+/* The banner's room (listing.html): none on a phone, nor over a car's or a property's path, which
+   start at the top; a split page's from 960 px up (below). */
 .listing-banner { display: none; }
 .listing > *,
 .listing-side > *,
@@ -133,13 +134,14 @@
    card and the map across the page. */
 @media (min-width: 960px) {
   .listing { max-width: none; }
-  /* Over the path, room for a banner (listing.html), empty for now and kept for an ad, a gutter
-     between them: so that the path, its buttons and the photo stand at the same height on every
-     listing as one steps through them, the listing's own length making no difference. Across
-     the page a fifth of the photos' height; on a split page as much as stands under the photo
-     (below). It is in the page, whose min-height takes it in, "Njoftime të ngjashme" still just
-     out of view under a short listing. */
-  .listing-banner { display: block; height: min(14vh, 7.6rem); margin-bottom: var(--gutter); }
+  /* Over the path of a split page, room kept for a banner (listing.html), as much as stands under
+     the photo (below), so that the listing stands in the middle of the screen and its path, its
+     buttons and the photo at the same height on every listing as one steps through them, a gutter
+     under it. It is in the page, whose min-height takes it in, "Njoftime të ngjashme" still just
+     out of view under a short listing. Across the page, a property's, it had a fifth of the
+     photos' height (min(14vh, 7.6rem)), empty, which read as a gap under the header: none there
+     until a banner comes, the path at the page's top as on a car's. */
+  .listing-split > .listing-banner { display: block; margin-bottom: var(--gutter); }
   .listing-side > :is(.listing-header, .listing-details, .listing-description, .listing-options),
   .listing-deal > .price-box { max-width: 46rem; }
   /* Across the page a photo's frame is wider than the photo, and no taller than most screens
@@ -324,8 +326,6 @@
 }
 @media (min-width: 960px) {
   .listing-page:has(> .listing-car) { display: block; max-width: 60rem; margin-inline: auto; }
-  /* No room for a banner over a car's path: its page starts at the top, as a phone's does. */
-  .listing-car > .listing-banner { display: none; }
   /* The map in the column at the right, where it has room enough (map_aside_controller.js): under
      the buttons, a square as wide as the column. */
   .listing-car .listing-deal > .listing-map-section { margin-top: 1.5rem; }
