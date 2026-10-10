@@ -328,7 +328,10 @@
   </section>
   {%- endif %}
 
-  <section class="results" aria-labelledby="results-heading">
+  {#- A search with words says what it searched and where (the address "Ruaj kërkimin" keeps),
+      for the visitor's last searches, which a search box offers while empty (application.js,
+      recent_searches.js). -#}
+  <section class="results" aria-labelledby="results-heading"{% if let Some(q) = filters.q.as_deref() %} data-search-words="{{ q }}" data-search-address="{{ save_address }}"{% endif %}>
     {#- The listings' heading (the count and the chips are under the row, above). On a category
         page, to the eye, under "Më të klikuarat" where it is: the order, the category and the
         kind of listing when one is chosen ("Njoftimet më të reja në Makina në shitje",

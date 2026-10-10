@@ -95,6 +95,19 @@
 .suggestion[aria-selected="true"] { background: var(--surface-muted); }
 .suggestion-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .suggestion-context { flex: none; color: var(--muted); font-size: var(--text-sm); }
+/* An empty box's last searches (suggest_controller.js, showRecent): a clock in the muted colour
+   before each one's words, and last "Pastro kërkimet e fundit", quieter, a button drawn as a
+   row. */
+.suggestion-recent { align-items: center; }
+.suggestion-recent svg { flex: none; color: var(--muted); }
+.suggestion-forget { width: 100%; border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--text-sm); text-align: left; cursor: pointer; }
+
+/* The welcome page's row of the listings seen lately (home.html): its heading with "Pastro" at
+   the line's end, quiet, as tall as a finger needs. */
+.row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin: 1.75rem 0 .75rem; }
+.row-head h2 { margin: 0; }
+.row-forget { flex: none; padding: .4rem .25rem; border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--text-sm); cursor: pointer; }
+.row-forget:hover { color: var(--text); text-decoration: underline; text-underline-offset: .15em; }
 
 /* A select chosen from a list in the page (picker_controller.js) rather than the phone's own picker.
    The select stays, unseen, where the button is, so a "required" note points there; the list opens

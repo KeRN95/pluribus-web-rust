@@ -72,6 +72,19 @@
   </div>
 </section>
 
+{%- if let Some(page) = seen %}
+{#- The listings the visitor saw lately, the latest first, still on the site (browse.rs,
+    SEEN_COOKIE, which application.js keeps), in a row like "Më të klikuarat" under them, a
+    reserved or sold one saying so over its photo; "Pastro" forgets them (recent_controller.js). -#}
+<section class="seen-lately" data-controller="drag-row recent" aria-labelledby="seen-heading">
+  <div class="row-head">
+    <h2 id="seen-heading">Shikuar së fundmi</h2>
+    <button type="button" class="row-forget" data-action="recent#forget">Pastro</button>
+  </div>
+  {% call rows::card_row(page) %}
+</section>
+{%- endif %}
+
 {%- if let Some(page) = most_viewed %}
 {#- The listings seen the most this week, the most first (db::most_viewed, views.rs), in a row of
     cards that slides sideways (card_row.html), each saying how many times it was seen. -#}

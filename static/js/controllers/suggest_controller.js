@@ -1,16 +1,34 @@
 import { Controller } from "@hotwired/stimulus";
+import { forgetSearches, recentSearches } from "controllers/recent_searches.js";
 
 // Suggestions under a search box as its words are typed (web/suggestions.rs sends them as rows of
 // links): the words finished as listings use them, the categories they are in, makes and models,
 // towns. The box keeps the focus: the arrow keys mark a row, Enter follows it (or, with none
 // marked, searches the words as typed), Escape closes the list; a click or a tap follows a row as
-// any link. Without this script the box is a plain search.
+// any link. Empty, the box offers the visitor's last searches instead (recent_searches.js), and a
+// last row that forgets them. Without this script the box is a plain search.
 
 let count = 0;
 // After the last key, so that words typed quickly aren't asked for letter by letter.
 const WAIT = 120;
 // Suggestions already fetched, by the words they are for: deleting a letter shows them at once.
 const KEPT = 40;
+
+// A clock, the line icons' way (icons.rs, CLOCK): before a last search's words.
+function clock() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  for (const [name, value] of Object.entries({ width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" })) {
+    svg.setAttribute(name, value);
+  }
+  const face = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  face.setAttribute("cx", 12);
+  face.setAttribute("cy", 12);
+  face.setAttribute("r", 9);
+  const hands = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  hands.setAttribute("d", "M12 7v5l3 2");
+  svg.append(face, hands);
+  return svg;
+}
 
 export default class extends Controller {
   static targets = ["input", "list"];
@@ -51,6 +69,7 @@ export default class extends Controller {
 
   async fetch() {
     const words = this.inputTarget.value;
+    if (!words.trim()) return this.showRecent();
     if (words.trim().length < 2) return this.close();
     if (this.kept.has(words)) return this.show(this.kept.get(words));
     this.request?.abort();
@@ -72,6 +91,45 @@ export default class extends Controller {
 
   show(rows) {
     this.listTarget.innerHTML = rows;
+    this.opened();
+  }
+
+  // The last searches, each a row like a suggestion with a clock before its words, leading back
+  // to its page; then "Pastro kërkimet e fundit". None, and the list stays closed. Made of
+  // elements, not HTML: the words are the visitor's own.
+  showRecent() {
+    const searches = recentSearches();
+    if (!searches.length) return this.close();
+    const rows = searches.map((search) => {
+      const row = document.createElement("a");
+      row.className = "suggestion suggestion-recent";
+      row.setAttribute("role", "option");
+      row.tabIndex = -1;
+      row.href = search.address;
+      const label = document.createElement("span");
+      label.className = "suggestion-label";
+      label.textContent = search.words;
+      row.append(clock(), label);
+      return row;
+    });
+    const forget = document.createElement("button");
+    forget.type = "button";
+    forget.className = "suggestion suggestion-forget";
+    forget.setAttribute("role", "option");
+    forget.tabIndex = -1;
+    forget.textContent = "Pastro kërkimet e fundit";
+    forget.addEventListener("click", () => {
+      forgetSearches();
+      this.close();
+      this.inputTarget.focus();
+    });
+    this.listTarget.replaceChildren(...rows, forget);
+    this.opened();
+  }
+
+  // The list's rows in it: each its id for the box to name, none marked, open while the box has
+  // the focus.
+  opened() {
     this.options().forEach((option, index) => {
       option.id = `${this.listTarget.id}-${index}`;
       option.setAttribute("aria-selected", "false");

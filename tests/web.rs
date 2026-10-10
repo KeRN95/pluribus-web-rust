@@ -457,6 +457,50 @@ async fn welcome_page_ignores_the_city_it_used_to_remember(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_welcome_page_shows_the_listings_seen_lately(pool: PgPool) {
+    // None seen, no such row.
+    assert!(!html(pool.clone(), "/").await.contains("Shikuar së fundmi"));
+    // A listing's page gives its number, which application.js puts first in the cookie as the page
+    // shows; its seller's own page gives none.
+    let golf = "/listing/1001-volkswagen-golf-7-2016-nafte";
+    assert!(html(pool.clone(), golf).await.contains(r#" data-listing-number="1001""#));
+    let ana = session_for(&pool, ANA_ID).await;
+    assert!(!get_with_cookie(pool.clone(), golf, &ana).await.body.contains("data-listing-number"));
+    // The cookie's listings, the latest first and each once, those still on the site: a paused
+    // one, a number no listing has and what isn't a number are left out.
+    sqlx::query("UPDATE listings SET status = 'PAUSED' WHERE public_no = 1002").execute(&pool).await.unwrap();
+    let page = get_with_cookie(pool.clone(), "/", "shikuar=1005.1002.999999.x.1001.1005").await.body;
+    let row = section(&page, "seen-heading");
+    assert_eq!(card_numbers(row), [1005, 1001]);
+    assert!(row.contains(r#"<h2 id="seen-heading">Shikuar së fundmi</h2>"#) && row.contains(r#"data-action="recent#forget">Pastro</button>"#), "{row}");
+    // Over the newest listings, its cards with ids of their own, the first photo the page's lead.
+    assert!(page.find(r#"id="seen-heading""#) < page.find(r#"id="latest-heading""#));
+    assert!(row.contains(r#"id="seen-1005""#) && row.contains(r#"fetchpriority="high""#), "{row}");
+    // A sold one stays, saying so over its photo.
+    sqlx::query("UPDATE listings SET status = 'SOLD', sold_at = now() WHERE public_no = 1005").execute(&pool).await.unwrap();
+    let page = get_with_cookie(pool.clone(), "/", "shikuar=1005.1001").await.body;
+    let row = section(&page, "seen-heading");
+    assert_eq!(card_numbers(row), [1005, 1001]);
+    assert!(row.contains(r#"<p class="card-status is-sold">Shitur</p>"#), "{row}");
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_search_with_words_says_what_and_where_for_the_last_searches(pool: PgPool) {
+    // What it searched and where, which application.js keeps among the last searches.
+    let search = html(pool.clone(), "/search?q=golf").await;
+    assert!(search.contains(r#"<section class="results" aria-labelledby="results-heading" data-search-words="golf" data-search-address="/search?q=golf">"#), "{search}");
+    let cars = html(pool.clone(), "/c/makina?q=golf&vehicle_fuel=DIESEL").await;
+    assert!(cars.contains(r#"data-search-words="golf" data-search-address="/c/makina?q=golf&vehicle_fuel=DIESEL""#), "{cars}");
+    // Words are the visitor's own: what would end the attribute or open a tag is escaped.
+    let odd = html(pool.clone(), "/search?q=golf%22%3E%3Cb").await;
+    let tag = &odd[odd.find(r#"<section class="results""#).unwrap()..];
+    let tag = &tag[..tag.find('>').unwrap()];
+    assert!(tag.contains("data-search-words=\"golf&#34;&#62;&#60;b\"") || tag.contains("data-search-words=\"golf&quot;&gt;&lt;b\""), "{tag}");
+    // A page without words has nothing to keep.
+    assert!(!html(pool.clone(), "/c/makina").await.contains("data-search-words"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn bumped_listing_comes_first(pool: PgPool) {
     let body = get(pool, "/").await.body;
     let house = body.find("Shtëpi private në shitje në Vlorë").unwrap();

@@ -5,6 +5,7 @@ import { Application } from "@hotwired/stimulus";
 // listings are kept, for the header's heart too; the town's, to forget it (below); refresh.js, the
 // filled-in fields of a GET form (below).
 import HeartController from "controllers/heart_controller.js";
+import { rememberSearch } from "controllers/recent_searches.js";
 import PlaceController, { forgetTown } from "controllers/place_controller.js";
 import { filledIn } from "controllers/refresh.js";
 
@@ -239,6 +240,24 @@ document.addEventListener("turbo:before-visit", stopWatching);
 document.addEventListener("turbo:load", () => {
   const url = document.querySelector("[data-seen-url]")?.dataset.seenUrl;
   if (url) navigator.sendBeacon(url);
+});
+
+// A listing's page shown goes first among those the visitor saw lately, the cookie whose
+// numbers the welcome page shows in a row (browse.rs, SEEN_COOKIE, SEEN_MOST at most, kept 90
+// days); not the seller's own, which has no number to give. A search with words shown goes
+// first among the last searches, which a search box offers while empty (recent_searches.js).
+const SEEN_COOKIE = "shikuar";
+const SEEN_MOST = 12;
+document.addEventListener("turbo:load", () => {
+  const number = document.querySelector("[data-listing-number]")?.dataset.listingNumber;
+  if (number) {
+    const pair = document.cookie.split("; ").find((each) => each.startsWith(`${SEEN_COOKIE}=`));
+    const before = (pair ?? "").slice(SEEN_COOKIE.length + 1).split(".").filter((each) => /^\d+$/.test(each) && each !== number);
+    const numbers = [number, ...before].slice(0, SEEN_MOST).join(".");
+    document.cookie = `${SEEN_COOKIE}=${numbers}; path=/; max-age=${90 * 24 * 60 * 60}; samesite=lax`;
+  }
+  const searched = document.querySelector("[data-search-words]");
+  if (searched) rememberSearch(searched.dataset.searchWords, searched.dataset.searchAddress);
 });
 
 // On a touch screen, no cross-fade between pages: for it the browser draws both pages whole and

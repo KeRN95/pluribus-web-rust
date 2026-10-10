@@ -667,6 +667,18 @@ async fn window_edge(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Option
     Ok(edge.map(|(sort_at, id)| Cursor::Newest { sort_at, id }))
 }
 
+/// The listings with these numbers still on the site, up, reserved or sold (whose cards say so),
+/// in the order given: the welcome page's row of those its visitor saw lately (browse.rs,
+/// SEEN_COOKIE).
+pub async fn cards_by_numbers(db: &PgPool, numbers: &[i64]) -> sqlx::Result<Vec<ListingCard>> {
+    let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
+    query.push("NULL::real AS rank, NULL::float8 AS distance_m FROM (SELECT l.* FROM listings l WHERE l.public_no = ANY(");
+    query.push_bind(numbers.to_vec()).push(") AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD')) l");
+    query.push(" LEFT JOIN locations loc ON loc.id = l.location_id ORDER BY array_position(");
+    query.push_bind(numbers.to_vec()).push("::bigint[], l.public_no)");
+    query.build_query_as().fetch_all(db).await
+}
+
 /// How many listings the welcome page's "Më të klikuarat" shows, and over how many days their
 /// views count.
 pub const MOST_VIEWED: i64 = 12;

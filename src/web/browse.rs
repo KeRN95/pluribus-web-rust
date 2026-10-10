@@ -59,6 +59,30 @@ pub const LISTING_IDS: &str = "listing";
 /// The row of cards that slides sideways, by the word its cards' ids start with: the most seen
 /// this week.
 pub const MOST_VIEWED_IDS: &str = "most-viewed";
+/// The welcome page's row of the listings its visitor saw lately (SEEN_COOKIE).
+pub const SEEN_IDS: &str = "seen";
+
+/// The cookie that keeps the listings a visitor saw lately, the latest first, their numbers
+/// joined by dots: application.js puts a listing first as its page shows (not one Turbo only
+/// fetched ahead, nor the seller's own), and the welcome page shows them in a row (home).
+pub const SEEN_COOKIE: &str = "shikuar";
+/// How many it keeps (application.js keeps to it too).
+pub const SEEN_MOST: usize = 12;
+
+/// The listings the visitor saw lately, by SEEN_COOKIE: their numbers, the latest first, each
+/// once, SEEN_MOST at most; what isn't a number left out.
+fn seen_numbers(headers: &HeaderMap) -> Vec<i64> {
+    let mut numbers = Vec::new();
+    for number in cookie(headers, SEEN_COOKIE).unwrap_or_default().split('.').filter_map(|part| part.parse::<i64>().ok()) {
+        if number > 0 && !numbers.contains(&number) {
+            numbers.push(number);
+        }
+        if numbers.len() == SEEN_MOST {
+            break;
+        }
+    }
+    numbers
+}
 
 /// How a browse page shows its listings (the view menu, cards_controller.js): small cards, as many
 /// to a line as fit; big ones, one a line, every photo to slide through; or a list, a line each,
@@ -275,13 +299,17 @@ struct HomePage {
     /// Every other main category, in their order, after them.
     others: Vec<Shortcut>,
     page: ListingPage,
+    /// The listings the visitor saw lately ("Shikuar së fundmi", SEEN_COOKIE), still on the site;
+    /// none for one who saw none.
+    seen: Option<ListingPage>,
     /// The listings seen the most this week ("Më të klikuarat"), none before any are.
     most_viewed: Option<ListingPage>,
     meta: PageMeta,
 }
 
-/// The welcome page asks what the visitor is looking for, then shows the most seen this week in a
-/// row (db::most_viewed), then all of them, newest first.
+/// The welcome page asks what the visitor is looking for, then shows the listings they saw lately
+/// in a row (SEEN_COOKIE) and the most seen this week in another (db::most_viewed), then all of
+/// them, newest first.
 pub async fn home(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -297,12 +325,20 @@ pub async fn home(
         return frame_response(after, &ListingPage::new(rows, Sort::Newest, next_url));
     }
 
-    let (rows, categories, mut most_viewed) = tokio::try_join!(
+    let seen = seen_numbers(&headers);
+    let (rows, categories, mut most_viewed, mut seen) = tokio::try_join!(
         db::listing_page(&state.db, &filter),
         db::categories(&state.db),
         state.views.most_viewed(&state.db, None),
+        async {
+            match seen.is_empty() {
+                true => Ok(Vec::new()),
+                false => db::cards_by_numbers(&state.db, &seen).await,
+            }
+        },
     )?;
     safety::without_hidden(&mut most_viewed, &hidden);
+    safety::without_hidden(&mut seen, &hidden);
     // Every main category with its icon: Automjete, Prona, Elektronikë and Veshje / aksesorë
     // first, on a line of their own after the search's button, then the others in their order.
     let shortcut = |category: &db::Category| Shortcut {
@@ -314,13 +350,18 @@ pub async fn home(
     let others =
         categories.top_level().filter(|category| !MAIN_ON_WELCOME.contains(&category.slug.as_str())).map(shortcut).collect();
     let page = ListingPage::new(rows, Sort::Newest, next_url);
-    // "Më të klikuarat" loads its first two photos straight away: it is on the first screen, its
-    // first photo before anything else (ListingPage::lead); without it, the listings' first does.
-    let most_viewed = (!most_viewed.is_empty()).then(|| ListingPage::row(most_viewed, MOST_VIEWED_IDS, 2).leading());
-    let page = if most_viewed.is_none() { page.leading() } else { page };
+    // The first row loads its first two photos straight away: it is on the first screen, its first
+    // photo before anything else (ListingPage::lead), the listings seen lately's where there are
+    // some, else "Më të klikuarat"'s; without either, the listings' first does.
+    let seen = (!seen.is_empty()).then(|| ListingPage::row(seen, SEEN_IDS, 2).leading());
+    let most_viewed = (!most_viewed.is_empty()).then(|| {
+        let row = ListingPage::row(most_viewed, MOST_VIEWED_IDS, 2);
+        if seen.is_none() { row.leading() } else { row }
+    });
+    let page = if seen.is_none() && most_viewed.is_none() { page.leading() } else { page };
     let origin = seo::origin(&headers);
     let meta = PageMeta::new(&origin, "Pluribus: njoftime në gjithë Shqipërinë", seo::SITE_DESCRIPTION, format!("{origin}/"));
-    render(HomePage { main, others, page, most_viewed, meta })
+    render(HomePage { main, others, page, seen, most_viewed, meta })
 }
 
 /// A category's icon, as its pill has it (icons.rs): a main category's own, a subcategory's where
