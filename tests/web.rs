@@ -303,6 +303,31 @@ fn positions(html: &str, texts: &[&str]) -> Vec<usize> {
     texts.iter().map(|text| html.find(text).unwrap_or_else(|| panic!("missing {text}"))).collect()
 }
 
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn pages_that_find_nothing_offer_ways_on(pool: PgPool) {
+    // Words that find nothing: how to search for more, and a wanted ad for what no one sells yet.
+    let page = get(pool.clone(), "/search?q=xyzzyqqq").await.body;
+    assert!(page.contains("Nuk u gjet asnjë njoftim.") && page.contains("Kontrollo si i ke shkruar fjalët"), "{page}");
+    assert!(page.contains(r#"<a class="button secondary" href="/shto">Shto një njoftim „Kërkoj të blej“</a>"#));
+    // An empty category, with no words searched, says neither.
+    let empty = get(pool.clone(), "/c/aparate-fotografike").await.body;
+    assert!(empty.contains("Nuk u gjet asnjë njoftim.") && !empty.contains("Kontrollo si i ke shkruar") && !empty.contains("Shto një njoftim „Kërkoj të blej“"));
+    // An address with nothing: why that may be, a search in every category, and the ways home and
+    // to posting, in the site's frame.
+    let missing = get(pool.clone(), "/kjo-faqe-nuk-ekziston").await;
+    assert_eq!(missing.status, StatusCode::NOT_FOUND);
+    assert!(missing.body.contains("<h1>Faqja nuk u gjet</h1>"));
+    assert!(missing.body.contains(r#"<form class="search not-found-search" action="/search" method="get" role="search">"#));
+    assert!(missing.body.contains(r#"<a class="button" href="/">Faqja kryesore</a>"#) && missing.body.contains(r#"<a class="button secondary" href="/shto">Shto një njoftim</a>"#));
+    // A request that fails: the site's frame too, with what to do and the way home, never the error.
+    use axum::response::IntoResponse;
+    let response = marketplace::web::AppError::from(std::io::Error::other("the database went away")).into_response();
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let body = String::from_utf8(response.into_body().collect().await.unwrap().to_bytes().to_vec()).unwrap();
+    assert!(body.contains("<h1>Diçka shkoi keq</h1>") && body.contains(r#"<header class="site-header">"#), "{body}");
+    assert!(body.contains(r#"<a href="/kontakt">Kontakt</a>"#) && !body.contains("database"));
+}
+
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn home_page_lists_categories(pool: PgPool) {
     let response = get(pool, "/").await;
@@ -3141,9 +3166,11 @@ async fn every_listing_offers_its_sellers_phone(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn signing_in_takes_a_code_sent_to_the_phone(pool: PgPool) {
-    // Not signed in, "Llogaria" asks for a name and a phone number or an e-mail address.
+    // Not signed in, "Llogaria" asks for a name and a phone number or an e-mail address, and
+    // says it signs in as well as makes an account.
     let page = get(pool.clone(), "/llogaria").await;
-    assert!(page.body.contains("<h1>Krijo një llogari</h1>"));
+    assert!(page.body.contains("<h1>Hyr ose krijo një llogari</h1>"));
+    assert!(page.body.contains("<title>Hyr ose krijo llogari | Pluribus</title>"));
     assert!(page.body.contains(r#"<form class="account-form" action="/hyr" method="post">"#));
 
     let sent = post_form(
@@ -3197,7 +3224,7 @@ async fn signing_in_takes_a_code_sent_to_the_phone(pool: PgPool) {
     assert_eq!(again.status, StatusCode::UNPROCESSABLE_ENTITY);
     let out = post_form(pool.clone(), "/dil", &[], Some(&session)).await;
     assert_eq!(out.location.as_deref(), Some("/"));
-    assert!(get_with_cookie(pool, "/llogaria", &session).await.body.contains("Krijo një llogari"));
+    assert!(get_with_cookie(pool, "/llogaria", &session).await.body.contains("Hyr ose krijo një llogari"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

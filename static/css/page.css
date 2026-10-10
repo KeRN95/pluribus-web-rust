@@ -673,6 +673,11 @@
 .listing-meta strong { font-weight: var(--semibold); }
 .more { display: inline-block; padding: 1rem; color: var(--muted); }
 .empty { color: var(--muted); }
+/* The page not found and the error's (not_found.html, error.html): why, then a search in every
+   category, as wide as a line reads well, and the ways home and to posting. */
+.not-found { max-width: 40rem; }
+.not-found-search { max-width: 32rem; margin: 1.25rem 0; }
+.not-found-links { display: flex; flex-wrap: wrap; gap: .6rem; }
 /* A seller's number or address proved theirs by signing in with it (safety.rs): a shield with a
    check, in the green of a good price, on a listing's seller card and on their profile. */
 .verified { display: inline-flex; align-items: center; gap: .3rem; margin: 0; color: var(--below); font-size: var(--text-xs); font-weight: var(--semibold); }

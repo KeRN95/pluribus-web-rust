@@ -1,13 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}{% if create %}Krijo llogari{% else %}Hyr{% endif %} | Pluribus{% endblock %}
+{% block title %}{% if create %}Hyr ose krijo llogari{% else %}Hyr{% endif %} | Pluribus{% endblock %}
 
 {% block content %}
 <section class="account">
   {%- if create %}
-  <h1>Krijo një llogari</h1>
-  <p class="lead">Vetëm me numrin e celularit ose me email-in, pa fjalëkalim: të dërgojmë një kod me 6 shifra për ta
-    konfirmuar. Ke llogari? Shkruaj të njëjtin numër dhe hyn në të.</p>
+  {#- "Llogaria" for someone not signed in: one form signs in or makes an account, by the contact
+      typed, so it says both (it said "Krijo një llogari" alone once, which a returning seller took
+      for the wrong page). -#}
+  <h1>Hyr ose krijo një llogari</h1>
+  <p class="lead">Me numrin e celularit ose me email-in, pa fjalëkalim: të dërgojmë një kod me 6 shifra. Me numrin
+    që ke përdorur më parë hyn në llogarinë tënde; me një të ri krijohet një llogari.</p>
   {%- else %}
   <h1>Hyr</h1>
   <p class="lead">Hyr me numrin e celularit ose me email-in. Të dërgojmë një kod me 6 shifra, pa fjalëkalim.</p>
@@ -19,7 +22,7 @@
     <div class="field">
       <label class="field-label" for="name">Emri</label>
       <input id="name" name="name" value="{{ name }}" maxlength="60" autocomplete="name" placeholder="p.sh. Ana ose Auto Elbasani">
-      <p class="field-hint">Shfaqet te njoftimet e tua dhe në profilin tënd.</p>
+      <p class="field-hint">Për një llogari të re: shfaqet te njoftimet e tua dhe në profilin tënd.</p>
     </div>
     {%- endif %}
     <div class="field">

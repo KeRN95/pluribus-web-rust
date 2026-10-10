@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Diçka shkoi keq | Pluribus{% endblock %}
+
+{% block content %}
+{#- A request that failed (web::AppError, logged in full): the site's frame still, so that the
+    visitor keeps the header and the footer, with what to do. Nothing in it asks the database,
+    which may be what failed. -#}
+<section class="not-found">
+  <h1>Diçka shkoi keq</h1>
+  <p class="lead">Nuk e hapëm dot këtë faqe. Provo përsëri pas pak; nëse vazhdon, na shkruaj te <a href="/kontakt">Kontakt</a>.</p>
+  <p class="not-found-links"><a class="button" href="/">Faqja kryesore</a></p>
+</section>
+{% endblock %}

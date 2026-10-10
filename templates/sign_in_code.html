@@ -13,7 +13,7 @@
     {%- if publishes %} Shkruaje dhe njoftimi yt publikohet.{% endif %}</p>
 
   {% if let Some(code) = test_code %}
-  <p class="form-error test-mode">Versioni provë: kodi është <strong>{{ code }}</strong>. Në versionin e vërtetë vjen me SMS ose email.</p>
+  <p class="form-error test-mode">Versioni provë: kodi është <strong>{{ code }}</strong>. Në versionin e vërtetë vjen në WhatsApp ose me email.</p>
   {% endif %}
   <form class="account-form" action="/hyr/kodi" method="post">
     {% if let Some(error) = error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}

@@ -553,7 +553,9 @@ fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) {
     }
 }
 
-/// Any error that ends a request: logged in full, shown to the visitor as a plain 500.
+/// Any error that ends a request: logged in full, shown to the visitor as a 500 in the site's
+/// frame (error.html), with the way home, rather than a line of plain text; the line alone if
+/// even that page fails.
 pub struct AppError(anyhow::Error);
 
 impl<E: Into<anyhow::Error>> From<E> for AppError {
@@ -562,14 +564,15 @@ impl<E: Into<anyhow::Error>> From<E> for AppError {
     }
 }
 
+#[derive(Template)]
+#[template(path = "error.html")]
+struct ErrorPage;
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         tracing::error!(error = ?self.0, "request failed");
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Diçka shkoi keq. Provo përsëri.",
-        )
-            .into_response()
+        let page = render(ErrorPage).unwrap_or_else(|_| "Diçka shkoi keq. Provo përsëri.".into_response());
+        (StatusCode::INTERNAL_SERVER_ERROR, page).into_response()
     }
 }
 

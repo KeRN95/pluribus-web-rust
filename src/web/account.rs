@@ -167,7 +167,7 @@ pub struct SignInPage {
     pub name: String,
     pub error: Option<String>,
     pub started: i64,
-    /// "Krijo një llogari", with a name, rather than signing in to go on somewhere.
+    /// "Hyr ose krijo një llogari", with a name, rather than signing in to go on somewhere.
     pub create: bool,
 }
 
