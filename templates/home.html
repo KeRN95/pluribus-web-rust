@@ -11,9 +11,6 @@
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
-{#- The theme is among the welcome page's round buttons, not in its top bar (base.html). -#}
-{% block theme_toggle %}{% endblock %}
-
 {% block content %}
 <section class="welcome">
   {#- The question, for screen readers: on the page the search and the categories ask it. -#}
@@ -23,11 +20,12 @@
       no top bar holds (every page's has the account alone, base.html), as tall as the pills under
       them. The search takes the width the buttons leave it: words only, searched in every
       category and town, the results' filters narrowing them, drawn like the message box in
-      Claude's app, a pill with the words in it and, inside it at the end, a round coral button
-      with a magnifier that searches (the text inside says what the field is for; its label stays
-      for screen readers). Then the button that posts a listing, plain, on the surface with the
-      menus' hairline as the back button is; the listings kept and the conversations, plain as
-      the plus; and the theme, in the blue under its moon and the yellow under its sun. -#}
+      Claude's app, a pill with the words in it and, at its end, a round button in the page's
+      colour with a magnifier that searches, the pill's whole height (the text inside says what
+      the field is for; its label stays for screen readers). Then the button that posts a
+      listing, plain, on the surface with the menus' hairline as the back button is; and the
+      listings kept and the conversations, plain as the plus. The theme is in the top bar, as on
+      every page (base.html). -#}
   <div class="welcome-tools">
   <form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest"
         data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
@@ -55,22 +53,15 @@
         <svg class="circle-icon" data-icon="message-circle" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
         <span class="inbox-count" data-inbox-target="count" hidden></span>
       </a>
-      {#- The theme it switches to: a moon on the light one, a sun on the dark (theme_controller.js). -#}
-      <button type="button" class="circle-shortcut theme-shortcut" data-controller="theme" data-action="theme#toggle" aria-label="Tema e errët" aria-pressed="false" title="Tema e errët">
-        <svg class="circle-icon icon-moon" data-icon="moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MOON|safe }}</svg>
-        <svg class="circle-icon icon-sun" data-icon="sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SUN|safe }}</svg>
-      </button>
   </div>
 
   {#- Every main category at once, as pills like the listing page's details: its icon, then its
-      name, every one the category pages' pills' size. First, on a line of their own
-      (.welcome-main, welcome.css), the four most looked for, Automjete, Prona, Elektronikë and
-      Veshje / aksesorë (MAIN_ON_WELCOME in browse.rs); then every other main category, in its
+      name, every one the category pages' pills' size, all side by side in one list that wraps
+      wherever the line ends: first the four most looked for, Automjete, Prona, Elektronikë and
+      Veshje / aksesorë (MAIN_ON_WELCOME in browse.rs), then every other main category, in its
       order. -#}
   <nav class="shortcuts" aria-label="Kategoritë">
-    <div class="welcome-main">
-      {%- for shortcut in main %}{% call pill(shortcut) %}{% endfor %}
-    </div>
+    {%- for shortcut in main %}{% call pill(shortcut) %}{% endfor %}
     {%- for shortcut in others %}{% call pill(shortcut) %}{% endfor %}
   </nav>
   </div>

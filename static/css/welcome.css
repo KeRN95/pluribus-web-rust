@@ -287,26 +287,17 @@
 }
 /* The row over the categories (home.html): the search bar, which takes the width the buttons
    leave it, then the round buttons, as tall as the pills under them and as far apart; the bar's
-   magnifier inside it with 3px round it. */
+   magnifier its whole height, a circle in the page's colour at its end, over the bar's hairline
+   there, as big as the round buttons beside it. */
 .welcome-tools { display: flex; align-items: center; gap: var(--column-gap); margin-bottom: var(--row-gap); }
-.welcome-tools .welcome-form { flex: 1 1 auto; min-width: 0; height: var(--pill); padding: 3px 3px 3px 1.2rem; box-shadow: none; }
-.welcome-tools .welcome-search { width: calc(var(--pill) - 8px); height: calc(var(--pill) - 8px); }
+.welcome-tools .welcome-form { flex: 1 1 auto; min-width: 0; height: var(--pill); padding: 0 0 0 1.2rem; box-shadow: none; }
+.welcome-tools .welcome-search { width: var(--pill); height: var(--pill); margin-right: -1px; }
 .welcome .shortcuts { gap: var(--row-gap) var(--column-gap); margin-top: 0; }
 .welcome .shortcut {
   padding-top: var(--pill-pad);
   padding-bottom: var(--pill-pad);
   font-size: var(--pill-font);
   line-height: 1.55;
-}
-/* The first line of categories, a line of its own (flex-basis) however short: the four main
-   categories most looked for, Automjete, Prona, Elektronikë and Veshje / aksesorë (home.html),
-   the way into the site before the rest; their pills the others' size (they were a size up once,
-   with the search's button before them). As far apart as the others. */
-.welcome-main {
-  display: flex;
-  flex-wrap: wrap;
-  flex-basis: 100%;
-  gap: var(--row-gap) var(--column-gap);
 }
 /* Phones: the welcome page's categories smaller, so that three stand on a line where two did and
    the listings come sooner: less room round the name, the name and its icon a touch smaller, the
@@ -330,17 +321,13 @@
 
 
 /* The round buttons in the row with the search (home.html, .welcome-tools), as tall as the
-   categories' pills under them (--pill): the one for posting a listing, then the listings kept,
-   the conversations and the theme, which no top bar holds (every page's has the account alone,
-   base.css). The theme is marked as the site marks what is picked or open (a category page's own
-   pill, an open menu's button): a tint of a colour, a border of it and the icon in it, the border
-   whole under the pointer or a press, its colour (--tone) and its tint (--tone-bg) as
-   listing.css's price bubbles have them: the blue under its moon, on the light theme, and the
-   yellow under its sun, on the dark (--yellow). The plus, the listings kept and the conversations
-   are plain (.plain-shortcut), on the surface with the menus' hairline and their icon in the
-   text's colour, as the back button is (browse.css): the one colour means one thing. Their icons
-   are the pills' size beside them. On a phone a finger's target is bigger than the button, as a
-   pill's is (::after, from the gaps). */
+   categories' pills under them (--pill): the one for posting a listing, then the listings kept and
+   the conversations, which no top bar holds (it has the account and the theme, base.html). All
+   plain (.plain-shortcut), on the surface with the menus' hairline and their icon in the text's
+   colour, as the back button is (browse.css); a circle's colour (--tone) and its tint
+   (--tone-bg) are there for one that would be marked as picked or open. Their icons are the
+   pills' size beside them. On a phone a finger's target is bigger than the button, as a pill's
+   is (::after, from the gaps). */
 .circle-shortcut {
   position: relative;
   display: flex;
@@ -361,11 +348,6 @@
   -webkit-tap-highlight-color: transparent;
 }
 .circle-icon { flex: none; }
-.theme-shortcut { --tone: var(--blue); --tone-bg: var(--blue-bg); }
-:root[data-theme="dark"] .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .theme-shortcut { --tone: var(--yellow); --tone-bg: var(--yellow-bg); }
-}
 .circle-shortcut:active { border-color: var(--tone); transform: scale(.94); }
 @media (hover: hover) {
   .circle-shortcut:hover { border-color: var(--tone); }

@@ -324,12 +324,12 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(body.contains(r#"<form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest""#));
     assert!(body.contains(r#"<input id="welcome-q" type="search" name="q""#));
     assert!(body.contains(r#"<div class="suggestions" id="welcome-suggestions" role="listbox""#));
-    // The search button is a magnifier inside the field's pill, as in Claude's app.
+    // The search button is a magnifier at the end of the field's pill, as in Claude's app.
     assert!(body.contains(r#"<button type="submit" class="icon-button welcome-search" aria-label="Kërko""#));
     // The search leads a row of its own over the categories, with the round buttons the other
-    // pages have in no top bar: the plus, plain, then the listings kept, the conversations
-    // (plain) and the theme, all in that row and nowhere else on the page; no button opens the
-    // search, which stands open.
+    // pages have in no top bar: the plus, then the listings kept and the conversations, all plain,
+    // in that row and nowhere else on the page; no button opens the search, which stands open.
+    // The theme is in the top bar (below), not among them.
     let nav = body.find(r#"<nav class="shortcuts" aria-label="Kategoritë">"#).unwrap();
     let row = positions(&body, &[
         r#"<div class="welcome-tools">"#,
@@ -337,38 +337,34 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         r#"<a class="circle-shortcut plain-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#,
         r#"<a class="circle-shortcut plain-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#,
         r#"<a class="circle-shortcut plain-shortcut inbox-shortcut" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">"#,
-        r#"<button type="button" class="circle-shortcut theme-shortcut" data-controller="theme" data-action="theme#toggle""#,
     ]);
-    assert!(row.is_sorted() && row[5] < nav, "{row:?} before {nav}");
-    assert_eq!(body.matches("circle-shortcut").count(), 4, "{body}");
+    assert!(row.is_sorted() && row[4] < nav, "{row:?} before {nav}");
+    assert_eq!(body.matches("circle-shortcut").count(), 3, "{body}");
+    assert!(!body.contains("theme-shortcut"));
     assert!(!body.contains("search-shortcut") && !body.contains("welcome-search-panel") && !body.contains("welcome-scrim"));
-    // Then Automjete, Prona, Elektronikë and Veshje / aksesorë, on a line of their own
-    // (.welcome-main); then every other category in its order.
-    let first = &body[body.find(r#"<div class="welcome-main">"#).unwrap()..];
-    let first = &first[..first.find("</div>").unwrap()];
-    let line = positions(first, &[
+    // Then every category's pill straight in the list, no group round any of them, so that they
+    // wrap wherever the line ends: Automjete, Prona, Elektronikë and Veshje / aksesorë first, then
+    // every other category in its order.
+    let list = &body[nav..];
+    let list = &list[..list.find("</nav>").unwrap()];
+    assert!(!list.contains("<div") && !body.contains("welcome-main"), "{list}");
+    let order = positions(list, &[
         r#"<a class="shortcut" href="/c/automjete">"#,
         r#"<a class="shortcut" href="/c/prona">"#,
         r#"<a class="shortcut" href="/c/elektronike">"#,
         r#"<a class="shortcut" href="/c/veshje-dhe-aksesore">"#,
-    ]);
-    assert!(line.is_sorted(), "{line:?}");
-    assert_eq!(first.matches(r#"<a class="shortcut""#).count(), 4, "{first}");
-    assert!(!first.contains("circle-shortcut"), "{first}");
-    let order = positions(&body, &[
-        r#"<div class="welcome-main">"#,
         r#"<a class="shortcut" href="/c/shtepi-dhe-kopsht">"#,
         r#"<a class="shortcut" href="/c/sport-dhe-hobi">"#,
         r#"<a class="shortcut" href="/c/kafshe-shtepiake">"#,
         r#"<a class="shortcut" href="/c/te-tjera">"#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
-    assert!(order[4] < nav + body[nav..].find("</nav>").unwrap());
-    // Every page's top bar has the account at its right end, and after it the theme, but the
-    // welcome page's, whose theme is among its round buttons: the plus, the heart and the
-    // conversations are the welcome page's round buttons and no bar's.
+    assert!(!list.contains("circle-shortcut"), "{list}");
+    // Every page's top bar has the account at its right end, and after it the theme, the welcome
+    // page's too: the plus, the heart and the conversations are the welcome page's round buttons
+    // and no bar's.
     let cars = get(pool.clone(), "/c/automjete").await.body;
-    for (page, theme) in [(&body, false), (&cars, true)] {
+    for (page, theme) in [(&body, true), (&cars, true)] {
         for gone in ["post-button", "saved-button", "inbox-button"] {
             assert!(!page.contains(gone), "{gone}");
         }
