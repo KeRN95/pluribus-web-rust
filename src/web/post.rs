@@ -19,7 +19,7 @@ use serde::Deserialize;
 
 use super::{
     Result,
-    account::{ClientIp, MIN_FORM_SECONDS, SignInPage, cookie_header, current_user, display_name, now, redirect_with_cookies},
+    account::{self, ClientIp, MIN_FORM_SECONDS, SignInPage, cookie_header, current_user, display_name, now, redirect_with_cookies},
     filters::{self, Choice, ChoiceGroup, parse_number},
     named, not_found,
     photos::{self, Submission},
@@ -649,10 +649,12 @@ pub async fn create_listing(
         }
     };
 
-    // Not signed in: the listing goes under the phone number or e-mail address typed with it, and
-    // the account that has it, or one made with the listing under the name typed. No code, so
-    // posting is as quick as it gets; and it signs no one in, which takes a code (account.rs), so
-    // typing someone's number never opens their account.
+    // Not signed in: the listing goes under the phone number or e-mail address typed with it. One
+    // no account has makes one, under the name typed, and the listing goes up at once, no code
+    // asked: posting is as quick as it gets. One an account has already gets a code, and the
+    // listing waits for it (DRAFT): typing it signs the account in and puts the listing up
+    // (account.rs, check_code), so that nobody posts under someone else's account, nor signs in
+    // to it, by typing their number.
     let contact = match user {
         Some(_) => None,
         None => {
@@ -685,6 +687,15 @@ pub async fn create_listing(
     if user.is_none() && errors.is_empty() && !unsigned_post_allowed(ip.as_deref()) {
         fail(&mut errors, "form", "Shumë njoftime nga ky rrjet brenda një ore. Provo përsëri më vonë.");
     }
+    // A contact an account has: the code's own limits, before anything is kept.
+    let waits = user.is_none() && existing.is_some();
+    if waits
+        && errors.is_empty()
+        && let Some(contact) = &contact
+        && let Some(limit) = account::code_limit(&state, contact, ip.as_deref()).await?
+    {
+        fail(&mut errors, "form", limit);
+    }
     let processed = read_photos(&photos, &mut errors).await?;
     let (Some(checked), Some(processed)) = (checked, processed) else {
         let mut again = page(&Purpose::New, user.as_ref(), &categories, &cities, &attributes, form, errors);
@@ -693,13 +704,15 @@ pub async fn create_listing(
         return form_again(again);
     };
 
-    // All checked: the account of someone not signed in, made now if their contact has none.
-    let poster = match (&user, &contact) {
-        (Some(user), _) => match store {
+    // All checked: the account of someone not signed in, the one their contact has (whose code
+    // the listing waits for), or one made now.
+    let poster = match (&user, &contact, &existing) {
+        (Some(user), _, _) => match store {
             Some(store) => Poster::for_store(user, store),
             None => Poster::of(user),
         },
-        (None, Some(contact)) => {
+        (None, Some(contact), Some(account)) => Poster { id: account.id, phone: contact.phone(), email: contact.email(), business_id: None },
+        (None, Some(contact), None) => {
             let name = display_name(&form.name);
             let account = db::poster_account(&state.db, contact.phone(), contact.email(), name.as_deref()).await?;
             if account.status == "PENDING" {
@@ -708,17 +721,32 @@ pub async fn create_listing(
             }
             Poster { id: account.id, phone: contact.phone(), email: contact.email(), business_id: None }
         }
-        (None, None) => unreachable!("without a contact, the form went back with an error"),
+        (None, None, _) => unreachable!("without a contact, the form went back with an error"),
     };
     let stored = photos::store(&state.media, processed).await?;
     let slug = format::slug(checked.title);
-    let (listing_id, public_no) = db::create_listing(&state.db, &checked.listing(&poster, &slug, &properties, true)).await?;
+    let (listing_id, public_no) = db::create_listing(&state.db, &checked.listing(&poster, &slug, &properties, !waits)).await?;
     db::add_listing_photos(&state.db, listing_id, &stored).await?;
     let to = format!("/listing/{public_no}-{slug}");
     if user.is_some() {
         return Ok(Redirect::to(&to).into_response());
     }
     record_unsigned_post(ip.as_deref());
+    if let (true, Some(contact)) = (waits, &contact) {
+        // To the code page, which says the listing goes up once the code is typed. A code that
+        // couldn't go out leaves the listing waiting, to go a day on (db::forget_drafts).
+        let purpose = db::CodePurpose { listing_id: Some(listing_id), ..Default::default() };
+        return match account::send_code_and_ask(&state, &headers, contact, ip.as_deref(), &purpose).await? {
+            Ok(response) => Ok(response),
+            Err(message) => {
+                let mut errors = HashMap::new();
+                fail(&mut errors, "form", message);
+                let mut again = page(&Purpose::New, None, &categories, &cities, &attributes, form, errors);
+                again.ai_fill = state.ai.is_some();
+                form_again(again)
+            }
+        };
+    }
     // Its page says it is up, once, and how to change it later: by signing in (listings.rs).
     let posted = cookie_header(&headers, POSTED_COOKIE, &public_no.to_string(), 600);
     Ok(redirect_with_cookies(&to, vec![posted]))

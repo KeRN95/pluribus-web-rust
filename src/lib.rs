@@ -75,7 +75,7 @@ pub fn app(db: PgPool) -> axum::Router {
     media.fill_in_copies();
     notices::start(db.clone());
     web::start_search_alerts(db.clone());
-    expiry::start(db.clone());
+    expiry::start(db.clone(), media.clone());
     rates::start(db.clone());
     web::router(AppState { db, media, moderators: Moderators::from_env(), ai, views })
 }

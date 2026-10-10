@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT count(*) AS \"count!\",\n                  coalesce(bool_or(lower(title) = lower($2)), false) AS \"same_title!\"\n           FROM listings\n           WHERE created_by_user_id = $1 AND created_at > now() - interval '1 day'",
+  "query": "SELECT count(*) AS \"count!\",\n                  coalesce(bool_or(lower(title) = lower($2)), false) AS \"same_title!\"\n           FROM listings\n           WHERE created_by_user_id = $1 AND created_at > now() - interval '1 day' AND status <> 'DRAFT'",
   "describe": {
     "columns": [
       {
@@ -25,5 +25,5 @@
       null
     ]
   },
-  "hash": "e829e65c697d369b265cf8b377f50212ff459c06a4e0a0f6e5733cacaabcd6e2"
+  "hash": "5bf4bdfe1786d311d84bfea3bb4647ca010a0595f54d68f07e44117f59d5f61f"
 }

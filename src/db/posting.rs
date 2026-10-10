@@ -14,7 +14,7 @@ pub async fn recent_posts(db: &PgPool, user_id: Uuid, title: &str) -> sqlx::Resu
         r#"SELECT count(*) AS "count!",
                   coalesce(bool_or(lower(title) = lower($2)), false) AS "same_title!"
            FROM listings
-           WHERE created_by_user_id = $1 AND created_at > now() - interval '1 day'"#,
+           WHERE created_by_user_id = $1 AND created_at > now() - interval '1 day' AND status <> 'DRAFT'"#,
         user_id,
         title,
     )

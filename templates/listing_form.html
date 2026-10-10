@@ -12,9 +12,11 @@
   <p class="lead">Publikohet menjëherë. Blerësit të kontaktojnë te <strong>{{ who }}</strong>.</p>
   {%- endif %}
   {%- else %}
-  {#- Not signed in: the account comes with the listing (post.rs, create_listing). -#}
+  {#- Not signed in: the account comes with the listing, or for a contact an account has, the
+      code that puts it up (post.rs, create_listing). -#}
   <p class="lead">S'ke llogari? S'ka problem: në fund shkruaj celularin ose email-in, dhe njoftimi publikohet menjëherë;
-    llogaria krijohet vetë. <a href="/llogaria">Ke llogari? Hyr</a></p>
+    llogaria krijohet vetë. Nëse ke llogari me të, të dërgojmë një kod, dhe njoftimi publikohet sapo ta shkruash.
+    <a href="/llogaria">Ke llogari? Hyr</a></p>
   {%- endif %}
 
   {#- listing_form_controller.js offers the listing types and the condition the chosen category

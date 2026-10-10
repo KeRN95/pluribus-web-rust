@@ -63,8 +63,10 @@ async fn tell(listing: &ExpiryNotice, subject: &str, body: &str) {
     }
 }
 
-/// Looks for listings to expire or warn of every CHECK_EVERY, from now on, in the background.
-pub fn start(db: PgPool) {
+/// Looks for listings to expire or warn of every CHECK_EVERY, from now on, in the background;
+/// and for listings posted without signing in that their code never put up, which go with their
+/// photos (db::forget_drafts).
+pub fn start(db: PgPool, media: crate::media::Media) {
     tokio::spawn(async move {
         let origin = crate::web::site_origin();
         let mut every = tokio::time::interval(CHECK_EVERY);
@@ -73,6 +75,10 @@ pub fn start(db: PgPool) {
             every.tick().await;
             if let Err(error) = run(&db, &origin).await {
                 tracing::warn!(%error, "could not expire the listings whose time is up");
+            }
+            match db::forget_drafts(&db).await {
+                Ok(files) => crate::web::delete_photos(&media, &files).await,
+                Err(error) => tracing::warn!(%error, "could not forget the listings their code never put up"),
             }
         }
     });

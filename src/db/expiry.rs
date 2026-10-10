@@ -4,6 +4,23 @@
 
 use super::*;
 
+/// Listings posted without signing in under a contact an account had, whose code nobody typed
+/// (web/post.rs): a day on, taken down for good (DELETED), their contact and their photos' rows
+/// with them, so that someone else's number typed into the form leaves nothing behind; returns
+/// the photos' files, which the caller takes out of the store.
+pub async fn forget_drafts(db: &PgPool) -> sqlx::Result<Vec<String>> {
+    let mut tx = db.begin().await?;
+    let old = "l.status = 'DRAFT' AND l.created_at < now() - interval '1 day'";
+    let files: Vec<String> =
+        sqlx::query_scalar(&format!("DELETE FROM listing_media m USING listings l WHERE l.id = m.listing_id AND {old} RETURNING m.storage_key"))
+            .fetch_all(&mut *tx)
+            .await?;
+    sqlx::query(&format!("DELETE FROM listing_contacts c USING listings l WHERE l.id = c.listing_id AND {old}")).execute(&mut *tx).await?;
+    sqlx::query(&format!("UPDATE listings l SET status = 'DELETED' WHERE {old}")).execute(&mut *tx).await?;
+    tx.commit().await?;
+    Ok(files)
+}
+
 /// A listing whose seller hears that it expired or is about to, with how to reach them.
 #[derive(Debug, sqlx::FromRow)]
 pub struct ExpiryNotice {

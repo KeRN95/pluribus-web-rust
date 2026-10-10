@@ -5556,7 +5556,7 @@ async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
     assert!(form.contains(r#"<input id="contact" name="contact" value="" required"#));
     assert!(form.contains("njoftimi publikohet menjëherë"));
     assert!(form.contains("llogaria krijohet vetë"));
-    assert!(!form.contains("Të dërgojmë një kod") && !form.contains("të dërgojmë kodin"));
+    assert!(form.contains("Nëse ke llogari me të, të dërgojmë një kod, dhe njoftimi publikohet sapo ta shkruash."));
 
     let started = started();
     let mut fields = listing_fields(("name", "Dorina"), &started);
@@ -5609,12 +5609,31 @@ async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
         .unwrap();
     assert_eq!(name, "Përdorues");
 
-    // A number with an account already: the listing goes under it, which keeps its name.
+    // A number with an account already: the listing waits, out of sight, for the code that goes
+    // to it; typed, the code signs its owner in and puts the listing up under that account,
+    // which keeps its name. Typing someone else's number puts nothing up under their name.
     let mut fields = listing_fields(("name", "Dikush tjetër"), &started);
     fields.extend([("title", "Telefon tjetër për shitje"), ("contact", "+355 69 000 0003")]);
     let posted = post_form(pool.clone(), "/shto", &fields, None).await;
-    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    assert_eq!(posted.location.as_deref(), Some("/hyr/kodi"), "{}", posted.body);
     assert!(posted.cookie("session").is_none());
+    let status = |title: &'static str| {
+        let pool = pool.clone();
+        async move { sqlx::query_scalar::<_, String>("SELECT status FROM listings WHERE title = $1").bind(title).fetch_one(&pool).await.unwrap() }
+    };
+    assert_eq!(status("Telefon tjetër për shitje").await, "DRAFT");
+    assert!(!get(pool.clone(), "/search?q=telefon+tjeter").await.body.contains("Telefon tjetër për shitje"));
+    let login = format!("login={}", posted.cookie("login").unwrap());
+    let asked = get_with_cookie(pool.clone(), "/hyr/kodi", &login).await.body;
+    assert!(asked.contains("Shkruaje dhe njoftimi yt publikohet."), "{asked}");
+    sqlx::query("UPDATE login_codes SET code_hash = sha256(convert_to(contact || ':123456', 'UTF8')) WHERE contact = '+355690000003'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let typed = post_form(pool.clone(), "/hyr/kodi", &[("code", "123456")], Some(&login)).await;
+    assert!(typed.cookie("session").is_some());
+    assert!(typed.location.as_deref().is_some_and(|to| to.ends_with("-telefon-tjeter-per-shitje")), "{:?}", typed.location);
+    assert_eq!(status("Telefon tjetër për shitje").await, "ACTIVE");
     let owner: String = sqlx::query_scalar(
         "SELECT u.display_name FROM listings l JOIN users u ON u.id = l.created_by_user_id
          WHERE l.title = 'Telefon tjetër për shitje' AND l.status = 'ACTIVE'",
@@ -5623,6 +5642,27 @@ async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
     .await
     .unwrap();
     assert_eq!(owner, "Dritan");
+
+    // One never confirmed waits a day, then goes, with the number it showed.
+    new_seller(&pool, "+355691112299").await;
+    let mut fields = listing_fields(("name", ""), &started);
+    fields.extend([("title", "Një tjetër që pret kodin"), ("contact", "069 111 2299")]);
+    let waiting = post_form(pool.clone(), "/shto", &fields, None).await;
+    assert_eq!(waiting.location.as_deref(), Some("/hyr/kodi"), "{}", waiting.body);
+    assert!(marketplace::db::forget_drafts(&pool).await.unwrap().is_empty());
+    assert_eq!(status("Një tjetër që pret kodin").await, "DRAFT", "not yet a day");
+    sqlx::query("UPDATE listings SET created_at = now() - interval '25 hours' WHERE title = 'Një tjetër që pret kodin'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    marketplace::db::forget_drafts(&pool).await.unwrap();
+    let contacts: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM listing_contacts c JOIN listings l ON l.id = c.listing_id WHERE l.title = 'Një tjetër që pret kodin'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!((status("Një tjetër që pret kodin").await.as_str(), contacts), ("DELETED", 0));
 
     // Not under a suspended account, nor without a contact that can be one.
     sqlx::query("UPDATE users SET status = 'SUSPENDED' WHERE phone_e164 = '+355690000003'")

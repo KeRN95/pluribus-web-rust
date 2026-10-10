@@ -278,6 +278,12 @@ pub fn type_trial() -> bool {
     std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true")
 }
 
+/// Takes photos' files out of the store, every copy of each (photos::delete), for the work done
+/// outside a request: the listings their code never put up (expiry.rs).
+pub async fn delete_photos(media: &crate::media::Media, keys: &[String]) {
+    photos::delete(media, keys).await;
+}
+
 /// The site's address for links made outside a request, which has none to go by: the message
 /// notices' (notices.rs). PUBLIC_URL, or the development server's address (seo::origin).
 pub fn site_origin() -> String {
