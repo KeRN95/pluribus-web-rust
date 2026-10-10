@@ -65,9 +65,11 @@
     <p class="card-description">{{ description }}</p>
     {%- endif %}
     {#- The price; one that dropped lately is followed, as on the listing's page, by what it was,
-        struck through, and by how much, in a green pill (page.css). -#}
+        struck through, and by how much, in a green pill (page.css); a car well under what cars
+        of its model and year ask, by "Çmim i mirë" in one (car_prices.rs). -#}
     <p class="card-price"><span class="card-amount">{{ card.price_display() }}</span>
-      {%- if let Some((percent, was)) = card.price_drop() %}<del class="card-was"><span class="visually-hidden">Çmimi ishte </span>{{ was }}</del><span class="card-drop">−{{ percent }}%</span>{% endif %}</p>
+      {%- if let Some((percent, was)) = card.price_drop() %}<del class="card-was"><span class="visually-hidden">Çmimi ishte </span>{{ was }}</del><span class="card-drop">−{{ percent }}%</span>{% endif %}
+      {%- if card.bargain() %}<span class="card-bargain">Çmim i mirë</span>{% endif %}</p>
     {%- if let Some(place) = card.place_text() %}
     {#- In the list, under the price, where it is: the pin and the zone and town ("Blloku, Tiranë"),
         or the town, whatever the search is in, small and muted; there the details line leaves the

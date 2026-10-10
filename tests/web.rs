@@ -2960,6 +2960,101 @@ async fn a_property_or_a_car_shows_where_it_is_on_a_map_under_its_seller(pool: P
     assert!(!html(pool, "/listing/1005-iphone-13-128-gb-si-i-ri").await.contains("listing-map"));
 }
 
+/// Golfs up for sale, as 1001 is but for their years and their prices in euros.
+async fn golfs(pool: &PgPool, cars: &[(i32, i64)]) {
+    for (year, price) in cars {
+        sqlx::query(
+            "WITH l AS (
+                 INSERT INTO listings (seller_user_id, created_by_user_id, category_id, location_id, slug, title, description,
+                                       listing_type, condition, price_amount, currency, price_type, price_normalized, status, published_at)
+                 SELECT seller_user_id, created_by_user_id, category_id, location_id, slug, title, description,
+                        listing_type, condition, $2::numeric, 'EUR', 'FIXED', $2::numeric, 'ACTIVE', now() - interval '3 days'
+                 FROM listings WHERE public_no = 1001
+                 RETURNING id
+             )
+             INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_text, value_number, value_boolean, value_date, value_option_id)
+             SELECT l.id, v.attribute_id, v.data_type, v.value_text,
+                    CASE WHEN a.code = 'vehicle_year' THEN $1::numeric ELSE v.value_number END,
+                    v.value_boolean, v.value_date, v.value_option_id
+             FROM l, listing_attribute_values v JOIN attributes a ON a.id = v.attribute_id
+             WHERE v.listing_id = 'a0000000-0000-4000-8000-000000001001'",
+        )
+        .bind(year)
+        .bind(price)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_cars_price_is_compared_with_what_cars_of_its_model_and_year_ask(pool: PgPool) {
+    let golf = "/listing/1001-volkswagen-golf-7-2016-nafte";
+    let refresh = || marketplace::db::refresh_car_prices(&pool);
+    // Its price, now, with no history of it: a drop would have its own pill on the card.
+    let priced = |price: i64| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query("UPDATE listings SET price_amount = $1::numeric, price_normalized = $1::numeric WHERE public_no = 1001")
+                .bind(price)
+                .execute(&pool)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM listing_price_history WHERE listing_id = 'a0000000-0000-4000-8000-000000001001'").execute(&pool).await.unwrap();
+        }
+    };
+    let hint = |query: &'static str| {
+        let pool = pool.clone();
+        async move { get(pool, &format!("/shto/cmimi?{query}")).await }
+    };
+
+    // Too few Golfs to say anything.
+    refresh().await.unwrap();
+    assert!(!get(pool.clone(), golf).await.body.contains("car-price"));
+    assert_eq!(hint("model=VOLKSWAGEN_GOLF&year=2016&currency=EUR").await.status, StatusCode::NO_CONTENT);
+
+    // Nine more, from 2014 to 2018: ten, whose median is 10 250 €, the middle half's 9 500 to
+    // 11 375; its 9 500 € is about it.
+    golfs(&pool, &[(2014, 8000), (2015, 9000), (2015, 9500), (2016, 10000), (2016, 10500), (2017, 11000), (2017, 11500), (2018, 12000), (2018, 12500)]).await;
+    refresh().await.unwrap();
+    let page = get(pool.clone(), golf).await.body;
+    assert!(page.contains(r#"<details class="bubble car-price price-near" data-controller="dropdown">"#), "{page}");
+    assert!(page.contains("Rreth mesatares"));
+    assert!(page.contains("<div><dt>Mesatarja</dt><dd>10\u{a0}300\u{a0}€</dd></div>"), "{page}");
+    assert!(page.contains("<div><dt>Shumica kërkojnë</dt><dd>9\u{a0}500–11\u{a0}400\u{a0}€</dd></div>"), "{page}");
+    assert!(page.contains("Nga 10 Volkswagen Golf 2014–2018 në shitje, pa makinat për pjesë."), "{page}");
+    assert!(!get(pool.clone(), "/c/makina").await.body.contains("card-bargain"));
+
+    // At 8 000 €, against the median as it stands (no rebuild), a good price, on its card too; at
+    // 13 000 €, over it; at 4 000 €, so far under it that it says nothing.
+    priced(8000).await;
+    let page = get(pool.clone(), golf).await.body;
+    assert!(page.contains(r#"<details class="bubble car-price price-below""#) && page.contains("Çmim i mirë"), "{page}");
+    let cars = get(pool.clone(), "/c/makina").await.body;
+    assert_eq!(cars.matches(r#"<span class="card-bargain">Çmim i mirë</span>"#).count(), 1, "{cars}");
+    priced(13000).await;
+    assert!(get(pool.clone(), golf).await.body.contains(r#"<details class="bubble car-price price-above""#));
+    assert!(!get(pool.clone(), "/c/makina").await.body.contains("card-bargain"));
+    priced(4000).await;
+    assert!(!get(pool.clone(), golf).await.body.contains("car-price"));
+
+    // The listing form's hint: what such cars ask, and how the price typed will compare, in the
+    // currency chosen; too few cars, or no model, and it says nothing.
+    let answer: Value = serde_json::from_str(&hint("model=VOLKSWAGEN_GOLF&year=2016&currency=EUR&price=8%20000").await.body).unwrap();
+    assert_eq!(answer["text"], "Volkswagen Golf 2014–2018 në shitje: shumica kërkojnë 9\u{a0}500–11\u{a0}400\u{a0}€, mesatarja 10\u{a0}300\u{a0}€.");
+    assert_eq!(answer["verdict"], "Te faqja e makinës, çmimi yt del „Çmim i mirë“.");
+    let answer: Value = serde_json::from_str(&hint("model=VOLKSWAGEN_GOLF&year=2016&currency=EUR&price=900").await.body).unwrap();
+    assert_eq!(answer["verdict"], "Çmimi yt është shumë nën mesataren: a është i saktë, dhe në monedhën e duhur?");
+    let answer: Value = serde_json::from_str(&hint("model=VOLKSWAGEN_GOLF&year=2016&currency=EUR").await.body).unwrap();
+    assert_eq!(answer["verdict"], Value::Null);
+    let lek: Value = serde_json::from_str(&hint("model=VOLKSWAGEN_GOLF&year=2016&currency=ALL&price=1000000").await.body).unwrap();
+    assert!(lek["text"].as_str().unwrap().ends_with("0\u{a0}Lekë."), "{lek}");
+    assert_eq!(lek["verdict"], "Te faqja e makinës, çmimi yt del „Rreth mesatares“.");
+    assert_eq!(hint("model=VOLKSWAGEN_GOLF&year=2025&currency=EUR").await.status, StatusCode::NO_CONTENT);
+    assert_eq!(hint("model=BMW_3_SERIES&year=2016&currency=EUR").await.status, StatusCode::NO_CONTENT);
+    assert_eq!(hint("year=2016").await.status, StatusCode::NO_CONTENT);
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_property_in_a_zone_compares_its_square_metre_with_the_zones(pool: PgPool) {
     // Eleven flats on sale in Blloku, 100 m² each: ten from 700 to 1 200 € a square metre, and one
@@ -3064,7 +3159,7 @@ async fn the_listing_form_asks_for_the_writing_first_and_offers_ai_when_it_is_se
     let new = send_to(app_with_ai(pool.clone(), &url), Request::get("/shto").body(Body::empty()).unwrap()).await.body;
     let order = positions(&new, &[r#"name="photos""#, "Plotëso pjesën tjetër me AI", r#"id="category""#]);
     assert!(order.is_sorted(), "{order:?}");
-    assert!(new.contains(r##"data-controller="listing-form narrow ai-fill" data-ai-fill-photos-outlet="#listing-photos""##));
+    assert!(new.contains(r##"data-controller="listing-form narrow price-hint ai-fill" data-ai-fill-photos-outlet="#listing-photos""##));
     assert!(new.contains(r#"<div class="field" id="listing-photos" data-controller="photos""#));
     let session = session_for(&pool, "11111111-1111-4111-8111-111111111111").await;
     let request = Request::get("/listing/1001/ndrysho").header(header::COOKIE, &session).body(Body::empty()).unwrap();

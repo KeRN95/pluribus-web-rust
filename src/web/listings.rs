@@ -14,6 +14,7 @@ use super::{
     Result,
     account::{ClientIp, cookie_header, current_user},
     browse::{self, ListingPage, NextPage, Subcategory, category_icon, verified_label},
+    car_prices,
     cookie, is_next_page_request, not_found,
     icons::{self, Reads},
     photos,
@@ -141,6 +142,17 @@ impl ListingCard {
         let cut: String = self.description.chars().take(db::DESCRIPTION_EXCERPT).collect();
         let at_word = cut.rfind(' ').filter(|&at| at > cut.len() / 2).map_or(cut.as_str(), |at| &cut[..at]);
         format!("{}…", at_word.trim_end_matches([',', '.', ';', ':', '-']))
+    }
+
+    /// A clear bargain: a car whose price is well under what cars of its model and year ask
+    /// (car_prices::verdict), as its page says; not one whose price dropped lately, whose pill
+    /// says enough.
+    pub fn bargain(&self) -> bool {
+        let good = match (self.price_normalized, self.model_median) {
+            (Some(price), Some(median)) => car_prices::verdict(price, median) == Some(car_prices::Verdict::Good),
+            _ => false,
+        };
+        good && self.price_drop().is_none()
     }
 
     /// By how much its price dropped lately, and from what (price_drop), for the badge beside it.
@@ -489,6 +501,9 @@ struct ListingShow {
     /// left, and the price, the ways to the seller and the seller's card in a
     /// column at the right (.listing-deal), its photos sized for the page (CAR_GALLERY_SIZES).
     car_page: bool,
+    /// For a car up for sale at a price, how it compares with what cars of its model and year
+    /// ask (car_price.html).
+    car_price: Option<car_prices::CarPrice>,
     /// A car's key facts, in a row under its title: the year, the mileage, the gearbox and the
     /// fuel (CAR_FACTS), each with its icon; none on any other page.
     facts: Vec<Detail>,
@@ -718,6 +733,12 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     // A car's page (Makina) has its key facts in a row under the title, which leave the details,
     // and its options under their own names after the grid of the others (listing.html).
     let car_page = slugs.contains(&"makina");
+    let car_price = match car_page {
+        true => db::car_price(&state.db, listing.id)
+            .await?
+            .and_then(|car| car_prices::CarPrice::new(car, &listing.currency, listing.eur_rate)),
+        false => None,
+    };
     let facts: Vec<Detail> = if car_page {
         CAR_FACTS.iter().filter_map(|code| attributes.iter().find(|attribute| attribute.code == *code)).map(detail_of).collect()
     } else {
@@ -768,6 +789,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             map,
             wide_photos,
             car_page,
+            car_price,
             facts,
             options,
             page,

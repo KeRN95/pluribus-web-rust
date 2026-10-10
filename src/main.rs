@@ -47,6 +47,9 @@ async fn main() -> anyhow::Result<()> {
                 if let Err(error) = marketplace::db::refresh_zone_prices(&db).await {
                     tracing::warn!(%error, "could not refresh what a square metre costs in each zone");
                 }
+                if let Err(error) = marketplace::db::refresh_car_prices(&db).await {
+                    tracing::warn!(%error, "could not refresh what cars of each model ask");
+                }
                 if let Err(error) = marketplace::db::refresh_response_times(&db).await {
                     tracing::warn!(%error, "could not refresh how quickly the sellers answer");
                 }

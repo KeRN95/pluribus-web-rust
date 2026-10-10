@@ -134,6 +134,7 @@ DELETE FROM users WHERE auth_subject LIKE 'dev|generated-%';
 \endif
 REFRESH MATERIALIZED VIEW search_words;
 REFRESH MATERIALIZED VIEW zone_area_prices;
+REFRESH MATERIALIZED VIEW car_model_prices;
 COMMIT;
 \if :{?only}
 \echo 'Removed the generated listings under' :only 'and the sellers left without any.'
@@ -1509,6 +1510,7 @@ WHERE id IN (SELECT id FROM written);
 
 REFRESH MATERIALIZED VIEW search_words;
 REFRESH MATERIALIZED VIEW zone_area_prices;
+REFRESH MATERIALIZED VIEW car_model_prices;
 
 COMMIT;
 

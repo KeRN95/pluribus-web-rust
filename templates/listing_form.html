@@ -24,7 +24,7 @@
       With the AI set up, a new listing's form fills itself in from what the seller wrote
       (ai_fill_controller.js, which takes the photos picked from photos_controller.js). -#}
   <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data"
-        data-controller="listing-form narrow{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% endif %}{% if new_listing %} data-listing-form-guess-value="true"{% endif %}>
+        data-controller="listing-form narrow price-hint{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% endif %}{% if new_listing %} data-listing-form-guess-value="true"{% endif %}>
     {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
     {%- if new_listing && !stores.is_empty() %}
     {#- "Posto si": the poster, or a store they may post for (stores.rs), whose name, logo and
@@ -165,6 +165,9 @@
         </div>
       </div>
     </div>
+    {#- For a car whose model and year are chosen, what cars like it ask, and how the price typed
+        compares (price_hint_controller.js, car_prices.rs). -#}
+    <p class="field-hint price-hint" data-price-hint-target="hint" role="status" hidden></p>
     {% if let Some(error) = self.error("price") %}<p class="field-error">{{ error }}</p>{% endif %}
 
     <div class="form-row">

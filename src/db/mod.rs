@@ -82,6 +82,7 @@ mod notifications;
 mod rates;
 mod review;
 mod promotions;
+mod car_prices;
 
 pub use account::*;
 pub use categories::*;
@@ -104,6 +105,7 @@ pub use notifications::*;
 pub use rates::*;
 pub use review::*;
 pub use promotions::*;
+pub use car_prices::*;
 
 #[cfg(test)]
 mod tests {

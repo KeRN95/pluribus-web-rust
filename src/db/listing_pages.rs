@@ -84,6 +84,10 @@ pub struct ListingCard {
     /// Whether a promotion highlights it now (highlighted_until): its card stands out.
     #[sqlx(default)]
     pub highlighted: bool,
+    /// For a car up for sale at a price, what cars of its model and year ask, the median in
+    /// euros (car_model_prices): a clear bargain says so on its card (web/car_prices.rs).
+    #[sqlx(default)]
+    pub model_median: Option<Decimal>,
 }
 
 /// How much of a description a card carries, in characters.
@@ -734,6 +738,16 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH card_attributes AS MATERIALI
                 ", price_was!(), " AS price_was,
                 coalesce(l.featured_until > now(), false) AS featured,
                 coalesce(l.highlighted_until > now(), false) AS highlighted,
+                -- A car's (Makina's, its model and year the properties 0002 fixes the ids of):
+                -- what cars of its model and year ask (car_model_prices).
+                (SELECT p.median_eur
+                 FROM listing_attribute_values m
+                 JOIN listing_attribute_values y
+                   ON y.listing_id = m.listing_id AND y.attribute_id = '20000000-0000-0000-0000-000000000003'
+                 JOIN car_model_prices p ON p.model_id = m.value_option_id AND p.year = y.value_number::int
+                 WHERE m.listing_id = l.id AND m.attribute_id = '20000000-0000-0000-0000-000000000002'
+                   AND l.category_id = '10000000-0000-0000-0000-000000000101' AND l.listing_type = 'SELL'
+                   AND l.price_type IN ('FIXED', 'NEGOTIABLE') AND l.condition IS DISTINCT FROM 'FOR_PARTS') AS model_median,
                 ");
 
 /// One page of active listings in the filter's order, with at most PAGE_SIZE + 1 rows.

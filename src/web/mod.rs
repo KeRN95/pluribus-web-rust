@@ -3,6 +3,7 @@
 mod account;
 mod ai_fill;
 mod browse;
+mod car_prices;
 mod filters;
 mod icons;
 mod listings;
@@ -86,6 +87,7 @@ pub fn router(state: AppState) -> Router {
         .route("/shto/fushat", get(properties::fields_for_category))
         .route("/shto/ploteso", post(ai_fill::fill).layer(with_photos()))
         .route("/shto/zona", post(post::guess_zone))
+        .route("/shto/cmimi", get(car_prices::hint))
         .route("/njoftimet-e-mia", get(post::my_listings))
         .route("/te-ruajturat", get(saved::page))
         .route("/te-ruajturat/numrat", get(saved::numbers))

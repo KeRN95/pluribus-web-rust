@@ -330,7 +330,8 @@
   opacity: .8;
   text-overflow: ellipsis;
 }
-.card-drop {
+.card-drop,
+.card-bargain {
   flex: none;
   display: inline-block;
   padding: 0 .4rem;

@@ -1,0 +1,19 @@
+{#- A car's price against what cars of its model and year ask (car_prices.rs): a bubble like
+    "Llogarit kredinë" in the colour of the verdict, green for a good price, yellow about the
+    middle, red over it, which opens what it comes from in a card under it: the median and the
+    middle half's prices, from how many cars, and what moves a car's price besides. A tap outside
+    or Escape closes it (dropdown_controller.js). -#}
+<details class="bubble car-price {{ car.tone() }}" data-controller="dropdown">
+  <summary title="Si krahasohet">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PRICE_TAG|safe }}</svg>
+    {{ car.words() }}
+  </summary>
+  <div class="bubble-card car-price-card">
+    <p class="bubble-title">Si krahasohet</p>
+    <dl class="bubble-sum">
+      <div><dt>Mesatarja</dt><dd>{{ car.median }}</dd></div>
+      <div><dt>Shumica kërkojnë</dt><dd>{{ car.range }}</dd></div>
+    </dl>
+    <p class="bubble-note">Nga {{ car.listings }} {{ car.cars }} në shitje, pa makinat për pjesë. Kilometrazhi, gjendja dhe pajisjet e ndryshojnë çmimin.</p>
+  </div>
+</details>

@@ -704,17 +704,23 @@
 .area-price-verdict::before { content: ""; flex: none; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
 /* In a zone with an average (zone_area_prices), the bubble takes the colour of how its square
    metre compares: green 200 € or more under it, red as much over it, yellow in between
-   (ZONE_MARGIN_EUR, listings.rs). */
-.area-price.price-below { --tone: var(--below); --tone-bg: var(--below-bg); }
-.area-price.price-near { --tone: var(--near); --tone-bg: var(--near-bg); }
-.area-price.price-above { --tone: var(--above); --tone-bg: var(--above-bg); }
-.area-price:is(.price-below, .price-near, .price-above) > summary {
+   (ZONE_MARGIN_EUR, listings.rs); a car's, of how its price compares with what cars of its
+   model and year ask: green 15 % or more under the median, red as much over (car_prices.rs). */
+:is(.area-price, .car-price).price-below { --tone: var(--below); --tone-bg: var(--below-bg); }
+:is(.area-price, .car-price).price-near { --tone: var(--near); --tone-bg: var(--near-bg); }
+:is(.area-price, .car-price).price-above { --tone: var(--above); --tone-bg: var(--above-bg); }
+:is(.area-price, .car-price):is(.price-below, .price-near, .price-above) > summary {
   border-color: color-mix(in srgb, var(--tone) 30%, transparent);
   background: var(--tone-bg);
   color: var(--tone);
 }
-.area-price:is(.price-below, .price-near, .price-above) > summary:hover,
-.area-price:is(.price-below, .price-near, .price-above)[open] > summary { background: color-mix(in srgb, var(--tone) 12%, var(--tone-bg)); }
+:is(.area-price, .car-price):is(.price-below, .price-near, .price-above) > summary:hover,
+:is(.area-price, .car-price):is(.price-below, .price-near, .price-above)[open] > summary { background: color-mix(in srgb, var(--tone) 12%, var(--tone-bg)); }
+/* A car's price against what cars of its model and year ask: its card under it, as wide as what
+   it says. */
+.car-price { position: relative; width: fit-content; }
+.price-box > .car-price { margin-top: .4rem; }
+.car-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw - 2rem)); }
 /* The price with the loan calculator's bubble beside it. */
 .price-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
 /* With a price per square metre, the price takes a line of its own and the loan calculator's
