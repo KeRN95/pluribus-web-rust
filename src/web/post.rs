@@ -24,7 +24,7 @@ use super::{
     named, not_found,
     photos::{self, Submission},
     properties::{self, PropertyField},
-    render,
+    render, saved,
 };
 use crate::{
     AppState,
@@ -808,12 +808,12 @@ impl MyListing {
         format::price(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
     }
 
-    /// Listings that are no longer up say so; they can't be edited.
+    /// Listings that are no longer simply up say so.
     pub fn status_label(&self) -> Option<&'static str> {
         match self.status.as_str() {
             "ACTIVE" => None,
             "RESERVED" => Some("Rezervuar"),
-            "SOLD" => Some("Shitur"),
+            "SOLD" => Some(format::sold(&self.listing_type)),
             "EXPIRED" => Some("Skaduar"),
             "PENDING_REVIEW" | "DRAFT" => Some("Në pritje"),
             "PAUSED" => Some("Çaktivizuar"),
@@ -823,18 +823,30 @@ impl MyListing {
         }
     }
 
+    /// Up, or taken down by its seller for a while: it can be edited.
     pub fn editable(&self) -> bool {
-        matches!(self.status.as_str(), "ACTIVE" | "RESERVED")
+        matches!(self.status.as_str(), "ACTIVE" | "RESERVED" | "PAUSED")
     }
 
     /// Up on the site, so it can be taken down for a while ("Çaktivizo").
     pub fn pausable(&self) -> bool {
-        self.editable()
+        matches!(self.status.as_str(), "ACTIVE" | "RESERVED")
     }
 
-    /// Taken down by its seller, so it can be put back ("Aktivizo").
-    pub fn paused(&self) -> bool {
-        self.status == "PAUSED"
+    /// Taken down by its seller, or sold, so it can be put back up ("Aktivizo").
+    pub fn resumable(&self) -> bool {
+        matches!(self.status.as_str(), "PAUSED" | "SOLD")
+    }
+
+    /// Up, and on sale or for rent, so it can be said to be sold ("U shit", "U dha me qira") or
+    /// reserved.
+    pub fn sellable(&self) -> bool {
+        self.pausable() && db::SELLABLE_KINDS.contains(&self.listing_type.as_str())
+    }
+
+    /// The button that says it is sold: "U shit", or "U dha me qira" for a rental.
+    pub fn sell_action(&self) -> &'static str {
+        format::sell_action(&self.listing_type)
     }
 }
 
@@ -844,9 +856,25 @@ pub async fn pause_listing(State(state): State<AppState>, headers: HeaderMap, Pa
     change_listing(&state, &headers, public_no, ListingAction::Pause).await
 }
 
-/// "Aktivizo": a paused listing goes back up, where it was in "newest first".
+/// "Aktivizo": a paused or sold listing goes back up, where it was in "newest first".
 pub async fn resume_listing(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
     change_listing(&state, &headers, public_no, ListingAction::Resume).await
+}
+
+/// "U shit" ("U dha me qira" for a rental): the listing is sold. Its page stays, saying so, for
+/// links shared and kept; it leaves the lists, and no one can ask about it any more.
+pub async fn sell_listing(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
+    change_listing(&state, &headers, public_no, ListingAction::Sell).await
+}
+
+/// "Rezervo": someone is taking it. It stays up, saying so, and can still be asked about.
+pub async fn reserve_listing(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
+    change_listing(&state, &headers, public_no, ListingAction::Reserve).await
+}
+
+/// "Hiq rezervimin": the reservation is off, the listing up as before.
+pub async fn unreserve_listing(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
+    change_listing(&state, &headers, public_no, ListingAction::Unreserve).await
 }
 
 /// "Fshi": the listing is gone for good, from the site and from "Njoftimet e mia".
@@ -855,7 +883,9 @@ pub async fn delete_listing(State(state): State<AppState>, headers: HeaderMap, P
 }
 
 /// Only the listing's own seller may; anyone else gets "not found", as for a listing that doesn't
-/// exist. Back to "Njoftimet e mia" after.
+/// exist, and so does an action the listing's state or kind doesn't take. Back to the page the
+/// button was on, the listing's own or "Njoftimet e mia", or to "Njoftimet e mia" without one;
+/// after deleting, always there, as the listing's page is gone.
 async fn change_listing(state: &AppState, headers: &HeaderMap, public_no: i64, action: ListingAction) -> Result<Response> {
     let Some(user) = current_user(state, headers).await? else {
         return render(SignInPage::new());
@@ -863,7 +893,11 @@ async fn change_listing(state: &AppState, headers: &HeaderMap, public_no: i64, a
     if !db::change_own_listing(&state.db, public_no, user.id, action).await? {
         return not_found().await;
     }
-    Ok(Redirect::to("/njoftimet-e-mia").into_response())
+    let back = match action {
+        ListingAction::Delete => None,
+        _ => saved::referring_page(headers),
+    };
+    Ok(Redirect::to(back.as_deref().unwrap_or("/njoftimet-e-mia")).into_response())
 }
 
 /// "Njoftimet e mia": the signed-in seller's listings, each with a way to edit it.

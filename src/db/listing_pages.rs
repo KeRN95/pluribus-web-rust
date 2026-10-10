@@ -61,6 +61,10 @@ pub struct ListingCard {
     /// the title (description_excerpt).
     #[sqlx(default)]
     pub description: String,
+    /// Its status: every list shows active listings alone but /te-ruajturat, which keeps the
+    /// reserved and sold ones a visitor kept, each saying so over its photo (status_label).
+    #[sqlx(default)]
+    pub status: String,
 }
 
 /// How much of a description a card carries, in characters.
@@ -533,6 +537,7 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH card_attributes AS MATERIALI
                  ORDER BY spare.sort_order
                  LIMIT 1) AS spare_detail,
                 left(btrim(regexp_replace(coalesce(l.description, ''), '\\s+', ' ', 'g')), 401) AS description,
+                l.status,
                 ", price_was!(), " AS price_was,
                 ");
 

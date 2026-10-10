@@ -28,7 +28,8 @@
       {%- endif %}
       <div class="conversation-listing-text">
         <h1 class="conversation-title">{{ listing.title }}</h1>
-        <span class="conversation-price">{{ listing.price }}</span>
+        {#- Its price, and after it, once it is no longer simply up, what became of it. -#}
+        <span class="conversation-price">{{ listing.price }}{% if let Some(status) = listing.status %}<span class="badge conversation-status">{{ status }}</span>{% endif %}</span>
       </div>
     </a>
     {%- else %}

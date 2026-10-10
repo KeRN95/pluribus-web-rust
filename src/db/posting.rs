@@ -238,7 +238,7 @@ pub async fn create_listing(db: &PgPool, listing: &NewListing<'_>) -> sqlx::Resu
 }
 
 /// One of the user's own listings, as the edit form shows it. Only listings they created, and only
-/// while they are up (active or reserved), can be edited.
+/// while they are up (active or reserved) or taken down by them for a while (paused), can be edited.
 pub struct OwnListing {
     pub id: Uuid,
     pub public_no: i64,
@@ -269,7 +269,7 @@ pub async fn own_listing(db: &PgPool, public_no: i64, user_id: Uuid) -> sqlx::Re
            FROM listings l
            JOIN categories c ON c.id = l.category_id
            LEFT JOIN listing_contacts lc ON lc.listing_id = l.id
-           WHERE l.public_no = $1 AND l.created_by_user_id = $2 AND l.status IN ('ACTIVE', 'RESERVED')"#,
+           WHERE l.public_no = $1 AND l.created_by_user_id = $2 AND l.status IN ('ACTIVE', 'RESERVED', 'PAUSED')"#,
         public_no,
         user_id,
     )
@@ -277,7 +277,8 @@ pub async fn own_listing(db: &PgPool, public_no: i64, user_id: Uuid) -> sqlx::Re
     .await
 }
 
-/// Saves an edit, if the listing is the user's and still up; returns whether it did. A listing
+/// Saves an edit, if the listing is the user's and still up, or taken down by them for a while
+/// (PAUSED, which an edit leaves as it is); returns whether it did. A listing
 /// keeps its point on the map unless it moves to another town, and its place in "newest first".
 pub async fn update_listing(db: &PgPool, public_no: i64, listing: &NewListing<'_>) -> sqlx::Result<bool> {
     let mut tx = db.begin().await?;
@@ -291,7 +292,7 @@ pub async fn update_listing(db: &PgPool, public_no: i64, listing: &NewListing<'_
              location_id = $4
          FROM locations loc
          LEFT JOIN locations town ON town.id = location_municipality(loc.id)
-         WHERE loc.id = $4 AND l.public_no = $1 AND l.created_by_user_id = $2 AND l.status IN ('ACTIVE', 'RESERVED')
+         WHERE loc.id = $4 AND l.public_no = $1 AND l.created_by_user_id = $2 AND l.status IN ('ACTIVE', 'RESERVED', 'PAUSED')
          RETURNING l.id",
         public_no,
         listing.user_id,
@@ -332,40 +333,70 @@ pub async fn update_listing(db: &PgPool, public_no: i64, listing: &NewListing<'_
 pub enum ListingAction {
     /// Take it down for a while (PAUSED): nobody else sees it until it is put back.
     Pause,
-    /// Put a paused listing back up.
+    /// Put a paused or sold listing back up.
     Resume,
+    /// Say it is sold, or let out (SOLD, with when): its page stays, saying so, with no way to
+    /// reach the seller about it, and it leaves the lists.
+    Sell,
+    /// Say someone is taking it (RESERVED): it stays up, saying so.
+    Reserve,
+    /// Take the reservation off: up as before.
+    Unreserve,
     /// Take it down for good (DELETED).
     Delete,
 }
+
+/// The kinds of listing that can be sold or reserved: those on sale and those for rent (a wanted
+/// ad, a job or a service has nothing to hand over).
+pub const SELLABLE_KINDS: [&str; 2] = ["SELL", "RENT"];
 
 impl ListingAction {
     /// The statuses the action applies to, and the one it leaves.
     fn statuses(self) -> (&'static [&'static str], &'static str) {
         match self {
             Self::Pause => (&["ACTIVE", "RESERVED"], "PAUSED"),
-            Self::Resume => (&["PAUSED"], "ACTIVE"),
+            Self::Resume => (&["PAUSED", "SOLD"], "ACTIVE"),
+            Self::Sell => (&["ACTIVE", "RESERVED"], "SOLD"),
+            Self::Reserve => (&["ACTIVE"], "RESERVED"),
+            Self::Unreserve => (&["RESERVED"], "ACTIVE"),
             Self::Delete => (&["DRAFT", "ACTIVE", "RESERVED", "SOLD", "EXPIRED", "PAUSED", "SUSPENDED", "REJECTED"], "DELETED"),
+        }
+    }
+
+    /// The kinds of listing it applies to: selling and reserving only to those that can be
+    /// handed over (SELLABLE_KINDS); None for every kind.
+    fn kinds(self) -> Option<&'static [&'static str]> {
+        match self {
+            Self::Sell | Self::Reserve | Self::Unreserve => Some(&SELLABLE_KINDS),
+            Self::Pause | Self::Resume | Self::Delete => None,
         }
     }
 }
 
-/// Pauses, resumes or deletes one of the user's listings. False when the listing isn't theirs, or
-/// isn't in a state the action applies to (a deleted one, or pausing one already paused). The
-/// status history records the seller as the one who changed it.
+/// Pauses, resumes, sells, reserves or deletes one of the user's listings. False when the listing
+/// isn't theirs, isn't in a state the action applies to (a deleted one, or pausing one already
+/// paused), or isn't of a kind it applies to (selling a wanted ad). Selling sets when it was sold,
+/// as the schema asks of a sold listing, and putting one back up clears it. The status history
+/// records the seller as the one who changed it.
 pub async fn change_own_listing(db: &PgPool, public_no: i64, user_id: Uuid, action: ListingAction) -> sqlx::Result<bool> {
     let (from, to) = action.statuses();
     let from: Vec<String> = from.iter().map(|status| status.to_string()).collect();
+    let kinds: Option<Vec<String>> = action.kinds().map(|kinds| kinds.iter().map(|kind| kind.to_string()).collect());
     let mut tx = db.begin().await?;
     sqlx::query!("SELECT set_config('app.user_id', $1, true)", user_id.to_string())
         .fetch_one(&mut *tx)
         .await?;
     let changed = sqlx::query!(
-        "UPDATE listings SET status = $3, updated_at = now()
-         WHERE public_no = $1 AND created_by_user_id = $2 AND status::text = ANY($4)",
+        "UPDATE listings
+         SET status = $3::text, updated_at = now(),
+             sold_at = CASE WHEN $3::text = 'SOLD' THEN now() WHEN $3::text = 'ACTIVE' THEN NULL ELSE sold_at END
+         WHERE public_no = $1 AND created_by_user_id = $2 AND status::text = ANY($4)
+           AND ($5::text[] IS NULL OR listing_type::text = ANY($5))",
         public_no,
         user_id,
         to,
         &from,
+        kinds.as_deref(),
     )
     .execute(&mut *tx)
     .await?

@@ -11,7 +11,7 @@
   {%- if !signed_in %}
   <p class="lead">Hyr në llogari për të ruajtur njoftimet që të pëlqejnë, me zemrën mbi foton e tyre, dhe për t'i gjetur këtu.</p>
   <p><a class="button" href="/llogaria">Hyr</a></p>
-  {%- else if page.cards.is_empty() %}
+  {%- else if page.cards.is_empty() && gone.is_empty() %}
   <p class="empty">Ende s'ke ruajtur asnjë njoftim. Prek zemrën mbi foton e një njoftimi për ta ruajtur këtu.</p>
   {%- else %}
   {%- if !drops.is_empty() %}
@@ -28,7 +28,29 @@
     </ul>
   </div>
   {%- endif %}
+  {%- if !page.cards.is_empty() %}
   {% include "listing_grid.html" %}
+  {%- endif %}
+  {%- if !gone.is_empty() %}
+  {#- Those kept that no one can open any more (db::saved_gone): their seller took them down, for a
+      while or for good, or the reports or the moderators did; each says which, and "Hiq" lets it
+      go (the heart's own form, back to this page). -#}
+  <section class="saved-gone" aria-labelledby="saved-gone-heading">
+    <h2 id="saved-gone-heading">Nuk shfaqen më</h2>
+    <ul class="saved-gone-list">
+      {%- for listing in gone %}
+      <li class="saved-gone-entry">
+        <span class="saved-gone-title">{{ listing.title }}</span>
+        <span class="badge">{{ listing.label() }}</span>
+        <form method="post" action="/listing/{{ listing.public_no }}/ruaj">
+          <input type="hidden" name="ruaj" value="0">
+          <button type="submit" class="button secondary small">Hiq</button>
+        </form>
+      </li>
+      {%- endfor %}
+    </ul>
+  </section>
+  {%- endif %}
   {%- endif %}
 </section>
 {% endblock %}

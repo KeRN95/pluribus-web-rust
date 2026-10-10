@@ -134,6 +134,23 @@ pub fn listing_type(code: &str) -> &str {
     }
 }
 
+/// What a sold listing (SOLD) says it is, by its kind: a flat let out is "Dhënë me qira", anything
+/// else "Shitur".
+pub fn sold(listing_type: &str) -> &'static str {
+    match listing_type {
+        "RENT" => "Dhënë me qira",
+        _ => "Shitur",
+    }
+}
+
+/// The seller's button that says a listing is sold, by its kind: "U shit", or "U dha me qira".
+pub fn sell_action(listing_type: &str) -> &'static str {
+    match listing_type {
+        "RENT" => "U dha me qira",
+        _ => "U shit",
+    }
+}
+
 pub fn condition(code: &str) -> &str {
     match code {
         "NEW" => "E re",

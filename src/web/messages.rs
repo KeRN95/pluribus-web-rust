@@ -88,6 +88,20 @@ pub struct ListingHead {
     pub url: String,
     pub photo: Option<String>,
     pub price: String,
+    /// What became of it, once it is no longer simply up: reserved, sold ("Dhënë me qira" for a
+    /// rental) or off the site, so that neither side writes on about a thing gone.
+    pub status: Option<&'static str>,
+}
+
+/// What a conversation's head says of its listing's status (`status`, of a listing of kind
+/// `kind`): nothing while it is up.
+fn listing_status(status: Option<&str>, kind: Option<&str>) -> Option<&'static str> {
+    match status? {
+        "ACTIVE" => None,
+        "RESERVED" => Some("Rezervuar"),
+        "SOLD" => Some(format::sold(kind.unwrap_or("SELL"))),
+        _ => Some("Jo më në faqe"),
+    }
 }
 
 /// A conversation's page, or the page that starts one about a listing.
@@ -118,6 +132,7 @@ impl ConversationPage {
                 url: format!("/listing/{}-{}", target.public_no, target.slug),
                 photo: target.photo.clone(),
                 price: format::price(target.price_amount, &target.currency, &target.price_type, &target.listing_type),
+                status: None,
             }),
             other_name: target.seller_name.clone(),
             id: None,
@@ -141,6 +156,7 @@ impl ConversationPage {
                 conversation.price_type.as_deref().unwrap_or("FIXED"),
                 conversation.listing_type.as_deref().unwrap_or("SELL"),
             ),
+            status: listing_status(conversation.listing_status.as_deref(), conversation.listing_type.as_deref()),
         });
         Self {
             listing,

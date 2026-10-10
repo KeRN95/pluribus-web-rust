@@ -93,6 +93,8 @@
   .conversation-listing:hover .conversation-title { text-decoration: underline; text-underline-offset: .15em; }
 }
 .conversation-price { color: var(--muted); font-size: var(--text-sm); font-weight: var(--semibold); }
+/* After the price, once the listing is no longer simply up: reserved, sold or off the site. */
+.conversation-status { margin-left: .5rem; padding: .05rem .5rem; color: var(--text); font-size: var(--text-xs); }
 .conversation-with { display: flex; align-items: center; gap: .45rem; margin: 0; color: var(--muted); font-size: var(--text-sm); font-weight: var(--medium); }
 .conversation-with .avatar { width: 1.6rem; height: 1.6rem; font-size: .75rem; }
 h1.conversation-with { color: var(--text); font-size: var(--text-xl); }

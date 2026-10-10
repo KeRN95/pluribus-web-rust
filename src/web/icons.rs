@@ -641,6 +641,12 @@ pub const BLOCK: &str = r#"<circle cx="12" cy="12" r="8.5"/><path d="m6 6 12 12"
 pub const PENCIL: &str = r#"<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>"#;
 pub const PAUSE: &str = r#"<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>"#;
 pub const TRASH: &str = r#"<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/>"#;
+/// And a circle with a check for saying a listing is sold or let out ("U shit", "U dha me qira"),
+/// the clock for reserving it ("Rezervo") or taking the reservation off ("Hiq rezervimin"), and
+/// a triangle for putting a paused or sold one back up ("Aktivizo").
+pub const SOLD: &str = r#"<circle cx="12" cy="12" r="8.5"/><path d="m8.5 12 2.5 2.5 4.5-5"/>"#;
+pub const RESERVE: &str = CLOCK;
+pub const RESUME: &str = r#"<path d="M8 5.5v13l10.5-6.5Z"/>"#;
 
 /// A shield with a check: a seller's number or address verified (listing.html, profile.html).
 pub const VERIFIED: &str = r#"<path d="M12 3 4.5 6v5.5c0 4.5 3.2 8.3 7.5 9.5 4.3-1.2 7.5-5 7.5-9.5V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>"#;

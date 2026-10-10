@@ -42,7 +42,9 @@ pub async fn saved_numbers(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<i64>>
     .await
 }
 
-/// The cards of the active listings the user keeps, the last kept first: at most `limit`.
+/// The cards of the listings the user keeps that anyone can still open, the last kept first: the
+/// active ones, and those reserved or sold since, which their cards say (ListingCard::status). At
+/// most `limit`.
 pub async fn saved_cards(db: &PgPool, user_id: Uuid, limit: i64) -> sqlx::Result<Vec<ListingCard>> {
     let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
     query.push(
@@ -53,8 +55,32 @@ pub async fn saved_cards(db: &PgPool, user_id: Uuid, limit: i64) -> sqlx::Result
                WHERE s.user_id = ",
     );
     query.push_bind(user_id);
-    query.push(" AND l.status = 'ACTIVE' ORDER BY s.saved_at DESC, l.id DESC LIMIT ");
+    query.push(" AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD') ORDER BY s.saved_at DESC, l.id DESC LIMIT ");
     query.push_bind(limit);
     query.push(") l LEFT JOIN locations loc ON loc.id = l.location_id ORDER BY l.saved_at DESC, l.id DESC");
     query.build_query_as().fetch_all(db).await
+}
+
+/// A listing the user keeps that no one can open any more: its seller took it down for a while
+/// or for good, or the reports or the moderators did. /te-ruajturat names it, to be let go.
+#[derive(Debug, sqlx::FromRow)]
+pub struct GoneListing {
+    pub public_no: i64,
+    pub title: String,
+    pub status: String,
+}
+
+/// The listings the user keeps that are no longer on the site, the last kept first.
+pub async fn saved_gone(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<GoneListing>> {
+    sqlx::query_as(
+        "SELECT l.public_no, coalesce(l.generated_title, l.title) AS title, l.status::text AS status
+         FROM saved_listings s
+         JOIN listings l ON l.id = s.listing_id
+         WHERE s.user_id = $1 AND l.status NOT IN ('ACTIVE', 'RESERVED', 'SOLD')
+         ORDER BY s.saved_at DESC, l.id DESC
+         LIMIT 50",
+    )
+    .bind(user_id)
+    .fetch_all(db)
+    .await
 }

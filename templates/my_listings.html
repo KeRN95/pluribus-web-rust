@@ -54,17 +54,32 @@
           <span title="{{ listing.stats.saves_title() }}">{% call stat_icon(crate::web::icons::HEART) %}<span class="visually-hidden">Ruajtje: </span>{{ crate::format::count(listing.stats.saves) }}</span>
         </span>
       </div>
-      {#- Edit; take down for a while or put back; delete, after the browser asks to be sure
-          (data-turbo-confirm). -#}
+      {#- Edit; one on sale or for rent, say it is sold ("U shit", "U dha me qira") or reserved,
+          or take the reservation off; take down for a while, or put a paused or sold one back up;
+          delete, after the browser asks to be sure (data-turbo-confirm). Each comes back here. -#}
       <div class="my-listing-actions">
         {%- if listing.editable() %}
         <a class="button secondary small" href="/listing/{{ listing.public_no }}/ndrysho">Ndrysho</a>
+        {%- endif %}
+        {%- if listing.sellable() %}
+        <form method="post" action="/listing/{{ listing.public_no }}/shitur">
+          <button type="submit" class="button secondary small">{{ listing.sell_action() }}</button>
+        </form>
+        {%- if listing.status == "ACTIVE" %}
+        <form method="post" action="/listing/{{ listing.public_no }}/rezervo">
+          <button type="submit" class="button secondary small">Rezervo</button>
+        </form>
+        {%- else %}
+        <form method="post" action="/listing/{{ listing.public_no }}/zhrezervo">
+          <button type="submit" class="button secondary small">Hiq rezervimin</button>
+        </form>
+        {%- endif %}
         {%- endif %}
         {%- if listing.pausable() %}
         <form method="post" action="/listing/{{ listing.public_no }}/caktivizo">
           <button type="submit" class="button secondary small">Çaktivizo</button>
         </form>
-        {%- else if listing.paused() %}
+        {%- else if listing.resumable() %}
         <form method="post" action="/listing/{{ listing.public_no }}/aktivizo">
           <button type="submit" class="button secondary small">Aktivizo</button>
         </form>

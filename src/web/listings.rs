@@ -118,6 +118,16 @@ impl ListingCard {
         self.views.map(|views| format::number(Decimal::from(views)))
     }
 
+    /// Over the photo of a kept listing that is no longer simply up (/te-ruajturat alone lists
+    /// them): "Rezervuar", or "Shitur" ("Dhënë me qira" for a rental).
+    pub fn status_label(&self) -> Option<&'static str> {
+        match self.status.as_str() {
+            "RESERVED" => Some("Rezervuar"),
+            "SOLD" => Some(format::sold(&self.listing_type)),
+            _ => None,
+        }
+    }
+
     pub fn price_display(&self) -> String {
         format::price(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
     }
@@ -392,16 +402,28 @@ impl ListingDetail {
     pub fn status_label(&self) -> Option<&'static str> {
         match self.status.as_str() {
             "RESERVED" => Some("Rezervuar"),
-            "SOLD" => Some("Shitur"),
+            "SOLD" => Some(format::sold(&self.listing_type)),
+            "PAUSED" => Some("Çaktivizuar"),
             "SUSPENDED" => Some("Në shqyrtim"),
             "REJECTED" => Some("Hequr"),
             _ => None,
         }
     }
 
-    /// On the site for anyone with its link: not taken off it by its reports or the moderators.
+    /// On the site for anyone with its link: not taken off it by its reports or the moderators,
+    /// nor down for a while by its seller.
     pub fn on_site(&self) -> bool {
         matches!(self.status.as_str(), "ACTIVE" | "RESERVED" | "SOLD")
+    }
+
+    /// Of a kind that can be sold or reserved (db::SELLABLE_KINDS): one on sale or for rent.
+    pub fn sellable(&self) -> bool {
+        db::SELLABLE_KINDS.contains(&self.listing_type.as_str())
+    }
+
+    /// Its seller's button that says it is sold: "U shit", or "U dha me qira" for a rental.
+    pub fn sell_action(&self) -> &'static str {
+        format::sell_action(&self.listing_type)
     }
 }
 
@@ -629,6 +651,8 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let hidden_note = match listing.status.as_str() {
         "SUSPENDED" => Some("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë."),
         "REJECTED" => Some("Moderatorët e hoqën këtë njoftim nga faqja."),
+        "PAUSED" if own => Some("E ke çaktivizuar këtë njoftim: askush tjetër nuk e sheh. „Aktivizo“ e kthen në faqe aty ku ishte."),
+        "PAUSED" => Some("Shitësi e ka çaktivizuar këtë njoftim: askush tjetër nuk e sheh."),
         _ => None,
     };
     // A car's title says its make, model and year: its details leave them out.

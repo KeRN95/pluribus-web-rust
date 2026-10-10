@@ -26,6 +26,7 @@
 .my-listings { display: grid; gap: .6rem; margin: 0 0 1.25rem; padding: 0; list-style: none; }
 .my-listing {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: .75rem;
   padding: .75rem .9rem;
@@ -33,7 +34,9 @@
   border-radius: var(--radius);
   background: var(--surface);
 }
-.my-listing-text { display: grid; flex: 1; gap: .15rem; min-width: 0; }
+/* The title keeps 16rem at least: where its buttons (up to five: Ndrysho, U shit, Rezervo,
+   Çaktivizo, Fshi) leave it less, they go under it. */
+.my-listing-text { display: grid; flex: 1 1 16rem; gap: .15rem; min-width: 0; }
 .my-listing-title { overflow: hidden; color: var(--text); font-weight: var(--semibold); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
 .my-listing-meta { color: var(--muted); font-size: var(--text-sm); }
 /* What the listings drew (my_listings.html): all of them together in three tiles side by side,
@@ -58,7 +61,8 @@
 .my-listing-stats > span { display: inline-flex; align-items: center; gap: .3rem; }
 .my-stat svg,
 .my-listing-stats svg { flex: none; }
-/* Each listing's buttons; on phones they go under its title. */
+/* Each listing's buttons; on phones, and wherever they leave the title too little room, they go
+   under it. */
 .my-listing-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
 .my-listing-actions form { display: contents; }
 .button.small { padding: .4rem .75rem; font-size: var(--text-sm); }

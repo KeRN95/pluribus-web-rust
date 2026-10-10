@@ -235,7 +235,8 @@
    is this pill's size and on its soft dark (--over-photo): the line about the listing in the
    other top corner, which leaves room for both, the heart's circle, as tall as the pill is, and
    the photo counter at the bottom; each as far from the photo's edges. */
-.card-views {
+.card-views,
+.card-status {
   grid-area: 1 / 1;
   align-self: start;
   justify-self: start;
@@ -263,6 +264,21 @@
 }
 .card-views svg,
 .listing-views svg { flex: none; }
+/* A kept listing reserved or sold since (/te-ruajturat): what it is now on the views' pill, its
+   words alone; a sold one's photo a little faded, as a thing no longer to be had. */
+.card-status {
+  padding: .2rem .55rem;
+  border-radius: 999px;
+  background: rgb(38 38 36 / 45%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: var(--semibold);
+  line-height: 1.2;
+  pointer-events: none;
+}
+.card-media:has(.card-status.is-sold) .card-photo { filter: grayscale(.7); opacity: .75; }
 .listing-media .heart { position: absolute; top: calc(var(--over-edge) - .3rem); right: calc(var(--over-edge) - .3rem); z-index: 2; }
 .listing-media .heart-button { --circle: var(--over-photo); --reach: .3rem; }
 .listing-media .heart-button svg { width: 14px; height: 14px; }
@@ -666,6 +682,14 @@
 .price-drops-title { margin: 0; font-weight: var(--semibold); }
 .price-drops ul { margin: .35rem 0 0; padding-left: 1.1rem; }
 .price-drops a { color: inherit; font-weight: var(--medium); }
+/* Under the cards, the kept listings no one can open any more: a line each, the title muted,
+   then why, then "Hiq" (saved.html). */
+.saved-gone { margin-top: 2.5rem; }
+.saved-gone h2 { margin: 0 0 .5rem; font-size: var(--text-lg); }
+.saved-gone-list { margin: 0; padding: 0; list-style: none; }
+.saved-gone-entry { display: flex; align-items: center; gap: .6rem; padding: .6rem 0; border-top: 1px solid var(--border); }
+.saved-gone-title { flex: 1; min-width: 0; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.saved-gone-entry .badge { flex: none; margin: 0; }
 
 /* Form fields */
 

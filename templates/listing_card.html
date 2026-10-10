@@ -80,6 +80,11 @@
         a dark pill like the heart's circle, at the photo's top left. -#}
     <p class="card-views" title="{{ views }} shikime këtë javë"><svg data-icon="eye" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::EYE|safe }}</svg><span class="visually-hidden">Shikime këtë javë: </span>{{ views }}</p>
     {%- endif %}
+    {%- if let Some(status) = card.status_label() %}
+    {#- On /te-ruajturat, a kept listing reserved or sold since says so where the views would be,
+        on the same dark pill; a sold one's photo dims (page.css). -#}
+    <p class="card-status{% if card.status == "SOLD" %} is-sold{% endif %}">{{ status }}</p>
+    {%- endif %}
   </div>
   {#- The details line, which starts with the city, with no pin before it, then the distance from
       the map pin when there is one: "Tiranë · 2,4 km · 2016 · Naftë". One line, ending in "…" when

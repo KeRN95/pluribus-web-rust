@@ -92,6 +92,21 @@ struct SavedPage {
     /// The listings kept whose price dropped since the visitor last looked, over them.
     drops: Vec<db::PriceDrop>,
     page: ListingPage,
+    /// Under them, those kept that no one can open any more, each to let go.
+    gone: Vec<db::GoneListing>,
+}
+
+impl db::GoneListing {
+    /// Why it isn't on the site, as its row says.
+    pub fn label(&self) -> &'static str {
+        match self.status.as_str() {
+            "PAUSED" => "Çaktivizuar nga shitësi",
+            "DELETED" => "U fshi",
+            "EXPIRED" => "Skadoi",
+            "SUSPENDED" | "REJECTED" => "Hequr nga faqja",
+            _ => "Jo në faqe",
+        }
+    }
 }
 
 impl SavedPage {
@@ -114,18 +129,23 @@ impl db::PriceDrop {
 }
 
 /// GET /te-ruajturat: the listings the signed-in user keeps, the last kept first, as the browse
-/// pages show listings, under those whose price dropped since they last looked; for someone not
-/// signed in, the way to sign in.
+/// pages show listings (a reserved or sold one saying so over its photo), under those whose price
+/// dropped since they last looked, and over those no longer on the site; for someone not signed
+/// in, the way to sign in.
 pub async fn page(State(state): State<AppState>, headers: HeaderMap) -> Result<Response> {
-    let (signed_in, drops, cards) = match current_user(&state, &headers).await? {
+    let (signed_in, drops, cards, gone) = match current_user(&state, &headers).await? {
         Some(user) => {
-            let (drops, cards) =
-                tokio::try_join!(db::price_drops(&state.db, user.id), db::saved_cards(&state.db, user.id, SAVED_MOST))?;
-            (true, drops, cards)
+            let (drops, cards, gone) = tokio::try_join!(
+                db::price_drops(&state.db, user.id),
+                db::saved_cards(&state.db, user.id, SAVED_MOST),
+                db::saved_gone(&state.db, user.id),
+            )?;
+            (true, drops, cards, gone)
         }
-        None => (false, Vec::new(), Vec::new()),
+        None => (false, Vec::new(), Vec::new(), Vec::new()),
     };
-    render(SavedPage { signed_in, drops, page: ListingPage { cards, next: None, layout: Default::default(), eager: 4, card_ids: LISTING_IDS, lead: false } })
+    let page = ListingPage { cards, next: None, layout: Default::default(), eager: 4, card_ids: LISTING_IDS, lead: false };
+    render(SavedPage { signed_in, drops, page, gone })
 }
 
 #[derive(Deserialize)]
@@ -178,7 +198,7 @@ fn accepts_json(headers: &HeaderMap) -> bool {
 
 /// The page a request came from (its Referer), when it is one of the site's own: its path and
 /// query, or the path alone when the query can't go in a cookie as it is.
-fn referring_page(headers: &HeaderMap) -> Option<String> {
+pub(super) fn referring_page(headers: &HeaderMap) -> Option<String> {
     let referer = headers.get(header::REFERER)?.to_str().ok()?;
     let host = headers.get(header::HOST)?.to_str().ok()?;
     let page = referer.split_once("://")?.1.strip_prefix(host)?;

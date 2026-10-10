@@ -84,8 +84,8 @@ pub struct Photo {
 }
 
 /// Sold and reserved listings stay viewable, so shared links keep working; those the reports or
-/// the moderators took off the site come too, for their seller and the moderators alone (web/
-/// listings.rs).
+/// the moderators took off the site, and those their seller took down for a while (PAUSED), come
+/// too, for their seller and the moderators alone (web/listings.rs).
 pub async fn listing_by_public_no(
     db: &PgPool,
     public_no: i64,
@@ -131,7 +131,7 @@ pub async fn listing_by_public_no(
            LEFT JOIN zone_area_prices zone_price ON zone_price.zone_id = l.location_id AND zone_price.category_id = l.category_id
            LEFT JOIN users u ON u.id = l.seller_user_id
            LEFT JOIN businesses b ON b.id = l.seller_business_id
-           WHERE l.public_no = $1 AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD', 'SUSPENDED', 'REJECTED')"#,
+           WHERE l.public_no = $1 AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD', 'PAUSED', 'SUSPENDED', 'REJECTED')"#,
         public_no
     )
     .fetch_optional(db)

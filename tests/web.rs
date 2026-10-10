@@ -4009,10 +4009,21 @@ async fn sellers_pause_resume_and_delete_their_listings(pool: PgPool) {
     let paused = post_form(pool.clone(), &pause, &[], Some(&ana)).await;
     assert_eq!(paused.location.as_deref(), Some("/njoftimet-e-mia"));
     assert_eq!(get(pool.clone(), &url).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(get_with_cookie(pool.clone(), &url, &besa).await.status, StatusCode::NOT_FOUND);
     assert!(!searched(pool.clone()).await.contains(&url));
     let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
     assert!(mine.contains(r#"<span class="badge">Çaktivizuar</span>"#));
     assert!(mine.contains(&format!(r#"action="{resume}""#)));
+    // Its page, which "Njoftimet e mia" links to, is still there for its seller: it says it is
+    // paused and that no one else sees it, offers "Aktivizo", and counts no view. It can be
+    // edited meanwhile.
+    let own = get_with_cookie(pool.clone(), &url, &ana).await;
+    assert_eq!(own.status, StatusCode::OK);
+    assert!(own.body.contains(r#"<span class="badge">Çaktivizuar</span>"#), "{}", own.body);
+    assert!(own.body.contains("E ke çaktivizuar këtë njoftim: askush tjetër nuk e sheh."));
+    assert!(own.body.contains(&format!(r#"<form method="post" action="{resume}">"#)) && !own.body.contains(&pause_form));
+    assert!(!own.body.contains("data-seen-url") && !own.body.contains("phone-reveal"));
+    assert_eq!(get_with_cookie(pool.clone(), &format!("/listing/{no}/ndrysho"), &ana).await.status, StatusCode::OK);
     // Pausing it again changes nothing.
     assert_eq!(post_form(pool.clone(), &pause, &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
 
@@ -4037,6 +4048,120 @@ async fn sellers_pause_resume_and_delete_their_listings(pool: PgPool) {
     .await
     .unwrap();
     assert!(by_seller);
+}
+
+/// A form sent from a page of the site, as a browser sends it: with the page as its Referer.
+async fn post_from_page(pool: PgPool, uri: &str, page: &str, cookie: &str) -> TestResponse {
+    let request = Request::post(uri)
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header(header::HOST, "localhost")
+        .header(header::REFERER, format!("http://localhost{page}"))
+        .header(header::COOKIE, cookie)
+        .body(Body::empty())
+        .unwrap();
+    send(pool, request).await
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn sellers_say_a_listing_is_reserved_or_sold(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let no = post_listing(&pool, &ana).await;
+    let url = format!("/listing/{no}-samsung-galaxy-s21-128-gb");
+    let (sell, reserve, unreserve, resume) = (
+        format!("/listing/{no}/shitur"),
+        format!("/listing/{no}/rezervo"),
+        format!("/listing/{no}/zhrezervo"),
+        format!("/listing/{no}/aktivizo"),
+    );
+    let form = |action: &str| format!(r#"<form method="post" action="{action}">"#);
+    let status = |pool: PgPool| {
+        let no = no.clone();
+        async move {
+            sqlx::query_as::<_, (String, bool)>("SELECT status, sold_at IS NOT NULL FROM listings WHERE public_no = $1::bigint")
+                .bind(no)
+                .fetch_one(&pool)
+                .await
+                .unwrap()
+        }
+    };
+    // Besa keeps it and writes to Ana about it.
+    send(pool.clone(), tap_heart(&no, "1", Some(besa.as_str()))).await;
+    let thread = write(&pool, &format!("/listing/{no}/mesazh"), "A është ende në shitje?", &besa).await.location.unwrap();
+
+    // On her page, Ana has "U shit" and "Rezervo" with her own buttons; nobody else has, nor can.
+    let own = get_with_cookie(pool.clone(), &url, &ana).await.body;
+    assert!(own.contains(&form(&sell)) && own.contains(&form(&reserve)) && !own.contains(&form(&unreserve)), "{own}");
+    assert!(own.contains("</svg>U shit</button>") && own.contains("</svg>Rezervo</button>"));
+    let theirs = get_with_cookie(pool.clone(), &url, &besa).await.body;
+    assert!(!theirs.contains(&form(&sell)) && !theirs.contains(&form(&reserve)));
+    for action in [&sell, &reserve] {
+        assert_eq!(post_form(pool.clone(), action, &[], Some(&besa)).await.status, StatusCode::NOT_FOUND);
+    }
+
+    // Reserved: still up, saying so, and still reached; back to the page it was reserved on.
+    let reserved = post_from_page(pool.clone(), &reserve, &url, &ana).await;
+    assert_eq!(reserved.location.as_deref(), Some(url.as_str()));
+    assert_eq!(status(pool.clone()).await, ("RESERVED".to_string(), false));
+    let page = get(pool.clone(), &url).await.body;
+    assert!(page.contains(r#"<span class="badge">Rezervuar</span>"#) && page.contains("phone-reveal"));
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
+    assert!(mine.contains(r#"<span class="badge">Rezervuar</span>"#) && mine.contains(&form(&unreserve)) && mine.contains(&form(&sell)));
+    assert_eq!(post_form(pool.clone(), &reserve, &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+    // The reservation off, up as before; from "Njoftimet e mia", back there.
+    let unreserved = post_from_page(pool.clone(), &unreserve, "/njoftimet-e-mia", &ana).await;
+    assert_eq!(unreserved.location.as_deref(), Some("/njoftimet-e-mia"));
+    assert_eq!(status(pool.clone()).await, ("ACTIVE".to_string(), false));
+
+    // Sold: its page stays, saying so, with no way to reach Ana about it; it leaves the lists.
+    post_from_page(pool.clone(), &sell, &url, &ana).await;
+    assert_eq!(status(pool.clone()).await, ("SOLD".to_string(), true));
+    let page = get(pool.clone(), &url).await;
+    assert_eq!(page.status, StatusCode::OK);
+    assert!(page.body.contains(r#"<span class="badge">Shitur</span>"#), "{}", page.body);
+    assert!(!page.body.contains("phone-reveal") && !page.body.contains("/mesazh\""));
+    assert!(!get(pool.clone(), "/search?q=Galaxy").await.body.contains(&url));
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
+    assert!(mine.contains(r#"<span class="badge">Shitur</span>"#) && mine.contains(&form(&resume)) && !mine.contains(&form(&sell)));
+    // Besa still finds it among those she keeps, saying so over its photo, and in her
+    // conversation with Ana, after its price.
+    let kept = get_with_cookie(pool.clone(), "/te-ruajturat", &besa).await.body;
+    assert!(kept.contains(r#"<p class="card-status is-sold">Shitur</p>"#), "{kept}");
+    assert!(card_numbers(&kept).contains(&no.parse().unwrap()));
+    let conversation = get_with_cookie(pool.clone(), &thread, &besa).await.body;
+    assert!(conversation.contains(r#"<span class="badge conversation-status">Shitur</span>"#), "{conversation}");
+
+    // Back on sale: up again, when it was sold forgotten.
+    post_form(pool.clone(), &resume, &[], Some(&ana)).await;
+    assert_eq!(status(pool.clone()).await, ("ACTIVE".to_string(), false));
+    assert!(!get_with_cookie(pool.clone(), &thread, &besa).await.body.contains("conversation-status"));
+
+    // Taken down by Ana, it leaves Besa's cards for the list of those no longer shown, which says
+    // why and lets it go.
+    post_form(pool.clone(), &format!("/listing/{no}/caktivizo"), &[], Some(&ana)).await;
+    let kept = get_with_cookie(pool.clone(), "/te-ruajturat", &besa).await.body;
+    assert!(!card_numbers(&kept).contains(&no.parse().unwrap()));
+    let gone = section(&kept, "saved-gone-heading");
+    assert!(gone.contains("Samsung Galaxy S21, 128 GB") && gone.contains(r#"<span class="badge">Çaktivizuar nga shitësi</span>"#), "{gone}");
+    assert!(gone.contains(&format!(r#"<form method="post" action="/listing/{no}/ruaj">"#)));
+    let let_go = post_form(pool.clone(), &format!("/listing/{no}/ruaj"), &[("ruaj", "0")], Some(&besa)).await;
+    assert_eq!(let_go.status, StatusCode::SEE_OTHER);
+    assert!(!get_with_cookie(pool.clone(), "/te-ruajturat", &besa).await.body.contains("saved-gone"));
+    post_form(pool.clone(), &resume, &[], Some(&ana)).await;
+
+    // A rental is let out ("U dha me qira", "Dhënë me qira"); a wanted ad is neither sold nor
+    // reserved.
+    sqlx::query("UPDATE listings SET listing_type = 'RENT' WHERE public_no = $1::bigint").bind(&no).execute(&pool).await.unwrap();
+    assert!(get_with_cookie(pool.clone(), &url, &ana).await.body.contains("</svg>U dha me qira</button>"));
+    post_form(pool.clone(), &sell, &[], Some(&ana)).await;
+    assert!(get(pool.clone(), &url).await.body.contains(r#"<span class="badge">Dhënë me qira</span>"#));
+    post_form(pool.clone(), &resume, &[], Some(&ana)).await;
+    sqlx::query("UPDATE listings SET listing_type = 'BUY' WHERE public_no = $1::bigint").bind(&no).execute(&pool).await.unwrap();
+    let wanted = get_with_cookie(pool.clone(), &url, &ana).await.body;
+    assert!(!wanted.contains(&form(&sell)) && !wanted.contains(&form(&reserve)));
+    for action in [&sell, &reserve] {
+        assert_eq!(post_form(pool.clone(), action, &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+    }
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
