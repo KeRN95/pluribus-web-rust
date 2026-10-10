@@ -305,11 +305,11 @@
   </div>
 
   {% if car_page %}
-  {%- if let Some(amount) = listing.loan_amount() %}
+  {%- if let Some(amount) = listing.car_loan_amount() %}
   {#- Under the facts, as FINN has it, the loan calculator in a card of its own (loan_controller.js,
-      loan_calculator.html): what the car costs a month, from the down payment, the years and the
-      interest, with the loan, its interest and the whole; and the way to all the loan offers, a
-      button in the site's own colour, which leads nowhere yet. -#}
+      loan_calculator.html), for any car on sale with a price: what the car costs a month, from the
+      down payment, the years and the interest, with the loan, its interest and the whole; and the
+      way to all the loan offers, a button in the site's own colour, which leads nowhere yet. -#}
   <section class="listing-loan" data-controller="loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" aria-labelledby="loan-heading">
     <h2 id="loan-heading" class="listing-loan-title">Sa do të kushtojë kredia në muaj</h2>
     {% include "loan_calculator.html" %}

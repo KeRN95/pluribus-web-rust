@@ -323,10 +323,20 @@ impl ListingDetail {
     /// (not rents, wanted ads or "price on request") that cost enough to borrow for, at least
     /// 10 000 € or, about the same, 1 000 000 Lekë.
     pub fn loan_amount(&self) -> Option<Decimal> {
+        self.loan_from(10_000, 1_000_000)
+    }
+
+    /// The same for a car's page, which has the calculator in a card under its key facts for any
+    /// car on sale with a price, as FINN has it: a used car often costs less than 10 000 €.
+    pub fn car_loan_amount(&self) -> Option<Decimal> {
+        self.loan_from(1, 1)
+    }
+
+    fn loan_from(&self, euros: i64, leke: i64) -> Option<Decimal> {
         let priced = matches!(self.price_type.as_str(), "FIXED" | "NEGOTIABLE" | "FROM");
         let enough = match self.currency.as_str() {
-            "EUR" => Decimal::from(10_000),
-            "ALL" => Decimal::from(1_000_000),
+            "EUR" => Decimal::from(euros),
+            "ALL" => Decimal::from(leke),
             _ => return None,
         };
         self.price_amount.filter(|amount| priced && self.listing_type == "SELL" && *amount >= enough)

@@ -1932,13 +1932,13 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
         "<h2>Përshkrimi</h2>",
     ]);
     assert!(order.is_sorted(), "{order:?}");
+    // Any car on sale with a price has the section, as FINN has it: the Golf's, at 9 500 €, too.
+    let golf = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
+    assert!(golf.contains(r#"<section class="listing-loan" data-controller="loan" data-loan-price-value="9500.00""#), "{golf}");
     // Every other page has the calculator in a bubble beside the price, like the price per square
     // metre's, which opens it in a card under it the same way (the house, below). Under 10 000 €
-    // or 1 000 000 Lekë it isn't worth a loan: no section on the Golf's page, no bubble on the
-    // iPhone's.
-    for cheap in ["/listing/1001-volkswagen-golf-7-2016-nafte", "/listing/1005-iphone-13-128-gb-si-i-ri"] {
-        assert!(!html(pool.clone(), cheap).await.contains("data-loan-price-value"), "{cheap}");
-    }
+    // or 1 000 000 Lekë it isn't worth a loan: no bubble on the iPhone's page.
+    assert!(!html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await.contains("data-loan-price-value"));
     // In Lekë, the limit is about the same as in euros: 500 000 Lekë isn't enough, 1 000 000 is.
     for (price, offered) in [(500_000, false), (999_999, false), (1_000_000, true)] {
         sqlx::query("UPDATE listings SET price_amount = $1::numeric, currency = 'ALL', price_type = 'FIXED' WHERE public_no = 1005")
