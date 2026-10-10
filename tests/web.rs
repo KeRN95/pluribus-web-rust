@@ -6872,6 +6872,52 @@ async fn a_category_is_found_by_its_filters_and_a_search_not_at_all(pool: PgPool
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_visitor_chooses_english_and_the_pages_speak_it(pool: PgPool) {
+    // Albanian until chosen; the switch at every page's foot names English in English.
+    let home = get(pool.clone(), "/").await.body;
+    assert!(home.contains(r#"<html lang="sq">"#), "{home}");
+    assert!(home.contains(r#"<button type="submit" name="gjuha" value="en" lang="en">English</button>"#));
+    assert!(!home.contains("i18n-en"));
+
+    // Chosen on a page: back to it, the choice kept a year; from another site's page, home.
+    let choose = |referer: &'static str, cookie: Option<String>| {
+        let pool = pool.clone();
+        async move {
+            let mut request = Request::post("/gjuha")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::HOST, "127.0.0.1:3000")
+                .header(header::REFERER, referer);
+            if let Some(cookie) = cookie {
+                request = request.header(header::COOKIE, cookie);
+            }
+            send(pool, request.body(Body::from("gjuha=en")).unwrap()).await
+        }
+    };
+    let chosen = choose("http://127.0.0.1:3000/c/makina", None).await;
+    assert_eq!(chosen.status, StatusCode::SEE_OTHER);
+    assert_eq!(chosen.location.as_deref(), Some("/c/makina"));
+    assert_eq!(chosen.cookie("gjuha"), Some("en"));
+    let set = chosen.headers.get(header::SET_COOKIE).unwrap().to_str().unwrap();
+    assert!(set.contains("Max-Age=31536000"), "{set}");
+    assert_eq!(choose("https://another.example/", None).await.location.as_deref(), Some("/"));
+
+    // The pages speak English: their frame, and the ways of its numbers and words; the switch
+    // names Albanian in Albanian; the scripts get their texts.
+    let page = get_with_cookie(pool.clone(), "/c/makina", "gjuha=en").await.body;
+    assert!(page.contains(r#"<html lang="en">"#), "{page}");
+    assert!(page.contains(r#"<a href="/kushtet">Terms</a>"#) && page.contains(r#"<a href="/si-funksionon">How it works</a>"#));
+    assert!(page.contains(r#"<button type="submit" name="gjuha" value="sq" lang="sq">Shqip</button>"#));
+    assert!(page.contains(r#"<script type="application/json" id="i18n-en">"#));
+
+    // A signed-in user's choice is kept on their account, for what reaches them with the site
+    // closed.
+    let ana = session_for(&pool, ANA_ID).await;
+    choose("http://127.0.0.1:3000/", Some(ana)).await;
+    let kept: String = sqlx::query_scalar("SELECT preferred_language FROM users WHERE id = $1::uuid").bind(ANA_ID).fetch_one(&pool).await.unwrap();
+    assert_eq!(kept, "en");
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn search_engines_find_the_listings_and_the_categories_by_the_sitemaps(pool: PgPool) {
     let site = site();
     // robots.txt keeps crawlers out of a visitor's own pages, and says where the sitemaps are.

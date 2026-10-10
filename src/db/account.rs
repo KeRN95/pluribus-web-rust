@@ -78,6 +78,16 @@ pub async fn set_notice_preferences(db: &PgPool, user_id: Uuid, preferences: Not
     Ok(())
 }
 
+/// The language the account chose (web/language.rs), which its e-mails are written in.
+pub async fn set_preferred_language(db: &PgPool, user_id: Uuid, code: &str) -> sqlx::Result<()> {
+    sqlx::query("UPDATE users SET preferred_language = $2 WHERE id = $1 AND preferred_language <> $2")
+        .bind(user_id)
+        .bind(code)
+        .execute(db)
+        .await?;
+    Ok(())
+}
+
 /// The account's token in the links that stop its e-mail notices without signing in
 /// (web/unsubscribe.rs): made at random the first time one goes out (migration 0039).
 pub async fn notice_token(db: &PgPool, user_id: Uuid) -> sqlx::Result<String> {

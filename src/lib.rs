@@ -5,6 +5,7 @@ pub mod ai;
 pub mod db;
 pub mod expiry;
 pub mod format;
+pub mod i18n;
 pub mod media;
 pub mod notices;
 pub mod promotions;
@@ -12,6 +13,8 @@ pub mod rates;
 pub mod sender;
 pub mod views;
 pub mod web;
+
+pub use i18n::{t, tf};
 
 use std::sync::Arc;
 

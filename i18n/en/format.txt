@@ -1,0 +1,157 @@
+# format.rs: prices, counts, kinds of listing, conditions, dates and times, a seller's activity.
+
+Falas
+= Free
+
+Paga me marrëveshje
+= Salary negotiable
+
+Çmimi me marrëveshje
+= Price on request
+
+/muaj
+= /month
+
+nga {}
+= from {}
+
+(i diskutueshëm)
+= (negotiable)
+
+Lekë
+= lek
+
+1 njoftim
+= 1 listing
+
+{} njoftime
+= {} listings
+
+{}+ njoftime
+= {}+ listings
+
+„{}“
+= “{}”
+
+{} dhe {}
+= {} and {}
+
+Në shitje
+= For sale
+
+Kërkoj të blej
+= Wanted
+
+Me qira
+= For rent
+
+Kërkoj me qira
+= Wanted to rent
+
+Shërbim
+= Service
+
+Ofertë pune
+= Job offer
+
+Dhënë me qira
+= Rented out
+
+Shitur
+= Sold
+
+U dha me qira
+= Mark as rented
+
+U shit
+= Mark as sold
+
+E re
+= New
+
+Si e re
+= Like new
+
+E përdorur
+= Used
+
+Për pjesë
+= For parts
+
+Skadon sot
+= Expires today
+
+Skadon nesër
+= Expires tomorrow
+
+Skadon pas {} ditësh
+= Expires in {} days
+
+brenda 1 ore
+= within an hour
+
+brenda disa orësh
+= within a few hours
+
+brenda një dite
+= within a day
+
+brenda disa ditësh
+= within a few days
+
+Aktiv sot
+= Active today
+
+Aktiv dje
+= Active yesterday
+
+Aktiv para {} ditësh
+= Active {} days ago
+
+Përgjigjet zakonisht {}
+= Usually replies {}
+
+Sot
+= Today
+
+Dje
+= Yesterday
+
+para {} ditësh
+= {} days ago
+
+janar
+= January
+
+shkurt
+= February
+
+mars
+= March
+
+prill
+= April
+
+maj
+= May
+
+qershor
+= June
+
+korrik
+= July
+
+gusht
+= August
+
+shtator
+= September
+
+tetor
+= October
+
+nëntor
+= November
+
+dhjetor
+= December

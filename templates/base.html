@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="sq">
+<html lang="{{ crate::i18n::lang().code() }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,7 +7,7 @@
   <title>{% block title %}Pluribus{% endblock %}</title>
   {%- block meta %}
   {#- A page that says nothing of its own (meta.html): the site's description. #}
-  <meta name="description" content="{{ crate::web::seo::SITE_DESCRIPTION }}">
+  <meta name="description" content="{{ crate::t(crate::web::seo::SITE_DESCRIPTION) }}">
   {%- endblock %}
   {#- Apply a saved theme before the first paint, so the page never flashes the wrong one. The
       script is web::THEME_SCRIPT, whose hash the Content-Security-Policy lets run. -#}
@@ -32,6 +32,10 @@
       cache_headers, web::import_map); then those the page uses preloaded at once, rather than
       application.js first and what it imports after: web::render puts them where MODULES_HERE
       is, application.js and the controllers the page names. -#}
+  {%- if crate::i18n::english() %}
+  {#- An English page carries the scripts' own texts in English (i18n.js, i18n::scripts_json). -#}
+  <script type="application/json" id="i18n-en">{{ crate::i18n::scripts_json()|safe }}</script>
+  {%- endif %}
   <script type="importmap">{{ crate::web::import_map()|safe }}</script>
   <link rel="modulepreload" href="{{ crate::web::TURBO|safe }}">
   <link rel="modulepreload" href="{{ crate::web::STIMULUS|safe }}">
@@ -94,10 +98,10 @@
           conversations have messages unread (inbox_controller.js). The welcome page has them in
           the row with its search instead (home.html empties the block). -#}
       {%- block header_shortcuts %}
-      <a class="icon-button saved-button" href="/te-ruajturat" aria-label="Të ruajturat" title="Të ruajturat">
+      <a class="icon-button saved-button" href="/te-ruajturat" aria-label="{{ crate::t("Të ruajturat") }}" title="{{ crate::t("Të ruajturat") }}">
         <svg data-icon="heart" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg>
       </a>
-      <a class="icon-button inbox-button" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">
+      <a class="icon-button inbox-button" href="/mesazhet" aria-label="{{ crate::t("Mesazhet") }}" title="{{ crate::t("Mesazhet") }}" data-controller="inbox">
         <svg data-icon="message-circle" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
         <span class="inbox-count" data-inbox-target="count" hidden></span>
       </a>
@@ -107,13 +111,13 @@
           expired and they haven't seen it (account_controller.js, notifications.rs). Posting is
           the welcome page's round plus, in the row with its search (home.html), and no top
           bar's. -#}
-      <a class="icon-button account-button" href="/llogaria" aria-label="Llogaria" title="Llogaria" data-controller="account">
+      <a class="icon-button account-button" href="/llogaria" aria-label="{{ crate::t("Llogaria") }}" title="{{ crate::t("Llogaria") }}" data-controller="account">
         <svg data-icon="user" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
       </a>
       {#- After the account, the theme: a moon on the light one, a sun on the dark, the theme it
           switches to (theme_controller.js), on every page, the welcome page's too. -#}
       {%- block theme_toggle %}
-      <button type="button" class="icon-button theme-toggle" data-controller="theme" data-action="theme#toggle" aria-label="Tema e errët" aria-pressed="false" title="Tema e errët">
+      <button type="button" class="icon-button theme-toggle" data-controller="theme" data-action="theme#toggle" aria-label="{{ crate::t("Tema e errët") }}" aria-pressed="false" title="{{ crate::t("Tema e errët") }}">
         <svg class="icon-moon" data-icon="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MOON|safe }}</svg>
         <svg class="icon-sun" data-icon="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SUN|safe }}</svg>
       </button>
@@ -123,14 +127,22 @@
   <main class="container">
     {% block content %}{% endblock %}
   </main>
-  {#- The pages about the site (web/pages.rs), on every page, where people look for them. -#}
+  {#- The pages about the site (web/pages.rs), on every page, where people look for them; and the
+      other language, named in itself, which the page comes back in (web/language.rs). -#}
   <footer class="site-footer">
-    <nav class="footer-links" aria-label="Rreth faqes">
-      <a href="/si-funksionon">Si funksionon</a>
-      <a href="/siguria">Këshilla sigurie</a>
-      <a href="/kushtet">Kushtet</a>
-      <a href="/privatesia">Privatësia</a>
-      <a href="/kontakt">Kontakt</a>
+    <nav class="footer-links" aria-label="{{ crate::t("Rreth faqes") }}">
+      <a href="/si-funksionon">{{ crate::t("Si funksionon") }}</a>
+      <a href="/siguria">{{ crate::t("Këshilla sigurie") }}</a>
+      <a href="/kushtet">{{ crate::t("Kushtet") }}</a>
+      <a href="/privatesia">{{ crate::t("Privatësia") }}</a>
+      <a href="/kontakt">{{ crate::t("Kontakt") }}</a>
+      <form class="language-switch" method="post" action="/gjuha">
+        {%- if crate::i18n::english() %}
+        <button type="submit" name="gjuha" value="sq" lang="sq">Shqip</button>
+        {%- else %}
+        <button type="submit" name="gjuha" value="en" lang="en">English</button>
+        {%- endif %}
+      </form>
     </nav>
     <p>© 2026 Pluribus</p>
   </footer>

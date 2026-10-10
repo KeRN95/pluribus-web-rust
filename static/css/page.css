@@ -794,6 +794,10 @@ a.notification-line:hover .notification-title { text-decoration: underline; text
 .footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 .5rem; margin: 0 0 .5rem; }
 .footer-links a { padding: .65rem .5rem; color: var(--text); text-decoration: none; }
 .footer-links a:hover { text-decoration: underline; }
+/* The other language, named in itself, at the links' end, a link by its look (language.rs). */
+.language-switch { display: contents; }
+.language-switch button { padding: .65rem .5rem; border: 0; background: none; color: var(--text); font: inherit; cursor: pointer; }
+.language-switch button:hover { text-decoration: underline; }
 .site-footer p { margin: 0; }
 
 /* The pages about the site: a column of text as wide as a line reads well, the sections'

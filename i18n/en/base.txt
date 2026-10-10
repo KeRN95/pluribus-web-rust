@@ -1,0 +1,42 @@
+# The site's English (src/i18n.rs): each Albanian text on a line, its English on the next after
+# "= ", a blank line between entries. This file: every page's frame (base.html), and what the
+# code's own examples and checks say.
+
+Pluribus: njoftime në gjithë Shqipërinë. Makina, prona, elektronikë, punë, shërbime dhe më shumë, me foto, çmime dhe vendndodhje.
+= Pluribus: classifieds across Albania. Cars, property, electronics, jobs, services and more, with photos, prices and locations.
+
+Të ruajturat
+= Saved
+
+Mesazhet
+= Messages
+
+Llogaria
+= Account
+
+Tema e errët
+= Dark theme
+
+Rreth faqes
+= About the site
+
+Si funksionon
+= How it works
+
+Këshilla sigurie
+= Safety tips
+
+Kushtet
+= Terms
+
+Privatësia
+= Privacy
+
+Kontakt
+= Contact
+
+Shto një njoftim
+= Post a listing
+
+{n} njoftime
+= {n} listings

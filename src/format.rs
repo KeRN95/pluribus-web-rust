@@ -1,7 +1,10 @@
-//! Display formatting with Albanian conventions: "9 500 €", "60 000 Lekë", "04.10.2026".
+//! Display formatting with Albanian conventions: "9 500 €", "60 000 Lekë", "04.10.2026"; in
+//! English (i18n.rs), its words, a decimal point, and dates as "4 Oct 2026".
 
 use rust_decimal::{Decimal, prelude::ToPrimitive};
 use time::{Date, Duration, Month, OffsetDateTime, UtcOffset, macros::format_description};
+
+use crate::i18n::{english, t, t1, t2};
 
 /// Keeps a number and its unit on one line.
 const NBSP: char = '\u{a0}';
@@ -17,22 +20,22 @@ pub fn price(amount: Option<Decimal>, currency: &str, price_type: &str, listing_
 /// diskutueshëm)"); empty when nothing does.
 pub fn price_parts(amount: Option<Decimal>, currency: &str, price_type: &str, listing_type: &str) -> (String, String) {
     match (price_type, amount) {
-        ("FREE", _) => ("Falas".to_string(), String::new()),
+        ("FREE", _) => (t("Falas").to_string(), String::new()),
         _ if listing_type == "JOB" && (price_type == "ON_REQUEST" || amount.is_none()) => {
-            ("Paga me marrëveshje".to_string(), String::new())
+            (t("Paga me marrëveshje").to_string(), String::new())
         }
-        ("ON_REQUEST", _) | (_, None) => ("Çmimi me marrëveshje".to_string(), String::new()),
+        ("ON_REQUEST", _) | (_, None) => (t("Çmimi me marrëveshje").to_string(), String::new()),
         (kind, Some(amount)) => {
             let period = match listing_type {
-                "RENT" | "WANTED_RENT" | "JOB" => "/muaj",
+                "RENT" | "WANTED_RENT" | "JOB" => t("/muaj"),
                 _ => "",
             };
             let price = match kind {
-                "FROM" => format!("nga {}", money(amount, currency)),
+                "FROM" => t1("nga {}", money(amount, currency)),
                 _ => money(amount, currency),
             };
             let note = match kind {
-                "NEGOTIABLE" => format!("{period} (i diskutueshëm)"),
+                "NEGOTIABLE" => format!("{period} {}", t("(i diskutueshëm)")),
                 _ => period.to_string(),
             };
             (price, note)
@@ -48,12 +51,13 @@ pub fn money(amount: Decimal, currency: &str) -> String {
 pub fn currency_symbol(code: &str) -> &str {
     match code {
         "EUR" => "€",
-        "ALL" => "Lekë",
+        "ALL" => t("Lekë"),
         other => other,
     }
 }
 
-/// Thousands separated by no-break spaces, decimal comma, decimals only when there are any.
+/// Thousands separated by no-break spaces, decimal comma (a point in English), decimals only when
+/// there are any.
 pub fn number(amount: Decimal) -> String {
     let cents = (amount.round_dp(2) * Decimal::ONE_HUNDRED)
         .to_i64()
@@ -68,10 +72,11 @@ pub fn number(amount: Decimal) -> String {
         grouped.push(digit);
     }
     let sign = if cents < 0 { "-" } else { "" };
+    let point = if english() { '.' } else { ',' };
     if fraction == 0 {
         format!("{sign}{grouped}")
     } else {
-        format!("{sign}{grouped},{fraction:02}")
+        format!("{sign}{grouped}{point}{fraction:02}")
     }
 }
 
@@ -83,9 +88,9 @@ pub fn count(count: impl std::borrow::Borrow<i64>) -> String {
 
 pub fn listing_count(count: i64, limit: i64) -> String {
     match count {
-        1 => "1 njoftim".to_string(),
-        n if n > limit => format!("{}+ njoftime", number(Decimal::from(limit))),
-        n => format!("{} njoftime", number(Decimal::from(n))),
+        1 => t("1 njoftim").to_string(),
+        n if n > limit => t1("{}+ njoftime", number(Decimal::from(limit))),
+        n => t1("{} njoftime", number(Decimal::from(n))),
     }
 }
 
@@ -94,19 +99,19 @@ pub fn listing_count(count: i64, limit: i64) -> String {
 pub fn short_listing_count(count: i64, limit: i64) -> String {
     let (n, more) = if count > limit { (limit, "+") } else { (count, "") };
     match n {
-        1 if more.is_empty() => "1 njoftim".to_string(),
-        n if n >= 1000 => format!("{}k{more} njoftime", n / 1000),
-        n => format!("{n}{more} njoftime"),
+        1 if more.is_empty() => t("1 njoftim").to_string(),
+        n if n >= 1000 => t1("{} njoftime", format!("{}k{more}", n / 1000)),
+        n => t1("{} njoftime", format!("{n}{more}")),
     }
 }
 
 /// Words in Albanian quotes, listed: "„golf“", "„golf“ dhe „mercedes“", "„a“, „b“ dhe „c“".
 pub fn quoted_list(words: &[String]) -> String {
-    let quoted: Vec<String> = words.iter().map(|word| format!("„{word}“")).collect();
+    let quoted: Vec<String> = words.iter().map(|word| t1("„{}“", word)).collect();
     match quoted.split_last() {
         None => String::new(),
         Some((last, [])) => last.clone(),
-        Some((last, rest)) => format!("{} dhe {last}", rest.join(", ")),
+        Some((last, rest)) => t2("{} dhe {}", rest.join(", "), last),
     }
 }
 
@@ -115,7 +120,8 @@ pub fn distance(meters: f64) -> String {
     if meters < 950.0 {
         format!("{}{NBSP}m", ((meters / 10.0).round() * 10.0) as i64)
     } else if meters < 9_950.0 {
-        format!("{:.1}{NBSP}km", meters / 1000.0).replace('.', ",")
+        let km = format!("{:.1}{NBSP}km", meters / 1000.0);
+        if english() { km } else { km.replace('.', ",") }
     } else {
         format!("{}{NBSP}km", (meters / 1000.0).round() as i64)
     }
@@ -124,12 +130,12 @@ pub fn distance(meters: f64) -> String {
 /// How a listing type reads in filters.
 pub fn listing_type(code: &str) -> &str {
     match code {
-        "SELL" => "Në shitje",
-        "BUY" => "Kërkoj të blej",
-        "RENT" => "Me qira",
-        "WANTED_RENT" => "Kërkoj me qira",
-        "SERVICE" => "Shërbim",
-        "JOB" => "Ofertë pune",
+        "SELL" => t("Në shitje"),
+        "BUY" => t("Kërkoj të blej"),
+        "RENT" => t("Me qira"),
+        "WANTED_RENT" => t("Kërkoj me qira"),
+        "SERVICE" => t("Shërbim"),
+        "JOB" => t("Ofertë pune"),
         other => other,
     }
 }
@@ -138,34 +144,36 @@ pub fn listing_type(code: &str) -> &str {
 /// else "Shitur".
 pub fn sold(listing_type: &str) -> &'static str {
     match listing_type {
-        "RENT" => "Dhënë me qira",
-        _ => "Shitur",
+        "RENT" => t("Dhënë me qira"),
+        _ => t("Shitur"),
     }
 }
 
 /// The seller's button that says a listing is sold, by its kind: "U shit", or "U dha me qira".
 pub fn sell_action(listing_type: &str) -> &'static str {
     match listing_type {
-        "RENT" => "U dha me qira",
-        _ => "U shit",
+        "RENT" => t("U dha me qira"),
+        _ => t("U shit"),
     }
 }
 
 pub fn condition(code: &str) -> &str {
     match code {
-        "NEW" => "E re",
-        "LIKE_NEW" => "Si e re",
-        "USED" => "E përdorur",
-        "FOR_PARTS" => "Për pjesë",
+        "NEW" => t("E re"),
+        "LIKE_NEW" => t("Si e re"),
+        "USED" => t("E përdorur"),
+        "FOR_PARTS" => t("Për pjesë"),
         other => other,
     }
 }
 
-/// A date by Albania's clock: "04.10.2026".
+/// A date by Albania's clock: "04.10.2026"; in English "4 Oct 2026".
 pub fn date(value: OffsetDateTime) -> String {
-    tirana(value)
-        .format(format_description!("[day].[month].[year]"))
-        .unwrap_or_default()
+    match english() {
+        true => tirana(value).format(format_description!("[day padding:none] [month repr:short] [year]")),
+        false => tirana(value).format(format_description!("[day].[month].[year]")),
+    }
+    .unwrap_or_default()
 }
 
 /// When a listing expires, as its seller's buttons say it within a week, by Albania's clock:
@@ -175,9 +183,9 @@ pub fn expires_soon(expires: OffsetDateTime, now: OffsetDateTime) -> Option<Stri
         return None;
     }
     match (tirana(expires).date() - tirana(now).date()).whole_days() {
-        0 => Some("Skadon sot".to_string()),
-        1 => Some("Skadon nesër".to_string()),
-        days @ 2..=6 => Some(format!("Skadon pas {days} ditësh")),
+        0 => Some(t("Skadon sot").to_string()),
+        1 => Some(t("Skadon nesër").to_string()),
+        days @ 2..=6 => Some(t1("Skadon pas {} ditësh", days)),
         _ => None,
     }
 }
@@ -186,10 +194,10 @@ pub fn expires_soon(expires: OffsetDateTime, now: OffsetDateTime) -> Option<Stri
 /// card says it after "Përgjigjet zakonisht": within the hour, a few hours, a day, or a few days.
 pub fn answers_within(seconds: f64) -> &'static str {
     match seconds {
-        s if s <= 3600.0 => "brenda 1 ore",
-        s if s <= 3.0 * 3600.0 => "brenda disa orësh",
-        s if s <= 24.0 * 3600.0 => "brenda një dite",
-        _ => "brenda disa ditësh",
+        s if s <= 3600.0 => t("brenda 1 ore"),
+        s if s <= 3.0 * 3600.0 => t("brenda disa orësh"),
+        s if s <= 24.0 * 3600.0 => t("brenda një dite"),
+        _ => t("brenda disa ditësh"),
     }
 }
 
@@ -197,9 +205,9 @@ pub fn answers_within(seconds: f64) -> &'static str {
 /// dje", "Aktiv para 3 ditësh"; None from a week on.
 pub fn last_active(seen: OffsetDateTime, now: OffsetDateTime) -> Option<String> {
     match (tirana(now).date() - tirana(seen).date()).whole_days() {
-        ..=0 => Some("Aktiv sot".to_string()),
-        1 => Some("Aktiv dje".to_string()),
-        days @ 2..=6 => Some(format!("Aktiv para {days} ditësh")),
+        ..=0 => Some(t("Aktiv sot").to_string()),
+        1 => Some(t("Aktiv dje").to_string()),
+        days @ 2..=6 => Some(t1("Aktiv para {} ditësh", days)),
         _ => None,
     }
 }
@@ -209,7 +217,7 @@ pub fn last_active(seen: OffsetDateTime, now: OffsetDateTime) -> Option<String> 
 /// brenda 1 ore · Aktiv sot". The dot and what follows it hold together (no-break spaces), so
 /// that a line too narrow for both wraps before the dot, as the card's summary does.
 pub fn seller_activity(answers: Option<f64>, seen: Option<OffsetDateTime>, now: OffsetDateTime) -> Option<String> {
-    let answers = answers.map(|seconds| format!("Përgjigjet zakonisht {}", answers_within(seconds)));
+    let answers = answers.map(|seconds| t1("Përgjigjet zakonisht {}", answers_within(seconds)));
     let active = seen.and_then(|seen| last_active(seen, now)).map(|active| active.replace(' ', "\u{a0}"));
     match (answers, active) {
         (Some(answers), Some(active)) => Some(format!("{answers} ·\u{a0}{active}")),
@@ -221,9 +229,9 @@ pub fn seller_activity(answers: Option<f64>, seen: Option<OffsetDateTime>, now: 
 /// within the week, and the date from a week on.
 pub fn when(value: OffsetDateTime, now: OffsetDateTime) -> String {
     match (tirana(now).date() - tirana(value).date()).whole_days() {
-        ..=0 => "Sot".to_string(),
-        1 => "Dje".to_string(),
-        days @ 2..=6 => format!("para {days} ditësh"),
+        ..=0 => t("Sot").to_string(),
+        1 => t("Dje").to_string(),
+        days @ 2..=6 => t1("para {} ditësh", days),
         _ => date(value),
     }
 }
@@ -257,7 +265,7 @@ pub fn month_year(value: OffsetDateTime) -> String {
     const MONTHS: [&str; 12] = [
         "janar", "shkurt", "mars", "prill", "maj", "qershor", "korrik", "gusht", "shtator", "tetor", "nëntor", "dhjetor",
     ];
-    format!("{} {}", MONTHS[usize::from(u8::from(value.month())) - 1], value.year())
+    format!("{} {}", t(MONTHS[usize::from(u8::from(value.month())) - 1]), value.year())
 }
 
 /// The first letter of a name, for its round badge: "Auto Elbasani" gives "A".

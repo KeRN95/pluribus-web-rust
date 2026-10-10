@@ -6,6 +6,7 @@ mod browse;
 mod car_prices;
 mod filters;
 mod icons;
+pub mod language;
 mod listings;
 mod messages;
 mod moderation;
@@ -121,6 +122,7 @@ pub fn router(state: AppState) -> Router {
         .route("/moderim/promovime", post(moderation::grant_promotion))
         .route("/moderim/promovime/{id}/ndalo", post(moderation::end_promotion))
         .route("/promovo", get(promotions::page))
+        .route("/gjuha", post(language::choose))
         .route("/listing/{public_no}/caktivizo", post(post::pause_listing))
         .route("/listing/{public_no}/aktivizo", post(post::resume_listing))
         .route("/listing/{public_no}/shitur", post(post::sell_listing))
@@ -175,6 +177,7 @@ pub fn router(state: AppState) -> Router {
         .layer(middleware::from_fn(cache_headers))
         .layer(middleware::from_fn(security_headers))
         .layer(middleware::from_fn(account::signed_in_cookie))
+        .layer(middleware::from_fn(language::language))
         // WOFF2 fonts are Brotli-compressed already; compressing them again only costs time.
         .layer(CompressionLayer::new().compress_when(
             DefaultPredicate::new().and(NotForContentType::const_new("font/")),
