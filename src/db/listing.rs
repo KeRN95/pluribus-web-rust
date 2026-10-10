@@ -304,6 +304,26 @@ pub async fn order_listing_photos(db: &PgPool, listing_id: Uuid, order: &[String
     tx.commit().await
 }
 
+/// Puts the listing at a point of its seller's own on the map, more exactly than its town's (the
+/// form's map, map_pin_controller.js; post.rs rounds it to about a hundred metres).
+pub async fn set_listing_point(db: &PgPool, listing_id: Uuid, latitude: f64, longitude: f64) -> sqlx::Result<()> {
+    sqlx::query("UPDATE listings SET latitude = $2::numeric(9, 6), longitude = $3::numeric(9, 6) WHERE id = $1")
+        .bind(listing_id)
+        .bind(latitude)
+        .bind(longitude)
+        .execute(db)
+        .await?;
+    Ok(())
+}
+
+/// The listing's point on the map: its own, or its town's.
+pub async fn listing_point(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Option<(f64, f64)>> {
+    sqlx::query_as("SELECT latitude::float8, longitude::float8 FROM listings WHERE id = $1 AND latitude IS NOT NULL")
+        .bind(listing_id)
+        .fetch_optional(db)
+        .await
+}
+
 /// A photo on the edit form, which its seller can remove.
 pub struct OwnPhoto {
     pub id: Uuid,

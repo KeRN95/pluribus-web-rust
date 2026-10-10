@@ -138,7 +138,7 @@
           {%- for group in category_groups %}
           {%- if let Some(label) = group.label %}<optgroup label="{{ label }}">{% endif %}
           {%- for category in group.options %}
-          <option value="{{ category.value }}" data-types="{{ category.types }}" data-currency="{{ category.currency }}"{% if category.uses_condition %} data-condition{% endif %}{% if category.zoned %} data-zoned{% endif %}{% if category.selected %} selected{% endif %}>{{ category.label }}</option>
+          <option value="{{ category.value }}" data-types="{{ category.types }}" data-currency="{{ category.currency }}"{% if category.uses_condition %} data-condition{% endif %}{% if category.zoned %} data-zoned{% endif %}{% if category.mapped %} data-mapped{% endif %}{% if category.selected %} selected{% endif %}>{{ category.label }}</option>
           {%- endfor %}
           {%- if group.label.is_some() %}</optgroup>{% endif %}
           {%- endfor %}
@@ -238,6 +238,26 @@
           </div>
           {% if let Some(error) = self.error("zone") %}<p class="field-error">{{ error }}</p>{% endif %}
         </div>
+      </div>
+
+      {#- Where exactly, for a property or a car, whose pages show a map: a map that opens under
+          its button, its pin in the middle, the map moved under it, the point kept to about a
+          hundred metres and near the town chosen (map_pin_controller.js, post.rs). Without one,
+          its town's point. Shown as the category is one of them. -#}
+      <div class="field map-pin" data-controller="map-pin" data-map-pin-towns-value="{{ towns }}"{% if !map_shown %} hidden{% endif %}>
+        <span class="field-label">Vendi në hartë <span class="optional">(s'është i detyrueshëm)</span></span>
+        <input type="hidden" name="latitude" value="{{ form.latitude }}" data-map-pin-target="latitude">
+        <input type="hidden" name="longitude" value="{{ form.longitude }}" data-map-pin-target="longitude">
+        <div class="map-pin-canvas" data-map-pin-target="canvas" hidden></div>
+        <div class="map-pin-actions">
+          <button type="button" class="button secondary small" data-map-pin-target="open" data-action="map-pin#open">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PIN|safe }}</svg>
+            <span data-map-pin-target="openLabel">{% if form.latitude.is_empty() %}Vendose në hartë{% else %}Shiko në hartë{% endif %}</span>
+          </button>
+          <button type="button" class="link-button" data-map-pin-target="clear" data-action="map-pin#clear"{% if form.latitude.is_empty() %} hidden{% endif %}>Hiqe pikën</button>
+        </div>
+        <p class="field-hint" data-map-pin-target="status" role="status">{% if form.latitude.is_empty() %}Pa të, njoftimi del te qendra e qytetit.{% else %}Njoftimi del te pika që vendose, afërsisht.{% endif %}</p>
+        {% if let Some(error) = self.error("point") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
 
       {%- if signed_in_as.is_none() %}

@@ -242,6 +242,11 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .listing-form-tips h2 { margin: 0 0 .7rem; font-size: var(--text-md); }
 .listing-form-tips ul { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
 .listing-form-tips strong { color: var(--text); font-weight: var(--semibold); }
+/* A property's or a car's point on the map (map_pin_controller.js): the map under its button,
+   as wide as the form, its pin in the middle (.map-center, map.css). */
+.map-pin-canvas { position: relative; height: 18rem; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-muted); }
+.map-pin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
+.map-pin-actions .button { gap: .35rem; }
 /* A listing begun and left, offered back: what it was, and "Vazhdo" or "Fshije" under it. */
 .draft-note p { margin: 0 0 .6rem; }
 .draft-actions { display: flex; flex-wrap: wrap; gap: .5rem; }

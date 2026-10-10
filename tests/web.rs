@@ -2835,6 +2835,72 @@ async fn a_listing_shows_listings_like_it(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_property_can_say_where_it_is_on_the_map(pool: PgPool) {
+    let seller = new_seller(&pool, "+355692223355").await;
+    let started = started();
+    let listing = |category: &'static str, latitude: &'static str, longitude: &'static str| {
+        let mut fields = listing_fields(("category", category), &started);
+        if category == "apartamente" {
+            fields.retain(|field| field.0 != "condition");
+            fields.push(("prop_property_area", "90"));
+            fields.retain(|field| field.0 != "title");
+            fields.push(("title", "Apartament 2+1 te Blloku"));
+        }
+        fields.extend([("latitude", latitude), ("longitude", longitude)]);
+        fields
+    };
+    let point = |pool: PgPool, no: String| async move {
+        sqlx::query_as::<_, (f64, f64)>("SELECT latitude::float8, longitude::float8 FROM listings WHERE public_no = $1::bigint")
+            .bind(no)
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+    };
+    let number = |posted: &TestResponse| posted.location.clone().expect("posted").trim_start_matches("/listing/").split('-').next().unwrap().to_string();
+
+    // The form offers a map for property and cars, whose pages show one, starting on each town's
+    // point.
+    let form = get_with_cookie(pool.clone(), "/shto", &seller).await.body;
+    let option = |slug: &str| {
+        let start = form.find(&format!(r#"<option value="{slug}""#)).unwrap();
+        form[start..start + form[start..].find('>').unwrap()].to_string()
+    };
+    assert!(option("apartamente").contains("data-mapped") && option("makina").contains("data-mapped"));
+    assert!(!option("telefona").contains("data-mapped"));
+    assert!(form.contains(r#"<div class="field map-pin" data-controller="map-pin" data-map-pin-towns-value="{&#34;"#), "{form}");
+    assert!(form.contains("&#34;tirane&#34;:[41.3"));
+
+    // Put in Blloku, it stands there, to about a hundred metres.
+    let posted = post_form(pool.clone(), "/shto", &listing("apartamente", "41.318762", "19.817612"), Some(&seller)).await;
+    let flat = number(&posted);
+    assert_eq!(point(pool.clone(), flat.clone()).await, (41.319, 19.818));
+    let page = get(pool.clone(), posted.location.as_deref().unwrap()).await.body;
+    assert!(page.contains(r#"data-listing-map-latitude-value="41.319"#), "{page}");
+
+    // In Shkodër while the town is Tirana it is refused, as is a point it can't read.
+    let far = post_form(pool.clone(), "/shto", &listing("apartamente", "42.0693", "19.5126"), Some(&seller)).await;
+    assert_eq!(far.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(far.body.contains("Pika në hartë është larg qytetit që zgjodhe: vendose te qyteti, ose hiqe."), "{}", far.body);
+    let garbled = post_form(pool.clone(), "/shto", &listing("apartamente", "e-ra", "19.8"), Some(&seller)).await;
+    assert!(garbled.body.contains("Pika në hartë nuk u lexua: vendose përsëri."));
+
+    // A phone's is let go: it stands at its town's point.
+    let phone = number(&post_form(pool.clone(), "/shto", &listing("telefona", "41.318762", "19.817612"), Some(&seller)).await);
+    let tirana: (f64, f64) = sqlx::query_as("SELECT latitude::float8, longitude::float8 FROM locations WHERE slug = 'tirane' AND location_type = 'MUNICIPALITY'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(point(pool.clone(), phone).await, tirana);
+
+    // Its edit starts from the point, and moves it.
+    let edit = get_with_cookie(pool.clone(), &format!("/listing/{flat}/ndrysho"), &seller).await.body;
+    assert!(edit.contains(r#"<input type="hidden" name="latitude" value="41.319" data-map-pin-target="latitude">"#), "{edit}");
+    assert!(edit.contains(r#"data-map-pin-target="clear" data-action="map-pin#clear">Hiqe pikën</button>"#));
+    post_form(pool.clone(), &format!("/listing/{flat}/ndrysho"), &listing("apartamente", "41.3301", "19.8201"), Some(&seller)).await;
+    assert_eq!(point(pool.clone(), flat).await, (41.33, 19.82));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_property_says_its_zone(pool: PgPool) {
     // A seller new today: the fixtures' have posted their five for the day.
     let seller = new_seller(&pool, "+355692223344").await;

@@ -21,6 +21,7 @@ use super::{
     Result,
     account::{self, ClientIp, MIN_FORM_SECONDS, SignInPage, cookie_header, current_user, display_name, now, redirect_with_cookies},
     filters::{self, Choice, ChoiceGroup, parse_number},
+    listings::MAPPED,
     named, not_found,
     photos::{self, Submission},
     properties::{self, PropertyField},
@@ -61,6 +62,30 @@ pub(super) fn zoned(categories: &Categories, category: &Category) -> bool {
     category.slug == ZONED || categories.ancestors(category).iter().any(|above| above.slug == ZONED)
 }
 
+/// The categories whose listings' pages show where they are on a map (listings.rs, MAPPED), and
+/// whose form can put them there more exactly than their town's point: property and cars.
+pub(super) fn mapped(categories: &Categories, category: &Category) -> bool {
+    MAPPED.contains(&category.slug.as_str()) || categories.ancestors(category).iter().any(|above| MAPPED.contains(&above.slug.as_str()))
+}
+
+/// How far from its town's point a listing's own may be, in kilometres: a municipality's
+/// villages are well within it, another town isn't.
+const POINT_NEAR_KM: f64 = 40.0;
+
+/// How far apart two points are, in kilometres (the haversine, on a sphere the earth's size).
+fn distance_km((latitude, longitude): (f64, f64), (to_latitude, to_longitude): (f64, f64)) -> f64 {
+    let (from, to) = (latitude.to_radians(), to_latitude.to_radians());
+    let (across, along) = ((to_latitude - latitude).to_radians(), (to_longitude - longitude).to_radians());
+    let a = (across / 2.0).sin().powi(2) + from.cos() * to.cos() * (along / 2.0).sin().powi(2);
+    6371.0 * 2.0 * a.sqrt().asin()
+}
+
+/// A point to about a hundred metres (three decimals of a degree): near enough to say where a
+/// property or a car is, not a private seller's front door.
+fn rounded(point: (f64, f64)) -> (f64, f64) {
+    ((point.0 * 1000.0).round() / 1000.0, (point.1 * 1000.0).round() / 1000.0)
+}
+
 /// What the form sent, kept as typed so the form can show it again next to its errors.
 #[derive(Default)]
 pub struct ListingForm {
@@ -80,6 +105,10 @@ pub struct ListingForm {
     contact: String,
     /// "Posto si": the address of the store it is posted as (stores.rs); empty for the poster's own.
     si: String,
+    /// A property's or a car's point on the map, from the form's map (map_pin_controller.js);
+    /// empty for its town's.
+    latitude: String,
+    longitude: String,
     /// Hidden from people; see sign_in.html.
     website: String,
     started: Option<i64>,
@@ -118,6 +147,8 @@ impl ListingForm {
                 "contact" => &mut form.contact,
                 "si" => &mut form.si,
                 "website" => &mut form.website,
+                "latitude" => &mut form.latitude,
+                "longitude" => &mut form.longitude,
                 "started" => {
                     form.started = value.parse().ok();
                     continue;
@@ -158,6 +189,8 @@ impl ListingForm {
             name: listing.contact_name.unwrap_or_default(),
             contact: String::new(),
             si: String::new(),
+            latitude: String::new(),
+            longitude: String::new(),
             website: String::new(),
             started: None,
             properties: values,
@@ -184,6 +217,8 @@ pub struct CategoryOption {
     currency: String,
     /// Its listings can say their zone in the town.
     zoned: bool,
+    /// Its listings can say where they are on the map (mapped).
+    mapped: bool,
 }
 
 /// A town's zones in the form's "Zona" select, under the town, which narrow_controller.js shows
@@ -224,6 +259,10 @@ struct ListingFormPage {
     photos: Vec<OwnPhoto>,
     /// Sent back with an error, photos the browser holds: it puts them back as they were.
     photos_again: bool,
+    /// Whether the category chosen can say where it is on the map (mapped), and each town's point
+    /// by its slug, as JSON, which the form's map starts on (map_pin_controller.js).
+    map_shown: bool,
+    towns: String,
     /// "Plotëso pjesën tjetër me AI": on a new listing's form, when the AI is set up.
     ai_fill: bool,
     /// A new listing's form: "Zona" follows the zone its title or description names (guess_zone,
@@ -283,6 +322,7 @@ fn page(
         uses_condition: category.uses_condition,
         currency: category.default_currency.clone(),
         zoned: zoned(categories, category),
+        mapped: mapped(categories, category),
     };
     let mut category_groups = Vec::new();
     for top in categories.top_level() {
@@ -312,6 +352,7 @@ fn page(
                 .collect(),
         })
         .collect();
+    let map_shown = categories.by_slug(&form.category).is_some_and(|category| mapped(categories, category));
     let zone_shown = categories.by_slug(&form.category).is_some_and(|category| zoned(categories, category))
         && zones.iter().any(|group| group.city == form.city);
     let (heading, action, submit_label, cancel_url) = match purpose {
@@ -343,6 +384,11 @@ fn page(
         started: now(),
         photos: Vec::new(),
         photos_again: false,
+        map_shown,
+        towns: serde_json::Value::Object(
+            cities.iter().map(|city| (city.slug.clone(), serde_json::json!([city.latitude, city.longitude]))).collect(),
+        )
+        .to_string(),
         ai_fill: false,
         new_listing: matches!(purpose, Purpose::New),
         stores: Vec::new(),
@@ -457,6 +503,8 @@ struct Checked<'a> {
     city: &'a City,
     zone: Option<&'a Zone>,
     name: &'a str,
+    /// A property's or a car's own point on the map, rounded; none for its town's.
+    point: Option<(f64, f64)>,
 }
 
 /// Who a listing is posted as: the account, the contact buyers get, and the store it is posted
@@ -600,6 +648,26 @@ fn check<'a>(
     if name.chars().count() > 60 {
         fail(errors, "name", "Emri mund të ketë deri në 60 shkronja.");
     }
+    // Where on the map, more exactly than the town's point: a property's or a car's alone, near
+    // the town chosen, rounded to about a hundred metres. Another category's is let go.
+    let point = match (form.latitude.trim(), form.longitude.trim(), category, city) {
+        ("", "", ..) | (_, _, None, _) | (_, _, _, None) => None,
+        (_, _, Some(category), _) if !mapped(categories, category) => None,
+        (latitude, longitude, _, Some(city)) => match (latitude.parse::<f64>(), longitude.parse::<f64>()) {
+            (Ok(latitude), Ok(longitude)) if latitude.is_finite() && longitude.is_finite() => {
+                if distance_km((latitude, longitude), (city.latitude, city.longitude)) <= POINT_NEAR_KM {
+                    Some(rounded((latitude, longitude)))
+                } else {
+                    fail(errors, "point", "Pika në hartë është larg qytetit që zgjodhe: vendose te qyteti, ose hiqe.");
+                    None
+                }
+            }
+            _ => {
+                fail(errors, "point", "Pika në hartë nuk u lexua: vendose përsëri.");
+                None
+            }
+        },
+    };
 
     Some(Checked {
         category: category?,
@@ -613,6 +681,7 @@ fn check<'a>(
         city: city?,
         zone,
         name,
+        point,
     })
 }
 
@@ -764,9 +833,13 @@ pub async fn create_listing(
     } else {
         None
     };
+    let point = checked.point;
     let mut listing = checked.listing(&poster, &slug, &properties, !waits);
     listing.review = review;
     let (listing_id, public_no) = db::create_listing(&state.db, &listing).await?;
+    if let Some((latitude, longitude)) = point {
+        db::set_listing_point(&state.db, listing_id, latitude, longitude).await?;
+    }
     db::add_listing_photos(&state.db, listing_id, &stored).await?;
     let to = format!("/listing/{public_no}-{slug}");
     if user.is_some() {
@@ -856,7 +929,15 @@ pub async fn edit_listing(
     let attributes = attributes_for(&state, &categories, &listing.category).await?;
     let purpose = Purpose::Edit { public_no, slug: listing.slug.clone() };
     let listing_photos = db::own_listing_photos(&state.db, listing.id).await?;
-    let form = ListingForm::from_listing(listing, values);
+    // Where it is on the map, when its seller put it there rather than at its town's point.
+    let point = db::listing_point(&state.db, listing.id).await?;
+    let town = listing.city.as_deref().and_then(|slug| cities.iter().find(|city| city.slug == slug)).map(|town| (town.latitude, town.longitude));
+    let mut form = ListingForm::from_listing(listing, values);
+    if let (Some(point), Some(town)) = (point, town)
+        && distance_km(point, town) > 0.05
+    {
+        (form.latitude, form.longitude) = (point.0.to_string(), point.1.to_string());
+    }
     let mut page = page(&purpose, Some(&user), &categories, &cities, &attributes, form, HashMap::new());
     page.photos = listing_photos;
     render(page)
@@ -900,9 +981,13 @@ pub async fn update_listing(
         return form_again(page);
     };
     let slug = format::slug(checked.title);
+    let point = checked.point;
     let changed = checked.listing(&Poster::of(&user), &slug, &properties, true);
     if !db::update_listing(&state.db, public_no, &changed).await? {
         return not_found().await;
+    }
+    if let Some((latitude, longitude)) = point {
+        db::set_listing_point(&state.db, listing.id, latitude, longitude).await?;
     }
     let gone = db::remove_listing_photos(&state.db, listing.id, &removed).await?;
     photos::delete(&state.media, &gone).await;

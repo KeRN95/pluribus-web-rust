@@ -55,7 +55,7 @@ const CAR_FACTS: [&str; 4] = ["vehicle_year", "vehicle_mileage", "vehicle_transm
 
 /// The categories whose listings' pages show where they are on a map, under the seller: property
 /// (Prona and those under it) and cars (Makina), which buyers go to see.
-const MAPPED: [&str; 2] = ["prona", "makina"];
+pub(super) const MAPPED: [&str; 2] = ["prona", "makina"];
 
 /// Where a property or a car is, on the map under its seller (listing_map_controller.js): its
 /// point, which is its place's (its town's, for a zone without one of its own), so a circle round
