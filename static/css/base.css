@@ -1,7 +1,7 @@
 /* Calm and grey: a pale grey page under white surfaces, eerie black words and buttons (light grey on
    the dark theme's eerie black), a lime accent for what is new, soft rounded surfaces, and one
-   typeface, Geist, for everything: headings, prices, text and the logo (the name, "pluribus", in
-   the font's black weight) differ only in weight and colour. */
+   typeface, Geist, for all the text: headings, prices and text differ only in weight and colour.
+   The logo alone is another, Clash Display, drawn as shapes (logo.svg). */
 
 /* Geist, Vercel's typeface, free under the SIL Open Font License (fonts/OFL-Geist.txt). A variable
    font, every weight from 100 to 900 in one file, in the Latin subset only, which covers Albanian
@@ -37,13 +37,13 @@
   /* The accent, lime by default, one of five the menu offers (data-accent on <html>, below): the
      logo's dot and what is new or unread, the dots and counts. Light as lime is, it is only ever a
      background on the light theme, behind dark icons or numbers (--highlight-knob and
-     --highlight-icon: a magnifier or a bookmark dark on a lime circle), and an unread dot has a
-     dark edge (--dot-edge) on the white bar; the darker choices colour the icon on the grey
-     instead, and take white numbers. */
+     --highlight-icon: a magnifier or a bookmark dark on a lime circle), and an unread dot and the
+     logo's have a dark edge inside them on the white (--dot-edge, its colour); the darker choices
+     colour the icon on the grey instead, take white numbers and need no edge. */
   --lime: #c8ff00;
   --lime-knob: var(--lime);
   --lime-icon: #1b1b1b;
-  --lime-edge: inset 0 0 0 1.5px rgb(27 27 27 / 45%);
+  --lime-edge: rgb(27 27 27 / 45%);
   --choice-darkred: #9b1b1b;
   --choice-terracotta: #ba5837;
   --choice-blue: #4679a7;
@@ -95,18 +95,17 @@
   --text-sm: .875rem;    /* 14: labels, chips, the filters' boxes, quieter lines */
   --text-md: 1rem;       /* 16: body */
   --text-lg: 1.125rem;   /* 18: leads, a listing's own title over its description */
-  --text-xl: 1.25rem;    /* 20: section headings, the logo, a browse page's heading */
+  --text-xl: 1.25rem;    /* 20: section headings, a browse page's heading */
   --text-2xl: 1.6rem;    /* 25.6: page titles */
   --text-3xl: 2.25rem;   /* 36: a listing's price, page titles on wide screens */
   /* The weights, from quiet to loud: lead text, body, emphasis (chips, values), headings and
-     labels, prices, and the logo, at the heaviest the font has. */
+     labels, prices, and the initials in avatars. */
   --light: 300;
   --regular: 400;
   --medium: 500;
   --semibold: 600;
   --bold: 700;
   --heavy: 800;
-  --black: 900;
 }
 
 /* Dark theme: the visitor's choice (data-theme on <html>, set by theme_controller.js) or, until
@@ -130,7 +129,7 @@
   --on-main: #1b1b1b;
   --lime-knob: var(--surface-muted);
   --lime-icon: var(--lime);
-  --lime-edge: none;
+  --lime-edge: transparent;
   --choice-darkred: #e37170;
   --choice-terracotta: #de886c;
   --choice-blue: #75a2d0;
@@ -177,7 +176,7 @@
     --on-main: #1b1b1b;
     --lime-knob: var(--surface-muted);
     --lime-icon: var(--lime);
-    --lime-edge: none;
+    --lime-edge: transparent;
     --choice-darkred: #e37170;
     --choice-terracotta: #de886c;
     --choice-blue: #75a2d0;
@@ -209,7 +208,8 @@
 
 /* The accent the visitor picked (data-accent on <html>; lime when there is none): the colour
    itself, what stands on it, the circle a magnifier or a bookmark sits in and its line, and the
-   unread dots' edge. Each theme gives the choices its own shade above. */
+   colour of the edge inside the unread dots and the logo's. Each theme gives the choices its own
+   shade above. */
 :root {
   --highlight: var(--lime);
   --on-highlight: #1b1b1b;
@@ -225,7 +225,7 @@
   --on-highlight: var(--on-choice);
   --highlight-knob: var(--surface-muted);
   --highlight-icon: var(--highlight);
-  --dot-edge: none;
+  --dot-edge: transparent;
 }
 
 /* The old names, pointing at the new colours while the pages move to them one by one (until the
@@ -318,28 +318,36 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   padding: .65rem 1rem;
 }
 
-/* The logo: the name in lowercase (text-transform keeps it so) in Geist, the site's one typeface,
-   at its black weight (900; it was Playfair Display SemiBold, a serif, until 2026-10-10), its
-   letters a touch closer than the headings', the word alone, in the text's colour. A size up from
-   the text's headings, since a lowercase word stands lower and shorter. (The creature,
-   thinking.svg, is the site's icon alone now, in the tab and on home screens.) The word stays
-   from page to page (data-turbo-permanent, base.html), so as the theme changes its colour slides
+/* The logo: the name in lowercase in Clash Display Semibold (Indian Type Foundry's, from
+   Fontshare; Geist Black until 2026-10-11, Playfair Display SemiBold before 2026-10-10), the
+   logo's typeface alone, drawn as the font's shapes (logo.svg) so that no font loads for it and
+   its i's dot can take a colour of its own: the letters in the text's colour, the dot in the
+   accent, with a dark edge inside it on the light theme, where lime alone hardly shows on white
+   (--dot-edge, transparent on the dark theme and with a darker accent). The drawing is the font's
+   line, ascender to descender, 1.14em tall and 4.126em wide: at 26px, 107 x 30, and on phones at
+   24px, 99 x 27, in pixels, as the round buttons beside it set the bar's height. (The creature,
+   thinking.svg, is the site's icon alone now, in the tab and on home screens.) The logo stays
+   from page to page (data-turbo-permanent, base.html), so as the theme changes its colours slide
    to the other theme's rather than changing at once. */
 .logo {
   display: inline-flex;
   align-items: center;
   color: var(--text);
-  font-family: var(--font);
-  font-size: var(--text-2xl);
-  font-weight: var(--black);
-  letter-spacing: -0.03em;
-  text-transform: lowercase;
+  font-size: 26px;
   line-height: 1;
   text-decoration: none;
   transition: color .45s ease;
 }
+.logo-mark { display: block; width: 4.126em; height: 1.14em; }
+.logo-dot { fill: var(--highlight); transition: fill .45s ease; }
+.logo-dot-edge { stroke: var(--dot-edge); transition: stroke .45s ease; }
+@media (max-width: 719px) {
+  .logo { font-size: 24px; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .logo { transition: none; }
+  .logo,
+  .logo-dot,
+  .logo-dot-edge { transition: none; }
 }
 
 .search {

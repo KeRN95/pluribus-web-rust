@@ -3675,11 +3675,23 @@ async fn each_kind_of_thing_asks_for_what_fits_it(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_site_is_called_pluribus(pool: PgPool) {
-    // The logo is the name in lowercase, the word alone, in the site's one typeface, Geist, which
-    // comes with the page, the only font that does: the headings' Inter and the logo's Playfair
-    // Display went with their files. The pages' titles and the footer say the name.
+    // The logo is the name in lowercase, the word alone, in Clash Display drawn as shapes
+    // (logo.svg): the letters in the text's colour, the i's dot apart in the accent with an edge
+    // inside it, and the word for screen readers. The site's one typeface, Geist, comes with the
+    // page, the only font that does: the headings' Inter and the logo's Playfair Display went with
+    // their files. The pages' titles and the footer say the name.
     let home = html(pool.clone(), "/").await;
-    assert!(home.contains(r#"<a class="logo" id="logo" href="/" data-turbo-permanent translate="no"><span class="logo-word">pluribus</span></a>"#));
+    let logo = &home[home.find(r#"<a class="logo" id="logo" href="/" data-turbo-permanent translate="no"><svg class="logo-mark" "#).expect("the logo")..];
+    let logo = &logo[..logo.find("</a>").unwrap()];
+    assert!(logo.contains(r#" viewBox="0 0 4126 1140" aria-hidden="true"><path fill="currentColor" d="M190 1060"#), "{logo}");
+    assert!(logo.contains(r#"<rect class="logo-dot" x="2086" y="220" width="150" height="118"/>"#), "{logo}");
+    assert!(logo.contains(r#"<rect class="logo-dot-edge" x="2097" y="231" width="128" height="96" fill="none" stroke-width="22"/></svg>"#), "{logo}");
+    assert!(logo.ends_with(r#"</svg><span class="visually-hidden">pluribus</span>"#), "{logo}");
+    // The dot takes the accent, and its edge the unread dots' edge, which only lime has, and only
+    // on the light theme.
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    assert!(css.contains(".logo-dot{fill:var(--highlight);") && css.contains(".logo-dot-edge{stroke:var(--dot-edge);"));
+    assert!(css.contains("--lime-edge:rgb(27 27 27 / 45%);") && css.contains("--dot-edge:var(--lime-edge);"));
     assert!(!home.contains("thinking"));
     assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
     assert!(home.contains(

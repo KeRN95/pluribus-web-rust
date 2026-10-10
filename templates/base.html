@@ -20,9 +20,9 @@
   <link rel="icon" href="/static/img/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
   <link rel="manifest" href="/static/site.webmanifest">
-  {#- Fetch the font, Geist, the whole site's (the headings' Inter and the logo's Playfair Display
-      went on 2026-10-10), alongside the stylesheets rather than after it, so text rarely waits
-      for it. -#}
+  {#- Fetch the font, Geist, the whole site's text's (the headings' Inter and the logo's Playfair
+      Display went on 2026-10-10; the logo is shapes now, logo.svg), alongside the stylesheets
+      rather than after it, so text rarely waits for it. -#}
   <link rel="preload" href="/static/vendor/fonts/geist-v5-latin.woff2" as="font" type="font/woff2" crossorigin>
   {#- The site's stylesheets as one, in their order and without their comments (web::site_css):
       one request before the page shows rather than eight. The fingerprint changes with the files;
@@ -56,11 +56,12 @@
     <div class="header-inner">
       {#- The search is the welcome page's pill, and on the browse pages the round button before
           the filters. -#}
-      {#- The logo: the name in lowercase, in Geist's black weight, the word alone (the creature of
+      {#- The logo: the name in lowercase in Clash Display Semibold, drawn as shapes (logo.svg),
+          its i's dot apart in the accent, and the word for screen readers (the creature of
           thinking.svg is the site's icon, above, and no longer in the header). Turbo keeps it
-          from page to page (data-turbo-permanent), so that its colour slides to the other
+          from page to page (data-turbo-permanent), so that its colours slide to the other
           theme's rather than changing at once (base.css, .logo). -#}
-      <a class="logo" id="logo" href="/" data-turbo-permanent translate="no"><span class="logo-word">pluribus</span></a>
+      <a class="logo" id="logo" href="/" data-turbo-permanent translate="no">{% include "logo.svg" %}<span class="visually-hidden">pluribus</span></a>
       {%- if crate::web::type_trial() %}
       {#- Trying typefaces (TYPE_TRIAL=true, web::type_trial): "Aa" opens a panel that picks the
           headings' typeface and the text's, the site's own and Google Fonts', and their weights,
