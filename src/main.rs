@@ -4,9 +4,10 @@ use anyhow::Context;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use tracing_subscriber::EnvFilter;
 
-/// How often the words search corrects typos from (db::refresh_search_words) and what a square
-/// metre costs in each zone (db::refresh_zone_prices) are rebuilt, and the sign-in codes over a day
-/// old forgotten (db::forget_old_codes). The words take a couple of seconds for 100 000 listings,
+/// How often the words search corrects typos from (db::refresh_search_words), what a square metre
+/// costs in each zone (db::refresh_zone_prices) and how quickly each seller answers
+/// (db::refresh_response_times) are rebuilt, and the sign-in codes over a day old forgotten
+/// (db::forget_old_codes). The words take a couple of seconds for 100 000 listings,
 /// and searches go on meanwhile.
 const REFRESH_EVERY: Duration = Duration::from_secs(15 * 60);
 
@@ -45,6 +46,9 @@ async fn main() -> anyhow::Result<()> {
                 }
                 if let Err(error) = marketplace::db::refresh_zone_prices(&db).await {
                     tracing::warn!(%error, "could not refresh what a square metre costs in each zone");
+                }
+                if let Err(error) = marketplace::db::refresh_response_times(&db).await {
+                    tracing::warn!(%error, "could not refresh how quickly the sellers answer");
                 }
                 // Sign-in codes asked for over a day ago go, with the contacts and addresses (IPs)
                 // they were asked from, as the privacy page promises.

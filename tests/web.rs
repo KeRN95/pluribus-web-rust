@@ -449,6 +449,59 @@ async fn closing_an_account_closes_the_stores_it_owns(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_sellers_card_says_how_quickly_they_answer_and_when_they_were_here(pool: PgPool) {
+    let ana = session_for(&pool, ANA_ID).await;
+    let listing = "/listing/1001-volkswagen-golf-7-2016-nafte";
+    assert!(!get(pool.clone(), listing).await.body.contains("seller-activity"));
+    let seen = |pool: PgPool| async move {
+        sqlx::query_as::<_, (Option<time::OffsetDateTime>, time::OffsetDateTime)>("SELECT last_seen_at, updated_at FROM users WHERE id = $1::uuid")
+            .bind(ANA_ID)
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+    };
+
+    // Signed in, Ana is on the site: today. The moment holds for ten minutes, and the account's
+    // own updated_at stays as it was.
+    let (_, updated) = seen(pool.clone()).await;
+    get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await;
+    let (first, still) = seen(pool.clone()).await;
+    assert!(first.is_some());
+    assert_eq!(updated, still);
+    sqlx::query("UPDATE users SET last_seen_at = now() - interval '5 minutes' WHERE id = $1::uuid").bind(ANA_ID).execute(&pool).await.unwrap();
+    get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await;
+    let (kept, _) = seen(pool.clone()).await;
+    assert!(kept.unwrap() < time::OffsetDateTime::now_utc() - time::Duration::minutes(4));
+    sqlx::query("UPDATE users SET last_seen_at = now() - interval '20 minutes' WHERE id = $1::uuid").bind(ANA_ID).execute(&pool).await.unwrap();
+    get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await;
+    let (moved, _) = seen(pool.clone()).await;
+    assert!(moved.unwrap() > time::OffsetDateTime::now_utc() - time::Duration::minutes(1));
+    assert!(get(pool.clone(), listing).await.body.contains("<span class=\"seller-activity\">Aktiv\u{a0}sot</span>"));
+
+    // Three buyers wrote, each answered a quarter of an hour on: she answers within the hour. Two
+    // wouldn't have been enough to say so.
+    for (i, phone) in ["+355691112233", "+355691112244", "+355691112255"].into_iter().enumerate() {
+        let buyer = new_seller(&pool, phone).await;
+        let thread = write(&pool, "/listing/1001/mesazh", "A është ende në shitje?", &buyer).await.location.unwrap();
+        write(&pool, &thread, "Po, është.", &ana).await;
+        sqlx::query(
+            "UPDATE messages m SET created_at = m.created_at - interval '15 minutes'
+             FROM conversations c WHERE c.id = m.conversation_id AND m.sender_user_id = c.buyer_user_id",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        marketplace::db::refresh_response_times(&pool).await.unwrap();
+        let page = get(pool.clone(), listing).await.body;
+        assert_eq!(page.contains("Përgjigjet zakonisht"), i == 2, "{i}");
+    }
+    let page = get(pool.clone(), listing).await.body;
+    assert!(page.contains("<span class=\"seller-activity\">Përgjigjet zakonisht brenda 1 ore ·\u{a0}Aktiv\u{a0}sot</span>"), "{page}");
+    let profile = get(pool.clone(), &format!("/perdorues/{ANA_ID}")).await.body;
+    assert!(profile.contains("<p class=\"profile-activity\">Përgjigjet zakonisht brenda 1 ore ·\u{a0}Aktiv\u{a0}sot</p>"), "{profile}");
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_stores_people_share_its_conversations(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let besa = new_seller(&pool, "+355691112244").await;

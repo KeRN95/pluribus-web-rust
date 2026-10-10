@@ -316,6 +316,10 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .seller-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .seller-name { font-size: var(--text-sm); font-weight: var(--semibold); }
 .seller-summary { color: var(--muted); font-size: var(--text-xs); }
+/* Under it, how quickly the seller answers and when they were last on the site, in the
+   summary's grey, on lines of its own as it needs them. */
+.seller-activity { color: var(--muted); font-size: var(--text-xs); }
+.profile-header .profile-activity { margin-top: .15rem; color: var(--muted); font-size: var(--text-xs); }
 @media (hover: hover) {
   .seller:hover { background: var(--surface-muted); }
 }

@@ -53,6 +53,13 @@ pub struct ListingDetail {
     pub created_by_user_id: Uuid,
     /// The store it is posted as, whose people who post may change it (manages_listing).
     pub seller_business_id: Option<Uuid>,
+    /// How quickly the seller usually answers: the middle time, in seconds, from a buyer's first
+    /// message to their first answer over the last 90 days (seller_response_times), once they had
+    /// three conversations and answered half of them at least.
+    pub seller_answers: Option<f64>,
+    /// When the seller was last on the site: the private seller, or the latest of a store's
+    /// people.
+    pub seller_seen: Option<OffsetDateTime>,
     /// Whether the number (or address) it shows is one the account that posted it signed in with,
     /// proved theirs by the code (user_verifications).
     pub contact_verified: bool,
@@ -122,6 +129,11 @@ pub async fn listing_by_public_no(
                    WHERE o.status = 'ACTIVE'
                      AND (o.seller_business_id = l.seller_business_id OR o.seller_user_id = l.seller_user_id)) AS "seller_listings!",
                   l.created_by_user_id, l.seller_business_id,
+                  (SELECT r.median_seconds FROM seller_response_times r
+                   WHERE r.seller_id = coalesce(l.seller_business_id, l.seller_user_id) AND r.conversations >= 3 AND r.answered * 2 >= r.conversations) AS "seller_answers?",
+                  CASE WHEN l.seller_business_id IS NULL THEN u.last_seen_at
+                       ELSE (SELECT max(mu.last_seen_at) FROM business_members bm JOIN users mu ON mu.id = bm.user_id
+                             WHERE bm.business_id = l.seller_business_id) END AS "seller_seen?",
                   coalesce((SELECT CASE WHEN c.show_phone AND c.phone_e164 IS NOT NULL
                                         THEN EXISTS (SELECT 1 FROM user_verifications v
                                                      WHERE v.user_id = l.created_by_user_id AND v.status = 'VERIFIED'

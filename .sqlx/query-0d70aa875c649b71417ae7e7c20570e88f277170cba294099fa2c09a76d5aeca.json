@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT u.display_name, u.created_at,\n                  (SELECT count(*) FROM listings l WHERE l.seller_user_id = u.id AND l.status = 'ACTIVE') AS \"listings!\",\n                  (SELECT v.verification_type FROM user_verifications v\n                   WHERE v.user_id = u.id AND v.status = 'VERIFIED'\n                     AND ((v.verification_type = 'PHONE' AND v.verified_value = u.phone_e164::text)\n                          OR (v.verification_type = 'EMAIL' AND lower(v.verified_value) = lower(u.email::text)))\n                   ORDER BY v.verification_type = 'PHONE' DESC\n                   LIMIT 1) AS verified,\n                  (SELECT r.median_seconds FROM seller_response_times r\n                   WHERE r.seller_id = u.id AND r.conversations >= 3 AND r.answered * 2 >= r.conversations) AS \"seller_answers?\",\n                  u.last_seen_at\n           FROM users u WHERE u.id = $1 AND u.status = 'ACTIVE'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "display_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "listings!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "verified",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "seller_answers?",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "last_seen_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      null,
+      true
+    ]
+  },
+  "hash": "0d70aa875c649b71417ae7e7c20570e88f277170cba294099fa2c09a76d5aeca"
+}

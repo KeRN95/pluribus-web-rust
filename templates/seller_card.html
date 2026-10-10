@@ -37,6 +37,10 @@
         {%- else %}
         <span class="seller-summary">{{ listing.seller_summary() }}</span>
         {%- endif %}
+        {%- if let Some(activity) = listing.seller_activity() %}
+        {#- How quickly they answer, and when they were last on the site (format::seller_activity). -#}
+        <span class="seller-activity">{{ activity }}</span>
+        {%- endif %}
       </span>
       <svg class="seller-chevron" data-icon="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
     </a>

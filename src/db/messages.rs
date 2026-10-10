@@ -14,6 +14,13 @@ use super::*;
 /// The most messages a conversation's page shows: its latest.
 const MESSAGES_SHOWN: i64 = 300;
 
+/// Rebuilds how quickly each seller answers (seller_response_times, migration 0036), which their
+/// listings' card and their profile say; pages go on reading the old figures meanwhile.
+pub async fn refresh_response_times(db: &PgPool) -> sqlx::Result<()> {
+    sqlx::query!("REFRESH MATERIALIZED VIEW CONCURRENTLY seller_response_times").execute(db).await?;
+    Ok(())
+}
+
 /// A listing as a buyer would write to its seller about it.
 #[derive(Debug)]
 pub struct MessageTarget {

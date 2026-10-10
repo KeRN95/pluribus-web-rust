@@ -375,6 +375,12 @@ impl ListingDetail {
         if self.seller_is_business() { format!("Biznes · që nga {since}") } else { format!("Që nga {since}") }
     }
 
+    /// Under the seller's name, how quickly they answer and when they were last on the site, when
+    /// there is something to say: "Përgjigjet zakonisht brenda 1 ore · Aktiv sot".
+    pub fn seller_activity(&self) -> Option<String> {
+        format::seller_activity(self.seller_answers, self.seller_seen, time::OffsetDateTime::now_utc())
+    }
+
     /// And after a dot on that line, how many listings they have (seller_card.html): "12 njoftime".
     pub fn seller_count_text(&self) -> String {
         format::listing_count(self.seller_listings, i64::MAX)

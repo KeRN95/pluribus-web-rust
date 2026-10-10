@@ -182,6 +182,41 @@ pub fn expires_soon(expires: OffsetDateTime, now: OffsetDateTime) -> Option<Stri
     }
 }
 
+/// How quickly a seller answers, by the middle time of their first answers in seconds, as their
+/// card says it after "Përgjigjet zakonisht": within the hour, a few hours, a day, or a few days.
+pub fn answers_within(seconds: f64) -> &'static str {
+    match seconds {
+        s if s <= 3600.0 => "brenda 1 ore",
+        s if s <= 3.0 * 3600.0 => "brenda disa orësh",
+        s if s <= 24.0 * 3600.0 => "brenda një dite",
+        _ => "brenda disa ditësh",
+    }
+}
+
+/// When someone was last on the site, within the week, by Albania's clock: "Aktiv sot", "Aktiv
+/// dje", "Aktiv para 3 ditësh"; None from a week on.
+pub fn last_active(seen: OffsetDateTime, now: OffsetDateTime) -> Option<String> {
+    match (tirana(now).date() - tirana(seen).date()).whole_days() {
+        ..=0 => Some("Aktiv sot".to_string()),
+        1 => Some("Aktiv dje".to_string()),
+        days @ 2..=6 => Some(format!("Aktiv para {days} ditësh")),
+        _ => None,
+    }
+}
+
+/// What a seller's card and profile say of them beyond their name, when there is something to
+/// say: how quickly they answer and when they were last on the site, "Përgjigjet zakonisht
+/// brenda 1 ore · Aktiv sot". The dot and what follows it hold together (no-break spaces), so
+/// that a line too narrow for both wraps before the dot, as the card's summary does.
+pub fn seller_activity(answers: Option<f64>, seen: Option<OffsetDateTime>, now: OffsetDateTime) -> Option<String> {
+    let answers = answers.map(|seconds| format!("Përgjigjet zakonisht {}", answers_within(seconds)));
+    let active = seen.and_then(|seen| last_active(seen, now)).map(|active| active.replace(' ', "\u{a0}"));
+    match (answers, active) {
+        (Some(answers), Some(active)) => Some(format!("{answers} ·\u{a0}{active}")),
+        (answers, active) => answers.or(active),
+    }
+}
+
 /// When something happened, as a line says it, by Albania's clock: "Sot", "Dje", "para 3 ditësh"
 /// within the week, and the date from a week on.
 pub fn when(value: OffsetDateTime, now: OffsetDateTime) -> String {
@@ -502,6 +537,27 @@ mod tests {
         // A week or more off, nothing yet; once past, nothing either (it has expired).
         assert_eq!(expires_soon(datetime!(2026-10-17 08:00 UTC), now), None);
         assert_eq!(expires_soon(datetime!(2026-10-10 19:00 UTC), now), None);
+    }
+
+    #[test]
+    fn says_how_a_seller_answers_and_when_they_were_last_here() {
+        use time::macros::datetime;
+        assert_eq!(answers_within(20.0 * 60.0), "brenda 1 ore");
+        assert_eq!(answers_within(2.5 * 3600.0), "brenda disa orësh");
+        assert_eq!(answers_within(20.0 * 3600.0), "brenda një dite");
+        assert_eq!(answers_within(3.0 * 86400.0), "brenda disa ditësh");
+        // Saturday the 10th, half past nine in the evening in Tirana (UTC+2).
+        let now = datetime!(2026-10-10 19:30 UTC);
+        assert_eq!(last_active(datetime!(2026-10-10 08:00 UTC), now).as_deref(), Some("Aktiv sot"));
+        // 21:30 UTC on the 9th is half past eleven at night there: yesterday.
+        assert_eq!(last_active(datetime!(2026-10-09 21:30 UTC), now).as_deref(), Some("Aktiv dje"));
+        assert_eq!(last_active(datetime!(2026-10-05 12:00 UTC), now).as_deref(), Some("Aktiv para 5 ditësh"));
+        assert_eq!(last_active(datetime!(2026-10-03 12:00 UTC), now), None);
+        assert_eq!(
+            seller_activity(Some(600.0), Some(datetime!(2026-10-10 08:00 UTC)), now).as_deref(),
+            Some("Përgjigjet zakonisht brenda 1 ore ·\u{a0}Aktiv\u{a0}sot")
+        );
+        assert_eq!(seller_activity(None, None, now), None);
     }
 
     #[test]

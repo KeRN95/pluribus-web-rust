@@ -514,6 +514,8 @@ struct ProfilePage {
     meta: PageMeta,
     /// "Numër i verifikuar" when the number they signed in with is theirs, or the address.
     verified: Option<&'static str>,
+    /// How quickly they answer and when they were last on the site (format::seller_activity).
+    activity: Option<String>,
     /// A store's page (stores.rs): its cover, logo and what it says of itself, where it is, when it
     /// is open and how to reach it; and, for its owner and admins, the way to change it.
     store: Option<db::Store>,
@@ -650,6 +652,7 @@ async fn profile_page(
         count,
         business: matches!(profile.seller, db::Seller::Business(_)),
         verified: verified_label(profile.verified.as_deref()),
+        activity: format::seller_activity(profile.answers, profile.seen, time::OffsetDateTime::now_utc()),
         name: profile.name,
         page,
     })

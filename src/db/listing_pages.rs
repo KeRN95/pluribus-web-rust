@@ -444,6 +444,10 @@ pub struct Profile {
     /// What of theirs is verified (user_verifications): PHONE, the number they signed in with,
     /// or EMAIL; a business's public number when one of its people signed in with it.
     pub verified: Option<String>,
+    /// How quickly they usually answer, and when they were last on the site, as a listing's
+    /// seller card has them (db::ListingDetail).
+    pub answers: Option<f64>,
+    pub seen: Option<OffsetDateTime>,
 }
 
 pub async fn user_profile(db: &PgPool, id: Uuid) -> sqlx::Result<Option<Profile>> {
@@ -455,7 +459,10 @@ pub async fn user_profile(db: &PgPool, id: Uuid) -> sqlx::Result<Option<Profile>
                      AND ((v.verification_type = 'PHONE' AND v.verified_value = u.phone_e164::text)
                           OR (v.verification_type = 'EMAIL' AND lower(v.verified_value) = lower(u.email::text)))
                    ORDER BY v.verification_type = 'PHONE' DESC
-                   LIMIT 1) AS verified
+                   LIMIT 1) AS verified,
+                  (SELECT r.median_seconds FROM seller_response_times r
+                   WHERE r.seller_id = u.id AND r.conversations >= 3 AND r.answered * 2 >= r.conversations) AS "seller_answers?",
+                  u.last_seen_at
            FROM users u WHERE u.id = $1 AND u.status = 'ACTIVE'"#,
         id,
     )
@@ -467,6 +474,8 @@ pub async fn user_profile(db: &PgPool, id: Uuid) -> sqlx::Result<Option<Profile>
         since: row.created_at,
         listings: row.listings,
         verified: row.verified,
+        answers: row.seller_answers,
+        seen: row.last_seen_at,
     }))
 }
 
@@ -478,7 +487,11 @@ pub async fn business_profile(db: &PgPool, slug: &str) -> sqlx::Result<Option<Pr
                    JOIN user_verifications v ON v.user_id = m.user_id
                    WHERE m.business_id = b.id AND v.status = 'VERIFIED' AND v.verification_type = 'PHONE'
                      AND v.verified_value = b.public_phone::text
-                   LIMIT 1) AS verified
+                   LIMIT 1) AS verified,
+                  (SELECT r.median_seconds FROM seller_response_times r
+                   WHERE r.seller_id = b.id AND r.conversations >= 3 AND r.answered * 2 >= r.conversations) AS "seller_answers?",
+                  (SELECT max(mu.last_seen_at) FROM business_members bm JOIN users mu ON mu.id = bm.user_id
+                   WHERE bm.business_id = b.id) AS seen
            FROM businesses b WHERE b.slug = $1 AND b.status = 'ACTIVE'"#,
         slug,
     )
@@ -490,6 +503,8 @@ pub async fn business_profile(db: &PgPool, slug: &str) -> sqlx::Result<Option<Pr
         since: row.created_at,
         listings: row.listings,
         verified: row.verified,
+        answers: row.seller_answers,
+        seen: row.seen,
     }))
 }
 
