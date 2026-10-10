@@ -1670,8 +1670,9 @@ async fn price_pages_continue_where_the_last_one_ended(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn words_find_the_best_matches_first(pool: PgPool) {
-    // 40 in Të tjera that say "kaltërosh", a minute apart, the first the newest: every fifth in its
-    // title, every third twice in its description, the others once.
+    // 260 in Të tjera that say "kaltërosh", a minute apart, the first the newest: every fifth in its
+    // title, every third twice in its description, the others once. The newest 240 are ranked
+    // (db::RANK_WINDOW); the 20 past them follow, newest first.
     sqlx::query(
         "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title,
                                description, price_amount, currency, price_type, price_normalized,
@@ -1681,42 +1682,54 @@ async fn words_find_the_best_matches_first(pool: PgPool) {
                 CASE WHEN g % 5 = 0 THEN 'Kaltërosh ' || g ELSE 'Njoftim shtesë ' || g END,
                 CASE WHEN g % 3 = 0 THEN 'Një kaltërosh, dhe një kaltërosh tjetër.' ELSE 'Një kaltërosh.' END,
                 1000, 'ALL', 'FIXED', 10, 'ACTIVE', now() - g * interval '1 minute'
-         FROM generate_series(1, 40) g",
+         FROM generate_series(1, 260) g",
     )
     .execute(&pool)
     .await
     .unwrap();
     marketplace::db::refresh_search_words(&pool).await.unwrap();
+    assert_eq!(marketplace::db::RANK_WINDOW, 240);
     let in_order = |order: &'static str| {
         let pool = pool.clone();
         async move {
             sqlx::query_scalar::<_, i64>(&format!(
-                "SELECT l.public_no FROM listings l, search_query('kaltërosh') s
-                 WHERE l.status = 'ACTIVE' AND l.search_vector @@ s.query ORDER BY {order}"
+                "SELECT public_no FROM (
+                     SELECT l.public_no, l.sort_at, l.id, ts_rank(l.search_vector, s.query) AS rank,
+                            row_number() OVER (ORDER BY l.sort_at DESC, l.id DESC) AS newest
+                     FROM listings l, search_query('kaltërosh') s
+                     WHERE l.status = 'ACTIVE' AND l.search_vector @@ s.query) m
+                 ORDER BY {order}"
             ))
             .fetch_all(&pool)
             .await
             .unwrap()
         }
     };
-    let best = in_order("ts_rank(l.search_vector, s.query) DESC, l.sort_at DESC, l.id DESC").await;
-    let newest = in_order("l.sort_at DESC, l.id DESC").await;
-    assert_eq!(best.len(), 40);
-    // Those with the word in their title come first, those that say it twice besides first of them.
-    let titled: Vec<i64> = sqlx::query_scalar("SELECT public_no FROM listings WHERE title LIKE 'Kaltërosh %' ORDER BY public_no")
-        .fetch_all(&pool)
-        .await
-        .unwrap();
-    let mut first = best[..8].to_vec();
-    first.sort();
-    assert_eq!(first, titled);
-    let twice: Vec<i64> = sqlx::query_scalar(
-        "SELECT public_no FROM listings WHERE title LIKE 'Kaltërosh %' AND description LIKE '%tjetër%' ORDER BY sort_at DESC",
+    let best = in_order("newest > 240, CASE WHEN newest <= 240 THEN rank END DESC, sort_at DESC, id DESC").await;
+    let newest = in_order("sort_at DESC, id DESC").await;
+    assert_eq!(best.len(), 260);
+    // Among the ranked, those with the word in their title come first, those that say it twice
+    // besides first of them; past the window, the rest newest first.
+    let titled: Vec<i64> = sqlx::query_scalar(
+        "SELECT public_no FROM listings WHERE title LIKE 'Kaltërosh %' AND split_part(title, ' ', 2)::int <= 240
+         ORDER BY public_no",
     )
     .fetch_all(&pool)
     .await
     .unwrap();
-    assert_eq!(best[..2], twice[..]);
+    assert_eq!(titled.len(), 48);
+    let mut first = best[..48].to_vec();
+    first.sort();
+    assert_eq!(first, titled);
+    let twice: Vec<i64> = sqlx::query_scalar(
+        "SELECT public_no FROM listings WHERE title LIKE 'Kaltërosh %' AND description LIKE '%tjetër%'
+           AND split_part(title, ' ', 2)::int <= 240 ORDER BY sort_at DESC",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(best[..16], twice[..]);
+    assert_eq!(best[240..], newest[240..]);
     assert_ne!(best, newest);
 
     // Words open the page in the best match first, which its order's menu names first, the newest

@@ -93,7 +93,7 @@ pub enum Sort {
     /// The best match for the search's words first (ts_rank: the title's words weigh most, the
     /// details' next, the description's least), the newest first among equals; only with words.
     /// Among the newest RANK_WINDOW matches, so that a word in a quarter of the listings costs
-    /// no more than one in a few.
+    /// no more than one in a few; the matches past them follow, newest first (relevance_page).
     Relevance,
     #[default]
     Newest,
@@ -150,6 +150,8 @@ impl Sort {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Cursor {
     Relevance { rank: f32, sort_at: OffsetDateTime, id: Uuid },
+    /// The best match first, past its ranked window: the matches older than it, newest first.
+    RelevanceRest { sort_at: OffsetDateTime, id: Uuid },
     Newest { sort_at: OffsetDateTime, id: Uuid },
     Price { price: Option<Decimal>, id: Uuid },
     Distance { meters: f64, id: Uuid },
@@ -160,7 +162,10 @@ impl Cursor {
     pub fn after(sort: Sort, card: &ListingCard) -> Self {
         match (sort, card.distance_m) {
             (Sort::Nearest, Some(meters)) => Self::Distance { meters, id: card.id },
-            (Sort::Relevance, _) => Self::Relevance { rank: card.rank.unwrap_or(0.0), sort_at: card.sort_at, id: card.id },
+            (Sort::Relevance, _) => match card.rank {
+                Some(rank) => Self::Relevance { rank, sort_at: card.sort_at, id: card.id },
+                None => Self::RelevanceRest { sort_at: card.sort_at, id: card.id },
+            },
             (Sort::Newest | Sort::Nearest, _) => Self::Newest { sort_at: card.sort_at, id: card.id },
             (Sort::PriceLow | Sort::PriceHigh, _) => {
                 Self::Price { price: card.price_normalized, id: card.id }
@@ -170,18 +175,26 @@ impl Cursor {
 
     pub fn id(&self) -> Uuid {
         match self {
-            Self::Relevance { id, .. } | Self::Newest { id, .. } | Self::Price { id, .. } | Self::Distance { id, .. } => *id,
+            Self::Relevance { id, .. }
+            | Self::RelevanceRest { id, .. }
+            | Self::Newest { id, .. }
+            | Self::Price { id, .. }
+            | Self::Distance { id, .. } => *id,
         }
     }
 
     /// "<key>_<id>". The key is microseconds since 1970 (PostgreSQL's precision) for the newest
     /// first order, the price in euros, or "-" for none, for the price orders, and the distance
     /// in metres, in full, for the nearest first order; for the best match first, the rank (as
-    /// short as it reads back the same) and the microseconds: "<rank>_<key>_<id>".
+    /// short as it reads back the same) and the microseconds, "<rank>_<key>_<id>", and past its
+    /// window "past_<key>_<id>".
     pub fn encode(&self) -> String {
         match self {
             Self::Relevance { rank, sort_at, id } => {
                 format!("{rank}_{}_{id}", sort_at.unix_timestamp_nanos() / 1_000)
+            }
+            Self::RelevanceRest { sort_at, id } => {
+                format!("past_{}_{id}", sort_at.unix_timestamp_nanos() / 1_000)
             }
             Self::Newest { sort_at, id } => {
                 format!("{}_{id}", sort_at.unix_timestamp_nanos() / 1_000)
@@ -194,6 +207,10 @@ impl Cursor {
 
     pub fn decode(sort: Sort, value: &str) -> Option<Self> {
         if sort == Sort::Relevance {
+            if let Some(past) = value.strip_prefix("past_") {
+                let Some(Self::Newest { sort_at, id }) = Self::decode(Sort::Newest, past) else { return None };
+                return Some(Self::RelevanceRest { sort_at, id });
+            }
             let mut parts = value.splitn(3, '_');
             let rank: f32 = parts.next()?.parse().ok()?;
             let nanos = parts.next()?.parse::<i128>().ok()?.checked_mul(1_000)?;
@@ -575,8 +592,22 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH card_attributes AS MATERIALI
 
 /// One page of active listings in the filter's order, with at most PAGE_SIZE + 1 rows.
 pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec<ListingCard>> {
+    match filter.sort {
+        Sort::Relevance => relevance_page(db, filter).await,
+        sort => ordered_page(db, filter, sort, filter.after, PAGE_SIZE + 1).await,
+    }
+}
+
+/// The first `limit` matches in this order after the cursor.
+async fn ordered_page(
+    db: &PgPool,
+    filter: &ListingFilter,
+    sort: Sort,
+    after: Option<Cursor>,
+    limit: i64,
+) -> sqlx::Result<Vec<ListingCard>> {
     let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
-    query.push(if filter.sort == Sort::Relevance { "l.rank" } else { "NULL::real" }).push(" AS rank, ");
+    query.push("NULL::real AS rank, ");
     match &filter.near {
         Some(near) => near.push_distance(&mut query),
         None => {
@@ -584,11 +615,56 @@ pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<V
         }
     }
     query.push(" AS distance_m FROM ");
-    push_ordered(&mut query, filter, filter.after, false, PAGE_SIZE + 1);
+    push_ordered(&mut query, filter, sort, after, false, limit);
     query.push(" LEFT JOIN locations loc ON loc.id = l.location_id");
-    push_order(&mut query, filter.sort, filter.near.as_ref());
+    push_order(&mut query, sort, filter.near.as_ref());
+    query.push(" LIMIT ").push_bind(limit);
+    query.build_query_as().fetch_all(db).await
+}
+
+/// A page of the best match first: the ranked window's matches after the cursor, and once they
+/// run out, the matches older than the window, newest first (their cards have no rank, and the
+/// page after them starts past the window, Cursor::RelevanceRest). A window that holds every
+/// match has nothing past it.
+async fn relevance_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec<ListingCard>> {
+    let mut rows = Vec::new();
+    let past = match filter.after {
+        Some(Cursor::RelevanceRest { sort_at, id }) => Cursor::Newest { sort_at, id },
+        after => {
+            rows = ranked_page(db, filter, after).await?;
+            if rows.len() as i64 > PAGE_SIZE {
+                return Ok(rows);
+            }
+            match window_edge(db, filter).await? {
+                Some(edge) => edge,
+                None => return Ok(rows),
+            }
+        }
+    };
+    let left = PAGE_SIZE + 1 - rows.len() as i64;
+    rows.extend(ordered_page(db, filter, Sort::Newest, Some(past), left).await?);
+    Ok(rows)
+}
+
+/// The ranked window's matches after the cursor, the best first: PAGE_SIZE + 1 at most.
+async fn ranked_page(db: &PgPool, filter: &ListingFilter, after: Option<Cursor>) -> sqlx::Result<Vec<ListingCard>> {
+    let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
+    query.push("l.rank AS rank, NULL::float8 AS distance_m FROM ");
+    push_ranked(&mut query, filter, after, PAGE_SIZE + 1);
+    query.push(" LEFT JOIN locations loc ON loc.id = l.location_id");
+    push_order(&mut query, Sort::Relevance, None);
     query.push(" LIMIT ").push_bind(PAGE_SIZE + 1);
     query.build_query_as().fetch_all(db).await
+}
+
+/// The oldest match in the ranked window, where the matches past it start: the RANK_WINDOW-th
+/// newest, as a newest first cursor; None when the window holds every match.
+async fn window_edge(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Option<Cursor>> {
+    let mut query = QueryBuilder::<Postgres>::new("SELECT l.sort_at, l.id FROM listings l");
+    push_conditions(&mut query, filter, false);
+    query.push(" ORDER BY l.sort_at DESC, l.id DESC OFFSET ").push_bind(RANK_WINDOW - 1).push(" LIMIT 1");
+    let edge: Option<(OffsetDateTime, Uuid)> = query.build_query_as().fetch_optional(db).await?;
+    Ok(edge.map(|(sort_at, id)| Cursor::Newest { sort_at, id }))
 }
 
 /// How many listings the welcome page's "Më të klikuarat" shows, and over how many days their
@@ -866,8 +942,11 @@ pub async fn map_points(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec
                 l.latitude::float8 AS latitude, l.longitude::float8 AS longitude
          FROM ",
     );
-    push_ordered(&mut query, filter, None, true, MAP_POINTS + 1);
-    push_order(&mut query, filter.sort, filter.near.as_ref());
+    // Its dots come in the list's order, but the best match first's: newest first there, as
+    // its matches past the window come (relevance_page).
+    let sort = if filter.sort == Sort::Relevance { Sort::Newest } else { filter.sort };
+    push_ordered(&mut query, filter, sort, None, true, MAP_POINTS + 1);
+    push_order(&mut query, sort, filter.near.as_ref());
     query.push(" LIMIT ").push_bind(MAP_POINTS + 1);
     query.build_query_as().fetch_all(db).await
 }
@@ -881,21 +960,20 @@ pub async fn map_points(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec
 /// first, the cheapest of all being neither cars nor flats. The newest first come from one scan,
 /// as ever: every category's newest are in one index (idx_listings_active_sort), the categories
 /// are big enough for it, and filtered, the one scan can share its work among Postgres's workers.
-/// The best match first ranks the newest RANK_WINDOW matches (push_ranked).
+/// The order is `sort`, the filter's or, for the best match first's pages, the newest first
+/// (relevance_page, whose window push_ranked reads).
 fn push_ordered(
     query: &mut QueryBuilder<'_, Postgres>,
     filter: &ListingFilter,
+    sort: Sort,
     after: Option<Cursor>,
     located: bool,
     limit: i64,
 ) {
-    if filter.sort == Sort::Relevance {
-        push_ranked(query, filter, after, located, limit);
-        return;
-    }
-    let by_category = filter.category_ids.as_ref().filter(|_| {
-        matches!((filter.sort, &filter.near), (Sort::PriceLow | Sort::PriceHigh, _) | (Sort::Nearest, Some(_)))
-    });
+    let by_category = filter
+        .category_ids
+        .as_ref()
+        .filter(|_| matches!((sort, &filter.near), (Sort::PriceLow | Sort::PriceHigh, _) | (Sort::Nearest, Some(_))));
     if let Some(ids) = by_category {
         query.push("unnest(").push_bind(ids.clone()).push("::uuid[]) AS category(id) CROSS JOIN LATERAL ");
     }
@@ -905,9 +983,9 @@ fn push_ordered(
         query.push(" AND l.latitude IS NOT NULL");
     }
     if let Some(after) = after {
-        push_after(query, filter.sort, filter.near.as_ref(), after);
+        push_after(query, sort, filter.near.as_ref(), after);
     }
-    match (filter.sort, filter.near.as_ref()) {
+    match (sort, filter.near.as_ref()) {
         // By the distance alone, which a location index gives nearest first (KNN) only when it
         // is the whole order: every listing as far as the last one comes too, and the id orders
         // those outside (push_order), many sharing their town's point.
@@ -917,24 +995,26 @@ fn push_ordered(
             query.push(" FETCH FIRST (").push_bind(limit).push(") ROWS WITH TIES) l");
         }
         _ => {
-            push_order(query, filter.sort, filter.near.as_ref());
+            push_order(query, sort, filter.near.as_ref());
             query.push(" LIMIT ").push_bind(limit).push(") l");
         }
     }
 }
 
-/// How many of a search's matches, the newest, the best match first ranks. Ranking costs a few
-/// microseconds a listing, and a word can be in a quarter of a million of them: ranked all, a
-/// page of "makina" took 210 ms where newest first took 5 (a million listings); ranked among
-/// the newest thousand, 9. A search that finds fewer has them all ranked. Past them the list
-/// ends, where the count stops counting too (COUNT_LIMIT).
-pub const RANK_WINDOW: i64 = COUNT_LIMIT;
+/// How many of a search's matches, the newest, the best match first ranks; the rest follow them
+/// newest first. Ranking every match costs as many heap reads as there are matches: against a
+/// million listings a page of "makina" (252 000 matches) took 210 ms where newest first took
+/// 5. The window is read as newest first reads its page, off idx_listings_active_sort, for as
+/// long as the planner thinks walking it cheaper than reading every match: at 1 000 it judged
+/// otherwise for "gjendje të mirë" (70 634 matches, 14 126 expected) and took 134 ms, at 240
+/// it walks, 3 ms. Ten pages ranked; a search that finds fewer has them all ranked.
+pub const RANK_WINDOW: i64 = 10 * PAGE_SIZE;
 
-/// push_ordered for the best match first: the newest RANK_WINDOW matches, each with its rank
+/// The best match first's window, as `l`: the newest RANK_WINDOW matches, each with its rank
 /// (`rank`, ts_rank against the words; 0 for all where the words left nothing to search), the
 /// first `limit` of them after the cursor by the rank, then the newest. The window's own LIMIT
 /// keeps the ranking above it, to its rows alone.
-fn push_ranked(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilter, after: Option<Cursor>, located: bool, limit: i64) {
+fn push_ranked(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilter, after: Option<Cursor>, limit: i64) {
     query.push("(SELECT w.* FROM (SELECT l.*, ");
     match filter.search.as_ref().and_then(|search| search.query.as_ref()) {
         Some(words) => {
@@ -946,9 +1026,6 @@ fn push_ranked(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilter, a
     }
     query.push(" AS rank FROM (SELECT l.* FROM listings l");
     push_conditions(query, filter, false);
-    if located {
-        query.push(" AND l.latitude IS NOT NULL");
-    }
     query.push(" ORDER BY l.sort_at DESC, l.id DESC LIMIT ").push_bind(RANK_WINDOW).push(") l) w");
     if let Some(Cursor::Relevance { rank, sort_at, id }) = after {
         query.push(" WHERE (w.rank, w.sort_at, w.id) < (").push_bind(rank).push("::real, ");
@@ -975,8 +1052,8 @@ fn push_after(query: &mut QueryBuilder<'_, Postgres>, sort: Sort, near: Option<&
         Cursor::Distance { meters, id } => {
             query.push_bind(meters).push(", ").push_bind(id);
         }
-        // push_ranked compares it, past the window.
-        Cursor::Relevance { .. } => {
+        // The best match first's pages compare their own (relevance_page).
+        Cursor::Relevance { .. } | Cursor::RelevanceRest { .. } => {
             query.push("NULL, NULL");
         }
     }
