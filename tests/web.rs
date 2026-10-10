@@ -4379,6 +4379,27 @@ async fn post_listing(pool: &PgPool, seller: &str) -> String {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_listing_just_posted_says_so_once_with_ways_to_share_it(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let started = started();
+    let posted = post_form(pool.clone(), "/shto", &listing_fields(("", ""), &started), Some(&ana)).await;
+    let url = posted.location.clone().expect("posted");
+    let number = posted.cookie("posted").expect("the cookie that says it was just posted").to_string();
+    assert!(url.starts_with(&format!("/listing/{number}-")));
+
+    // Its page says it is up, with the share sheet's button and a WhatsApp message with its title
+    // and address, and leads to the seller's own listings.
+    let page = get_with_cookie(pool.clone(), &url, &format!("{ana}; posted={number}")).await;
+    assert!(page.body.contains("<p><strong>Njoftimi yt u publikua.</strong> Ndaje, që ta shohin më shumë njerëz.</p>"), "{}", page.body);
+    assert!(page.body.contains(r#"<button type="button" class="button small" data-share-target="button" data-action="share#share" title="Ndaje">"#));
+    assert!(page.body.contains(r#"href="https://wa.me/?text=Samsung%20Galaxy%20S21%2C%20128%20GB%20http"#), "{}", page.body);
+    assert!(page.body.contains(r#"<a href="/njoftimet-e-mia">Njoftimet e mia</a>"#));
+    // Once: the cookie goes with the answer, and the page says nothing of it after.
+    assert_eq!(page.cookie("posted"), Some(""));
+    assert!(!get_with_cookie(pool.clone(), &url, &ana).await.body.contains("Njoftimi yt u publikua"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn sellers_edit_their_own_listings(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let no = post_listing(&pool, &ana).await;

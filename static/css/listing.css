@@ -645,6 +645,12 @@
    report.html), with where to let them be again. Reporting is a button among the others. */
 .blocked-note,
 .promotion-note { margin: 1rem 0 0; color: var(--muted); font-size: var(--text-sm); }
+/* Just posted: it is up, and under that the ways to share it, a button each and "Njoftimet e
+   mia" after them (share_note.html). */
+.posted-note p { margin: 0; }
+.posted-share { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-top: .65rem; }
+.posted-share .button { gap: .35rem; }
+.posted-share .button.is-copied { border-color: var(--accent); color: var(--accent); }
 /* A price that dropped lately (price_drop.html): what it was, struck through, quietly, and by how
    much in a green pill, as the zone's bubble says a square metre is cheap for it. */
 .price-was {

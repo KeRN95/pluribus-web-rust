@@ -1,0 +1,15 @@
+{#- The ways to share a listing just posted, under the note that it is up (listing.html): the
+    phone's share sheet, or the link copied where there is none (share_controller.js, "Linku u
+    kopjua" for a moment); a WhatsApp message with its title and address, to send anyone; and its
+    seller's own listings. -#}
+<div class="posted-share" data-controller="share" data-share-url-value="{{ listing.url() }}" data-share-title-value="{{ listing.title }}">
+  <button type="button" class="button small" data-share-target="button" data-action="share#share" title="Ndaje">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="rotate(-45 12 12)"><rect x="2.5" y="8.5" width="11" height="7" rx="3.5"/><rect x="10.5" y="8.5" width="11" height="7" rx="3.5"/></g></svg>
+    Ndaje
+  </button>
+  <a class="button secondary small" href="{{ whatsapp_share }}" target="_blank" rel="noopener">
+    <svg data-icon="whatsapp" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::WHATSAPP|safe }}</svg>
+    WhatsApp
+  </a>
+  <a href="/njoftimet-e-mia">Njoftimet e mia</a>
+</div>

@@ -27,9 +27,17 @@
       its middle and the path, its buttons and the photo at the same height on every listing as
       one steps through them. None on a car's page or a property's, which start at the top. -#}
   <div class="listing-banner" aria-hidden="true"></div>
-  {%- if posted %}
-  {#- Posted just now without signing in (post.rs): changing it later takes signing in. -#}
-  <p class="notice" role="status">Njoftimi yt u publikua. Për ta ndryshuar ose fshirë më vonë, <a href="/njoftimet-e-mia">hyr</a> me numrin ose email-in që shkruajte.</p>
+  {%- if posted || just_published %}
+  {#- Posted just now (post.rs), said once: it is up; without signing in, changing it later takes
+      signing in; and the ways to share it (share_note.html). -#}
+  <div class="notice posted-note" role="status">
+    {%- if just_published %}
+    <p><strong>Njoftimi yt u publikua.</strong> Ndaje, që ta shohin më shumë njerëz.</p>
+    {%- else %}
+    <p>Njoftimi yt u publikua. Për ta ndryshuar ose fshirë më vonë, <a href="/njoftimet-e-mia">hyr</a> me numrin ose email-in që shkruajte.</p>
+    {%- endif %}
+    {%- if listing.status == "ACTIVE" %}{% include "share_note.html" %}{% endif %}
+  </div>
   {%- endif %}
   {%- if let Some(note) = hidden_note %}
   {#- Taken off the site by its reports or the moderators: what its seller and the moderators, who

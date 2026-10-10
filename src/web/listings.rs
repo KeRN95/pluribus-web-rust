@@ -490,6 +490,11 @@ struct ListingShow {
     views: Option<String>,
     /// Posted just now without signing in: the page says it is up, and how to change it later.
     posted: bool,
+    /// Posted just now by its seller, signed in, and up: the page says so.
+    just_published: bool,
+    /// For a listing just posted and up, a WhatsApp message to send anyone, with its title and
+    /// address (share_note.html).
+    whatsapp_share: String,
     /// For a property or a car, where it is, on a map under the seller.
     map: Option<ListingMap>,
     /// A property's or a car's page (MAPPED) has its photos across the page from 960 px up; every
@@ -768,6 +773,8 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     };
     // Said once: the cookie that says so (post.rs) goes with this answer.
     let posted = !own && just_posted && !waiting;
+    let just_published = own && just_posted && listing.status == "ACTIVE";
+    let whatsapp_share = format!("https://wa.me/?text={}", percent_encoded(&format!("{} {}{}", listing.title, seo::origin(&headers), listing.url())));
     let page = ListingPage::related(related, related_next);
     let meta = listing_meta(&seo::origin(&headers), &listing, &photos);
     let mut response =
@@ -786,6 +793,8 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             promotions,
             moderator,
             posted,
+            just_published,
+            whatsapp_share,
             map,
             wide_photos,
             car_page,
@@ -801,7 +810,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             hidden_note,
             section,
         })?;
-    if posted {
+    if posted || just_published {
         response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));
     }
     Ok(response)

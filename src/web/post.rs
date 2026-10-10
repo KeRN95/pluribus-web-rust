@@ -849,7 +849,9 @@ pub async fn create_listing(
     db::add_listing_photos(&state.db, listing_id, &stored).await?;
     let to = format!("/listing/{public_no}-{slug}");
     if user.is_some() {
-        return Ok(Redirect::to(&to).into_response());
+        // Its page says it is up, once, with ways to share it (listings.rs, just_published).
+        let posted = cookie_header(&headers, POSTED_COOKIE, &public_no.to_string(), 600);
+        return Ok(redirect_with_cookies(&to, vec![posted]));
     }
     record_unsigned_post(ip.as_deref());
     if let Some(contact) = &contact
