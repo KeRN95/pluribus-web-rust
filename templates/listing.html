@@ -153,7 +153,7 @@
   {%- let published = listing.published_display() %}
   {%- if listing.location_name.is_some() || published.is_some() %}
   <p class="listing-meta">
-    {%- if let Some(location) = listing.location_name %}{{ location }}{% endif %}
+    {%- if let Some(location) = listing.location_name %}<span translate="no">{{ location }}</span>{% endif %}
     {%- if let Some((prefix, date)) = published %}{% if listing.location_name.is_some() %} · {% endif %}<span class="visually-hidden">{{ prefix }}</span><strong>{{ date }}</strong>{% endif -%}
   </p>
   {%- endif %}
@@ -325,7 +325,7 @@
        data-listing-map-latitude-value="{{ map.latitude }}" data-listing-map-longitude-value="{{ map.longitude }}">
     <div class="map-canvas listing-map-canvas" data-listing-map-target="canvas"></div>
     {%- if !map.place.is_empty() %}
-    <p class="listing-map-place">{% include "pin.svg" %}{{ map.place }}</p>
+    <p class="listing-map-place" translate="no">{% include "pin.svg" %}{{ map.place }}</p>
     {%- endif %}
   </div>
 </section>

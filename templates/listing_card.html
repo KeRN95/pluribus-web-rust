@@ -51,7 +51,7 @@
     {#- Over a big card's photo, at its top left as the price is at its bottom: who sells it, their
         initial in a circle as on the listing page, and since when they are a user. A small card
         leaves it out (page.css). -#}
-    <p class="card-seller"><span class="avatar" aria-hidden="true">{{ card.seller_initial() }}</span><span class="card-seller-text"><span class="card-seller-name">{{ card.seller_name }}</span><span>{{ card.seller_since_text() }}</span></span></p>
+    <p class="card-seller"><span class="avatar" aria-hidden="true">{{ card.seller_initial() }}</span><span class="card-seller-text"><span class="card-seller-name" translate="no">{{ card.seller_name }}</span><span>{{ card.seller_since_text() }}</span></span></p>
     {%- endif %}
     <div class="card-head">
       <h2 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h2>
@@ -71,7 +71,7 @@
     {#- In the list, under the price, where it is: the pin and the zone and town ("Blloku, Tiranë"),
         or the town, whatever the search is in, small and muted; there the details line leaves the
         town out. The cards leave this out (page.css). -#}
-    <p class="card-place">{% include "pin.svg" %}{{ place }}</p>
+    <p class="card-place" translate="no">{% include "pin.svg" %}{{ place }}</p>
     {%- endif %}
     {%- let heart_number = card.public_no %}
     {% include "heart.html" %}
@@ -95,7 +95,7 @@
     <p class="card-summary">
       {%- let rest = card.details_line() -%}
       {%- if let Some(city) = card.place_label() -%}
-      <span class="card-town">{{ city }}{% if !rest.is_empty() %} · {% endif %}</span>
+      <span class="card-town" translate="no">{{ city }}{% if !rest.is_empty() %} · {% endif %}</span>
       {%- endif -%}
       {{- rest -}}
     </p>

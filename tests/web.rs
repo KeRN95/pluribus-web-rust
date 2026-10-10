@@ -217,7 +217,7 @@ async fn a_store_has_its_page_and_its_people_post_as_it(pool: PgPool) {
     let logo_key = logo_key.expect("a logo");
     assert!(media().get(&logo_key).await.unwrap().is_some());
     let page = get_with_cookie(pool.clone(), "/biznes/auto-elbasani", &ana).await.body;
-    assert!(page.contains("<h1>Auto Elbasani</h1>") && page.contains(r#"<img class="store-cover" src="/media/stores/"#), "{page}");
+    assert!(page.contains(r#"<h1 translate="no">Auto Elbasani</h1>"#) && page.contains(r#"<img class="store-cover" src="/media/stores/"#), "{page}");
     assert!(page.contains(&format!(r#"<img class="avatar large avatar-logo" src="{}""#, logo_url.unwrap())));
     assert!(page.contains(r#"<p class="store-about">Makina të përdorura nga Gjermania.</p>"#) && page.contains(r#"<p class="store-about">Shërbim pas shitjes.</p>"#));
     assert!(page.contains("<dd>Rruga e Durrësit 10, Elbasan</dd>") && page.contains("<dd>E hënë – e shtunë, 9:00 – 19:00</dd>"));
@@ -532,7 +532,7 @@ async fn a_stores_people_share_its_conversations(pool: PgPool) {
     for cookie in [&ana, &besa, &carla] {
         assert_eq!(unread(&pool, cookie).await, r#"{"unread":1}"#);
         let inbox = get_with_cookie(pool.clone(), "/mesazhet", cookie).await.body;
-        assert!(inbox.contains(r#"<span class="inbox-name">Dan <span class="inbox-store">Auto Elbasani</span></span>"#), "{inbox}");
+        assert!(inbox.contains(r#"<span class="inbox-name" translate="no">Dan <span class="inbox-store">Auto Elbasani</span></span>"#), "{inbox}");
     }
     assert!(!get_with_cookie(pool.clone(), "/mesazhet", &erion).await.body.contains(&thread));
     assert_eq!(get_with_cookie(pool.clone(), &thread, &erion).await.status, StatusCode::NOT_FOUND);
@@ -1098,20 +1098,20 @@ async fn card_details_start_with_the_city(pool: PgPool) {
     // category's card properties.
     let cars = get(pool.clone(), "/c/automjete").await.body;
     assert!(!cars.contains(r#"<p class="card-summary"><svg"#));
-    assert!(cars.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
+    assert!(cars.contains("<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Tiranë · </span>2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
     let property = get(pool.clone(), "/c/prona").await.body;
-    assert!(property.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>2+1 · 85\u{a0}m²</p>"));
+    assert!(property.contains("<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Tiranë · </span>2+1 · 85\u{a0}m²</p>"));
     // Rents are per month.
     assert!(property.contains("450\u{a0}€/muaj"));
     // Without properties, the line is just the city.
     let other = get(pool.clone(), "/c/te-tjera").await.body;
-    assert!(other.contains("<p class=\"card-summary\"><span class=\"card-town\">Berat</span></p>"));
+    assert!(other.contains("<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Berat</span></p>"));
     // A phone shows its storage on the card; its brand only on its page.
     let phones = get(pool.clone(), "/c/elektronike").await.body;
-    assert!(phones.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>128 GB</p>"));
+    assert!(phones.contains("<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Tiranë · </span>128 GB</p>"));
     // Under the price, for the list, where it is: the pin and the town, in every card, in a
     // search in that town too.
-    assert!(phones.contains(r#"<p class="card-place"><svg class="pin-icon" width="14" height="14""#));
+    assert!(phones.contains(r#"<p class="card-place" translate="no"><svg class="pin-icon" width="14" height="14""#));
     assert!(phones.contains(r#"aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>Tiranë</p>"#));
     // Searching in Tirana, the Tirana cards leave the city out and show the brand instead...
     let in_tirana = get(pool.clone(), "/c/elektronike?city=tirane").await.body;
@@ -1139,7 +1139,7 @@ async fn a_map_pin_finds_the_listings_within_its_radius_nearest_first(pool: PgPo
     let body = html(pool.clone(), "/search?lat=41.32833&lng=19.81806&radius=10").await;
     assert!(body.contains("Volkswagen Golf 7, 2016, naftë"));
     assert!(!body.contains("Mercedes-Benz C 220, 2018, automatike"));
-    assert!(body.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>0\u{a0}m · 2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
+    assert!(body.contains("<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Tiranë · </span>0\u{a0}m · 2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
     assert!(body.contains(r#"<a class="filter-chip" href="/search" aria-label="Hiq filtrin Brenda 10 km nga pika">"#));
     assert!(body.contains(r#"<input class="visually-hidden" type="radio" name="sort" value="" form="filter-form" data-action="filters#submit" checked>Më afër</label>"#));
 
@@ -1150,7 +1150,7 @@ async fn a_map_pin_finds_the_listings_within_its_radius_nearest_first(pool: PgPo
         "Volkswagen Golf 7, 2016, naftë",
     ]);
     assert!(order.is_sorted(), "{order:?}");
-    assert!(body.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>31\u{a0}km · 2016"));
+    assert!(body.contains("<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Tiranë · </span>31\u{a0}km · 2016"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -1398,7 +1398,7 @@ async fn big_cards_slide_through_every_photo(pool: PgPool) {
     assert_eq!(golf.matches(r#"<span class="is-current"></span><span></span><span></span>"#).count(), 1, "a dot for each photo");
     // Over the photo's top left, who sells it, their initial in a circle, and since when they are
     // a user.
-    assert!(golf.contains(r#"<p class="card-seller"><span class="avatar" aria-hidden="true">A</span><span class="card-seller-text"><span class="card-seller-name">Ana</span><span>Përdorues që nga "#));
+    assert!(golf.contains(r#"<p class="card-seller"><span class="avatar" aria-hidden="true">A</span><span class="card-seller-text"><span class="card-seller-name" translate="no">Ana</span><span>Përdorues që nga "#));
     assert!(golf.contains(r#"aria-label="Fotoja tjetër" hidden>"#));
 
     // The next pages come the same way, and the map page's list stays small.
@@ -2514,7 +2514,7 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     // the line under the title.
     let now = time::OffsetDateTime::now_utc();
     let when = marketplace::format::when(now - time::Duration::hours(2), now);
-    assert!(response.body.contains(&format!(r#"<p class="listing-meta">Tiranë · <span class="visually-hidden">Publikuar </span><strong>{when}</strong>"#)));
+    assert!(response.body.contains(&format!(r#"<p class="listing-meta"><span translate="no">Tiranë</span> · <span class="visually-hidden">Publikuar </span><strong>{when}</strong>"#)));
     assert!(response.body.contains(r#"<span class="listing-number">Numri i njoftimit: 1001</span></p>"#));
     assert!(!response.body.contains("Nr. 1001"));
     // What kind of listing it is, and its condition, over the price, not among the details.
@@ -3403,7 +3403,7 @@ async fn the_site_is_called_pluribus(pool: PgPool) {
     // comes with the page, the only font that does: the headings' Inter and the logo's Playfair
     // Display went with their files. The pages' titles and the footer say the name.
     let home = html(pool.clone(), "/").await;
-    assert!(home.contains(r#"<a class="logo" id="logo" href="/" data-turbo-permanent><span class="logo-word">pluribus</span></a>"#));
+    assert!(home.contains(r#"<a class="logo" id="logo" href="/" data-turbo-permanent translate="no"><span class="logo-word">pluribus</span></a>"#));
     assert!(!home.contains("thinking"));
     assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
     assert!(home.contains(
@@ -3783,7 +3783,7 @@ async fn revealing_a_phone_returns_a_turbo_stream_and_counts_it(pool: PgPool) {
         Some("text/vnd.turbo-stream.html; charset=utf-8")
     );
     assert!(response.body.contains(r#"<turbo-stream action="replace" target="phone-reveal">"#));
-    assert!(response.body.contains(r#"href="tel:+355690000001"><svg class="contact-icon""#));
+    assert!(response.body.contains(r#"href="tel:+355690000001" translate="no"><svg class="contact-icon""#));
     assert!(response.body.contains("</svg>+355 69 000 0001</a>"));
     // Under the price alone: the seller's card at the foot has no buttons of its own.
     assert_eq!(response.body.matches("<turbo-stream ").count(), 1);
@@ -4100,7 +4100,7 @@ async fn sellers_who_sign_in_by_email_get_an_email_button(pool: PgPool) {
     assert!(get(pool.clone(), &url).await.body.contains(r#"</svg><span class="button-label">Shfaq email-in</span></button>"#));
     let public_no = url.trim_start_matches("/listing/").split('-').next().unwrap();
     let reveal = post_form(pool, &format!("/listing/{public_no}/phone"), &[], None).await;
-    assert!(reveal.body.contains(r#"href="mailto:besa@example.com"><svg class="contact-icon""#));
+    assert!(reveal.body.contains(r#"href="mailto:besa@example.com" translate="no"><svg class="contact-icon""#));
     assert!(reveal.body.contains("</svg>besa@example.com</a>"));
 }
 
@@ -4446,7 +4446,7 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
     let path = url.trim_start_matches("http://localhost");
     let parts = get(pool.clone(), "/c/pjese-dhe-aksesore").await.body;
     assert!(parts.contains(&format!(r#"href="{path}">Navigator origjinal për Golf</a>"#)));
-    assert!(parts.contains("<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>Volkswagen · Golf</p>"));
+    assert!(parts.contains("<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Tiranë · </span>Volkswagen · Golf</p>"));
     assert!(get(pool.clone(), "/search?q=volkswagen+navigator").await.body.contains(path));
 
     // Only the make, or nothing at all: both fine.
@@ -5268,7 +5268,7 @@ async fn a_car_is_posted_with_its_make_model_and_year(pool: PgPool) {
         assert!(page.contains(detail), "{detail}");
     }
     // On its card, in the filters and in search, like the listings already there.
-    let card = "<p class=\"card-summary\"><span class=\"card-town\">Tiranë · </span>2017 · 120\u{a0}000\u{a0}km · Naftë</p>";
+    let card = "<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Tiranë · </span>2017 · 120\u{a0}000\u{a0}km · Naftë</p>";
     assert!(get(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&vehicle_year_min=2017").await.body.contains(card));
     assert!(get(pool.clone(), "/c/makina?vehicle_features=NAVIGATION").await.body.contains(&url));
     assert!(!get(pool.clone(), "/c/makina?vehicle_fuel=PETROL").await.body.contains(&url));
@@ -5673,7 +5673,7 @@ async fn a_listing_posted_without_signing_in_goes_up_by_its_code_or_a_moderator(
     assert!(posted.cookie("session").is_none());
     assert!(get(pool.clone(), "/search?q=galaxy").await.body.contains("Samsung Galaxy S21"));
     let page = get(pool.clone(), &url).await.body;
-    assert!(page.contains(r#"<span class="seller-name">Dorina</span>"#));
+    assert!(page.contains(r#"<span class="seller-name"><span translate="no">Dorina</span></span>"#));
     let (name, status): (String, String) =
         sqlx::query_as("SELECT display_name, status FROM users WHERE phone_e164 = '+355697778899'")
             .fetch_one(&pool)
@@ -5950,7 +5950,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         r#"<div class="seller-card">"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="avatar large" aria-hidden="true">A</span>"#,
-        r#"<span class="seller-name">Ana</span>"#,
+        r#"<span class="seller-name"><span translate="no">Ana</span></span>"#,
         r#"<span class="seller-summary"><span class="seller-since">Që nga "#,
         r#"</span> <span class="seller-count">· 5 njoftime</span></span>"#,
         r#"<aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">"#,
@@ -5982,7 +5982,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
 
     // Her profile says so too.
     let profile = get(pool.clone(), ana).await.body;
-    assert!(profile.contains("<h1>Ana</h1>"));
+    assert!(profile.contains(r#"<h1 translate="no">Ana</h1>"#));
     assert!(profile.contains("Në Pluribus që nga ") && profile.contains(" · 5 njoftime</p>"));
     assert_eq!(card_numbers(&profile).len(), 5);
     assert!(profile.contains("Volkswagen Golf 7, 2016, naftë"));
@@ -5994,7 +5994,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // A business says so on the since line of a car's card.
     assert!(page.contains(r#"<span class="seller-summary"><span class="seller-since">Biznes · që nga "#) && page.contains(r#"</span> <span class="seller-count">· 1 njoftim</span></span>"#), "{page}");
     let business = get(pool.clone(), "/biznes/auto-durresi").await.body;
-    assert!(business.contains("<h1>Auto Durrësi</h1>") && business.contains("Biznes · "));
+    assert!(business.contains(r#"<h1 translate="no">Auto Durrësi</h1>"#) && business.contains("Biznes · "));
     assert_eq!(card_numbers(&business), vec![1002]);
 
     // No such seller, or one not yet confirmed.
@@ -6724,7 +6724,7 @@ async fn a_buyer_writes_to_a_seller_who_answers(pool: PgPool) {
     assert_eq!(page.status, StatusCode::OK);
     assert!(page.body.contains(r#"<turbo-frame id="conversation" data-turbo-action="advance">"#));
     // Who with first, on a line of their own; then the listing, its title the heading.
-    let head = positions(&page.body, &[r#"<header class="conversation-head">"#, r#"<p class="conversation-with"><span class="avatar" aria-hidden="true">A</span>Ana</p>"#, r#"<h1 class="conversation-title">"#, r#"<span class="conversation-price">"#]);
+    let head = positions(&page.body, &[r#"<header class="conversation-head">"#, r#"<p class="conversation-with"><span class="avatar" aria-hidden="true">A</span><span translate="no">Ana</span></p>"#, r#"<h1 class="conversation-title">"#, r#"<span class="conversation-price">"#]);
     assert!(head.is_sorted(), "{head:?}");
     assert!(page.body.contains("Ana") && page.body.contains("Volkswagen Golf") && page.body.contains("Cili është çmimi i fundit?"));
     assert_eq!(get_with_cookie(pool.clone(), "/listing/1001/mesazh", &ana).await.location.as_deref(), Some(listing));
@@ -7551,10 +7551,10 @@ async fn the_number_a_seller_signed_in_with_shows_as_verified(pool: PgPool) {
     // On every listing, a car's too, a check beside her name, which says what it means as a
     // tooltip and to screen readers; on her profile, the words under her name.
     let page = html(pool.clone(), golf).await;
-    assert!(page.contains(r#"<span class="seller-name">Ana<span class="verified" title="Numër i verifikuar">"#), "{page}");
+    assert!(page.contains(r#"<span class="seller-name"><span translate="no">Ana</span><span class="verified" title="Numër i verifikuar">"#), "{page}");
     assert!(!page.contains("</svg>Numër i verifikuar</span>"));
     let iphone = html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await;
-    assert!(iphone.contains(r#"<span class="seller-name">Ana<span class="verified" title="Numër i verifikuar">"#), "{iphone}");
+    assert!(iphone.contains(r#"<span class="seller-name"><span translate="no">Ana</span><span class="verified" title="Numër i verifikuar">"#), "{iphone}");
     assert!(iphone.contains(r#"<span class="visually-hidden">Numër i verifikuar</span></span></span>"#));
     assert!(html(pool.clone(), "/perdorues/11111111-1111-4111-8111-111111111111").await.contains("Numër i verifikuar</p>"));
     let (kind, value): (String, String) =

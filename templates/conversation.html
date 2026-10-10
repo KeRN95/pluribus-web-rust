@@ -19,7 +19,7 @@
     {#- Who with first, on a line of their own (in the sheet, with "Mbyll" at its end), a hairline
         under it; then the listing, its title the heading, beside its photo and over its price,
         leading to it. -#}
-    <p class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span>{{ other_name }}
+    <p class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span><span translate="no">{{ other_name }}</span>
       {%- if let Some(store) = store %}<span class="conversation-store">Për {{ store }}</span>{% endif %}</p>
     <a class="conversation-listing" href="{{ listing.url }}" data-turbo-frame="_top">
       {%- if let Some(photo) = listing.photo %}
@@ -34,7 +34,7 @@
       </div>
     </a>
     {%- else %}
-    <h1 class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span>{{ other_name }}</h1>
+    <h1 class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span><span translate="no">{{ other_name }}</span></h1>
     {%- endif %}
   </header>
 

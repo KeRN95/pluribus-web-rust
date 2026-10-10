@@ -26,7 +26,7 @@
         {%- endif %}
         <span class="inbox-text">
           <span class="inbox-line">
-            <span class="inbox-name">{{ entry.other_name }}{% if let Some(store) = entry.store %} <span class="inbox-store">{{ store }}</span>{% endif %}</span>
+            <span class="inbox-name" translate="no">{{ entry.other_name }}{% if let Some(store) = entry.store %} <span class="inbox-store">{{ store }}</span>{% endif %}</span>
             <span class="inbox-when">{{ entry.when() }}</span>
           </span>
           {%- if let Some(title) = entry.listing_title %}

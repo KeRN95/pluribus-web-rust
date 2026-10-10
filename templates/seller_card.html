@@ -25,7 +25,7 @@
       <span class="avatar{% if car_page %} large{% endif %}" aria-hidden="true">{{ listing.seller_initial() }}</span>
       {%- endif %}
       <span class="seller-text">
-        <span class="seller-name">{{ listing.seller_name }}
+        <span class="seller-name"><span translate="no">{{ listing.seller_name }}</span>
           {%- if let Some(verified) = verified %}
           {#- A check beside the name: the number (or address) it shows is one they signed in with
               (safety.rs); what it means, as a tooltip and to screen readers. -#}
