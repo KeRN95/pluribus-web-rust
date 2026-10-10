@@ -169,17 +169,13 @@
       split page in the column at its right (listing.css, .listing-side). -#}
   <div class="listing-side">
   <header class="listing-header">
-    {%- if car_page && listing.heading.is_some() %}
-    {#- A car's title as its seller wrote it, and under it, quieter, the one made from what the car
-        is (generated_title: the make, the model, the engine, the year). -#}
-    <h1>{% if let Some(own) = listing.heading %}{{ own }}{% endif %}</h1>
-    <p class="listing-variant">{{ listing.title }}</p>
-    {%- else %}
-    <h1>{{ listing.title }}</h1>
-    {%- endif %}
+    {%- let made = car_page && listing.heading.is_some() %}
+    {#- A car's title as its seller wrote it; the one made from what the car is (generated_title:
+        the make, the model, the engine, the year) heads the line under it. -#}
+    <h1>{% if made %}{% if let Some(own) = listing.heading %}{{ own }}{% endif %}{% else %}{{ listing.title }}{% endif %}</h1>
     {#- What it is and in what state ("Në shitje · E përdorur"), and at the end of the line its
         number, to name it on the phone. -#}
-    <p class="card-meta listing-kind">{{ listing.kind_line() }} · <span class="listing-number">Numri i njoftimit: {{ listing.public_no }}</span></p>
+    <p class="card-meta listing-kind">{% if made %}<span class="listing-variant">{{ listing.title }}</span> · {% endif %}{{ listing.kind_line() }} · <span class="listing-number">Numri i njoftimit: {{ listing.public_no }}</span></p>
   </header>
   {%- if !facts.is_empty() %}
   {#- A car's key facts in a row under the title's hairline, as FINN has them (listings.rs,
