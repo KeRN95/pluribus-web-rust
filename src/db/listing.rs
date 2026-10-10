@@ -274,6 +274,36 @@ pub async fn add_listing_photos(db: &PgPool, listing_id: Uuid, photos: &[NewPhot
     tx.commit().await
 }
 
+/// Puts the listing's photos in the order its edit form sent: each by its id, or a photo just
+/// added by its key in the store (it has no id the form knew); the first is the cover. Photos
+/// the order leaves out follow, as they were. The cover changes in two steps, the old one let go
+/// first, as only one may be (ux_listing_media_one_cover).
+pub async fn order_listing_photos(db: &PgPool, listing_id: Uuid, order: &[String]) -> sqlx::Result<()> {
+    let mut tx = db.begin().await?;
+    sqlx::query(
+        "WITH wanted AS (SELECT token, place FROM unnest($2::text[]) WITH ORDINALITY AS o(token, place)),
+              ranked AS (
+                  SELECT m.id, row_number() OVER (ORDER BY coalesce(w.place, 1000000), m.is_cover DESC, m.sort_order, m.id) - 1 AS place
+                  FROM listing_media m LEFT JOIN wanted w ON w.token = m.id::text OR w.token = m.storage_key
+                  WHERE m.listing_id = $1
+              )
+         UPDATE listing_media m SET sort_order = r.place FROM ranked r WHERE m.id = r.id",
+    )
+    .bind(listing_id)
+    .bind(order)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("UPDATE listing_media SET is_cover = false WHERE listing_id = $1 AND is_cover AND sort_order <> 0")
+        .bind(listing_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("UPDATE listing_media SET is_cover = true WHERE listing_id = $1 AND sort_order = 0 AND NOT is_cover")
+        .bind(listing_id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await
+}
+
 /// A photo on the edit form, which its seller can remove.
 pub struct OwnPhoto {
     pub id: Uuid,

@@ -70,15 +70,18 @@
       </div>
 
       {#- Photos: the ones the listing has (when editing), each with "Hiq", then a zone that takes
-          more, picked or dropped onto it. photos_controller.js shows what was picked and makes big
-          phone photos smaller first. -#}
-      <div class="field" id="listing-photos" data-controller="photos" data-photos-max-value="{{ self.photos_left() }}"
+          more, picked or dropped onto it. photos_controller.js makes them one list, the first the
+          cover, each moved by its arrows or dragged, and makes big phone photos smaller first; it
+          sends their order (photo_order) and those taken out, and puts them back on a form sent
+          back with an error (photos_again). Without it, the input and the "Hiq" boxes. -#}
+      <div class="field" id="listing-photos" data-controller="photos" data-photos-max-value="{{ crate::media::MAX_PHOTOS }}"
+           data-photos-again-value="{{ photos_again }}" data-photos-left="{{ self.photos_left() }}"
            data-action="dragover->photos#over dragleave->photos#leave drop->photos#dropped">
         <span class="field-label" id="photos-label">Fotot</span>
         {%- if !photos.is_empty() %}
-        <ul class="photo-list">
+        <ul class="photo-list" data-photos-target="saved">
           {%- for photo in photos %}
-          <li class="photo-item">
+          <li class="photo-item" data-photo-id="{{ photo.id }}">
             <img src="{{ photo.card_url }}" alt="" loading="lazy">
             <label class="photo-remove"><input type="checkbox" name="remove_photo" value="{{ photo.id }}"> Hiq</label>
           </li>
@@ -86,12 +89,15 @@
         </ul>
         {%- endif %}
         <ul class="photo-list" data-photos-target="previews" hidden></ul>
+        <input type="hidden" name="photo_order" data-photos-target="order">
+        <input type="hidden" name="photos_kept" data-photos-target="kept">
+        <div data-photos-target="removed" hidden></div>
         <label class="photo-drop" data-photos-target="zone">
           <input type="file" name="photos" accept="image/*" multiple aria-labelledby="photos-label" data-photos-target="input" data-action="change->photos#chosen">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2.5"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8.5 5l1.5-2h4l1.5 2"/></svg>
           <span><strong>Shto foto</strong> ose tërhiqi këtu</span>
         </label>
-        <p class="field-hint">Deri në {{ crate::media::MAX_PHOTOS }} foto. E para del në karta dhe në krye të njoftimit.</p>
+        <p class="field-hint">Deri në {{ crate::media::MAX_PHOTOS }} foto. E para, kopertina, del në karta dhe në krye të njoftimit; i rendit me shigjetat ose duke i tërhequr.</p>
         <p class="field-hint" data-photos-target="status" role="status"></p>
         {% if let Some(error) = self.error("photos") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>

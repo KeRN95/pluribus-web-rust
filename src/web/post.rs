@@ -85,6 +85,12 @@ pub struct ListingForm {
     started: Option<i64>,
     /// The category's properties, by code ("vehicle_year"); several values for a multi-select.
     properties: HashMap<String, Vec<String>>,
+    /// The photos' order as the form arranged them (photos_controller.js): `saved:<id>` for one
+    /// the listing has, `new:<n>` for the n-th sent with it.
+    photo_order: Vec<String>,
+    /// Whether the browser holds the photos picked, and puts them back on a form sent back with
+    /// an error (photos_controller.js), which then needn't ask for them again.
+    photos_kept: bool,
 }
 
 impl ListingForm {
@@ -114,6 +120,14 @@ impl ListingForm {
                 "website" => &mut form.website,
                 "started" => {
                     form.started = value.parse().ok();
+                    continue;
+                }
+                "photo_order" => {
+                    form.photo_order = value.split(',').map(str::trim).filter(|token| !token.is_empty()).map(String::from).collect();
+                    continue;
+                }
+                "photos_kept" => {
+                    form.photos_kept = value == "1";
                     continue;
                 }
                 _ => continue,
@@ -147,6 +161,8 @@ impl ListingForm {
             website: String::new(),
             started: None,
             properties: values,
+            photo_order: Vec::new(),
+            photos_kept: false,
         }
     }
 }
@@ -206,6 +222,8 @@ struct ListingFormPage {
     started: i64,
     /// When editing, the photos the listing has; each can be removed.
     photos: Vec<OwnPhoto>,
+    /// Sent back with an error, photos the browser holds: it puts them back as they were.
+    photos_again: bool,
     /// "Plotëso pjesën tjetër me AI": on a new listing's form, when the AI is set up.
     ai_fill: bool,
     /// A new listing's form: "Zona" follows the zone its title or description names (guess_zone,
@@ -221,7 +239,7 @@ impl ListingFormPage {
         self.errors.get(field).map(String::as_str)
     }
 
-    /// How many more photos fit.
+    /// How many more photos fit, for a form without the script, whose saved photos stay.
     fn photos_left(&self) -> usize {
         MAX_PHOTOS.saturating_sub(self.photos.len())
     }
@@ -324,6 +342,7 @@ fn page(
         errors,
         started: now(),
         photos: Vec::new(),
+        photos_again: false,
         ai_fill: false,
         new_listing: matches!(purpose, Purpose::New),
         stores: Vec::new(),
@@ -391,8 +410,12 @@ fn form_again(page: ListingFormPage) -> Result<Response> {
 /// The photos sent with a form that is otherwise right, decoded and resized; None when the form
 /// goes back with errors. Browsers can't keep chosen files when it does, so the form says to pick
 /// them again.
+/// The photos sent, checked and made into their copies, when nothing else is wrong; with an
+/// error, none, and unless the browser holds them (`kept`, photos_controller.js), word to pick them
+/// again, since a form sent back can't hold files.
 async fn read_photos(
     photos: &[axum::body::Bytes],
+    kept: bool,
     errors: &mut HashMap<String, String>,
 ) -> Result<Option<Vec<crate::media::Processed>>> {
     let mut processed = Vec::new();
@@ -405,7 +428,7 @@ async fn read_photos(
     if errors.is_empty() {
         return Ok(Some(processed));
     }
-    if !photos.is_empty() {
+    if !photos.is_empty() && !kept {
         fail(errors, "photos", "Zgjidh fotot përsëri: formulari i harron kur ka një gabim.");
     }
     Ok(None)
@@ -697,11 +720,13 @@ pub async fn create_listing(
     {
         fail(&mut errors, "form", limit);
     }
-    let processed = read_photos(&photos, &mut errors).await?;
+    let kept = form.photos_kept && !photos.is_empty();
+    let processed = read_photos(&photos, form.photos_kept, &mut errors).await?;
     let (Some(checked), Some(processed)) = (checked, processed) else {
         let mut again = page(&Purpose::New, user.as_ref(), &categories, &cities, &attributes, form, errors);
         again.ai_fill = state.ai.is_some();
         again.stores = stores;
+        again.photos_again = kept;
         return form_again(again);
     };
 
@@ -865,10 +890,13 @@ pub async fn update_listing(
     let listing_photos = db::own_listing_photos(&state.db, listing.id).await?;
     let removed: Vec<uuid::Uuid> = removed.into_iter().filter(|id| listing_photos.iter().any(|photo| photo.id == *id)).collect();
     photos::check(&photos, listing_photos.len() - removed.len(), &mut errors);
-    let processed = read_photos(&photos, &mut errors).await?;
+    let kept = form.photos_kept;
+    let order = form.photo_order.clone();
+    let processed = read_photos(&photos, kept, &mut errors).await?;
     let (Some(checked), Some(processed)) = (checked, processed) else {
         let mut page = page(&purpose, Some(&user), &categories, &cities, &attributes, form, errors);
         page.photos = listing_photos;
+        page.photos_again = kept;
         return form_again(page);
     };
     let slug = format::slug(checked.title);
@@ -880,6 +908,22 @@ pub async fn update_listing(
     photos::delete(&state.media, &gone).await;
     let stored = photos::store(&state.media, processed).await?;
     db::add_listing_photos(&state.db, listing.id, &stored).await?;
+    // In the order the form arranged: a saved photo by its id (one of the listing's, not taken
+    // out), a new one by its place among those sent, the first the cover.
+    let order: Vec<String> = order
+        .iter()
+        .filter_map(|token| match token.split_once(':') {
+            Some(("saved", id)) => {
+                let id: uuid::Uuid = id.parse().ok()?;
+                (listing_photos.iter().any(|photo| photo.id == id) && !removed.contains(&id)).then(|| id.to_string())
+            }
+            Some(("new", place)) => stored.get(place.parse::<usize>().ok()?).map(|photo| photo.storage_key.clone()),
+            _ => None,
+        })
+        .collect();
+    if !order.is_empty() {
+        db::order_listing_photos(&state.db, listing.id, &order).await?;
+    }
     Ok(Redirect::to(&format!("/listing/{public_no}-{slug}")).into_response())
 }
 

@@ -4680,6 +4680,76 @@ async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn sellers_order_their_photos_and_keep_them_through_a_form_sent_back(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let started = started();
+    let fields = listing_fields(("", ""), &started);
+    // The photos as the listing keeps them, the cover first: each one's width and whether it is
+    // the cover.
+    let photos = |pool: PgPool, no: String| async move {
+        sqlx::query_as::<_, (String, i32, bool)>(
+            "SELECT m.id::text, m.width_px, m.is_cover FROM listing_media m JOIN listings l ON l.id = m.listing_id
+             WHERE l.public_no = $1::bigint ORDER BY m.is_cover DESC, m.sort_order",
+        )
+        .bind(no)
+        .fetch_all(&pool)
+        .await
+        .unwrap()
+    };
+
+    // Posted in the order the form sends them: the first the cover.
+    let posted = post_with_photos(pool.clone(), "/shto", &fields, &[jpeg(800, 600), jpeg(600, 800)], &ana).await;
+    let no = posted.location.expect("posted").trim_start_matches("/listing/").split('-').next().unwrap().to_string();
+    let before = photos(pool.clone(), no.clone()).await;
+    assert_eq!(before.iter().map(|photo| (photo.1, photo.2)).collect::<Vec<_>>(), vec![(800, true), (600, false)]);
+    let (first, second) = (before[0].0.clone(), before[1].0.clone());
+
+    // The edit form lists them for the script, which sends their order: a new one first, then the
+    // second before the first; the new one is the cover now.
+    let edit = get_with_cookie(pool.clone(), &format!("/listing/{no}/ndrysho"), &ana).await.body;
+    assert!(edit.contains(&format!(r#"<li class="photo-item" data-photo-id="{first}">"#)), "{edit}");
+    assert!(edit.contains(r#"<input type="hidden" name="photo_order" data-photos-target="order">"#));
+    let order = format!("new:0,saved:{second},saved:{first}");
+    let mut edited = fields.clone();
+    edited.extend([("photo_order", order.as_str()), ("photos_kept", "1")]);
+    let saved = post_with_photos(pool.clone(), &format!("/listing/{no}/ndrysho"), &edited, &[jpeg(1000, 500)], &ana).await;
+    assert_eq!(saved.status, StatusCode::SEE_OTHER);
+    let after = photos(pool.clone(), no.clone()).await;
+    assert_eq!(after.iter().map(|photo| (photo.1, photo.2)).collect::<Vec<_>>(), vec![(1000, true), (600, false), (800, false)]);
+    assert_eq!((after[1].0.as_str(), after[2].0.as_str()), (second.as_str(), first.as_str()));
+    // The script takes one out the same way the box does; an order naming another's photo, or
+    // one taken out, is no order for it.
+    let order = format!("saved:{first},saved:{},saved:{second}", before_photo_of_another(&pool).await);
+    let mut edited = fields.clone();
+    edited.extend([("photo_order", order.as_str()), ("remove_photo", after[0].0.as_str())]);
+    post_with_photos(pool.clone(), &format!("/listing/{no}/ndrysho"), &edited, &[], &ana).await;
+    let last = photos(pool.clone(), no.clone()).await;
+    assert_eq!(last.iter().map(|photo| (photo.0.as_str(), photo.2)).collect::<Vec<_>>(), vec![(first.as_str(), true), (second.as_str(), false)]);
+
+    // Sent back with an error, photos the browser holds come back as they were, and the form
+    // doesn't ask for them again; without the script it does.
+    let mut refused = listing_fields(("title", "Tel"), &started);
+    refused.push(("photos_kept", "1"));
+    let again = post_with_photos(pool.clone(), "/shto", &refused, &[jpeg(800, 600)], &ana).await;
+    assert_eq!(again.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(again.body.contains(r#"data-photos-again-value="true""#) && !again.body.contains("Zgjidh fotot përsëri"), "{}", again.body);
+    let plain = post_with_photos(pool.clone(), "/shto", &listing_fields(("title", "Tel"), &started), &[jpeg(800, 600)], &ana).await;
+    assert!(plain.body.contains(r#"data-photos-again-value="false""#) && plain.body.contains("Zgjidh fotot përsëri: formulari i harron kur ka një gabim."));
+}
+
+/// A photo added to another seller's listing (the Mercedes, 1002), by its id.
+async fn before_photo_of_another(pool: &PgPool) -> String {
+    sqlx::query_scalar(
+        "INSERT INTO listing_media (listing_id, media_type, status, storage_key, public_url, sort_order, is_cover)
+         VALUES ('a0000000-0000-4000-8000-000000001002', 'IMAGE', 'READY', 'photos/another', '/media/photos/another.webp', 99, false)
+         RETURNING id::text",
+    )
+    .fetch_one(pool)
+    .await
+    .unwrap()
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn listings_get_photos(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let started = started();

@@ -1,23 +1,66 @@
 import { Controller } from "@hotwired/stimulus";
 
-// The photo picker on the listing form. Photos can be picked a few at a time, as phones offer
-// them, or dropped onto its zone from a computer's files: each adds to the ones before (a file
-// input alone would forget them), up to the number
-// still allowed, and each new one shows as a small preview with "Hiq" to take it out again. Big
-// phone photos are made smaller before the form goes (longest side MAX_SIDE, JPEG), so posting
-// doesn't send megabytes over mobile data. The server checks and re-encodes every photo all the
-// same (media.rs); without this script the input sends what was picked last, as it is.
+// The photos on the listing form, one list wherever each came from: those the listing has (on an
+// edit) and those picked, a few at a time as phones offer them, or dropped onto the zone from a
+// computer's files. The first is the cover, which the cards show, marked "Kopertinë"; each moves
+// earlier or later by its arrows, or under a mouse by dragging it onto another's place, and "Hiq"
+// takes it out. What goes with the form follows the list: the photos picked, in its order (the
+// server keeps them in the order they come), and on an edit the whole order (photo_order:
+// "saved:<id>" for one the listing has, "new:<n>" for the n-th sent) and the ones it had that were
+// taken out (remove_photo). Big phone photos are made smaller first (longest side MAX_SIDE, JPEG),
+// so posting doesn't send megabytes over mobile data. A form the server sends back with an error
+// (a 422, which Turbo renders in place) gets its photos back as they were: they wait here, by the
+// form's address, across the render (photos_kept tells the server so, which then doesn't ask for
+// them again). The server checks and re-encodes every photo all the same (media.rs); without this
+// script the form sends what was picked last, as it is, and its saved photos have "Hiq" boxes.
 
 const MAX_SIDE = 1600; // px, as the server keeps them (media.rs)
 const QUALITY = 0.85;
 
+// The photos of a form on its way to the server, by its address, for the page that comes back.
+const waiting = new Map();
+
+const CHEVRON = (path) =>
+  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
+
 export default class extends Controller {
-  static targets = ["input", "previews", "status", "zone"];
-  static values = { max: Number };
+  static targets = ["input", "previews", "status", "zone", "saved", "order", "kept", "removed"];
+  // max: how many photos a listing may have; again: the server sent the form back with photos the
+  // browser holds.
+  static values = { max: Number, again: Boolean };
 
   connect() {
-    // What goes with the form, made smaller, in the order picked: the first is the cover.
-    this.picked = [];
+    this.key = this.element.closest("form")?.action ?? "";
+    const back = waiting.get(this.key);
+    waiting.delete(this.key);
+    // The photos the listing has, as the page lists them for a form without the script: read, then
+    // shown in the one list instead, their "Hiq" boxes out of the form.
+    const saved = this.hasSavedTarget
+      ? [...this.savedTarget.querySelectorAll("[data-photo-id]")].map((item) => ({
+          kind: "saved",
+          id: item.dataset.photoId,
+          src: item.querySelector("img").src,
+        }))
+      : [];
+    if (this.hasSavedTarget) {
+      this.savedTarget.hidden = true;
+      for (const box of this.savedTarget.querySelectorAll("input")) box.disabled = true;
+    }
+    [this.items, this.removed] = this.againValue && back ? [back.items, back.removed] : [saved, []];
+    this.keptTarget.value = "1";
+    this.urls = [];
+    this.sync();
+    if (this.againValue && back) this.statusTarget.textContent = this.summary();
+  }
+
+  disconnect() {
+    waiting.set(this.key, { items: this.items, removed: this.removed });
+    for (const url of this.urls) URL.revokeObjectURL(url);
+  }
+
+  // The photos picked, in the list's order: what the AI looks at (ai_fill_controller.js).
+  get picked() {
+    return this.items.filter((item) => item.kind === "new").map((item) => item.file);
   }
 
   async chosen() {
@@ -25,7 +68,7 @@ export default class extends Controller {
   }
 
   // A file dragged over the field lights its zone, as what is picked is; dropped, it is added as
-  // if picked. Anything else dragged (a text, a link) is left to the page.
+  // if picked. Anything else dragged (a text, a link, a photo of the list) is left alone here.
   over(event) {
     if (![...(event.dataTransfer?.types ?? [])].includes("Files")) return;
     event.preventDefault();
@@ -45,7 +88,7 @@ export default class extends Controller {
   }
 
   async add(chosen) {
-    const room = this.maxValue - this.picked.length;
+    const room = this.maxValue - this.items.length;
     let files = chosen.filter((file) => file.type.startsWith("image/"));
     let note = "";
     if (files.length > room) {
@@ -55,47 +98,146 @@ export default class extends Controller {
         : "Njoftimi ka sa foto lejohen. Hiq ndonjë për të shtuar të tjera.";
     }
     if (files.length) this.statusTarget.textContent = "Po përgatiten fotot…";
-    this.picked.push(...(await Promise.all(files.map(shrink))));
+    const shrunk = await Promise.all(files.map((file) => shrink(file)));
+    this.items.push(...shrunk.map((file) => ({ kind: "new", file })));
     this.sync();
     this.statusTarget.textContent = note || this.summary();
   }
 
   remove(event) {
-    this.picked.splice(Number(event.currentTarget.dataset.index), 1);
+    const [item] = this.items.splice(Number(event.currentTarget.dataset.index), 1);
+    if (item?.kind === "saved") this.removed.push(item.id);
     this.sync();
     this.statusTarget.textContent = this.summary();
   }
 
-  // The input holds every photo picked, so they all go; the previews show them.
+  earlier(event) {
+    const index = Number(event.currentTarget.dataset.index);
+    if (index > 0) this.move(index, index - 1, "earlier");
+  }
+
+  later(event) {
+    const index = Number(event.currentTarget.dataset.index);
+    if (index < this.items.length - 1) this.move(index, index + 1, "later");
+  }
+
+  // Under a mouse: a photo of the list dragged onto another's place takes it.
+  grab(event) {
+    this.dragging = Number(event.currentTarget.dataset.index);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", "");
+    event.currentTarget.classList.add("is-dragging");
+  }
+
+  hover(event) {
+    if (this.dragging === undefined) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }
+
+  place(event) {
+    if (this.dragging === undefined) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const from = this.dragging;
+    this.dragging = undefined;
+    this.move(from, Number(event.currentTarget.dataset.index));
+  }
+
+  release(event) {
+    this.dragging = undefined;
+    event.currentTarget.classList.remove("is-dragging");
+  }
+
+  // Moves a photo to another place; the focus follows it when a button moved it, so that the
+  // keyboard goes on from there.
+  move(from, to, button) {
+    const [item] = this.items.splice(from, 1);
+    this.items.splice(to, 0, item);
+    this.sync();
+    this.statusTarget.textContent = to === 0 ? "Kjo është tani kopertina." : "";
+    if (!button) return;
+    const target = this.previewsTarget.querySelector(`[data-index="${to}"][data-action="photos#${button}"]`);
+    (target && !target.disabled ? target : this.previewsTarget.querySelector(`[data-index="${to}"]`))?.focus();
+  }
+
+  // The input holds every photo picked, in the list's order, so they all go; the order and the
+  // photos taken out go beside them; the list shows them.
   sync() {
     const transfer = new DataTransfer();
-    for (const file of this.picked) transfer.items.add(file);
+    const order = [];
+    for (const item of this.items) {
+      if (item.kind === "new") {
+        order.push(`new:${transfer.items.length}`);
+        transfer.items.add(item.file);
+      } else {
+        order.push(`saved:${item.id}`);
+      }
+    }
     this.inputTarget.files = transfer.files;
-    this.showPreviews();
+    this.orderTarget.value = order.join(",");
+    this.removedTarget.replaceChildren(
+      ...this.removed.map((id) => Object.assign(document.createElement("input"), { type: "hidden", name: "remove_photo", value: id })),
+    );
+    this.render();
   }
 
   summary() {
-    return this.picked.length ? `${this.picked.length} foto gati për t'u ngarkuar.` : "";
+    const count = this.picked.length;
+    return count ? `${count} foto gati për t'u ngarkuar.` : "";
   }
 
-  showPreviews() {
-    for (const img of this.previewsTarget.querySelectorAll("img")) URL.revokeObjectURL(img.src);
-    this.previewsTarget.replaceChildren(
-      ...this.picked.map((file, index) => {
-        const item = document.createElement("li");
-        item.className = "photo-item";
-        const remove = Object.assign(document.createElement("button"), { type: "button", className: "photo-remove", textContent: "Hiq" });
-        remove.dataset.index = index;
-        remove.dataset.action = "photos#remove";
-        item.append(Object.assign(document.createElement("img"), { src: URL.createObjectURL(file), alt: "" }), remove);
-        return item;
-      }),
+  render() {
+    for (const url of this.urls) URL.revokeObjectURL(url);
+    this.urls = [];
+    this.previewsTarget.replaceChildren(...this.items.map((item, index) => this.photo(item, index)));
+    this.previewsTarget.hidden = this.items.length === 0;
+  }
+
+  // One photo of the list: the picture, "Kopertinë" over the first, then its arrows and "Hiq".
+  photo(item, index) {
+    const element = document.createElement("li");
+    element.className = "photo-item";
+    element.draggable = true;
+    element.tabIndex = -1;
+    element.dataset.index = index;
+    element.dataset.action = "dragstart->photos#grab dragover->photos#hover drop->photos#place dragend->photos#release";
+    const frame = document.createElement("div");
+    frame.className = "photo-frame";
+    const image = Object.assign(document.createElement("img"), { alt: "" });
+    if (item.kind === "saved") {
+      image.src = item.src;
+    } else {
+      image.src = URL.createObjectURL(item.file);
+      this.urls.push(image.src);
+    }
+    frame.append(image);
+    if (index === 0) frame.append(Object.assign(document.createElement("span"), { className: "photo-cover", textContent: "Kopertinë" }));
+    const tools = document.createElement("div");
+    tools.className = "photo-tools";
+    tools.append(
+      this.button(CHEVRON("m15 6-6 6 6 6"), "Më përpara", "earlier", index, index === 0),
+      this.button(CHEVRON("m9 6 6 6-6 6"), "Më pas", "later", index, index === this.items.length - 1),
+      this.button("Hiq", null, "remove", index, false),
     );
-    this.previewsTarget.hidden = this.picked.length === 0;
+    element.append(frame, tools);
+    return element;
   }
 
-  disconnect() {
-    for (const img of this.previewsTarget.querySelectorAll("img")) URL.revokeObjectURL(img.src);
+  button(content, label, action, index, disabled) {
+    const button = Object.assign(document.createElement("button"), { type: "button", disabled });
+    button.className = label ? "photo-step" : "photo-remove";
+    if (label) {
+      button.innerHTML = content;
+      button.setAttribute("aria-label", `${label} (foto ${index + 1})`);
+      button.title = label;
+    } else {
+      button.textContent = content;
+      button.setAttribute("aria-label", `Hiq foton ${index + 1}`);
+    }
+    button.dataset.index = index;
+    button.dataset.action = `photos#${action}`;
+    return button;
   }
 }
 
