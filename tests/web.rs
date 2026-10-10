@@ -4630,9 +4630,11 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
     // The category above the photo; the title under it; then the deal, the price in its box, on a
-    // car's page her initial, her name, since when and how many listings, leading to her profile,
-    // then the contact bar, the phone and the message, wide pills, the share, a link in a circle,
-    // and the report; then the description and the details; then her other listings.
+    // car's page the seller's card, her initial, her name, since when she is a user and how many
+    // listings on a line each, leading to her profile, and in the card the contact bar, the phone
+    // and the message, wide pills (contact_bar.html; under the price on every other page); then
+    // the share, a link in a circle, and the report; then the description and the details; then
+    // her other listings.
     let order = positions(&page, &[
         r#"<nav class="category-path listing-path""#,
         r#"<div class="gallery">"#,
@@ -4646,8 +4648,10 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         r#"<section class="seller-section" aria-labelledby="seller-heading">"#,
         r#"<h2 id="seller-heading">Shitësi</h2>"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
+        r#"<span class="avatar large" aria-hidden="true">A</span>"#,
         r#"<span class="seller-name">Ana</span>"#,
-        r#"<span class="seller-summary">Në Pluribus që nga "#,
+        r#"<span class="seller-summary">Përdorues që nga "#,
+        r#"<span class="seller-summary">5 njoftime</span>"#,
         r#"<aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">"#,
         r#"<form id="phone-reveal" method="post""#,
         "</aside>",
@@ -4657,9 +4661,17 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         "<h2>Detajet</h2>",
     ]);
     assert!(order.is_sorted(), "{order:?}");
-    // The seller's card has no buttons of its own: the ways to reach them are under the price.
-    assert!(!page.contains("seller-contact") && !page.contains("phone-reveal-seller"), "{page}");
-    assert!(page.contains(" · 5 njoftime</span>"));
+    // The bar is inside the card there, the page's one bar; on every other page it is under the
+    // price, the seller's card after the description without it, the summary on one line.
+    let card = &page[page.find(r#"<section class="seller-section""#).unwrap()..];
+    let card = &card[..card.find("</section>").unwrap()];
+    assert!(card.contains(r#"<aside class="contact-bar""#) && page.matches(r#"<aside class="contact-bar""#).count() == 1, "{card}");
+    let iphone = html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await;
+    let card = &iphone[iphone.find(r#"<section class="seller-section""#).unwrap()..];
+    let card = &card[..card.find("</section>").unwrap()];
+    assert!(card.contains(r#"<span class="avatar" aria-hidden="true">A</span>"#) && !card.contains("contact-bar"), "{card}");
+    assert!(card.contains(r#"<span class="seller-summary">Në Pluribus që nga "#) && card.contains(" · 5 njoftime</span>"), "{card}");
+    assert!(iphone.find(r#"<aside class="contact-bar""#).unwrap() < iphone.find(r#"<section class="seller-section""#).unwrap());
 
     // Her profile says so too.
     let profile = get(pool.clone(), ana).await.body;
@@ -4672,6 +4684,8 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // A business: its listings, on its own page.
     let page = get(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await.body;
     assert!(page.contains(r#"<a class="seller" href="/biznes/auto-durresi">"#));
+    // A business says so on the since line of a car's card.
+    assert!(page.contains(r#"<span class="seller-summary">Biznes · që nga "#) && page.contains(r#"<span class="seller-summary">1 njoftim</span>"#), "{page}");
     let business = get(pool.clone(), "/biznes/auto-durresi").await.body;
     assert!(business.contains("<h1>Auto Durrësi</h1>") && business.contains("Biznes · "));
     assert_eq!(card_numbers(&business), vec![1002]);
@@ -5729,11 +5743,15 @@ async fn the_number_a_seller_signed_in_with_shows_as_verified(pool: PgPool) {
     // Ana signs in with a code sent to her number: her listings say so beside her name, and her
     // profile under it.
     sign_in_with_code(&pool, "069 000 0001", "+355690000001").await;
-    // On the listing, a check beside her name, which says what it means as a tooltip and to screen
-    // readers; on her profile, the words under her name.
+    // On a car's page, in its words on a line of the seller's card; on every other listing, a
+    // check beside her name, which says what it means as a tooltip and to screen readers; on her
+    // profile, the words under her name.
     let page = html(pool.clone(), golf).await;
-    assert!(page.contains(r#"<span class="seller-name">Ana<span class="verified" title="Numër i verifikuar">"#), "{page}");
-    assert!(page.contains(r#"<span class="visually-hidden">Numër i verifikuar</span></span></span>"#));
+    assert!(page.contains(r#"<span class="verified"><svg width="14""#) && page.contains("</svg>Numër i verifikuar</span>"), "{page}");
+    assert!(!page.contains(r#"title="Numër i verifikuar""#));
+    let iphone = html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await;
+    assert!(iphone.contains(r#"<span class="seller-name">Ana<span class="verified" title="Numër i verifikuar">"#), "{iphone}");
+    assert!(iphone.contains(r#"<span class="visually-hidden">Numër i verifikuar</span></span></span>"#));
     assert!(html(pool.clone(), "/perdorues/11111111-1111-4111-8111-111111111111").await.contains("Numër i verifikuar</p>"));
     let (kind, value): (String, String) =
         sqlx::query_as("SELECT verification_type, verified_value FROM user_verifications WHERE status = 'VERIFIED'")

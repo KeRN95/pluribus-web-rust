@@ -62,7 +62,8 @@
    their profile, their name and summary cut short where the line is too short. The ways to reach them are the buttons under
    the price alone. On a phone the contact bar settles between the description and the card (the
    card and the map come after it in the grid, by order), a band from edge to edge (below), and
-   the card keeps the 2.5rem under it, so that it stands clear of the band. */
+   the card keeps the 2.5rem under it, so that it stands clear of the band. On a car's page the
+   card holds the contact bar too, in the deal's column from 960 px up (.listing-car, below). */
 .seller-section { margin-top: 1.75rem; }
 @media (max-width: 719px) {
   .seller-section { margin-top: 2.5rem; }
@@ -213,8 +214,8 @@
    icon, three to a line (.spec-grid), the options in columns with a check each under their own
    names (.options), and the map under "Lokacioni". At the right, in a column of 19.5rem, which
    goes with the page (it stuck under the top bar at first), the price in a card, the seller's
-   card under its heading, the bar's pills on a line each, the message's first, and the share and
-   the report: the deal
+   card, which holds the bar's pills on a line each, the message's first, and under it the share
+   and the report: the deal
    (.listing-deal), which on every other page, and on a phone, is no box at all, its parts in the
    rest's grid (display: contents). The page is 60rem wide, as a split page is. On a phone one
    column: the title, the facts, the price, the bar, the circles, the description, the details, the
@@ -255,9 +256,25 @@
   .spec-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .options { columns: 3; }
 }
+/* Under 960 px a car's seller section is no box (its card is the column's, below): its heading and
+   the seller's row are the rest's grid items, after the description and the details as on every
+   page (order 2, with the map), the heading taking the room the section has over it, and the
+   contact bar inside it is the phone's foot bar, or from 720 px up on the line it shares with the
+   share and the report, as on every other page (above). */
 @media (max-width: 959px) {
-  .listing-car .listing-deal > .seller-section,
+  .listing-car .listing-deal > .seller-section { display: contents; }
+  .listing-car .listing-deal > .seller-section > :is(h2, .seller-head),
   .listing-car .listing-side > .listing-map-section { order: 2; }
+  .listing-car .listing-deal > .seller-section > :is(h2, .seller-head) { min-width: 0; }
+  .listing-car .listing-deal > .seller-section > h2 { margin-top: 1.75rem; }
+}
+@media (max-width: 719px) {
+  .listing-car .listing-deal > .seller-section > h2 { margin-top: 2.5rem; }
+}
+@media (min-width: 720px) and (max-width: 959px) {
+  .listing-car .listing-deal > .seller-section > :is(h2, .seller-head) { grid-column: 1 / -1; }
+  .listing-car .listing-deal > .seller-section > .contact-bar { grid-column: 1; margin-right: .5rem; }
+  .listing-car .listing-deal > .seller-section + .actions { grid-column: 2; align-self: center; }
 }
 @media (min-width: 960px) {
   .listing-page:has(> .listing-car) { display: block; max-width: 60rem; margin-inline: auto; }
@@ -272,19 +289,30 @@
   .listing-car .listing-side { grid-template-columns: minmax(0, 1fr) 19.5rem; column-gap: 2rem; }
   .listing-car .listing-side > * { grid-column: 1; max-width: none; }
   .listing-car .listing-side > .listing-deal { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; grid-row: 1 / span 40; align-self: start; }
-  .listing-car .listing-deal > *,
-  .listing-car .listing-deal > .contact-bar + .actions { grid-column: 1; align-self: auto; max-width: none; margin-right: 0; }
+  .listing-car .listing-deal > * { grid-column: 1; align-self: auto; max-width: none; margin-right: 0; }
   .listing-car .listing-header h1 { margin-top: 0; }
   .listing-car .price-box { padding: 1rem 1.15rem 1.1rem; border: 1px solid var(--menu-border); border-radius: 16px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%); }
   /* The loan calculator's card hangs from the bubble's right edge, the column's edge being near. */
   .listing-car .loan .bubble-card { left: auto; right: 0; transform-origin: top right; }
-  .listing-car .listing-deal > .contact-bar { flex-direction: column; align-items: stretch; }
+  /* The seller's card holds the ways to reach them (seller_card.html): the card's chrome, the
+     price card's, goes to the section, the seller's row losing its own; the heading inside it, a
+     small quiet line; the initial 3rem; since when and how many listings on a line each, wrapping
+     rather than cut short (the column is too narrow for one line); the verified check in its words
+     on a line of its own; and under a hairline the bar's pills on a line each, the message's
+     first. The share and the report stay under the card. */
+  .listing-car .listing-deal > .seller-section { margin-top: 1.5rem; padding: .85rem 1.15rem 1.1rem; border: 1px solid var(--menu-border); border-radius: 16px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%); }
+  .listing-car .listing-deal > .seller-section > h2 { margin: 0 0 .35rem; color: var(--muted); font-size: var(--text-xs); line-height: 1.25; }
+  .listing-car .listing-deal .seller-head { padding: 0; border: 0; border-radius: 0; box-shadow: none; }
+  .listing-car .listing-deal .seller-head .seller { margin: 0 -.6rem; }
+  .listing-car .listing-deal .seller-text { gap: .125rem; }
+  .listing-car .listing-deal .seller-name { font-size: var(--text-md); }
+  .listing-car .listing-deal .seller-summary { font-size: var(--text-sm); white-space: normal; }
+  .listing-car .listing-deal .seller-head .verified { margin: .1rem 0 0; }
+  .listing-car .listing-deal .contact-bar { flex-direction: column; align-items: stretch; margin-top: .8rem; padding-top: .9rem; border-top: 1px solid var(--border); }
   .listing-car .contact-bar .button { flex: none; }
   .listing-car .contact-bar .message-button { order: -1; }
   .listing-car .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
   .listing-car .listing-deal > .actions { margin-top: .75rem; }
-  .listing-car .listing-deal > .seller-section { margin-top: 1.5rem; }
-  .listing-car .listing-deal > .seller-section + .contact-bar { margin-top: 1rem; }
 }
 
 .listing-photo {
@@ -665,7 +693,7 @@
 .actions .button:active,
 .contact-bar .button:active { transform: scale(.97); }
 .actions .button.secondary { gap: .45rem; border-color: var(--menu-border); }
-/* How to reach the seller (listing.html, .contact-bar): the phone, "Shfaq numrin" (an envelope,
+/* How to reach the seller (contact_bar.html, .contact-bar): the phone, "Shfaq numrin" (an envelope,
    "Shfaq email-in", for a seller who signed in by e-mail), and a message, "Shkruaji shitësit", a
    speech bubble: wide pills that say their names, a little taller than the circles beside them,
    the way to the seller being what the page is for. The message is filled in the page's colour,

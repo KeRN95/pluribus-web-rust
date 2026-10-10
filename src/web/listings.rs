@@ -358,6 +358,19 @@ impl ListingDetail {
         )
     }
 
+    /// On a car's page, where the seller's card is too narrow for the summary on one line, since
+    /// when they are on the site on a line of its own: "Përdorues që nga tetor 2026", or for a
+    /// business "Biznes · që nga mars 2026".
+    pub fn seller_since_line(&self) -> String {
+        let since = format::month_year(self.seller_since);
+        if self.seller_is_business() { format!("Biznes · që nga {since}") } else { format!("Përdorues që nga {since}") }
+    }
+
+    /// And how many listings they have on the line under it: "12 njoftime".
+    pub fn seller_count_text(&self) -> String {
+        format::listing_count(self.seller_listings, i64::MAX)
+    }
+
     /// When it was published, as the pill over the photo says it ("Sot", "Dje", "para 3 ditësh",
     /// the date; format::when), with what screen readers hear before it: "Publikuar " for the
     /// words, "Publikuar më " for a date.

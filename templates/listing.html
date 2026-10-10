@@ -229,41 +229,16 @@
     {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
     {%- endif %}
   </div>
-  {#- On a car's page the seller's card comes under the price, and the ways to reach them under
-      it. -#}
+  {#- On a car's page the seller's card comes under the price, with the ways to reach them inside
+      it (seller_card.html). -#}
   {%- if car_page %}{% include "seller_card.html" %}{% endif %}
 
-  {#- How to reach the seller, under the price: the phone (an envelope for a seller who signed in
-      by e-mail) and a message, wide pills that say their names, the way to the seller being what
-      the page is for; on a phone a bar at the foot of the screen, which stays while the listing
-      scrolls, a slight shadow over it while it floats (listing.css, .contact-bar;
-      sticky_controller.js). Then, beside them from 720 px up and under the price alone on a
-      phone, the share and the report, circles (.actions). The seller themselves come after the
-      description (below). -#}
-  {%- let message = !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}
-  {%- if reveal.is_some() || message %}
-  <aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">
-    {% if let Some(reveal) = reveal %}
-    {#- The phone, "Shfaq numrin", in a plain pill; the number that takes its place is marked as
-        what is picked is. Turbo submits the form and swaps in the number (or address) from the
-        Turbo Stream response, in its place. -#}
-    <form id="phone-reveal" method="post" action="/listing/{{ listing.public_no }}/phone">
-      <button type="submit" class="button secondary reveal-button">
-        {%- match reveal %}{% when Reveal::Phone %}{% include "phone.svg" %}{% when Reveal::Email %}{% include "mail.svg" %}{% endmatch -%}
-        <span class="button-label">{{ reveal.label() }}</span></button>
-    </form>
-    {% endif %}
-    {%- if message %}
-    {#- "Shkruaji shitësit", a speech bubble in a pill filled in the page's colour: a message to the
-        seller, which takes signing in first (messages.rs); signed in, the conversation opens in
-        the sheet. -#}
-    <a class="button message-button" href="/listing/{{ listing.public_no }}/mesazh"
-       {%- if sheet %} data-turbo-frame="conversation" data-turbo-prefetch="false" data-action="message-sheet#open"{% endif %}>
-      <svg class="contact-icon" data-icon="message-circle" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
-      <span class="button-label">Shkruaji shitësit</span></a>
-    {%- endif %}
-  </aside>
-  {%- endif %}
+  {#- How to reach the seller, under the price: the contact bar (contact_bar.html), the phone and
+      the message, wide pills, which on a phone is the bar at the foot of the screen; on a car's
+      page it is inside the seller's card (above). Then, beside the bar from 720 px up and under
+      the price alone on a phone, the share and the report, circles (.actions). The seller
+      themselves come after the description (below). -#}
+  {%- if !car_page %}{% include "contact_bar.html" %}{% endif %}
   <div class="actions">
     {%- if own %}
     {#- The seller's own: edit it, take it down for a while (back from "Njoftimet e mia"), or
