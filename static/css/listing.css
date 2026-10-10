@@ -259,6 +259,8 @@
 }
 @media (min-width: 960px) {
   .listing-page:has(> .listing-car) { display: block; max-width: 60rem; margin-inline: auto; }
+  /* No room for a banner over a car's path: its page starts at the top, as a phone's does. */
+  .listing-car > .listing-banner { display: none; }
   .listing-car .listing-media .gallery-photo,
   .listing-car .listing-media .listing-photo { aspect-ratio: 4 / 3; height: auto; max-height: calc(100vh - 12.05rem - 1px); }
   .listing-car .listing-side { grid-template-columns: minmax(0, 1fr) 19.5rem; column-gap: 2rem; }
