@@ -4840,6 +4840,11 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         "<h2>Detajet</h2>",
     ]);
     assert!(order.is_sorted(), "{order:?}");
+    // The description can fold past a dozen lines (fold_controller.js): its button waits hidden,
+    // and nothing is folded in the page itself.
+    assert!(page.contains(r#"<div class="description-fold" data-controller="fold">"#));
+    assert!(page.contains(r#"<button type="button" class="description-more" data-fold-target="button" data-action="fold#open" hidden>"#));
+    assert!(page.contains("Shfaq të gjithë përshkrimin") && !page.contains("is-folded"));
     // The bar is inside the card there, the page's one bar; on every other page it is under the
     // price, the seller's card after the description without it, the summary on one line.
     let card = &page[page.find(r#"<section class="seller-section""#).unwrap()..];
@@ -4899,11 +4904,6 @@ async fn a_category_page_says_where_it_is_in_pills(pool: PgPool) {
     // heading, which shows the other categories at its level as pills after it, not itself; no
     // pills under, as it has no subcategories; the count by the order's pill; and the trail for
     // search engines (schema.org's BreadcrumbList), in place of a breadcrumb.
-    // The description can fold past a dozen lines (fold_controller.js): its button waits hidden,
-    // and nothing is folded in the page itself.
-    assert!(page.contains(r#"<div class="description-fold" data-controller="fold">"#));
-    assert!(page.contains(r#"<button type="button" class="description-more" data-fold-target="button" data-action="fold#open" hidden>"#));
-    assert!(page.contains("Shfaq të gjithë përshkrimin") && !page.contains("is-folded"));
     let cars = html(pool.clone(), "/c/makina").await;
     let order = positions(&cars, &[
         r#"<nav class="category-pills" aria-label="Kategoritë">"#,

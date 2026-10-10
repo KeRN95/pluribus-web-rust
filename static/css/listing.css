@@ -883,12 +883,6 @@
 /* The listing's number ends the line under the title, whole on one line. */
 .listing-number { white-space: nowrap; }
 .description { margin: 0; font-size: var(--text-md); line-height: 1.7; white-space: pre-line; }
-/* A car's title as its seller wrote it, over the description. */
-.description-heading { margin: 0 0 .35rem; font-size: var(--text-lg); font-weight: var(--semibold); line-height: 1.35; }
-
-@media (min-width: 720px) {
-  .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem 1rem; }
-  h1 { font-size: var(--text-3xl); }
 /* Folded (fold_controller.js, on one longer than a dozen lines): a dozen lines, the last three
    fading out, and under them "Shfaq të gjithë përshkrimin" in the page's colour with a plus, in
    the middle, which unfolds it. */
@@ -920,6 +914,12 @@
 @media (hover: hover) {
   .description-more:hover { background: var(--badge); }
 }
+/* A car's title as its seller wrote it, over the description. */
+.description-heading { margin: 0 0 .35rem; font-size: var(--text-lg); font-weight: var(--semibold); line-height: 1.35; }
+
+@media (min-width: 720px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem 1rem; }
+  h1 { font-size: var(--text-3xl); }
   .listing-header h1 { font-size: var(--text-2xl); }
   .listing-price { font-size: var(--text-3xl); }
 }
