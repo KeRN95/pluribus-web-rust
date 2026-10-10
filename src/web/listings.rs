@@ -48,13 +48,9 @@ pub const CAR_GALLERY_SIZES: &str =
 /// 75%, a lease 80%). The loan is the rest of the price.
 pub const LOAN_DOWN_PERCENT: u32 = 35;
 
-/// A car's title as FINN shows one: its make and model as the title ("Volkswagen Golf"), and
-/// what the rest of the title says under it, quieter ("1.6, 2017"); for a title that starts with
-/// its make and model, as a made one does (properties.rs).
-pub struct CarTitle {
-    pub name: String,
-    pub variant: String,
-}
+/// A car's key facts, in a row under its title (listing.html, .key-facts), in this order: the
+/// year, the mileage, the gearbox and the fuel, as FINN has them. They leave the details.
+const CAR_FACTS: [&str; 4] = ["vehicle_year", "vehicle_mileage", "vehicle_transmission", "vehicle_fuel"];
 
 /// The categories whose listings' pages show where they are on a map, under the seller: property
 /// (Prona and those under it) and cars (Makina), which buyers go to see.
@@ -435,9 +431,9 @@ struct ListingShow {
     /// left, and the price, the ways to the seller and the seller's card in a
     /// column at the right (.listing-deal), its photos sized for the page (CAR_GALLERY_SIZES).
     car_page: bool,
-    /// On a car's page, its make and model as the title and the rest of the title under them
-    /// (CarTitle); None where the title doesn't start with them, and on every other page.
-    car_title: Option<CarTitle>,
+    /// A car's key facts, in a row under its title: the year, the mileage, the gearbox and the
+    /// fuel (CAR_FACTS), each with its icon; none on any other page.
+    facts: Vec<Detail>,
     /// On a car's page, its options, the details with several values (a multi-select's), listed
     /// under their own names after the grid of the others; elsewhere among the details.
     options: Vec<Detail>,
@@ -636,12 +632,18 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             values: attribute.shown.clone(),
         }
     };
-    // A car's page (Makina) has its options under their own names after the grid of the other
-    // details (listing.html).
+    // A car's page (Makina) has its key facts in a row under the title, which leave the details,
+    // and its options under their own names after the grid of the others (listing.html).
     let car_page = slugs.contains(&"makina");
+    let facts: Vec<Detail> = if car_page {
+        CAR_FACTS.iter().filter_map(|code| attributes.iter().find(|attribute| attribute.code == *code)).map(detail_of).collect()
+    } else {
+        Vec::new()
+    };
     let mut details: Vec<Detail> = attributes
         .iter()
         .filter(|attribute| !(titled && properties::TITLE_CODES.contains(&attribute.code.as_str())))
+        .filter(|attribute| !(car_page && CAR_FACTS.contains(&attribute.code.as_str())))
         .map(detail_of)
         .collect();
     // A property's zone in its town comes first among its details, lit as its cards say it too.
@@ -652,18 +654,6 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     }
     let (details, options): (Vec<Detail>, Vec<Detail>) =
         if car_page { details.into_iter().partition(|detail| !detail.multi) } else { (details, Vec::new()) };
-    // A car's title as FINN shows one: its make and model, and the rest of the title under them.
-    let car_title = car_page
-        .then(|| {
-            let shown = |code: &str| {
-                attributes.iter().find(|attribute| attribute.code == code).and_then(|attribute| attribute.shown.first())
-            };
-            let name = format!("{} {}", shown("vehicle_make")?, shown("vehicle_model")?);
-            let rest = listing.title.strip_prefix(&name)?;
-            (rest.is_empty() || rest.starts_with([',', ' ']))
-                .then(|| CarTitle { name, variant: rest.trim_start_matches([',', ' ']).to_string() })
-        })
-        .flatten();
     // A property or a car: its photos across the page, and where it is, on a map under the seller.
     let wide_photos = slugs.iter().any(|slug| MAPPED.contains(slug));
     let map = match (listing.latitude, listing.longitude) {
@@ -693,7 +683,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             map,
             wide_photos,
             car_page,
-            car_title,
+            facts,
             options,
             page,
             views,

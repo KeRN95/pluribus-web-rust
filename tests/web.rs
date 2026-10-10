@@ -1793,18 +1793,23 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     // What kind of listing it is, and its condition, over the price, not among the details.
     assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur · <span class="listing-number">"#));
     assert!(!response.body.contains(">Gjendja</dt>"));
-    // A car's page, laid out as FINN's: its details in a grid after the description, a name with
-    // its icon over its value, the year, the mileage, the gearbox and the fuel among them (no row
-    // of key facts under the title); and its options in a list of their own, each with a check.
-    // No pills.
-    assert!(!response.body.contains("key-facts"));
+    // A car's page, laid out as FINN's: its key facts, the year, the mileage, the gearbox and the
+    // fuel, in a row under the title, each with its icon and its name over its value; the rest of
+    // its details in a grid after the description, a name with its icon over its value, the facts
+    // left out; and its options in a list of their own, each with a check. No pills.
+    let facts = &response.body[response.body.find(r#"<dl class="key-facts">"#).expect("the key facts")..];
+    let facts = &facts[..facts.find("</dl>").unwrap()];
+    let order = positions(facts, &["<dd>2016</dd>", "<dd>148\u{a0}000\u{a0}km</dd>", "<dd>Manuale</dd>", "<dd>Naftë</dd>"]);
+    assert!(order.is_sorted(), "{order:?}");
+    assert_eq!(facts.matches(r#"<div class="key-fact">"#).count(), 4, "{facts}");
+    assert_eq!(facts.matches(r#"<svg class="key-fact-icon""#).count(), 4, "{facts}");
+    assert!(facts.contains("<dt>Kilometrazhi</dt><dd>148\u{a0}000\u{a0}km</dd>"), "{facts}");
+    assert!(response.body.find("</header>").unwrap() < response.body.find(r#"<dl class="key-facts">"#).unwrap());
     let specs = &response.body[response.body.find(r#"<dl class="spec-grid">"#).expect("the details' grid")..];
     let specs = &specs[..specs.find("</dl>").unwrap()];
     assert!(specs.contains("Karroceria</dt><dd>Hatchback</dd>"), "{specs}");
     assert!(specs.contains(r#"<div class="spec">"#) && specs.contains(r#"<dt><svg class="spec-icon""#), "{specs}");
-    for value in ["<dd>2016</dd>", "<dd>148\u{a0}000\u{a0}km</dd>", "<dd>Manuale</dd>", "<dd>Naftë</dd>"] {
-        assert!(specs.contains(value), "{value}: {specs}");
-    }
+    assert!(!specs.contains("Kilometrazhi") && !specs.contains("Naftë"), "the facts leave the details: {specs}");
     // The map under its own heading, "Lokacioni", on a car's page.
     let order = positions(&response.body, &[r#"<section class="listing-map-section""#, "<h2>Lokacioni</h2>", r#"<div class="listing-map""#]);
     assert!(order.is_sorted(), "{order:?}");
@@ -4143,20 +4148,20 @@ async fn a_cars_title_is_made_from_what_it_is(pool: PgPool) {
     // The page's title is made from its make, model, engine (in litres, to a tenth) and year, and
     // kept with it.
     let page = get(pool.clone(), &url).await.body;
-    assert!(page.contains("<h1>Volkswagen Golf</h1>") && page.contains(r#"<p class="listing-variant">1.6, 2017</p>"#), "{page}");
+    assert!(page.contains("<h1>Volkswagen Golf 7 1.6 TDI, 2017</h1>") && page.contains(r#"<p class="listing-variant">Volkswagen Golf 1.6, 2017</p>"#), "{page}");
     let generated: Option<String> = sqlx::query_scalar("SELECT generated_title FROM listings WHERE public_no = $1")
         .bind(no)
         .fetch_one(&pool)
         .await
         .unwrap();
     assert_eq!(generated.as_deref(), Some("Volkswagen Golf 1.6, 2017"));
-    // The seller's own heads the description; the details leave out what the title says, but for
-    // the engine's exact size; the year is under the title, after the make and model.
-    assert!(page.contains(r#"<h3 class="description-heading">Volkswagen Golf 7 1.6 TDI, 2017</h3>"#));
+    // The seller's own heads the page, not the description; the details leave out what the made
+    // title says, but for the engine's exact size; the year stands among the key facts.
+    assert!(!page.contains("description-heading"), "the seller's own heads the page, not the description");
     for said in ["Marka", "Modeli"] {
         assert!(!page.contains(&format!(">{said}</dt>")), "{said}");
     }
-    assert!(!page.contains("Viti</dt>"));
+    assert!(page.contains("<dt>Viti</dt><dd>2017</dd>") && page.matches("Viti</dt>").count() == 1);
     for shown in ["Karroceria", "Ngjyra", "Motorri"] {
         assert!(page.contains(&format!("{shown}</dt>")), "{shown}");
     }
@@ -4169,7 +4174,7 @@ async fn a_cars_title_is_made_from_what_it_is(pool: PgPool) {
     let saved = post_form(pool.clone(), &format!("/listing/{no}/ndrysho"), &fields, Some(&ana)).await;
     assert_eq!(saved.status, StatusCode::SEE_OTHER);
     let edited = get(pool.clone(), &url).await.body;
-    assert!(edited.contains("<h1>Volkswagen Golf</h1>") && edited.contains(r#"<p class="listing-variant">2018</p>"#), "{edited}");
+    assert!(edited.contains(r#"<p class="listing-variant">Volkswagen Golf, 2018</p>"#), "{edited}");
     // The edit form keeps the seller's own.
     let form = get_with_cookie(pool.clone(), &format!("/listing/{no}/ndrysho"), &ana).await.body;
     assert!(form.contains(r#"value="Volkswagen Golf 7 1.6 TDI, 2017""#));
@@ -4236,7 +4241,7 @@ async fn sellers_type_a_make_or_model_the_list_lacks(pool: PgPool) {
     let page = get(pool.clone(), &url).await.body;
     // They make its title, as a listed make and model would: the two as the heading, the year
     // under it.
-    assert!(page.contains("<h1>Zastava Yugo</h1>") && page.contains(r#"<p class="listing-variant">2017</p>"#), "{page}");
+    assert!(page.contains(r#"<p class="listing-variant">Zastava Yugo, 2017</p>"#), "{page}");
     // Search finds it by them; the lists and filters don't offer them until someone approves them.
     assert!(get(pool.clone(), "/search?q=yugo").await.body.contains(&url));
     assert!(!get(pool.clone(), "/shto/fushat?category=makina").await.body.contains(">Zastava<"));
@@ -4278,7 +4283,7 @@ async fn sellers_type_a_make_or_model_the_list_lacks(pool: PgPool) {
     let posted = post_form(pool.clone(), "/shto", &buzz, Some(&besa)).await;
     assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
     let buzz = get(pool.clone(), &posted.location.unwrap()).await.body;
-    assert!(buzz.contains("<h1>Volkswagen ID. Buzz</h1>") && buzz.contains(r#"<p class="listing-variant">2017</p>"#), "{buzz}");
+    assert!(buzz.contains(r#"<p class="listing-variant">Volkswagen ID. Buzz, 2017</p>"#), "{buzz}");
     let typed: i64 = sqlx::query_scalar("SELECT count(*) FROM attribute_options WHERE lower(label) = 'id buzz'")
         .fetch_one(&pool)
         .await
@@ -4389,7 +4394,7 @@ async fn moderators_approve_or_merge_what_sellers_typed(pool: PgPool) {
     let approved = post_form(pool.clone(), &format!("/moderim/{yugo_id}/mirato"), &[("label", "Koral")], Some(&moderator)).await;
     assert_eq!(approved.status, StatusCode::SEE_OTHER);
     assert_eq!(option_active(&pool, "Koral").await, Some(true));
-    assert!(get(pool.clone(), &yugo).await.body.contains("<h1>Zastava Koral</h1>"));
+    assert!(get(pool.clone(), &yugo).await.body.contains(r#"<p class="listing-variant">Zastava Koral, 2017</p>"#));
     assert!(get(pool.clone(), "/search?q=koral").await.body.contains(&yugo));
     assert!(get(pool.clone(), "/c/makina").await.body.contains(">Zastava<"));
 
@@ -4406,11 +4411,11 @@ async fn moderators_approve_or_merge_what_sellers_typed(pool: PgPool) {
     assert_eq!(merged.status, StatusCode::SEE_OTHER);
     assert_eq!(option_active(&pool, "Golf IV").await, None);
     let page = get(pool.clone(), &golf).await.body;
-    assert!(page.contains("<h1>Volkswagen Golf</h1>") && !page.contains(">Golf IV<"));
+    assert!(page.contains(r#"<p class="listing-variant">Volkswagen Golf, 2017</p>"#) && !page.contains(">Golf IV<"));
     // A typed make merged into the listed one takes its typed model along, under the listed make.
     let merged = post_form(pool.clone(), &format!("/moderim/{mercedes_id}/bashko"), &[("into", &mercedes_benz_id)], Some(&moderator)).await;
     assert_eq!(merged.status, StatusCode::SEE_OTHER);
-    assert!(get(pool.clone(), &mercedes).await.body.contains("<h1>Mercedes-Benz C 220</h1>"));
+    assert!(get(pool.clone(), &mercedes).await.body.contains(r#"<p class="listing-variant">Mercedes-Benz C 220, 2017</p>"#));
     let page = get_with_cookie(pool.clone(), "/moderim", &moderator).await.body;
     assert!(page.contains(r#"<span class="pending-attribute">Modeli · Mercedes-Benz</span>"#));
     assert!(page.contains(r#"<strong class="pending-label">C 220</strong>"#));
@@ -4626,9 +4631,9 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         r#"<nav class="category-path listing-path""#,
         r#"<div class="gallery">"#,
         r#"<p class="listing-meta">"#,
-        "<h1>Volkswagen Golf</h1>",
-        r#"<p class="listing-variant">7, 2016, naftë</p>"#,
+        "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur · "#,
+        r#"<dl class="key-facts">"#,
         r#"<div class="listing-deal">"#,
         r#"<div class="price-box">"#,
         r#"<p class="listing-price">"#,
