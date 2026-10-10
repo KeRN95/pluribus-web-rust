@@ -75,6 +75,7 @@ mod safety;
 mod typed_in;
 mod notices;
 mod searches;
+mod expiry;
 
 pub use categories::*;
 pub use properties::*;
@@ -90,6 +91,7 @@ pub use safety::*;
 pub use typed_in::*;
 pub use notices::*;
 pub use searches::*;
+pub use expiry::*;
 
 #[cfg(test)]
 mod tests {

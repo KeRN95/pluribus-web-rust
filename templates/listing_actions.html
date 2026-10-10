@@ -9,6 +9,13 @@
       or sold one back up; or delete it after the browser asks to be sure. Each comes back to this
       page, but deleting, which goes to "Njoftimet e mia" (post.rs). -#}
   {%- let up = listing.status == "ACTIVE" || listing.status == "RESERVED" %}
+  {%- if listing.renewable() %}
+  {#- Expired, or expiring within a week ("Skadon pas 3 ditësh" in its tooltip): "Rifresko" keeps
+      it up 60 days more (post.rs, renew_listing). -#}
+  <form method="post" action="/listing/{{ listing.public_no }}/rifresko">
+    <button type="submit" class="button secondary"{% if let Some(soon) = listing.expires_soon() %} title="{{ soon }}"{% endif %}><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::RENEW|safe }}</svg>Rifresko</button>
+  </form>
+  {%- endif %}
   {%- if up || listing.status == "PAUSED" %}
   <a class="button secondary" href="/listing/{{ listing.public_no }}/ndrysho"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PENCIL|safe }}</svg>Ndrysho</a>
   {%- endif %}

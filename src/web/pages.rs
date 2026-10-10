@@ -21,7 +21,7 @@ pub const PAGES: [(&str, &str); 5] = [
 ];
 
 /// When the terms and the privacy page last changed, as they say at their top.
-const TERMS_UPDATED: &str = "8 tetor 2026";
+const TERMS_UPDATED: &str = "10 tetor 2026";
 const PRIVACY_UPDATED: &str = "10 tetor 2026";
 
 /// A setting from .env, when it is set: CONTACT_EMAIL, the address the contact and privacy pages

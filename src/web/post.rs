@@ -850,6 +850,19 @@ impl MyListing {
     pub fn sell_action(&self) -> &'static str {
         format::sell_action(&self.listing_type)
     }
+
+    /// Up or reserved and expiring within a week: "Skadon pas 3 ditësh" (format::expires_soon).
+    pub fn expires_soon(&self) -> Option<String> {
+        match self.status.as_str() {
+            "ACTIVE" | "RESERVED" => format::expires_soon(self.expires_at?, time::OffsetDateTime::now_utc()),
+            _ => None,
+        }
+    }
+
+    /// Expired, or expiring within a week: "Rifresko" keeps it up db::LISTING_DAYS more.
+    pub fn renewable(&self) -> bool {
+        self.status == "EXPIRED" || self.expires_soon().is_some()
+    }
 }
 
 /// "Çaktivizo": the seller takes a listing down for a while; only they still see it, on
@@ -877,6 +890,20 @@ pub async fn reserve_listing(State(state): State<AppState>, headers: HeaderMap, 
 /// "Hiq rezervimin": the reservation is off, the listing up as before.
 pub async fn unreserve_listing(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
     change_listing(&state, &headers, public_no, ListingAction::Unreserve).await
+}
+
+/// "Rifresko": the listing stays up db::LISTING_DAYS more, an expired one back up, and comes back
+/// to the top of "newest first" if it was last brought up a week ago or more (db::renew_listing).
+/// Back to the page the button was on, or "Njoftimet e mia".
+pub async fn renew_listing(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
+    let Some(user) = current_user(&state, &headers).await? else {
+        return render(SignInPage::new());
+    };
+    if !db::renew_listing(&state.db, public_no, user.id).await? {
+        return not_found().await;
+    }
+    let back = saved::referring_page(&headers).unwrap_or_else(|| "/njoftimet-e-mia".to_string());
+    Ok(Redirect::to(&back).into_response())
 }
 
 /// "Fshi": the listing is gone for good, from the site and from "Njoftimet e mia".

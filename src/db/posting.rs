@@ -184,18 +184,28 @@ async fn save_properties(
     Ok(())
 }
 
+/// How long a listing stays up once published, renewed ("Rifresko") or put back up, in days: it
+/// expires then (expiry.rs), unless its seller renews it. A listing from before there was an
+/// expiry has none, and stays up.
+pub const LISTING_DAYS: i32 = 60;
+/// A renewal brings a listing back to the top of "newest first" (`bumped_at`) once in this many
+/// days at most, so that renewing is no way to stay on top.
+pub const BUMP_DAYS: i32 = 7;
+
 /// Saves a listing at its place's point on the map (its town's, for a zone without one), with the
-/// seller's contact, published at once or as a draft (`publish`), and returns its id and number.
+/// seller's contact, published at once or as a draft (`publish`), when it expires with it, and
+/// returns its id and number.
 pub async fn create_listing(db: &PgPool, listing: &NewListing<'_>) -> sqlx::Result<(Uuid, i64)> {
     let mut tx = db.begin().await?;
     let row = sqlx::query!(
         "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, location_id, slug, title,
                                description, listing_type, condition, price_amount, currency, price_type,
-                               price_normalized, latitude, longitude, status, published_at)
+                               price_normalized, latitude, longitude, status, published_at, expires_at)
          SELECT $1, $1, $2, loc.id, $4, $5, $6, $7, $8, $9, $10::text::currency_code, $11,
                 price_in_eur($9, $10::text::currency_code),
                 coalesce(loc.latitude, town.latitude), coalesce(loc.longitude, town.longitude),
-                CASE WHEN $12 THEN 'ACTIVE' ELSE 'DRAFT' END, CASE WHEN $12 THEN now() END
+                CASE WHEN $12 THEN 'ACTIVE' ELSE 'DRAFT' END, CASE WHEN $12 THEN now() END,
+                CASE WHEN $12 THEN now() + make_interval(days => $13) END
          FROM locations loc
          LEFT JOIN locations town ON town.id = location_municipality(loc.id)
          WHERE loc.id = $3
@@ -212,6 +222,7 @@ pub async fn create_listing(db: &PgPool, listing: &NewListing<'_>) -> sqlx::Resu
         listing.currency,
         listing.price_type,
         listing.publish,
+        LISTING_DAYS,
     )
     .fetch_one(&mut *tx)
     .await?;
@@ -376,8 +387,8 @@ impl ListingAction {
 /// Pauses, resumes, sells, reserves or deletes one of the user's listings. False when the listing
 /// isn't theirs, isn't in a state the action applies to (a deleted one, or pausing one already
 /// paused), or isn't of a kind it applies to (selling a wanted ad). Selling sets when it was sold,
-/// as the schema asks of a sold listing, and putting one back up clears it. The status history
-/// records the seller as the one who changed it.
+/// as the schema asks of a sold listing, and putting one back up clears it and gives it its
+/// LISTING_DAYS again. The status history records the seller as the one who changed it.
 pub async fn change_own_listing(db: &PgPool, public_no: i64, user_id: Uuid, action: ListingAction) -> sqlx::Result<bool> {
     let (from, to) = action.statuses();
     let from: Vec<String> = from.iter().map(|status| status.to_string()).collect();
@@ -389,7 +400,9 @@ pub async fn change_own_listing(db: &PgPool, public_no: i64, user_id: Uuid, acti
     let changed = sqlx::query!(
         "UPDATE listings
          SET status = $3::text, updated_at = now(),
-             sold_at = CASE WHEN $3::text = 'SOLD' THEN now() WHEN $3::text = 'ACTIVE' THEN NULL ELSE sold_at END
+             sold_at = CASE WHEN $3::text = 'SOLD' THEN now() WHEN $3::text = 'ACTIVE' THEN NULL ELSE sold_at END,
+             expires_at = CASE WHEN $3::text = 'ACTIVE' AND status IN ('PAUSED', 'SOLD')
+                               THEN now() + make_interval(days => $6) ELSE expires_at END
          WHERE public_no = $1 AND created_by_user_id = $2 AND status::text = ANY($4)
            AND ($5::text[] IS NULL OR listing_type::text = ANY($5))",
         public_no,
@@ -397,6 +410,7 @@ pub async fn change_own_listing(db: &PgPool, public_no: i64, user_id: Uuid, acti
         to,
         &from,
         kinds.as_deref(),
+        LISTING_DAYS,
     )
     .execute(&mut *tx)
     .await?
@@ -404,6 +418,35 @@ pub async fn change_own_listing(db: &PgPool, public_no: i64, user_id: Uuid, acti
         == 1;
     tx.commit().await?;
     Ok(changed)
+}
+
+/// "Rifresko": one of the user's listings, up, reserved or expired, stays up for LISTING_DAYS from
+/// now, an expired one back up, and comes back to the top of "newest first" if it was published
+/// or last brought up (`sort_at`) BUMP_DAYS ago or more. False if it isn't theirs, or isn't in a
+/// state to renew (paused, sold, deleted, taken off the site).
+pub async fn renew_listing(db: &PgPool, public_no: i64, user_id: Uuid) -> sqlx::Result<bool> {
+    let mut tx = db.begin().await?;
+    sqlx::query!("SELECT set_config('app.user_id', $1, true)", user_id.to_string())
+        .fetch_one(&mut *tx)
+        .await?;
+    let renewed = sqlx::query!(
+        "UPDATE listings
+         SET status = CASE WHEN status = 'EXPIRED' THEN 'ACTIVE' ELSE status END,
+             expires_at = now() + make_interval(days => $3),
+             bumped_at = CASE WHEN sort_at < now() - make_interval(days => $4) THEN now() ELSE bumped_at END,
+             updated_at = now()
+         WHERE public_no = $1 AND created_by_user_id = $2 AND status IN ('ACTIVE', 'RESERVED', 'EXPIRED')",
+        public_no,
+        user_id,
+        LISTING_DAYS,
+        BUMP_DAYS,
+    )
+    .execute(&mut *tx)
+    .await?
+    .rows_affected()
+        == 1;
+    tx.commit().await?;
+    Ok(renewed)
 }
 
 /// A row on "Njoftimet e mia".
@@ -416,6 +459,8 @@ pub struct MyListing {
     pub price_amount: Option<Decimal>,
     pub currency: String,
     pub price_type: String,
+    /// When it expires, if it does (LISTING_DAYS).
+    pub expires_at: Option<OffsetDateTime>,
     pub stats: ListingStats,
 }
 
@@ -450,7 +495,7 @@ impl std::iter::Sum for ListingStats {
 pub async fn my_listings(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<MyListing>> {
     let rows = sqlx::query!(
         r#"SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS "title!", l.status, l.listing_type,
-                  l.price_amount, l.currency::text AS "currency!", l.price_type,
+                  l.price_amount, l.currency::text AS "currency!", l.price_type, l.expires_at,
                   coalesce(seen.views, 0)::bigint AS "views!", coalesce(seen.views_week, 0)::bigint AS "views_week!",
                   coalesce(seen.contacts, 0)::bigint AS "contacts!",
                   coalesce(seen.contacts_week, 0)::bigint AS "contacts_week!",
@@ -486,6 +531,7 @@ pub async fn my_listings(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<MyListi
             price_amount: row.price_amount,
             currency: row.currency,
             price_type: row.price_type,
+            expires_at: row.expires_at,
             stats: ListingStats {
                 views: row.views,
                 views_week: row.views_week,

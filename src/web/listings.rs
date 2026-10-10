@@ -404,6 +404,7 @@ impl ListingDetail {
             "RESERVED" => Some("Rezervuar"),
             "SOLD" => Some(format::sold(&self.listing_type)),
             "PAUSED" => Some("Çaktivizuar"),
+            "EXPIRED" => Some("Skaduar"),
             "SUSPENDED" => Some("Në shqyrtim"),
             "REJECTED" => Some("Hequr"),
             _ => None,
@@ -411,7 +412,7 @@ impl ListingDetail {
     }
 
     /// On the site for anyone with its link: not taken off it by its reports or the moderators,
-    /// nor down for a while by its seller.
+    /// nor down for a while by its seller, nor expired (expiry.rs).
     pub fn on_site(&self) -> bool {
         matches!(self.status.as_str(), "ACTIVE" | "RESERVED" | "SOLD")
     }
@@ -424,6 +425,19 @@ impl ListingDetail {
     /// Its seller's button that says it is sold: "U shit", or "U dha me qira" for a rental.
     pub fn sell_action(&self) -> &'static str {
         format::sell_action(&self.listing_type)
+    }
+
+    /// Up or reserved and expiring within a week: "Skadon pas 3 ditësh", by its seller's buttons.
+    pub fn expires_soon(&self) -> Option<String> {
+        match self.status.as_str() {
+            "ACTIVE" | "RESERVED" => format::expires_soon(self.expires_at?, time::OffsetDateTime::now_utc()),
+            _ => None,
+        }
+    }
+
+    /// Expired, or expiring within a week: its seller's "Rifresko" keeps it up db::LISTING_DAYS more.
+    pub fn renewable(&self) -> bool {
+        self.status == "EXPIRED" || self.expires_soon().is_some()
     }
 }
 
@@ -653,6 +667,8 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         "REJECTED" => Some("Moderatorët e hoqën këtë njoftim nga faqja."),
         "PAUSED" if own => Some("E ke çaktivizuar këtë njoftim: askush tjetër nuk e sheh. „Aktivizo“ e kthen në faqe aty ku ishte."),
         "PAUSED" => Some("Shitësi e ka çaktivizuar këtë njoftim: askush tjetër nuk e sheh."),
+        "EXPIRED" if own => Some("Ky njoftim skadoi: askush tjetër nuk e sheh. „Rifresko“ e kthen në faqe për 60 ditë të tjera."),
+        "EXPIRED" => Some("Ky njoftim skadoi: askush tjetër nuk e sheh."),
         _ => None,
     };
     // A car's title says its make, model and year: its details leave them out.

@@ -40,6 +40,8 @@ pub struct ListingDetail {
     /// euros.
     pub eur_rate: Option<Decimal>,
     pub published_at: Option<OffsetDateTime>,
+    /// When it expires, if it does (posting.rs, LISTING_DAYS).
+    pub expires_at: Option<OffsetDateTime>,
     /// The seller: a business's name, or the private seller's, with their profile's address.
     pub seller_name: String,
     pub seller_url: String,
@@ -84,8 +86,8 @@ pub struct Photo {
 }
 
 /// Sold and reserved listings stay viewable, so shared links keep working; those the reports or
-/// the moderators took off the site, and those their seller took down for a while (PAUSED), come
-/// too, for their seller and the moderators alone (web/listings.rs).
+/// the moderators took off the site, those their seller took down for a while (PAUSED) and those
+/// that expired come too, for their seller and the moderators alone (web/listings.rs).
 pub async fn listing_by_public_no(
     db: &PgPool,
     public_no: i64,
@@ -107,7 +109,7 @@ pub async fn listing_by_public_no(
                   l.latitude::float8 AS "latitude?", l.longitude::float8 AS "longitude?",
                   zone_price.average_eur AS "zone_average_eur?", zone_price.listings AS "zone_listings?",
                   (SELECT r.eur_rate FROM exchange_rates r WHERE r.currency = l.currency) AS "eur_rate?",
-                  l.published_at,
+                  l.published_at, l.expires_at,
                   coalesce(b.display_name, u.display_name) AS "seller_name!",
                   CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || u.id END AS "seller_url!",
                   coalesce(b.created_at, u.created_at) AS "seller_since!",
@@ -131,7 +133,7 @@ pub async fn listing_by_public_no(
            LEFT JOIN zone_area_prices zone_price ON zone_price.zone_id = l.location_id AND zone_price.category_id = l.category_id
            LEFT JOIN users u ON u.id = l.seller_user_id
            LEFT JOIN businesses b ON b.id = l.seller_business_id
-           WHERE l.public_no = $1 AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD', 'PAUSED', 'SUSPENDED', 'REJECTED')"#,
+           WHERE l.public_no = $1 AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD', 'PAUSED', 'EXPIRED', 'SUSPENDED', 'REJECTED')"#,
         public_no
     )
     .fetch_optional(db)

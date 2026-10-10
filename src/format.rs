@@ -168,6 +168,20 @@ pub fn date(value: OffsetDateTime) -> String {
         .unwrap_or_default()
 }
 
+/// When a listing expires, as its seller's buttons say it within a week, by Albania's clock:
+/// "Skadon sot", "Skadon nesër", "Skadon pas 3 ditësh"; None from a week on, or once past.
+pub fn expires_soon(expires: OffsetDateTime, now: OffsetDateTime) -> Option<String> {
+    if expires <= now {
+        return None;
+    }
+    match (tirana(expires).date() - tirana(now).date()).whole_days() {
+        0 => Some("Skadon sot".to_string()),
+        1 => Some("Skadon nesër".to_string()),
+        days @ 2..=6 => Some(format!("Skadon pas {days} ditësh")),
+        _ => None,
+    }
+}
+
 /// When something happened, as a line says it, by Albania's clock: "Sot", "Dje", "para 3 ditësh"
 /// within the week, and the date from a week on.
 pub fn when(value: OffsetDateTime, now: OffsetDateTime) -> String {
@@ -473,6 +487,21 @@ mod tests {
         // Summer time starts on the last Sunday of March at 01:00 UTC (the 29th in 2026).
         assert_eq!(date(datetime!(2026-03-28 22:30 UTC)), "28.03.2026");
         assert_eq!(date(datetime!(2026-03-29 22:30 UTC)), "30.03.2026");
+    }
+
+    #[test]
+    fn says_when_a_listing_expires_within_the_week() {
+        use time::macros::datetime;
+        // Saturday the 10th, half past nine in the evening in Tirana (UTC+2).
+        let now = datetime!(2026-10-10 19:30 UTC);
+        assert_eq!(expires_soon(datetime!(2026-10-10 21:00 UTC), now).as_deref(), Some("Skadon sot"));
+        // 22:30 UTC is half past midnight on the 11th in Tirana: tomorrow.
+        assert_eq!(expires_soon(datetime!(2026-10-10 22:30 UTC), now).as_deref(), Some("Skadon nesër"));
+        assert_eq!(expires_soon(datetime!(2026-10-13 08:00 UTC), now).as_deref(), Some("Skadon pas 3 ditësh"));
+        assert_eq!(expires_soon(datetime!(2026-10-16 08:00 UTC), now).as_deref(), Some("Skadon pas 6 ditësh"));
+        // A week or more off, nothing yet; once past, nothing either (it has expired).
+        assert_eq!(expires_soon(datetime!(2026-10-17 08:00 UTC), now), None);
+        assert_eq!(expires_soon(datetime!(2026-10-10 19:00 UTC), now), None);
     }
 
     #[test]

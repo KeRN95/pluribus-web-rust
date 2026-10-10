@@ -107,6 +107,7 @@ pub fn router(state: AppState) -> Router {
         .route("/listing/{public_no}/caktivizo", post(post::pause_listing))
         .route("/listing/{public_no}/aktivizo", post(post::resume_listing))
         .route("/listing/{public_no}/shitur", post(post::sell_listing))
+        .route("/listing/{public_no}/rifresko", post(post::renew_listing))
         .route("/listing/{public_no}/rezervo", post(post::reserve_listing))
         .route("/listing/{public_no}/zhrezervo", post(post::unreserve_listing))
         .route("/listing/{public_no}/fshi", post(post::delete_listing))

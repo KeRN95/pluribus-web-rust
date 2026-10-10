@@ -647,6 +647,8 @@ pub const TRASH: &str = r#"<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 
 pub const SOLD: &str = r#"<circle cx="12" cy="12" r="8.5"/><path d="m8.5 12 2.5 2.5 4.5-5"/>"#;
 pub const RESERVE: &str = CLOCK;
 pub const RESUME: &str = r#"<path d="M8 5.5v13l10.5-6.5Z"/>"#;
+/// Two arrows round a circle: renewing a listing that expired or soon will ("Rifresko").
+pub const RENEW: &str = r#"<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/>"#;
 
 /// A shield with a check: a seller's number or address verified (listing.html, profile.html).
 pub const VERIFIED: &str = r#"<path d="M12 3 4.5 6v5.5c0 4.5 3.2 8.3 7.5 9.5 4.3-1.2 7.5-5 7.5-9.5V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>"#;

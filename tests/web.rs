@@ -4285,6 +4285,140 @@ async fn a_saved_search_counts_and_tells_of_its_new_listings(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn listings_expire_unless_their_sellers_renew_them(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let no = post_listing(&pool, &ana).await;
+    let url = format!("/listing/{no}-samsung-galaxy-s21-128-gb");
+    let renew = format!("/listing/{no}/rifresko");
+    let renew_form = format!(r#"<form method="post" action="{renew}">"#);
+    let run = || marketplace::expiry::run(&pool, "https://pluribus.example");
+    // Runs a statement on the listing ($1, its number).
+    let set = |pool: PgPool, sql: &'static str| {
+        let no = no.clone();
+        async move {
+            sqlx::query(sql).bind(no).execute(&pool).await.unwrap();
+        }
+    };
+    // Its status, the days it has left, and when it was last brought up.
+    let state = |pool: PgPool| {
+        let no = no.clone();
+        async move {
+            sqlx::query_as::<_, (String, f64, Option<time::OffsetDateTime>)>(
+                "SELECT status, extract(epoch FROM expires_at - now())::float8 / 86400, bumped_at
+                 FROM listings WHERE public_no = $1::bigint",
+            )
+            .bind(no)
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+        }
+    };
+    let notified = |pool: PgPool, kind: &'static str| async move {
+        sqlx::query_scalar::<_, String>("SELECT title FROM notifications WHERE notification_type = $1 ORDER BY created_at")
+            .bind(kind)
+            .fetch_all(&pool)
+            .await
+            .unwrap()
+    };
+    send(pool.clone(), tap_heart(&no, "1", Some(besa.as_str()))).await;
+
+    // Posted, it has 60 days; the listings from before there was an expiry have none, and stay.
+    let (status, days, _) = state(pool.clone()).await;
+    assert_eq!(status, "ACTIVE");
+    assert!((59.99..=60.0).contains(&days), "{days}");
+    assert_eq!(run().await.unwrap(), (0, 0));
+    assert!(!get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(&renew_form));
+
+    // Within a week of it, its seller sees when, and "Rifresko", on "Njoftimet e mia" and on its page.
+    set(
+        pool.clone(),
+        "UPDATE listings SET expires_at = (date_trunc('day', now() AT TIME ZONE 'Europe/Tirane') + interval '5 days 12 hours') AT TIME ZONE 'Europe/Tirane'
+         WHERE public_no = $1::bigint",
+    )
+    .await;
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
+    assert!(mine.contains(r#"<span class="badge">Skadon pas 5 ditësh</span>"#), "{mine}");
+    assert!(mine.contains(&renew_form));
+    let own = get_with_cookie(pool.clone(), &url, &ana).await.body;
+    assert!(own.contains(&renew_form) && own.contains(r#"title="Skadon pas 5 ditësh""#), "{own}");
+    assert!(!get_with_cookie(pool.clone(), &url, &besa).await.body.contains(&renew_form));
+    assert_eq!(run().await.unwrap(), (0, 0));
+
+    // Three days from it, its seller hears of it, once.
+    set(pool.clone(), "UPDATE listings SET expires_at = now() + interval '2 days' WHERE public_no = $1::bigint").await;
+    assert_eq!(run().await.unwrap(), (1, 0));
+    assert_eq!(run().await.unwrap(), (0, 0));
+    assert_eq!(notified(pool.clone(), "EXPIRING").await, ["Njoftimi skadon së shpejti: Samsung Galaxy S21, 128 GB"]);
+
+    // Its time up: off the site, the history saying why, its seller told; once.
+    set(
+        pool.clone(),
+        "UPDATE listings SET expires_at = now() - interval '1 minute', published_at = now() - interval '60 days'
+         WHERE public_no = $1::bigint",
+    )
+    .await;
+    assert_eq!(run().await.unwrap(), (0, 1));
+    assert_eq!(run().await.unwrap(), (0, 0));
+    assert_eq!(state(pool.clone()).await.0, "EXPIRED");
+    assert_eq!(notified(pool.clone(), "EXPIRED").await, ["Njoftimi skadoi: Samsung Galaxy S21, 128 GB"]);
+    let reason: Option<String> = sqlx::query_scalar(
+        "SELECT h.reason FROM listing_status_history h JOIN listings l ON l.id = h.listing_id
+         WHERE l.public_no = $1::bigint AND h.to_status = 'EXPIRED'",
+    )
+    .bind(&no)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(reason.as_deref(), Some("Skadoi"));
+    assert_eq!(get(pool.clone(), &url).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(get_with_cookie(pool.clone(), &url, &besa).await.status, StatusCode::NOT_FOUND);
+    assert!(!get(pool.clone(), "/search?q=Galaxy").await.body.contains(&url));
+    // Besa, who keeps it, finds it among those no longer shown, saying why.
+    let gone = get_with_cookie(pool.clone(), "/te-ruajturat", &besa).await.body;
+    assert!(section(&gone, "saved-gone-heading").contains(r#"<span class="badge">Skadoi</span>"#), "{gone}");
+    // Its seller still has its page, saying so, with "Rifresko" and none of the buttons for a
+    // listing up or taken down for a while; and it on "Njoftimet e mia", likewise.
+    let own = get_with_cookie(pool.clone(), &url, &ana).await;
+    assert_eq!(own.status, StatusCode::OK);
+    assert!(own.body.contains(r#"<span class="badge">Skaduar</span>"#), "{}", own.body);
+    assert!(own.body.contains("Ky njoftim skadoi: askush tjetër nuk e sheh. „Rifresko“ e kthen në faqe për 60 ditë të tjera."));
+    assert!(own.body.contains(&renew_form) && !own.body.contains(&format!("/listing/{no}/aktivizo")) && !own.body.contains(&format!("/listing/{no}/caktivizo")));
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
+    assert!(mine.contains(r#"<span class="badge">Skaduar</span>"#) && mine.contains(&renew_form), "{mine}");
+
+    // Renewed by nobody else; by Ana, from its page: up again for 60 days, back on that page, and,
+    // published 60 days ago, at the top of "newest first" again.
+    assert_eq!(post_form(pool.clone(), &renew, &[], Some(&besa)).await.status, StatusCode::NOT_FOUND);
+    let renewed = post_from_page(pool.clone(), &renew, &url, &ana).await;
+    assert_eq!(renewed.location.as_deref(), Some(url.as_str()));
+    let (status, days, bumped) = state(pool.clone()).await;
+    assert_eq!(status, "ACTIVE");
+    assert!((59.99..=60.0).contains(&days), "{days}");
+    assert!(bumped.is_some());
+    assert_eq!(get(pool.clone(), &url).await.status, StatusCode::OK);
+    assert_eq!(card_numbers(&get(pool.clone(), "/").await.body).first(), Some(&no.parse().unwrap()));
+    // Renewed again within the week, from "Njoftimet e mia": its 60 days from now, but not brought
+    // up again.
+    set(pool.clone(), "UPDATE listings SET expires_at = now() + interval '1 day' WHERE public_no = $1::bigint").await;
+    let renewed = post_from_page(pool.clone(), &renew, "/njoftimet-e-mia", &ana).await;
+    assert_eq!(renewed.location.as_deref(), Some("/njoftimet-e-mia"));
+    let (_, days, bumped_again) = state(pool.clone()).await;
+    assert!((59.99..=60.0).contains(&days), "{days}");
+    assert_eq!(bumped_again, bumped);
+
+    // Taken down for a while, it neither expires nor renews; put back up, it has 60 days again.
+    post_form(pool.clone(), &format!("/listing/{no}/caktivizo"), &[], Some(&ana)).await;
+    set(pool.clone(), "UPDATE listings SET expires_at = now() - interval '1 day' WHERE public_no = $1::bigint").await;
+    assert_eq!(run().await.unwrap(), (0, 0));
+    assert_eq!(post_form(pool.clone(), &renew, &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+    post_form(pool.clone(), &format!("/listing/{no}/aktivizo"), &[], Some(&ana)).await;
+    let (status, days, _) = state(pool.clone()).await;
+    assert_eq!(status, "ACTIVE");
+    assert!((59.99..=60.0).contains(&days), "{days}");
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn listings_go_into_subcategories(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     // The form groups subcategories under their category.

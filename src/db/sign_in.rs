@@ -232,11 +232,12 @@ pub async fn poster_account(db: &PgPool, phone: Option<&str>, email: Option<&str
 /// returns its address.
 pub async fn publish_draft(db: &PgPool, listing_id: Uuid, user_id: Uuid) -> sqlx::Result<Option<String>> {
     sqlx::query_scalar!(
-        r#"UPDATE listings SET status = 'ACTIVE', published_at = now()
+        r#"UPDATE listings SET status = 'ACTIVE', published_at = now(), expires_at = now() + make_interval(days => $3)
            WHERE id = $1 AND created_by_user_id = $2 AND status = 'DRAFT'
            RETURNING '/listing/' || public_no || '-' || slug AS "url!""#,
         listing_id,
         user_id,
+        super::LISTING_DAYS,
     )
     .fetch_optional(db)
     .await
