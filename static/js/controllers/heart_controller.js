@@ -8,8 +8,8 @@ import { signedIn } from "controllers/signed_in.js";
 // known before. A tap keeps the listing or lets it go at once, every heart for it on the page with
 // it, and tells the server (POST /listing/N/ruaj), one tap after the other; should that fail, the
 // hearts go back. Someone not signed in goes to sign in, and comes back with the listing kept.
-// The same answer says how many kept listings dropped their price unseen, for the header's heart
-// (the welcome page's, at the end of its categories).
+// The same answer says how many kept listings dropped their price unseen, for the top bar's heart
+// (the welcome page's, in the row with its search).
 // Someone not signed in keeps nothing, and the page doesn't ask (signed_in.js).
 // What is known is kept in the browser too (localStorage, STORE), so that a page opened afresh, not
 // only one Turbo shows, has its hearts as they were with its photos, before the answer comes; it
@@ -55,18 +55,18 @@ function answered(answer) {
   showDrops(answer.price_drops);
 }
 
-// The welcome page's heart at the end of its categories (home.html) has a dot while listings the
-// visitor keeps dropped their price since they last looked at /te-ruajturat, and says how many to
-// screen readers; not on that page, which shows them (saved.html) and so has them seen. (No top
-// bar has a heart: every page's holds the account alone.)
+// The heart that leads to the listings kept, in the top bar (base.html) or, on the welcome page, in
+// the row with its search (home.html), has a dot while listings the visitor keeps dropped their
+// price since they last looked at /te-ruajturat, and says how many to screen readers; not on that
+// page, which shows them (saved.html) and so has them seen.
 function showDrops(count) {
-  const button = document.querySelector(".saved-shortcut");
-  if (!button) return;
   const news = count > 0 && !document.querySelector(".price-drops");
   const label = news ? `Të ruajturat: ${count} me çmim më të ulët` : "Të ruajturat";
-  button.classList.toggle("has-drops", news);
-  button.setAttribute("aria-label", label);
-  button.title = label;
+  for (const button of document.querySelectorAll(".saved-shortcut, .saved-button")) {
+    button.classList.toggle("has-drops", news);
+    button.setAttribute("aria-label", label);
+    button.title = label;
+  }
 }
 
 // Each page asks again: the visitor may have signed in or out, or kept listings elsewhere.

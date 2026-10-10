@@ -361,25 +361,31 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(order.is_sorted(), "{order:?}");
     assert!(!list.contains("circle-shortcut"), "{list}");
     // Every page's top bar has the account at its right end, and after it the theme, the welcome
-    // page's too: the plus, the heart and the conversations are the welcome page's round buttons
-    // and no bar's.
+    // page's too; before the account, the listings kept and the conversations, so that every page
+    // reaches them in a tap, but on the welcome page, whose row with the search has them. The plus
+    // is that row's alone.
     let cars = get(pool.clone(), "/c/automjete").await.body;
-    for (page, theme) in [(&body, true), (&cars, true)] {
-        for gone in ["post-button", "saved-button", "inbox-button"] {
-            assert!(!page.contains(gone), "{gone}");
-        }
+    for (page, shortcuts) in [(&body, false), (&cars, true)] {
+        assert!(!page.contains("post-button"));
         // The typeface panel ("Aa") stands there only while TYPE_TRIAL is on (.env).
         let trial = std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true");
         assert_eq!(page.contains(r#"<details class="type-menu" data-controller="dropdown type-trial""#), trial);
         let bar = &page[page.find(r#"<header class="site-header">"#).unwrap()..page.find("</header>").unwrap()];
-        assert_eq!(bar.matches("icon-button").count(), 1 + usize::from(theme) + usize::from(trial), "{bar}");
+        assert_eq!(bar.matches("icon-button").count(), 2 + 2 * usize::from(shortcuts) + usize::from(trial), "{bar}");
         assert!(bar.contains(r#"<a class="icon-button account-button" href="/llogaria""#));
         let toggle = r#"<button type="button" class="icon-button theme-toggle" data-controller="theme" data-action="theme#toggle""#;
-        assert_eq!(bar.contains(toggle), theme, "{bar}");
-        if theme {
-            assert!(bar.find("account-button").unwrap() < bar.find("theme-toggle").unwrap());
+        assert!(bar.contains(toggle), "{bar}");
+        assert!(bar.find("account-button").unwrap() < bar.find("theme-toggle").unwrap());
+        let saved = r#"<a class="icon-button saved-button" href="/te-ruajturat" aria-label="Të ruajturat" title="Të ruajturat">"#;
+        let inbox = r#"<a class="icon-button inbox-button" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">"#;
+        assert_eq!(bar.contains(saved) && bar.contains(inbox), shortcuts, "{bar}");
+        if shortcuts {
+            let order = positions(bar, &[saved, inbox, "account-button"]);
+            assert!(order.is_sorted(), "{order:?}");
+            assert!(bar.contains(r#"<span class="inbox-count" data-inbox-target="count" hidden></span>"#));
         }
     }
+    assert!(!body.contains("saved-button") && !body.contains("inbox-button"));
     assert!(!cars.contains("circle-shortcut"));
     assert!(!body.contains("data-panel-target") && !body.contains("<noscript>"));
     assert!(!body.contains(r#"name="city""#) && !body.contains(r#"name="category""#));
@@ -471,12 +477,13 @@ fn tap_heart(number: &str, keep: &str, cookie: Option<&str>) -> Request<Body> {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn every_listing_has_a_heart_over_its_photo(pool: PgPool) {
     // On every card, the newest listings' row's too, and on the listing's page; the welcome page's
-    // round button at the end of its categories leads to the listings kept, and no top bar does.
+    // round button in the row with its search leads to the listings kept, and every other page's
+    // top bar does.
     let home = get(pool.clone(), "/").await.body;
     assert_eq!(home.matches(r#"<form class="heart""#).count(), home.matches(r#"<article class="card"#).count());
     assert!(home.contains(r#"<a class="circle-shortcut plain-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#));
     let cars = get(pool.clone(), "/c/automjete").await.body;
-    assert!(!cars.contains("saved-button"));
+    assert!(cars.contains(r#"<a class="icon-button saved-button" href="/te-ruajturat""#));
     assert!(cars.contains(&heart(1001)));
     assert_eq!(cars.matches(r#"<form class="heart""#).count(), cars.matches(r#"<article class="card"#).count());
     let listing = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
@@ -5481,9 +5488,12 @@ async fn writing_to_a_seller_takes_signing_in_first(pool: PgPool) {
     let inbox = get(pool.clone(), "/mesazhet").await.body;
     assert!(inbox.contains("Hyr në llogari për t'u shkruar shitësve"));
     assert_eq!(get(pool.clone(), "/mesazhet/numri").await.body, r#"{"unread":0}"#);
-    // The welcome page has the button to the conversations at the end of its categories; no top
-    // bar has one.
-    assert!(!get(pool.clone(), "/c/automjete").await.body.contains("inbox-button"));
+    // The welcome page has the button to the conversations in the row with its search; every other
+    // page has it in the top bar, the listing's page too, which a seller reads a buyer's message
+    // from.
+    for page in ["/c/automjete", "/listing/1001-volkswagen-golf-7-2016-nafte", "/mesazhet"] {
+        assert!(get(pool.clone(), page).await.body.contains(r#"<a class="icon-button inbox-button" href="/mesazhet""#), "{page}");
+    }
     assert!(get(pool.clone(), "/").await.body.contains(r#"<a class="circle-shortcut plain-shortcut inbox-shortcut" href="/mesazhet""#));
 }
 

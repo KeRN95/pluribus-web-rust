@@ -11,13 +11,18 @@
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
+{#- The listings kept and the conversations are the round buttons in the row with the search
+    (below), so the top bar has the account and the theme alone here. #}
+{% block header_shortcuts %}{% endblock %}
+
 {% block content %}
 <section class="welcome">
   {#- The question, for screen readers: on the page the search and the categories ask it. -#}
   <h1 class="visually-hidden">Çfarë po kërkon?</h1>
   <div class="welcome-start">
   {#- One row over the categories (.welcome-tools, welcome.css): the search, then the round buttons
-      no top bar holds (every page's has the account alone, base.html), as tall as the pills under
+      that this page's top bar leaves out (every other page's has the heart and the conversations
+      before the account, base.html; the plus is this row's alone), as tall as the pills under
       them. The search takes the width the buttons leave it: words only, searched in every
       category and town, the results' filters narrowing them, drawn like the message box in
       Claude's app, a pill with the words in it and, at its end, a round button in the page's
