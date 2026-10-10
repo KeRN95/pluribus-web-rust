@@ -5112,6 +5112,53 @@ async fn listings_expire_unless_their_sellers_renew_them(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_stores_listing_tells_its_expiry_to_whoever_still_keeps_it(pool: PgPool) {
+    // Besa posts for Dritan's store, Auto Durrësi.
+    let besa = new_seller(&pool, "+355691112244").await;
+    let store = "44444444-4444-4444-8444-444444444444";
+    sqlx::query("INSERT INTO business_members (business_id, user_id, role) VALUES ($1::uuid, $2::uuid, 'EDITOR')")
+        .bind(store)
+        .bind(account_of(&besa))
+        .execute(&pool)
+        .await
+        .unwrap();
+    let no = post_listing(&pool, &besa).await;
+    sqlx::query("UPDATE listings SET seller_user_id = NULL, seller_business_id = $2::uuid, expires_at = now() + interval '2 days' WHERE public_no = $1::bigint")
+        .bind(&no)
+        .bind(store)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let run = || marketplace::expiry::run(&pool, "https://pluribus.example");
+    let told = |pool: PgPool| async move {
+        sqlx::query_as::<_, (String, String)>(
+            "SELECT user_id::text, notification_type FROM notifications
+             WHERE notification_type IN ('EXPIRING', 'EXPIRED') ORDER BY created_at, notification_type",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap()
+    };
+    let expiring = |user: &str| (user.to_string(), "EXPIRING".to_string());
+
+    // While she posts for it, Besa hears that it is about to expire.
+    assert_eq!(run().await.unwrap(), (1, 0));
+    assert_eq!(told(pool.clone()).await, [expiring(account_of(&besa))]);
+
+    // Gone from the store, she hears no more of it: Dritan, its owner, who may renew it, does,
+    // of the same expiry, and of its end.
+    sqlx::query("DELETE FROM business_members WHERE user_id = $1::uuid").bind(account_of(&besa)).execute(&pool).await.unwrap();
+    assert_eq!(run().await.unwrap(), (1, 0));
+    assert_eq!(run().await.unwrap(), (0, 0));
+    assert_eq!(told(pool.clone()).await, [expiring(account_of(&besa)), expiring(DRITAN_ID)]);
+    let dritan = session_for(&pool, DRITAN_ID).await;
+    assert!(get_with_cookie(pool.clone(), &format!("/listing/{no}-samsung-galaxy-s21-128-gb"), &dritan).await.body.contains(&format!(r#"<form method="post" action="/listing/{no}/rifresko">"#)));
+    sqlx::query("UPDATE listings SET expires_at = now() - interval '1 minute' WHERE public_no = $1::bigint").bind(&no).execute(&pool).await.unwrap();
+    assert_eq!(run().await.unwrap(), (0, 1));
+    assert_eq!(told(pool.clone()).await.last(), Some(&(DRITAN_ID.to_string(), "EXPIRED".to_string())));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn listings_go_into_subcategories(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     // The form groups subcategories under their category.
