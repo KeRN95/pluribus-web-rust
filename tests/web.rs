@@ -5643,6 +5643,96 @@ async fn writing_to_a_seller_takes_signing_in_first(pool: PgPool) {
     assert!(get(pool.clone(), "/").await.body.contains(r#"<a class="circle-shortcut plain-shortcut inbox-shortcut" href="/mesazhet""#));
 }
 
+/// The notices of unread messages sent so far (notifications, NEW_MESSAGE), oldest first: to whom,
+/// their title, their text and their conversation.
+async fn message_notices(pool: &PgPool) -> Vec<(String, String, String, String)> {
+    sqlx::query_as(
+        "SELECT user_id::text, title, body, payload ->> 'conversation' FROM notifications
+         WHERE notification_type = 'NEW_MESSAGE' ORDER BY created_at",
+    )
+    .fetch_all(pool)
+    .await
+    .unwrap()
+}
+
+/// Time passes: every message, every notice about one, when each side last read and when each
+/// conversation was last written in, `minutes` older.
+async fn minutes_pass(pool: &PgPool, minutes: i32) {
+    for (table, column) in [
+        ("messages", "created_at"),
+        ("notifications", "created_at"),
+        ("conversation_participants", "last_read_at"),
+        ("conversations", "last_message_at"),
+    ] {
+        sqlx::query(&format!("UPDATE {table} SET {column} = {column} - make_interval(mins => $1)"))
+            .bind(minutes)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_message_left_unread_brings_a_notice_at_most_once_an_hour(pool: PgPool) {
+    let ana = session_for(&pool, ANA_ID).await;
+    let buyer = new_seller(&pool, "+355691112233").await;
+    let due = || marketplace::notices::send_due(&pool, "https://pluribus.example");
+    let thread = write(&pool, "/listing/1001/mesazh", "A është ende në shitje?", &buyer).await.location.unwrap();
+    let conversation = thread.trim_start_matches("/mesazhet/").to_string();
+
+    // Just written, nothing: Ana may be reading it. A few minutes on, still unread, she hears of
+    // it, once: who wrote, about which listing, the message and where to answer it.
+    assert_eq!(due().await.unwrap(), 0);
+    minutes_pass(&pool, 4).await;
+    assert_eq!(due().await.unwrap(), 1);
+    let notices = message_notices(&pool).await;
+    assert_eq!(notices.len(), 1);
+    let (to, title, body, about) = &notices[0];
+    assert_eq!((to.as_str(), body.as_str(), about.as_str()), (ANA_ID, "A është ende në shitje?", conversation.as_str()));
+    assert!(title.starts_with("Përdorues të shkroi për „Volkswagen Golf"), "{title}");
+    assert_eq!(due().await.unwrap(), 0);
+
+    // More within the hour bring none; past it, the latest of those after the notice brings one.
+    write(&pool, &thread, "Mund ta shoh nesër?", &buyer).await;
+    minutes_pass(&pool, 10).await;
+    assert_eq!(due().await.unwrap(), 0);
+    minutes_pass(&pool, 60).await;
+    assert_eq!(due().await.unwrap(), 1);
+    assert_eq!(message_notices(&pool).await[1].2, "Mund ta shoh nesër?");
+
+    // Read, a message brings nothing however long it waits; and Ana's answer, left unread, tells
+    // the buyer.
+    write(&pool, &thread, "Në orën 5?", &buyer).await;
+    minutes_pass(&pool, 70).await;
+    let page = get_with_cookie(pool.clone(), &thread, &ana).await.body;
+    let last = message_ids(&page).pop().unwrap();
+    let read = attribute(&page, "data-conversation-read-url-value");
+    post_form(pool.clone(), &format!("{read}?deri={last}"), &[], Some(&ana)).await;
+    assert_eq!(due().await.unwrap(), 0);
+    write(&pool, &thread, "Po, në orën 5.", &ana).await;
+    minutes_pass(&pool, 4).await;
+    assert_eq!(due().await.unwrap(), 1);
+    let buyer_id: String = sqlx::query_scalar("SELECT buyer_user_id::text FROM conversations").fetch_one(&pool).await.unwrap();
+    assert_eq!(message_notices(&pool).await[2].0, buyer_id);
+
+    // "Njoftimet e mia" says she hears of them, and lets her stop: then nothing, until she says
+    // yes again.
+    let checkbox = r#"<input type="checkbox" name="mesazhet" value="1""#;
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
+    assert!(mine.contains(r#"<form class="notice-settings" method="post" action="/llogaria/njoftimet">"#));
+    assert!(mine.contains(&format!("{checkbox} checked>")), "{mine}");
+    let off = post_form(pool.clone(), "/llogaria/njoftimet", &[], Some(&ana)).await;
+    assert_eq!(off.location.as_deref(), Some("/njoftimet-e-mia"));
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(&format!("{checkbox}>")));
+    write(&pool, &thread, "A je aty?", &buyer).await;
+    minutes_pass(&pool, 120).await;
+    assert_eq!(due().await.unwrap(), 0);
+    post_form(pool.clone(), "/llogaria/njoftimet", &[("mesazhet", "1")], Some(&ana)).await;
+    assert_eq!(due().await.unwrap(), 1);
+    // Not signed in, the form leads to signing in.
+    assert_eq!(post_form(pool.clone(), "/llogaria/njoftimet", &[], None).await.location.as_deref(), Some("/llogaria"));
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn until_the_seller_answers_a_buyer_sends_three_messages_and_no_links(pool: PgPool) {
     let ana = session_for(&pool, ANA_ID).await;

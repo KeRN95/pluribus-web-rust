@@ -411,3 +411,21 @@ pub async fn sign_out(State(state): State<AppState>, headers: HeaderMap) -> Resu
     }
     Ok(redirect_with_cookies("/", vec![cookie_header(&headers, SESSION_COOKIE, "", 0)]))
 }
+
+#[derive(Deserialize)]
+pub struct NoticeSettings {
+    /// "1" while "Më njofto për mesazhet" is ticked; a box left unticked sends nothing.
+    #[serde(default)]
+    mesazhet: String,
+}
+
+/// POST /llogaria/njoftimet: whether the signed-in user hears, by e-mail or WhatsApp, of the
+/// messages they haven't read a few minutes after they came (notices.rs), from "Njoftimet e mia",
+/// which it goes back to.
+pub async fn notice_settings(State(state): State<AppState>, headers: HeaderMap, Form(form): Form<NoticeSettings>) -> Result<Response> {
+    let Some(user) = current_user(&state, &headers).await? else {
+        return Ok(Redirect::to("/llogaria").into_response());
+    };
+    db::set_message_alerts(&state.db, user.id, form.mesazhet == "1").await?;
+    Ok(Redirect::to("/njoftimet-e-mia").into_response())
+}

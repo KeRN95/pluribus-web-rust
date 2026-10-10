@@ -61,6 +61,11 @@
 .my-listing-stats > span { display: inline-flex; align-items: center; gap: .3rem; }
 .my-stat svg,
 .my-listing-stats svg { flex: none; }
+/* "Më njofto për mesazhet" (my_listings.html): a box, its name and what it does, and "Ruaj". */
+.notice-settings { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin: 1.5rem 0; }
+.notice-setting { display: flex; flex: 1 1 18rem; align-items: flex-start; gap: .6rem; font-weight: var(--semibold); cursor: pointer; }
+.notice-setting input { flex: none; width: 1.1rem; height: 1.1rem; margin: .15rem 0 0; accent-color: var(--button); }
+.notice-setting .field-hint { display: block; margin-top: .15rem; font-weight: var(--regular); }
 /* Each listing's buttons; on phones, and wherever they leave the title too little room, they go
    under it. */
 .my-listing-actions { display: flex; flex-wrap: wrap; gap: .4rem; }

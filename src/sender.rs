@@ -1,7 +1,9 @@
 //! Sending sign-in codes: to an e-mail address by SMTP, which every e-mail service offers (Amazon
 //! SES, Postmark, Brevo...), and to a phone number by WhatsApp, through Meta's WhatsApp Cloud API
 //! and an authentication template. Each is set up in .env (see .env.example); a channel that isn't
-//! writes its codes to the server's log instead, which is how development runs.
+//! writes its codes to the server's log instead, which is how development runs. The same channels
+//! carry the notices of messages someone hasn't read (notices.rs): by e-mail, or by WhatsApp with
+//! a utility template of its own (WHATSAPP_NOTICE_TEMPLATE).
 
 use std::{sync::OnceLock, time::Duration};
 
@@ -23,14 +25,62 @@ pub enum Channel {
     Log,
 }
 
+/// A notice of messages someone hasn't read (notices.rs): who wrote, about which listing, the
+/// latest message, how many are unread, and the address of the conversation.
+#[derive(Debug, Clone)]
+pub struct Notice {
+    pub writer: String,
+    pub listing: Option<String>,
+    pub excerpt: String,
+    pub unread: i64,
+    pub url: String,
+}
+
+impl Notice {
+    /// "Ana të shkroi për „Volkswagen Golf 7“": the e-mail's subject, and the notification's title.
+    pub fn title(&self) -> String {
+        match &self.listing {
+            Some(listing) => format!("{} të shkroi për „{listing}“", self.writer),
+            None => format!("{} të shkroi në Pluribus", self.writer),
+        }
+    }
+
+    /// The e-mail's text: who wrote and about what, the latest message (and how many more), the
+    /// link to answer, and how often these come and how to stop them.
+    pub fn text(&self) -> String {
+        let about = match &self.listing {
+            Some(listing) => format!(" për „{listing}“"),
+            None => String::new(),
+        };
+        let more = match self.unread {
+            ..=1 => String::new(),
+            2 => "\n(dhe 1 mesazh tjetër i palexuar)\n".to_string(),
+            unread => format!("\n(dhe {} mesazhe të tjera të palexuara)\n", unread - 1),
+        };
+        format!(
+            "{} të shkroi në Pluribus{about}:\n\n    {}\n{more}\nPërgjigju këtu: {}\n\n\
+             Për një bisedë nuk të vjen më shumë se një email në orë. Për të mos i marrë më, \
+             hiq shenjën te „Më njofto për mesazhet“ te „Njoftimet e mia“.\n",
+            self.writer,
+            self.excerpt.replace('\n', "\n    "),
+            self.url,
+        )
+    }
+}
+
 /// Meta's WhatsApp Cloud API, sending an authentication template: Meta's fixed text with the code
-/// in it, and a button that copies the code.
+/// in it, and a button that copies the code. With a notice template too (WHATSAPP_NOTICE_TEMPLATE,
+/// a utility template), the notices of messages someone hasn't read.
 pub struct WhatsApp {
     client: reqwest::Client,
     url: String,
     token: String,
     template: String,
     language: String,
+    /// The utility template that tells someone they have a message: its body says who wrote
+    /// ({{1}}) and about what ({{2}}), and its button opens the conversation, its address's end
+    /// the conversation's own (the template's URL ending in {{1}}).
+    notice_template: Option<String>,
 }
 
 impl WhatsApp {
@@ -41,7 +91,55 @@ impl WhatsApp {
             token: token.to_string(),
             template: template.to_string(),
             language: language.to_string(),
+            notice_template: None,
         }
+    }
+
+    /// The same, sending notices of unread messages with this utility template too.
+    pub fn with_notices(mut self, template: Option<String>) -> Self {
+        self.notice_template = template;
+        self
+    }
+
+    /// The notice: the template's text with who wrote and about what, and its button to the
+    /// conversation, the end of whose address (after /mesazhet/) it fills in.
+    pub fn notice_payload(&self, phone: &str, notice: &Notice) -> Option<Value> {
+        let template = self.notice_template.as_ref()?;
+        let conversation = notice.url.rsplit('/').next().unwrap_or_default();
+        Some(json!({
+            "messaging_product": "whatsapp",
+            "to": phone.trim_start_matches('+'),
+            "type": "template",
+            "template": {
+                "name": template,
+                "language": { "code": self.language },
+                "components": [
+                    { "type": "body", "parameters": [
+                        { "type": "text", "text": notice.writer },
+                        { "type": "text", "text": notice.listing.as_deref().unwrap_or("Pluribus") }
+                    ] },
+                    { "type": "button", "sub_type": "url", "index": "0",
+                      "parameters": [{ "type": "text", "text": conversation }] }
+                ]
+            }
+        }))
+    }
+
+    async fn post(&self, payload: &Value) -> Result<(), String> {
+        let response = self
+            .client
+            .post(&self.url)
+            .bearer_auth(&self.token)
+            .json(payload)
+            .send()
+            .await
+            .map_err(|error| format!("WhatsApp: {error}"))?;
+        let status = response.status();
+        if status.is_success() {
+            return Ok(());
+        }
+        let body = response.text().await.unwrap_or_default();
+        Err(format!("WhatsApp {status}: {body}"))
     }
 
     /// The message: the code in the template's text, and again behind its "copy code" button.
@@ -63,20 +161,15 @@ impl WhatsApp {
     }
 
     pub async fn send(&self, phone: &str, code: &str) -> Result<(), String> {
-        let response = self
-            .client
-            .post(&self.url)
-            .bearer_auth(&self.token)
-            .json(&self.payload(phone, code))
-            .send()
-            .await
-            .map_err(|error| format!("WhatsApp: {error}"))?;
-        let status = response.status();
-        if status.is_success() {
-            return Ok(());
+        self.post(&self.payload(phone, code)).await
+    }
+
+    /// Sends a notice, if a notice template is set up; false if none is.
+    pub async fn send_notice(&self, phone: &str, notice: &Notice) -> Result<bool, String> {
+        match self.notice_payload(phone, notice) {
+            Some(payload) => self.post(&payload).await.map(|_| true),
+            None => Ok(false),
         }
-        let body = response.text().await.unwrap_or_default();
-        Err(format!("WhatsApp {status}: {body}"))
     }
 }
 
@@ -103,20 +196,37 @@ impl Email {
     }
 
     pub fn message(&self, to: &str, code: &str) -> Result<Message, String> {
+        self.text(
+            to,
+            format!("{code} është kodi yt për Pluribus"),
+            format!(
+                "Kodi yt për të hyrë në Pluribus:\n\n    {code}\n\nVlen për 10 minuta. \
+                 Nëse nuk e kërkove ti, mund ta injorosh këtë email.\n"
+            ),
+        )
+    }
+
+    /// A notice of messages someone hasn't read (Notice): its title the subject.
+    pub fn notice_message(&self, to: &str, notice: &Notice) -> Result<Message, String> {
+        self.text(to, notice.title(), notice.text())
+    }
+
+    fn text(&self, to: &str, subject: String, body: String) -> Result<Message, String> {
         Message::builder()
             .from(self.from.clone())
             .to(to.parse().map_err(|error| format!("address: {error}"))?)
-            .subject(format!("{code} është kodi yt për Pluribus"))
+            .subject(subject)
             .header(ContentType::TEXT_PLAIN)
-            .body(format!(
-                "Kodi yt për të hyrë në Pluribus:\n\n    {code}\n\nVlen për 10 minuta. \
-                 Nëse nuk e kërkove ti, mund ta injorosh këtë email.\n"
-            ))
+            .body(body)
             .map_err(|error| format!("message: {error}"))
     }
 
     pub async fn send(&self, to: &str, code: &str) -> Result<(), String> {
         self.transport.send(self.message(to, code)?).await.map(|_| ()).map_err(|error| format!("SMTP: {error}"))
+    }
+
+    pub async fn send_notice(&self, to: &str, notice: &Notice) -> Result<(), String> {
+        self.transport.send(self.notice_message(to, notice)?).await.map(|_| ()).map_err(|error| format!("SMTP: {error}"))
     }
 }
 
@@ -150,14 +260,17 @@ impl Senders {
             }
         };
         let whatsapp = match (env("WHATSAPP_TOKEN"), env("WHATSAPP_PHONE_NUMBER_ID"), env("WHATSAPP_TEMPLATE")) {
-            (Some(token), Some(phone_number_id), Some(template)) => Some(WhatsApp::new(
-                "https://graph.facebook.com",
-                &env("WHATSAPP_API_VERSION").unwrap_or_else(|| "v21.0".to_string()),
-                &phone_number_id,
-                &token,
-                &template,
-                &env("WHATSAPP_LANGUAGE").unwrap_or_else(|| "sq".to_string()),
-            )),
+            (Some(token), Some(phone_number_id), Some(template)) => Some(
+                WhatsApp::new(
+                    "https://graph.facebook.com",
+                    &env("WHATSAPP_API_VERSION").unwrap_or_else(|| "v21.0".to_string()),
+                    &phone_number_id,
+                    &token,
+                    &template,
+                    &env("WHATSAPP_LANGUAGE").unwrap_or_else(|| "sq".to_string()),
+                )
+                .with_notices(env("WHATSAPP_NOTICE_TEMPLATE")),
+            ),
             (None, None, None) => None,
             _ => {
                 tracing::error!("WhatsApp sign-in codes are off: WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_TEMPLATE go together");
@@ -181,6 +294,20 @@ impl Senders {
             (Contact::Phone(phone), _, Some(whatsapp)) => whatsapp.send(phone, code).await.map(|_| Channel::WhatsApp),
             _ => {
                 tracing::warn!(to = %contact.masked(), code, "sign-in code: this channel isn't set up, so it only goes to this log");
+                Ok(Channel::Log)
+            }
+        }
+    }
+
+    /// Sends a notice of unread messages to `contact`: by e-mail, or by WhatsApp where its notice
+    /// template is set up; otherwise it goes to the log.
+    pub async fn send_notice(&self, contact: &Contact, notice: &Notice) -> Result<Channel, String> {
+        match (contact, &self.email, &self.whatsapp) {
+            (Contact::Email(address), Some(email), _) => email.send_notice(address, notice).await.map(|_| Channel::Email),
+            // The guard sends it, where the notice template is set up.
+            (Contact::Phone(phone), _, Some(whatsapp)) if whatsapp.send_notice(phone, notice).await? => Ok(Channel::WhatsApp),
+            _ => {
+                tracing::info!(to = %contact.masked(), url = %notice.url, "message notice: this channel isn't set up, so it only goes to this log");
                 Ok(Channel::Log)
             }
         }
@@ -245,6 +372,47 @@ mod tests {
         assert!(message.contains("To: ana@example.com"));
         assert!(message.contains("From: Pluribus <kodi@example.com>"));
         assert!(message.contains("482910"));
+    }
+
+    fn notice(unread: i64) -> Notice {
+        Notice {
+            writer: "Besa".into(),
+            listing: Some("Volkswagen Golf 1.6, 2016".into()),
+            excerpt: "A është ende në shitje?\nMund ta shoh nesër.".into(),
+            unread,
+            url: "https://pluribus.example/mesazhet/0192f0c1-0000-7000-8000-000000000001".into(),
+        }
+    }
+
+    #[test]
+    fn notices_say_who_wrote_about_what_and_where_to_answer() {
+        let email = Email::new("smtp.example.com", 587, "user", "password", "Pluribus <kodi@example.com>").unwrap();
+        let message = String::from_utf8(email.notice_message("ana@example.com", &notice(3)).unwrap().formatted()).unwrap();
+        assert!(message.contains("To: ana@example.com"));
+        // The subject is the notice's title, encoded as e-mail headers are; the text says it all.
+        assert_eq!(notice(1).title(), "Besa të shkroi për „Volkswagen Golf 1.6, 2016“");
+        let text = notice(3).text();
+        assert!(text.starts_with("Besa të shkroi në Pluribus për „Volkswagen Golf 1.6, 2016“:\n\n    A është ende në shitje?\n    Mund ta shoh nesër.\n"), "{text}");
+        assert!(text.contains("(dhe 2 mesazhe të tjera të palexuara)"));
+        assert!(text.contains("Përgjigju këtu: https://pluribus.example/mesazhet/0192f0c1-0000-7000-8000-000000000001"));
+        assert!(text.contains("„Më njofto për mesazhet“"));
+        assert!(!notice(1).text().contains("palexuar"));
+        assert!(notice(2).text().contains("(dhe 1 mesazh tjetër i palexuar)"));
+        let no_listing = Notice { listing: None, ..notice(1) };
+        assert_eq!(no_listing.title(), "Besa të shkroi në Pluribus");
+    }
+
+    #[test]
+    fn whatsapp_notices_need_their_own_template() {
+        let whatsapp = WhatsApp::new("http://localhost", "v21.0", "123", "secret", "kodi_hyrjes", "sq");
+        assert!(whatsapp.notice_payload("+355691234567", &notice(1)).is_none());
+        let whatsapp = whatsapp.with_notices(Some("mesazh_i_ri".into()));
+        let payload = whatsapp.notice_payload("+355691234567", &notice(1)).unwrap();
+        assert_eq!(payload["to"], "355691234567");
+        assert_eq!(payload["template"]["name"], "mesazh_i_ri");
+        assert_eq!(payload["template"]["components"][0]["parameters"][0]["text"], "Besa");
+        assert_eq!(payload["template"]["components"][0]["parameters"][1]["text"], "Volkswagen Golf 1.6, 2016");
+        assert_eq!(payload["template"]["components"][1]["parameters"][0]["text"], "0192f0c1-0000-7000-8000-000000000001");
     }
 
     #[test]

@@ -94,6 +94,14 @@
   </ul>
   {% endif %}
   <p><a class="button" href="/shto">+ Shto një njoftim</a></p>
+  {#- Whether they hear, by e-mail or WhatsApp, of the messages they haven't read a few minutes
+      after they came, at most once an hour per conversation (notices.rs); on unless they untick
+      it, which the notice itself says how to. -#}
+  <form class="notice-settings" method="post" action="/llogaria/njoftimet">
+    <label class="notice-setting"><input type="checkbox" name="mesazhet" value="1"{% if message_alerts %} checked{% endif %}>
+      <span>Më njofto për mesazhet<span class="field-hint">Kur dikush të shkruan dhe nuk e ke lexuar pas pak minutash, të vjen një njoftim te email-i ose WhatsApp-i yt, jo më shumë se një në orë për një bisedë.</span></span></label>
+    <button type="submit" class="button secondary small">Ruaj</button>
+  </form>
   {%- if !blocked.is_empty() %}
   {#- Those the user blocked, on a listing's page (safety.rs) or in a conversation (messages.rs):
       their listings leave the user's pages, and neither writes to the other. Each to let be

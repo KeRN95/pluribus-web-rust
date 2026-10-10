@@ -73,6 +73,7 @@ mod posting;
 mod price_drops;
 mod safety;
 mod typed_in;
+mod notices;
 
 pub use categories::*;
 pub use properties::*;
@@ -86,6 +87,7 @@ pub use posting::*;
 pub use price_drops::*;
 pub use safety::*;
 pub use typed_in::*;
+pub use notices::*;
 
 #[cfg(test)]
 mod tests {

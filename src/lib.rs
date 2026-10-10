@@ -5,6 +5,7 @@ pub mod ai;
 pub mod db;
 pub mod format;
 pub mod media;
+pub mod notices;
 pub mod sender;
 pub mod views;
 pub mod web;
@@ -58,7 +59,8 @@ impl Moderators {
 
 /// The application's router. `main` serves it, with photos in the store .env names (the small and
 /// AVIF copies of those kept before there were any made meanwhile), its moderators, the AI if .env
-/// has a key for it, and the views written every minute.
+/// has a key for it, the views written every minute, and the notices of unread messages sent as
+/// they fall due (notices.rs).
 pub fn app(db: PgPool) -> axum::Router {
     let ai = Ai::from_env();
     if ai.is_none() {
@@ -68,6 +70,7 @@ pub fn app(db: PgPool) -> axum::Router {
     views.flush_now_and_then(db.clone());
     let media = Media::from_env();
     media.fill_in_copies();
+    notices::start(db.clone());
     web::router(AppState { db, media, moderators: Moderators::from_env(), ai, views })
 }
 

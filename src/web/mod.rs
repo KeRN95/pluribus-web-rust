@@ -109,6 +109,7 @@ pub fn router(state: AppState) -> Router {
         .route("/hyr", post(account::request_code))
         .route("/hyr/kodi", get(account::code_page).post(account::check_code))
         .route("/dil", post(account::sign_out))
+        .route("/llogaria/njoftimet", post(account::notice_settings))
         .route("/si-funksionon", get(pages::how_it_works))
         .route("/siguria", get(pages::safety_tips))
         .route("/kushtet", get(pages::terms))
@@ -245,6 +246,12 @@ fn content_security_policy() -> &'static HeaderValue {
 /// being settled.
 pub fn type_trial() -> bool {
     std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true")
+}
+
+/// The site's address for links made outside a request, which has none to go by: the message
+/// notices' (notices.rs). PUBLIC_URL, or the development server's address (seo::origin).
+pub fn site_origin() -> String {
+    seo::origin(&HeaderMap::new())
 }
 
 /// How long browsers keep a file whose address changes whenever the file does: a year, without
