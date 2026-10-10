@@ -4,7 +4,7 @@
 use std::{
     future::Future,
     pin::Pin,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::atomic::{AtomicU8, Ordering},
 };
 
 use sqlx::PgConnection;
@@ -294,55 +294,120 @@ pub struct ListingFilter {
     /// Only listings put up or brought up after this moment (`sort_at`): a saved search's new
     /// ones (web/searches.rs).
     pub since: Option<OffsetDateTime>,
-    /// Whether one of the filter's queries gave up walking an order for its matches (planned):
-    /// words that match few listings, which its other queries then read through the words'
-    /// index straight away.
-    pub few_matches: AtomicBool,
+    /// What its queries have found out about its words' matches (planned).
+    pub matches: Matches,
 }
 
-/// How long a query on a search with words walks an order (or the table) for its matches before
-/// it reads them through the words' index instead (planned): ample for words in one listing in a
-/// few hundred, whose page comes in a few milliseconds.
-const WALK_FOR: &str = "100ms";
+/// What a filter's queries have found out about its words' matches, which its later queries go by
+/// (planned): nothing yet, or whether they are few (fewer than FEW) or many.
+#[derive(Debug, Default)]
+pub struct Matches(AtomicU8);
+
+impl Matches {
+    const FEW: u8 = 1;
+    const MANY: u8 = 2;
+
+    /// Few, or many, once a query has found out; None before.
+    pub fn few(&self) -> Option<bool> {
+        match self.0.load(Ordering::Relaxed) {
+            Self::FEW => Some(true),
+            Self::MANY => Some(false),
+            _ => None,
+        }
+    }
+
+    pub fn set(&self, few: bool) {
+        self.0.store(if few { Self::FEW } else { Self::MANY }, Ordering::Relaxed);
+    }
+}
+
+/// How long a query of a search with words runs as Postgres plans it before planned steps in:
+/// ample for the plans that suit their matches, a few milliseconds.
+const FIRST_TRY: &str = "50ms";
+
+/// How many matches are few: read through the words' index, they are quicker to sort than the
+/// newest first order is to walk for them (a page wants 25, the ranked window 240).
+const FEW: i64 = 5_000;
+
+/// Bitmap scans alone, no parallel workers: a filter's matches read through the words' index (and
+/// any other that narrows them), sorted when an order is wanted.
+const THROUGH_INDEX: &str = "SELECT set_config('enable_indexscan', 'off', true), set_config('enable_seqscan', 'off', true),
+                                    set_config('max_parallel_workers_per_gather', '0', true)";
+
+/// Index scans alone: the order walked, its matches taken as they come.
+const IN_ORDER: &str = "SELECT set_config('enable_bitmapscan', 'off', true), set_config('enable_seqscan', 'off', true)";
+
+/// How a query reads a filter's matches: the first in an order (a page, the ranked window and its
+/// edge, the map's dots, the newest for their towns), or any of them (a count, the categories).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Reads {
+    InOrder,
+    Any,
+}
 
 /// A query running on the connection it was given, for `planned`.
 type Run<'c, T> = Pin<Box<dyn Future<Output = sqlx::Result<T>> + Send + 'c>>;
 
 /// Runs one of a filter's queries, which `run` builds and runs on the connection it is given (twice
 /// at most). Without words, as Postgres plans it. With words, Postgres takes each word for as
-/// common among a category's listings, or alongside another word, as it is among all of them,
-/// and walks the newest first order (or the whole table) expecting a match soon; for words that
-/// seldom meet, "apartament" among the cars, it then reads every listing (2.9 s for that page's
-/// matches, against a million listings). Counting the matches first would tell, but words in a
-/// quarter of the listings would pay for it on every page (31 ms for "makina"). So a query with
-/// words walks for WALK_FOR at most; past it, and for the filter's queries after it
-/// (few_matches), the matches are read through the words' index alone, which has their
-/// categories in it too (idx_listings_active_words), and sorted: quick, since they are few.
-async fn planned<T>(db: &PgPool, filter: &ListingFilter, run: impl for<'c> Fn(&'c mut PgConnection) -> Run<'c, T>) -> sqlx::Result<T> {
+/// common among a category's listings, or alongside another word, as it is among all of them, and
+/// errs both ways. For words that seldom meet ("apartament" among the cars) it walks the newest
+/// first order (or the whole table, for a count) expecting a match soon, and reads every listing:
+/// 2.9 s for that page's ranked window against a million listings. For words that meet often
+/// ("gjendje shumë mirë", 51 549 matches) it reads every match and sorts them, 92 ms where the
+/// walk takes 4. Counting the matches first would tell, but a word in a quarter of the listings
+/// would pay for it on every page (29 ms for "makina"). So the query runs as planned for
+/// FIRST_TRY; past it, the matches are counted through the words' index up to FEW (Matches, for
+/// the filter's later queries), and the query runs again: through that index for few matches, which
+/// has their categories in it too (idx_listings_active_words), and for many, in order (a count,
+/// which the walk would take a long way for, through the index all the same).
+async fn planned<T>(
+    db: &PgPool,
+    filter: &ListingFilter,
+    reads: Reads,
+    run: impl for<'c> Fn(&'c mut PgConnection) -> Run<'c, T>,
+) -> sqlx::Result<T> {
     let words = filter.search.as_ref().is_some_and(|search| search.query.is_some() || search.kind_query.is_some());
     if !words {
         return run(&mut *db.acquire().await?).await;
     }
-    if !filter.few_matches.load(Ordering::Relaxed) {
-        let mut tx = db.begin().await?;
-        sqlx::query("SELECT set_config('statement_timeout', $1, true)").bind(WALK_FOR).execute(&mut *tx).await?;
-        match run(&mut tx).await {
-            // Cancelled for walking too long (query_canceled).
-            Err(sqlx::Error::Database(error)) if error.code().as_deref() == Some("57014") => {
-                filter.few_matches.store(true, Ordering::Relaxed);
+    let few = match filter.matches.few() {
+        Some(few) => few,
+        None => {
+            let mut tx = db.begin().await?;
+            sqlx::query("SELECT set_config('statement_timeout', $1, true)").bind(FIRST_TRY).execute(&mut *tx).await?;
+            match run(&mut tx).await {
+                // Cancelled for running too long (query_canceled).
+                Err(sqlx::Error::Database(error)) if error.code().as_deref() == Some("57014") => {}
+                // Read only: the transaction ends as it is dropped.
+                done => return done,
             }
-            // Read only: the transaction ends as it is dropped.
-            done => return done,
+            drop(tx);
+            match filter.matches.few() {
+                Some(few) => few,
+                None => {
+                    let few = count_through_index(db, filter).await? < FEW;
+                    filter.matches.set(few);
+                    few
+                }
+            }
         }
-    }
+    };
     let mut tx = db.begin().await?;
-    sqlx::query(
-        "SELECT set_config('enable_indexscan', 'off', true), set_config('enable_seqscan', 'off', true),
-                set_config('max_parallel_workers_per_gather', '0', true)",
-    )
-    .execute(&mut *tx)
-    .await?;
+    let plan = if few || reads == Reads::Any { THROUGH_INDEX } else { IN_ORDER };
+    sqlx::query(plan).execute(&mut *tx).await?;
     run(&mut tx).await
+}
+
+/// The filter's matches counted up to FEW through the words' index alone: as dear as they are many,
+/// and at most what FEW of them cost (a few milliseconds for a few, 29 for "makina").
+async fn count_through_index(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<i64> {
+    let mut tx = db.begin().await?;
+    sqlx::query(THROUGH_INDEX).execute(&mut *tx).await?;
+    let mut query = QueryBuilder::<Postgres>::new("SELECT count(*) FROM (SELECT 1 FROM listings l");
+    push_filters(&mut query, filter);
+    query.push(" LIMIT ").push_bind(FEW).push(") matches");
+    query.build_query_scalar().fetch_one(&mut *tx).await
 }
 
 /// A visitor's words as a search, which forgives typos and finds other forms of a word: "golff"
@@ -678,7 +743,7 @@ async fn ordered_page(
     after: Option<Cursor>,
     limit: i64,
 ) -> sqlx::Result<Vec<ListingCard>> {
-    planned(db, filter, |conn| {
+    planned(db, filter, Reads::InOrder, |conn| {
         let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
         query.push("NULL::real AS rank, ");
         match &filter.near {
@@ -723,7 +788,7 @@ async fn relevance_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec
 
 /// The ranked window's matches after the cursor, the best first: PAGE_SIZE + 1 at most.
 async fn ranked_page(db: &PgPool, filter: &ListingFilter, after: Option<Cursor>) -> sqlx::Result<Vec<ListingCard>> {
-    planned(db, filter, |conn| {
+    planned(db, filter, Reads::InOrder, |conn| {
         let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
         query.push("l.rank AS rank, NULL::float8 AS distance_m FROM ");
         push_ranked(&mut query, filter, after, PAGE_SIZE + 1);
@@ -738,7 +803,7 @@ async fn ranked_page(db: &PgPool, filter: &ListingFilter, after: Option<Cursor>)
 /// The oldest match in the ranked window, where the matches past it start: the RANK_WINDOW-th
 /// newest, as a newest first cursor; None when the window holds every match.
 async fn window_edge(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Option<Cursor>> {
-    let edge: Option<(OffsetDateTime, Uuid)> = planned(db, filter, |conn| {
+    let edge: Option<(OffsetDateTime, Uuid)> = planned(db, filter, Reads::InOrder, |conn| {
         let mut query = QueryBuilder::<Postgres>::new("SELECT l.sort_at, l.id FROM listings l");
         push_conditions(&mut query, filter, false);
         query.push(" ORDER BY l.sort_at DESC, l.id DESC OFFSET ").push_bind(RANK_WINDOW - 1).push(" LIMIT 1");
@@ -950,7 +1015,7 @@ pub async fn listing_count(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<
 
 /// How many active listings match the filter, counting at most `limit` + 1.
 pub async fn listing_count_up_to(db: &PgPool, filter: &ListingFilter, limit: i64) -> sqlx::Result<i64> {
-    planned(db, filter, |conn| {
+    planned(db, filter, Reads::Any, |conn| {
         let mut query = QueryBuilder::<Postgres>::new("SELECT count(*) FROM (SELECT 1 FROM listings l");
         push_filters(&mut query, filter);
         query.push(" LIMIT ").push_bind(limit + 1).push(") matches");
@@ -987,7 +1052,7 @@ pub async fn price_quarters(db: &PgPool, category_ids: &[Uuid], currency: &str) 
 /// at most `limit` of them, counted as listing_count counts, among at most COUNT_LIMIT + 1
 /// listings.
 pub async fn listing_categories(db: &PgPool, filter: &ListingFilter, limit: i64) -> sqlx::Result<Vec<(Uuid, i64)>> {
-    planned(db, filter, |conn| {
+    planned(db, filter, Reads::Any, |conn| {
         let mut query =
             QueryBuilder::<Postgres>::new("SELECT category_id, count(*) FROM (SELECT l.category_id FROM listings l");
         push_filters(&mut query, filter);
@@ -1004,7 +1069,7 @@ pub async fn listing_categories(db: &PgPool, filter: &ListingFilter, limit: i64)
 /// those come in the order rows lie in the table, and listings rewritten together, such as those
 /// moved into their zones, lie together at its end.
 pub async fn listing_towns(db: &PgPool, filter: &ListingFilter, limit: i64) -> sqlx::Result<Vec<(Uuid, i64)>> {
-    planned(db, filter, |conn| {
+    planned(db, filter, Reads::InOrder, |conn| {
         let mut query = QueryBuilder::<Postgres>::new(
             "SELECT CASE WHEN loc.location_type = 'AREA' THEN loc.parent_id ELSE loc.id END AS town, count(*)
              FROM (SELECT l.location_id FROM listings l",
@@ -1041,7 +1106,7 @@ pub async fn map_points(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec
     // Its dots come in the list's order, but the best match first's: newest first there, as
     // its matches past the window come (relevance_page).
     let sort = if filter.sort == Sort::Relevance { Sort::Newest } else { filter.sort };
-    planned(db, filter, |conn| {
+    planned(db, filter, Reads::InOrder, |conn| {
         let mut query = QueryBuilder::<Postgres>::new(
             "SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.listing_type, l.price_amount,
                     l.currency::text AS currency, l.price_type,

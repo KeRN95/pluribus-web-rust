@@ -1712,12 +1712,15 @@ async fn the_map_has_a_dot_for_every_result_up_to_its_limit(pool: PgPool) {
     assert!(!card.contains("map-note"));
 }
 
-/// A search's listings, count and categories as one plan reads them: walking its order, or, once a
-/// query walked too long (db::ListingFilter::few_matches), through the words' index.
-async fn search_read(pool: &PgPool, words: &str, categories: Option<Vec<sqlx::types::Uuid>>, sort: marketplace::db::Sort, through_index: bool) -> (Vec<i64>, i64, Vec<(sqlx::types::Uuid, i64)>) {
+/// A search's listings, count and categories as one plan reads them: as Postgres plans them, or as
+/// after a query ran past its first try (db::ListingFilter::matches), for few matches (through
+/// the words' index) or many (in order).
+async fn search_read(pool: &PgPool, words: &str, categories: Option<Vec<sqlx::types::Uuid>>, sort: marketplace::db::Sort, few: Option<bool>) -> (Vec<i64>, i64, Vec<(sqlx::types::Uuid, i64)>) {
     let search = marketplace::db::text_search(pool, Some(words)).await.unwrap();
     let filter = marketplace::db::ListingFilter { search, category_ids: categories, sort, ..Default::default() };
-    filter.few_matches.store(through_index, std::sync::atomic::Ordering::Relaxed);
+    if let Some(few) = few {
+        filter.matches.set(few);
+    }
     let cards = marketplace::db::listing_page(pool, &filter).await.unwrap();
     let count = marketplace::db::listing_count(pool, &filter).await.unwrap();
     let found_in = marketplace::db::listing_categories(pool, &filter, 8).await.unwrap();
@@ -1745,14 +1748,16 @@ async fn a_search_reads_the_same_listings_through_its_words_index(pool: PgPool) 
         ("shitje", None),
     ] {
         for sort in [Sort::Relevance, Sort::Newest, Sort::PriceLow] {
-            let walked = search_read(&pool, words, categories.clone(), sort, false).await;
-            let indexed = search_read(&pool, words, categories.clone(), sort, true).await;
-            assert_eq!(walked, indexed, "{words} {sort:?}");
+            let planned = search_read(&pool, words, categories.clone(), sort, None).await;
+            let indexed = search_read(&pool, words, categories.clone(), sort, Some(true)).await;
+            let walked = search_read(&pool, words, categories.clone(), sort, Some(false)).await;
+            assert_eq!(planned, indexed, "{words} {sort:?}");
+            assert_eq!(planned, walked, "{words} {sort:?}");
         }
     }
-    let (golf, ..) = search_read(&pool, "golf", Some(vehicles.clone()), Sort::Newest, true).await;
+    let (golf, ..) = search_read(&pool, "golf", Some(vehicles.clone()), Sort::Newest, Some(true)).await;
     assert!(golf.contains(&1001), "{golf:?}");
-    let (none, count, found_in) = search_read(&pool, "apartament", Some(vehicles), Sort::Relevance, true).await;
+    let (none, count, found_in) = search_read(&pool, "apartament", Some(vehicles), Sort::Relevance, Some(true)).await;
     assert_eq!((none.len(), count, found_in.len()), (0, 0, 0));
 }
 
