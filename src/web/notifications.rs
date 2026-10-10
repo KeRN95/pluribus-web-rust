@@ -54,6 +54,7 @@ impl Row {
             "NEW_MESSAGE" => (icons::CHAT, notification.conversation.map(|id| format!("/mesazhet/{id}"))),
             "EXPIRING" => (icons::CLOCK, listing),
             "EXPIRED" => (icons::RENEW, listing),
+            "STORE_INVITE" => (icons::STORE, notification.invitation.map(|id| format!("/ftesa/{id}"))),
             _ => (icons::BELL, None),
         };
         Self {

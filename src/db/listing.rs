@@ -51,6 +51,8 @@ pub struct ListingDetail {
     pub seller_listings: i64,
     /// The account that posted it: its seller, or one of a business's people.
     pub created_by_user_id: Uuid,
+    /// The store it is posted as, whose people who post may change it (manages_listing).
+    pub seller_business_id: Option<Uuid>,
     /// Whether the number (or address) it shows is one the account that posted it signed in with,
     /// proved theirs by the code (user_verifications).
     pub contact_verified: bool,
@@ -119,7 +121,7 @@ pub async fn listing_by_public_no(
                   (SELECT count(*) FROM listings o
                    WHERE o.status = 'ACTIVE'
                      AND (o.seller_business_id = l.seller_business_id OR o.seller_user_id = l.seller_user_id)) AS "seller_listings!",
-                  l.created_by_user_id,
+                  l.created_by_user_id, l.seller_business_id,
                   coalesce((SELECT CASE WHEN c.show_phone AND c.phone_e164 IS NOT NULL
                                         THEN EXISTS (SELECT 1 FROM user_verifications v
                                                      WHERE v.user_id = l.created_by_user_id AND v.status = 'VERIFIED'

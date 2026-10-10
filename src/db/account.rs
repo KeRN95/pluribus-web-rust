@@ -111,7 +111,8 @@ pub async fn set_contact(db: &PgPool, user_id: Uuid, contact: &Contact) -> sqlx:
             if let Some(old) = old_phone.filter(|old| old != phone) {
                 sqlx::query(
                     "UPDATE listing_contacts c SET phone_e164 = $3::text::e164_phone
-                     FROM listings l WHERE l.id = c.listing_id AND l.created_by_user_id = $1 AND c.phone_e164 = $2::text::e164_phone",
+                     FROM listings l WHERE l.id = c.listing_id AND l.created_by_user_id = $1 AND l.seller_business_id IS NULL
+                       AND c.phone_e164 = $2::text::e164_phone",
                 )
                 .bind(user_id)
                 .bind(old)
@@ -129,7 +130,8 @@ pub async fn set_contact(db: &PgPool, user_id: Uuid, contact: &Contact) -> sqlx:
             if let Some(old) = old_email.filter(|old| !old.eq_ignore_ascii_case(email)) {
                 sqlx::query(
                     "UPDATE listing_contacts c SET email = $3::text::citext
-                     FROM listings l WHERE l.id = c.listing_id AND l.created_by_user_id = $1 AND c.email = $2::text::citext",
+                     FROM listings l WHERE l.id = c.listing_id AND l.created_by_user_id = $1 AND l.seller_business_id IS NULL
+                       AND c.email = $2::text::citext",
                 )
                 .bind(user_id)
                 .bind(old)
@@ -163,7 +165,8 @@ pub async fn remove_contact(db: &PgPool, user_id: Uuid, phone: bool) -> sqlx::Re
             .await?;
         sqlx::query(
             "UPDATE listing_contacts c SET phone_e164 = NULL, email = coalesce(c.email, $3::text::citext), show_email = true
-             FROM listings l WHERE l.id = c.listing_id AND l.created_by_user_id = $1 AND c.phone_e164 = $2::text::e164_phone",
+             FROM listings l WHERE l.id = c.listing_id AND l.created_by_user_id = $1 AND l.seller_business_id IS NULL
+               AND c.phone_e164 = $2::text::e164_phone",
         )
         .bind(user_id)
         .bind(&old_phone)
@@ -177,7 +180,8 @@ pub async fn remove_contact(db: &PgPool, user_id: Uuid, phone: bool) -> sqlx::Re
             .await?;
         sqlx::query(
             "UPDATE listing_contacts c SET email = NULL, phone_e164 = coalesce(c.phone_e164, $3::text::e164_phone), show_phone = true
-             FROM listings l WHERE l.id = c.listing_id AND l.created_by_user_id = $1 AND c.email = $2::text::citext",
+             FROM listings l WHERE l.id = c.listing_id AND l.created_by_user_id = $1 AND l.seller_business_id IS NULL
+               AND c.email = $2::text::citext",
         )
         .bind(user_id)
         .bind(&old_email)
@@ -212,29 +216,47 @@ pub async fn end_other_sessions(db: &PgPool, user_id: Uuid, keep: &[u8]) -> sqlx
 pub const DELETED_NAME: &str = "Përdorues i fshirë";
 
 /// Closes the account, in one transaction (README, "Users are anonymised, not deleted"): its
-/// listings deleted (the status history saying so), their contacts and photos with them; what only
+/// listings deleted (the status history saying so), their contacts and photos with them; the stores
+/// it owns closed (DELETED), their listings, people and invitations with them, while the listings
+/// it posted for another's store stay that store's; what only
 /// it had gone (sessions, notifications and what it hears of, saved listings and searches, blocks
 /// either way, verifications, business memberships, codes asked for its contacts); and the account
 /// itself anonymised, no phone number, address or picture, DELETED_NAME, the identity it signed in
 /// with freed. Messages stay for the other side, under DELETED_NAME; reports and moderation stay.
-/// Returns the photos' files (listing_media.storage_key), which the caller takes out of the store
-/// once this is done.
+/// Returns the photos' files (listing_media.storage_key) and its stores' logos and covers, which
+/// the caller takes out of the store once this is done.
 pub async fn delete_account(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<String>> {
     let mut tx = db.begin().await?;
     sqlx::query("SELECT set_config('app.user_id', $1, true), set_config('app.status_reason', 'Llogaria u mbyll', true)")
         .bind(user_id.to_string())
         .execute(&mut *tx)
         .await?;
-    let photos: Vec<String> = sqlx::query_scalar(
-        "SELECT m.storage_key FROM listing_media m JOIN listings l ON l.id = m.listing_id WHERE l.created_by_user_id = $1",
-    )
-    .bind(user_id)
-    .fetch_all(&mut *tx)
-    .await?;
+    // Its listings: its own, and those of the stores it owns, whoever of their people posted them.
+    let owned_stores = "SELECT business_id FROM business_members WHERE user_id = $1 AND role = 'OWNER'";
+    let its_listings = format!("(l.seller_business_id IS NULL AND l.created_by_user_id = $1) OR l.seller_business_id IN ({owned_stores})");
+    let mut files: Vec<String> =
+        sqlx::query_scalar(&format!("SELECT m.storage_key FROM listing_media m JOIN listings l ON l.id = m.listing_id WHERE {its_listings}"))
+            .bind(user_id)
+            .fetch_all(&mut *tx)
+            .await?;
+    let pictures: Vec<(Option<String>, Option<String>)> =
+        sqlx::query_as(&format!("SELECT logo_key, cover_key FROM businesses WHERE id IN ({owned_stores})"))
+            .bind(user_id)
+            .fetch_all(&mut *tx)
+            .await?;
+    files.extend(pictures.into_iter().flat_map(|(logo, cover)| [logo, cover]).flatten());
     for statement in [
-        "DELETE FROM listing_media m USING listings l WHERE l.id = m.listing_id AND l.created_by_user_id = $1",
-        "DELETE FROM listing_contacts c USING listings l WHERE l.id = c.listing_id AND l.created_by_user_id = $1",
-        "UPDATE listings SET status = 'DELETED' WHERE created_by_user_id = $1 AND status <> 'DELETED'",
+        format!("DELETE FROM listing_media m USING listings l WHERE l.id = m.listing_id AND ({its_listings})"),
+        format!("DELETE FROM listing_contacts c USING listings l WHERE l.id = c.listing_id AND ({its_listings})"),
+        format!("UPDATE listings l SET status = 'DELETED' WHERE ({its_listings}) AND l.status <> 'DELETED'"),
+        format!("UPDATE businesses SET status = 'DELETED', logo_url = NULL, logo_key = NULL, cover_url = NULL, cover_key = NULL,
+                                    updated_at = now() WHERE id IN ({owned_stores})"),
+        format!("DELETE FROM business_invitations WHERE business_id IN ({owned_stores})"),
+        format!("DELETE FROM business_members WHERE business_id IN ({owned_stores})"),
+    ] {
+        sqlx::query(&statement).bind(user_id).execute(&mut *tx).await?;
+    }
+    for statement in [
         "DELETE FROM login_codes
          WHERE user_id = $1 OR contact IN (SELECT phone_e164::text FROM users WHERE id = $1 UNION SELECT email::text FROM users WHERE id = $1)",
         "DELETE FROM sessions WHERE user_id = $1",
@@ -260,5 +282,5 @@ pub async fn delete_account(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<Stri
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
-    Ok(photos)
+    Ok(files)
 }

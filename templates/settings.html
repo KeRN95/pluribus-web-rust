@@ -76,8 +76,17 @@
   </form>
 
   <h2>Dyqanet</h2>
-  {#- The stores the account is one of the people of (stores.rs), each to its page and, for its
-      owner and admins, its form; and a new one, up to db::STORES_MOST owned. -#}
+  {#- The invitations waiting for the account's contacts, each to take or turn down; the stores it
+      is one of the people of (stores.rs), each to its page, with its role and, for its owner
+      and admins, its people and its form, for the rest the way out; and a new one, up to
+      db::STORES_MOST owned. -#}
+  {%- for invitation in invitations %}
+  <div class="store-invitation">
+    <p><a href="/ftesa/{{ invitation.id }}">{{ invitation.store_name }}</a> të fton si „{{ crate::web::stores::role_name(invitation.role) }}“.</p>
+    <form method="post" action="/ftesa/{{ invitation.id }}/prano"><button type="submit" class="button small">Prano</button></form>
+    <form method="post" action="/ftesa/{{ invitation.id }}/refuzo"><button type="submit" class="button secondary small">Refuzo</button></form>
+  </div>
+  {%- endfor %}
   {%- if stores.is_empty() %}
   <p class="field-hint">Një dyqan ka faqen e vet, me logon, përshkrimin, adresën dhe orarin, dhe njoftimet që poston si ai.</p>
   {%- else %}
@@ -85,10 +94,18 @@
     {%- for store in stores %}
     <li class="settings-store">
       <a href="/biznes/{{ store.slug }}">{{ store.display_name }}</a>
-      <span class="field-hint">{% if store.role == "OWNER" %}Pronar{% else if store.role == "ADMIN" %}Administrator{% else if store.role == "EDITOR" %}Poston njoftime{% else %}Shikon{% endif %}</span>
-      {%- if store.manages() %}
-      <a class="button secondary small" href="/dyqani/{{ store.slug }}/ndrysho">Ndrysho</a>
-      {%- endif %}
+      <span class="field-hint">{{ crate::web::stores::role_name(store.role) }}</span>
+      <span class="settings-store-actions">
+        {%- if store.manages() %}
+        <a class="button secondary small" href="/dyqani/{{ store.slug }}/njerezit">Njerëzit</a>
+        <a class="button secondary small" href="/dyqani/{{ store.slug }}/ndrysho">Ndrysho</a>
+        {%- endif %}
+        {%- if store.role != "OWNER" %}
+        <form method="post" action="/dyqani/{{ store.slug }}/largohu" data-turbo-confirm="Të largohesh nga {{ store.display_name }}?">
+          <button type="submit" class="button secondary small">Largohu</button>
+        </form>
+        {%- endif %}
+      </span>
     </li>
     {%- endfor %}
   </ul>
@@ -129,7 +146,7 @@
   </div>
 
   <h2>Fshi llogarinë</h2>
-  <p>Njoftimet e tua fshihen bashkë me fotot, dhe numri, email-i dhe emri hiqen nga llogaria. Mesazhet që ke shkëmbyer mbeten për palën tjetër, me „Përdorues i fshirë“ në vend të emrit tënd. Llogaria nuk kthehet më.</p>
+  <p>Njoftimet e tua fshihen bashkë me fotot, dyqanet që ke krijuar mbyllen bashkë me njoftimet e tyre, dhe numri, email-i dhe emri hiqen nga llogaria. Mesazhet që ke shkëmbyer mbeten për palën tjetër, me „Përdorues i fshirë“ në vend të emrit tënd. Llogaria nuk kthehet më.</p>
   <form class="account-form settings-form" method="post" action="/llogaria/fshi">
     <div class="field">
       <label class="field-label" for="konfirmo">Shkruaj FSHI që ta fshish</label>

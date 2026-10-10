@@ -15,7 +15,21 @@
       message left unread. -#}
   {% call account::account_nav("listings", notifications.all) %}
   <h1>Njoftimet e mia</h1>
+  {%- if !stores.is_empty() %}
+  {#- The user's own listings, or a store's they post for (stores.rs), whoever of its people
+      posted them: a pill each, the one shown marked. -#}
+  <nav class="account-nav whose-listings" aria-label="Njoftimet e kujt">
+    <a href="/njoftimet-e-mia"{% if store.is_none() %} aria-current="page"{% endif %}>Të miat</a>
+    {%- for one in stores %}
+    <a href="/njoftimet-e-mia?dyqani={{ one.slug }}"{% if let Some(shown) = store %}{% if shown.slug == one.slug %} aria-current="page"{% endif %}{% endif %}>{{ one.display_name }}</a>
+    {%- endfor %}
+  </nav>
+  {%- endif %}
+  {%- if let Some(store) = store %}
+  <p class="lead">Njoftimet e <strong>{{ store.display_name }}</strong>, nga kushdo që i ka publikuar.</p>
+  {%- else %}
   <p class="lead">Njoftimet që ke publikuar me <strong>{{ signed_in_as }}</strong>.</p>
+  {%- endif %}
   {%- if let Some(pending) = pending %}
   {#- Moderators only: the makes and models sellers typed in, waiting. -#}
   <p class="moderation-link"><a class="button secondary small" href="/moderim">Për miratim ({{ pending }})</a></p>

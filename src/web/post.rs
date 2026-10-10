@@ -10,7 +10,7 @@ use std::{
 use askama::Template;
 use axum::{
     Form, Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
@@ -841,6 +841,15 @@ struct MyListingsPage {
     pending: Option<i64>,
     /// How many of their notifications they haven't seen, by "Lajmërimet" in the account's row.
     notifications: db::Unread,
+    /// The stores they post for, each a pill after "Të miat", and the one shown, if one is.
+    stores: Vec<db::MyStore>,
+    store: Option<db::MyStore>,
+}
+
+#[derive(Deserialize)]
+pub struct WhoseListings {
+    /// The store whose listings to show, by its address; the user's own without it.
+    dyqani: Option<String>,
 }
 
 impl MyListing {
@@ -971,13 +980,24 @@ async fn change_listing(state: &AppState, headers: &HeaderMap, public_no: i64, a
     Ok(Redirect::to(back.as_deref().unwrap_or("/njoftimet-e-mia")).into_response())
 }
 
-/// "Njoftimet e mia": the signed-in seller's listings, each with a way to edit it.
-pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap) -> Result<Response> {
+/// "Njoftimet e mia": the signed-in seller's listings, each with a way to edit it; with
+/// `?dyqani=` those of a store they post for (stores.rs), whoever of its people posted them.
+pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap, Query(whose): Query<WhoseListings>) -> Result<Response> {
     let Some(user) = current_user(&state, &headers).await? else {
         return render(SignInPage::new());
     };
-    let (listings, notifications) =
-        tokio::try_join!(db::my_listings(&state.db, user.id), db::unread_notifications(&state.db, user.id))?;
+    let stores = posting_stores(&state, Some(&user)).await?;
+    let store = match whose.dyqani.as_deref() {
+        None | Some("") => None,
+        Some(slug) => match stores.iter().find(|store| store.slug == slug) {
+            Some(store) => Some(store.clone()),
+            None => return not_found().await,
+        },
+    };
+    let (listings, notifications) = tokio::try_join!(
+        db::my_listings(&state.db, user.id, store.as_ref().map(|store| store.id)),
+        db::unread_notifications(&state.db, user.id)
+    )?;
     let pending = match state.moderators.include(&user) {
         true => {
             let (options, reported) = tokio::try_join!(db::pending_option_count(&state.db), db::reported_count(&state.db))?;
@@ -986,7 +1006,7 @@ pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap) -> R
         false => None,
     };
     let totals = listings.iter().map(|listing| listing.stats).sum();
-    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending, notifications })
+    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending, notifications, stores, store })
 }
 
 /// What a listing drew, or all of a seller's listings together, as "Njoftimet e mia" says it.

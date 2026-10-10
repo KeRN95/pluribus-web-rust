@@ -738,6 +738,7 @@ a.notification-line:hover .notification-title { text-decoration: underline; text
 .filter-form select,
 .pending-form input,
 .pending-form select,
+.person-role select,
 .picker-button {
   width: 100%;
   min-width: 0;
@@ -752,7 +753,8 @@ a.notification-line:hover .notification-title { text-decoration: underline; text
 /* A chevron drawn in the text colour, so it follows the theme. */
 .field select,
 .filter-form select,
-.pending-form select {
+.pending-form select,
+.person-role select {
   appearance: none;
   padding-right: 2rem;
   background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),

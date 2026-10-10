@@ -283,7 +283,8 @@ pub async fn own_listing(db: &PgPool, public_no: i64, user_id: Uuid) -> sqlx::Re
            FROM listings l
            JOIN categories c ON c.id = l.category_id
            LEFT JOIN listing_contacts lc ON lc.listing_id = l.id
-           WHERE l.public_no = $1 AND l.created_by_user_id = $2 AND l.status IN ('ACTIVE', 'RESERVED', 'PAUSED')"#,
+           WHERE l.public_no = $1 AND manages_listing(l.seller_business_id, l.created_by_user_id, $2)
+             AND l.status IN ('ACTIVE', 'RESERVED', 'PAUSED')"#,
         public_no,
         user_id,
     )
@@ -291,8 +292,9 @@ pub async fn own_listing(db: &PgPool, public_no: i64, user_id: Uuid) -> sqlx::Re
     .await
 }
 
-/// Saves an edit, if the listing is the user's and still up, or taken down by them for a while
-/// (PAUSED, which an edit leaves as it is); returns whether it did. A listing
+/// Saves an edit, if the listing is the user's (or a store's they post for, manages_listing) and
+/// still up, or taken down for a while (PAUSED, which an edit leaves as it is); returns whether it
+/// did. The number it shows stays. A listing
 /// keeps its point on the map unless it moves to another town, and its place in "newest first".
 pub async fn update_listing(db: &PgPool, public_no: i64, listing: &NewListing<'_>) -> sqlx::Result<bool> {
     let mut tx = db.begin().await?;
@@ -306,7 +308,8 @@ pub async fn update_listing(db: &PgPool, public_no: i64, listing: &NewListing<'_
              location_id = $4
          FROM locations loc
          LEFT JOIN locations town ON town.id = location_municipality(loc.id)
-         WHERE loc.id = $4 AND l.public_no = $1 AND l.created_by_user_id = $2 AND l.status IN ('ACTIVE', 'RESERVED', 'PAUSED')
+         WHERE loc.id = $4 AND l.public_no = $1 AND manages_listing(l.seller_business_id, l.created_by_user_id, $2)
+           AND l.status IN ('ACTIVE', 'RESERVED', 'PAUSED')
          RETURNING l.id",
         public_no,
         listing.user_id,
@@ -387,8 +390,8 @@ impl ListingAction {
     }
 }
 
-/// Pauses, resumes, sells, reserves or deletes one of the user's listings. False when the listing
-/// isn't theirs, isn't in a state the action applies to (a deleted one, or pausing one already
+/// Pauses, resumes, sells, reserves or deletes one of the user's listings, or of a store's they post
+/// for (manages_listing). False when the listing isn't theirs, isn't in a state the action applies to (a deleted one, or pausing one already
 /// paused), or isn't of a kind it applies to (selling a wanted ad). Selling sets when it was sold,
 /// as the schema asks of a sold listing, and putting one back up clears it and gives it its
 /// LISTING_DAYS again. The status history records the seller as the one who changed it.
@@ -406,7 +409,7 @@ pub async fn change_own_listing(db: &PgPool, public_no: i64, user_id: Uuid, acti
              sold_at = CASE WHEN $3::text = 'SOLD' THEN now() WHEN $3::text = 'ACTIVE' THEN NULL ELSE sold_at END,
              expires_at = CASE WHEN $3::text = 'ACTIVE' AND status IN ('PAUSED', 'SOLD')
                                THEN now() + make_interval(days => $6) ELSE expires_at END
-         WHERE public_no = $1 AND created_by_user_id = $2 AND status::text = ANY($4)
+         WHERE public_no = $1 AND manages_listing(seller_business_id, created_by_user_id, $2) AND status::text = ANY($4)
            AND ($5::text[] IS NULL OR listing_type::text = ANY($5))",
         public_no,
         user_id,
@@ -423,7 +426,7 @@ pub async fn change_own_listing(db: &PgPool, public_no: i64, user_id: Uuid, acti
     Ok(changed)
 }
 
-/// "Rifresko": one of the user's listings, up, reserved or expired, stays up for LISTING_DAYS from
+/// "Rifresko": one of the user's listings (or of a store's they post for), up, reserved or expired, stays up for LISTING_DAYS from
 /// now, an expired one back up, and comes back to the top of "newest first" if it was published
 /// or last brought up (`sort_at`) BUMP_DAYS ago or more. Its notifications that it expires or
 /// expired are read, and the account button loses its dot for them. False if it isn't theirs, or
@@ -439,7 +442,8 @@ pub async fn renew_listing(db: &PgPool, public_no: i64, user_id: Uuid) -> sqlx::
              expires_at = now() + make_interval(days => $3),
              bumped_at = CASE WHEN sort_at < now() - make_interval(days => $4) THEN now() ELSE bumped_at END,
              updated_at = now()
-         WHERE public_no = $1 AND created_by_user_id = $2 AND status IN ('ACTIVE', 'RESERVED', 'EXPIRED')
+         WHERE public_no = $1 AND manages_listing(seller_business_id, created_by_user_id, $2)
+           AND status IN ('ACTIVE', 'RESERVED', 'EXPIRED')
          RETURNING id",
         public_no,
         user_id,
@@ -506,8 +510,10 @@ impl std::iter::Sum for ListingStats {
     }
 }
 
-/// The user's listings, newest first, deleted ones left out, each with what it drew.
-pub async fn my_listings(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<MyListing>> {
+/// The user's own listings, or with `store` that store's, whoever of its people posted them (the
+/// caller checks the user posts for it); newest first, deleted ones left out, each with what it
+/// drew.
+pub async fn my_listings(db: &PgPool, user_id: Uuid, store: Option<Uuid>) -> sqlx::Result<Vec<MyListing>> {
     let rows = sqlx::query!(
         r#"SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS "title!", l.status, l.listing_type,
                   l.price_amount, l.currency::text AS "currency!", l.price_type, l.expires_at,
@@ -529,9 +535,12 @@ pub async fn my_listings(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<MyListi
                FROM saved_listings k
                WHERE k.listing_id = l.id
            ) kept
-           WHERE l.created_by_user_id = $1 AND l.status <> 'DELETED'
+           WHERE CASE WHEN $2::uuid IS NULL THEN l.created_by_user_id = $1 AND l.seller_business_id IS NULL
+                      ELSE l.seller_business_id = $2 END
+             AND l.status <> 'DELETED'
            ORDER BY l.created_at DESC, l.public_no DESC"#,
         user_id,
+        store,
     )
     .fetch_all(db)
     .await?;

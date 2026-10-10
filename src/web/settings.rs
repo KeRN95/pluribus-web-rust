@@ -33,8 +33,10 @@ struct SettingsPage {
     settings: db::AccountSettings,
     preferences: db::NoticePreferences,
     blocked: Vec<db::BlockedSeller>,
-    /// The stores the account is one of the people of (stores.rs), and whether it may make another.
+    /// The stores the account is one of the people of (stores.rs), and whether it may make another;
+    /// the invitations into others waiting for its phone number or e-mail address.
     stores: Vec<db::MyStore>,
+    invitations: Vec<db::Invitation>,
     more_stores: bool,
     /// How many devices are signed in, this one with them.
     sessions: i64,
@@ -68,7 +70,7 @@ impl SettingsPage {
 
 /// The page for this user, the fields as their account has them.
 async fn settings_page(state: &AppState, user: &SessionUser, done: Option<&'static str>) -> Result<SettingsPage> {
-    let (settings, preferences, blocked, sessions, unread, stores, owned) = tokio::try_join!(
+    let (settings, preferences, blocked, sessions, unread, stores, owned, invitations) = tokio::try_join!(
         db::account_settings(&state.db, user.id),
         db::notice_preferences(&state.db, user.id),
         db::blocked_sellers(&state.db, user.id),
@@ -76,6 +78,7 @@ async fn settings_page(state: &AppState, user: &SessionUser, done: Option<&'stat
         db::unread_notifications(&state.db, user.id),
         db::my_stores(&state.db, user.id),
         db::stores_owned(&state.db, user.id),
+        db::invitations_for(&state.db, user.id),
     )?;
     let name = settings.display_name.clone();
     Ok(SettingsPage {
@@ -83,6 +86,7 @@ async fn settings_page(state: &AppState, user: &SessionUser, done: Option<&'stat
         preferences,
         blocked,
         stores,
+        invitations,
         more_stores: owned < db::STORES_MOST,
         sessions,
         unread: unread.all,
@@ -120,6 +124,9 @@ fn done_line(word: &str) -> Option<&'static str> {
         "njoftimet" => "Zgjedhjet për njoftimet u ruajtën.",
         "pajisjet" => "Dole nga pajisjet e tjera.",
         "zhbllokuar" => "U zhbllokua.",
+        "pranuar" => "Tani je një nga njerëzit e dyqanit.",
+        "refuzuar" => "Ftesa u refuzua.",
+        "larguar" => "U largove nga dyqani.",
         _ => return None,
     })
 }

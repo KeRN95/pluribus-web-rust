@@ -172,12 +172,13 @@ pub async fn store(media: &Media, processed: Vec<Processed>) -> Result<Vec<NewPh
 }
 
 /// Deletes the files of photos taken off a listing, every copy, those of photos kept before WebP
-/// included. A file left behind only takes space, so a failure is logged rather than shown.
+/// included; a store's logo or cover (`stores/`) is one file. A file left behind only takes space,
+/// so a failure is logged rather than shown.
 pub async fn delete(media: &Media, keys: &[String]) {
     for key in keys {
         let files: Vec<String> = match key.strip_suffix(".webp").or_else(|| key.strip_suffix(".jpg")) {
-            Some(name) => COPIES.iter().chain([&EARLIER_CARD]).map(|copy| format!("{name}{copy}")).collect(),
-            None => vec![key.clone()],
+            Some(name) if !key.starts_with("stores/") => COPIES.iter().chain([&EARLIER_CARD]).map(|copy| format!("{name}{copy}")).collect(),
+            _ => vec![key.clone()],
         };
         for file in files {
             if let Err(error) = media.delete(&file).await {

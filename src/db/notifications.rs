@@ -31,6 +31,8 @@ pub struct Notification {
     pub search: Option<Uuid>,
     /// The conversation it is about.
     pub conversation: Option<Uuid>,
+    /// The invitation into a store it is about, while it is open.
+    pub invitation: Option<Uuid>,
 }
 
 /// The user's notifications of the last NOTIFICATIONS_DAYS, the latest first; NOTIFICATIONS_MOST
@@ -38,7 +40,7 @@ pub struct Notification {
 pub async fn notifications(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<Notification>> {
     sqlx::query_as(
         "SELECT n.id, n.notification_type AS kind, n.title, n.body, n.created_at, n.read_at IS NOT NULL AS read,
-                l.public_no, l.slug, s.id AS search, c.id AS conversation
+                l.public_no, l.slug, s.id AS search, c.id AS conversation, i.id AS invitation
          FROM notifications n
          LEFT JOIN listings l
                 ON l.id = CASE WHEN n.payload ? 'listing_id' THEN (n.payload ->> 'listing_id')::uuid END
@@ -47,6 +49,8 @@ pub async fn notifications(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<Notif
                 ON s.id = CASE WHEN n.payload ? 'search' THEN (n.payload ->> 'search')::uuid END AND s.user_id = n.user_id
          LEFT JOIN conversations c
                 ON c.id = CASE WHEN n.payload ? 'conversation' THEN (n.payload ->> 'conversation')::uuid END
+         LEFT JOIN business_invitations i
+                ON i.id = CASE WHEN n.payload ? 'invitation' THEN (n.payload ->> 'invitation')::uuid END AND i.expires_at > now()
          WHERE n.user_id = $1 AND n.created_at > now() - make_interval(days => $2)
          ORDER BY n.created_at DESC, n.id DESC
          LIMIT $3",

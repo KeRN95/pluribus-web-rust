@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE listings\n         SET status = $3::text, updated_at = now(),\n             sold_at = CASE WHEN $3::text = 'SOLD' THEN now() WHEN $3::text = 'ACTIVE' THEN NULL ELSE sold_at END,\n             expires_at = CASE WHEN $3::text = 'ACTIVE' AND status IN ('PAUSED', 'SOLD')\n                               THEN now() + make_interval(days => $6) ELSE expires_at END\n         WHERE public_no = $1 AND manages_listing(seller_business_id, created_by_user_id, $2) AND status::text = ANY($4)\n           AND ($5::text[] IS NULL OR listing_type::text = ANY($5))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Text",
+        "TextArray",
+        "TextArray",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9614e433b190d1c5d771e12b56f550f1b09bf7ae5fb45df776061df013b1f475"
+}

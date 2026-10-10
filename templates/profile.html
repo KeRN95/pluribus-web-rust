@@ -27,7 +27,12 @@
     {%- endif %}
   </div>
   {%- if let Some(edit) = edit_url %}
-  <a class="button secondary small store-edit" href="{{ edit }}">Ndrysho dyqanin</a>
+  <span class="store-edit">
+    {%- if let Some(store) = store %}
+    <a class="button secondary small" href="/dyqani/{{ store.slug }}/njerezit">Njerëzit</a>
+    {%- endif %}
+    <a class="button secondary small" href="{{ edit }}">Ndrysho dyqanin</a>
+  </span>
   {%- endif %}
 </header>
 {%- if let Some(store) = store %}

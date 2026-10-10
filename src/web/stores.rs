@@ -8,24 +8,28 @@ use std::collections::HashMap;
 
 use askama::Template;
 use axum::{
+    Form,
     body::Bytes,
-    extract::{Path, State},
-    http::{HeaderMap, StatusCode},
+    extract::{Path, Query, State},
+    http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Redirect, Response},
 };
+use serde::Deserialize;
+use uuid::Uuid;
 
 use super::{
     Result,
     account::{SignInPage, current_user},
+    listings::percent_encoded,
     not_found,
     photos::Submission,
-    render,
+    render, saved, site_origin,
 };
 use crate::{
     AppState,
-    db::{self, City, ImageChange, StoreFields, StoreImage},
-    format::Contact,
-    media,
+    db::{self, City, ImageChange, SessionUser, StoreFields, StoreImage},
+    format::{self, Contact},
+    media, sender,
 };
 
 #[derive(Template)]
@@ -292,16 +296,24 @@ pub async fn create_store(State(state): State<AppState>, headers: HeaderMap, sub
     Ok(Redirect::to(&format!("/biznes/{slug}")).into_response())
 }
 
-/// The store at this address, for someone who may change it (db::MANAGING_ROLES).
-async fn managed_store(state: &AppState, headers: &HeaderMap, slug: &str) -> Result<Option<db::Store>> {
+/// The store at this address, with the user and their role in it, for its owner and admins
+/// (db::MANAGING_ROLES); None for anyone else.
+async fn managed(state: &AppState, headers: &HeaderMap, slug: &str) -> Result<Option<(SessionUser, db::Store, String)>> {
     let Some(user) = current_user(state, headers).await? else {
         return Ok(None);
     };
-    let manages = db::my_stores(&state.db, user.id).await?.iter().any(|store| store.slug == slug && store.manages());
-    if !manages {
+    let Some(store) = db::store_by_slug(&state.db, slug).await? else {
         return Ok(None);
+    };
+    match db::role_in(&state.db, store.id, user.id).await? {
+        Some(role) if db::MANAGING_ROLES.contains(&role.as_str()) => Ok(Some((user, store, role))),
+        _ => Ok(None),
     }
-    Ok(db::store_by_slug(&state.db, slug).await?)
+}
+
+/// The store at this address, for someone who may change it (db::MANAGING_ROLES).
+async fn managed_store(state: &AppState, headers: &HeaderMap, slug: &str) -> Result<Option<db::Store>> {
+    Ok(managed(state, headers, slug).await?.map(|(_, store, _)| store))
 }
 
 /// GET /dyqani/{slug}/ndrysho: the store's form, for its owner and its admins.
@@ -356,6 +368,368 @@ pub async fn update_store(State(state): State<AppState>, headers: HeaderMap, Pat
     let gone = db::update_store(&state.db, store.id, &fields, &change(logo, form.remove_logo), &change(cover, form.remove_cover)).await?;
     forget_files(&state, &gone).await;
     Ok(Redirect::to(&format!("/biznes/{slug}")).into_response())
+}
+
+/// A role's name, as the pages say it.
+pub fn role_name(role: &str) -> &'static str {
+    match role {
+        "OWNER" => "Pronar",
+        "ADMIN" => "Administrator",
+        "EDITOR" => "Poston njoftime",
+        _ => "Vetëm mesazhet",
+    }
+}
+
+/// What a role lets someone do, as the invitation form and the invitation say it.
+pub fn role_does(role: &str) -> &'static str {
+    match role {
+        "OWNER" => "Gjithçka, edhe njerëzit e dyqanit.",
+        "ADMIN" => "Ndryshon dyqanin dhe njerëzit e tij, poston njoftime dhe u përgjigjet mesazheve.",
+        "EDITOR" => "Poston dhe ndryshon njoftimet e dyqanit, dhe u përgjigjet mesazheve.",
+        _ => "U përgjigjet mesazheve të dyqanit.",
+    }
+}
+
+/// The roles someone of `role` gives, and so takes back: an owner any of db::GIVEN_ROLES, an admin
+/// those under its own; nobody else any.
+fn given_by(role: &str) -> &'static [&'static str] {
+    match role {
+        "OWNER" => &db::GIVEN_ROLES,
+        "ADMIN" => &["EDITOR", "VIEWER"],
+        _ => &[],
+    }
+}
+
+/// How many invitations a store may have open at once: enough for a team, not for mailing lists.
+const INVITATIONS_MOST: usize = 20;
+
+/// A store's people (store_people.html), for its owner and admins: each with their role, those the
+/// user may handle with the roles they give and "Hiq"; the open invitations, each to send again by
+/// WhatsApp or as a link, or to withdraw; and the form that asks someone in.
+#[derive(Template)]
+#[template(path = "store_people.html")]
+struct PeoplePage {
+    store: db::Store,
+    /// The user, and their role in the store, which says whom they handle.
+    me: Uuid,
+    role: String,
+    members: Vec<db::Member>,
+    invitations: Vec<db::Invitation>,
+    /// The site's address, which an invitation's link starts with.
+    origin: String,
+    /// The invitation form as typed, and why it didn't go.
+    contact: String,
+    invite_role: String,
+    error: Option<String>,
+    /// What the last form did.
+    done: Option<&'static str>,
+}
+
+impl PeoplePage {
+    /// The roles the user gives.
+    fn roles(&self) -> &'static [&'static str] {
+        given_by(&self.role)
+    }
+
+    /// Whether the user may change or let go this one of the store's people: not themself, and
+    /// only someone with a role they give (never the owner).
+    fn handles(&self, member: &db::Member) -> bool {
+        member.user_id != self.me && given_by(&self.role).contains(&member.role.as_str())
+    }
+
+    /// The role the invitation form starts at: the one typed, else someone who posts.
+    fn picked(&self, role: &str) -> bool {
+        if self.invite_role.is_empty() { role == "EDITOR" } else { self.invite_role == role }
+    }
+
+    /// The contact someone signs in with, as people write it.
+    fn contact_of(&self, member: &db::Member) -> String {
+        match (&member.phone, &member.email) {
+            (Some(phone), _) => format::phone(phone),
+            (None, email) => email.clone().unwrap_or_default(),
+        }
+    }
+
+    /// Whom an invitation waits for, as people write it.
+    fn invited(&self, invitation: &db::Invitation) -> String {
+        match (&invitation.phone, &invitation.email) {
+            (Some(phone), _) => format::phone(phone),
+            (None, email) => email.clone().unwrap_or_default(),
+        }
+    }
+
+    /// An invitation's page, to send by hand.
+    fn link(&self, invitation: &db::Invitation) -> String {
+        format!("{}/ftesa/{}", self.origin, invitation.id)
+    }
+
+    /// A chat in WhatsApp with the number an invitation waits for, its link written in it; None for
+    /// an e-mail address, which hears of it by e-mail.
+    fn whatsapp(&self, invitation: &db::Invitation) -> Option<String> {
+        let digits = invitation.phone.as_deref()?.strip_prefix('+')?;
+        let text = format!("Përshëndetje! Të ftoj në dyqanin „{}“ te Pluribus: {}", self.store.display_name, self.link(invitation));
+        Some(format!("https://wa.me/{digits}?text={}", percent_encoded(&text)))
+    }
+
+    /// The day an invitation runs out.
+    fn until(&self, invitation: &db::Invitation) -> String {
+        format::date(invitation.expires_at)
+    }
+}
+
+#[derive(Deserialize)]
+pub struct PeopleDone {
+    /// What the last form did (people_done).
+    u: Option<String>,
+}
+
+/// The line at the top of the page of people saying what the last form did.
+fn people_done(word: &str) -> Option<&'static str> {
+    Some(match word {
+        "ftuar" => "Ftesa u ruajt. Dërgoja edhe vetë: me WhatsApp, ose kopjo lidhjen.",
+        "anetar" => "Ky numër ose email është tashmë i dyqanit.",
+        "anuluar" => "Ftesa u anulua.",
+        "roli" => "Roli u ndryshua.",
+        "hequr" => "U hoq nga dyqani.",
+        _ => return None,
+    })
+}
+
+/// The page of people, with what it shows besides its store.
+async fn people_page(
+    state: &AppState,
+    me: Uuid,
+    store: db::Store,
+    role: String,
+    (contact, invite_role): (String, String),
+    error: Option<String>,
+    done: Option<&'static str>,
+) -> Result<PeoplePage> {
+    let (members, invitations) = tokio::try_join!(db::members(&state.db, store.id), db::store_invitations(&state.db, store.id))?;
+    Ok(PeoplePage { store, me, role, members, invitations, origin: site_origin(), contact, invite_role, error, done })
+}
+
+/// GET /dyqani/{slug}/njerezit: the store's people, for its owner and admins.
+pub async fn people(State(state): State<AppState>, headers: HeaderMap, Path(slug): Path<String>, Query(done): Query<PeopleDone>) -> Result<Response> {
+    let Some((user, store, role)) = managed(&state, &headers, &slug).await? else {
+        return not_found().await;
+    };
+    let done = done.u.as_deref().and_then(people_done);
+    render(people_page(&state, user.id, store, role, Default::default(), None, done).await?)
+}
+
+#[derive(Deserialize)]
+pub struct InviteForm {
+    #[serde(default)]
+    kontakti: String,
+    #[serde(default)]
+    roli: String,
+}
+
+/// POST /dyqani/{slug}/njerezit: asks someone into the store by their number or address, with one
+/// of the roles the user gives. An account with that contact has a notification of it; an address
+/// hears of it by e-mail; for a number, the page has WhatsApp's button to send it by hand.
+pub async fn invite(State(state): State<AppState>, headers: HeaderMap, Path(slug): Path<String>, Form(form): Form<InviteForm>) -> Result<Response> {
+    let Some((user, store, role)) = managed(&state, &headers, &slug).await? else {
+        return not_found().await;
+    };
+    let contact = Contact::parse(&form.kontakti);
+    let error = if contact.is_none() {
+        Some("Shkruaj një numër celulari (069 123 4567) ose një email.")
+    } else if !given_by(&role).contains(&form.roli.as_str()) {
+        Some("Zgjidh një nga rolet.")
+    } else if db::store_invitations(&state.db, store.id).await?.len() >= INVITATIONS_MOST {
+        Some("Dyqani ka 20 ftesa në pritje. Anulo disa para se të dërgosh të tjera.")
+    } else {
+        None
+    };
+    let (Some(contact), None) = (contact, error) else {
+        let error = error.map(str::to_string);
+        let page = people_page(&state, user.id, store, role, (form.kontakti, form.roli), error, None).await?;
+        return Ok((StatusCode::UNPROCESSABLE_ENTITY, render(page)?).into_response());
+    };
+    let title: String = format!("{} të fton në dyqan", store.display_name).chars().take(180).collect();
+    let body = format!("Si „{}“: {}", role_name(&form.roli), role_does(&form.roli));
+    let id = match db::invite(&state.db, store.id, &contact, &form.roli, user.id, &title, &body).await? {
+        db::Invited::Member => return Ok(Redirect::to(&format!("/dyqani/{slug}/njerezit?u=anetar")).into_response()),
+        db::Invited::Sent(id) => id,
+    };
+    if let Contact::Email(_) = contact {
+        let text = format!("{body}\n\nPër ta pranuar, hyr në Pluribus me këtë email:\n{}/ftesa/{id}", site_origin());
+        if let Err(error) = sender::senders().send_text(&contact, &title, &text).await {
+            tracing::warn!(%error, to = %contact.masked(), "store invitation not sent");
+        }
+    }
+    Ok(Redirect::to(&format!("/dyqani/{slug}/njerezit?u=ftuar")).into_response())
+}
+
+#[derive(Deserialize)]
+pub struct RoleForm {
+    #[serde(default)]
+    roli: String,
+}
+
+/// One of the store's people the user handles (PeoplePage::handles): their id; None otherwise.
+async fn handled(state: &AppState, store: &db::Store, user: &SessionUser, role: &str, member: &str) -> Result<Option<Uuid>> {
+    let Ok(member) = member.parse::<Uuid>() else {
+        return Ok(None);
+    };
+    let theirs = db::role_in(&state.db, store.id, member).await?;
+    let handles = member != user.id && theirs.is_some_and(|theirs| given_by(role).contains(&theirs.as_str()));
+    Ok(handles.then_some(member))
+}
+
+/// POST /dyqani/{slug}/njerezit/{user_id}: gives one of the store's people another role, one the
+/// user gives, if the user handles them.
+pub async fn set_role(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((slug, member)): Path<(String, String)>,
+    Form(form): Form<RoleForm>,
+) -> Result<Response> {
+    let Some((user, store, role)) = managed(&state, &headers, &slug).await? else {
+        return not_found().await;
+    };
+    let Some(member) = handled(&state, &store, &user, &role, &member).await? else {
+        return not_found().await;
+    };
+    if !given_by(&role).contains(&form.roli.as_str()) {
+        return not_found().await;
+    }
+    db::set_member_role(&state.db, store.id, member, &form.roli).await?;
+    Ok(Redirect::to(&format!("/dyqani/{slug}/njerezit?u=roli")).into_response())
+}
+
+/// POST /dyqani/{slug}/njerezit/{user_id}/hiq: lets one of the store's people go, if the user
+/// handles them; the listings they posted for it stay its own.
+pub async fn remove(State(state): State<AppState>, headers: HeaderMap, Path((slug, member)): Path<(String, String)>) -> Result<Response> {
+    let Some((user, store, role)) = managed(&state, &headers, &slug).await? else {
+        return not_found().await;
+    };
+    let Some(member) = handled(&state, &store, &user, &role, &member).await? else {
+        return not_found().await;
+    };
+    db::remove_member(&state.db, store.id, member).await?;
+    Ok(Redirect::to(&format!("/dyqani/{slug}/njerezit?u=hequr")).into_response())
+}
+
+/// POST /dyqani/{slug}/ftesat/{id}/anulo: withdraws one of the store's invitations.
+pub async fn cancel(State(state): State<AppState>, headers: HeaderMap, Path((slug, id)): Path<(String, String)>) -> Result<Response> {
+    let Some((_, store, _)) = managed(&state, &headers, &slug).await? else {
+        return not_found().await;
+    };
+    let Ok(id) = id.parse::<Uuid>() else {
+        return not_found().await;
+    };
+    db::cancel_invitation(&state.db, store.id, id).await?;
+    Ok(Redirect::to(&format!("/dyqani/{slug}/njerezit?u=anuluar")).into_response())
+}
+
+/// POST /dyqani/{slug}/largohu: someone who isn't the store's owner leaves it; to "Cilësimet".
+pub async fn leave(State(state): State<AppState>, headers: HeaderMap, Path(slug): Path<String>) -> Result<Response> {
+    let Some(user) = current_user(&state, &headers).await? else {
+        return Ok(Redirect::to("/llogaria").into_response());
+    };
+    let Some(store) = db::store_by_slug(&state.db, &slug).await? else {
+        return not_found().await;
+    };
+    if !db::remove_member(&state.db, store.id, user.id).await? {
+        return not_found().await;
+    }
+    Ok(Redirect::to("/llogaria/cilesimet?u=larguar").into_response())
+}
+
+/// Who looks at an invitation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Viewer {
+    SignedOut,
+    /// Signed in with the contact it waits for.
+    Invited,
+    /// Signed in with other contacts.
+    Other,
+}
+
+/// An invitation into a store (store_invitation.html): the store, the role it gives and what that
+/// lets one do; for the one it is for, "Prano" and "Refuzo"; for anyone else, the contact to sign
+/// in with.
+#[derive(Template)]
+#[template(path = "store_invitation.html")]
+struct InvitationPage {
+    invitation: db::Invitation,
+    viewer: Viewer,
+    /// The contact it waits for, its middle hidden ("+355 69 *** **33").
+    masked: String,
+}
+
+impl InvitationPage {
+    /// The day it runs out.
+    fn until(&self) -> String {
+        format::date(self.invitation.expires_at)
+    }
+}
+
+/// Whether the invitation waits for one of the user's contacts.
+fn invites(user: &SessionUser, invitation: &db::Invitation) -> bool {
+    let phone = invitation.phone.is_some() && invitation.phone == user.phone;
+    let email = match (&invitation.email, &user.email) {
+        (Some(invited), Some(theirs)) => invited.eq_ignore_ascii_case(theirs),
+        _ => false,
+    };
+    phone || email
+}
+
+/// GET /ftesa/{id}: an invitation, while it is open. Someone not signed in comes back here
+/// after signing in (saved::back_after_sign_in).
+pub async fn invitation(State(state): State<AppState>, headers: HeaderMap, Path(id): Path<String>) -> Result<Response> {
+    let invitation = match id.parse::<Uuid>() {
+        Ok(id) => db::invitation(&state.db, id).await?,
+        Err(_) => None,
+    };
+    let Some(invitation) = invitation else {
+        return not_found().await;
+    };
+    let user = current_user(&state, &headers).await?;
+    let viewer = match &user {
+        None => Viewer::SignedOut,
+        Some(user) if invites(user, &invitation) => Viewer::Invited,
+        Some(_) => Viewer::Other,
+    };
+    let page = format!("/ftesa/{}", invitation.id);
+    let masked = invitation.contact().masked();
+    let mut response = render(InvitationPage { invitation, viewer, masked })?;
+    if user.is_none() {
+        response.headers_mut().append(header::SET_COOKIE, saved::back_after_sign_in(&headers, &page));
+    }
+    Ok(response)
+}
+
+/// POST /ftesa/{id}/prano: the user takes the invitation, if it is theirs; to "Cilësimet",
+/// which lists the store now.
+pub async fn accept(State(state): State<AppState>, headers: HeaderMap, Path(id): Path<String>) -> Result<Response> {
+    let Some(user) = current_user(&state, &headers).await? else {
+        return Ok(Redirect::to("/llogaria").into_response());
+    };
+    let Ok(id) = id.parse::<Uuid>() else {
+        return not_found().await;
+    };
+    match db::accept_invitation(&state.db, id, user.id).await? {
+        Some(_) => Ok(Redirect::to("/llogaria/cilesimet?u=pranuar").into_response()),
+        None => not_found().await,
+    }
+}
+
+/// POST /ftesa/{id}/refuzo: the user turns the invitation down, if it is theirs.
+pub async fn decline(State(state): State<AppState>, headers: HeaderMap, Path(id): Path<String>) -> Result<Response> {
+    let Some(user) = current_user(&state, &headers).await? else {
+        return Ok(Redirect::to("/llogaria").into_response());
+    };
+    let Ok(id) = id.parse::<Uuid>() else {
+        return not_found().await;
+    };
+    if !db::decline_invitation(&state.db, id, user.id).await? {
+        return not_found().await;
+    }
+    Ok(Redirect::to("/llogaria/cilesimet?u=refuzuar").into_response())
 }
 
 #[cfg(test)]

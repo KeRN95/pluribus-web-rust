@@ -600,7 +600,12 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     };
     // One its reports or the moderators took off the site is for its seller and the moderators.
     let user = current_user(&state, &headers).await?;
-    let own = user.as_ref().is_some_and(|user| user.id == listing.created_by_user_id);
+    // Its seller's: a private seller's, or a store's people who post (manages_listing).
+    let own = match (&user, listing.seller_business_id) {
+        (None, _) => false,
+        (Some(user), None) => user.id == listing.created_by_user_id,
+        (Some(user), Some(store)) => db::posts_for(&state.db, store, user.id).await?,
+    };
     let moderator = user.as_ref().is_some_and(|user| state.moderators.include(user));
     if !listing.on_site() && !own && !moderator {
         return not_found().await;
@@ -863,7 +868,7 @@ pub fn whatsapp_url(phone: &str, title: &str, url: &str) -> Option<String> {
 
 /// `text` percent-encoded byte by byte, all but the characters a URL never needs to escape: a
 /// space is %20 rather than a form's "+", which WhatsApp would show as it is.
-fn percent_encoded(text: &str) -> String {
+pub(super) fn percent_encoded(text: &str) -> String {
     text.bytes()
         .map(|byte| match byte {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (byte as char).to_string(),

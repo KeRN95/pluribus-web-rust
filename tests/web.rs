@@ -223,7 +223,7 @@ async fn a_store_has_its_page_and_its_people_post_as_it(pool: PgPool) {
     assert!(page.contains("<dd>Rruga e Durrësit 10, Elbasan</dd>") && page.contains("<dd>E hënë – e shtunë, 9:00 – 19:00</dd>"));
     assert!(page.contains(r#"href="tel:+355691112233""#) && page.contains(r#"href="https://wa.me/355691112233""#));
     assert!(page.contains(r#"href="mailto:info@autoelbasani.al""#) && page.contains(r#"href="https://www.autoelbasani.al" rel="nofollow ugc noopener" target="_blank">www.autoelbasani.al</a>"#));
-    assert!(page.contains(r#"<a class="button secondary small store-edit" href="/dyqani/auto-elbasani/ndrysho">Ndrysho dyqanin</a>"#));
+    assert!(page.contains(r#"<a class="button secondary small" href="/dyqani/auto-elbasani/ndrysho">Ndrysho dyqanin</a>"#));
     assert!(!get(pool.clone(), "/biznes/auto-elbasani").await.body.contains("Ndrysho dyqanin"));
     assert!(!page.contains("L12345678A"), "the NIPT stays on the form");
     // "Cilësimet" lists it, and makes another.
@@ -280,6 +280,172 @@ async fn a_store_has_its_page_and_its_people_post_as_it(pool: PgPool) {
     assert_eq!(second.location.as_deref(), Some("/biznes/auto-elbasani-plus"));
     let third = post_store(&pool, "/dyqani/krijo", &[("name", "Auto Elbasani Plus")], &[], &besa).await;
     assert_eq!(third.location.as_deref(), Some("/biznes/auto-elbasani-plus-2"));
+}
+
+/// The account behind a test session's cookie (session_for).
+fn account_of(cookie: &str) -> &str {
+    cookie.trim_start_matches("session=test-token-")
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_stores_owner_asks_people_in_who_post_for_it_until_they_go(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let carla = new_seller(&pool, "+355691112255").await;
+    let made = post_store(&pool, "/dyqani/krijo", &[("name", "Auto Elbasani"), ("phone", "069 111 2233"), ("city", "elbasan")], &[], &ana).await;
+    assert_eq!(made.location.as_deref(), Some("/biznes/auto-elbasani"));
+    let invitations = |pool: PgPool| async move {
+        sqlx::query_scalar::<_, String>("SELECT id::text FROM business_invitations ORDER BY created_at").fetch_all(&pool).await.unwrap()
+    };
+
+    // Its people: its owner alone, on a page for its owner and admins, linked from its page.
+    let people = get_with_cookie(pool.clone(), "/dyqani/auto-elbasani/njerezit", &ana).await.body;
+    assert!(people.contains("Përdorues (ti)") && people.contains("Pronar"), "{people}");
+    assert!(get_with_cookie(pool.clone(), "/biznes/auto-elbasani", &ana).await.body.contains(r#"href="/dyqani/auto-elbasani/njerezit""#));
+    assert_eq!(get_with_cookie(pool.clone(), "/dyqani/auto-elbasani/njerezit", &besa).await.status, StatusCode::NOT_FOUND);
+
+    // Asked in by number: the account with it hears of it in "Lajmërimet" and "Cilësimet"; the
+    // page has WhatsApp's button with the invitation's link written in, and the link to copy.
+    let refused = post_form(pool.clone(), "/dyqani/auto-elbasani/njerezit", &[("kontakti", "123"), ("roli", "EDITOR")], Some(&ana)).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("Shkruaj një numër celulari") && refused.body.contains(r#"value="123""#));
+    let sent = post_form(pool.clone(), "/dyqani/auto-elbasani/njerezit", &[("kontakti", "069 111 2244"), ("roli", "EDITOR")], Some(&ana)).await;
+    assert_eq!(sent.location.as_deref(), Some("/dyqani/auto-elbasani/njerezit?u=ftuar"));
+    let invitation = invitations(pool.clone()).await.remove(0);
+    let people = get_with_cookie(pool.clone(), "/dyqani/auto-elbasani/njerezit?u=ftuar", &ana).await.body.replace("&#38;", "&");
+    assert!(people.contains("Ftesat në pritje") && people.contains("+355 69 111 2244") && people.contains("Ftesa u ruajt."), "{people}");
+    assert!(people.contains("https://wa.me/355691112244?text=") && people.contains(&format!("/ftesa/{invitation}")), "{people}");
+    let heard = get_with_cookie(pool.clone(), "/lajmerimet", &besa).await.body;
+    assert!(heard.contains("Auto Elbasani të fton në dyqan") && heard.contains(&format!(r#"href="/ftesa/{invitation}""#)), "{heard}");
+    assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet", &besa).await.body.contains(&format!(r#"action="/ftesa/{invitation}/prano""#)));
+
+    // Its page: the store and the role. Someone else learns whom it is for, and can't take it;
+    // someone signed out comes back to it after signing in.
+    let theirs = get_with_cookie(pool.clone(), &format!("/ftesa/{invitation}"), &carla).await.body;
+    assert!(theirs.contains("Auto Elbasani të fton") && theirs.contains("Poston njoftime") && theirs.contains("+355 69 *** **44"), "{theirs}");
+    assert!(!theirs.contains("/prano"));
+    assert_eq!(post_form(pool.clone(), &format!("/ftesa/{invitation}/prano"), &[], Some(&carla)).await.status, StatusCode::NOT_FOUND);
+    let signed_out = get(pool.clone(), &format!("/ftesa/{invitation}")).await;
+    assert!(signed_out.cookie("kthehu").is_some_and(|back| back.contains(&invitation)), "{:?}", signed_out.cookies);
+
+    // Taken: the store is in Besa's "Cilësimet" with her role and the way out, not its people.
+    let taken = post_form(pool.clone(), &format!("/ftesa/{invitation}/prano"), &[], Some(&besa)).await;
+    assert_eq!(taken.location.as_deref(), Some("/llogaria/cilesimet?u=pranuar"));
+    let settings = get_with_cookie(pool.clone(), "/llogaria/cilesimet?u=pranuar", &besa).await.body;
+    assert!(settings.contains(r#"<a href="/biznes/auto-elbasani">Auto Elbasani</a>"#) && settings.contains("Poston njoftime"), "{settings}");
+    assert!(settings.contains(r#"action="/dyqani/auto-elbasani/largohu""#) && !settings.contains("/dyqani/auto-elbasani/njerezit"));
+    assert!(invitations(pool.clone()).await.is_empty());
+
+    // She posts as the store; its owner changes the listing too. Her own listings leave it out,
+    // the store's pill lists it, for the store's people alone.
+    let posted = post_form(pool.clone(), "/shto", &[listing_fields(("", ""), &started()), vec![("si", "auto-elbasani")]].concat(), Some(&besa)).await;
+    let url = posted.location.expect("posted");
+    let no: i64 = url.trim_start_matches("/listing/").split('-').next().unwrap().parse().unwrap();
+    assert_eq!(get_with_cookie(pool.clone(), &format!("/listing/{no}/ndrysho"), &ana).await.status, StatusCode::OK);
+    assert!(get_with_cookie(pool.clone(), &url, &ana).await.body.contains(&format!(r#"action="/listing/{no}/caktivizo""#)));
+    let hers = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &besa).await.body;
+    assert!(hers.contains(r#"href="/njoftimet-e-mia?dyqani=auto-elbasani""#) && !hers.contains(&format!("/listing/{no}-")), "{hers}");
+    let stores = get_with_cookie(pool.clone(), "/njoftimet-e-mia?dyqani=auto-elbasani", &ana).await.body;
+    assert!(stores.contains(&format!("/listing/{no}-")) && stores.contains("Njoftimet e <strong>Auto Elbasani</strong>"), "{stores}");
+    assert_eq!(get_with_cookie(pool.clone(), "/njoftimet-e-mia?dyqani=auto-elbasani", &carla).await.status, StatusCode::NOT_FOUND);
+
+    // Made one who answers its messages alone: no posting as it, no changing its listings.
+    let besa_id = account_of(&besa);
+    let changed = post_form(pool.clone(), &format!("/dyqani/auto-elbasani/njerezit/{besa_id}"), &[("roli", "VIEWER")], Some(&ana)).await;
+    assert_eq!(changed.location.as_deref(), Some("/dyqani/auto-elbasani/njerezit?u=roli"));
+    assert_eq!(get_with_cookie(pool.clone(), &format!("/listing/{no}/ndrysho"), &besa).await.status, StatusCode::NOT_FOUND);
+    assert!(!get_with_cookie(pool.clone(), "/shto", &besa).await.body.contains(r#"value="auto-elbasani""#));
+    assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet", &besa).await.body.contains("Vetëm mesazhet"));
+    // Nobody takes the owner's role or lets the owner go, nor does the owner leave.
+    let ana_id = account_of(&ana);
+    assert_eq!(post_form(pool.clone(), &format!("/dyqani/auto-elbasani/njerezit/{ana_id}/hiq"), &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(post_form(pool.clone(), "/dyqani/auto-elbasani/largohu", &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(post_form(pool.clone(), &format!("/dyqani/auto-elbasani/njerezit/{besa_id}"), &[("roli", "OWNER")], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+
+    // Asking in someone who is in already says so; an address hears of it by e-mail, and the
+    // invitation can be withdrawn.
+    let member = post_form(pool.clone(), "/dyqani/auto-elbasani/njerezit", &[("kontakti", "069 111 2244"), ("roli", "ADMIN")], Some(&ana)).await;
+    assert_eq!(member.location.as_deref(), Some("/dyqani/auto-elbasani/njerezit?u=anetar"));
+    let by_mail = post_form(pool.clone(), "/dyqani/auto-elbasani/njerezit", &[("kontakti", "Carla@Example.test"), ("roli", "ADMIN")], Some(&ana)).await;
+    assert_eq!(by_mail.location.as_deref(), Some("/dyqani/auto-elbasani/njerezit?u=ftuar"));
+    let withdrawn = invitations(pool.clone()).await.remove(0);
+    let cancelled = post_form(pool.clone(), &format!("/dyqani/auto-elbasani/ftesat/{withdrawn}/anulo"), &[], Some(&ana)).await;
+    assert_eq!(cancelled.location.as_deref(), Some("/dyqani/auto-elbasani/njerezit?u=anuluar"));
+    assert!(invitations(pool.clone()).await.is_empty());
+    assert_eq!(get_with_cookie(pool.clone(), &format!("/ftesa/{withdrawn}"), &carla).await.status, StatusCode::NOT_FOUND);
+
+    // Turned down, it is gone; taken by Carla, who then leaves.
+    post_form(pool.clone(), "/dyqani/auto-elbasani/njerezit", &[("kontakti", "069 111 2255"), ("roli", "EDITOR")], Some(&ana)).await;
+    let declined = invitations(pool.clone()).await.remove(0);
+    let turned = post_form(pool.clone(), &format!("/ftesa/{declined}/refuzo"), &[], Some(&carla)).await;
+    assert_eq!(turned.location.as_deref(), Some("/llogaria/cilesimet?u=refuzuar"));
+    assert!(invitations(pool.clone()).await.is_empty());
+    post_form(pool.clone(), "/dyqani/auto-elbasani/njerezit", &[("kontakti", "069 111 2255"), ("roli", "EDITOR")], Some(&ana)).await;
+    let again = invitations(pool.clone()).await.remove(0);
+    post_form(pool.clone(), &format!("/ftesa/{again}/prano"), &[], Some(&carla)).await;
+    let left = post_form(pool.clone(), "/dyqani/auto-elbasani/largohu", &[], Some(&carla)).await;
+    assert_eq!(left.location.as_deref(), Some("/llogaria/cilesimet?u=larguar"));
+
+    // Besa let go: the listing she posted stays the store's, and hers to change no more.
+    let removed = post_form(pool.clone(), &format!("/dyqani/auto-elbasani/njerezit/{besa_id}/hiq"), &[], Some(&ana)).await;
+    assert_eq!(removed.location.as_deref(), Some("/dyqani/auto-elbasani/njerezit?u=hequr"));
+    let members: i64 = sqlx::query_scalar("SELECT count(*) FROM business_members m JOIN businesses b ON b.id = m.business_id WHERE b.slug = 'auto-elbasani'").fetch_one(&pool).await.unwrap();
+    assert_eq!(members, 1);
+    let paused = post_form(pool.clone(), &format!("/listing/{no}/caktivizo"), &[], Some(&besa)).await;
+    let status: String = sqlx::query_scalar("SELECT status FROM listings WHERE public_no = $1").bind(no).fetch_one(&pool).await.unwrap();
+    assert_eq!(status, "ACTIVE", "{:?}", paused.status);
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn closing_an_account_closes_the_stores_it_owns(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let made = post_store(&pool, "/dyqani/krijo", &[("name", "Auto Elbasani"), ("phone", "069 111 2233")], &[("logo", jpeg(80, 80))], &ana).await;
+    assert_eq!(made.location.as_deref(), Some("/biznes/auto-elbasani"));
+    post_store(&pool, "/dyqani/krijo", &[("name", "Besa Shop")], &[], &besa).await;
+    // Each posts for the other's store too.
+    sqlx::query(
+        "INSERT INTO business_members (business_id, user_id, role)
+         SELECT b.id, $1::uuid, 'EDITOR' FROM businesses b WHERE b.slug = 'auto-elbasani'
+         UNION ALL SELECT b.id, $2::uuid, 'EDITOR' FROM businesses b WHERE b.slug = 'besa-shop'",
+    )
+    .bind(account_of(&besa))
+    .bind(account_of(&ana))
+    .execute(&pool)
+    .await
+    .unwrap();
+    let post_as = |cookie: String, store: &'static str| {
+        let pool = pool.clone();
+        async move {
+            let posted = post_form(pool, "/shto", &[listing_fields(("", ""), &started()), vec![("si", store)]].concat(), Some(&cookie)).await;
+            posted.location.expect("posted").trim_start_matches("/listing/").split('-').next().unwrap().parse::<i64>().unwrap()
+        }
+    };
+    let ana_for_hers = post_as(besa.clone(), "auto-elbasani").await;
+    let hers_by_ana = post_as(ana.clone(), "besa-shop").await;
+    let logo: String = sqlx::query_scalar("SELECT logo_key FROM businesses WHERE slug = 'auto-elbasani'").fetch_one(&pool).await.unwrap();
+    assert!(media().get(&logo).await.unwrap().is_some());
+
+    let closed = post_form(pool.clone(), "/llogaria/fshi", &[("konfirmo", "FSHI")], Some(&ana)).await;
+    assert!(closed.body.contains("<h1>Llogaria u fshi</h1>"), "{}", closed.body);
+    // Her store is closed, its listings with it, whoever posted them, and its logo's file.
+    let status = |slug: &'static str| {
+        let pool = pool.clone();
+        async move { sqlx::query_scalar::<_, String>("SELECT status FROM businesses WHERE slug = $1").bind(slug).fetch_one(&pool).await.unwrap() }
+    };
+    assert_eq!(status("auto-elbasani").await, "DELETED");
+    assert_eq!(get(pool.clone(), "/biznes/auto-elbasani").await.status, StatusCode::NOT_FOUND);
+    let listing_status = |no: i64| {
+        let pool = pool.clone();
+        async move { sqlx::query_scalar::<_, String>("SELECT status FROM listings WHERE public_no = $1").bind(no).fetch_one(&pool).await.unwrap() }
+    };
+    assert_eq!(listing_status(ana_for_hers).await, "DELETED");
+    assert!(media().get(&logo).await.unwrap().is_none());
+    // Besa's store stays, with the listing Ana posted for it, and Besa its only one.
+    assert_eq!(status("besa-shop").await, "ACTIVE");
+    assert_eq!(listing_status(hers_by_ana).await, "ACTIVE");
+    let people: i64 = sqlx::query_scalar("SELECT count(*) FROM business_members m JOIN businesses b ON b.id = m.business_id WHERE b.slug IN ('auto-elbasani', 'besa-shop')").fetch_one(&pool).await.unwrap();
+    assert_eq!(people, 1);
 }
 
 /// What the AI stand-in was asked: the key each call came with, and the request.
@@ -5817,7 +5983,7 @@ async fn search_engines_find_the_listings_and_the_categories_by_the_sitemaps(poo
     // robots.txt keeps crawlers out of a visitor's own pages, and says where the sitemaps are.
     let robots = send(pool.clone(), from_the_site("/robots.txt")).await;
     assert_eq!(robots.content_type.as_deref(), Some("text/plain; charset=utf-8"));
-    for page in ["/hyr", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet", "/lajmerimet", "/shto", "/listing/*/ndrysho", "/dyqani"] {
+    for page in ["/hyr", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet", "/lajmerimet", "/shto", "/listing/*/ndrysho", "/dyqani", "/ftesa"] {
         assert!(robots.body.contains(&format!("\nDisallow: {page}\n")), "{page}");
     }
     assert!(robots.body.ends_with(&format!("\nSitemap: {site}/sitemap.xml\n")));

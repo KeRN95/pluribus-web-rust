@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Ftesë nga {{ invitation.store_name }} | Pluribus{% endblock %}
+
+{% block content %}
+{#- An invitation into a store (stores.rs): the store, with its logo, the role it gives and what
+    that lets one do; for the one it waits for, "Prano" and "Refuzo"; for anyone else, which
+    contact to sign in with (someone not signed in comes back here after). -#}
+<section class="account store-invite">
+  <header class="profile-header">
+    {%- if let Some(logo) = invitation.store_logo %}
+    <img class="avatar large avatar-logo" src="{{ logo }}" alt="" width="64" height="64">
+    {%- else %}
+    <span class="avatar large" aria-hidden="true">{{ crate::format::initial(invitation.store_name) }}</span>
+    {%- endif %}
+    <div>
+      <h1>{{ invitation.store_name }} të fton</h1>
+      <p>Si „{{ crate::web::stores::role_name(invitation.role) }}“: {{ crate::web::stores::role_does(invitation.role) }}</p>
+    </div>
+  </header>
+  {%- match viewer %}
+  {%- when crate::web::stores::Viewer::Invited %}
+  <div class="store-invite-actions">
+    <form method="post" action="/ftesa/{{ invitation.id }}/prano">
+      <button type="submit" class="button">Prano ftesën</button>
+    </form>
+    <form method="post" action="/ftesa/{{ invitation.id }}/refuzo">
+      <button type="submit" class="button secondary">Refuzo</button>
+    </form>
+  </div>
+  {%- when crate::web::stores::Viewer::Other %}
+  <p class="notice">Kjo ftesë është për <strong>{{ masked }}</strong>. Shto këtë numër ose email te llogaria jote, ose hyr me të, për ta pranuar.</p>
+  <p><a class="button secondary" href="/llogaria/cilesimet">Cilësimet</a></p>
+  {%- when crate::web::stores::Viewer::SignedOut %}
+  <p>Hyr në Pluribus me <strong>{{ masked }}</strong> për ta pranuar. Pa llogari? Krijohet vetë, me të njëjtin kod.</p>
+  <p><a class="button" href="/llogaria">Hyr</a></p>
+  {%- endmatch %}
+  <p class="account-note">Ftesa vlen deri më {{ self.until() }}.</p>
+</section>
+{% endblock %}
