@@ -3141,6 +3141,42 @@ async fn a_property_in_a_zone_compares_its_square_metre_with_the_zones(pool: PgP
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_listing_form_names_its_fields_in_three_sections(pool: PgPool) {
+    // Signed out: what is sold, its category and price, where it is and how to reach the seller,
+    // each field named over it, the photos taken by a zone, the tips beside it.
+    let form = get(pool.clone(), "/shto").await.body;
+    let sections = positions(
+        &form,
+        &[
+            r#"<h2 id="section-what">Çfarë shet</h2>"#,
+            r#"<label class="field-label" for="title">Titulli</label>"#,
+            r#"<label class="field-label" for="description">Përshkrimi</label>"#,
+            r#"<span class="field-label" id="photos-label">Fotot</span>"#,
+            r#"<label class="photo-drop" data-photos-target="zone">"#,
+            r#"<h2 id="section-details">Kategoria dhe çmimi</h2>"#,
+            r#"<label class="field-label" for="category">Kategoria</label>"#,
+            r#"<label class="field-label" for="price_type">Çmimi</label>"#,
+            r#"<h2 id="section-where">Vendi dhe kontakti</h2>"#,
+            r#"<label class="field-label" for="city">Qyteti</label>"#,
+            r#"<label class="field-label" for="contact">Celulari ose email-i</label>"#,
+            r#"<label class="field-label" for="name">Emri <span class="optional">(s'është i detyrueshëm)</span></label>"#,
+            r#"<aside class="listing-form-tips" aria-labelledby="tips-heading">"#,
+        ],
+    );
+    assert!(sections.windows(2).all(|pair| pair[0] < pair[1]), "{sections:?}");
+    assert!(form.contains(r#"placeholder="p.sh. Golf 7, 2016, naftë""#));
+
+    // Signed in, where alone: the name and the contact are the account's.
+    let ana = session_for(&pool, ANA_ID).await;
+    let form = get_with_cookie(pool.clone(), "/shto", &ana).await.body;
+    assert!(form.contains(r#"<h2 id="section-where">Vendi</h2>"#), "{form}");
+    assert!(!form.contains(r#"id="name""#) && !form.contains(r#"id="contact""#));
+    // An edit has no tips: it was written once already.
+    let edit = get_with_cookie(pool.clone(), "/listing/1001/ndrysho", &ana).await.body;
+    assert!(edit.contains(r#"<h2 id="section-what">Çfarë shet</h2>"#) && !edit.contains("listing-form-tips") && !edit.contains(r#"id="name""#), "{edit}");
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_listing_form_asks_for_the_writing_first_and_offers_ai_when_it_is_set_up(pool: PgPool) {
     // The title, the description and the photos first, then the category, the price and the town.
     let form = html(pool.clone(), "/shto").await;

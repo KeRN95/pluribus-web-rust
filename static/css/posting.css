@@ -153,8 +153,8 @@
 .promotion-grant { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem 1rem; margin-bottom: 1rem; }
 .promotion-grant .field { flex: 1 1 12rem; }
 .promotion-grant .field-error { flex-basis: 100%; margin: 0; }
-/* Photos in the listing form: small squares, four to a row, then the picker, a button whose file
-   input is hidden but still takes the tap (and the keyboard). */
+/* Photos in the listing form: small squares, four to a row, then the zone that takes more, picked
+   or dropped onto it (.photo-drop). */
 .photo-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; margin: .25rem 0 .5rem; padding: 0; list-style: none; }
 .photo-list[hidden] { display: none; }
 .photo-item { display: grid; gap: .25rem; }
@@ -164,9 +164,61 @@
    as a field; a new one's is a button, which takes it out at once. */
 .photo-remove input { flex: none; width: 1.05rem; height: 1.05rem; margin: 0; padding: 0; accent-color: var(--button); }
 button.photo-remove { justify-self: start; padding: 0; border: 0; background: none; text-decoration: underline; }
-.photo-picker { position: relative; gap: .4rem; justify-self: start; overflow: hidden; }
-.photo-picker input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.photo-picker:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The zone that takes the photos: a dashed box, the camera over the words; its file input over
+   it all, out of sight, so that a tap or a click anywhere on it picks, and the keyboard reaches
+   it. A file dragged over it lights it as what is picked is (photos_controller.js), as does the
+   focus. */
+.photo-drop {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: .35rem;
+  padding: 1.35rem 1rem;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+}
+.photo-drop input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.photo-drop strong { color: var(--text); font-weight: var(--semibold); }
+.photo-drop.is-over,
+.photo-drop:focus-within { border-color: var(--accent); background: var(--badge); color: var(--accent); }
+.photo-drop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) {
+  .photo-drop:hover { border-color: var(--accent); }
+}
+/* The listing form: on a wide screen the form at the left, as wide as it reads well, and beside
+   it what helps a listing sell, which stays in sight as the form scrolls; a phone shows the form
+   alone. Its sections each under a heading, a hairline over each but the first. */
+.new-listing { max-width: none; }
+.new-listing > h1,
+.new-listing > .lead,
+.new-listing > .account-note { max-width: 40rem; }
+.listing-form-layout { display: grid; gap: 2.5rem; }
+.listing-form-tips { display: none; }
+@media (min-width: 1024px) {
+  .listing-form-layout { grid-template-columns: minmax(0, 40rem) minmax(15rem, 19rem); align-items: start; }
+  .listing-form-tips {
+    display: block;
+    position: sticky;
+    top: 5rem;
+    padding: 1.1rem 1.2rem;
+    border: 1px solid var(--menu-border);
+    border-radius: 16px;
+    background: var(--surface);
+  }
+}
+.listing-form-tips h2 { margin: 0 0 .7rem; font-size: var(--text-md); }
+.listing-form-tips ul { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
+.listing-form-tips strong { color: var(--text); font-weight: var(--semibold); }
+.form-section { display: grid; gap: 1rem; min-width: 0; }
+.form-section + .form-section { margin-top: .5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.form-section > h2 { margin: 0; font-size: var(--text-lg); }
+.form-section .price-hint { margin-top: -.5rem; }
 /* "Plotëso pjesën tjetër me AI", between what the seller writes and the rest of the form
    (ai_fill_controller.js): the button, and under it what it does, then what it did, in a box
    tinted the accent. The button's sparkles pulse while the AI reads. */

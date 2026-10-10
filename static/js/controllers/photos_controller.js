@@ -1,7 +1,8 @@
 import { Controller } from "@hotwired/stimulus";
 
 // The photo picker on the listing form. Photos can be picked a few at a time, as phones offer
-// them: each pick adds to the ones before (a file input alone would forget them), up to the number
+// them, or dropped onto its zone from a computer's files: each adds to the ones before (a file
+// input alone would forget them), up to the number
 // still allowed, and each new one shows as a small preview with "Hiq" to take it out again. Big
 // phone photos are made smaller before the form goes (longest side MAX_SIDE, JPEG), so posting
 // doesn't send megabytes over mobile data. The server checks and re-encodes every photo all the
@@ -11,7 +12,7 @@ const MAX_SIDE = 1600; // px, as the server keeps them (media.rs)
 const QUALITY = 0.85;
 
 export default class extends Controller {
-  static targets = ["input", "previews", "status"];
+  static targets = ["input", "previews", "status", "zone"];
   static values = { max: Number };
 
   connect() {
@@ -20,8 +21,32 @@ export default class extends Controller {
   }
 
   async chosen() {
+    await this.add([...this.inputTarget.files]);
+  }
+
+  // A file dragged over the field lights its zone, as what is picked is; dropped, it is added as
+  // if picked. Anything else dragged (a text, a link) is left to the page.
+  over(event) {
+    if (![...(event.dataTransfer?.types ?? [])].includes("Files")) return;
+    event.preventDefault();
+    this.zoneTarget.classList.add("is-over");
+  }
+
+  leave(event) {
+    if (event.relatedTarget && this.element.contains(event.relatedTarget)) return;
+    this.zoneTarget.classList.remove("is-over");
+  }
+
+  async dropped(event) {
+    if (!event.dataTransfer?.files?.length) return;
+    event.preventDefault();
+    this.zoneTarget.classList.remove("is-over");
+    await this.add([...event.dataTransfer.files]);
+  }
+
+  async add(chosen) {
     const room = this.maxValue - this.picked.length;
-    let files = [...this.inputTarget.files].filter((file) => file.type.startsWith("image/"));
+    let files = chosen.filter((file) => file.type.startsWith("image/"));
     let note = "";
     if (files.length > room) {
       files = files.slice(0, Math.max(room, 0));
