@@ -270,8 +270,10 @@
    the seller's row are the rest's grid items, after the description and the details as on every
    page (order 2, with the map), the heading taking the room the section has over it, and the
    contact bar inside it is the phone's foot bar, or from 720 px up on the line it shares with the
-   share and the report, as on every other page (above). */
+   share and the report, as on every other page (above). The price, no card there, stands as far
+   under the key facts' hairline as the facts stand over it (1.25rem), rather than on the line. */
 @media (max-width: 959px) {
+  .listing-car .price-box { margin-top: 1.25rem; }
   .listing-car .listing-deal > .seller-section { display: contents; }
   .listing-car .listing-deal > .seller-section > :is(h2, .seller-head),
   .listing-car .listing-side > .listing-map-section { order: 2; }
