@@ -3856,7 +3856,10 @@ async fn listings_get_photos(pool: PgPool) {
     assert!(page.contains(r#"<div class="listing-media" data-controller="slides">"#));
     assert!(page.contains(r#"data-slides-target="track" data-action="scroll->slides#update" tabindex="0" role="region" aria-label="Fotot e njoftimit""#));
     assert!(page.contains(r#"<div class="gallery-dots" data-slides-target="dots" aria-hidden="true"><span class="is-current"></span><span></span></div>"#));
-    assert!(page.contains(r#"<span class="gallery-count" data-slides-target="count">1 / 2</span>"#));
+    // The counter is a button, "Të gjitha fotot" to screen readers, that shows the filmstrip
+    // under the photos and hides it again: the strip starts hidden.
+    assert!(page.contains(r#"<button type="button" class="gallery-count" data-action="slides#toggleThumbs" aria-controls="listing-thumbs" aria-expanded="false" title="Të gjitha fotot"><span class="visually-hidden">Të gjitha fotot: </span><span data-slides-target="count">1 / 2</span></button>"#));
+    assert!(page.contains(r#"<div class="gallery-thumbs" id="listing-thumbs" data-slides-target="filmstrip" hidden>"#));
     // Under the photos, a filmstrip of them: each photo's mini copy in a square, the first marked
     // as the one that shows, a tap on any going to its photo; and arrows to step the strip, hidden
     // until the controller finds more thumbnails than fit.

@@ -344,6 +344,11 @@
   transform: scale(1.15);
 }
 .listing-photos:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* The counter, a button (listing.html): a click shows the filmstrip under the photos, or hides it
+   again (slides_controller.js, toggleThumbs). On the soft dark as the other pills over the photo,
+   darker under a mouse as the heart's circle is, and while the strip shows, light with dark
+   figures, as the photos' arrows are; it takes a tap a little round it too (::after), as small as
+   it is. */
 .gallery-count {
   position: absolute;
   right: var(--over-edge);
@@ -351,16 +356,29 @@
   display: flex;
   align-items: center;
   height: var(--over-photo);
+  margin: 0;
   padding: 0 .55rem;
+  border: 0;
   border-radius: 999px;
   background: rgb(38 38 36 / 45%);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   color: #fff;
+  font: inherit;
   font-size: var(--text-xs);
   font-weight: var(--semibold);
   font-variant-numeric: tabular-nums;
-  pointer-events: none;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .15s, color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.gallery-count::after { content: ""; position: absolute; inset: -.6rem -.4rem; }
+.gallery-count[aria-expanded="true"] { background: rgb(250 249 245 / 90%); color: #262624; }
+.gallery-count:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+@media (hover: hover) {
+  .gallery-count:hover { background: rgb(38 38 36 / 65%); }
+  .gallery-count[aria-expanded="true"]:hover { background: #faf9f5; }
 }
 .gallery-arrow { display: none; }
 @media (hover: hover) and (pointer: fine) {
@@ -417,10 +435,11 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .gallery-arrow,
+  .gallery-count,
   .gallery-dots span { transition: none; }
 }
 /* Under the photos, a filmstrip of them (listing.html, .gallery-thumbs), as the classifieds sites
-   have it: each photo's mini copy cut to a square, 4.5rem across (3.5 on a phone), rounded, the
+   have it, hidden until the counter over the photo shows it (above): each photo's mini copy cut to a square, 4.5rem across (3.5 on a phone), rounded, the
    one that shows outlined in the page's colour just outside its edge; a tap on any goes to its
    photo (slides_controller.js, pick). The strip slides sideways with no bar when there are more
    than fit, its sides padded for the outline, which its overflow would cut, the one that shows
@@ -428,6 +447,7 @@
    photos' arrows, steps it by most of its width, each there while the strip can go that way
    (scrolled; thumbsBack, thumbsOn). */
 .gallery-thumbs { position: relative; margin-top: .6rem; }
+.gallery-thumbs[hidden] { display: none; }
 .thumb-strip {
   position: relative;
   display: flex;

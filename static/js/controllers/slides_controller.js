@@ -9,9 +9,10 @@ import { Controller } from "@hotwired/stimulus";
 // to the first, the previous from the first to the last; each shows only while the mouse is near
 // its edge of the photo (near-previous, near-next). A small card shows only its first photo, and
 // none of this. A listing's page has a filmstrip of its photos under them too (listing.html,
-// .gallery-thumbs): each thumbnail goes to its photo, the one that shows is marked and kept in
-// view as the photos slide, and under a mouse an arrow at either end steps the strip by most of
-// its width, each there while the strip can go that way.
+// .gallery-thumbs), hidden until its counter is clicked, which hides it again: each thumbnail goes
+// to its photo, the one that shows is marked and kept in view as the photos slide, and under a
+// mouse an arrow at either end steps the strip by most of its width, each there while the strip
+// can go that way.
 
 // How long a step from one photo to another takes, in milliseconds.
 const STEP_MS = 200;
@@ -23,7 +24,7 @@ const FLICK = 0.3;
 const EDGE = 0.25;
 
 export default class extends Controller {
-  static targets = ["track", "dots", "count", "previous", "next", "thumbs", "thumbsPrevious", "thumbsNext"];
+  static targets = ["track", "dots", "count", "previous", "next", "filmstrip", "thumbs", "thumbsPrevious", "thumbsNext"];
 
   connect() {
     const track = this.trackTarget;
@@ -66,6 +67,15 @@ export default class extends Controller {
   pick(event) {
     const item = event.target.closest(".gallery-thumb, span");
     if (item) this.go([...item.parentElement.children].indexOf(item));
+  }
+
+  // The counter clicked (the button over the photo): the filmstrip shows, the photo that shows
+  // marked in it and its thumbnail brought into view, or hides again; the button says which.
+  toggleThumbs(event) {
+    const filmstrip = this.filmstripTarget;
+    filmstrip.hidden = !filmstrip.hidden;
+    event.currentTarget.setAttribute("aria-expanded", String(!filmstrip.hidden));
+    if (!filmstrip.hidden) this.update();
   }
 
   // The filmstrip's arrows: most of its width back, or on, smoothly unless motion is unwanted.
