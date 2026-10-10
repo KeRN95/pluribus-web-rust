@@ -221,11 +221,11 @@
    options, the seller and the map. */
 .listing-deal { display: contents; }
 /* The title a size up on a car's page, the seller's own, and the one made from what the car is
-   under it, quieter (generated_title); the kind's line under that. Then, under the hairline, the
-   car's key facts in a row, each with its icon, its name quiet over its value. */
+   under it, quieter (generated_title); the kind's line under that. Then, between two hairlines,
+   the car's key facts in a row, each with its icon, its name quiet over its value. */
 .listing-car .listing-header h1 { font-size: 1.75rem; }
 .listing-variant { margin: .35rem 0 0; color: var(--muted); font-size: var(--text-md); }
-.key-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1rem; margin: 1.25rem 0 0; }
+.key-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1rem; margin: 1.25rem 0 0; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
 .key-fact { display: flex; align-items: center; gap: .6rem; min-width: 0; }
 .key-fact-icon { flex: none; width: 38px; height: 38px; color: var(--text); }
 .key-fact-text { display: grid; min-width: 0; }
