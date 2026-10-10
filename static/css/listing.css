@@ -587,6 +587,22 @@
    path's finger targets, half the gaps round each (browse.css, --row-gap and --column-gap). */
 .listing-steps { --row-gap: .4rem; --column-gap: .4rem; display: flex; gap: var(--column-gap); margin-left: auto; }
 .listing-steps .is-off { opacity: .35; pointer-events: none; }
+/* On a phone the path's pills are their icons alone but the page's own (browse.css), and where
+   its name leaves the step buttons no room on its line (fit_controller.js finds them under it and
+   says so, .is-tight) that one goes round too, its icon alone in its tint, as tall as the back
+   button, the name still in the link, out of sight. One without an icon keeps its name. */
+@media (max-width: 719px) {
+  .listing-tags.is-tight .listing-path .is-selected:has(.shortcut-icon) {
+    flex: none;
+    justify-content: center;
+    width: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px);
+    height: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px);
+    padding: 0;
+    gap: 0;
+    border-radius: 50%;
+    font-size: 0;
+  }
+}
 /* The price is the headline: on a phone a little over the title's size (24.5px), from a tablet up
    a size over it (--text-3xl, below), the title under it either way. */
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: var(--text-2xl); }

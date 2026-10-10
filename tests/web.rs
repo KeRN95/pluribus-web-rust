@@ -1878,7 +1878,7 @@ async fn a_listing_steps_to_its_neighbours_on_its_categorys_page(pool: PgPool) {
     let top = positions(&page, &[
         r#"<article class="listing"#,
         r#"<div class="listing-banner" aria-hidden="true"></div>"#,
-        r#"<div class="listing-tags">"#,
+        r#"<div class="listing-tags" data-controller="fit">"#,
     ]);
     assert!(top.is_sorted(), "{top:?}");
     let steps = positions(&page, &[

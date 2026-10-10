@@ -40,8 +40,10 @@
   {#- Where it is: its category as a category page's head has it (browse.html), in pills with their
       icons, after a round back button and, three levels down, the round way beyond them, the
       category above its parent (way_up.html): the category above it, quieter, a way up, and its
-      own, filled; each leads to its page. Then its status, if it isn't simply up. -#}
-  <div class="listing-tags">
+      own, filled; each leads to its page. On a phone the pills but its own are their icons alone
+      (browse.css), and its own goes to its icon too where its name leaves the step buttons at the
+      line's end no room (fit_controller.js, .is-tight). Then its status, if it isn't simply up. -#}
+  <div class="listing-tags" data-controller="fit">
     <nav class="category-path listing-path" aria-label="Kategoria e njoftimit">
       <a class="back-button" href="{{ category.url }}" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
       {%- include "way_up.html" %}
