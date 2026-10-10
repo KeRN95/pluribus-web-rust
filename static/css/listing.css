@@ -229,27 +229,6 @@
 .key-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1rem; margin: 1rem 0 0; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
 .key-fact { display: flex; align-items: center; gap: .6rem; min-width: 0; }
 .key-fact-icon { flex: none; width: 38px; height: 38px; color: var(--text); }
-/* Under the facts, the loan calculator in a card like the seller's (listing.html, .listing-loan,
-   loan_calculator.html), the monthly payment a size up at its foot, and the way to all the loan
-   offers under it, a button in the site's colour; then two rows in a card for the partners to
-   come, the car's insurance and its history, each a name over a word on it, and at its end the
-   way on in the site's colour. */
-.listing-loan,
-.listing-partners { margin-top: 1.25rem; border: 1px solid var(--menu-border); border-radius: 16px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%); }
-.listing-loan { padding: 1rem 1.15rem 1.1rem; }
-.listing-loan-title { margin: 0 0 .9rem; font-size: var(--text-lg); }
-.listing-loan .loan-monthly dd { font-size: var(--text-xl); }
-.loan-offers { margin-top: 1rem; }
-.listing-partners { margin-top: 1rem; }
-.partner-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem 1.15rem; color: inherit; text-decoration: none; }
-.partner-row + .partner-row { border-top: 1px solid var(--border); }
-.partner-text { display: grid; gap: .1rem; min-width: 0; }
-.partner-text strong { font-weight: var(--semibold); }
-.partner-text span { color: var(--muted); font-size: var(--text-sm); }
-.partner-link { flex: none; color: var(--accent); font-size: var(--text-sm); font-weight: var(--semibold); white-space: nowrap; }
-@media (hover: hover) {
-  .partner-row:hover .partner-link { text-decoration: underline; }
-}
 /* A hairline over the description, the details and the map, as FINN parts them. */
 .listing-car .listing-side > :is(.listing-description, .listing-details, .listing-map-section) { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
 .key-fact-text { display: grid; min-width: 0; }

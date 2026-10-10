@@ -206,13 +206,12 @@
   <div class="price-box">
     {%- let area_price = listing.area_price() %}
     {%- let loan = listing.loan_amount() %}
-    {%- if let Some(amount) = loan %}{% if !car_page %}
+    {%- if let Some(amount) = loan %}
     {#- The price, and the bubble that opens the loan calculator (loan_controller.js): beside the
         price, or, for a property on sale, on the line under it beside the bubble that says what a
         square metre of it costs (area_price.html). Like that one, it opens a card under it, here
         the calculator (loan_calculator.html); a tap outside or Escape closes it
-        (dropdown_controller.js). A car's page has the calculator in a section of its own under
-        the key facts instead (below). -#}
+        (dropdown_controller.js). -#}
     <div class="price-row{% if area_price.is_some() %} with-area{% endif %}">
       <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{{ note }}</span>{% endif %}{% include "price_drop.html" %}</p>
       {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
@@ -227,8 +226,7 @@
         </div>
       </details>
     </div>
-    {%- endif %}{% endif %}
-    {%- if car_page || loan.is_none() %}
+    {%- else %}
     {#- The price, and smaller after it what qualifies it: "/muaj", "(i diskutueshëm)"; a property
         on sale says under it what a square metre of it costs (area_price.html). -#}
     <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{{ note }}</span>{% endif %}{% include "price_drop.html" %}</p>
@@ -309,30 +307,6 @@
   </div>
 
   {% if car_page %}
-  {%- if let Some(amount) = listing.car_loan_amount() %}
-  {#- Under the facts, as FINN has it, the loan calculator in a card of its own (loan_controller.js,
-      loan_calculator.html), for any car on sale with a price: what the car costs a month, from the
-      years and the interest, the down payment a set share of the price, with the loan, its
-      interest and the whole; and the way to all the loan offers, a button in the site's own
-      colour, which leads nowhere yet. -#}
-  <section class="listing-loan" data-controller="loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" data-loan-down-percent-value="{{ LOAN_DOWN_PERCENT }}" aria-labelledby="loan-heading">
-    <h2 id="loan-heading" class="listing-loan-title">Sa do të kushtojë kredia në muaj</h2>
-    {% include "loan_calculator.html" %}
-    <a class="button loan-offers" href="#">Shiko të gjitha ofertat e kredisë</a>
-  </section>
-  {%- endif %}
-  {#- Two rows in a card, as FINN has them, for the partners to come: insuring the car, and the
-      car's history; neither leads anywhere yet. -#}
-  <div class="listing-partners">
-    <a class="partner-row" href="#">
-      <span class="partner-text"><strong>Siguro makinën</strong><span>Krahaso dhe shiko ofertat e sigurimit</span></span>
-      <span class="partner-link">Çmimi i sigurimit →</span>
-    </a>
-    <a class="partner-row" href="#">
-      <span class="partner-text"><strong>Kontrollo historikun e makinës</strong><span>Një pasqyrë e shpejtë e historikut të makinës dhe çfarë duhet të kontrollosh</span></span>
-      <span class="partner-link">Shiko historikun →</span>
-    </a>
-  </div>
   {#- Then, a hairline over each (listing.css): the description, the details in a grid, a name
       over its value, each with its icon (.spec-grid), and the options, a car's several-valued
       details, in columns with a check each, under their own names (.options), and the map. -#}

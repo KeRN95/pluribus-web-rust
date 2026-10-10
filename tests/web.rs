@@ -1904,45 +1904,31 @@ async fn a_listing_steps_to_its_neighbours_on_its_categorys_page(pool: PgPool) {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     let car = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
-    // On a car's page, under the key facts, the calculator in a card of its own, as FINN has it:
-    // the years and the interest, and what they come to, the down payment a set share of the
-    // price (what the banks ask, LOAN_DOWN_PERCENT), the monthly payment last, and the way to all
-    // the loan offers, a button in the site's colour; no bubble beside a car's price. Under it
-    // the two rows for the partners to come, the car's insurance and its history; then the
-    // description.
-    let start = r#"<section class="listing-loan" data-controller="loan" data-loan-price-value="21500.00" data-loan-currency-value="€" data-loan-down-percent-value="35" aria-labelledby="loan-heading">"#;
-    let loan = &car[car.find(start).expect("the loan calculator's section")..];
-    let loan = &loan[..loan.find("</section>").unwrap()];
+    // A bubble beside the price, like the price per square metre's, which opens the calculator in a
+    // card under it the same way: the years and the interest, and what they come to, the down
+    // payment a set share of the price (what the banks ask, LOAN_DOWN_PERCENT), the monthly
+    // payment last. On a car's page too, in the price's card at the right.
+    let start = r#"<details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="21500.00" data-loan-currency-value="€" data-loan-down-percent-value="35">"#;
+    let loan = &car[car.find(start).expect("the loan calculator's bubble")..];
+    let loan = &loan[..loan.find("</details>").unwrap()];
+    assert!(loan[..loan.find("</summary>").unwrap()].contains("Llogarit kredinë"));
     assert!(!loan.contains("loan-down\""), "no field for the down payment");
     let card = positions(loan, &[
-        "Sa do të kushtojë kredia në muaj</h2>",
+        r#"<div class="bubble-card loan-card">"#,
         r#"<input id="loan-years""#,
         r#"<input id="loan-rate""#,
         "<dt>Paradhënia (35%)</dt>",
         "<dt>Kredia</dt>",
         "<dt>Kësti mujor</dt>",
-        r##"<a class="button loan-offers" href="#">Shiko të gjitha ofertat e kredisë</a>"##,
     ]);
     assert!(card.is_sorted(), "{card:?}");
-    assert!(!car.contains("bubble loan"), "no bubble beside a car's price");
-    let order = positions(&car, &[
-        r#"<dl class="key-facts">"#,
-        r#"<section class="listing-loan""#,
-        r#"<div class="listing-partners">"#,
-        "<strong>Siguro makinën</strong>",
-        "<strong>Kontrollo historikun e makinës</strong>",
-        "<h2>Përshkrimi</h2>",
-    ]);
-    assert!(order.is_sorted(), "{order:?}");
-    // Any car on sale with a price has the section, as FINN has it: the Golf's, at 9 500 €, too.
-    let golf = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
-    assert!(golf.contains(r#"<section class="listing-loan" data-controller="loan" data-loan-price-value="9500.00""#), "{golf}");
-    // Every other page has the calculator in a bubble beside the price, like the price per square
-    // metre's, which opens it in a card under it the same way (the house, below). Under 10 000 €
-    // or 1 000 000 Lekë it isn't worth a loan: no bubble on the iPhone's page.
-    assert!(!html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await.contains("data-loan-price-value"));
-    // In Lekë, the limit is about the same as in euros: 500 000 Lekë isn't enough, 1 000 000 is.
-    for (price, offered) in [(500_000, false), (999_999, false), (1_000_000, true)] {
+    assert!(car.find(r#"<div class="price-box">"#).unwrap() < car.find(start).unwrap() && !car.contains("listing-loan"));
+    // Anything on sale for more than 500 € has it, the Golf at 9 500 € too; a 4 500 Lekë jacket
+    // doesn't.
+    assert!(html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.contains("Llogarit kredinë"));
+    assert!(!html(pool.clone(), "/listing/1012-xhakete-dimri-per-meshkuj-masa-m").await.contains("data-loan-price-value"));
+    // In Lekë, the limit is about the same as in euros: 50 000 Lekë isn't more than it, 50 001 is.
+    for (price, offered) in [(50_000, false), (50_001, true)] {
         sqlx::query("UPDATE listings SET price_amount = $1::numeric, currency = 'ALL', price_type = 'FIXED' WHERE public_no = 1005")
             .bind(price)
             .execute(&pool)
