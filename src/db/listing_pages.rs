@@ -65,6 +65,10 @@ pub struct ListingCard {
     /// reserved and sold ones a visitor kept, each saying so over its photo (status_label).
     #[sqlx(default)]
     pub status: String,
+    /// How well it matches the search's words (ts_rank), in the best match first order alone
+    /// (Sort::Relevance), whose next page starts after it.
+    #[sqlx(default)]
+    pub rank: Option<f32>,
 }
 
 /// How much of a description a card carries, in characters.
@@ -86,6 +90,11 @@ pub struct WebpCopies {
 /// The orders a listing page can be sorted in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Sort {
+    /// The best match for the search's words first (ts_rank: the title's words weigh most, the
+    /// details' next, the description's least), the newest first among equals; only with words.
+    /// Among the newest RANK_WINDOW matches, so that a word in a quarter of the listings costs
+    /// no more than one in a few.
+    Relevance,
     #[default]
     Newest,
     PriceLow,
@@ -95,7 +104,7 @@ pub enum Sort {
 }
 
 impl Sort {
-    pub const ALL: [Sort; 4] = [Sort::Newest, Sort::PriceLow, Sort::PriceHigh, Sort::Nearest];
+    pub const ALL: [Sort; 5] = [Sort::Relevance, Sort::Newest, Sort::PriceLow, Sort::PriceHigh, Sort::Nearest];
 
     pub fn from_param(value: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|sort| sort.param() == value)
@@ -103,6 +112,7 @@ impl Sort {
 
     pub fn param(self) -> &'static str {
         match self {
+            Sort::Relevance => "relevance",
             Sort::Newest => "newest",
             Sort::PriceLow => "price_asc",
             Sort::PriceHigh => "price_desc",
@@ -117,6 +127,10 @@ impl Sort {
             (Sort::Nearest, Some(near)) => near.push_distance(query),
             (Sort::Newest | Sort::Nearest, _) => {
                 query.push("l.sort_at");
+            }
+            // The rank, then the newest: push_order and push_ordered write both.
+            (Sort::Relevance, _) => {
+                query.push("l.rank");
             }
             (Sort::PriceLow, _) => {
                 query.push("coalesce(l.price_normalized, 'Infinity')");
@@ -135,6 +149,7 @@ impl Sort {
 /// Where the next page starts: keyset pagination on the sort key, with the id breaking ties.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Cursor {
+    Relevance { rank: f32, sort_at: OffsetDateTime, id: Uuid },
     Newest { sort_at: OffsetDateTime, id: Uuid },
     Price { price: Option<Decimal>, id: Uuid },
     Distance { meters: f64, id: Uuid },
@@ -145,6 +160,7 @@ impl Cursor {
     pub fn after(sort: Sort, card: &ListingCard) -> Self {
         match (sort, card.distance_m) {
             (Sort::Nearest, Some(meters)) => Self::Distance { meters, id: card.id },
+            (Sort::Relevance, _) => Self::Relevance { rank: card.rank.unwrap_or(0.0), sort_at: card.sort_at, id: card.id },
             (Sort::Newest | Sort::Nearest, _) => Self::Newest { sort_at: card.sort_at, id: card.id },
             (Sort::PriceLow | Sort::PriceHigh, _) => {
                 Self::Price { price: card.price_normalized, id: card.id }
@@ -154,15 +170,19 @@ impl Cursor {
 
     pub fn id(&self) -> Uuid {
         match self {
-            Self::Newest { id, .. } | Self::Price { id, .. } | Self::Distance { id, .. } => *id,
+            Self::Relevance { id, .. } | Self::Newest { id, .. } | Self::Price { id, .. } | Self::Distance { id, .. } => *id,
         }
     }
 
     /// "<key>_<id>". The key is microseconds since 1970 (PostgreSQL's precision) for the newest
     /// first order, the price in euros, or "-" for none, for the price orders, and the distance
-    /// in metres, in full, for the nearest first order.
+    /// in metres, in full, for the nearest first order; for the best match first, the rank (as
+    /// short as it reads back the same) and the microseconds: "<rank>_<key>_<id>".
     pub fn encode(&self) -> String {
         match self {
+            Self::Relevance { rank, sort_at, id } => {
+                format!("{rank}_{}_{id}", sort_at.unix_timestamp_nanos() / 1_000)
+            }
             Self::Newest { sort_at, id } => {
                 format!("{}_{id}", sort_at.unix_timestamp_nanos() / 1_000)
             }
@@ -173,9 +193,18 @@ impl Cursor {
     }
 
     pub fn decode(sort: Sort, value: &str) -> Option<Self> {
+        if sort == Sort::Relevance {
+            let mut parts = value.splitn(3, '_');
+            let rank: f32 = parts.next()?.parse().ok()?;
+            let nanos = parts.next()?.parse::<i128>().ok()?.checked_mul(1_000)?;
+            let sort_at = OffsetDateTime::from_unix_timestamp_nanos(nanos).ok()?;
+            let id = parts.next()?.parse().ok()?;
+            return rank.is_finite().then_some(Self::Relevance { rank, sort_at, id });
+        }
         let (key, id) = value.split_once('_')?;
         let id = id.parse().ok()?;
         match sort {
+            Sort::Relevance => None,
             Sort::Newest => {
                 let nanos = key.parse::<i128>().ok()?.checked_mul(1_000)?;
                 let sort_at = OffsetDateTime::from_unix_timestamp_nanos(nanos).ok()?;
@@ -547,6 +576,7 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH card_attributes AS MATERIALI
 /// One page of active listings in the filter's order, with at most PAGE_SIZE + 1 rows.
 pub async fn listing_page(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec<ListingCard>> {
     let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
+    query.push(if filter.sort == Sort::Relevance { "l.rank" } else { "NULL::real" }).push(" AS rank, ");
     match &filter.near {
         Some(near) => near.push_distance(&mut query),
         None => {
@@ -851,6 +881,7 @@ pub async fn map_points(db: &PgPool, filter: &ListingFilter) -> sqlx::Result<Vec
 /// first, the cheapest of all being neither cars nor flats. The newest first come from one scan,
 /// as ever: every category's newest are in one index (idx_listings_active_sort), the categories
 /// are big enough for it, and filtered, the one scan can share its work among Postgres's workers.
+/// The best match first ranks the newest RANK_WINDOW matches (push_ranked).
 fn push_ordered(
     query: &mut QueryBuilder<'_, Postgres>,
     filter: &ListingFilter,
@@ -858,6 +889,10 @@ fn push_ordered(
     located: bool,
     limit: i64,
 ) {
+    if filter.sort == Sort::Relevance {
+        push_ranked(query, filter, after, located, limit);
+        return;
+    }
     let by_category = filter.category_ids.as_ref().filter(|_| {
         matches!((filter.sort, &filter.near), (Sort::PriceLow | Sort::PriceHigh, _) | (Sort::Nearest, Some(_)))
     });
@@ -888,6 +923,40 @@ fn push_ordered(
     }
 }
 
+/// How many of a search's matches, the newest, the best match first ranks. Ranking costs a few
+/// microseconds a listing, and a word can be in a quarter of a million of them: ranked all, a
+/// page of "makina" took 210 ms where newest first took 5 (a million listings); ranked among
+/// the newest thousand, 9. A search that finds fewer has them all ranked. Past them the list
+/// ends, where the count stops counting too (COUNT_LIMIT).
+pub const RANK_WINDOW: i64 = COUNT_LIMIT;
+
+/// push_ordered for the best match first: the newest RANK_WINDOW matches, each with its rank
+/// (`rank`, ts_rank against the words; 0 for all where the words left nothing to search), the
+/// first `limit` of them after the cursor by the rank, then the newest. The window's own LIMIT
+/// keeps the ranking above it, to its rows alone.
+fn push_ranked(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilter, after: Option<Cursor>, located: bool, limit: i64) {
+    query.push("(SELECT w.* FROM (SELECT l.*, ");
+    match filter.search.as_ref().and_then(|search| search.query.as_ref()) {
+        Some(words) => {
+            query.push("ts_rank(l.search_vector, ").push_bind(words.clone()).push("::tsquery)");
+        }
+        None => {
+            query.push("0::real");
+        }
+    }
+    query.push(" AS rank FROM (SELECT l.* FROM listings l");
+    push_conditions(query, filter, false);
+    if located {
+        query.push(" AND l.latitude IS NOT NULL");
+    }
+    query.push(" ORDER BY l.sort_at DESC, l.id DESC LIMIT ").push_bind(RANK_WINDOW).push(") l) w");
+    if let Some(Cursor::Relevance { rank, sort_at, id }) = after {
+        query.push(" WHERE (w.rank, w.sort_at, w.id) < (").push_bind(rank).push("::real, ");
+        query.push_bind(sort_at).push(", ").push_bind(id).push(")");
+    }
+    query.push(" ORDER BY w.rank DESC, w.sort_at DESC, w.id DESC LIMIT ").push_bind(limit).push(") l");
+}
+
 /// Keyset pagination: only what comes after the cursor in the sort's order.
 fn push_after(query: &mut QueryBuilder<'_, Postgres>, sort: Sort, near: Option<&Near>, after: Cursor) {
     let comparison = if sort.descending() { "<" } else { ">" };
@@ -906,12 +975,20 @@ fn push_after(query: &mut QueryBuilder<'_, Postgres>, sort: Sort, near: Option<&
         Cursor::Distance { meters, id } => {
             query.push_bind(meters).push(", ").push_bind(id);
         }
+        // push_ranked compares it, past the window.
+        Cursor::Relevance { .. } => {
+            query.push("NULL, NULL");
+        }
     }
     query.push(")");
 }
 
-/// The sort's order, the id breaking ties.
+/// The sort's order, the id breaking ties; for the best match first, the rank, then the newest.
 fn push_order(query: &mut QueryBuilder<'_, Postgres>, sort: Sort, near: Option<&Near>) {
+    if sort == Sort::Relevance {
+        query.push(" ORDER BY l.rank DESC, l.sort_at DESC, l.id DESC");
+        return;
+    }
     let direction = if sort.descending() { "DESC" } else { "ASC" };
     query.push(" ORDER BY ");
     sort.push_key(query, near);

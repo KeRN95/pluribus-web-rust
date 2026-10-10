@@ -819,10 +819,11 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     assert!(cars.contains("toggle->dropdown#announce"));
     let menu = &cars[cars.find(r#"<details class="sort-menu heading-sort""#).unwrap()..];
     assert!(menu[..menu.find("</details>").unwrap()].contains(r#"<fieldset class="sort-options">"#));
-    // A search's heading is for screen readers alone: the order's pill says it to the eye.
+    // A search's heading is for screen readers alone: the order's pill says it to the eye, the
+    // best match first for words.
     let search = html(pool.clone(), "/search?q=golf").await;
-    assert!(search.contains(r#"<summary class="small-pill sort-button" aria-label="Rendit: Më të rejat" title="Rendit: Më të rejat"><svg"#));
-    assert!(search.contains("</svg>Më të rejat</summary>") && !search.contains("heading-sort"));
+    assert!(search.contains(r#"<summary class="small-pill sort-button" aria-label="Rendit: Më të përshtatshmet" title="Rendit: Më të përshtatshmet"><svg"#));
+    assert!(search.contains("</svg>Më të përshtatshmet</summary>") && !search.contains("heading-sort"));
 
     // The top bar has no search: the row starts with a round button that opens one under it,
     // which searches the page's category and keeps its filters.
@@ -1665,6 +1666,80 @@ async fn price_pages_continue_where_the_last_one_ended(pool: PgPool) {
         assert_eq!(expected.len(), 41);
         assert_eq!(seen, expected, "{sort}");
     }
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn words_find_the_best_matches_first(pool: PgPool) {
+    // 40 in Të tjera that say "kaltërosh", a minute apart, the first the newest: every fifth in its
+    // title, every third twice in its description, the others once.
+    sqlx::query(
+        "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title,
+                               description, price_amount, currency, price_type, price_normalized,
+                               status, published_at)
+         SELECT '11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111111',
+                '10000000-0000-0000-0000-000000000011', 'njoftim-' || g,
+                CASE WHEN g % 5 = 0 THEN 'Kaltërosh ' || g ELSE 'Njoftim shtesë ' || g END,
+                CASE WHEN g % 3 = 0 THEN 'Një kaltërosh, dhe një kaltërosh tjetër.' ELSE 'Një kaltërosh.' END,
+                1000, 'ALL', 'FIXED', 10, 'ACTIVE', now() - g * interval '1 minute'
+         FROM generate_series(1, 40) g",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    marketplace::db::refresh_search_words(&pool).await.unwrap();
+    let in_order = |order: &'static str| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>(&format!(
+                "SELECT l.public_no FROM listings l, search_query('kaltërosh') s
+                 WHERE l.status = 'ACTIVE' AND l.search_vector @@ s.query ORDER BY {order}"
+            ))
+            .fetch_all(&pool)
+            .await
+            .unwrap()
+        }
+    };
+    let best = in_order("ts_rank(l.search_vector, s.query) DESC, l.sort_at DESC, l.id DESC").await;
+    let newest = in_order("l.sort_at DESC, l.id DESC").await;
+    assert_eq!(best.len(), 40);
+    // Those with the word in their title come first, those that say it twice besides first of them.
+    let titled: Vec<i64> = sqlx::query_scalar("SELECT public_no FROM listings WHERE title LIKE 'Kaltërosh %' ORDER BY public_no")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+    let mut first = best[..8].to_vec();
+    first.sort();
+    assert_eq!(first, titled);
+    let twice: Vec<i64> = sqlx::query_scalar(
+        "SELECT public_no FROM listings WHERE title LIKE 'Kaltërosh %' AND description LIKE '%tjetër%' ORDER BY sort_at DESC",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(best[..2], twice[..]);
+    assert_ne!(best, newest);
+
+    // Words open the page in the best match first, which its order's menu names first, the newest
+    // first after it; every page, as scrolling loads them, follows on in that order.
+    let search = "/search?q=kalt%C3%ABrosh";
+    let page = html(pool.clone(), search).await;
+    let choices = positions(&page, &["Më të përshtatshmet", "Më të rejat", "Më të lirat"]);
+    assert!(choices.is_sorted(), "{page}");
+    assert_eq!(every_page(&pool, search).await, best);
+    // Newest first when asked, every page too.
+    assert_eq!(every_page(&pool, &format!("{search}&sort=newest")).await, newest);
+    // Without words there is nothing to match: no such order on offer, nor taken from the address.
+    let plain = html(pool.clone(), "/c/te-tjera?sort=relevance").await;
+    assert!(!plain.contains("Më të përshtatshmet"), "{plain}");
+    let shown = card_numbers(&plain);
+    let newest_here: Vec<i64> = sqlx::query_scalar(
+        "SELECT public_no FROM listings WHERE category_id = '10000000-0000-0000-0000-000000000011' AND status = 'ACTIVE'
+         ORDER BY sort_at DESC, id DESC LIMIT 24",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(shown, newest_here);
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -5315,7 +5390,7 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
     let rented = html(pool.clone(), "/c/prona?type=RENT").await;
     assert!(rented.contains(r#"title="Rendit">më të reja</summary>"#) && rented.contains(r#"</details> <span class="heading-place">në Prona me qira</span></div>"#));
     let search = html(pool.clone(), "/search?q=golf").await;
-    assert!(search.contains(r#"<h2 class="results-heading visually-hidden" id="results-heading">Më të rejat</h2>"#));
+    assert!(search.contains(r#"<h2 class="results-heading visually-hidden" id="results-heading">Më të përshtatshmet</h2>"#));
     assert_eq!(row(&html(pool.clone(), "/c/prona").await), [1003, 1004]);
     assert_eq!(row(&html(pool.clone(), "/c/elektronike").await), [1005]);
     assert_eq!(row(&html(pool.clone(), "/c/makina").await), [1001, 1002]);

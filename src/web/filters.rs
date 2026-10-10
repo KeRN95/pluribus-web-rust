@@ -47,6 +47,7 @@ const DEFAULT_RADIUS_KM: u32 = 10;
 /// An order's name, as its button, its menu and the results' heading say it.
 fn sort_name(sort: Sort) -> &'static str {
     match sort {
+        Sort::Relevance => "Më të përshtatshmet",
         Sort::Newest => "Më të rejat",
         Sort::PriceLow => "Më të lirat",
         Sort::PriceHigh => "Më të shtrenjtat",
@@ -58,10 +59,21 @@ fn sort_name(sort: Sort) -> &'static str {
 /// më të reja në Makina").
 fn sort_adjective(sort: Sort) -> &'static str {
     match sort {
+        Sort::Relevance => "më të përshtatshme",
         Sort::Newest => "më të reja",
         Sort::PriceLow => "më të lira",
         Sort::PriceHigh => "më të shtrenjta",
         Sort::Nearest => "më afër",
+    }
+}
+
+/// The order a page opens in: nearest first with a map pin (`near`), the best match first with
+/// words to search (`words`), the newest first otherwise.
+fn default_sort(near: bool, words: bool) -> Sort {
+    match (near, words) {
+        (true, _) => Sort::Nearest,
+        (false, true) => Sort::Relevance,
+        (false, false) => Sort::Newest,
     }
 }
 
@@ -381,12 +393,15 @@ impl<'a> Filters<'a> {
             .or((path == "/harta").then_some(TIRANA))
             .map(|(latitude, longitude)| Near { latitude, longitude, radius_m: f64::from(radius_km) * 1000.0 });
 
-        // With a pin, nearest first unless another order is picked; without one, newest first.
-        let default_sort = if near.is_some() { Sort::Nearest } else { Sort::Newest };
+        // With a pin, nearest first unless another order is picked; with words, the best match
+        // first; with neither, newest first. Each of the first two only where it can be.
+        let words = params.search_words();
+        let default_sort = default_sort(near.is_some(), words.is_some());
         let sort = params
             .first("sort")
             .and_then(Sort::from_param)
             .filter(|sort| *sort != Sort::Nearest || near.is_some())
+            .filter(|sort| *sort != Sort::Relevance || words.is_some())
             .unwrap_or(default_sort);
         let after = params.first("after").and_then(|value| Cursor::decode(sort, value));
         // A town or a point, not both: a point in the address leaves out a town with it.
@@ -513,9 +528,9 @@ impl<'a> Filters<'a> {
         pairs
     }
 
-    /// Nearest first with a map pin, newest first without one.
+    /// Nearest first with a map pin, the best match first with words, newest first otherwise.
     fn default_sort(&self) -> Sort {
-        if self.near.is_some() { Sort::Nearest } else { Sort::Newest }
+        default_sort(self.near.is_some(), self.q.is_some())
     }
 
     /// This page's URL without the pairs `remove` matches.
@@ -1050,12 +1065,13 @@ impl<'a> Filters<'a> {
     }
 
     /// The default order's value is empty, so it stays out of URLs. Nearest first is only on
-    /// offer with a map pin.
+    /// offer with a map pin, the best match first with words.
     pub fn sort_choices(&self) -> Vec<Choice> {
         let default = self.default_sort();
         Sort::ALL
             .into_iter()
             .filter(|sort| *sort != Sort::Nearest || self.near.is_some())
+            .filter(|sort| *sort != Sort::Relevance || self.q.is_some())
             .map(|sort| Choice {
                 value: if sort == default { String::new() } else { sort.param().to_string() },
                 label: sort_name(sort).to_string(),
