@@ -133,14 +133,12 @@
    card and the map across the page. */
 @media (min-width: 960px) {
   .listing { max-width: none; }
-  /* Over the path, room for a banner (listing.html), empty for now and kept for an ad, about a
-     fifth as tall as the photo under it, a gutter between them: so that the path, its buttons
-     and the photo stand at the same height on every listing as one steps through them, the
-     listing's own length making no difference. Across the page a fifth of the photos' height
-     (below); on a split page a fifth of the photo's frame, which is three by four of seven
-     twelfths of the page, so about 45:7 of the page's width, and on a short screen a fifth of
-     the frame's own cap (below). It is in the page, whose min-height takes it in, "Njoftime të
-     ngjashme" still just out of view under a short listing. */
+  /* Over the path, room for a banner (listing.html), empty for now and kept for an ad, a gutter
+     between them: so that the path, its buttons and the photo stand at the same height on every
+     listing as one steps through them, the listing's own length making no difference. Across
+     the page a fifth of the photos' height; on a split page as much as stands under the photo
+     (below). It is in the page, whose min-height takes it in, "Njoftime të ngjashme" still just
+     out of view under a short listing. */
   .listing-banner { display: block; height: min(14vh, 7.6rem); margin-bottom: var(--gutter); }
   .listing-side > :is(.listing-header, .listing-details, .listing-description, .listing-options),
   .listing-deal > .price-box { max-width: 46rem; }
@@ -162,7 +160,18 @@
   .listing-page:has(> .listing-split) { display: block; max-width: 60rem; margin-inline: auto; }
   .listing-split { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: 2rem; }
   .listing-split > :is(.listing-banner, .notice, .listing-tags) { grid-column: 1 / -1; }
-  .listing-split > .listing-banner { height: auto; aspect-ratio: 45 / 7; max-height: calc((100vh - 12.05rem - 1px) / 5); }
+  /* A split listing stands in the middle of the screen: the banner's room over its path is half
+     of what the screen leaves round the path and the photo's frame, the other half under the
+     photo, "Njoftime të ngjashme" at the screen's foot. The frame is the same on every split
+     listing (three by four of seven twelfths of the page, or as tall as the screen leaves it,
+     below), so the path keeps its height as one steps through them whatever the column beside
+     the photo holds; a column taller than the photo runs on under the screen. Under the header
+     (3.55rem and a hairline, base.css) stand the page's gutter, the banner and its gutter, the
+     path (its round buttons, 2.95rem and 2px, browse.css, and .75rem under them) and the frame;
+     the room under the frame reaches the page's foot (its min-height, above, 2.5rem over the
+     section) and on through the 2.5rem under it to the screen's. None where the frame takes
+     all the room. */
+  .listing-split > .listing-banner { height: max(0px, calc((100svh - 11.25rem - 3px - min((min(60rem, 100vw - 2rem) - 2rem) * 7 / 9, 100vh - 12.05rem - 1px)) / 2)); }
   /* The photo and its filmstrip stay put under the top bar (3.55rem and its hairline, base.css,
      and 1rem under it) while the column beside them scrolls, and go with the page once the
      column has all gone by: sticky within their grid row, which the column's height sets. The
