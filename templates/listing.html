@@ -244,6 +244,7 @@
       the description (below). -#}
   {%- if !car_page %}{% include "contact_bar.html" %}{% endif %}
   {%- if !car_page || own %}{% include "listing_actions.html" %}{% endif %}
+  {%- if (own || moderator) && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}{% include "promotion_note.html" %}{% endif %}
   {%- if blocked %}
   {#- The visitor blocked its seller, from a report's thanks (report.html) or a conversation: said
       under the buttons, quietly, with where to let them be again; the page itself offers no block,

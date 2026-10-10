@@ -315,6 +315,21 @@
     {%- endif %}
   </div>
 
+  {%- if let Some(page) = featured %}
+  {#- The listings a promotion features among the page's matches, its filters' and its words'
+      (db::featured_cards, promotions.rs), in another order each time: a row of cards that
+      slides sideways (card_row.html), first of the rows over the results, and small whatever
+      size the page's own cards are; its note says that they are promoted, and leads to how
+      one is (/promovo). -#}
+  <section class="featured-row" data-controller="drag-row" aria-labelledby="featured-heading">
+    <div class="row-head">
+      <h2 id="featured-heading">Të veçuara</h2>
+      <a class="row-note" href="/promovo">Të promovuara · Si?</a>
+    </div>
+    {% call rows::card_row(page) %}
+  </section>
+  {%- endif %}
+
   {%- if let Some(page) = most_viewed %}
   {#- In every main category and a few big subcategories, with no filter on, their listings seen the
       most this week, the most first, as the welcome page has them for every category

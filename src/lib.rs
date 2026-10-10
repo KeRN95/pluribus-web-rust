@@ -7,6 +7,7 @@ pub mod expiry;
 pub mod format;
 pub mod media;
 pub mod notices;
+pub mod promotions;
 pub mod rates;
 pub mod sender;
 pub mod views;
@@ -67,8 +68,9 @@ impl Moderators {
 /// The application's router. `main` serves it, with photos in the store .env names (the small and
 /// AVIF copies of those kept before there were any made meanwhile), its moderators, the AI if .env
 /// has a key for it, the views written every minute, the notices of unread messages and the saved
-/// searches' alerts sent as they fall due, the listings whose time is up expired, and the Bank of
-/// Albania's euro rate read and taken (notices.rs, web/searches.rs, expiry.rs, rates.rs).
+/// searches' alerts sent as they fall due, the listings whose time is up expired, the promotions
+/// looked after, and the Bank of Albania's euro rate read and taken (notices.rs, web/searches.rs,
+/// expiry.rs, promotions.rs, rates.rs).
 pub fn app(db: PgPool) -> axum::Router {
     let ai = Ai::from_env();
     if ai.is_none() {
@@ -81,6 +83,7 @@ pub fn app(db: PgPool) -> axum::Router {
     notices::start(db.clone());
     web::start_search_alerts(db.clone());
     expiry::start(db.clone(), media.clone());
+    promotions::start(db.clone());
     rates::start(db.clone());
     web::router(AppState { db, media, moderators: Moderators::from_env(), ai, views })
 }

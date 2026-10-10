@@ -12,6 +12,7 @@ mod named;
 mod notifications;
 mod pages;
 mod photos;
+mod promotions;
 mod post;
 mod properties;
 mod safety;
@@ -115,6 +116,9 @@ pub fn router(state: AppState) -> Router {
         .route("/moderim/njoftim/{public_no}/refuzo", post(moderation::reject_listing))
         .route("/moderim/perdorues/{id}/pezullo", post(moderation::suspend_user))
         .route("/moderim/perdorues/{id}/rikthe", post(moderation::restore_user))
+        .route("/moderim/promovime", post(moderation::grant_promotion))
+        .route("/moderim/promovime/{id}/ndalo", post(moderation::end_promotion))
+        .route("/promovo", get(promotions::page))
         .route("/listing/{public_no}/caktivizo", post(post::pause_listing))
         .route("/listing/{public_no}/aktivizo", post(post::resume_listing))
         .route("/listing/{public_no}/shitur", post(post::sell_listing))

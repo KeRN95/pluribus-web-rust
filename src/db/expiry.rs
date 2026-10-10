@@ -25,7 +25,7 @@ pub async fn forget_drafts(db: &PgPool) -> sqlx::Result<Vec<String>> {
 /// Who hears of a listing's expiry, `l` the listing: whoever posted it; for a store's listing,
 /// while they still post for the store (manages_listing, 0035) and their account is active,
 /// and else the store's owner, who may renew it as well. NULL for a store without an owner.
-const TOLD: &str = "CASE WHEN l.seller_business_id IS NULL
+pub(super) const TOLD: &str = "CASE WHEN l.seller_business_id IS NULL
                             OR manages_listing(l.seller_business_id, l.created_by_user_id, l.created_by_user_id)
                                AND EXISTS (SELECT 1 FROM users p WHERE p.id = l.created_by_user_id AND p.status = 'ACTIVE')
                           THEN l.created_by_user_id

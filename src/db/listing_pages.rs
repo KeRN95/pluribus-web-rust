@@ -77,6 +77,13 @@ pub struct ListingCard {
     /// (Sort::Relevance), whose next page starts after it.
     #[sqlx(default)]
     pub rank: Option<f32>,
+    /// Whether a promotion features it now (featured_until, promotions.rs): the row over a
+    /// category's or a search's results shows it.
+    #[sqlx(default)]
+    pub featured: bool,
+    /// Whether a promotion highlights it now (highlighted_until): its card stands out.
+    #[sqlx(default)]
+    pub highlighted: bool,
 }
 
 /// How much of a description a card carries, in characters.
@@ -725,6 +732,8 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH card_attributes AS MATERIALI
                 left(btrim(regexp_replace(coalesce(l.description, ''), '\\s+', ' ', 'g')), 401) AS description,
                 l.status,
                 ", price_was!(), " AS price_was,
+                coalesce(l.featured_until > now(), false) AS featured,
+                coalesce(l.highlighted_until > now(), false) AS highlighted,
                 ");
 
 /// One page of active listings in the filter's order, with at most PAGE_SIZE + 1 rows.
@@ -822,6 +831,31 @@ pub async fn cards_by_numbers(db: &PgPool, numbers: &[i64]) -> sqlx::Result<Vec<
     query.push_bind(numbers.to_vec()).push(") AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD')) l");
     query.push(" LEFT JOIN locations loc ON loc.id = l.location_id ORDER BY array_position(");
     query.push_bind(numbers.to_vec()).push("::bigint[], l.public_no)");
+    query.build_query_as().fetch_all(db).await
+}
+
+/// How many listings the row over a category's or a search's results shows at most, of those a
+/// promotion features (featured_cards).
+pub const FEATURED: i64 = 8;
+
+/// The listings a promotion features now (featured_until, promotions.rs) among the filter's
+/// matches, at most `limit`, in another order each time, so that each has its turn at the
+/// row's start: the row over a category's or a search's results (browse.rs). Few listings are
+/// featured, and their partial index (idx_listings_active_featured) finds them, whatever else
+/// the filter asks.
+pub async fn featured_cards(db: &PgPool, filter: &ListingFilter, limit: i64) -> sqlx::Result<Vec<ListingCard>> {
+    let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
+    query.push("NULL::real AS rank, ");
+    match &filter.near {
+        Some(near) => near.push_distance(&mut query),
+        None => {
+            query.push("NULL::float8");
+        }
+    }
+    query.push(" AS distance_m FROM (SELECT l.* FROM listings l");
+    push_filters(&mut query, filter);
+    query.push(" AND l.featured_until > now() ORDER BY random() LIMIT ").push_bind(limit).push(") l");
+    query.push(" LEFT JOIN locations loc ON loc.id = l.location_id ORDER BY random()");
     query.build_query_as().fetch_all(db).await
 }
 

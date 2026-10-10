@@ -59,6 +59,8 @@ pub const LISTING_IDS: &str = "listing";
 /// The row of cards that slides sideways, by the word its cards' ids start with: the most seen
 /// this week.
 pub const MOST_VIEWED_IDS: &str = "most-viewed";
+/// The row of those a promotion features (db::featured_cards).
+pub const FEATURED_IDS: &str = "featured";
 /// The welcome page's row of the listings its visitor saw lately (SEEN_COOKIE).
 pub const SEEN_IDS: &str = "seen";
 
@@ -425,6 +427,9 @@ struct BrowsePage<'a> {
     level: Option<Vec<Subcategory>>,
     /// The cookie the view button sets on this page (cards_cookie).
     cards_cookie: String,
+    /// The listings a promotion features among the page's matches ("Të veçuara"), a row over
+    /// the rest; none when none is.
+    featured: Option<ListingPage>,
     /// In a category whose page shows its own most seen (views::has_own_most_viewed), with no
     /// filter on, its listings seen the most this week ("Më të klikuarat"), none before any are.
     most_viewed: Option<ListingPage>,
@@ -815,7 +820,7 @@ async fn browse(
         }
         _ => None,
     };
-    let (mut rows, count, mut points, found_in, mut most_viewed, quarters) = tokio::try_join!(
+    let (mut rows, count, mut points, found_in, mut most_viewed, quarters, featured) = tokio::try_join!(
         db::listing_page(&state.db, &filter),
         db::listing_count(&state.db, &filter),
         async {
@@ -845,16 +850,26 @@ async fn browse(
                 _ => Ok(None),
             }
         },
+        async {
+            // The listings a promotion features among the matches, the filter's own and its
+            // words': a row of their own over the results, on the grid.
+            match view {
+                View::Grid => db::featured_cards(&state.db, &filter, db::FEATURED).await,
+                _ => Ok(Vec::new()),
+            }
+        },
     )?;
     safety::without_hidden(&mut most_viewed, &filter.hidden_accounts);
     // "Më të klikuarat" comes before the results, on the first screen: its first two photos load
     // straight away, the first before anything else (ListingPage::lead); without it, or with it
     // folded away (MOST_VIEWED_COOKIE), where its photos wait until it is shown again, the
     // results' first does, but on the map page, whose map comes first.
+    // "Të veçuara", when a promotion features any of the matches, comes first of all.
+    let featured = (!featured.is_empty()).then(|| ListingPage::row(featured, FEATURED_IDS, 2).leading());
     let most_viewed_shown = cookie(&headers, MOST_VIEWED_COOKIE).as_deref() != Some("hidden");
     let most_viewed = (!most_viewed.is_empty()).then(|| {
         let row = ListingPage::row(most_viewed, MOST_VIEWED_IDS, if most_viewed_shown { 2 } else { 0 });
-        if most_viewed_shown { row.leading() } else { row }
+        if most_viewed_shown && featured.is_none() { row.leading() } else { row }
     });
     // Counted among at most COUNT_LIMIT + 1 listings, as the count is: past that, numbers would
     // mislead, and the names go alone.
@@ -875,7 +890,7 @@ async fn browse(
     let count = format::short_listing_count(count, db::COUNT_LIMIT);
     mark_city(&mut rows);
     let page = ListingPage::new(rows, filter.sort, next_url).layout(layout);
-    let leads = most_viewed.is_none() || !most_viewed_shown;
+    let leads = featured.is_none() && (most_viewed.is_none() || !most_viewed_shown);
     let page = if leads && view != View::Map { page.leading() } else { page };
     let more_points = points.len() as i64 > db::MAP_POINTS;
     points.truncate(db::MAP_POINTS as usize);
@@ -1020,6 +1035,7 @@ async fn browse(
         found_in,
         level,
         cards_cookie,
+        featured,
         most_viewed,
         most_viewed_shown,
         page,

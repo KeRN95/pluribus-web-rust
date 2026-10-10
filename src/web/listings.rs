@@ -470,6 +470,10 @@ struct ListingShow {
     reveal: Option<Reveal>,
     /// The visitor posted this listing: the page offers to edit it.
     own: bool,
+    /// For its seller, the promotions on it now (promotion_note.html).
+    promotions: Vec<db::OnPromotion>,
+    /// The visitor is a moderator: the page leads to giving it a promotion.
+    moderator: bool,
     /// How many times its page was seen, "1 234", under the heart; None before any.
     views: Option<String>,
     /// Posted just now without signing in: the page says it is up, and how to change it later.
@@ -634,6 +638,11 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         db::price_was(&state.db, listing.id),
         safety::hidden_accounts(&state, &headers),
     )?;
+    // What promotes it now, for its seller.
+    let promotions = match own {
+        true => db::listing_promotions(&state.db, &[listing.public_no]).await?,
+        false => Vec::new(),
+    };
     // Its neighbours on its category's page, among the listings the visitor sees there.
     let (previous, next) = db::listing_neighbours(&state.db, listing.id, listing.category_id, &hidden).await?;
     let price_drop = price_drop(price_was, listing.price_amount, &listing.currency);
@@ -753,6 +762,8 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             photos,
             reveal,
             own,
+            promotions,
+            moderator,
             posted,
             map,
             wide_photos,

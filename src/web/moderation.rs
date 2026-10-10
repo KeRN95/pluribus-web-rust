@@ -4,15 +4,17 @@
 //! properties.rs): a moderator approves one, its spelling put right, and the lists and filters
 //! offer it; or merges it into the listed one it is, spelt another way. The listings that wait
 //! before they go up (db::review): approved, they go up; refused, their seller is told why. And
-//! accounts: suspended, from a waiting or a reported listing, and restored. Only for the
-//! moderators .env names (MODERATORS); anyone else finds nothing here.
+//! accounts: suspended, from a waiting or a reported listing, and restored. And promotions
+//! (db/promotions.rs), given to a listing by its number until there are payments, and ended
+//! before their time. Only for the moderators .env names (MODERATORS); anyone else finds
+//! nothing here.
 
 use std::collections::HashMap;
 
 use askama::Template;
 use axum::{
     Form,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
@@ -166,14 +168,43 @@ struct ModerationPage {
     rows: Vec<PendingRow>,
     /// How many people reporting a listing take it off the site (db::HIDE_AFTER).
     hide_after: i64,
+    /// The promotions that can be given, and those on now.
+    products: Vec<db::PromotionProduct>,
+    promotions: Vec<db::OnPromotion>,
+    /// The number in the promotion's form: from a listing's page (njoftimi=1234), or as typed
+    /// when it was refused, with why.
+    promotion_number: String,
+    promotion_error: Option<String>,
 }
 
 impl ModerationPage {
     /// The page as things stand, with `error` beside the typed option it is about.
     async fn now(state: &AppState, error: Option<(Uuid, String)>) -> Result<Self> {
-        let (pending, reported, suspended) =
-            tokio::try_join!(db::pending_listings(&state.db), db::reported_listings(&state.db), db::suspended_users(&state.db))?;
-        Ok(Self { pending, reported, suspended, rows: rows(state, error).await?, hide_after: db::HIDE_AFTER })
+        let (pending, reported, suspended, products, promotions) = tokio::try_join!(
+            db::pending_listings(&state.db),
+            db::reported_listings(&state.db),
+            db::suspended_users(&state.db),
+            db::promotion_products(&state.db),
+            db::promotions_on(&state.db),
+        )?;
+        Ok(Self {
+            pending,
+            reported,
+            suspended,
+            rows: rows(state, error).await?,
+            hide_after: db::HIDE_AFTER,
+            products,
+            promotions,
+            promotion_number: String::new(),
+            promotion_error: None,
+        })
+    }
+
+    /// The promotion's form with this number in it, and why it was refused, if it was.
+    fn promoting(mut self, number: String, error: Option<String>) -> Self {
+        self.promotion_number = number;
+        self.promotion_error = error;
+        self
     }
 }
 
@@ -216,11 +247,62 @@ async fn rows(state: &AppState, error: Option<(Uuid, String)>) -> Result<Vec<Pen
         .collect())
 }
 
-pub async fn page(State(state): State<AppState>, headers: HeaderMap) -> Result<Response> {
+pub async fn page(State(state): State<AppState>, headers: HeaderMap, Query(query): Query<PromoteFor>) -> Result<Response> {
     if moderator(&state, &headers).await?.is_none() {
         return not_found().await;
     }
-    render(ModerationPage::now(&state, None).await?)
+    let number = query.njoftimi.unwrap_or_default().trim().chars().filter(char::is_ascii_digit).collect();
+    render(ModerationPage::now(&state, None).await?.promoting(number, None))
+}
+
+/// The listing a moderator came from to give it a promotion (its page's "Jep një promovim").
+#[derive(Deserialize)]
+pub struct PromoteFor {
+    njoftimi: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct PromotionForm {
+    #[serde(default)]
+    njoftimi: String,
+    #[serde(default)]
+    produkti: String,
+}
+
+/// POST /moderim/promovime: gives the listing with that number the promotion chosen
+/// (db::grant_promotion); a number no listing up or reserved has, or no promotion chosen, is
+/// said beside the form.
+pub async fn grant_promotion(State(state): State<AppState>, headers: HeaderMap, Form(form): Form<PromotionForm>) -> Result<Response> {
+    let Some(user) = moderator(&state, &headers).await? else {
+        return not_found().await;
+    };
+    let typed = form.njoftimi.trim().to_string();
+    let granted = match typed.parse::<i64>() {
+        Ok(number) if number > 0 => db::grant_promotion(&state.db, number, &form.produkti, user.id).await?,
+        _ => db::Granted::NoListing,
+    };
+    let error = match granted {
+        db::Granted::Given(_) => {
+            tracing::info!(moderator = %user.id, listing = %typed, product = %form.produkti, "gave a promotion");
+            return Ok(Redirect::to("/moderim#promovime").into_response());
+        }
+        db::Granted::NoListing => format!("Asnjë njoftim në faqe nuk ka numrin „{typed}“."),
+        db::Granted::NoProduct => "Zgjidh një nga promovimet.".to_string(),
+    };
+    let page = ModerationPage::now(&state, None).await?.promoting(typed, Some(error));
+    Ok((StatusCode::UNPROCESSABLE_ENTITY, render(page)?).into_response())
+}
+
+/// POST /moderim/promovime/{id}/ndalo: ends a promotion before its time; the listing loses what
+/// it gave.
+pub async fn end_promotion(State(state): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>) -> Result<Response> {
+    let Some(user) = moderator(&state, &headers).await? else {
+        return not_found().await;
+    };
+    if db::end_promotion(&state.db, id, user.id).await? {
+        tracing::info!(moderator = %user.id, promotion = %id, "ended a promotion");
+    }
+    Ok(Redirect::to("/moderim#promovime").into_response())
 }
 
 #[derive(Deserialize)]

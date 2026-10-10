@@ -11,7 +11,7 @@ pub const NOTIFICATIONS_MOST: i64 = 100;
 
 /// The kinds about the user's own listings, which the account button's dot stands for: the others
 /// have the heart's dot (prices dropped, saved searches) and the conversations' count (messages).
-pub const OWN_LISTING_KINDS: [&str; 2] = ["EXPIRING", "EXPIRED"];
+pub const OWN_LISTING_KINDS: [&str; 3] = ["EXPIRING", "EXPIRED", "PROMOTED"];
 
 /// A notification, with what it is about while that is still there to open.
 #[derive(Debug, sqlx::FromRow)]

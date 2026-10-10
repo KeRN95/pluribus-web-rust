@@ -1,0 +1,11 @@
+{#- Under the seller's own buttons on a listing that is up: the promotions on it and until when, or
+    the way to one (/promovo, web/promotions.rs); for a moderator, the way to give one (/moderim),
+    the number already in its form. Quiet, as the blocked seller's note is. -#}
+<p class="promotion-note">
+  {%- if own %}
+  {%- if promotions.is_empty() %}<a href="/promovo?njoftimi={{ listing.public_no }}">Promovoje</a> që ta shohin më shumë.
+  {%- else %}{% for promotion in promotions %}{{ promotion.name }}, deri më {{ promotion.until() }}{% if !loop.last %} · {% endif %}{% endfor %}.
+  {%- endif %}
+  {%- endif %}
+  {%- if moderator %}{% if own %} {% endif %}<a href="/moderim?njoftimi={{ listing.public_no }}#promovime">Jep një promovim</a>{% endif -%}
+</p>

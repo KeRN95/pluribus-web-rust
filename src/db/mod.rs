@@ -81,6 +81,7 @@ mod expiry;
 mod notifications;
 mod rates;
 mod review;
+mod promotions;
 
 pub use account::*;
 pub use categories::*;
@@ -102,6 +103,7 @@ pub use expiry::*;
 pub use notifications::*;
 pub use rates::*;
 pub use review::*;
+pub use promotions::*;
 
 #[cfg(test)]
 mod tests {

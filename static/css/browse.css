@@ -264,6 +264,11 @@
   border-bottom: 1px solid var(--border);
 }
 .filters-header h2 { margin: 0; font-size: var(--text-lg); font-weight: var(--semibold); }
+/* A row's head with a note at its end: "Të veçuara" and that they are promoted, which leads to
+   how one is. */
+.row-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+.row-head h2 { min-width: 0; }
+.row-note { flex: none; color: var(--muted); font-size: var(--text-sm); }
 .filters-close {
   padding: .4rem .9rem;
   border: 1px solid var(--menu-border);

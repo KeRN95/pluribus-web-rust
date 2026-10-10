@@ -149,6 +149,10 @@
 .pending-form { display: flex; flex: 1 1 14rem; gap: .4rem; }
 .pending-form input, .pending-form select { flex: 1; min-width: 0; }
 .pending-option .field-hint, .pending-option .field-error { margin: 0; }
+/* /moderim's promotion form: the number, the promotion, "Jepe" on a line, wrapping on a phone. */
+.promotion-grant { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem 1rem; margin-bottom: 1rem; }
+.promotion-grant .field { flex: 1 1 12rem; }
+.promotion-grant .field-error { flex-basis: 100%; margin: 0; }
 /* Photos in the listing form: small squares, four to a row, then the picker, a button whose file
    input is hidden but still takes the tap (and the keyboard). */
 .photo-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; margin: .25rem 0 .5rem; padding: 0; list-style: none; }

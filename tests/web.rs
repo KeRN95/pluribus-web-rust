@@ -5819,6 +5819,164 @@ async fn a_listing_posted_without_signing_in_goes_up_by_its_code_or_a_moderator(
     }
 }
 
+/// A moderator gives listing `number` the promotion `product` (/moderim).
+async fn promote(pool: &PgPool, moderator: &str, number: &str, product: &str) -> TestResponse {
+    post_form(pool.clone(), "/moderim/promovime", &[("njoftimi", number), ("produkti", product)], Some(moderator)).await
+}
+
+/// The listings in a page's "Të veçuara", by their numbers, in the row's order.
+fn featured_numbers(html: &str) -> Vec<i64> {
+    match html.find(r#"<section class="featured-row""#) {
+        Some(start) => {
+            let row = &html[start..];
+            card_numbers(&row[..row.find("</section>").unwrap()])
+        }
+        None => Vec::new(),
+    }
+}
+
+/// The listings in a page's results, by their numbers, past the rows over them.
+fn result_numbers(html: &str) -> Vec<i64> {
+    card_numbers(&html[html.find(r#"<section class="results""#).unwrap()..])
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn moderators_promote_listings_which_show_more_until_their_time(pool: PgPool) {
+    let moderator = new_seller(&pool, MODERATOR).await;
+    let ana = session_for(&pool, ANA_ID).await;
+    let golf = "/listing/1001-volkswagen-golf-7-2016-nafte";
+    let updated = |pool: PgPool| async move {
+        sqlx::query_scalar::<_, time::OffsetDateTime>("SELECT updated_at FROM listings WHERE public_no = 1001").fetch_one(&pool).await.unwrap()
+    };
+    let golf_updated = updated(pool.clone()).await;
+
+    // Only a moderator gives one; their page offers those on sale, the number from a listing's page
+    // already in its form.
+    assert_eq!(promote(&pool, &ana, "1001", "FEATURED_7D").await.status, StatusCode::NOT_FOUND);
+    let page = get_with_cookie(pool.clone(), "/moderim?njoftimi=1001", &moderator).await.body;
+    assert!(page.contains(r#"<h2 class="moderation-heading" id="promovime">Promovime</h2>"#), "{page}");
+    assert!(page.contains(r#"<input id="promotion-number" name="njoftimi" value="1001""#), "{page}");
+    for option in [
+        r#"<option value="BUMP_ONCE">Ngritje në krye</option>"#,
+        r#"<option value="FEATURED_7D">I veçuar për 7 ditë</option>"#,
+        r#"<option value="HIGHLIGHT_7D">I theksuar për 7 ditë</option>"#,
+        r#"<option value="CATEGORY_TOP_7D">Në krye të kategorisë për 7 ditë</option>"#,
+    ] {
+        assert!(page.contains(option), "{option}");
+    }
+    assert!(page.contains("Asnjë promovim tani."));
+    // The seller's page leads to one, a moderator's to giving one.
+    assert!(get_with_cookie(pool.clone(), golf, &ana).await.body.contains(r#"<p class="promotion-note"><a href="/promovo?njoftimi=1001">Promovoje</a> që ta shohin më shumë.</p>"#));
+    assert!(get_with_cookie(pool.clone(), golf, &moderator).await.body.contains(r#"<a href="/moderim?njoftimi=1001#promovime">Jep një promovim</a>"#));
+    assert!(!get(pool.clone(), golf).await.body.contains("promotion-note"));
+    let cars = get(pool.clone(), "/c/makina").await.body;
+    assert!(featured_numbers(&cars).is_empty() && !cars.contains("featured-row"));
+
+    // Featured: in the row over the results of its category and of the searches it matches, and
+    // nowhere else; on /moderim with until when; its seller hears of it and sees it.
+    let given = promote(&pool, &moderator, "1001", "FEATURED_7D").await;
+    assert_eq!(given.location.as_deref(), Some("/moderim#promovime"));
+    let cars = get(pool.clone(), "/c/makina").await.body;
+    assert_eq!(featured_numbers(&cars), vec![1001]);
+    assert!(cars.contains(r#"<article class="card" id="featured-1001">"#), "{cars}");
+    assert!(cars.contains(r#"<a class="row-note" href="/promovo">Të promovuara · Si?</a>"#));
+    assert_eq!(result_numbers(&cars), vec![1001, 1002]);
+    assert_eq!(featured_numbers(&get(pool.clone(), "/search?q=golf").await.body), vec![1001]);
+    assert!(featured_numbers(&get(pool.clone(), "/search?q=mercedes").await.body).is_empty());
+    assert!(featured_numbers(&get(pool.clone(), "/c/elektronike").await.body).is_empty());
+    let page = get_with_cookie(pool.clone(), "/moderim", &moderator).await.body;
+    assert!(page.contains(r#"<span class="pending-attribute">I veçuar për 7 ditë</span>"#) && page.contains(&format!(r#"<a class="pending-label" href="{golf}">"#)), "{page}");
+    assert!(page.contains("Nr. 1001 · deri më "));
+    let mine = get_with_cookie(pool.clone(), golf, &ana).await.body;
+    assert!(mine.contains(r#"<p class="promotion-note">I veçuar për 7 ditë, deri më "#), "{mine}");
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(r#"<span class="badge promoted">I veçuar për 7 ditë, deri më "#));
+    assert!(get_with_cookie(pool.clone(), "/lajmerimet", &ana).await.body.contains("I veçuar për 7 ditë: Volkswagen Golf 7, 2016, naftë"));
+    // Given again, its time adds up.
+    promote(&pool, &moderator, "1001", "FEATURED_7D").await;
+    let days: f64 = sqlx::query_scalar("SELECT extract(epoch FROM featured_until - now())::float8 / 86400 FROM listings WHERE public_no = 1001")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert!((13.99..=14.0).contains(&days), "{days}");
+
+    // Highlighted: its card stands out wherever it shows.
+    promote(&pool, &moderator, "1002", "HIGHLIGHT_7D").await;
+    let cars = get(pool.clone(), "/c/makina").await.body;
+    assert!(cars.contains(r#"<article class="card is-highlighted" id="listing-1002">"#), "{cars}");
+    assert!(cars.contains(r#"<article class="card" id="listing-1001">"#));
+
+    // A bump takes it to the top of "newest first" at once, spent there and then.
+    promote(&pool, &moderator, "1002", "BUMP_ONCE").await;
+    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1002, 1001]);
+    // At the top of its category for a week: there now, and back once a day has gone by.
+    promote(&pool, &moderator, "1001", "CATEGORY_TOP_7D").await;
+    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1001, 1002]);
+    // Giving them moved no listing's updated_at, which the sitemaps give search engines.
+    assert_eq!(updated(pool.clone()).await, golf_updated);
+    sqlx::query("UPDATE listings SET published_at = now() - interval '3 days', bumped_at = now() - interval '25 hours' WHERE public_no = 1001").execute(&pool).await.unwrap();
+    let golf_updated = updated(pool.clone()).await;
+    sqlx::query("UPDATE listings SET bumped_at = now() - interval '1 hour' WHERE public_no = 1002").execute(&pool).await.unwrap();
+    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1002, 1001]);
+    assert_eq!(marketplace::db::tick_promotions(&pool).await.unwrap(), (0, 1));
+    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1001, 1002]);
+    assert_eq!(marketplace::db::tick_promotions(&pool).await.unwrap(), (0, 0));
+
+    // Ended by a moderator, it gives no more; the other of its kind on it still does, until it is
+    // ended too.
+    let featured: Vec<String> = sqlx::query_scalar(
+        "SELECT p.id::text FROM listing_promotions p JOIN promotion_products pr ON pr.id = p.promotion_product_id
+         WHERE pr.code = 'FEATURED_7D' AND p.status = 'ACTIVE' ORDER BY p.ends_at",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(featured.len(), 2);
+    let page = get_with_cookie(pool.clone(), "/moderim", &moderator).await.body;
+    assert!(page.contains(&format!(r#"<form method="post" action="/moderim/promovime/{}/ndalo""#, featured[1])));
+    let ended = post_form(pool.clone(), &format!("/moderim/promovime/{}/ndalo", featured[1]), &[], Some(&moderator)).await;
+    assert_eq!(ended.location.as_deref(), Some("/moderim#promovime"));
+    assert_eq!(featured_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1001]);
+    post_form(pool.clone(), &format!("/moderim/promovime/{}/ndalo", featured[0]), &[], Some(&moderator)).await;
+    assert!(featured_numbers(&get(pool.clone(), "/c/makina").await.body).is_empty());
+    let left: Option<time::OffsetDateTime> = sqlx::query_scalar("SELECT featured_until FROM listings WHERE public_no = 1001").fetch_one(&pool).await.unwrap();
+    assert_eq!(left, None);
+
+    // Its time up, it ends.
+    sqlx::query(
+        "UPDATE listing_promotions p SET starts_at = now() - interval '8 days', ends_at = now() - interval '1 minute'
+         FROM promotion_products pr WHERE pr.id = p.promotion_product_id AND pr.code = 'HIGHLIGHT_7D'",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query("UPDATE listings SET highlighted_until = now() - interval '1 minute' WHERE public_no = 1002").execute(&pool).await.unwrap();
+    assert!(!get(pool.clone(), "/c/makina").await.body.contains("is-highlighted"));
+    assert_eq!(marketplace::db::tick_promotions(&pool).await.unwrap(), (1, 0));
+
+    // A number no listing up has, or no promotion chosen, is said beside the form.
+    let refused = promote(&pool, &moderator, "999999", "FEATURED_7D").await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("Asnjë njoftim në faqe nuk ka numrin „999999“.") && refused.body.contains(r#"value="999999" inputmode="numeric" required aria-invalid="true""#), "{}", refused.body);
+    let refused = promote(&pool, &moderator, "1001", "GJITHCKA").await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("Zgjidh një nga promovimet."));
+
+    // The moderators' record keeps each, and neither the ends nor the day's top moved updated_at.
+    let actions: Vec<(String, i64)> = sqlx::query_as(
+        "SELECT action_type, count(*) FROM moderation_actions WHERE action_type LIKE '%PROMOTION' GROUP BY 1 ORDER BY 1",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(actions, vec![("END_PROMOTION".to_string(), 2), ("GRANT_PROMOTION".to_string(), 5)]);
+    assert_eq!(updated(pool.clone()).await, golf_updated);
+
+    // /promovo says what each does and costs, and how to get one.
+    let about = get(pool.clone(), "/promovo?njoftimi=1001").await.body;
+    assert!(about.contains("<strong>I veçuar për 7 ditë</strong>") && about.contains("8,99\u{a0}€"), "{about}");
+    assert!(about.contains(r#"<a href="/kontakt">Kontakt</a> me numrin e njoftimit (<strong>1001</strong>)"#), "{about}");
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn moderators_review_listings_with_anothers_photos_and_suspend_accounts(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;

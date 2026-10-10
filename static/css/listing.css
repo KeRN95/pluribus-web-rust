@@ -643,7 +643,8 @@
 .price-note { font-size: .5em; letter-spacing: normal; }
 /* Under the buttons, quietly: that the visitor blocked the seller (from a report's thanks,
    report.html), with where to let them be again. Reporting is a button among the others. */
-.blocked-note { margin: 1rem 0 0; color: var(--muted); font-size: var(--text-sm); }
+.blocked-note,
+.promotion-note { margin: 1rem 0 0; color: var(--muted); font-size: var(--text-sm); }
 /* A price that dropped lately (price_drop.html): what it was, struck through, quietly, and by how
    much in a green pill, as the zone's bubble says a square metre is cheap for it. */
 .price-was {

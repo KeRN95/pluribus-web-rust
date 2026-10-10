@@ -897,6 +897,15 @@ struct MyListingsPage {
     /// The stores they post for, each a pill after "Të miat", and the one shown, if one is.
     stores: Vec<db::MyStore>,
     store: Option<db::MyStore>,
+    /// The promotions on the listings shown (db/promotions.rs).
+    promotions: Vec<db::OnPromotion>,
+}
+
+impl MyListingsPage {
+    /// The promotions on the listing with this number now.
+    pub fn promoted(&self, public_no: &i64) -> Vec<&db::OnPromotion> {
+        self.promotions.iter().filter(|promotion| promotion.public_no == *public_no).collect()
+    }
 }
 
 #[derive(Deserialize)]
@@ -1063,7 +1072,9 @@ pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap, Quer
         false => None,
     };
     let totals = listings.iter().map(|listing| listing.stats).sum();
-    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending, notifications, stores, store })
+    let numbers: Vec<i64> = listings.iter().map(|listing| listing.public_no).collect();
+    let promotions = db::listing_promotions(&state.db, &numbers).await?;
+    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending, notifications, stores, store, promotions })
 }
 
 /// What a listing drew, or all of a seller's listings together, as "Njoftimet e mia" says it.

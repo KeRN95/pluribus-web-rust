@@ -67,6 +67,7 @@
         <span class="my-listing-meta">
           {{ listing.price_display() }}{% if let Some(label) = listing.status_label() %} · <span class="badge">{{ label }}</span>{% endif %}
           {%- if let Some(soon) = listing.expires_soon() %} · <span class="badge">{{ soon }}</span>{% endif %}
+          {%- for promotion in self.promoted(listing.public_no) %} · <span class="badge promoted">{{ promotion.name }}, deri më {{ promotion.until() }}</span>{% endfor %}
         </span>
         <span class="my-listing-stats">
           <span title="{{ listing.stats.views_title() }}">{% call stat_icon(crate::web::icons::EYE) %}<span class="visually-hidden">Shikime: </span>{{ crate::format::count(listing.stats.views) }}</span>

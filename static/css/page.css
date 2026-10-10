@@ -105,6 +105,15 @@
   pointer-events: none;
 }
 
+/* A card a promotion highlights (promotions.rs): its panel always there, in the warm yellow's
+   tint with an edge of it, wherever the card shows, the page colour's tint being for what is
+   picked or open. */
+.card.is-highlighted::before {
+  opacity: 1;
+  background: var(--yellow-bg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--yellow) 45%, transparent);
+}
+
 /* Hover effects only where there is a real pointer; on phones they would stick after a tap. */
 @media (hover: hover) {
   .chip:hover { background: var(--surface-muted); border-color: var(--border-strong); }
@@ -797,3 +806,11 @@ a.notification-line:hover .notification-title { text-decoration: underline; text
 .text-page p { margin: 0 0 1rem; }
 .text-page ul { margin: 0 0 1rem; padding-left: 1.25rem; }
 .text-page li + li { margin-top: .5rem; }
+/* /promovo: each promotion on a line of its own, its name and what it does, its price at the
+   end; a hairline between them. */
+.text-page .promotion-products { padding: 0; list-style: none; }
+.promotion-product { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .85rem 0; border-bottom: 1px solid var(--border); }
+.text-page .promotion-product + .promotion-product { margin-top: 0; }
+.promotion-product-text { display: grid; gap: .15rem; }
+.promotion-product-text span { color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
+.promotion-price { flex: none; font-weight: var(--semibold); font-variant-numeric: tabular-nums; }

@@ -137,7 +137,7 @@ async fn moderator_says(tx: &mut sqlx::Transaction<'_, Postgres>, moderator: Uui
 }
 
 /// What a moderator did (moderation_actions).
-async fn record(
+pub(super) async fn record(
     tx: &mut sqlx::Transaction<'_, Postgres>,
     moderator: Uuid,
     listing: Option<Uuid>,

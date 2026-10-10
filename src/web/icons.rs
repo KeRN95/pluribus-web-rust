@@ -677,6 +677,10 @@ pub const SUN: &str = r#"<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2
 /// searches kept (saved.html, saved_searches.html).
 pub const BELL: &str = r#"<path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 4.8 2 6.8 2 6.8h-15s2-2 2-6.8Z"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/>"#;
 
+/// A megaphone, its mouth to the right, and the handle under it: a listing promoted
+/// (notifications.rs).
+pub const MEGAPHONE: &str = r#"<path d="M3.5 10.5v3a1 1 0 0 0 1 1h2l10 4.5v-14l-10 4.5h-2a1 1 0 0 0-1 1Z"/><path d="M7.5 14.5 9 19.5h2.5"/><path d="M20 10v4"/>"#;
+
 /// A storefront: its awning, scalloped, over its walls and door; an invitation into a store
 /// (notifications.rs).
 pub const STORE: &str = r#"<path d="M4.5 4h15L21 9H3z"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M4.5 11.5V20h15v-8.5"/><path d="M10 20v-4.5h4V20"/>"#;
