@@ -21,6 +21,7 @@ use crate::{
     AppState,
     db::{self, FormAttribute, ListingProperty, PropertyValue},
     format,
+    i18n::{t, t1, t2},
 };
 
 /// A select's options grouped under the option of the property they depend on: car models under
@@ -127,7 +128,8 @@ impl PropertyField {
 /// The value a select sends for "Tjetër".
 pub const OTHER: &str = "__other__";
 
-/// What's wrong with a name typed for "Tjetër" that isn't plausible_name.
+/// What's wrong with a name typed for "Tjetër" that isn't plausible_name; the form says it in the
+/// page's language (t), the moderators' page in Albanian.
 pub const NAME_PROBLEM: &str = "Shkruaj vetëm emrin, me 2 deri në 40 shkronja.";
 
 /// A name typed for "Tjetër", or put right by a moderator, that can be one: 2 to 40 characters,
@@ -148,7 +150,8 @@ pub fn any_required(fields: &[PropertyField]) -> bool {
     fields.iter().any(|field| field.required)
 }
 
-/// The form's fields for these properties, holding what was typed (or what the listing has).
+/// The form's fields for these properties, holding what was typed (or what the listing has), their
+/// names, units and options in the page's language.
 pub fn fields(
     attributes: &[FormAttribute],
     values: &HashMap<String, Vec<String>>,
@@ -162,7 +165,7 @@ pub fn fields(
             let chosen = |code: &str| typed.iter().any(|value| value == code);
             let choice = |option: &db::AttributeOption| Choice {
                 value: option.code.clone(),
-                label: option.label.clone(),
+                label: t(&option.label).to_string(),
                 selected: chosen(&option.code),
             };
             let parent = attribute
@@ -175,7 +178,7 @@ pub fn fields(
                         .options
                         .iter()
                         .map(|parent_option| OptionGroup {
-                            label: parent_option.label.clone(),
+                            label: t(&parent_option.label).to_string(),
                             parent: parent_option.code.clone(),
                             choices: attribute
                                 .options
@@ -191,8 +194,8 @@ pub fn fields(
                 None => (attribute.options.iter().map(choice).collect(), Vec::new()),
             };
             PropertyField {
-                label: attribute.name.clone(),
-                unit: attribute.unit.clone(),
+                label: t(&attribute.name).to_string(),
+                unit: attribute.unit.as_deref().map(|unit| t(unit).to_string()),
                 required: attribute.required,
                 kind: match attribute.data_type.as_str() {
                     "SELECT" => "select",
@@ -252,7 +255,7 @@ fn max_for(attribute: &FormAttribute) -> Option<Decimal> {
 }
 
 /// Checks the typed values against the category's properties; problems go into `errors` under
-/// the field's name.
+/// the field's name, in the page's language.
 pub fn check(
     attributes: &[FormAttribute],
     values: &HashMap<String, Vec<String>>,
@@ -273,7 +276,7 @@ pub fn check(
         };
         if typed.is_empty() {
             if attribute.required {
-                fail(format!("Plotëso \u{201e}{}\u{201c}.", attribute.name));
+                fail(t1("Plotëso „{}“.", t(&attribute.name)));
             }
             continue;
         }
@@ -285,11 +288,11 @@ pub fn check(
                 let text: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
                 let lower = text.to_lowercase();
                 if text.is_empty() {
-                    fail(format!("Shkruaj \u{201e}{}\u{201c}.", attribute.name));
+                    fail(t1("Shkruaj „{}“.", t(&attribute.name)));
                     continue;
                 }
                 if !plausible_name(&text) {
-                    fail(NAME_PROBLEM.to_string());
+                    fail(t(NAME_PROBLEM).to_string());
                     continue;
                 }
                 // Typed as it is in the list ("bmw"): the listed one.
@@ -318,14 +321,14 @@ pub fn check(
                     if let (Some(parent), Some(parent_option)) = (parent_chosen, option.parent_id)
                         && *parent != Some(parent_option)
                     {
-                        fail("Ky model nuk i përket markës së zgjedhur.".to_string());
+                        fail(t("Ky model nuk i përket markës së zgjedhur.").to_string());
                         continue;
                     }
                     chosen.insert(attribute.id, Some(option.id));
                     PropertyValue::Option(option.id)
                 }
                 None => {
-                    fail("Zgjidh një nga mundësitë.".to_string());
+                    fail(t("Zgjidh një nga mundësitë.").to_string());
                     continue;
                 }
             },
@@ -344,9 +347,9 @@ pub fn check(
                     if too_small || too_big {
                         let bound = |value: Decimal| value.normalize().to_string();
                         fail(match (attribute.min, max) {
-                            (Some(min), Some(max)) => format!("Duhet të jetë nga {} deri në {}.", bound(min), bound(max)),
-                            (Some(min), None) => format!("Duhet të jetë të paktën {}.", bound(min)),
-                            (None, Some(max)) => format!("Duhet të jetë deri në {}.", bound(max)),
+                            (Some(min), Some(max)) => t2("Duhet të jetë nga {} deri në {}.", bound(min), bound(max)),
+                            (Some(min), None) => t1("Duhet të jetë të paktën {}.", bound(min)),
+                            (None, Some(max)) => t1("Duhet të jetë deri në {}.", bound(max)),
                             (None, None) => unreachable!(),
                         });
                         continue;
@@ -354,7 +357,7 @@ pub fn check(
                     PropertyValue::Number(number)
                 }
                 None => {
-                    fail("Shkruaj një numër.".to_string());
+                    fail(t("Shkruaj një numër.").to_string());
                     continue;
                 }
             },
@@ -362,7 +365,7 @@ pub fn check(
             _ => {
                 let text = typed[0];
                 if text.chars().count() > 200 {
-                    fail("Deri në 200 shkronja.".to_string());
+                    fail(t("Deri në 200 shkronja.").to_string());
                     continue;
                 }
                 PropertyValue::Text(text.to_string())
@@ -392,7 +395,7 @@ fn check_year_pairs(attributes: &[FormAttribute], properties: &[ListingProperty]
         {
             errors
                 .entry(field_name(&closing.code))
-                .or_insert(format!("Duhet të jetë {} ose më vonë.", from.normalize()));
+                .or_insert(t1("Duhet të jetë {} ose më vonë.", from.normalize()));
         }
     }
 }

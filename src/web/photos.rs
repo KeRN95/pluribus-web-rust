@@ -15,6 +15,7 @@ use super::{Result, not_found};
 use crate::{
     AppState,
     db::NewPhoto,
+    i18n::{t, t1},
     media::{
         self, CARD_AVIF, CARD_COPY, CARD_SIDE, FULL_SIDE, MAX_PHOTOS, MAX_UPLOAD_BYTES, MIDDLE_SIDE, MINI_AVIF, MINI_COPY,
         MINI_SIDE, Media, Processed, SMALL_AVIF, SMALL_COPY, SMALL_SIDE,
@@ -83,8 +84,8 @@ impl<S: Send + Sync> FromRequest<S> for Submission {
 fn refused(error: MultipartError) -> Response {
     let status = error.status();
     let message = match status {
-        StatusCode::PAYLOAD_TOO_LARGE => "Fotot janë shumë të mëdha. Zgjidh më pak, ose më të vogla.",
-        _ => "Formulari nuk arriti i plotë. Provo përsëri.",
+        StatusCode::PAYLOAD_TOO_LARGE => t("Fotot janë shumë të mëdha. Zgjidh më pak, ose më të vogla."),
+        _ => t("Formulari nuk arriti i plotë. Provo përsëri."),
     };
     (status, message).into_response()
 }
@@ -92,9 +93,9 @@ fn refused(error: MultipartError) -> Response {
 /// How many, and how big: `kept` is how many the listing has already and keeps.
 pub fn check(photos: &[Bytes], kept: usize, errors: &mut HashMap<String, String>) {
     let message = if kept + photos.len() > MAX_PHOTOS {
-        Some(format!("Një njoftim mund të ketë deri në {MAX_PHOTOS} foto."))
+        Some(t1("Një njoftim mund të ketë deri në {} foto.", MAX_PHOTOS))
     } else if photos.iter().any(|photo| photo.len() > MAX_UPLOAD_BYTES) {
-        Some(format!("Secila foto mund të jetë deri në {} MB.", MAX_UPLOAD_BYTES / 1024 / 1024))
+        Some(t1("Secila foto mund të jetë deri në {} MB.", MAX_UPLOAD_BYTES / 1024 / 1024))
     } else {
         None
     };
@@ -126,7 +127,7 @@ pub async fn process(photos: Vec<Bytes>) -> Result<std::result::Result<Vec<Proce
         })
     })
     .await?;
-    Ok(processed.map_err(|_| "Një nga fotot nuk u lexua. Zgjidh foto JPG, PNG ose WebP."))
+    Ok(processed.map_err(|_| t("Një nga fotot nuk u lexua. Zgjidh foto JPG, PNG ose WebP.")))
 }
 
 /// Puts each one's files in the store, under a new name, and says where they are served.

@@ -7,7 +7,7 @@
   <label class="filter-label" for="filter-{{ field.name }}">{{ field.label }}</label>
   <div class="picker" data-controller="picker">
   <select id="filter-{{ field.name }}" name="{{ field.name }}"{% if let Some(parent) = field.depends_on %} data-depends-on="{{ parent }}"{% endif %}>
-    <option value="">Të gjitha</option>
+    <option value="">{{ crate::t("Të gjitha") }}</option>
     {% for choice in field.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
     {% for group in field.groups %}
     <optgroup label="{{ group.label }}" data-parent="{{ group.parent }}"{% if group.hidden %} hidden{% endif %}>
@@ -30,20 +30,20 @@
   <legend class="filter-label">{{ field.label }}{% if !field.unit.is_empty() %} ({{ field.unit }}){% endif %}</legend>
   <div class="range">
     {%- if field.min_choices.is_empty() %}
-    <input type="text" inputmode="numeric" name="{{ field.name }}_min" value="{{ field.min }}" placeholder="nga" aria-label="{{ field.label }} nga">
+    <input type="text" inputmode="numeric" name="{{ field.name }}_min" value="{{ field.min }}" placeholder="{{ crate::t("nga") }}" aria-label="{{ crate::t1("{} nga", field.label) }}">
     <span aria-hidden="true">–</span>
-    <input type="text" inputmode="numeric" name="{{ field.name }}_max" value="{{ field.max }}" placeholder="deri" aria-label="{{ field.label }} deri">
+    <input type="text" inputmode="numeric" name="{{ field.name }}_max" value="{{ field.max }}" placeholder="{{ crate::t("deri") }}" aria-label="{{ crate::t1("{} deri", field.label) }}">
     {%- else %}
     <div class="picker" data-controller="picker">
-    <select name="{{ field.name }}_min" aria-label="{{ field.label }} nga">
-      <option value="">nga</option>
+    <select name="{{ field.name }}_min" aria-label="{{ crate::t1("{} nga", field.label) }}">
+      <option value="">{{ crate::t("nga") }}</option>
       {% for choice in field.min_choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
     </select>
     </div>
     <span aria-hidden="true">–</span>
     <div class="picker" data-controller="picker">
-    <select name="{{ field.name }}_max" aria-label="{{ field.label }} deri">
-      <option value="">deri</option>
+    <select name="{{ field.name }}_max" aria-label="{{ crate::t1("{} deri", field.label) }}">
+      <option value="">{{ crate::t("deri") }}</option>
       {% for choice in field.max_choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
     </select>
     </div>
@@ -55,11 +55,11 @@
   <label class="filter-label" for="filter-{{ field.name }}">{{ field.label }}</label>
   {%- if field.min_choices.is_empty() %}
   <input id="filter-{{ field.name }}" type="text" inputmode="numeric" name="{{ field.name }}" value="{{ field.min }}"
-         maxlength="4" placeholder="p.sh. 2006">
+         maxlength="4" placeholder="{{ crate::t("p.sh. 2006") }}">
   {%- else %}
   <div class="picker" data-controller="picker">
   <select id="filter-{{ field.name }}" name="{{ field.name }}">
-    <option value="">Çdo vit</option>
+    <option value="">{{ crate::t("Çdo vit") }}</option>
     {% for choice in field.min_choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
   </select>
   </div>

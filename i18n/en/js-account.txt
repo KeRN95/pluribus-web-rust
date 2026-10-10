@@ -1,0 +1,14 @@
+# The account, the scripts' texts: the header's account button, which says how many notifications
+# about the visitor's own listings are unread (account_controller.js). signed_in.js and
+# theme_controller.js say nothing (the theme button's label is base.html's).
+
+# static/js/controllers/account_controller.js
+
+Llogaria
+= Account
+
+Llogaria: 1 lajmërim për njoftimet e tua
+= Account: 1 notification about your listings
+
+Llogaria: {} lajmërime për njoftimet e tua
+= Account: {} notifications about your listings

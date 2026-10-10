@@ -3,8 +3,8 @@
 {%- let types = filters.type_choices() %}
 {%- if !types.is_empty() %}
 <fieldset class="filter-group filter-options">
-  <legend class="filter-label">Lloji i njoftimit</legend>
-  <label class="check"><input type="radio" name="type" value=""{% if filters.listing_type.is_none() %} checked{% endif %}> Të gjitha</label>
+  <legend class="filter-label">{{ crate::t("Lloji i njoftimit") }}</legend>
+  <label class="check"><input type="radio" name="type" value=""{% if filters.listing_type.is_none() %} checked{% endif %}> {{ crate::t("Të gjitha") }}</label>
   {% for choice in types %}
   <label class="check"><input type="radio" name="type" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}> {{ choice.label }}</label>
   {% endfor %}

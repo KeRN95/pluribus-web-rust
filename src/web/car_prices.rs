@@ -15,7 +15,10 @@ use serde::Deserialize;
 use serde_json::json;
 
 use super::Result;
-use crate::{AppState, db, format};
+use crate::{
+    AppState, db, format,
+    i18n::{t, t1, t3},
+};
 
 /// How a car's price compares with what cars of its model and year ask.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,9 +34,9 @@ pub enum Verdict {
 impl Verdict {
     pub fn words(self) -> &'static str {
         match self {
-            Self::Good => "Çmim i mirë",
-            Self::Near => "Rreth mesatares",
-            Self::Above => "Mbi mesataren",
+            Self::Good => t("Çmim i mirë"),
+            Self::Near => t("Rreth mesatares"),
+            Self::Above => t("Mbi mesataren"),
         }
     }
 
@@ -149,14 +152,14 @@ pub async fn hint(State(state): State<AppState>, Query(query): Query<HintQuery>)
     let Some(shown) = Shown::new(&prices, currency, Some(rate)) else {
         return Ok(StatusCode::NO_CONTENT.into_response());
     };
-    let text = format!("{} në shitje: shumica kërkojnë {}, mesatarja {}.", shown.cars, shown.range, shown.median);
+    let text = t3("{} në shitje: shumica kërkojnë {}, mesatarja {}.", shown.cars, shown.range, shown.median);
     // The price typed, its thousands' spaces or dots aside ("9 500", "9.500"): a comma before the
     // last two digits at most is its cents'.
     let digits: String = query.price.chars().filter(|c| c.is_ascii_digit() || *c == ',').collect();
     let price = digits.replace(',', ".").parse::<Decimal>().ok().filter(|price| *price > Decimal::ZERO);
     let said = price.map(|price| match verdict(price * rate, prices.median_eur) {
-        Some(verdict) => format!("Te faqja e makinës, çmimi yt del „{}“.", verdict.words()),
-        None => "Çmimi yt është shumë nën mesataren: a është i saktë, dhe në monedhën e duhur?".to_string(),
+        Some(verdict) => t1("Te faqja e makinës, çmimi yt del „{}“.", verdict.words()),
+        None => t("Çmimi yt është shumë nën mesataren: a është i saktë, dhe në monedhën e duhur?").to_string(),
     });
     Ok(Json(json!({ "text": text, "verdict": said })).into_response())
 }

@@ -1,4 +1,4 @@
 {#- Turbo fetches the next page when this frame scrolls into view; without JavaScript the link still works. -#}
 <turbo-frame id="{{ next.frame_id }}" src="{{ next.url }}" loading="lazy" target="_top">
-  <a class="more" href="{{ next.url }}">Shfaq më shumë</a>
+  <a class="more" href="{{ next.url }}">{{ crate::t("Shfaq më shumë") }}</a>
 </turbo-frame>

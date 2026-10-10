@@ -1,13 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Kushtet e përdorimit | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Kushtet e përdorimit") }} | Pluribus{% endblock %}
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
 {% block content %}
-{#- The terms of use (web/pages.rs): written to be read, each section a heading and a few lines. -#}
+{#- The terms of use (web/pages.rs): written to be read, each section a heading and a few lines.
+    In English, terms_en.html, a faithful translation of the whole, which says the Albanian
+    applies: a change here is a change there too. -#}
 <article class="text-page">
-  <h1>Kushtet e përdorimit</h1>
+  <h1>{{ crate::t("Kushtet e përdorimit") }}</h1>
+  {%- if crate::i18n::english() %}{% include "terms_en.html" %}{% else %}
   <p class="updated">Përditësuar më {{ updated }}</p>
   <p class="lead">Duke përdorur Pluribus pranon këto kushte. Janë shkruar që të lexohen; ku ke pyetje, <a href="/kontakt">na shkruaj</a>.</p>
 
@@ -36,5 +39,6 @@
   <p>Për këto kushte zbatohet ligji i Republikës së Shqipërisë.</p>
 
   <p>Shiko edhe <a href="/privatesia">privatësinë</a> dhe <a href="/siguria">këshillat e sigurisë</a>.</p>
+  {%- endif %}
 </article>
 {% endblock %}

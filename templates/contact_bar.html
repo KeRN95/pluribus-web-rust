@@ -7,7 +7,7 @@
     listing with no number to show, or one off the site. -#}
 {%- let message = !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}
 {%- if reveal.is_some() || message %}
-<aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">
+<aside class="contact-bar" aria-label="{{ crate::t("Kontakti") }}" data-controller="sticky">
   {% if let Some(reveal) = reveal %}
   {#- The phone, "Shfaq numrin", in a plain pill; the number that takes its place is marked as
       what is picked is. Turbo submits the form and swaps in the number (or address) from the
@@ -25,7 +25,7 @@
   <a class="button message-button" href="/listing/{{ listing.public_no }}/mesazh"
      {%- if sheet %} data-turbo-frame="conversation" data-turbo-prefetch="false" data-action="message-sheet#open"{% endif %}>
     <svg class="contact-icon" data-icon="message-circle" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
-    <span class="button-label">Shkruaji shitësit</span></a>
+    <span class="button-label">{{ crate::t("Shkruaji shitësit") }}</span></a>
   {%- endif %}
 </aside>
 {%- endif %}

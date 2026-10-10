@@ -13,11 +13,11 @@
       browser says (filters_controller.js), which replaces the town. "Gjithë Shqipëria" forgets the
       town kept for the next pages too. -#}
   <div class="filter-group filter-place">
-    <label class="filter-label" for="filter-city">Qyteti</label>
+    <label class="filter-label" for="filter-city">{{ crate::t("Qyteti") }}</label>
     <div class="filter-place-row">
       <div class="picker" data-controller="picker">
       <select id="filter-city" name="city" data-action="filters#placed">
-        <option value="">Gjithë Shqipëria</option>
+        <option value="">{{ crate::t("Gjithë Shqipëria") }}</option>
         {%- for group in filters.city_groups() %}
         <optgroup label="{{ group.label }}">
           {%- for choice in group.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
@@ -25,10 +25,10 @@
         {%- endfor %}
       </select>
       </div>
-      <button type="button" class="button secondary filter-locate" data-action="filters#locate">{% include "pin.svg" %}Afër meje</button>
+      <button type="button" class="button secondary filter-locate" data-action="filters#locate">{% include "pin.svg" %}{{ crate::t("Afër meje") }}</button>
     </div>
     {%- if filters.has_pin() %}
-    <p class="field-hint">Tani nga harta: {{ filters.map_label() }}.</p>
+    <p class="field-hint">{{ crate::t1("Tani nga harta: {}.", filters.map_label()) }}</p>
     {%- endif %}
     <p class="field-hint" data-filters-target="placeStatus" role="status" hidden></p>
   </div>
@@ -38,10 +38,10 @@
       (narrow_controller.js, filters_controller.js). -#}
   {%- if filters.zoned() %}
   <div class="filter-group filter-zone" data-filters-target="zone"{% if !filters.zone_shown() %} hidden{% endif %}>
-    <label class="filter-label" for="filter-zone">Zona</label>
+    <label class="filter-label" for="filter-zone">{{ crate::t("Zona") }}</label>
     <div class="picker" data-controller="picker">
     <select id="filter-zone" name="zone" data-depends-on="city">
-      <option value="">Të gjitha zonat</option>
+      <option value="">{{ crate::t("Të gjitha zonat") }}</option>
       {%- for group in filters.zone_groups() %}
       <optgroup label="{{ group.label }}" data-parent="{{ group.parent }}"{% if group.hidden %} hidden{% endif %}>
         {%- for choice in group.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
@@ -54,10 +54,10 @@
 
   {% if filters.shows_category() %}
   <div class="filter-group">
-    <label class="filter-label" for="filter-category">Kategoria</label>
+    <label class="filter-label" for="filter-category">{{ crate::t("Kategoria") }}</label>
     <div class="picker" data-controller="picker" data-picker-tree-value="true">
     <select id="filter-category" name="category">
-      <option value="">Të gjitha</option>
+      <option value="">{{ crate::t("Të gjitha") }}</option>
       {% for choice in filters.category_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
     </select>
     </div>
@@ -73,24 +73,24 @@
       end at its edge no limit; or one of the quick choices under it, each about a quarter of the
       category's listings. Each moves the others; the label beside the name says the prices. -#}
   <fieldset class="filter-group price-filter" data-controller="price-range">
-    <legend class="filter-label">Çmimi <output data-price-range-target="label">{{ filters.price_label() }}</output></legend>
+    <legend class="filter-label">{{ crate::t("Çmimi") }} <output data-price-range-target="label">{{ filters.price_label() }}</output></legend>
     <div class="price-typed">
-      <input type="text" inputmode="numeric" name="price_min" value="{{ filters.price_min_value() }}" placeholder="nga" aria-label="Çmimi nga" autocomplete="off"
+      <input type="text" inputmode="numeric" name="price_min" value="{{ filters.price_min_value() }}" placeholder="{{ crate::t("nga") }}" aria-label="{{ crate::t("Çmimi nga") }}" autocomplete="off"
              data-price-range-target="min" data-action="change->price-range#typed">
       <span aria-hidden="true">–</span>
-      <input type="text" inputmode="numeric" name="price_max" value="{{ filters.price_max_value() }}" placeholder="deri" aria-label="Çmimi deri" autocomplete="off"
+      <input type="text" inputmode="numeric" name="price_max" value="{{ filters.price_max_value() }}" placeholder="{{ crate::t("deri") }}" aria-label="{{ crate::t("Çmimi deri") }}" autocomplete="off"
              data-price-range-target="max" data-action="change->price-range#typed">
       <div class="picker" data-controller="picker">
-      <select name="currency" aria-label="Monedha" data-price-range-target="currency" data-action="price-range#slide">
+      <select name="currency" aria-label="{{ crate::t("Monedha") }}" data-price-range-target="currency" data-action="price-range#slide">
         {% for choice in filters.currency_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
       </select>
       </div>
     </div>
     <div class="price-track">
       <span class="price-fill" data-price-range-target="fill"></span>
-      <input type="range" min="0" max="1000" step="1" value="{{ filters.price_from_position() }}" aria-label="Çmimi nga, në shkallë"
+      <input type="range" min="0" max="1000" step="1" value="{{ filters.price_from_position() }}" aria-label="{{ crate::t("Çmimi nga, në shkallë") }}"
              aria-valuetext="{{ filters.price_min_text() }}" data-price-range-target="from" data-action="price-range#slide">
-      <input type="range" min="0" max="1000" step="1" value="{{ filters.price_to_position() }}" aria-label="Çmimi deri, në shkallë"
+      <input type="range" min="0" max="1000" step="1" value="{{ filters.price_to_position() }}" aria-label="{{ crate::t("Çmimi deri, në shkallë") }}"
              aria-valuetext="{{ filters.price_max_text() }}" data-price-range-target="to" data-action="price-range#slide">
     </div>
     {%- if !price_choices.is_empty() %}
@@ -112,7 +112,7 @@
   {% let conditions = filters.condition_choices() %}
   {% if !conditions.is_empty() %}
   <fieldset class="filter-group filter-options">
-    <legend class="filter-label">Gjendja</legend>
+    <legend class="filter-label">{{ crate::t("Gjendja") }}</legend>
     {% for choice in conditions %}
     <label class="check"><input type="checkbox" name="condition" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}> {{ choice.label }}</label>
     {% endfor %}
@@ -126,7 +126,7 @@
   {%- if has_more %}
   {#- The rest, folded under their own heading; open while one of them is on. -#}
   <details class="more-filters"{% if more_open %} open{% endif %}>
-    <summary>Më shumë filtra<svg class="chevron" data-icon="chevron-down" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <summary>{{ crate::t("Më shumë filtra") }}<svg class="chevron" data-icon="chevron-down" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
     <div class="more-fields">
       {%- if !filters.type_first() %}
       {% include "filter_type.html" %}
@@ -142,7 +142,7 @@
 
   {#- Without JavaScript, a button applies them. -#}
   <noscript><div class="filter-actions">
-    <button type="submit" class="button">Shfaq rezultatet</button>
-    {% if !chips.is_empty() %}<a class="clear-filters" href="{{ clear_url }}">Pastro</a>{% endif %}
+    <button type="submit" class="button">{{ crate::t("Shfaq rezultatet") }}</button>
+    {% if !chips.is_empty() %}<a class="clear-filters" href="{{ clear_url }}">{{ crate::t("Pastro") }}</a>{% endif %}
   </div></noscript>
 </form>

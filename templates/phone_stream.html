@@ -11,7 +11,7 @@
         <svg class="icon-copied" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
       </button>
       {%- if let Some(whatsapp) = whatsapp %}
-      <a class="button secondary icon-circle whatsapp-button" href="{{ whatsapp }}" target="_blank" rel="noopener" aria-label="Shkruaj në WhatsApp" title="Shkruaj në WhatsApp">
+      <a class="button secondary icon-circle whatsapp-button" href="{{ whatsapp }}" target="_blank" rel="noopener" aria-label="{{ crate::t("Shkruaj në WhatsApp") }}" title="{{ crate::t("Shkruaj në WhatsApp") }}">
         <svg data-icon="whatsapp" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::WHATSAPP|safe }}</svg>
       </a>
       {%- endif %}

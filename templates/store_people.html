@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Njerëzit e {{ store.display_name }} | Pluribus{% endblock %}
+{% block title %}{{ crate::i18n::t1("Njerëzit e {}", store.display_name) }} | Pluribus{% endblock %}
 
 {% block content %}
 {#- A store's people (stores.rs), for its owner and admins: each with their contact and role, those
@@ -9,8 +9,8 @@
     someone in, its roles each with what it lets one do. -#}
 <section class="account store-people">
   <p class="store-people-back"><a href="/biznes/{{ store.slug }}">{{ store.display_name }}</a></p>
-  <h1>Njerëzit e dyqanit</h1>
-  <p class="lead">Kush punon për <strong>{{ store.display_name }}</strong>: poston njoftimet e tij dhe u përgjigjet mesazheve të tij.</p>
+  <h1>{{ crate::t("Njerëzit e dyqanit") }}</h1>
+  <p class="lead">{{ crate::t("Kush punon për") }} <strong>{{ store.display_name }}</strong>: {{ crate::t("poston njoftimet e tij dhe u përgjigjet mesazheve të tij.") }}</p>
   {%- if let Some(done) = done %}
   <p class="notice" role="status">{{ done }}</p>
   {%- endif %}
@@ -20,22 +20,22 @@
     <li class="person">
       <span class="avatar" aria-hidden="true">{{ crate::format::initial(member.display_name) }}</span>
       <span class="person-text">
-        <span class="person-name">{{ member.display_name }}{% if member.user_id == me %} (ti){% endif %}</span>
+        <span class="person-name">{{ member.display_name }}{% if member.user_id == me %} {{ crate::t("(ti)") }}{% endif %}</span>
         <span class="field-hint">{{ self.contact_of(member) }}</span>
       </span>
       {%- if self.handles(member) %}
       <form class="person-role" method="post" action="/dyqani/{{ store.slug }}/njerezit/{{ member.user_id }}">
-        <label class="visually-hidden" for="roli-{{ member.user_id }}">Roli i {{ member.display_name }}</label>
+        <label class="visually-hidden" for="roli-{{ member.user_id }}">{{ crate::i18n::t1("Roli i {}", member.display_name) }}</label>
         <select id="roli-{{ member.user_id }}" name="roli">
           {%- for role in self.roles() %}
           <option value="{{ role }}"{% if **role == member.role %} selected{% endif %}>{{ crate::web::stores::role_name(role) }}</option>
           {%- endfor %}
         </select>
-        <button type="submit" class="button secondary small">Ruaj</button>
+        <button type="submit" class="button secondary small">{{ crate::t("Ruaj") }}</button>
       </form>
       <form method="post" action="/dyqani/{{ store.slug }}/njerezit/{{ member.user_id }}/hiq"
-            data-turbo-confirm="Ta heqim {{ member.display_name }} nga dyqani? Njoftimet që ka publikuar mbeten të dyqanit.">
-        <button type="submit" class="button secondary small">Hiq</button>
+            data-turbo-confirm="{{ crate::i18n::t1("Ta heqim {} nga dyqani? Njoftimet që ka publikuar mbeten të dyqanit.", member.display_name) }}">
+        <button type="submit" class="button secondary small">{{ crate::t("Hiq") }}</button>
       </form>
       {%- else %}
       <span class="person-role-name">{{ crate::web::stores::role_name(member.role) }}</span>
@@ -45,26 +45,26 @@
   </ul>
 
   {%- if !invitations.is_empty() %}
-  <h2>Ftesat në pritje</h2>
+  <h2>{{ crate::t("Ftesat në pritje") }}</h2>
   <ul class="people">
     {%- for invitation in invitations %}
     <li class="person">
       <span class="person-text">
         <span class="person-name">{{ self.invited(invitation) }}</span>
-        <span class="field-hint">{{ crate::web::stores::role_name(invitation.role) }} · vlen deri më {{ self.until(invitation) }}</span>
+        <span class="field-hint">{{ crate::web::stores::role_name(invitation.role) }} · {{ crate::i18n::t1("vlen deri më {}", self.until(invitation)) }}</span>
       </span>
       <span class="person-actions">
         {%- if let Some(whatsapp) = self.whatsapp(invitation) %}
-        <a class="button secondary icon-circle whatsapp-button" href="{{ whatsapp }}" target="_blank" rel="noopener" aria-label="Dërgoje në WhatsApp" title="Dërgoje në WhatsApp">
+        <a class="button secondary icon-circle whatsapp-button" href="{{ whatsapp }}" target="_blank" rel="noopener" aria-label="{{ crate::t("Dërgoje në WhatsApp") }}" title="{{ crate::t("Dërgoje në WhatsApp") }}">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::WHATSAPP|safe }}</svg>
         </a>
         {%- endif %}
-        <button type="button" class="button secondary icon-circle copy-button" data-controller="copy" data-copy-text-value="{{ self.link(invitation) }}" data-action="copy#copy" aria-label="Kopjo lidhjen e ftesës" title="Kopjo lidhjen e ftesës">
+        <button type="button" class="button secondary icon-circle copy-button" data-controller="copy" data-copy-text-value="{{ self.link(invitation) }}" data-action="copy#copy" aria-label="{{ crate::t("Kopjo lidhjen e ftesës") }}" title="{{ crate::t("Kopjo lidhjen e ftesës") }}">
           <svg class="icon-copy" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 8.5V6A2.5 2.5 0 0 0 13 3.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/></svg>
           <svg class="icon-copied" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
         </button>
         <form method="post" action="/dyqani/{{ store.slug }}/ftesat/{{ invitation.id }}/anulo">
-          <button type="submit" class="button secondary small">Anulo</button>
+          <button type="submit" class="button secondary small">{{ crate::t("Anulo") }}</button>
         </form>
       </span>
     </li>
@@ -72,22 +72,22 @@
   </ul>
   {%- endif %}
 
-  <h2>Fto dikë</h2>
+  <h2>{{ crate::t("Fto dikë") }}</h2>
   <form class="account-form people-invite" method="post" action="/dyqani/{{ store.slug }}/njerezit">
     {%- if let Some(error) = error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
     <div class="field">
-      <label class="field-label" for="kontakti">Celulari ose email-i</label>
-      <input id="kontakti" name="kontakti" value="{{ contact }}" required autocomplete="off" placeholder="069 123 4567 ose emri@shembull.al">
+      <label class="field-label" for="kontakti">{{ crate::t("Celulari ose email-i") }}</label>
+      <input id="kontakti" name="kontakti" value="{{ contact }}" required autocomplete="off" placeholder="{{ crate::t("069 123 4567 ose emri@shembull.al") }}">
     </div>
     <fieldset class="field people-roles">
-      <legend class="field-label">Roli</legend>
+      <legend class="field-label">{{ crate::t("Roli") }}</legend>
       {%- for role in self.roles() %}
       <label class="notice-setting"><input type="radio" name="roli" value="{{ role }}"{% if self.picked(role) %} checked{% endif %}>
         <span>{{ crate::web::stores::role_name(role) }}<span class="field-hint">{{ crate::web::stores::role_does(role) }}</span></span></label>
       {%- endfor %}
     </fieldset>
-    <button type="submit" class="button">Dërgo ftesën</button>
-    <p class="field-hint">Ftesa vlen 14 ditë. E pranon duke hyrë në Pluribus me këtë numër ose email.</p>
+    <button type="submit" class="button">{{ crate::t("Dërgo ftesën") }}</button>
+    <p class="field-hint">{{ crate::t("Ftesa vlen 14 ditë. E pranon duke hyrë në Pluribus me këtë numër ose email.") }}</p>
   </form>
 </section>
 {% endblock %}

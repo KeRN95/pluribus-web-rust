@@ -16,7 +16,7 @@ export function t(text) {
   return english[text] ?? text;
 }
 
-// `t`, then its "{}" given the values in turn: t1("Mund të shtosh edhe {} foto", 3).
+// `t`, then its "{}" given the values in turn: tf(text, 3) for "… edhe {} foto".
 export function tf(text, ...values) {
   let i = 0;
   return t(text).replace(/\{\}/g, () => String(values[i++] ?? ""));

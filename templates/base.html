@@ -46,6 +46,15 @@
     (data-section, the block section): Elektronikë's are in Claude's blue and Shtëpi / kopsht's in
     its olive where the rest of the site is coral (base.css). -#}
 <body{% block section %}{% endblock %}>
+  {%- if crate::i18n::offer_english() %}
+  {#- To a visitor who hasn't chosen a language and whose browser reads no Albanian, English
+      offered in English, until they choose either (web/language.rs). -#}
+  <form class="language-offer" method="post" action="/gjuha" lang="en">
+    <p>Pluribus is in Albanian. Would you like it in English?</p>
+    <button type="submit" class="button" name="gjuha" value="en">English</button>
+    <button type="submit" class="language-stay" name="gjuha" value="sq" lang="sq">Vazhdo në shqip</button>
+  </form>
+  {%- endif %}
   <header class="site-header">
     <div class="header-inner">
       {#- The search is the welcome page's pill, and on the browse pages the round button before

@@ -38,5 +38,19 @@ Kontakt
 Shto një njoftim
 = Post a listing
 
+# The names the site gives people (i18n::name): to someone who gave none, and once an account is gone.
+Përdorues
+= User
+
+Përdorues i fshirë
+= Deleted user
+
+# The language, in "Cilësimet" (settings.html).
+Gjuha
+= Language
+
+Faqet, dhe email-et që të dërgojmë.
+= The pages, and the emails we send you.
+
 {n} njoftime
 = {n} listings

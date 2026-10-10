@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{% if create %}Hyr ose krijo llogari{% else %}Hyr{% endif %} | Pluribus{% endblock %}
+{% block title %}{% if create %}{{ crate::t("Hyr ose krijo llogari") }}{% else %}{{ crate::t("Hyr") }}{% endif %} | Pluribus{% endblock %}
 
 {% block content %}
 <section class="account">
@@ -8,27 +8,26 @@
   {#- "Llogaria" for someone not signed in: one form signs in or makes an account, by the contact
       typed, so it says both (it said "Krijo një llogari" alone once, which a returning seller took
       for the wrong page). -#}
-  <h1>Hyr ose krijo një llogari</h1>
-  <p class="lead">Me numrin e celularit ose me email-in, pa fjalëkalim: të dërgojmë një kod me 6 shifra. Me numrin
-    që ke përdorur më parë hyn në llogarinë tënde; me një të ri krijohet një llogari.</p>
+  <h1>{{ crate::t("Hyr ose krijo një llogari") }}</h1>
+  <p class="lead">{{ crate::t("Me numrin e celularit ose me email-in, pa fjalëkalim: të dërgojmë një kod me 6 shifra. Me numrin që ke përdorur më parë hyn në llogarinë tënde; me një të ri krijohet një llogari.") }}</p>
   {%- else %}
-  <h1>Hyr</h1>
-  <p class="lead">Hyr me numrin e celularit ose me email-in. Të dërgojmë një kod me 6 shifra, pa fjalëkalim.</p>
+  <h1>{{ crate::t("Hyr") }}</h1>
+  <p class="lead">{{ crate::t("Hyr me numrin e celularit ose me email-in. Të dërgojmë një kod me 6 shifra, pa fjalëkalim.") }}</p>
   {%- endif %}
 
   <form class="account-form" action="/hyr" method="post">
     {% if let Some(error) = error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
     {%- if create %}
     <div class="field">
-      <label class="field-label" for="name">Emri</label>
-      <input id="name" name="name" value="{{ name }}" maxlength="60" autocomplete="name" placeholder="p.sh. Ana ose Auto Elbasani">
-      <p class="field-hint">Për një llogari të re: shfaqet te njoftimet e tua dhe në profilin tënd.</p>
+      <label class="field-label" for="name">{{ crate::t("Emri") }}</label>
+      <input id="name" name="name" value="{{ name }}" maxlength="60" autocomplete="name" placeholder="{{ crate::t("p.sh. Ana ose Auto Elbasani") }}">
+      <p class="field-hint">{{ crate::t("Për një llogari të re: shfaqet te njoftimet e tua dhe në profilin tënd.") }}</p>
     </div>
     {%- endif %}
     <div class="field">
-      <label class="field-label" for="contact">Celulari ose email-i</label>
+      <label class="field-label" for="contact">{{ crate::t("Celulari ose email-i") }}</label>
       <input id="contact" name="contact" value="{{ contact }}" required autocomplete="username"
-             placeholder="069 123 4567 ose emri@shembull.com">
+             placeholder="{{ crate::t("069 123 4567 ose emri@shembull.com") }}">
     </div>
     {#- People never see or fill this field; a bot filling in every field does (see account.rs). -#}
     <div class="trap" aria-hidden="true">
@@ -36,8 +35,8 @@
       <input id="website" name="website" tabindex="-1" autocomplete="off">
     </div>
     <input type="hidden" name="started" value="{{ started }}">
-    <button type="submit" class="button">Më dërgo kodin</button>
+    <button type="submit" class="button">{{ crate::t("Më dërgo kodin") }}</button>
   </form>
-  <p class="account-note">Numri ose email-i yt shfaqet në njoftim vetëm kur dikush shtyp butonin për ta parë. Duke vazhduar, pranon <a href="/kushtet">kushtet e përdorimit</a>. Si i mbajmë të dhënat e tua: <a href="/privatesia">Privatësia</a>.</p>
+  <p class="account-note">{{ crate::t("Numri ose email-i yt shfaqet në njoftim vetëm kur dikush shtyp butonin për ta parë.") }} {{ crate::t("Duke vazhduar, pranon") }} <a href="/kushtet">{{ crate::t("kushtet e përdorimit") }}</a>. {{ crate::t("Si i mbajmë të dhënat e tua:") }} <a href="/privatesia">{{ crate::t("Privatësia") }}</a>.</p>
 </section>
 {% endblock %}

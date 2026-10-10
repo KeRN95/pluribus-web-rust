@@ -1,19 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Mesazhet | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Mesazhet") }} | Pluribus{% endblock %}
 
 {% block content %}
 {#- The visitor's conversations, the latest written in first (messages.rs, inbox): each with the
     listing's photo, who with (and for a store's people, the store), the listing, the start of the
     latest message (who sent it, if it was the visitor or a colleague) and when it came; those
-    with messages unread in bold, with how many. -#}
+    with messages unread in bold, with how many. A text of ours with an apostrophe in it ("t'u")
+    goes out as it is (|safe), as it did before it went through crate::t: a text alone, no value. -#}
 <section class="inbox">
-  <h1>Mesazhet</h1>
+  <h1>{{ crate::t("Mesazhet") }}</h1>
   {%- if !signed_in %}
-  <p class="lead">Hyr në llogari për t'u shkruar shitësve dhe për të lexuar mesazhet e tua.</p>
-  <p><a class="button" href="/llogaria">Hyr</a></p>
+  <p class="lead">{{ crate::t("Hyr në llogari për t'u shkruar shitësve dhe për të lexuar mesazhet e tua.")|safe }}</p>
+  <p><a class="button" href="/llogaria">{{ crate::t("Hyr") }}</a></p>
   {%- else if conversations.is_empty() %}
-  <p class="empty">Ende s'ke mesazhe. Për t'i shkruar një shitësi, prek butonin e mesazhit në faqen e njoftimit.</p>
+  <p class="empty">{{ crate::t("Ende s'ke mesazhe. Për t'i shkruar një shitësi, prek butonin e mesazhit në faqen e njoftimit.")|safe }}</p>
   {%- else %}
   <ul class="inbox-list">
     {%- for entry in conversations %}
@@ -26,16 +27,16 @@
         {%- endif %}
         <span class="inbox-text">
           <span class="inbox-line">
-            <span class="inbox-name" translate="no">{{ entry.other_name }}{% if let Some(store) = entry.store %} <span class="inbox-store">{{ store }}</span>{% endif %}</span>
+            <span class="inbox-name" translate="no">{{ crate::i18n::name(entry.other_name) }}{% if let Some(store) = entry.store %} <span class="inbox-store">{{ store }}</span>{% endif %}</span>
             <span class="inbox-when">{{ entry.when() }}</span>
           </span>
           {%- if let Some(title) = entry.listing_title %}
           <span class="inbox-listing">{{ title }}</span>
           {%- endif %}
           <span class="inbox-line">
-            <span class="inbox-last">{% if let Some(author) = entry.last_author %}{{ author }}: {% else if entry.last_mine %}Ti: {% endif %}{{ entry.preview() }}</span>
+            <span class="inbox-last">{% if let Some(author) = entry.last_author %}{{ crate::i18n::name(author) }}: {% else if entry.last_mine %}{{ crate::t("Ti") }}: {% endif %}{{ entry.preview() }}</span>
             {%- if entry.unread > 0 %}
-            <span class="inbox-unread"><span class="visually-hidden">Të palexuara: </span>{{ entry.unread }}</span>
+            <span class="inbox-unread"><span class="visually-hidden">{{ crate::t("Të palexuara:") }} </span>{{ entry.unread }}</span>
             {%- endif %}
           </span>
         </span>

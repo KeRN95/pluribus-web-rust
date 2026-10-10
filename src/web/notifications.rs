@@ -16,7 +16,24 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use super::{Result, account::current_user, icons, render};
-use crate::{AppState, db, format};
+use crate::{
+    AppState, db, format,
+    i18n::{self, t},
+};
+
+/// The titles the site keeps, in Albanian, as the texts they were written by have them
+/// (db/price_drops.rs, db/expiry.rs, notices.rs, searches.rs, stores.rs), which an English
+/// reader's page words anew (i18n::reworded_by; their English is in mail.txt).
+const TITLES: [&str; 8] = [
+    "Çmimi ra: {}",
+    "Njoftimi skadoi: {}",
+    "Njoftimi skadon së shpejti: {}",
+    "{} të shkroi për „{}“",
+    "{} të shkroi në Pluribus",
+    "1 njoftim i ri: {}",
+    "{} njoftime të reja: {}",
+    "{} të fton në dyqan",
+];
 
 #[derive(Template)]
 #[template(path = "notifications.html")]
@@ -60,12 +77,26 @@ impl Row {
         };
         Self {
             icon,
-            title: notification.title,
-            body: notification.body.filter(|body| !body.trim().is_empty()),
+            title: shown_title(&notification.kind, &notification.title),
+            body: notification.body.filter(|body| !body.trim().is_empty()).map(|body| match notification.kind.as_str() {
+                // "Si „Poston njoftime“: …": the role's words are the site's own.
+                "STORE_INVITE" => i18n::reworded_by(&body, &["Si „{}“: {}"], |value| t(value)).into_owned(),
+                _ => body,
+            }),
             when: format::when(notification.created_at, now),
             href,
             unread: !notification.read,
         }
+    }
+}
+
+/// A notification's title, kept in Albanian, in the page's language: worded anew from the text it
+/// was written by (TITLES), the names the site gives people in it too; a promotion's, its
+/// product's name before the listing's ("Ngritje në krye: Golf 7").
+fn shown_title(kind: &str, title: &str) -> String {
+    match (kind, title.split_once(": ")) {
+        ("PROMOTED", Some((promotion, listing))) => format!("{}: {listing}", t(promotion)),
+        _ => i18n::reworded_by(title, &TITLES, |value| i18n::name(value)).into_owned(),
     }
 }
 

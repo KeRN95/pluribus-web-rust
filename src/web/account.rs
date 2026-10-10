@@ -29,6 +29,7 @@ use crate::{
     AppState,
     db::{self, CodeCheck, CodePurpose, SessionUser},
     format::Contact,
+    i18n::{Lang, t, t1},
     sender::{self, Channel},
 };
 
@@ -160,11 +161,12 @@ fn shown_codes() -> &'static Mutex<HashMap<Uuid, String>> {
     CODES.get_or_init(Default::default)
 }
 
-/// " në WhatsApp", " me email" or nothing: how the code page says the code went out.
+/// "në WhatsApp", "me email" or nothing: how the code page says the code went out, in the page's
+/// language (sign_in_code.html puts it in its sentence).
 fn sent_via(contact: &Contact) -> &'static str {
     match sender::senders().channel(contact) {
-        Channel::WhatsApp => " në WhatsApp",
-        Channel::Email => " me email",
+        Channel::WhatsApp => t("në WhatsApp"),
+        Channel::Email => t("me email"),
         Channel::Log => "",
     }
 }
@@ -210,21 +212,23 @@ pub fn display_name(typed: &str) -> Option<String> {
     (!name.is_empty()).then(|| name.chars().take(60).collect())
 }
 
-/// Why no code can go to this contact now, if one can't: one a minute and a few an hour.
+/// Why no code can go to this contact now, if one can't: one a minute and a few an hour. In the
+/// page's language, as its callers show it.
 pub async fn code_limit(state: &AppState, contact: &Contact, ip: Option<&str>) -> Result<Option<&'static str>> {
     let requests = db::code_requests(&state.db, contact.as_str(), ip).await?;
     if requests.seconds_since_last.is_some_and(|seconds| seconds < CODE_INTERVAL_SECONDS) {
-        return Ok(Some("Të dërguam një kod pak më parë. Prit një minutë para se të kërkosh një tjetër."));
+        return Ok(Some(t("Të dërguam një kod pak më parë. Prit një minutë para se të kërkosh një tjetër.")));
     }
     if requests.for_contact >= CODES_PER_CONTACT_HOUR || requests.from_ip >= CODES_PER_IP_HOUR {
-        return Ok(Some("Shumë kërkesa për kode. Provo përsëri pas një ore."));
+        return Ok(Some(t("Shumë kërkesa për kode. Provo përsëri pas një ore.")));
     }
     Ok(None)
 }
 
 /// Sends a code to the contact (sender.rs: e-mail, or WhatsApp for a phone) and goes to the page
 /// that asks for it. Which code is waiting stays in a cookie rather than the URL, so the contact
-/// never shows there. If the code can't go out, the message for the visitor instead.
+/// never shows there. If the code can't go out, the message for the visitor instead, in the page's
+/// language.
 pub async fn send_code_and_ask(
     state: &AppState,
     headers: &HeaderMap,
@@ -245,7 +249,7 @@ pub async fn send_code_and_ask(
     if let Err(error) = sender::senders().send(contact, &code).await {
         tracing::error!(%error, to = %contact.masked(), "the sign-in code couldn't be sent");
         db::delete_login_code(&state.db, id).await?;
-        return Ok(Err("Nuk arritëm ta dërgojmë kodin. Kontrollo numrin ose email-in dhe provo përsëri pas pak."));
+        return Ok(Err(t("Nuk arritëm ta dërgojmë kodin. Kontrollo numrin ose email-in dhe provo përsëri pas pak.")));
     }
     if codes_on_screen() {
         shown_codes().lock().unwrap().insert(id, code);
@@ -280,10 +284,10 @@ pub async fn request_code(
     };
     let too_fast = form.started.is_none_or(|started| now() - started < MIN_FORM_SECONDS);
     if !form.website.is_empty() || too_fast {
-        return again("Prit një çast dhe provo përsëri.");
+        return again(t("Prit një çast dhe provo përsëri."));
     }
     let Some(contact) = Contact::parse(&form.contact) else {
-        return again("Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i.");
+        return again(t("Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i."));
     };
     if let Some(limit) = code_limit(&state, &contact, ip.as_deref()).await? {
         return again(limit);
@@ -299,7 +303,7 @@ pub async fn request_code(
 #[template(path = "sign_in_code.html")]
 pub struct CodePage {
     sent_to: String,
-    /// " në WhatsApp", " me email", or nothing while the channel isn't set up.
+    /// "në WhatsApp", "me email", or nothing while the channel isn't set up (sent_via).
     sent_via: &'static str,
     error: Option<String>,
     /// The code can no longer be used: the page offers a new one instead of the form.
@@ -320,7 +324,7 @@ impl CodePage {
         Self {
             sent_to,
             sent_via: "",
-            error: Some("Kodi skadoi ose u provua shumë herë. Kërko një kod të ri.".to_string()),
+            error: Some(t("Kodi skadoi ose u provua shumë herë. Kërko një kod të ri.").to_string()),
             gone: true,
             publishes: false,
             reviewed: false,
@@ -387,7 +391,7 @@ pub async fn check_code(
                 return unprocessable(CodePage {
                     sent_to,
                     sent_via: "",
-                    error: Some("Kjo llogari është pezulluar.".to_string()),
+                    error: Some(t("Kjo llogari është pezulluar.").to_string()),
                     gone: true,
                     publishes: false,
                     reviewed: false,
@@ -401,6 +405,11 @@ pub async fn check_code(
             db::verify_contact(&state.db, account.id, phone.as_deref(), email.as_deref()).await?;
             let token: String = rand::rng().random::<[u8; 32]>().iter().map(|byte| format!("{byte:02x}")).collect();
             db::create_session(&state.db, &hash(&token), account.id, SESSION_DAYS).await?;
+            // A language chosen before signing in is the account's now, for its e-mails too
+            // (language.rs).
+            if let Some(lang) = cookie(&headers, super::language::LANG_COOKIE).and_then(|code| Lang::from_code(&code)) {
+                db::set_preferred_language(&state.db, account.id, lang.code()).await?;
+            }
             let session = cookie_header(&headers, SESSION_COOKIE, &token, i64::from(SESSION_DAYS) * 86_400);
             let login = cookie_header(&headers, LOGIN_COOKIE, "", 0);
             let published = match purpose.listing_id {
@@ -416,10 +425,11 @@ pub async fn check_code(
         CodeCheck::Wrong(left) => unprocessable(CodePage {
             sent_via: Contact::parse(&pending.contact).map_or("", |contact| sent_via(&contact)),
             sent_to,
-            error: Some(format!(
-                "Kodi nuk është i saktë. {}",
-                if left == 1 { "Të ka mbetur edhe një provë.".to_string() } else { format!("Të kanë mbetur {left} prova.") }
-            )),
+            error: Some(if left == 1 {
+                t("Kodi nuk është i saktë. Të ka mbetur edhe një provë.").to_string()
+            } else {
+                t1("Kodi nuk është i saktë. Të kanë mbetur {} prova.", left)
+            }),
             gone: false,
             publishes: pending.publishes,
             reviewed: pending.reviewed,

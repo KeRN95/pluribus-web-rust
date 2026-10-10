@@ -16,7 +16,10 @@ use axum::{
 use uuid::Uuid;
 
 use super::{Result, not_found, render};
-use crate::{AppState, db};
+use crate::{
+    AppState, db,
+    i18n::{t, t1},
+};
 
 /// What a link stops.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,12 +38,12 @@ impl What {
         }
     }
 
-    /// What goes on as before, once they stop.
+    /// What goes on as before, once they stop, in the page's language.
     fn stays(self) -> &'static str {
         match self {
-            Self::Messages => "Mesazhet i gjen si gjithmonë te „Mesazhet“.",
-            Self::Search(_) => "Kërkimi mbetet te „Kërkimet e ruajtura“.",
-            Self::Email => "Lajmërimet i gjen te faqja, te „Lajmërimet“.",
+            Self::Messages => t("Mesazhet i gjen si gjithmonë te „Mesazhet“."),
+            Self::Search(_) => t("Kërkimi mbetet te „Kërkimet e ruajtura“."),
+            Self::Email => t("Lajmërimet i gjen te faqja, te „Lajmërimet“."),
         }
     }
 }
@@ -67,17 +70,17 @@ struct UnsubscribePage {
     action: String,
 }
 
-/// The account behind the token and what the link stops, with how the page names it; None for a
-/// token or a search that isn't (or is no longer) theirs.
+/// The account behind the token and what the link stops, with how the page names it (in its
+/// language); None for a token or a search that isn't (or is no longer) theirs.
 async fn link(state: &AppState, token: &str, what: &str) -> Result<Option<(Uuid, What, String)>> {
     let (Some(user), Some(what)) = (db::notice_token_user(&state.db, token).await?, What::parse(what)) else {
         return Ok(None);
     };
     let about = match what {
-        What::Messages => "email-e për mesazhet që nuk i ke lexuar".to_string(),
-        What::Email => "lajmërimet me email nga Pluribus".to_string(),
+        What::Messages => t("email-e për mesazhet që nuk i ke lexuar").to_string(),
+        What::Email => t("lajmërimet me email nga Pluribus").to_string(),
         What::Search(id) => match db::saved_searches(&state.db, user).await?.into_iter().find(|search| search.id == id) {
-            Some(search) => format!("email-e për kërkimin „{}“", search.name),
+            Some(search) => t1("email-e për kërkimin „{}“", search.name),
             None => return Ok(None),
         },
     };

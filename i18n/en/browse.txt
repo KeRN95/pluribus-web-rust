@@ -1,0 +1,341 @@
+# Browsing (area A): the welcome page, the category and search pages with their filters, map and
+# orders, the map page, the listing cards (listing_card.html, on other areas' pages too), and the
+# search box's suggestions. The texts the scripts share with these pages are in js-browse.txt.
+
+# templates/home.html
+Çfarë po kërkon?
+= What are you looking for?
+
+Kërko
+= Search
+
+Kërko p.sh. Golf 7, apartament 2+1
+= Search, e.g. Golf 7, iPhone 13
+
+Sugjerime
+= Suggestions
+
+Shto njoftim
+= Post a listing
+
+Kategoritë
+= Categories
+
+Shikuar së fundmi
+= Recently viewed
+
+Pastro
+= Clear
+
+Më të klikuarat
+= Most viewed
+
+Njoftimet më të reja
+= Newest listings
+
+# templates/browse.html
+Kthehu
+= Back
+
+{}: ndrysho kategorinë
+= {}: change category
+
+Shfaqen edhe rezultatet për {}.
+= Also showing results for {}.
+
+Nënkategoritë
+= Subcategories
+
+Kategoritë e njoftimeve të gjetura
+= Categories of the listings found
+
+Kërko njoftime
+= Search listings
+
+Filtrat
+= Filters
+
+Asnjë filtër
+= No filters
+
+Harta
+= Map
+
+Kudo
+= Everywhere
+
+Vendndodhja ime
+= My location
+
+Qyteti
+= Town
+
+Gjithë Shqipëria
+= All of Albania
+
+Largësia
+= Distance
+
+Mbyll
+= Close
+
+Filtrat e zgjedhur
+= Selected filters
+
+Hiq filtrin {}
+= Remove filter: {}
+
+Pastro filtrat
+= Clear filters
+
+Mos e ruaj më
+= Remove from saved searches
+
+Kërkimi u ruajt
+= Search saved
+
+Ruaje dhe merr lajmërim kur dalin njoftime të reja
+= Save it and get notified when new listings come up
+
+Ruaj kërkimin
+= Save search
+
+Të veçuara
+= Featured
+
+Të promovuara · Si?
+= Promoted · How?
+
+Rendit
+= Sort
+
+Provo të heqësh ndonjë filtër nga lart.
+= Try removing a filter above.
+
+Kontrollo si i ke shkruar fjalët, ose provo më pak fjalë, a më të përgjithshme: „Golf“ gjen më shumë se „Golf 7 GTI i zi“.
+= Check how you’ve spelt the words, or try fewer or more general ones: “Golf” finds more than “Golf 7 GTI”.
+
+Zgjero largësinë në {} km
+= Widen to {} km
+
+Kërko në gjithë qytetin
+= Search the whole town
+
+Kërko në gjithë Shqipërinë
+= Search all of Albania
+
+Shto një njoftim „Kërkoj të blej“
+= Post a “Wanted” listing
+
+# templates/filters.html, filter_field.html, filter_type.html
+Afër meje
+= Near me
+
+Tani nga harta: {}.
+= Set on the map: {}.
+
+Zona
+= Area
+
+Të gjitha zonat
+= All areas
+
+Kategoria
+= Category
+
+Të gjitha
+= All
+
+Çmimi
+= Price
+
+nga
+= from
+
+deri
+= to
+
+Çmimi nga
+= Price from
+
+Çmimi deri
+= Price to
+
+Monedha
+= Currency
+
+Çmimi nga, në shkallë
+= Price from, on the slider
+
+Çmimi deri, në shkallë
+= Price to, on the slider
+
+Gjendja
+= Condition
+
+Më shumë filtra
+= More filters
+
+Shfaq rezultatet
+= Show results
+
+{} nga
+= {} from
+
+{} deri
+= {} to
+
+p.sh. 2006
+= e.g. 2006
+
+Çdo vit
+= Any year
+
+Lloji i njoftimit
+= Listing type
+
+# templates/map.html, map_radius.html, map_town.html
+Kërko në hartë
+= Search on the map
+
+Lëviz hartën derisa pika të jetë aty ku kërkon, zmadhoje ose zvogëloje për largësinë dhe shtyp „Vendos hartën“.
+= Move the map until the pin is where you’re looking, zoom in or out for the distance, and press “Search here”.
+
+Të gjitha kategoritë
+= All categories
+
+Shfaq hartën
+= Show the map
+
+Fshih hartën
+= Hide the map
+
+Vendos hartën
+= Search here
+
+Në hartë shfaqen {} njoftimet e para të listës.
+= The map shows the first {} listings in the list.
+
+Zmadho hartën për më afër, zvogëloje për më larg.
+= Zoom in for nearer, out for further.
+
+# templates/listing_grid.html, next_page.html, heart.html
+Nuk u gjet asnjë njoftim.
+= No listings found.
+
+Shfaq më shumë
+= Show more
+
+Ruaje
+= Save
+
+# templates/listing_card.html
+Fotoja e mëparshme
+= Previous photo
+
+Fotoja tjetër
+= Next photo
+
+Çmimi ishte
+= Price was
+
+Çmim i mirë
+= Good price
+
+{} shikime këtë javë
+= Views this week: {}
+
+Shikime këtë javë
+= Views this week
+
+# src/web/browse.rs
+Kartela të vogla
+= Small cards
+
+Kartela të mëdha
+= Big cards
+
+Listë
+= List
+
+Asnjë njoftim
+= No listings
+
+Shfaq {}
+= Show {}
+
+Email i verifikuar
+= Verified email
+
+Numër i verifikuar
+= Verified number
+
+# A seller's profile's description: their name, since when, how many listings.
+{} në Pluribus që nga {}: {}.
+= {} on Pluribus since {}: {}.
+
+„{}“ në {}
+= “{}” in {}
+
+Rezultatet për „{}“
+= Results for “{}”
+
+Njoftimet në {}
+= Listings in {}
+
+Të gjitha njoftimet
+= All listings
+
+# After the order's word, the category: "Newest listings in Cars" (browse.html). Also the
+# suggestions' "in Cars", "in Tiranë".
+në {}
+= in {}
+
+{}: {} në Pluribus, me foto, çmime dhe vendndodhje.
+= {}: {} on Pluribus, with photos, prices and locations.
+
+{}: {} në Pluribus.
+= {}: {} on Pluribus.
+
+# src/web/filters.rs: the orders, as their menu says them...
+Më të përshtatshmet
+= Most relevant
+
+Më të rejat
+= Newest
+
+Më të lirat
+= Lowest price
+
+Më të shtrenjtat
+= Highest price
+
+Më afër
+= Nearest
+
+# ...and as the heading of a category's listings words them, first in English: "Newest listings
+# in Cars" (browse.html).
+më të përshtatshme
+= Most relevant
+
+më të reja
+= Newest
+
+më të lira
+= Lowest-priced
+
+më të shtrenjta
+= Highest-priced
+
+më afër
+= Nearest
+
+Brenda {} km nga pika
+= Within {} km of the pin
+
+# A part's filter, the year of the buyer's vehicle (FITS_YEAR_LABEL, given to t as a const).
+Viti i automjetit
+= Vehicle year
+
+# The prices' and ranges' words the price slider says too ("deri {}", "Çdo çmim", "Pa kufi") are
+# in js-browse.txt, and "nga {}" in format.txt.

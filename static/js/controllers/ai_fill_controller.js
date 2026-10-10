@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { t } from "controllers/i18n.js";
 import { shrink } from "controllers/photos_controller.js";
 
 // "Plotëso pjesën tjetër me AI" on the posting form: the title, the description and the first
@@ -12,7 +13,9 @@ import { shrink } from "controllers/photos_controller.js";
 
 const PHOTOS = 4; // the server looks at no more
 const PHOTO_SIDE = 1024; // and makes them this small anyway: smaller ones go up quicker
-const FAILED = "AI nuk u përgjigj tani. Plotëso vetë fushat e tjera, ose provo pak më vonë.";
+// What it says when the AI couldn't be asked, as the server does (web/ai_fill.rs), in the page's
+// language.
+const failed = () => t("AI nuk u përgjigj tani. Plotëso vetë fushat e tjera, ose provo pak më vonë.");
 
 export default class extends Controller {
   static targets = ["button", "status"];
@@ -49,12 +52,12 @@ export default class extends Controller {
     const title = form.elements.title.value.trim();
     const description = form.elements.description.value.trim();
     if (title.length < 5 || description.length < 10) {
-      this.say("Shkruaj së pari titullin dhe përshkrimin: AI plotëson pjesën tjetër prej tyre.");
+      this.say(t("Shkruaj së pari titullin dhe përshkrimin: AI plotëson pjesën tjetër prej tyre."));
       (title.length < 5 ? form.elements.title : form.elements.description).focus();
       return;
     }
     this.busy(true);
-    this.say("AI po e lexon njoftimin…");
+    this.say(t("AI po e lexon njoftimin…"));
     try {
       const body = new FormData();
       body.append("title", title);
@@ -67,15 +70,15 @@ export default class extends Controller {
       const response = await fetch("/shto/ploteso", { method: "POST", body, headers: { Accept: "application/json" } });
       const answer = await response.json().catch(() => ({}));
       if (!response.ok) {
-        this.say(answer.message ?? FAILED);
+        this.say(answer.message ?? failed());
         return;
       }
       const filled = await this.apply(answer);
       this.say(filled
-        ? "AI plotësoi fushat me ngjyrë. Kontrolloji dhe ndrysho çfarë s'është e saktë."
-        : "AI nuk gjeti gjë për të plotësuar. Plotësoji vetë fushat.");
+        ? t("AI plotësoi fushat me ngjyrë. Kontrolloji dhe ndrysho çfarë s'është e saktë.")
+        : t("AI nuk gjeti gjë për të plotësuar. Plotësoji vetë fushat."));
     } catch {
-      this.say(FAILED);
+      this.say(failed());
     } finally {
       this.busy(false);
     }

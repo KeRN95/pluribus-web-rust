@@ -14,7 +14,7 @@ pub mod sender;
 pub mod views;
 pub mod web;
 
-pub use i18n::{t, tf};
+pub use i18n::{t, t1, t2, t3, tf};
 
 use std::sync::Arc;
 

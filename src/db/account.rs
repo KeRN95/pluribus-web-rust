@@ -88,6 +88,15 @@ pub async fn set_preferred_language(db: &PgPool, user_id: Uuid, code: &str) -> s
     Ok(())
 }
 
+/// The language of the active account an e-mail address signs in to, if one does: what is sent
+/// to that address is in it (an invitation into a store).
+pub async fn language_of_email(db: &PgPool, email: &str) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar("SELECT preferred_language::text FROM users WHERE email = $1::text::citext AND status = 'ACTIVE'")
+        .bind(email)
+        .fetch_optional(db)
+        .await
+}
+
 /// The account's token in the links that stop its e-mail notices without signing in
 /// (web/unsubscribe.rs): made at random the first time one goes out (migration 0039).
 pub async fn notice_token(db: &PgPool, user_id: Uuid) -> sqlx::Result<String> {

@@ -7,16 +7,17 @@
   <h1>{{ heading }}</h1>
   {%- if let Some(who) = signed_in_as %}
   {%- if cancel_url.is_some() %}
-  <p class="lead">Ndryshimet shfaqen menjëherë. Blerësit të kontaktojnë te <strong>{{ who }}</strong>.</p>
+  <p class="lead">{{ crate::t("Ndryshimet shfaqen menjëherë.") }} {{ crate::t("Blerësit të kontaktojnë te") }} <strong>{{ who }}</strong>.</p>
   {%- else %}
-  <p class="lead">Publikohet menjëherë. Blerësit të kontaktojnë te <strong>{{ who }}</strong>.</p>
+  <p class="lead">{{ crate::t("Publikohet menjëherë.") }} {{ crate::t("Blerësit të kontaktojnë te") }} <strong>{{ who }}</strong>.</p>
   {%- endif %}
   {%- else %}
   {#- Not signed in: the account comes with the listing, or for a contact an account has, the
-      code that puts it up (post.rs, create_listing). -#}
-  <p class="lead">S'ke llogari? S'ka problem: në fund shkruaj celularin ose email-in, dhe njoftimi publikohet menjëherë;
-    llogaria krijohet vetë. Nëse ke llogari me të, të dërgojmë një kod, dhe njoftimi publikohet sapo ta shkruash.
-    <a href="/llogaria">Ke llogari? Hyr</a></p>
+      code that puts it up (post.rs, create_listing). A text with an apostrophe goes out as it is
+      (|safe on the catalogue's own text, with no value in it), which escaping would make &#39;. -#}
+  <p class="lead">{{ crate::t("S'ke llogari? S'ka problem: në fund shkruaj celularin ose email-in, dhe njoftimi publikohet menjëherë; llogaria krijohet vetë.")|safe }}
+    {{ crate::t("Nëse ke llogari me të, të dërgojmë një kod, dhe njoftimi publikohet sapo ta shkruash.") }}
+    <a href="/llogaria">{{ crate::t("Ke llogari? Hyr") }}</a></p>
   {%- endif %}
 
   {#- The form, and on a wide screen beside it what helps a listing sell (.listing-form-layout in
@@ -36,10 +37,10 @@
     {#- What this browser kept of a listing begun and left (draft_controller.js), offered on an
         empty form: "Vazhdo" fills it in, "Fshije" lets it go. -#}
     <div class="notice draft-note" data-draft-target="note" role="status" hidden>
-      <p>Ke një njoftim të pambaruar, <strong data-draft-target="title"></strong>, të ruajtur <span data-draft-target="when"></span>. Fotot nuk ruhen.</p>
+      <p>{{ crate::t("Ke një njoftim të pambaruar,") }} <strong data-draft-target="title"></strong>, {{ crate::t("të ruajtur") }} <span data-draft-target="when"></span>. {{ crate::t("Fotot nuk ruhen.") }}</p>
       <div class="draft-actions">
-        <button type="button" class="button small" data-action="draft#restore">Vazhdo</button>
-        <button type="button" class="button secondary small" data-action="draft#discard">Fshije</button>
+        <button type="button" class="button small" data-action="draft#restore">{{ crate::t("Vazhdo") }}</button>
+        <button type="button" class="button secondary small" data-action="draft#discard">{{ crate::t("Fshije") }}</button>
       </div>
     </div>
     {%- endif %}
@@ -48,16 +49,16 @@
         number the listing then shows. Its empty choice is the poster, a choice and not a
         placeholder, so it keeps the text's colour (picker_controller.js). -#}
     <div class="field">
-      <label class="field-label" for="si">Posto si</label>
+      <label class="field-label" for="si">{{ crate::t("Posto si") }}</label>
       <div class="picker" data-controller="picker" data-picker-placeholder-value="false">
       <select id="si" name="si">
-        <option value="">Unë{% if let Some(who) = signed_in_as %} ({{ who }}){% endif %}</option>
+        <option value="">{{ crate::t("Unë") }}{% if let Some(who) = signed_in_as %} ({{ who }}){% endif %}</option>
         {%- for store in stores %}
         <option value="{{ store.slug }}"{% if store.slug == form.si %} selected{% endif %}>{{ store.display_name }}</option>
         {%- endfor %}
       </select>
       </div>
-      <p class="field-hint">Si dyqan, njoftimi del me emrin, logon dhe numrin e dyqanit.</p>
+      <p class="field-hint">{{ crate::t("Si dyqan, njoftimi del me emrin, logon dhe numrin e dyqanit.") }}</p>
       {%- if let Some(error) = self.error("si") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
     {%- endif %}
@@ -65,17 +66,17 @@
     {#- What the seller writes comes first, the title, the description and the photos, then the
         rest, which the AI can fill in from them. -#}
     <section class="form-section" aria-labelledby="section-what">
-      <h2 id="section-what">Çfarë shet</h2>
+      <h2 id="section-what">{{ crate::t("Çfarë shet") }}</h2>
       <div class="field">
-        <label class="field-label" for="title">Titulli</label>
-        <input id="title" name="title" value="{{ form.title }}" required minlength="5" maxlength="120" placeholder="p.sh. Golf 7, 2016, naftë"
+        <label class="field-label" for="title">{{ crate::t("Titulli") }}</label>
+        <input id="title" name="title" value="{{ form.title }}" required minlength="5" maxlength="120" placeholder="{{ crate::t("p.sh. Golf 7, 2016, naftë") }}"
                data-listing-form-target="title" data-action="change->listing-form#guessZone">
         {% if let Some(error) = self.error("title") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
 
       <div class="field">
-        <label class="field-label" for="description">Përshkrimi</label>
-        <textarea id="description" name="description" rows="6" required minlength="10" maxlength="5000" placeholder="Gjendja, çfarë ka, pse e shet, kur mund ta shohin…"
+        <label class="field-label" for="description">{{ crate::t("Përshkrimi") }}</label>
+        <textarea id="description" name="description" rows="6" required minlength="10" maxlength="5000" placeholder="{{ crate::t("Gjendja, çfarë ka, pse e shet, kur mund ta shohin…") }}"
                   data-listing-form-target="description" data-action="change->listing-form#guessZone">{{ form.description }}</textarea>
         {% if let Some(error) = self.error("description") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
@@ -88,13 +89,13 @@
       <div class="field" id="listing-photos" data-controller="photos" data-photos-max-value="{{ crate::media::MAX_PHOTOS }}"
            data-photos-again-value="{{ photos_again }}" data-photos-left="{{ self.photos_left() }}"
            data-action="dragover->photos#over dragleave->photos#leave drop->photos#dropped">
-        <span class="field-label" id="photos-label">Fotot</span>
+        <span class="field-label" id="photos-label">{{ crate::t("Fotot") }}</span>
         {%- if !photos.is_empty() %}
         <ul class="photo-list" data-photos-target="saved">
           {%- for photo in photos %}
           <li class="photo-item" data-photo-id="{{ photo.id }}">
             <img src="{{ photo.card_url }}" alt="" loading="lazy">
-            <label class="photo-remove"><input type="checkbox" name="remove_photo" value="{{ photo.id }}"> Hiq</label>
+            <label class="photo-remove"><input type="checkbox" name="remove_photo" value="{{ photo.id }}"> {{ crate::t("Hiq") }}</label>
           </li>
           {%- endfor %}
         </ul>
@@ -106,9 +107,9 @@
         <label class="photo-drop" data-photos-target="zone">
           <input type="file" name="photos" accept="image/*" multiple aria-labelledby="photos-label" data-photos-target="input" data-action="change->photos#chosen">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2.5"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8.5 5l1.5-2h4l1.5 2"/></svg>
-          <span><strong>Shto foto</strong> ose tërhiqi këtu</span>
+          <span><strong>{{ crate::t("Shto foto") }}</strong> {{ crate::t("ose tërhiqi këtu") }}</span>
         </label>
-        <p class="field-hint">Deri në {{ crate::media::MAX_PHOTOS }} foto. E para, kopertina, del në karta dhe në krye të njoftimit; i rendit me shigjetat ose duke i tërhequr.</p>
+        <p class="field-hint">{{ crate::t1("Deri në {} foto.", crate::media::MAX_PHOTOS) }} {{ crate::t("E para, kopertina, del në karta dhe në krye të njoftimit; i rendit me shigjetat ose duke i tërhequr.") }}</p>
         <p class="field-hint" data-photos-target="status" role="status"></p>
         {% if let Some(error) = self.error("photos") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
@@ -121,25 +122,25 @@
       <div class="ai-fill">
         <button type="button" class="button secondary ai-fill-button" data-ai-fill-target="button" data-action="ai-fill#fill">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.9 5 5.1 1.9-5.1 1.9-1.9 5-1.9-5L5 10.4l5.1-1.9z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>
-          Plotëso pjesën tjetër me AI
+          {{ crate::t("Plotëso pjesën tjetër me AI") }}
         </button>
         {%- if editing.is_some() %}
-        <p class="field-hint" data-ai-fill-target="status" role="status">Nga titulli, përshkrimi dhe fotot, AI plotëson detajet që mungojnë. Ato që ke vënë nuk i prek.</p>
+        <p class="field-hint" data-ai-fill-target="status" role="status">{{ crate::t("Nga titulli, përshkrimi dhe fotot, AI plotëson detajet që mungojnë. Ato që ke vënë nuk i prek.") }}</p>
         {%- else %}
-        <p class="field-hint" data-ai-fill-target="status" role="status">Nga titulli, përshkrimi dhe fotot, AI zgjedh kategorinë dhe plotëson detajet, çmimin dhe qytetin. Ti i kontrollon para se ta publikosh.</p>
+        <p class="field-hint" data-ai-fill-target="status" role="status">{{ crate::t("Nga titulli, përshkrimi dhe fotot, AI zgjedh kategorinë dhe plotëson detajet, çmimin dhe qytetin. Ti i kontrollon para se ta publikosh.") }}</p>
         {%- endif %}
       </div>
       {%- endif %}
     </section>
 
     <section class="form-section" aria-labelledby="section-details">
-      <h2 id="section-details">Kategoria dhe çmimi</h2>
+      <h2 id="section-details">{{ crate::t("Kategoria dhe çmimi") }}</h2>
       <div class="field">
-        <label class="field-label" for="category">Kategoria</label>
+        <label class="field-label" for="category">{{ crate::t("Kategoria") }}</label>
         {#- Chosen from a list in the page, not the phone's own picker (picker_controller.js). -#}
         <div class="picker" data-controller="picker" data-picker-tree-value="true">
         <select id="category" name="category" required data-listing-form-target="category" data-action="listing-form#categoryChanged">
-          <option value="">Zgjidh kategorinë</option>
+          <option value="">{{ crate::t("Zgjidh kategorinë") }}</option>
           {%- for group in category_groups %}
           {%- if let Some(label) = group.label %}<optgroup label="{{ label }}">{% endif %}
           {%- for category in group.options %}
@@ -154,7 +155,7 @@
 
       <div class="form-row">
         <div class="field" data-listing-form-target="typeField">
-          <label class="field-label" for="listing_type">Lloji</label>
+          <label class="field-label" for="listing_type">{{ crate::t("Lloji") }}</label>
           <div class="picker" data-controller="picker">
           <select id="listing_type" name="listing_type" data-listing-form-target="type">
             {% for choice in types %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
@@ -163,10 +164,10 @@
           {% if let Some(error) = self.error("listing_type") %}<p class="field-error">{{ error }}</p>{% endif %}
         </div>
         <div class="field" data-listing-form-target="conditionField">
-          <label class="field-label" for="condition">Gjendja</label>
+          <label class="field-label" for="condition">{{ crate::t("Gjendja") }}</label>
           <div class="picker" data-controller="picker">
           <select id="condition" name="condition">
-            <option value="">Zgjidh</option>
+            <option value="">{{ crate::t("Zgjidh") }}</option>
             {% for choice in conditions %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
           </select>
           </div>
@@ -180,7 +181,7 @@
 
       <div class="form-row price-row">
         <div class="field">
-          <label class="field-label" for="price_type">Çmimi</label>
+          <label class="field-label" for="price_type">{{ crate::t("Çmimi") }}</label>
           <div class="picker" data-controller="picker">
           <select id="price_type" name="price_type" data-listing-form-target="priceType" data-action="listing-form#priceTypeChanged">
             {% for choice in price_types %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
@@ -188,11 +189,11 @@
           </div>
         </div>
         <div class="field" data-listing-form-target="amountField">
-          <label class="field-label" for="price">Shuma</label>
+          <label class="field-label" for="price">{{ crate::t("Shuma") }}</label>
           <div class="amount">
-            <input id="price" name="price" value="{{ form.price }}" inputmode="decimal" placeholder="p.sh. 9 500">
+            <input id="price" name="price" value="{{ form.price }}" inputmode="decimal" placeholder="{{ crate::t("p.sh. 9 500") }}">
             <div class="picker" data-controller="picker">
-            <select name="currency" aria-label="Monedha" data-listing-form-target="currency">
+            <select name="currency" aria-label="{{ crate::t("Monedha") }}" data-listing-form-target="currency">
               {% for choice in currencies %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
             </select>
             </div>
@@ -209,13 +210,13 @@
         takes. A signed-in seller's name is their account's (settings.rs), which their listings
         show. -#}
     <section class="form-section" aria-labelledby="section-where">
-      <h2 id="section-where">{% if signed_in_as.is_none() %}Vendi dhe kontakti{% else %}Vendi{% endif %}</h2>
+      <h2 id="section-where">{% if signed_in_as.is_none() %}{{ crate::t("Vendi dhe kontakti") }}{% else %}{{ crate::t("Vendi") }}{% endif %}</h2>
       <div class="form-row">
         <div class="field">
-          <label class="field-label" for="city">Qyteti</label>
+          <label class="field-label" for="city">{{ crate::t("Qyteti") }}</label>
           <div class="picker" data-controller="picker">
           <select id="city" name="city" required data-listing-form-target="city" data-action="listing-form#zoneShown listing-form#guessZone">
-            <option value="">Zgjidh qytetin</option>
+            <option value="">{{ crate::t("Zgjidh qytetin") }}</option>
             {% for group in cities %}
             <optgroup label="{{ group.label }}">
               {% for city in group.choices %}<option value="{{ city.value }}"{% if city.selected %} selected{% endif %}>{{ city.label }}</option>{% endfor %}
@@ -230,10 +231,10 @@
             new listing, the one its title or description names, picked for the seller until they
             pick one (listing_form_controller.js, guessZone). -#}
         <div class="field" data-listing-form-target="zoneField"{% if !zone_shown %} hidden{% endif %}>
-          <label class="field-label" for="zone">Zona <span class="optional">(s'është e detyrueshme)</span></label>
+          <label class="field-label" for="zone">{{ crate::t("Zona") }} <span class="optional">{{ crate::t("(s'është e detyrueshme)")|safe }}</span></label>
           <div class="picker" data-controller="picker">
           <select id="zone" name="zone" data-depends-on="city" data-listing-form-target="zone">
-            <option value="">Zgjidh zonën</option>
+            <option value="">{{ crate::t("Zgjidh zonën") }}</option>
             {% for group in zones %}
             <optgroup label="{{ group.label }}" data-parent="{{ group.city }}">
               {% for zone in group.choices %}<option value="{{ zone.value }}"{% if zone.selected %} selected{% endif %}>{{ zone.label }}</option>{% endfor %}
@@ -250,35 +251,35 @@
           hundred metres and near the town chosen (map_pin_controller.js, post.rs). Without one,
           its town's point. Shown as the category is one of them. -#}
       <div class="field map-pin" data-controller="map-pin" data-map-pin-towns-value="{{ towns }}"{% if !map_shown %} hidden{% endif %}>
-        <span class="field-label">Vendi në hartë <span class="optional">(s'është i detyrueshëm)</span></span>
+        <span class="field-label">{{ crate::t("Vendi në hartë") }} <span class="optional">{{ crate::t("(s'është i detyrueshëm)")|safe }}</span></span>
         <input type="hidden" name="latitude" value="{{ form.latitude }}" data-map-pin-target="latitude">
         <input type="hidden" name="longitude" value="{{ form.longitude }}" data-map-pin-target="longitude">
         <div class="map-pin-canvas" data-map-pin-target="canvas" hidden></div>
         <div class="map-pin-actions">
           <button type="button" class="button secondary small" data-map-pin-target="open" data-action="map-pin#open">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PIN|safe }}</svg>
-            <span data-map-pin-target="openLabel">{% if form.latitude.is_empty() %}Vendose në hartë{% else %}Shiko në hartë{% endif %}</span>
+            <span data-map-pin-target="openLabel">{% if form.latitude.is_empty() %}{{ crate::t("Vendose në hartë") }}{% else %}{{ crate::t("Shiko në hartë") }}{% endif %}</span>
           </button>
-          <button type="button" class="link-button" data-map-pin-target="clear" data-action="map-pin#clear"{% if form.latitude.is_empty() %} hidden{% endif %}>Hiqe pikën</button>
+          <button type="button" class="link-button" data-map-pin-target="clear" data-action="map-pin#clear"{% if form.latitude.is_empty() %} hidden{% endif %}>{{ crate::t("Hiqe pikën") }}</button>
         </div>
-        <p class="field-hint" data-map-pin-target="status" role="status">{% if form.latitude.is_empty() %}Pa të, njoftimi del te qendra e qytetit.{% else %}Njoftimi del te pika që vendose, afërsisht.{% endif %}</p>
+        <p class="field-hint" data-map-pin-target="status" role="status">{% if form.latitude.is_empty() %}{{ crate::t("Pa të, njoftimi del te qendra e qytetit.") }}{% else %}{{ crate::t("Njoftimi del te pika që vendose, afërsisht.") }}{% endif %}</p>
         {% if let Some(error) = self.error("point") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
 
       {%- if signed_in_as.is_none() %}
       <div class="form-row">
         <div class="field">
-          <label class="field-label" for="contact">Celulari ose email-i</label>
-          <input id="contact" name="contact" value="{{ form.contact }}" required autocomplete="username" placeholder="p.sh. 069 123 4567">
+          <label class="field-label" for="contact">{{ crate::t("Celulari ose email-i") }}</label>
+          <input id="contact" name="contact" value="{{ form.contact }}" required autocomplete="username" placeholder="{{ crate::t("p.sh. 069 123 4567") }}">
           {% if let Some(error) = self.error("contact") %}<p class="field-error">{{ error }}</p>{% endif %}
         </div>
         <div class="field">
-          <label class="field-label" for="name">Emri <span class="optional">(s'është i detyrueshëm)</span></label>
+          <label class="field-label" for="name">{{ crate::t("Emri") }} <span class="optional">{{ crate::t("(s'është i detyrueshëm)")|safe }}</span></label>
           <input id="name" name="name" value="{{ form.name }}" maxlength="60" autocomplete="name">
           {% if let Some(error) = self.error("name") %}<p class="field-error">{{ error }}</p>{% endif %}
         </div>
       </div>
-      <p class="field-hint">Blerësit të kontaktojnë këtu; e shohin vetëm kur shtypin butonin e telefonit te njoftimi. Me të hyn më vonë, për ta ndryshuar njoftimin.</p>
+      <p class="field-hint">{{ crate::t("Blerësit të kontaktojnë këtu; e shohin vetëm kur shtypin butonin e telefonit te njoftimi. Me të hyn më vonë, për ta ndryshuar njoftimin.") }}</p>
       {%- endif %}
     </section>
 
@@ -289,19 +290,19 @@
     <input type="hidden" name="started" value="{{ started }}">
     <div class="form-actions">
       <button type="submit" class="button">{{ submit_label }}</button>
-      {% if let Some(url) = cancel_url %}<a class="button secondary" href="{{ url }}">Anulo</a>{% endif %}
+      {% if let Some(url) = cancel_url %}<a class="button secondary" href="{{ url }}">{{ crate::t("Anulo") }}</a>{% endif %}
     </div>
   </form>
   {%- if new_listing %}
   {#- What helps a listing sell, beside the form on a wide screen: the photos, the title, the price,
       and what happens after (60 days, Rifresko). -#}
   <aside class="listing-form-tips" aria-labelledby="tips-heading">
-    <h2 id="tips-heading">Që të shitet më shpejt</h2>
+    <h2 id="tips-heading">{{ crate::t("Që të shitet më shpejt") }}</h2>
     <ul>
-      <li><strong>Fotot.</strong> E para del në karta dhe në krye të njoftimit: zgjidh më të mirën. Në dritë dite, nga disa anë, me defektet që ka.</li>
-      <li><strong>Titulli.</strong> Çfarë është, me markën, modelin dhe vitin: „Golf 7, 2016, naftë“, jo „Shes makinë“.</li>
-      <li><strong>Çmimi.</strong> Një çmim i qartë sjell më shumë mesazhe se „me marrëveshje“. Për një makinë, forma të thotë çfarë kërkojnë të ngjashmet.</li>
-      <li><strong>Pas publikimit.</strong> Njoftimi qëndron 60 ditë, dhe e rifreskon me një klik te „Njoftimet e mia“.</li>
+      <li><strong>{{ crate::t("Fotot.") }}</strong> {{ crate::t("E para del në karta dhe në krye të njoftimit: zgjidh më të mirën. Në dritë dite, nga disa anë, me defektet që ka.") }}</li>
+      <li><strong>{{ crate::t("Titulli.") }}</strong> {{ crate::t("Çfarë është, me markën, modelin dhe vitin: „Golf 7, 2016, naftë“, jo „Shes makinë“.") }}</li>
+      <li><strong>{{ crate::t("Çmimi.") }}</strong> {{ crate::t("Një çmim i qartë sjell më shumë mesazhe se „me marrëveshje“. Për një makinë, forma të thotë çfarë kërkojnë të ngjashmet.") }}</li>
+      <li><strong>{{ crate::t("Pas publikimit.") }}</strong> {{ crate::t("Njoftimi qëndron 60 ditë, dhe e rifreskon me një klik te „Njoftimet e mia“.") }}</li>
     </ul>
   </aside>
   {%- endif %}
@@ -309,12 +310,12 @@
   {%- if new_listing %}
   {#- Where the seller hands their listing and contact over: the terms it goes up under, and how the
       site keeps what they give (pages.rs). -#}
-  <p class="account-note">Duke publikuar, pranon <a href="/kushtet">kushtet e përdorimit</a>. Si i mbajmë të dhënat e tua: <a href="/privatesia">Privatësia</a>.</p>
+  <p class="account-note">{{ crate::t("Duke publikuar, pranon") }} <a href="/kushtet">{{ crate::t("kushtet e përdorimit") }}</a>. {{ crate::t("Si i mbajmë të dhënat e tua:") }} <a href="/privatesia">{{ crate::t("Privatësia") }}</a>.</p>
   {%- endif %}
 
   {%- if signed_in_as.is_some() %}
   <form class="account-note" action="/dil" method="post">
-    <a href="/njoftimet-e-mia">Njoftimet e mia</a> · Nuk je ti? <button type="submit" class="link-button">Dil</button>
+    <a href="/njoftimet-e-mia">{{ crate::t("Njoftimet e mia") }}</a> · {{ crate::t("Nuk je ti?") }} <button type="submit" class="link-button">{{ crate::t("Dil") }}</button>
   </form>
   {%- endif %}
 </section>

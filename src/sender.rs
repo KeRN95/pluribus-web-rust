@@ -6,7 +6,10 @@
 //! (web/searches.rs) and the warnings of listings about to expire or expired (expiry.rs): by
 //! e-mail, or by WhatsApp with a utility template of each one's own (WHATSAPP_NOTICE_TEMPLATE,
 //! WHATSAPP_SEARCH_TEMPLATE, WHATSAPP_EXPIRY_TEMPLATE); a phone number gets none of a kind
-//! whose template isn't set up.
+//! whose template isn't set up. An e-mail is in its recipient's language (i18n.rs): the code's
+//! in the language of the page that asked for it, the rest in the one kept on their account
+//! (the callers' `i18n::in_lang`); a WhatsApp template's texts stay Albanian, as Meta approved
+//! them.
 
 use std::{sync::OnceLock, time::Duration};
 
@@ -20,7 +23,10 @@ use lettre::{
 };
 use serde_json::{Value, json};
 
-use crate::format::Contact;
+use crate::{
+    format::Contact,
+    i18n::{t, t1, t2},
+};
 
 /// How a code reaches its contact.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,38 +51,35 @@ pub struct Notice {
 }
 
 impl Notice {
-    /// "Ana të shkroi për „Volkswagen Golf 7“": the e-mail's subject, and the notification's title.
+    /// "Ana të shkroi për „Volkswagen Golf 7“": the e-mail's subject, and the notification's title
+    /// (kept in Albanian, web/notifications.rs words it for its reader).
     pub fn title(&self) -> String {
         match &self.listing {
-            Some(listing) => format!("{} të shkroi për „{listing}“", self.writer),
-            None => format!("{} të shkroi në Pluribus", self.writer),
+            Some(listing) => t2("{} të shkroi për „{}“", &self.writer, listing),
+            None => t1("{} të shkroi në Pluribus", &self.writer),
         }
     }
 
     /// The e-mail's text: who wrote and about what, the latest message (and how many more), the
     /// link to answer, and how often these come and how to stop them.
     pub fn text(&self) -> String {
-        let about = match &self.listing {
-            Some(listing) => format!(" për „{listing}“"),
-            None => String::new(),
+        let wrote = match &self.listing {
+            Some(listing) => t2("{} të shkroi në Pluribus për „{}“:", &self.writer, listing),
+            None => t1("{} të shkroi në Pluribus:", &self.writer),
         };
         let more = match self.unread {
             ..=1 => String::new(),
-            2 => "\n(dhe 1 mesazh tjetër i palexuar)\n".to_string(),
-            unread => format!("\n(dhe {} mesazhe të tjera të palexuara)\n", unread - 1),
+            2 => format!("\n{}\n", t("(dhe 1 mesazh tjetër i palexuar)")),
+            unread => format!("\n{}\n", t1("(dhe {} mesazhe të tjera të palexuara)", unread - 1)),
         };
         let stop = match &self.unsubscribe {
-            Some(link) => format!("hap {link}, ose "),
-            None => String::new(),
+            Some(link) => t1(
+                "Për një bisedë nuk të vjen më shumë se një email në orë. Për të mos i marrë më, hap {}, ose hiq shenjën te „Mesazhet që nuk i ke lexuar“ te „Cilësimet“.",
+                link,
+            ),
+            None => t("Për një bisedë nuk të vjen më shumë se një email në orë. Për të mos i marrë më, hiq shenjën te „Mesazhet që nuk i ke lexuar“ te „Cilësimet“.").to_string(),
         };
-        format!(
-            "{} të shkroi në Pluribus{about}:\n\n    {}\n{more}\nPërgjigju këtu: {}\n\n\
-             Për një bisedë nuk të vjen më shumë se një email në orë. Për të mos i marrë më, {stop}\
-             hiq shenjën te „Mesazhet që nuk i ke lexuar“ te „Cilësimet“.\n",
-            self.writer,
-            self.excerpt.replace('\n', "\n    "),
-            self.url,
-        )
+        format!("{wrote}\n\n    {}\n{more}\n{}\n\n{stop}\n", self.excerpt.replace('\n', "\n    "), t1("Përgjigju këtu: {}", &self.url))
     }
 }
 
@@ -300,14 +303,8 @@ impl Email {
     }
 
     pub fn message(&self, to: &str, code: &str) -> Result<Message, String> {
-        self.text(
-            to,
-            format!("{code} është kodi yt për Pluribus"),
-            format!(
-                "Kodi yt për të hyrë në Pluribus:\n\n    {code}\n\nVlen për 10 minuta. \
-                 Nëse nuk e kërkove ti, mund ta injorosh këtë email.\n"
-            ),
-        )
+        let (subject, body) = code_email(code);
+        self.text(to, subject, body)
     }
 
     /// A notice of messages someone hasn't read (Notice): its title the subject.
@@ -355,6 +352,14 @@ impl Email {
     pub async fn send_alert(&self, to: &str, alert: &Alert) -> Result<(), String> {
         self.transport.send(self.alert_message(to, alert)?).await.map(|_| ()).map_err(|error| format!("SMTP: {error}"))
     }
+}
+
+/// A sign-in code's e-mail, in the language of the page that asked for it: its subject and text.
+fn code_email(code: &str) -> (String, String) {
+    (
+        t1("{} është kodi yt për Pluribus", code),
+        format!("{}\n\n    {code}\n\n{}\n", t("Kodi yt për të hyrë në Pluribus:"), t("Vlen për 10 minuta. Nëse nuk e kërkove ti, mund ta injorosh këtë email.")),
+    )
 }
 
 /// The channels set up in the environment.
@@ -556,6 +561,25 @@ mod tests {
         assert!(notice(2).text().contains("(dhe 1 mesazh tjetër i palexuar)"));
         let no_listing = Notice { listing: None, ..notice(1) };
         assert_eq!(no_listing.title(), "Besa të shkroi në Pluribus");
+    }
+
+    #[test]
+    fn a_notice_and_a_code_speak_english_to_whoever_chose_it() {
+        use crate::i18n::{LANG, Lang};
+        LANG.sync_scope(Lang::En, || {
+            assert_eq!(notice(1).title(), "Besa wrote to you about “Volkswagen Golf 1.6, 2016”");
+            let text = Notice { unsubscribe: Some("https://pluribus.example/ndalo/abc123/mesazhet".into()), ..notice(3) }.text();
+            assert!(text.starts_with("Besa wrote to you on Pluribus about “Volkswagen Golf 1.6, 2016”:\n\n    A është ende në shitje?\n"), "{text}");
+            assert!(text.contains("\n(and 2 more unread messages)\n"), "{text}");
+            assert!(text.contains("\nReply here: https://pluribus.example/mesazhet/0192f0c1-0000-7000-8000-000000000001\n"), "{text}");
+            assert!(text.contains("To stop them, open https://pluribus.example/ndalo/abc123/mesazhet, or untick"), "{text}");
+            let (subject, body) = code_email("482910");
+            assert_eq!(subject, "482910 is your Pluribus code");
+            assert!(body.starts_with("Your code to sign in to Pluribus:\n\n    482910\n\nIt works for 10 minutes."), "{body}");
+        });
+        let (subject, body) = code_email("482910");
+        assert_eq!(subject, "482910 është kodi yt për Pluribus");
+        assert_eq!(body, "Kodi yt për të hyrë në Pluribus:\n\n    482910\n\nVlen për 10 minuta. Nëse nuk e kërkove ti, mund ta injorosh këtë email.\n");
     }
 
     #[test]

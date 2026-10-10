@@ -1,0 +1,92 @@
+# The posting form's scripts (static/js/controllers/): the photos' list, the draft kept, the map's
+# pin and the AI's fill. Those the server says too are here once, where English pages carry them
+# for the scripts as well.
+
+# Said by the server too: listing_form.html ("Hiq", the map's), web/ai_fill.rs (WRITE_FIRST,
+# UNAVAILABLE)
+
+Hiq
+= Remove
+
+Vendose në hartë
+= Put it on the map
+
+Pa të, njoftimi del te qendra e qytetit.
+= Without it, the listing shows at the town centre.
+
+Shkruaj së pari titullin dhe përshkrimin: AI plotëson pjesën tjetër prej tyre.
+= Write the title and description first: the AI fills in the rest from them.
+
+AI nuk u përgjigj tani. Plotëso vetë fushat e tjera, ose provo pak më vonë.
+= The AI didn’t answer just now. Fill in the other fields yourself, or try again a little later.
+
+# photos_controller.js
+
+Mund të shtosh edhe 1 foto: u morën të parat.
+= You can add 1 more photo: the first one was added.
+
+Mund të shtosh edhe {} foto: u morën të parat.
+= You can add {} more photos: the first ones were added.
+
+Njoftimi ka sa foto lejohen. Hiq ndonjë për të shtuar të tjera.
+= The listing already has the most photos allowed. Remove one to add others.
+
+Po përgatiten fotot…
+= Getting the photos ready…
+
+Kjo është tani kopertina.
+= This is now the cover.
+
+1 foto gati për t'u ngarkuar.
+= 1 photo ready to upload.
+
+{} foto gati për t'u ngarkuar.
+= {} photos ready to upload.
+
+Kopertinë
+= Cover
+
+Më përpara
+= Move earlier
+
+Më pas
+= Move later
+
+{} (foto {})
+= {} (photo {})
+
+Hiq foton {}
+= Remove photo {}
+
+# draft_controller.js (its when() has an English branch of its own)
+
+„{}“
+= “{}”
+
+pa titull
+= untitled
+
+# map_pin_controller.js
+
+Harta nuk u ngarkua. Provo përsëri.
+= The map didn’t load. Try again.
+
+Njoftimi del te pika që vendose, afërsisht. Lëviz hartën për ta ndryshuar.
+= The listing shows at the point you set, roughly. Move the map to change it.
+
+Lëviz hartën derisa kunja të jetë te vendi. Ruhet afërsisht, rreth 100 m.
+= Move the map until the pin is on the spot. It’s kept roughly, to about 100 m.
+
+Njoftimi del këtu, afërsisht, rreth 100 m.
+= The listing shows here, to about 100 m.
+
+# ai_fill_controller.js
+
+AI po e lexon njoftimin…
+= The AI is reading your listing…
+
+AI plotësoi fushat me ngjyrë. Kontrolloji dhe ndrysho çfarë s'është e saktë.
+= The AI filled in the tinted fields. Check them and change anything that isn’t right.
+
+AI nuk gjeti gjë për të plotësuar. Plotësoji vetë fushat.
+= The AI found nothing to fill in. Fill in the fields yourself.

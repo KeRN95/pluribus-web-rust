@@ -1,6 +1,6 @@
 //! A listing's page, its phone number reveal, and its views.
 
-use std::cmp::Ordering;
+use std::{borrow::Cow, cmp::Ordering};
 
 use askama::Template;
 use axum::{
@@ -26,6 +26,7 @@ use crate::{
     AppState,
     db::{self, ListingCard, ListingDetail, MapPoint, Photo, SellerContact},
     format,
+    i18n::{t, t_value, t1, t2},
     media::{CARD_SIDE, FULL_SIDE},
 };
 
@@ -123,7 +124,7 @@ impl ListingCard {
     /// them): "Rezervuar", or "Shitur" ("Dhënë me qira" for a rental).
     pub fn status_label(&self) -> Option<&'static str> {
         match self.status.as_str() {
-            "RESERVED" => Some("Rezervuar"),
+            "RESERVED" => Some(t("Rezervuar")),
             "SOLD" => Some(format::sold(&self.listing_type)),
             _ => None,
         }
@@ -195,7 +196,7 @@ impl ListingCard {
 
     /// "Përdorues që nga tetor 2026", under the seller's name over a big card's photo.
     pub fn seller_since_text(&self) -> String {
-        format!("Përdorues që nga {}", format::month_year(self.seller_since))
+        t1("Përdorues që nga {}", format::month_year(self.seller_since))
     }
 
     /// When it was posted, or last brought up again: "Sot", "para 3 ditësh", the date from a week
@@ -243,11 +244,12 @@ impl ListingCard {
     /// What follows the city on the details line: the distance from the map pin, when there is
     /// one, then the category's card properties. Without the city, one more property goes in
     /// first, so the line still says something new: "Apple · 128 GB" rather than "Vlorë · 128 GB".
+    /// The properties as the database words them, in the language now (i18n::t_value).
     pub fn details_line(&self) -> String {
         let distance = self.distance_m.map(format::distance);
-        let spare = self.spare_detail.clone().filter(|_| self.city_known);
-        let parts: Vec<String> =
-            distance.into_iter().chain(spare).chain(self.details.iter().cloned()).collect();
+        let spare = self.spare_detail.as_deref().filter(|_| self.city_known).map(|spare| t_value(spare).into_owned());
+        let details = self.details.iter().map(|detail| t_value(detail).into_owned());
+        let parts: Vec<String> = distance.into_iter().chain(spare).chain(details).collect();
         parts.join(" · ")
     }
 }
@@ -298,10 +300,11 @@ impl ListingDetail {
             return None;
         }
         let per_area = (amount / area).round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero);
-        let from = if self.price_type == "FROM" { "nga " } else { "" };
+        // A starting price says so before each: "nga 925 €/m²".
+        let from = |text: String| if self.price_type == "FROM" { t1("nga {}", text) } else { text };
         Some(AreaPrice {
-            per_area: format!("{from}{}/m²", format::money(per_area, &self.currency)),
-            price: format!("{from}{}", format::money(amount, &self.currency)),
+            per_area: from(format!("{}/m²", format::money(per_area, &self.currency))),
+            price: from(format::money(amount, &self.currency)),
             area: format!("{}\u{a0}m²", format::number(area)),
             rounded_to: if self.currency == "ALL" { "lek" } else { "euro" },
             zone: self.zone_price(per_area),
@@ -323,20 +326,20 @@ impl ListingDetail {
         let difference = per_area - average;
         let margin = Decimal::from(ZONE_MARGIN_EUR);
         let (tone, verdict) = match difference * rate {
-            eur if eur <= -margin => ("price-below", "Nën mesataren"),
-            eur if eur >= margin => ("price-above", "Mbi mesataren"),
-            _ if difference.is_zero() => ("price-near", "Njësoj si mesatarja"),
-            _ => ("price-near", "Afër mesatares"),
+            eur if eur <= -margin => ("price-below", t("Nën mesataren")),
+            eur if eur >= margin => ("price-above", t("Mbi mesataren")),
+            _ if difference.is_zero() => ("price-near", t("Njësoj si mesatarja")),
+            _ => ("price-near", t("Afër mesatares")),
         };
         let gap = format::money(difference.abs(), &self.currency);
         let difference = match difference.cmp(&Decimal::ZERO) {
-            Ordering::Less => Some(format!("{gap}/m² më lirë")),
-            Ordering::Greater => Some(format!("{gap}/m² më shtrenjtë")),
+            Ordering::Less => Some(t1("{}/m² më lirë", gap)),
+            Ordering::Greater => Some(t1("{}/m² më shtrenjtë", gap)),
             Ordering::Equal => None,
         };
         Some(ZonePrice {
             zone: zone.clone(),
-            category: self.category_name.clone(),
+            category: t(&self.category_name).to_string(),
             average: format!("{}/m²", format::money(average, &self.currency)),
             listings: format::listing_count(listings, i64::MAX),
             tone,
@@ -373,10 +376,10 @@ impl ListingDetail {
 
     /// "Në Pluribus që nga tetor 2026 · 12 njoftime".
     pub fn seller_summary(&self) -> String {
-        format!(
+        t2(
             "Në Pluribus që nga {} · {}",
             format::month_year(self.seller_since),
-            format::listing_count(self.seller_listings, i64::MAX)
+            format::listing_count(self.seller_listings, i64::MAX),
         )
     }
 
@@ -384,7 +387,7 @@ impl ListingDetail {
     /// summary's words shorter: "Që nga tetor 2026", or for a business "Biznes · që nga mars 2026".
     pub fn seller_since_line(&self) -> String {
         let since = format::month_year(self.seller_since);
-        if self.seller_is_business() { format!("Biznes · që nga {since}") } else { format!("Që nga {since}") }
+        if self.seller_is_business() { t1("Biznes · që nga {}", since) } else { t1("Që nga {}", since) }
     }
 
     /// Under the seller's name, how quickly they answer and when they were last on the site, when
@@ -399,12 +402,12 @@ impl ListingDetail {
     }
 
     /// When it was published, as the pill over the photo says it ("Sot", "Dje", "para 3 ditësh",
-    /// the date; format::when), with what screen readers hear before it: "Publikuar " for the
-    /// words, "Publikuar më " for a date.
+    /// the date; format::when), with what screen readers hear before it: "Publikuar" for the
+    /// words, "Publikuar më" for a date, which the page puts a space after.
     pub fn published_display(&self) -> Option<(&'static str, String)> {
         let published = self.published_at?;
         let when = format::when(published, time::OffsetDateTime::now_utc());
-        let prefix = if when.starts_with(|c: char| c.is_ascii_digit()) { "Publikuar më " } else { "Publikuar " };
+        let prefix = if when.starts_with(|c: char| c.is_ascii_digit()) { t("Publikuar më") } else { t("Publikuar") };
         Some((prefix, when))
     }
 
@@ -419,12 +422,12 @@ impl ListingDetail {
 
     pub fn status_label(&self) -> Option<&'static str> {
         match self.status.as_str() {
-            "RESERVED" => Some("Rezervuar"),
+            "RESERVED" => Some(t("Rezervuar")),
             "SOLD" => Some(format::sold(&self.listing_type)),
-            "PAUSED" => Some("Çaktivizuar"),
-            "EXPIRED" => Some("Skaduar"),
-            "SUSPENDED" => Some("Në shqyrtim"),
-            "REJECTED" => Some("Hequr"),
+            "PAUSED" => Some(t("Çaktivizuar")),
+            "EXPIRED" => Some(t("Skaduar")),
+            "SUSPENDED" => Some(t("Në shqyrtim")),
+            "REJECTED" => Some(t("Hequr")),
             _ => None,
         }
     }
@@ -708,18 +711,18 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     safety::without_hidden(&mut related, &hidden);
     let hidden_note = match listing.status.as_str() {
         "PENDING_REVIEW" if own || just_posted => {
-            Some("Njoftimi yt pret miratimin e një moderatori: askush tjetër nuk e sheh ende. Zakonisht brenda pak orësh.".to_string())
+            Some(t("Njoftimi yt pret miratimin e një moderatori: askush tjetër nuk e sheh ende. Zakonisht brenda pak orësh.").to_string())
         }
-        "PENDING_REVIEW" => Some("Ky njoftim pret miratimin e moderatorëve.".to_string()),
-        "SUSPENDED" => Some("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë.".to_string()),
+        "PENDING_REVIEW" => Some(t("Ky njoftim pret miratimin e moderatorëve.").to_string()),
+        "SUSPENDED" => Some(t("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë.").to_string()),
         "REJECTED" => Some(match listing.rejection_reason.as_deref().filter(|_| own) {
-            Some(reason) => format!("Moderatorët e hoqën këtë njoftim nga faqja: {reason}."),
-            None => "Moderatorët e hoqën këtë njoftim nga faqja.".to_string(),
+            Some(reason) => t1("Moderatorët e hoqën këtë njoftim nga faqja: {}.", reason),
+            None => t("Moderatorët e hoqën këtë njoftim nga faqja.").to_string(),
         }),
-        "PAUSED" if own => Some("E ke çaktivizuar këtë njoftim: askush tjetër nuk e sheh. „Aktivizo“ e kthen në faqe aty ku ishte.".to_string()),
-        "PAUSED" => Some("Shitësi e ka çaktivizuar këtë njoftim: askush tjetër nuk e sheh.".to_string()),
-        "EXPIRED" if own => Some("Ky njoftim skadoi: askush tjetër nuk e sheh. „Rifresko“ e kthen në faqe për 60 ditë të tjera.".to_string()),
-        "EXPIRED" => Some("Ky njoftim skadoi: askush tjetër nuk e sheh.".to_string()),
+        "PAUSED" if own => Some(t("E ke çaktivizuar këtë njoftim: askush tjetër nuk e sheh. „Aktivizo“ e kthen në faqe aty ku ishte.").to_string()),
+        "PAUSED" => Some(t("Shitësi e ka çaktivizuar këtë njoftim: askush tjetër nuk e sheh.").to_string()),
+        "EXPIRED" if own => Some(t("Ky njoftim skadoi: askush tjetër nuk e sheh. „Rifresko“ e kthen në faqe për 60 ditë të tjera.").to_string()),
+        "EXPIRED" => Some(t("Ky njoftim skadoi: askush tjetër nuk e sheh.").to_string()),
         _ => None,
     };
     // A car's title says its make, model and year: its details leave them out.
@@ -731,6 +734,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             named: look.is_none_or(|look| look.reads == Reads::Named),
             multi: attribute.multi,
             key: attribute.key,
+            place: false,
             label: attribute.label.clone(),
             values: attribute.shown.clone(),
         }
@@ -755,10 +759,18 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         .filter(|attribute| !(car_page && CAR_FACTS.contains(&attribute.code.as_str())))
         .map(detail_of)
         .collect();
-    // A property's zone in its town comes first among its details, lit as its cards say it too.
+    // A property's zone in its town comes first among its details, lit as its cards say it too:
+    // "Zona" (the page says it in its language), and the zone's name, as it is.
     if let Some(zone) = &listing.zone {
-        let zone =
-            Detail { label: "Zona".to_string(), values: vec![zone.clone()], icon: Some(icons::PIN), named: false, multi: false, key: true };
+        let zone = Detail {
+            label: "Zona".to_string(),
+            values: vec![zone.clone()],
+            icon: Some(icons::PIN),
+            named: false,
+            multi: false,
+            key: true,
+            place: true,
+        };
         details.insert(0, zone);
     }
     let (details, options): (Vec<Detail>, Vec<Detail>) =
@@ -832,7 +844,8 @@ pub struct AreaPrice {
 
 /// A property's price per square metre against its zone's average (zone_area_prices).
 pub struct ZonePrice {
-    /// The zone's name, "Blloku", and the listing's category's, "Apartamente".
+    /// The zone's name, "Blloku", and the listing's category's, "Apartamente", in the page's
+    /// language.
     pub zone: String,
     pub category: String,
     /// The average, in the listing's currency, rounded as the price per square metre is:
@@ -863,13 +876,22 @@ pub struct Detail {
     /// One of the category's key facts, which its cards show too (show_in_card; a property's
     /// zone as well): its icon lit among the details, in a small round pill of its own.
     pub key: bool,
+    /// Its value is a place's name (a property's zone), which stays as it is in every language.
+    pub place: bool,
 }
 
 impl Detail {
     /// Whether its name goes before `value`: where it's named, unless the value says it, as
     /// "6 GB RAM" does RAM, or is it, as a box ticked is ("Pa aksident", db::listing_attributes).
+    /// Both as the database words them: the page says them in its language (crate::t, shown).
     pub fn named_before(&self, value: &str) -> bool {
         self.named && value != self.label && !value.split_whitespace().any(|word| word.eq_ignore_ascii_case(&self.label))
+    }
+
+    /// `value` as the page shows it, in the language now: a choice's label, "Jo", a number and its
+    /// unit, a date (i18n::t_value); a place's name as it is.
+    pub fn shown<'a>(&self, value: &'a str) -> Cow<'a, str> {
+        if self.place { Cow::Borrowed(value) } else { t_value(value) }
     }
 }
 
@@ -885,16 +907,16 @@ impl Reveal {
     /// The button's name, for screen readers and as a tooltip: it shows only an icon.
     pub fn label(&self) -> &'static str {
         match self {
-            Reveal::Phone => "Shfaq numrin",
-            Reveal::Email => "Shfaq email-in",
+            Reveal::Phone => t("Shfaq numrin"),
+            Reveal::Email => t("Shfaq email-in"),
         }
     }
 
     /// The copy button's name, beside the number or address once shown.
     pub fn copy_label(&self) -> &'static str {
         match self {
-            Reveal::Phone => "Kopjo numrin",
-            Reveal::Email => "Kopjo email-in",
+            Reveal::Phone => t("Kopjo numrin"),
+            Reveal::Email => t("Kopjo email-in"),
         }
     }
 }
@@ -914,14 +936,15 @@ struct PhoneStream {
 
 /// The address that opens a WhatsApp chat with `phone` (E.164), its first message typed in
 /// ("Përshëndetje! Ju shkruaj për njoftimin „…“ në Pluribus: <its address>"), so that a seller
-/// with many listings knows which one; the buyer can change it before sending. None for an
-/// Albanian landline (+355 but not 6x, the mobiles), which has no WhatsApp; a number abroad may.
+/// with many listings knows which one; the buyer can change it before sending. In the buyer's
+/// language: they write it. None for an Albanian landline (+355 but not 6x, the mobiles), which
+/// has no WhatsApp; a number abroad may.
 pub fn whatsapp_url(phone: &str, title: &str, url: &str) -> Option<String> {
     let digits = phone.strip_prefix('+')?;
     if digits.starts_with("355") && !digits[3..].starts_with('6') {
         return None;
     }
-    let text = format!("Përshëndetje! Ju shkruaj për njoftimin „{title}“ në Pluribus: {url}");
+    let text = t2("Përshëndetje! Ju shkruaj për njoftimin „{}“ në Pluribus: {}", title, url);
     Some(format!("https://wa.me/{digits}?text={}", percent_encoded(&text)))
 }
 

@@ -19,6 +19,7 @@ use crate::{
     AppState,
     db::{self, City, ListingFilter},
     format,
+    i18n::{t, t1},
 };
 
 /// The most finished searches offered, the categories the first finds most in, the makes, models
@@ -35,7 +36,8 @@ const PLACE_TOWNS: i64 = 3;
 /// its search, since its filter says where; so does a search that names the town (named.rs).
 pub const PLACE_WORDS: [&str; 8] = ["ne", "te", "tek", "nga", "per", "prane", "afer", "rreth"];
 
-/// A row of suggestions: what it searches for, and after it, quieter, where.
+/// A row of suggestions: what it searches for, and after it, quieter, where; what it says in the
+/// page's language, but the words searched.
 pub struct Suggestion {
     pub label: String,
     /// "në Makina", or empty.
@@ -141,27 +143,27 @@ async fn suggest(db: &PgPool, typed: &str) -> Result<Vec<Suggestion>> {
             }
             suggestions.push(Suggestion {
                 label: first.clone(),
-                context: format!("në {}", category.name),
+                context: t1("në {}", t(&category.name)),
                 url: url(&format!("/c/{}", category.slug), [("q".to_string(), first.clone())]),
             });
         }
     }
     suggestions.extend(options.into_iter().map(|option| Suggestion {
         label: option.name,
-        context: format!("në {}", option.category_name),
+        context: t1("në {}", t(&option.category_name)),
         url: url(&format!("/c/{}", option.category_slug), option.filters),
     }));
     // "apartamente në tir": apartamente, in Tirana; "në tir": all of Tirana's listings.
     let wanted = without_place_word(before);
     suggestions.extend(towns.into_iter().map(|town| match wanted.is_empty() {
         true => Suggestion {
-            label: format!("Njoftimet në {}", town.name),
+            label: t1("Njoftimet në {}", &town.name),
             context: String::new(),
             url: url("/search", [("city".to_string(), town.slug.clone())]),
         },
         false => Suggestion {
             label: wanted.to_string(),
-            context: format!("në {}", town.name),
+            context: t1("në {}", &town.name),
             url: url("/search", [("q".to_string(), wanted.to_string()), ("city".to_string(), town.slug.clone())]),
         },
     }));
@@ -184,7 +186,7 @@ async fn places_for(db: &PgPool, words: &str) -> Result<Vec<Suggestion>> {
         .filter_map(|(id, _)| cities.iter().find(|city| city.id == id))
         .map(|town| Suggestion {
             label: words.to_string(),
-            context: format!("në {}", town.name),
+            context: t1("në {}", &town.name),
             url: url("/search", [("q".to_string(), words.to_string()), ("city".to_string(), town.slug.clone())]),
         })
         .collect())

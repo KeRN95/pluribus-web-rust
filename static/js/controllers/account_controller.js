@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { t, tf } from "controllers/i18n.js";
 import { signedIn } from "controllers/signed_in.js";
 
 // The account's round button at the top bar's right end (base.html): a dot while a notification
@@ -25,7 +26,8 @@ export default class extends Controller {
 
   show(own) {
     const on = own > 0 && !document.querySelector(".notification-list");
-    const label = on ? `Llogaria: ${own === 1 ? "1 lajmërim" : `${own} lajmërime`} për njoftimet e tua` : "Llogaria";
+    let label = t("Llogaria");
+    if (on) label = own === 1 ? t("Llogaria: 1 lajmërim për njoftimet e tua") : tf("Llogaria: {} lajmërime për njoftimet e tua", own);
     this.element.classList.toggle("has-news", on);
     this.element.setAttribute("aria-label", label);
     this.element.title = label;

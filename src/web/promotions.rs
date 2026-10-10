@@ -12,15 +12,18 @@ use axum::{
 use serde::Deserialize;
 
 use super::{Result, render, seo::{self, PageMeta}};
-use crate::{AppState, db, format};
+use crate::{
+    AppState, db, format,
+    i18n::{t, t1},
+};
 
-/// What a kind of promotion does, as the pages say it.
+/// What a kind of promotion does, as the pages say it, in their language.
 pub fn does(promotion_type: &str) -> &'static str {
     match promotion_type {
-        "FEATURED" => "Del te „Të veçuara“, rreshti mbi njoftimet e kategorisë së tij dhe të kërkimeve ku përputhet, me radhë me të tjerët.",
-        "HIGHLIGHT" => "Karta e tij dallohet me një sfond të verdhë të lehtë, kudo që shfaqet.",
-        "BUMP" => "Ngjitet menjëherë në krye të njoftimeve më të reja, një herë.",
-        "CATEGORY_TOP" => "Ngjitet në krye të njoftimeve më të reja çdo ditë, sa zgjat.",
+        "FEATURED" => t("Del te „Të veçuara“, rreshti mbi njoftimet e kategorisë së tij dhe të kërkimeve ku përputhet, me radhë me të tjerët."),
+        "HIGHLIGHT" => t("Karta e tij dallohet me një sfond të verdhë të lehtë, kudo që shfaqet."),
+        "BUMP" => t("Ngjitet menjëherë në krye të njoftimeve më të reja, një herë."),
+        "CATEGORY_TOP" => t("Ngjitet në krye të njoftimeve më të reja çdo ditë, sa zgjat."),
         _ => "",
     }
 }
@@ -62,8 +65,8 @@ impl PromotePage {
     /// The e-mail's subject, ready for a mailto link: the listing's number in it, when known.
     pub fn subject(&self) -> String {
         let subject = match self.number {
-            Some(number) => format!("Promovim për njoftimin {number}"),
-            None => "Promovim".to_string(),
+            Some(number) => t1("Promovim për njoftimin {}", number),
+            None => t("Promovim").to_string(),
         };
         form_urlencoded::byte_serialize(subject.as_bytes()).collect::<String>().replace('+', "%20")
     }
@@ -78,10 +81,12 @@ pub struct ForListing {
 pub async fn page(State(state): State<AppState>, headers: HeaderMap, Query(query): Query<ForListing>) -> Result<Response> {
     let products = db::promotion_products(&state.db).await?;
     let origin = seo::origin(&headers);
+    // The title for the previews (og:title) in Albanian, as the apps that fetch them see it; the
+    // description, the page's own, in its language.
     let meta = PageMeta::new(
         &origin,
         "Promovo një njoftim",
-        "Si shihet më shumë një njoftim në Pluribus: në rreshtin „Të veçuara“, në krye të më të rejave, ose me një kartë që dallohet.",
+        t("Si shihet më shumë një njoftim në Pluribus: në rreshtin „Të veçuara“, në krye të më të rejave, ose me një kartë që dallohet."),
         seo::canonical(&origin, "/promovo", None),
     );
     let number = query.njoftimi.and_then(|number| number.trim().parse::<i64>().ok()).filter(|number| *number > 0);

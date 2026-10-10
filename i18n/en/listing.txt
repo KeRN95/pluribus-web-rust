@@ -1,0 +1,510 @@
+# A listing's page (listing.html and what it includes: the photos, the details, the price and its
+# bubbles, the loan calculator, the seller's card, the contact bar and the number it reveals, the
+# seller's own buttons, the notes after posting), reporting a listing (report.html, safety.rs), and
+# a seller's or a store's public page (profile.html). Texts that listings.rs, car_prices.rs and
+# safety.rs put on these pages, or on the cards (a card's status, its seller's line).
+
+# templates/listing.html
+
+Njoftimi yt u publikua.
+= Your listing is live.
+
+Ndaje, që ta shohin më shumë njerëz.
+= Share it so more people see it.
+
+Për ta ndryshuar ose fshirë më vonë,
+= To edit or delete it later,
+
+hyr
+= sign in
+
+me numrin ose email-in që shkruajte.
+= with the number or email you entered.
+
+Kategoria e njoftimit
+= Listing category
+
+Kthehu
+= Back
+
+Njoftimet e tjera
+= Other listings
+
+Lista e njoftimeve
+= Back to the list
+
+Njoftimi i mëparshëm
+= Previous listing
+
+Njoftimi tjetër
+= Next listing
+
+Fotot e njoftimit
+= Listing photos
+
+foto {} nga {}
+= photo {} of {}
+
+Foto e mëparshme
+= Previous photo
+
+Foto tjetër
+= Next photo
+
+Të gjitha fotot
+= All photos
+
+Foto {} nga {}
+= Photo {} of {}
+
+Fotot e mëparshme
+= Previous photos
+
+Fotot e tjera
+= More photos
+
+# How many times the page was seen, the eye's tooltip: one apart, for English.
+1 shikime
+= 1 view
+
+{} shikime
+= {} views
+
+Shikime
+= Views
+
+Numri i njoftimit
+= Listing number
+
+Llogarit kredinë
+= Calculate loan
+
+Llogaritësi i kredisë
+= Loan calculator
+
+E ke bllokuar këtë shitës: njoftimet që ka vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit.
+= You’ve blocked this seller: their listings don’t show up on your listing pages, and you can’t message each other.
+
+E zhbllokon te
+= You can unblock them in
+
+Cilësimet
+= Settings
+
+Detajet
+= Details
+
+# A property's zone, first among its details (listings.rs, through crate::t(detail.label)).
+Zona
+= Area
+
+Vendndodhja
+= Location
+
+Lokacioni
+= Location
+
+Njoftime të ngjashme
+= Similar listings
+
+Mesazh për shitësin
+= Message to the seller
+
+Mbyll
+= Close
+
+# templates/description.html
+
+Përshkrimi
+= Description
+
+Shfaq të gjithë përshkrimin
+= Show the full description
+
+# templates/seller_card.html (the check by the name says what browse.rs's verified_label does,
+# in the language now)
+
+Shitësi
+= Seller
+
+# templates/contact_bar.html, phone_stream.html, listings.rs (Reveal)
+
+Kontakti
+= Contact
+
+Shfaq numrin
+= Show number
+
+Shfaq email-in
+= Show email
+
+Shkruaji shitësit
+= Message the seller
+
+Kopjo numrin
+= Copy number
+
+Kopjo email-in
+= Copy email
+
+Shkruaj në WhatsApp
+= Message on WhatsApp
+
+# The first message a WhatsApp chat with the seller starts with (listings.rs, whatsapp_url): the
+# visitor's own, in their language.
+Përshëndetje! Ju shkruaj për njoftimin „{}“ në Pluribus: {}
+= Hello! I’m writing about your listing “{}” on Pluribus: {}
+
+# templates/listing_actions.html
+
+Rifresko
+= Renew
+
+Ndrysho
+= Edit
+
+Rezervo
+= Reserve
+
+Hiq rezervimin
+= Unreserve
+
+Çaktivizo
+= Pause
+
+Aktivizo
+= Reactivate
+
+Ta fshijmë këtë njoftim? Nuk mund ta kthesh më.
+= Delete this listing? You can’t undo this.
+
+Fshi
+= Delete
+
+Shpërndaje
+= Share
+
+Raporto
+= Report
+
+# templates/loan_calculator.html
+
+Vitet
+= Years
+
+Interesi vjetor (%)
+= Annual interest (%)
+
+Paradhënia
+= Down payment
+
+Kredia
+= Loan
+
+Interesi
+= Interest
+
+Gjithsej
+= Total
+
+Kësti mujor
+= Monthly payment
+
+Paradhënia është sa kërkojnë zakonisht bankat për një makinë të përdorur. Llogaritje orientuese: kushtet e sakta i jep banka.
+= The down payment is what banks usually ask for a used car. A rough estimate: the bank sets the exact terms.
+
+# templates/area_price.html, listings.rs (area_price, zone_price): a square metre's price
+
+Si llogaritet
+= How it’s worked out
+
+Çmimi
+= Price
+
+Sipërfaqja
+= Area
+
+Për m²
+= Per m²
+
+Mesatarja e zonës
+= Local average
+
+Çmimi pjesëtuar me sipërfaqen, rrumbullakuar në {}.
+= The price divided by the area, rounded to the nearest {}.
+
+Mesatarja: {} në shitje në {} ({}), pa çmimet më të ulëta e më të larta.
+= Average: {} for sale in {} ({}), leaving out the lowest and highest prices.
+
+Nën mesataren
+= Below average
+
+Mbi mesataren
+= Above average
+
+Njësoj si mesatarja
+= Same as the average
+
+Afër mesatares
+= Close to average
+
+{}/m² më lirë
+= {}/m² cheaper
+
+{}/m² më shtrenjtë
+= {}/m² more expensive
+
+# templates/car_price.html, car_prices.rs: a car's price against cars like it (and the posting
+# form's hint, which price_hint_controller.js shows)
+
+Si krahasohet
+= How it compares
+
+Mesatarja
+= Average
+
+Shumica kërkojnë
+= Most ask
+
+Nga {} {} në shitje, pa makinat për pjesë.
+= Based on {} {} for sale, leaving out cars for parts.
+
+Kilometrazhi, gjendja dhe pajisjet e ndryshojnë çmimin.
+= Mileage, condition and equipment affect the price.
+
+Çmim i mirë
+= Good price
+
+Rreth mesatares
+= About average
+
+{} në shitje: shumica kërkojnë {}, mesatarja {}.
+= {} for sale: most ask {}, average {}.
+
+Te faqja e makinës, çmimi yt del „{}“.
+= On the car’s page, your price shows as “{}”.
+
+Çmimi yt është shumë nën mesataren: a është i saktë, dhe në monedhën e duhur?
+= Your price is far below average: is it right, and in the right currency?
+
+# templates/price_drop.html: before the price it dropped from (for screen readers)
+
+Çmimi ishte
+= Price was
+
+# templates/promotion_note.html
+
+Promovoje
+= Promote it
+
+që ta shohin më shumë.
+= so more people see it.
+
+deri më {}
+= until {}
+
+Jep një promovim
+= Give a promotion
+
+# templates/share_note.html
+
+Ndaje
+= Share
+
+Njoftimet e mia
+= My listings
+
+# listings.rs: a listing's status (on its page, and a card's over its photo), when it went up,
+# its seller's line, and why it isn't on the site
+
+Rezervuar
+= Reserved
+
+Çaktivizuar
+= Paused
+
+Skaduar
+= Expired
+
+Në shqyrtim
+= Under review
+
+Hequr
+= Removed
+
+Publikuar më
+= Published on
+
+Publikuar
+= Published
+
+Përdorues që nga {}
+= Member since {}
+
+Në Pluribus që nga {} · {}
+= On Pluribus since {} · {}
+
+Biznes · që nga {}
+= Business · since {}
+
+Që nga {}
+= Since {}
+
+Njoftimi yt pret miratimin e një moderatori: askush tjetër nuk e sheh ende. Zakonisht brenda pak orësh.
+= Your listing is waiting for a moderator’s approval: nobody else can see it yet. Usually within a few hours.
+
+Ky njoftim pret miratimin e moderatorëve.
+= This listing is waiting for the moderators’ approval.
+
+Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë.
+= This listing isn’t shown on the site: several people reported it, and the moderators will review it.
+
+Moderatorët e hoqën këtë njoftim nga faqja: {}.
+= The moderators removed this listing from the site: {}.
+
+Moderatorët e hoqën këtë njoftim nga faqja.
+= The moderators removed this listing from the site.
+
+E ke çaktivizuar këtë njoftim: askush tjetër nuk e sheh. „Aktivizo“ e kthen në faqe aty ku ishte.
+= You’ve paused this listing: nobody else can see it. “Reactivate” puts it back on the site where it was.
+
+Shitësi e ka çaktivizuar këtë njoftim: askush tjetër nuk e sheh.
+= The seller has paused this listing: nobody else can see it.
+
+Ky njoftim skadoi: askush tjetër nuk e sheh. „Rifresko“ e kthen në faqe për 60 ditë të tjera.
+= This listing has expired: nobody else can see it. “Renew” puts it back on the site for another 60 days.
+
+Ky njoftim skadoi: askush tjetër nuk e sheh.
+= This listing has expired: nobody else can see it.
+
+# templates/report.html
+
+Raporto njoftimin
+= Report listing
+
+Hyr në llogari që ta raportosh. Kur disa llogari raportojnë të njëjtin njoftim, ai fshihet nga faqja derisa ta shohin moderatorët, prandaj pa llogari nuk mund të raportohet.
+= Sign in to report it. When several accounts report the same listing, it’s hidden from the site until the moderators look at it, so it can’t be reported without an account.
+
+Hyr
+= Sign in
+
+Faleminderit! Moderatorët do ta shohin raportimin tënd.
+= Thank you! The moderators will look at your report.
+
+E ke bllokuar edhe shitësin: njoftimet që ka vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit.
+= You’ve blocked the seller too: their listings don’t show up on your listing pages, and you can’t message each other.
+
+Kthehu te njoftimi
+= Back to the listing
+
+Nëse s'do ta shohësh më këtë shitës, bllokoje: njoftimet që ka vënë nuk do të të dalin më te faqet e njoftimeve, dhe nuk do t'i shkruani dot njëri-tjetrit. E zhbllokon kur të duash te „Cilësimet“.
+= If you don’t want to see this seller any more, block them: their listings won’t show up on your listing pages, and you won’t be able to message each other. You can unblock them whenever you like in “Settings”.
+
+Blloko shitësin
+= Block seller
+
+Çfarë nuk shkon me të?
+= What’s wrong with it?
+
+Shpjegim
+= Explanation
+
+(sipas dëshirës)
+= (optional)
+
+Dërgo raportimin
+= Send report
+
+# The reasons the form offers (safety::REASONS, through crate::t: the test can't see them), each
+# with what it covers. The code each sends stays as it is.
+
+Mashtrim
+= Scam
+
+Kërkon para përpara, ose çmimi duket shumë i mirë për të qenë i vërtetë.
+= Asks for money up front, or the price looks too good to be true.
+
+Njoftim i rremë
+= Fake listing
+
+Sendi nuk ekziston, ose fotot janë marrë diku tjetër.
+= The item doesn’t exist, or the photos come from somewhere else.
+
+I ndaluar ose fyes
+= Prohibited or offensive
+
+Diçka që nuk lejohet të shitet, ose përmbajtje fyese.
+= Something that isn’t allowed to be sold, or offensive content.
+
+Spam ose i përsëritur
+= Spam or duplicate
+
+I njëjti njoftim disa herë, ose reklamë.
+= The same listing several times, or advertising.
+
+Nuk është më në dispozicion
+= No longer available
+
+Është shitur ose është dhënë me qira.
+= It’s been sold or rented out.
+
+Të dhëna të gabuara
+= Wrong details
+
+Kategoria, çmimi ose vendi nuk janë të sakta.
+= The category, price or place is wrong.
+
+Tjetër
+= Other
+
+Shkruaj më poshtë çfarë nuk shkon.
+= Write below what’s wrong.
+
+# safety.rs: what the form says to put right
+
+Zgjidh çfarë nuk shkon me njoftimin.
+= Choose what’s wrong with the listing.
+
+Shkruaj shkurt çfarë nuk shkon me njoftimin.
+= Write briefly what’s wrong with the listing.
+
+Shpjegimi mund të ketë deri në 1 000 shkronja.
+= The explanation can be up to 1 000 characters.
+
+Ke dërguar shumë raportime sot. Provo përsëri nesër.
+= You’ve sent too many reports today. Try again tomorrow.
+
+# templates/profile.html
+
+Biznes
+= Business
+
+Në Pluribus që nga {}
+= On Pluribus since {}
+
+Njerëzit
+= People
+
+Ndrysho dyqanin
+= Edit store
+
+Për dyqanin
+= About the store
+
+Adresa
+= Address
+
+Orari
+= Hours
+
+Kërko te njoftimet e {}
+= Search {}’s listings
+
+Kërko
+= Search
+
+{} për „{}“
+= {} for “{}”
+
+Hiq kërkimin
+= Clear search

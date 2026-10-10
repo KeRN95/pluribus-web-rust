@@ -798,6 +798,13 @@ a.notification-line:hover .notification-title { text-decoration: underline; text
 .language-switch { display: contents; }
 .language-switch button { padding: .65rem .5rem; border: 0; background: none; color: var(--text); font: inherit; cursor: pointer; }
 .language-switch button:hover { text-decoration: underline; }
+
+/* English offered at the top of the page (web/language.rs): a quiet band above the header, its
+   question and the two answers on a line where they fit. */
+.language-offer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem 1rem; padding: .6rem 16px; background: var(--surface-muted); border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+.language-offer p { margin: 0; color: var(--text); }
+.language-offer .button { min-height: 2.25rem; padding: 0 1rem; }
+.language-stay { padding: .5rem; border: 0; background: none; color: var(--muted); font: inherit; cursor: pointer; text-decoration: underline; }
 .site-footer p { margin: 0; }
 
 /* The pages about the site: a column of text as wide as a line reads well, the sections'

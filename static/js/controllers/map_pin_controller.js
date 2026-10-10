@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { t } from "controllers/i18n.js";
 import { loadLeaflet, tiles } from "controllers/leaflet.js";
 
 // Where a property or a car is, more exactly than its town's point, on the listing form: the field
@@ -56,7 +57,7 @@ export default class extends Controller {
     try {
       L = await loadLeaflet();
     } catch {
-      this.statusTarget.textContent = "Harta nuk u ngarkua. Provo përsëri.";
+      this.statusTarget.textContent = t("Harta nuk u ngarkua. Provo përsëri.");
       this.canvasTarget.hidden = true;
       this.openTarget.hidden = false;
       return;
@@ -82,8 +83,8 @@ export default class extends Controller {
       this.place();
     });
     this.statusTarget.textContent = point
-      ? "Njoftimi del te pika që vendose, afërsisht. Lëviz hartën për ta ndryshuar."
-      : "Lëviz hartën derisa kunja të jetë te vendi. Ruhet afërsisht, rreth 100 m.";
+      ? t("Njoftimi del te pika që vendose, afërsisht. Lëviz hartën për ta ndryshuar.")
+      : t("Lëviz hartën derisa kunja të jetë te vendi. Ruhet afërsisht, rreth 100 m.");
     this.clearTarget.hidden = false;
   }
 
@@ -91,7 +92,7 @@ export default class extends Controller {
     const { lat, lng } = this.map.getCenter();
     this.latitudeTarget.value = lat.toFixed(5);
     this.longitudeTarget.value = lng.toFixed(5);
-    this.statusTarget.textContent = "Njoftimi del këtu, afërsisht, rreth 100 m.";
+    this.statusTarget.textContent = t("Njoftimi del këtu, afërsisht, rreth 100 m.");
   }
 
   clear() {
@@ -102,8 +103,8 @@ export default class extends Controller {
     this.canvasTarget.replaceChildren();
     this.canvasTarget.hidden = true;
     this.openTarget.hidden = false;
-    this.openLabelTarget.textContent = "Vendose në hartë";
+    this.openLabelTarget.textContent = t("Vendose në hartë");
     this.clearTarget.hidden = true;
-    this.statusTarget.textContent = "Pa të, njoftimi del te qendra e qytetit.";
+    this.statusTarget.textContent = t("Pa të, njoftimi del te qendra e qytetit.");
   }
 }

@@ -13,11 +13,11 @@
   {#- Expired, or expiring within a week ("Skadon pas 3 ditësh" in its tooltip): "Rifresko" keeps
       it up 60 days more (post.rs, renew_listing). -#}
   <form method="post" action="/listing/{{ listing.public_no }}/rifresko">
-    <button type="submit" class="button secondary"{% if let Some(soon) = listing.expires_soon() %} title="{{ soon }}"{% endif %}><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::RENEW|safe }}</svg>Rifresko</button>
+    <button type="submit" class="button secondary"{% if let Some(soon) = listing.expires_soon() %} title="{{ soon }}"{% endif %}><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::RENEW|safe }}</svg>{{ crate::t("Rifresko") }}</button>
   </form>
   {%- endif %}
   {%- if up || listing.status == "PAUSED" %}
-  <a class="button secondary" href="/listing/{{ listing.public_no }}/ndrysho"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PENCIL|safe }}</svg>Ndrysho</a>
+  <a class="button secondary" href="/listing/{{ listing.public_no }}/ndrysho"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PENCIL|safe }}</svg>{{ crate::t("Ndrysho") }}</a>
   {%- endif %}
   {%- if up && listing.sellable() %}
   <form method="post" action="/listing/{{ listing.public_no }}/shitur">
@@ -25,32 +25,32 @@
   </form>
   {%- if listing.status == "ACTIVE" %}
   <form method="post" action="/listing/{{ listing.public_no }}/rezervo">
-    <button type="submit" class="button secondary"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::RESERVE|safe }}</svg>Rezervo</button>
+    <button type="submit" class="button secondary"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::RESERVE|safe }}</svg>{{ crate::t("Rezervo") }}</button>
   </form>
   {%- else %}
   <form method="post" action="/listing/{{ listing.public_no }}/zhrezervo">
-    <button type="submit" class="button secondary"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::RESERVE|safe }}</svg>Hiq rezervimin</button>
+    <button type="submit" class="button secondary"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::RESERVE|safe }}</svg>{{ crate::t("Hiq rezervimin") }}</button>
   </form>
   {%- endif %}
   {%- endif %}
   {%- if up %}
   <form method="post" action="/listing/{{ listing.public_no }}/caktivizo">
-    <button type="submit" class="button secondary"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PAUSE|safe }}</svg>Çaktivizo</button>
+    <button type="submit" class="button secondary"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PAUSE|safe }}</svg>{{ crate::t("Çaktivizo") }}</button>
   </form>
   {%- else if listing.status == "PAUSED" || listing.status == "SOLD" %}
   <form method="post" action="/listing/{{ listing.public_no }}/aktivizo">
-    <button type="submit" class="button secondary"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::RESUME|safe }}</svg>Aktivizo</button>
+    <button type="submit" class="button secondary"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::RESUME|safe }}</svg>{{ crate::t("Aktivizo") }}</button>
   </form>
   {%- endif %}
   <form method="post" action="/listing/{{ listing.public_no }}/fshi"
-        data-turbo-confirm="Ta fshijmë këtë njoftim? Nuk mund ta kthesh më.">
-    <button type="submit" class="button secondary danger"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::TRASH|safe }}</svg>Fshi</button>
+        data-turbo-confirm="{{ crate::t("Ta fshijmë këtë njoftim? Nuk mund ta kthesh më.") }}">
+    <button type="submit" class="button secondary danger"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::TRASH|safe }}</svg>{{ crate::t("Fshi") }}</button>
   </form>
   {%- endif %}
   <div data-controller="share" data-share-url-value="{{ listing.url() }}" data-share-title-value="{{ listing.title }}">
     {#- A link in a circle, like the copy button beside the number: the phone's share sheet, or
         where there is none, the link copied, a check for a moment (share_controller.js). -#}
-    <button type="button" class="button secondary icon-circle share-button" data-share-target="button" data-action="share#share" aria-label="Shpërndaje" title="Shpërndaje">
+    <button type="button" class="button secondary icon-circle share-button" data-share-target="button" data-action="share#share" aria-label="{{ crate::t("Shpërndaje") }}" title="{{ crate::t("Shpërndaje") }}">
       <svg class="icon-link" data-icon="link" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="rotate(-45 12 12)"><rect x="2.5" y="8.5" width="11" height="7" rx="3.5"/><rect x="10.5" y="8.5" width="11" height="7" rx="3.5"/></g></svg>
       <svg class="icon-copied" data-icon="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
     </button>
@@ -59,7 +59,7 @@
   {#- Reporting the listing (report.html): a flag in a circle beside the share, named for screen
       readers and in a tooltip. Not fetched ahead under the pointer: the report page remembers
       where to come back to. -#}
-  <a class="button secondary icon-circle report-button" href="/listing/{{ listing.public_no }}/raporto" data-turbo-prefetch="false" aria-label="Raporto" title="Raporto">
+  <a class="button secondary icon-circle report-button" href="/listing/{{ listing.public_no }}/raporto" data-turbo-prefetch="false" aria-label="{{ crate::t("Raporto") }}" title="{{ crate::t("Raporto") }}">
     <svg data-icon="flag" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::FLAG|safe }}</svg>
   </a>
   {%- endif %}

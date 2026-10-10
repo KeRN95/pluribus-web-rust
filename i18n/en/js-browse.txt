@@ -1,0 +1,61 @@
+# Browsing's scripts (area A): the filters, the price slider, the maps and "Afër meje", the
+# search box's last searches, the hearts' news and the view menu. Some the pages say too, which
+# these entries serve as well (noted).
+
+# static/js/controllers/filters_controller.js, map_controller.js
+Po kërkoj vendndodhjen…
+= Finding your location…
+
+# static/js/controllers/map_controller.js
+Harta nuk u ngarkua. Provo përsëri.
+= The map didn’t load. Try again.
+
+# static/js/controllers/locate.js
+Ky shfletues nuk e jep vendndodhjen. Zgjidh qytetin.
+= This browser doesn’t share your location. Choose a town.
+
+Vendndodhja nuk u gjet. Lejoje te shfletuesi, ose zgjidh qytetin.
+= Your location wasn’t found. Allow it in your browser, or choose a town.
+
+# static/js/controllers/price_range_controller.js; the prices' label as filters.rs words it
+# (range_label, price_label, price_text) too.
+Lekë
+= lek
+
+nga {}
+= from {}
+
+deri {}
+= up to {}
+
+Çdo çmim
+= Any price
+
+Pa kufi
+= No limit
+
+# static/js/controllers/suggest_controller.js
+Pastro kërkimet e fundit
+= Clear recent searches
+
+# static/js/controllers/heart_controller.js: the heart's news, to screen readers and as its
+# tooltip ("Saved: 2 with a lower price, 1 search with new listings").
+{} me çmim më të ulët
+= {} with a lower price
+
+{} kërkime me njoftime të reja
+= {} searches with new listings
+
+# English alone asks for this one, the singular.
+1 kërkim me njoftime të reja
+= 1 search with new listings
+
+Të ruajturat: {}
+= Saved: {}
+
+Të ruajturat
+= Saved
+
+# static/js/controllers/cards_controller.js; the view menu's button and legend (browse.html) too.
+Pamja
+= View

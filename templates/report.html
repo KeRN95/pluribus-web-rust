@@ -1,57 +1,59 @@
 {% extends "base.html" %}
 
-{% block title %}Raporto njoftimin | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Raporto njoftimin") }} | Pluribus{% endblock %}
 
 {% block content %}
 {#- Reporting a listing (safety.rs): what is wrong with it, for the moderators, from someone signed
     in, whom it thanks once sent; whoever isn't signs in first, and comes back here. -#}
 <section class="account report">
-  <h1>Raporto njoftimin</h1>
+  <h1>{{ crate::t("Raporto njoftimin") }}</h1>
   <p class="lead"><a href="{{ url }}">{{ title }}</a></p>
   {%- match state %}
   {%- when ReportState::SignIn %}
-  <p>Hyr në llogari që ta raportosh. Kur disa llogari raportojnë të njëjtin njoftim, ai fshihet nga faqja derisa ta shohin moderatorët, prandaj pa llogari nuk mund të raportohet.</p>
-  <p><a class="button" href="/llogaria">Hyr</a></p>
+  <p>{{ crate::t("Hyr në llogari që ta raportosh. Kur disa llogari raportojnë të njëjtin njoftim, ai fshihet nga faqja derisa ta shohin moderatorët, prandaj pa llogari nuk mund të raportohet.") }}</p>
+  <p><a class="button" href="/llogaria">{{ crate::t("Hyr") }}</a></p>
   {%- when ReportState::Done %}
-  <p class="notice" role="status">Faleminderit! Moderatorët do ta shohin raportimin tënd.</p>
+  <p class="notice" role="status">{{ crate::t("Faleminderit! Moderatorët do ta shohin raportimin tënd.") }}</p>
   {%- if blocked %}
   {#- The seller blocked too, from here or from a conversation: said, with where to let them be
       again. -#}
-  <p>E ke bllokuar edhe shitësin: njoftimet që ka vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit. E zhbllokon te <a href="/llogaria/cilesimet">Cilësimet</a>.</p>
-  <p><a class="button secondary" href="{{ url }}">Kthehu te njoftimi</a></p>
+  <p>{{ crate::t("E ke bllokuar edhe shitësin: njoftimet që ka vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit.") }} {{ crate::t("E zhbllokon te") }} <a href="/llogaria/cilesimet">{{ crate::t("Cilësimet") }}</a>.</p>
+  <p><a class="button secondary" href="{{ url }}">{{ crate::t("Kthehu te njoftimi") }}</a></p>
   {%- else %}
   {#- Having reported the listing, the visitor can block its seller too (safety::block,
       user_blocks): the seller's listings leave their pages, and neither writes to the other. The
-      listing's page offers no block of its own. -#}
-  <p>Nëse s'do ta shohësh më këtë shitës, bllokoje: njoftimet që ka vënë nuk do të të dalin më te faqet e njoftimeve, dhe nuk do t'i shkruani dot njëri-tjetrit. E zhbllokon kur të duash te „Njoftimet e mia“.</p>
+      listing's page offers no block of its own. Safe: a text of the catalogue's alone, and its
+      Albanian's apostrophes as they were (escaped, they would be &#39;). -#}
+  <p>{{ crate::t("Nëse s'do ta shohësh më këtë shitës, bllokoje: njoftimet që ka vënë nuk do të të dalin më te faqet e njoftimeve, dhe nuk do t'i shkruani dot njëri-tjetrit. E zhbllokon kur të duash te „Cilësimet“.")|safe }}</p>
   <div class="form-actions">
     <form method="post" action="/listing/{{ public_no }}/blloko">
       <input type="hidden" name="blloko" value="1">
-      <button type="submit" class="button secondary"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BLOCK|safe }}</svg>Blloko shitësin</button>
+      <button type="submit" class="button secondary"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BLOCK|safe }}</svg>{{ crate::t("Blloko shitësin") }}</button>
     </form>
-    <a class="button secondary" href="{{ url }}">Kthehu te njoftimi</a>
+    <a class="button secondary" href="{{ url }}">{{ crate::t("Kthehu te njoftimi") }}</a>
   </div>
   {%- endif %}
   {%- when ReportState::Form %}
   <form class="account-form" method="post" action="/listing/{{ public_no }}/raporto">
-    {#- One reason, each with what it covers. -#}
+    {#- One reason, each with what it covers (safety::REASONS: their names and what they cover are
+        the catalogue's, the code they send is as it is). -#}
     <fieldset class="report-reasons">
-      <legend class="field-label">Çfarë nuk shkon me të?</legend>
+      <legend class="field-label">{{ crate::t("Çfarë nuk shkon me të?") }}</legend>
       {%- for choice in reasons %}
       <label class="report-reason">
         <input type="radio" name="reason" value="{{ choice.code }}" required{% if reason == choice.code %} checked{% endif %}>
-        <span class="report-reason-text"><span class="report-reason-label">{{ choice.label }}</span><span class="field-hint">{{ choice.hint }}</span></span>
+        <span class="report-reason-text"><span class="report-reason-label">{{ crate::t(choice.label) }}</span><span class="field-hint">{{ crate::t(choice.hint) }}</span></span>
       </label>
       {%- endfor %}
     </fieldset>
     <div class="field">
-      <label class="field-label" for="report-details">Shpjegim <span class="optional">(sipas dëshirës)</span></label>
+      <label class="field-label" for="report-details">{{ crate::t("Shpjegim") }} <span class="optional">{{ crate::t("(sipas dëshirës)") }}</span></label>
       <textarea id="report-details" name="details" rows="4" maxlength="1000">{{ details }}</textarea>
     </div>
     {%- if let Some(error) = error %}
     <p class="form-error" role="alert">{{ error }}</p>
     {%- endif %}
-    <div class="form-actions"><button type="submit" class="button">Dërgo raportimin</button></div>
+    <div class="form-actions"><button type="submit" class="button">{{ crate::t("Dërgo raportimin") }}</button></div>
   </form>
   {%- endmatch %}
 </section>

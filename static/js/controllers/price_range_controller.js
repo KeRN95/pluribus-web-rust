@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { t, tf } from "controllers/i18n.js";
 
 // The price filter: typed, from and to; one track with two ends, the lowest price and the highest,
 // which stop at each other; or one of the quick choices under it, each about a quarter of the
@@ -7,10 +8,11 @@ import { Controller } from "@hotwired/stimulus";
 // the rate listings' prices are compared at), a step worth more the further right, prices kept to
 // two figures. Either end at its edge is no limit. The typed fields carry the prices, the label
 // beside the name says them as their chip does (filters.rs, range_label), and the coral stretch
-// lies between the ends. As filters.rs.
+// lies between the ends. As filters.rs, in the page's language.
 const STEPS = 1000;
 const DECADES = 5;
 const BASE = { EUR: 10, ALL: 1000 };
+// The currencies' symbols, as format::currency_symbol has them ("Lekë" in the page's language).
 const UNIT = { EUR: "€", ALL: "Lekë" };
 
 export default class extends Controller {
@@ -78,8 +80,8 @@ export default class extends Controller {
     this.minTarget.value = min ?? "";
     this.maxTarget.value = max ?? "";
     this.labelTarget.textContent = this.label(min, max);
-    this.fromTarget.setAttribute("aria-valuetext", min === null ? "Pa kufi" : this.money(min));
-    this.toTarget.setAttribute("aria-valuetext", max === null ? "Pa kufi" : this.money(max));
+    this.fromTarget.setAttribute("aria-valuetext", min === null ? t("Pa kufi") : this.money(min));
+    this.toTarget.setAttribute("aria-valuetext", max === null ? t("Pa kufi") : this.money(max));
     this.paint();
   }
 
@@ -101,15 +103,15 @@ export default class extends Controller {
   }
 
   label(min, max) {
-    const unit = UNIT[this.currency];
+    const unit = t(UNIT[this.currency]);
     if (min !== null && max !== null) return `${this.number(min)} – ${this.number(max)}\u00a0${unit}`;
-    if (min !== null) return `nga ${this.money(min)}`;
-    if (max !== null) return `deri ${this.money(max)}`;
-    return "Çdo çmim";
+    if (min !== null) return tf("nga {}", this.money(min));
+    if (max !== null) return tf("deri {}", this.money(max));
+    return t("Çdo çmim");
   }
 
   money(price) {
-    return `${this.number(price)}\u00a0${UNIT[this.currency]}`;
+    return `${this.number(price)}\u00a0${t(UNIT[this.currency])}`;
   }
 
   number(value) {

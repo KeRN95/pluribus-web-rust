@@ -20,6 +20,8 @@
 .settings-contact dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .settings-contact dd:last-child:not(:nth-child(2)) { margin-left: auto; }
 .settings-buttons { display: flex; flex-wrap: wrap; gap: .6rem; }
+/* The language in use, among the two (settings.html): picked, in the tint. */
+.language-choice .button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
 .account h1 { margin: 0 0 .3rem; }
 .account .lead { margin: 0 0 1.25rem; color: var(--muted); }
 .account .lead strong { white-space: nowrap; }

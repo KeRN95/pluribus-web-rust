@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { t } from "controllers/i18n.js";
 
 // How a browse page shows its listings: small cards, as many to a line as fit; big ones, one a
 // line, every photo to slide through (slides_controller.js); or a list, a line each, the photo at
@@ -13,7 +14,7 @@ export default class extends Controller {
   choose(event) {
     const layout = event.target.value;
     for (const other of ["big", "list"]) this.element.classList.toggle(`cards-${other}`, layout === other);
-    const label = `Pamja: ${event.target.closest("label").textContent.trim()}`;
+    const label = `${t("Pamja")}: ${event.target.closest("label").textContent.trim()}`;
     this.buttonTarget.setAttribute("aria-label", label);
     this.buttonTarget.title = label;
     document.cookie = `${this.cookieValue}=${layout}; path=/; max-age=31536000; samesite=lax`;

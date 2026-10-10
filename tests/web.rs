@@ -1808,6 +1808,33 @@ async fn words_that_name_a_kind_of_listing_find_that_kind(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn an_english_search_names_its_filters_in_english_words(pool: PgPool) {
+    // On an English page, English's words name a category (by its English name, singular or
+    // plural), a kind and a town, as Albanian's do.
+    let found_in_english = |words: &'static str| {
+        let pool = pool.clone();
+        async move {
+            let response = get_with_cookie(pool.clone(), &format!("/search?q={words}"), "gjuha=en").await;
+            let page = match (response.status, &response.location) {
+                (StatusCode::SEE_OTHER, Some(to)) => get_with_cookie(pool, to, "gjuha=en").await,
+                _ => response,
+            };
+            card_numbers(&page.body)
+        }
+    };
+    assert_eq!(found_in_english("flat+for+rent+in+tirana").await, [1003]);
+    assert_eq!(found_in_english("apartments+to+rent").await, [1003]);
+    assert!(found_in_english("flat+for+sale").await.is_empty());
+    assert_eq!(found_in_english("house+for+sale+in+vlora").await, [1004]);
+    assert_eq!(found_in_english("phones").await, [1005]);
+    // The page it goes to has those filters on.
+    let to = get_with_cookie(pool.clone(), "/search?q=flat+for+rent+in+tirana", "gjuha=en").await.location.unwrap();
+    assert!(to.contains("category=apartamente") && to.contains("type=RENT") && to.contains("city=tirane"), "{to}");
+    // An Albanian page reads Albanian's words alone: there "flat for rent" are words to search.
+    assert!(found(&pool, "flat+for+rent").await.is_empty());
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn search_forgives_typos_and_names_the_word_it_searched(pool: PgPool) {
     // No listing says "golff": the Golf is found, and the page says "golf" was searched too.
     let misspelt = get(pool.clone(), "/search?q=golff").await.body;
@@ -6914,6 +6941,166 @@ async fn a_visitor_chooses_english_and_the_pages_speak_it(pool: PgPool) {
     let ana = session_for(&pool, ANA_ID).await;
     choose("http://127.0.0.1:3000/", Some(ana)).await;
     let kept: String = sqlx::query_scalar("SELECT preferred_language FROM users WHERE id = $1::uuid").bind(ANA_ID).fetch_one(&pool).await.unwrap();
+    assert_eq!(kept, "en");
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
+    let en = |uri: &'static str| {
+        let pool = pool.clone();
+        async move { get_with_cookie(pool, uri, "gjuha=en").await }
+    };
+    // Browsing: the welcome page, a category's page with its filters, the database's names in
+    // English.
+    let home = en("/").await.body;
+    assert!(home.contains(r#"<h1 class="visually-hidden">What are you looking for?</h1>"#) && home.contains("</svg>Vehicles</a>"), "{home}");
+    assert!(home.contains(r#"<h2 id="latest-heading">Newest listings</h2>"#), "{home}");
+    let cars = en("/c/makina").await.body;
+    assert!(cars.contains("<title>Cars | Pluribus</title>") && cars.contains("<h1>Cars</h1>"), "{cars}");
+    assert!(cars.contains(r#"aria-label="Filters: No filters""#) && cars.contains(r#"placeholder="Search listings""#), "{cars}");
+    assert!(cars.contains(">Motorbikes<") && cars.contains(">Commercial vehicles<") && cars.contains(">All of Albania<"), "{cars}");
+    assert!(cars.contains(r#"<summary class="heading-sort-button" title="Sort">Newest</summary>"#), "{cars}");
+    assert!(cars.contains(r#"<p class="result-count" id="result-count" data-show="Show 2 listings">2 listings</p>"#), "{cars}");
+    assert_eq!(en("/c/makina?numri=1").await.body, r#"{"count":2,"show":"Show 2 listings","text":"2 listings"}"#);
+    let vehicles = en("/c/automjete").await.body;
+    assert!(vehicles.contains("2016 · 148\u{a0}000\u{a0}km · Diesel</p>"), "{vehicles}");
+    let nothing = en("/search?q=xyzzyqqq").await.body;
+    assert!(nothing.contains(r#"<p class="empty">No listings found.</p>"#), "{nothing}");
+    // A pin's filter, its chip and its note; the order's name.
+    let near = en("/c/makina?lat=41.32833&lng=19.81806&radius=5&sort=price_asc").await.body;
+    assert!(near.contains(r#"aria-label="Remove filter: Within 5 km of the pin">"#) && near.contains(r#"title="Sort">Lowest-priced</summary>"#), "{near}");
+
+    // A listing: its properties, names and values from the database in English, its sections and
+    // its buttons.
+    let golf = en("/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
+    assert!(golf.contains("<dt>Fuel</dt><dd>Diesel</dd>") && golf.contains("<dt>Gearbox</dt><dd>Manual</dd>"), "{golf}");
+    assert!(golf.contains("<dt>Mileage</dt><dd>148\u{a0}000\u{a0}km</dd>"), "{golf}");
+    assert!(golf.contains(r#"<p class="card-meta listing-kind">For sale · Used ·"#), "{golf}");
+    assert!(golf.contains(r#"<span class="button-label">Show number</span>"#) && golf.contains("<h2>Location</h2>"), "{golf}");
+    assert!(golf.contains("Listing number: 1001"), "{golf}");
+
+    // Posting, signing in, the messages, the pages about the site, and a page that isn't there.
+    let form = en("/shto").await.body;
+    assert!(form.contains("<title>Post a listing | Pluribus</title>") && form.contains(r#"<h2 id="section-what">What you’re selling</h2>"#), "{form}");
+    assert!(en("/llogaria").await.body.contains("<h1>Sign in or create an account</h1>"));
+    assert!(en("/mesazhet").await.body.contains(r#"<p class="lead">Sign in to message sellers and read your messages.</p>"#));
+    let terms = en("/kushtet").await.body;
+    assert!(terms.contains("<h1>Terms of use</h1>"), "{terms}");
+    assert!(terms.contains("This English version is a translation for convenience. Where it differs from the Albanian, the Albanian version applies."));
+    let gone = en("/kjo-faqe-nuk-ekziston").await;
+    assert_eq!(gone.status, StatusCode::NOT_FOUND);
+    assert!(gone.body.contains("<h1>Page not found</h1>"), "{}", gone.body);
+
+    // Signed in: one's own listings, editing one, and a conversation's quick first messages.
+    let ana = format!("{}; gjuha=en", session_for(&pool, ANA_ID).await);
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains("<h1>My listings</h1>"));
+    let edit = get_with_cookie(pool.clone(), "/listing/1001/ndrysho", &ana).await.body;
+    assert!(edit.contains("<h1>Edit listing</h1>") && edit.contains(r#"<button type="submit" class="button">Save changes</button>"#), "{edit}");
+    let write = get_with_cookie(pool.clone(), "/listing/1002/mesazh", &ana).await.body;
+    assert!(write.contains(r#"data-conversation-text-param="What’s your best price?">What’s your best price?</button>"#), "{write}");
+
+    // The same pages in Albanian are as they were.
+    assert!(get(pool.clone(), "/c/makina").await.body.contains("<h1>Makina</h1>"));
+    assert!(get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body.contains("<dt>Karburanti</dt><dd>Naftë</dd>"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn a_browser_that_reads_no_albanian_is_offered_english(pool: PgPool) {
+    let home = |languages: &'static str, cookie: Option<&'static str>| {
+        let pool = pool.clone();
+        async move {
+            let mut request = Request::get("/").header(header::ACCEPT_LANGUAGE, languages);
+            if let Some(cookie) = cookie {
+                request = request.header(header::COOKIE, cookie);
+            }
+            send(pool, request.body(Body::empty()).unwrap()).await.body
+        }
+    };
+    let offer = r#"<form class="language-offer" method="post" action="/gjuha" lang="en">"#;
+    // In English, until the visitor chooses either; never to a browser that reads Albanian, nor to
+    // a search engine, which names no language.
+    let english = home("en-GB,en;q=0.9", None).await;
+    assert!(english.contains(offer) && english.contains("<p>Pluribus is in Albanian. Would you like it in English?</p>"), "{english}");
+    assert!(english.contains(r#"<html lang="sq">"#));
+    assert!(!home("sq-AL,sq;q=0.9,en;q=0.8", None).await.contains(offer));
+    assert!(!home("en-GB,en;q=0.9", Some("gjuha=sq")).await.contains(offer));
+    assert!(!home("en-GB,en;q=0.9", Some("gjuha=en")).await.contains(offer));
+    assert!(!get(pool.clone(), "/").await.body.contains(offer));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_readers_language_words_what_the_site_kept_for_them(pool: PgPool) {
+    let ana = session_for(&pool, ANA_ID).await;
+    let in_english = format!("{ana}; gjuha=en");
+    // "Cilësimet" has the language too, the one in use pressed.
+    let settings = get_with_cookie(pool.clone(), "/llogaria/cilesimet", &in_english).await.body;
+    assert!(settings.contains("<h2>Language</h2>") && settings.contains(r#"aria-pressed="true">English</button>"#), "{settings}");
+    assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet", &ana).await.body.contains(r#"aria-pressed="true">Shqip</button>"#));
+
+    // The notifications keep their titles in Albanian, as the site wrote them; an English reader's
+    // page words them anew, the names the site gives people and its own words among them too.
+    sqlx::query(
+        "INSERT INTO notifications (user_id, notification_type, title, body, payload) VALUES
+         ($1::uuid, 'PRICE_DROP', 'Çmimi ra: Volkswagen Golf 7', NULL, '{}'),
+         ($1::uuid, 'NEW_MESSAGE', 'Përdorues të shkroi për „Volkswagen Golf 7“', 'A është ende në shitje?', '{}'),
+         ($1::uuid, 'SAVED_SEARCH', '3 njoftime të reja: Makina në Tiranë', NULL, '{}'),
+         ($1::uuid, 'PROMOTED', 'I veçuar për 7 ditë: Volkswagen Golf 7', NULL, '{}'),
+         ($1::uuid, 'STORE_INVITE', 'Auto Elbasani të fton në dyqan',
+          'Si „Poston njoftime“: Poston dhe ndryshon njoftimet e dyqanit, dhe u përgjigjet mesazheve.', '{}')",
+    )
+    .bind(ANA_ID)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let english = get_with_cookie(pool.clone(), "/lajmerimet", &in_english).await.body;
+    for said in [
+        "Price drop: Volkswagen Golf 7",
+        "User wrote to you about “Volkswagen Golf 7”",
+        "A është ende në shitje?",
+        "3 new listings: Makina në Tiranë",
+        "Featured for 7 days: Volkswagen Golf 7",
+        "Auto Elbasani invites you to their store",
+        "As “Posts listings”: Posts and edits the store’s listings, and answers messages.",
+    ] {
+        assert!(english.contains(said), "{said}\n{english}");
+    }
+    let albanian = get_with_cookie(pool.clone(), "/lajmerimet", &ana).await.body;
+    assert!(albanian.contains("Çmimi ra: Volkswagen Golf 7") && albanian.contains("Përdorues të shkroi për „Volkswagen Golf 7“"), "{albanian}");
+
+    // A reader in English has their e-mail in English (sender.rs's tests), and the notification it
+    // keeps its Albanian.
+    sqlx::query("UPDATE users SET preferred_language = 'en' WHERE id = $1::uuid").bind(ANA_ID).execute(&pool).await.unwrap();
+    let buyer = new_seller(&pool, "+355691112233").await;
+    write(&pool, "/listing/1001/mesazh", "A është ende në shitje?", &buyer).await;
+    minutes_pass(&pool, 4).await;
+    assert_eq!(marketplace::notices::send_due(&pool, "https://pluribus.example").await.unwrap(), 1);
+    let title: String = sqlx::query_scalar("SELECT title FROM notifications WHERE notification_type = 'NEW_MESSAGE' AND payload ? 'conversation'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert!(title.starts_with("Përdorues të shkroi për „Volkswagen Golf"), "{title}");
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_language_chosen_before_signing_in_becomes_the_accounts(pool: PgPool) {
+    let sent = post_form(pool.clone(), "/hyr", &[("name", "Erion"), ("contact", "069 123 4567"), ("started", &started())], Some("gjuha=en")).await;
+    assert_eq!(sent.location.as_deref(), Some("/hyr/kodi"));
+    let login = format!("login={}; gjuha=en", sent.cookie("login").unwrap());
+    sqlx::query(
+        "UPDATE login_codes SET code_hash = sha256(convert_to(contact || ':123456', 'UTF8'))
+         WHERE contact = '+355691234567'",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    // The code's page, and what a wrong code says, in English.
+    assert!(get_with_cookie(pool.clone(), "/hyr/kodi", &login).await.body.contains("We sent a 6-digit code"));
+    let wrong = post_form(pool.clone(), "/hyr/kodi", &[("code", "000000")], Some(&login)).await;
+    assert!(wrong.body.contains("That code isn’t right. You have 4 tries left."), "{}", wrong.body);
+    // Signed in, the account speaks English too: its e-mails will.
+    let signed = post_form(pool.clone(), "/hyr/kodi", &[("code", "123456")], Some(&login)).await;
+    assert_eq!(signed.status, StatusCode::SEE_OTHER);
+    let kept: String = sqlx::query_scalar("SELECT preferred_language FROM users WHERE phone_e164 = '+355691234567'").fetch_one(&pool).await.unwrap();
     assert_eq!(kept, "en");
 }
 

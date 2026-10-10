@@ -2,8 +2,8 @@
     "Vendndodhja ime"; a pill as that one is (map.css). It has no name, so it sends no town of its
     own: only the map's point counts. A category's card has its own menu (browse.html). -#}
 <div class="picker map-town" data-controller="picker">
-<select aria-label="Qyteti" data-map-target="town" data-action="map#goToTown">
-  <option value="">Qyteti</option>
+<select aria-label="{{ crate::t("Qyteti") }}" data-map-target="town" data-action="map#goToTown">
+  <option value="">{{ crate::t("Qyteti") }}</option>
   {%- for group in filters.town_groups() %}
   <optgroup label="{{ group.label }}">
     {%- for town in group.towns %}<option value="{{ town.slug }}" data-lat="{{ town.latitude }}" data-lng="{{ town.longitude }}">{{ town.name }}</option>{% endfor %}

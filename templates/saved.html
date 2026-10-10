@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Të ruajturat | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Të ruajturat") }} | Pluribus{% endblock %}
 
 {% block content %}
 {#- The listings the visitor keeps, the last kept first, as the browse pages show listings, each
@@ -9,24 +9,26 @@
 <section class="saved">
   {#- The searches kept are a tap away (saved_searches.html), with how many have new listings the
       visitor hasn't heard of (searches.rs). -#}
-  <p class="saved-switch"><a href="/kerkimet-e-ruajtura"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BELL|safe }}</svg>Kërkimet e ruajtura{% if search_alerts > 0 %} · {{ search_alerts }} me njoftime të reja{% endif %}</a></p>
-  <h1>Të ruajturat</h1>
+  <p class="saved-switch"><a href="/kerkimet-e-ruajtura"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BELL|safe }}</svg>{{ crate::t("Kërkimet e ruajtura") }}{% if search_alerts > 0 %} · {{ crate::t1("{} me njoftime të reja", search_alerts) }}{% endif %}</a></p>
+  <h1>{{ crate::t("Të ruajturat") }}</h1>
+  {#- The texts with an apostrophe ("t'i", "s'ke") are the catalogue's as they are (|safe), which
+      escaping would write as &#39;. #}
   {%- if !signed_in %}
-  <p class="lead">Hyr në llogari për të ruajtur njoftimet që të pëlqejnë, me zemrën mbi foton e tyre, dhe për t'i gjetur këtu.</p>
-  <p><a class="button" href="/llogaria">Hyr</a></p>
+  <p class="lead">{{ crate::t("Hyr në llogari për të ruajtur njoftimet që të pëlqejnë, me zemrën mbi foton e tyre, dhe për t'i gjetur këtu.")|safe }}</p>
+  <p><a class="button" href="/llogaria">{{ crate::t("Hyr") }}</a></p>
   {%- else if page.cards.is_empty() && gone.is_empty() %}
-  <p class="empty">Ende s'ke ruajtur asnjë njoftim. Prek zemrën mbi foton e një njoftimi për ta ruajtur këtu.</p>
+  <p class="empty">{{ crate::t("Ende s'ke ruajtur asnjë njoftim. Prek zemrën mbi foton e një njoftimi për ta ruajtur këtu.")|safe }}</p>
   {%- else %}
   {%- if !drops.is_empty() %}
   {#- The listings kept whose price dropped since the visitor last looked (db::price_drops): from
       what to what. Once shown, the page says so (data-seen-url, application.js): they are seen, up
       to the latest of them, and the header's heart loses its dot. -#}
   <div class="notice price-drops" data-seen-url="{{ self.seen_url() }}">
-    <p class="price-drops-title">Çmime më të ulëta te njoftimet që ke ruajtur</p>
+    <p class="price-drops-title">{{ crate::t("Çmime më të ulëta te njoftimet që ke ruajtur") }}</p>
     <ul>
       {%- for drop in drops %}
       {%- let (was, now) = drop.prices() %}
-      <li><a href="{{ drop.url() }}">{{ drop.title }}</a>: nga <del>{{ was }}</del> në {{ now }}</li>
+      <li><a href="{{ drop.url() }}">{{ drop.title }}</a>: {% if crate::i18n::english() %}from <del>{{ was }}</del> to {{ now }}{% else %}nga <del>{{ was }}</del> në {{ now }}{% endif %}</li>
       {%- endfor %}
     </ul>
   </div>
@@ -39,7 +41,7 @@
       while or for good, or the reports or the moderators did; each says which, and "Hiq" lets it
       go (the heart's own form, back to this page). -#}
   <section class="saved-gone" aria-labelledby="saved-gone-heading">
-    <h2 id="saved-gone-heading">Nuk shfaqen më</h2>
+    <h2 id="saved-gone-heading">{{ crate::t("Nuk shfaqen më") }}</h2>
     <ul class="saved-gone-list">
       {%- for listing in gone %}
       <li class="saved-gone-entry">
@@ -47,7 +49,7 @@
         <span class="badge">{{ listing.label() }}</span>
         <form method="post" action="/listing/{{ listing.public_no }}/ruaj">
           <input type="hidden" name="ruaj" value="0">
-          <button type="submit" class="button secondary small">Hiq</button>
+          <button type="submit" class="button secondary small">{{ crate::t("Hiq") }}</button>
         </form>
       </li>
       {%- endfor %}

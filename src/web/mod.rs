@@ -197,7 +197,7 @@ async fn same_site_posts(request: Request, next: Next) -> Response {
         if let (Some(origin), Some(host)) = (origin, host) {
             let origin_host = origin.split_once("://").map_or(origin, |(_, rest)| rest);
             if origin_host != host {
-                return (StatusCode::FORBIDDEN, "Kjo kërkesë vjen nga një faqe tjetër.").into_response();
+                return (StatusCode::FORBIDDEN, crate::t("Kjo kërkesë vjen nga një faqe tjetër.")).into_response();
             }
         }
     }
@@ -631,7 +631,7 @@ struct ErrorPage;
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         tracing::error!(error = ?self.0, "request failed");
-        let page = render(ErrorPage).unwrap_or_else(|_| "Diçka shkoi keq. Provo përsëri.".into_response());
+        let page = render(ErrorPage).unwrap_or_else(|_| crate::t("Diçka shkoi keq. Provo përsëri.").into_response());
         (StatusCode::INTERNAL_SERVER_ERROR, page).into_response()
     }
 }
@@ -643,7 +643,9 @@ pub type Result<T, E = AppError> = std::result::Result<T, E>;
 /// (`stylesheet_link`). Every page says it may differ with the request's `Turbo-Frame` (Vary):
 /// the infinite scroll's next page answers a frame's request with the frame alone and any other
 /// with the whole page, at the same address (`is_next_page_request`), so a cache must keep the two
-/// apart, or it could give the frame to a visitor or a search engine asking for the page.
+/// apart, or it could give the frame to a visitor or a search engine asking for the page. And with
+/// the language: its cookie, and the browser's languages, to which a page offers English
+/// (language.rs).
 pub fn render(template: impl Template) -> Result<Response> {
     let mut html = template.render()?;
     let whole_page = html.find(MODULES_HERE);
@@ -651,7 +653,7 @@ pub fn render(template: impl Template) -> Result<Response> {
         let preloads = module_preloads(&html);
         html.replace_range(at..at + MODULES_HERE.len(), &preloads);
     }
-    let mut response = ([(header::VARY, HeaderValue::from_static("Turbo-Frame"))], Html(html)).into_response();
+    let mut response = ([(header::VARY, HeaderValue::from_static("Turbo-Frame, Cookie, Accept-Language"))], Html(html)).into_response();
     if whole_page.is_some() {
         response.headers_mut().insert(header::LINK, stylesheet_link().clone());
     }

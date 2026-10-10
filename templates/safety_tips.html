@@ -1,13 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Këshilla sigurie | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Këshilla sigurie") }} | Pluribus{% endblock %}
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
 {% block content %}
-{#- How to buy and sell without being cheated (web/pages.rs). -#}
+{#- How to buy and sell without being cheated (web/pages.rs). In English, safety_tips_en.html,
+    said as a whole: a change here is a change there too. -#}
 <article class="text-page">
-  <h1>Këshilla sigurie</h1>
+  <h1>{{ crate::t("Këshilla sigurie") }}</h1>
+  {%- if crate::i18n::english() %}{% include "safety_tips_en.html" %}{% else %}
   <p class="lead">Shumica e shitjeve në Pluribus shkojnë mirë, mes njerëzish që takohen dhe e shohin mallin. Këto rregulla të thjeshta mbajnë larg ata pak që mashtrojnë.</p>
 
   <h2>Kur blen</h2>
@@ -51,5 +53,6 @@
   </ul>
 
   <p>Diçka që s'e gjen këtu? <a href="/kontakt">Na shkruaj</a>.</p>
+  {%- endif %}
 </article>
 {% endblock %}

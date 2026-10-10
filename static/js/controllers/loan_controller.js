@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { t } from "controllers/i18n.js";
 
 // The loan calculator, in the card "Llogarit kredinë" that opens under a listing's price, or in
 // the card under a car's key facts (loan_calculator.html): the price less the down payment, a set
@@ -7,7 +8,7 @@ import { Controller } from "@hotwired/stimulus";
 // given (an annuity, as banks lend), with the interest and what it all comes to. Worked out at the
 // start, for the fields' first values, and as they change; nothing goes to the server.
 
-const NBSP = " ";
+const NBSP = " ";
 
 export default class extends Controller {
   static targets = ["years", "rate", "down", "loan", "interest", "total", "monthly", "message"];
@@ -28,7 +29,7 @@ export default class extends Controller {
       for (const sum of [this.loanTarget, this.interestTarget, this.totalTarget, this.monthlyTarget]) {
         sum.textContent = "–";
       }
-      this.messageTarget.textContent = "Shkruaj vitet (1–50) dhe interesin.";
+      this.messageTarget.textContent = t("Shkruaj vitet (1–50) dhe interesin.");
       this.messageTarget.hidden = false;
       return;
     }

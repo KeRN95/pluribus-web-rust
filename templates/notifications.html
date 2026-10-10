@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {%- import "account_nav.html" as account %}
 
-{% block title %}Lajmërimet | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Lajmërimet") }} | Pluribus{% endblock %}
 
 {% block content %}
 {#- The user's notifications (notifications.rs), the latest first, each a line leading to what it
@@ -13,12 +13,14 @@
   {%- if signed_in %}
   {% call account::account_nav("notifications", 0) %}
   {%- endif %}
-  <h1>Lajmërimet</h1>
+  <h1>{{ crate::t("Lajmërimet") }}</h1>
   {%- if !signed_in %}
-  <p class="lead">Hyr në llogari për të parë lajmërimet: kur bie çmimi i një njoftimi që ke ruajtur, kur dalin njoftime të reja te një kërkim i ruajtur, kur një mesazh mbetet pa u lexuar, kur një njoftim yt po skadon.</p>
-  <p><a class="button" href="/llogaria">Hyr</a></p>
+  <p class="lead">{{ crate::t("Hyr në llogari për të parë lajmërimet: kur bie çmimi i një njoftimi që ke ruajtur, kur dalin njoftime të reja te një kërkim i ruajtur, kur një mesazh mbetet pa u lexuar, kur një njoftim yt po skadon.") }}</p>
+  <p><a class="button" href="/llogaria">{{ crate::t("Hyr") }}</a></p>
   {%- else if rows.is_empty() %}
-  <p class="empty">Ende s'ke asnjë lajmërim. Këtu do të dalin kur bie çmimi i një njoftimi që ke ruajtur, kur dalin njoftime të reja te një kërkim i ruajtur, kur një mesazh mbetet pa u lexuar dhe kur një njoftim yt po skadon.</p>
+  {#- Its text has an apostrophe ("s'ke"): the catalogue's as it is (|safe), which escaping would
+      write as &#39;. #}
+  <p class="empty">{{ crate::t("Ende s'ke asnjë lajmërim. Këtu do të dalin kur bie çmimi i një njoftimi që ke ruajtur, kur dalin njoftime të reja te një kërkim i ruajtur, kur një mesazh mbetet pa u lexuar dhe kur një njoftim yt po skadon.")|safe }}</p>
   {%- else %}
   <ul class="notification-list">
     {%- for row in rows %}
@@ -30,7 +32,7 @@
       {%- endif %}
         <svg class="notification-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ row.icon|safe }}</svg>
         <span class="notification-text">
-          <span class="notification-title">{% if row.unread %}<span class="visually-hidden">E re: </span>{% endif %}{{ row.title }}</span>
+          <span class="notification-title">{% if row.unread %}<span class="visually-hidden">{{ crate::t("E re:") }} </span>{% endif %}{{ row.title }}</span>
           {%- if let Some(body) = row.body %}
           <span class="notification-body">{{ body }}</span>
           {%- endif %}

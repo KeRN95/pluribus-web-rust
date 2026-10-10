@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { t } from "controllers/i18n.js";
 
 // A listing's message sheet (listing.html). A message button, signed in, loads the conversation
 // into the sheet's frame (data-turbo-frame) and opens it. On a phone it slides up from the screen's
@@ -255,7 +256,10 @@ export default class extends Controller {
     this.sheetTarget.hidden = true;
     document.documentElement.classList.remove("sheet-open");
     this.frameTarget.removeAttribute("src");
-    this.frameTarget.innerHTML = '<p class="message-sheet-wait">Po hapet biseda…</p>';
+    const wait = document.createElement("p");
+    wait.className = "message-sheet-wait";
+    wait.textContent = t("Po hapet biseda…");
+    this.frameTarget.replaceChildren(wait);
     const byKeyboard = event?.type === "keydown" || (event?.type === "click" && event.detail === 0);
     if (byKeyboard) this.button?.focus({ preventScroll: true });
     else this.button?.blur();

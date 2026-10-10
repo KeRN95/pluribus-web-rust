@@ -177,6 +177,8 @@ pub struct DueSearchAlert {
     pub phone: Option<String>,
     /// Whether its saver lets the site e-mail them (notification_preferences.email_enabled).
     pub email_ok: bool,
+    /// The language their e-mail is in (users.preferred_language: "sq", "en").
+    pub language: String,
 }
 
 /// The searches with alerts on whose last alert, or saving, is at least `gap` ago, of active users
@@ -186,7 +188,8 @@ pub async fn due_search_alerts(db: &PgPool, gap: std::time::Duration) -> sqlx::R
     sqlx::query_as(
         "SELECT s.id, s.user_id, s.name, s.filters ->> 'path' AS path, s.filters ->> 'query' AS query,
                 coalesce(s.last_alerted_at, s.created_at) AS since,
-                u.email::text AS email, u.phone_e164::text AS phone, coalesce(np.email_enabled, true) AS email_ok
+                u.email::text AS email, u.phone_e164::text AS phone, coalesce(np.email_enabled, true) AS email_ok,
+                u.preferred_language AS language
          FROM saved_searches s
          JOIN users u ON u.id = s.user_id AND u.status = 'ACTIVE'
          LEFT JOIN notification_preferences np ON np.user_id = s.user_id

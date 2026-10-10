@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus";
 import { signedIn } from "controllers/signed_in.js";
+import { t, tf } from "controllers/i18n.js";
 
 // The header's button for the conversations (base.html), or the welcome page's at the end of its
 // categories (home.html): how many have messages the visitor hasn't read, in a coral circle at its
@@ -31,7 +32,7 @@ export default class extends Controller {
   }
 
   show(unread) {
-    const label = unread > 0 ? `Mesazhet: ${unread} të palexuara` : "Mesazhet";
+    const label = unread > 0 ? tf("Mesazhet: {} të palexuara", unread) : t("Mesazhet");
     this.countTarget.textContent = unread > 9 ? "9+" : String(unread);
     this.countTarget.hidden = !(unread > 0);
     this.element.setAttribute("aria-label", label);

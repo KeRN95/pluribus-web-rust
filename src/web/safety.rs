@@ -20,6 +20,7 @@ use super::{
 use crate::{
     AppState,
     db::{self, ListingCard, Reported, ReportTarget},
+    i18n::t,
 };
 
 /// A reason a listing can be reported for, as the form offers it.
@@ -31,7 +32,9 @@ pub struct Reason {
 }
 
 /// The reasons, in db::REASONS's order; the first four take a listing off the site when enough
-/// people give them (db::SERIOUS_REASONS).
+/// people give them (db::SERIOUS_REASONS). Their names and what they cover in Albanian: the form
+/// says them in its language (report.html, crate::t), i18n/en/listing.txt has each; /moderim says
+/// them as they are (reason_label).
 pub const REASONS: [Reason; 7] = [
     Reason { code: "SCAM", label: "Mashtrim", hint: "Kërkon para përpara, ose çmimi duket shumë i mirë për të qenë i vërtetë." },
     Reason { code: "FAKE", label: "Njoftim i rremë", hint: "Sendi nuk ekziston, ose fotot janë marrë diku tjetër." },
@@ -153,13 +156,13 @@ pub async fn report(
     };
     let details = form.details.trim();
     let error = if !db::REASONS.contains(&form.reason.as_str()) {
-        Some("Zgjidh çfarë nuk shkon me njoftimin.")
+        Some(t("Zgjidh çfarë nuk shkon me njoftimin."))
     } else if form.reason == "OTHER" && details.is_empty() {
-        Some("Shkruaj shkurt çfarë nuk shkon me njoftimin.")
+        Some(t("Shkruaj shkurt çfarë nuk shkon me njoftimin."))
     } else if details.chars().count() > DETAILS_MAX {
-        Some("Shpjegimi mund të ketë deri në 1 000 shkronja.")
+        Some(t("Shpjegimi mund të ketë deri në 1 000 shkronja."))
     } else if db::reports_today(&state.db, user.id).await? >= db::REPORTS_PER_DAY {
-        Some("Ke dërguar shumë raportime sot. Provo përsëri nesër.")
+        Some(t("Ke dërguar shumë raportime sot. Provo përsëri nesër."))
     } else {
         None
     };

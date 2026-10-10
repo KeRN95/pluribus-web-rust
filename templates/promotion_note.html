@@ -3,9 +3,9 @@
     the number already in its form. Quiet, as the blocked seller's note is. -#}
 <p class="promotion-note">
   {%- if own %}
-  {%- if promotions.is_empty() %}<a href="/promovo?njoftimi={{ listing.public_no }}">Promovoje</a> që ta shohin më shumë.
-  {%- else %}{% for promotion in promotions %}{{ promotion.name }}, deri më {{ promotion.until() }}{% if !loop.last %} · {% endif %}{% endfor %}.
+  {%- if promotions.is_empty() %}<a href="/promovo?njoftimi={{ listing.public_no }}">{{ crate::t("Promovoje") }}</a> {{ crate::t("që ta shohin më shumë.") }}
+  {%- else %}{% for promotion in promotions %}{{ crate::t(promotion.name) }}, {{ crate::t1("deri më {}", promotion.until()) }}{% if !loop.last %} · {% endif %}{% endfor %}.
   {%- endif %}
   {%- endif %}
-  {%- if moderator %}{% if own %} {% endif %}<a href="/moderim?njoftimi={{ listing.public_no }}#promovime">Jep një promovim</a>{% endif -%}
+  {%- if moderator %}{% if own %} {% endif %}<a href="/moderim?njoftimi={{ listing.public_no }}#promovime">{{ crate::t("Jep një promovim") }}</a>{% endif -%}
 </p>

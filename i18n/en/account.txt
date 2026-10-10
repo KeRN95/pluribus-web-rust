@@ -1,0 +1,495 @@
+# The account's own pages: signing in and the code (sign_in.html, sign_in_code.html,
+# web/account.rs), the settings (settings.html, account_closed.html, web/settings.rs), the row of
+# the account's pages (account_nav.html), the listings and the searches kept (saved.html,
+# saved_searches.html, web/saved.rs, web/searches.rs), the notifications (notifications.html) and
+# the e-mails' links that stop them (unsubscribe.html, web/unsubscribe.rs). The notifications'
+# titles and bodies, the saved searches' names and what goes out by e-mail or WhatsApp are not
+# here.
+
+# templates/account_nav.html
+
+Llogaria jote
+= Your account
+
+Njoftimet e mia
+= My listings
+
+Lajmërimet
+= Notifications
+
+1 e re
+= 1 new
+
+{} të reja
+= {} new
+
+Cilësimet
+= Settings
+
+# templates/sign_in.html
+
+Hyr ose krijo llogari
+= Sign in or create an account
+
+Hyr
+= Sign in
+
+Hyr ose krijo një llogari
+= Sign in or create an account
+
+Me numrin e celularit ose me email-in, pa fjalëkalim: të dërgojmë një kod me 6 shifra. Me numrin që ke përdorur më parë hyn në llogarinë tënde; me një të ri krijohet një llogari.
+= With your mobile number or email, no password: we send you a 6-digit code. A number you’ve used before signs you in to your account; a new one creates an account.
+
+Hyr me numrin e celularit ose me email-in. Të dërgojmë një kod me 6 shifra, pa fjalëkalim.
+= Sign in with your mobile number or email. We send you a 6-digit code, no password needed.
+
+Emri
+= Name
+
+p.sh. Ana ose Auto Elbasani
+= e.g. Ana or Auto Elbasani
+
+Për një llogari të re: shfaqet te njoftimet e tua dhe në profilin tënd.
+= For a new account: it shows on your listings and your profile.
+
+Celulari ose email-i
+= Mobile or email
+
+069 123 4567 ose emri@shembull.com
+= 069 123 4567 or name@example.com
+
+Më dërgo kodin
+= Send me the code
+
+Numri ose email-i yt shfaqet në njoftim vetëm kur dikush shtyp butonin për ta parë.
+= Your number or email shows on a listing only when someone taps the button to see it.
+
+Duke vazhduar, pranon
+= By continuing, you accept
+
+kushtet e përdorimit
+= the terms of use
+
+Si i mbajmë të dhënat e tua:
+= How we keep your data:
+
+# templates/sign_in_code.html
+
+Shkruaj kodin
+= Enter the code
+
+Kërko një kod të ri
+= Ask for a new code
+
+Të dërguam një kod me 6 shifra te
+= We sent a 6-digit code to
+
+# {}: how it went, "në WhatsApp" or "me email" (web/account.rs, below).
+Të dërguam një kod me 6 shifra {} te
+= We sent a 6-digit code {} to
+
+Vlen për 10 minuta.
+= It works for 10 minutes.
+
+Shkruaje dhe njoftimi yt publikohet.
+= Enter it and your listing goes live.
+
+Pa kodin, e publikon një moderator pasi ta shohë.
+= Without it, a moderator puts it up once they’ve checked it.
+
+Shkruaje dhe shtohet te llogaria jote.
+= Enter it and it’s added to your account.
+
+Versioni provë: kodi është
+= Test version: the code is
+
+Në versionin e vërtetë vjen në WhatsApp ose me email.
+= On the real site it comes on WhatsApp or by email.
+
+Kodi
+= Code
+
+Ruaje
+= Save
+
+Nuk erdhi?
+= Didn’t get it?
+
+pas një minute.
+= in a minute.
+
+# web/account.rs: how the code went out, and why it can't, or can't be used
+
+në WhatsApp
+= on WhatsApp
+
+me email
+= by email
+
+Të dërguam një kod pak më parë. Prit një minutë para se të kërkosh një tjetër.
+= We sent you a code a moment ago. Wait a minute before asking for another.
+
+Shumë kërkesa për kode. Provo përsëri pas një ore.
+= Too many requests for codes. Try again in an hour.
+
+Nuk arritëm ta dërgojmë kodin. Kontrollo numrin ose email-in dhe provo përsëri pas pak.
+= We couldn’t send the code. Check the number or email and try again shortly.
+
+Prit një çast dhe provo përsëri.
+= Wait a moment and try again.
+
+Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i.
+= Enter a mobile number (e.g. 069 123 4567) or an email address.
+
+Kodi skadoi ose u provua shumë herë. Kërko një kod të ri.
+= The code has expired or was tried too many times. Ask for a new one.
+
+Kjo llogari është pezulluar.
+= This account has been suspended.
+
+Kodi nuk është i saktë. Të ka mbetur edhe një provë.
+= That code isn’t right. You have one try left.
+
+Kodi nuk është i saktë. Të kanë mbetur {} prova.
+= That code isn’t right. You have {} tries left.
+
+# templates/account_closed.html
+
+Llogaria u fshi
+= Account deleted
+
+Njoftimet e tua u fshinë bashkë me fotot, dhe numri, email-i dhe emri u hoqën. Faleminderit që e përdore Pluribus-in.
+= Your listings were deleted with their photos, and your number, email and name were removed. Thank you for using Pluribus.
+
+Te faqja e parë
+= Go to the home page
+
+# templates/settings.html
+
+# {}: a month and year, "tetor 2026".
+Llogaria jote në Pluribus që nga {}.
+= Your account on Pluribus since {}.
+
+Emri që shohin të tjerët
+= The name others see
+
+Te njoftimet e tua, te profili dhe te bisedat.
+= On your listings, your profile and your conversations.
+
+Ruaje emrin
+= Save name
+
+Numri dhe email-i
+= Phone number and email
+
+Hyn me cilindo prej tyre. Njoftimet e tua tregojnë numrin, ose email-in kur s'ke numër.
+= You can sign in with either. Your listings show the number, or the email when you have no number.
+
+Asnjë
+= None
+
+Hiqe
+= Remove
+
+Email-i
+= Email
+
+Shto ose ndrysho numrin ose email-in
+= Add or change your number or email
+
+069 123 4567 ose emri@shembull.al
+= 069 123 4567 or name@example.com
+
+Të dërgojmë një kod atje. Kur e shkruan, zë vendin e atij që kishe të të njëjtit lloj, edhe te njoftimet e tua.
+= We send a code there. Once you enter it, it takes the place of the one of the same kind you had, on your listings too.
+
+Dërgo kodin
+= Send code
+
+Mesazhet që nuk i ke lexuar
+= Messages you haven’t read
+
+Kur dikush të shkruan dhe nuk e ke lexuar pas pak minutash, të vjen një njoftim te email-i ose WhatsApp-i yt, jo më shumë se një në orë për një bisedë.
+= When someone writes to you and you haven’t read it after a few minutes, you get a notice by email or WhatsApp, no more than one an hour per conversation.
+
+Çmimet që bien
+= Price drops
+
+Kur ulet çmimi i një njoftimi që ke ruajtur me zemër.
+= When a listing you’ve saved with the heart drops its price.
+
+Kërkimet e ruajtura
+= Saved searches
+
+Kur dalin njoftime të reja te kërkimet që ke ruajtur, jo më shumë se një në tri orë për një kërkim.
+= When new listings come up in searches you’ve saved, no more than one every three hours per search.
+
+Edhe me email
+= By email too
+
+Pa të, lajmërimet i gjen vetëm këtu, te „Lajmërimet“, dhe te pika mbi zemër.
+= Without it, you find notifications only here, in “Notifications”, and as the dot on the heart.
+
+Ruaj
+= Save
+
+Dyqanet
+= Stores
+
+# After the store's name: "Auto Durrësi të fton si „Administrator“."; {} is the role's name.
+të fton si „{}“.
+= invites you as “{}”.
+
+Prano
+= Accept
+
+Refuzo
+= Decline
+
+Një dyqan ka faqen e vet, me logon, përshkrimin, adresën dhe orarin, dhe njoftimet që poston si ai.
+= A store has its own page, with its logo, description, address and opening hours, and the listings posted as the store.
+
+Njerëzit
+= People
+
+Ndrysho
+= Edit
+
+Të largohesh nga {}?
+= Leave {}?
+
+Largohu
+= Leave
+
+Krijo një dyqan
+= Create a store
+
+Ata që ke bllokuar
+= People you’ve blocked
+
+Njoftimet që kanë vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit.
+= Their listings don’t show up on the listing pages for you, and you can’t write to each other.
+
+Zhblloko
+= Unblock
+
+Pajisjet
+= Devices
+
+Llogaria jote është e hapur në {} pajisje, kjo me to.
+= You’re signed in on {} devices, this one included.
+
+Llogaria jote është e hapur vetëm në këtë pajisje.
+= You’re signed in on this device only.
+
+Dil nga pajisjet e tjera
+= Sign out of other devices
+
+Dil nga llogaria
+= Sign out
+
+Fshi llogarinë
+= Delete account
+
+Njoftimet e tua fshihen bashkë me fotot, dyqanet që ke krijuar mbyllen bashkë me njoftimet e tyre, dhe numri, email-i dhe emri hiqen nga llogaria. Mesazhet që ke shkëmbyer mbeten për palën tjetër, me „Përdorues i fshirë“ në vend të emrit tënd. Llogaria nuk kthehet më.
+= Your listings are deleted with their photos, the stores you created close with their listings, and your number, email and name are removed from the account. Messages you’ve exchanged stay with the other person, with “Deleted user” in place of your name. The account can’t be brought back.
+
+# The word to type, which web/settings.rs takes in English too.
+Shkruaj FSHI që ta fshish
+= Type DELETE to confirm
+
+# web/settings.rs: what a form did, and why it couldn't
+
+Emri u ruajt.
+= Name saved.
+
+U ruajt te llogaria: hyn edhe me të tani.
+= Saved to your account: you can sign in with it now too.
+
+Ndërkohë ky numër ose email u bë i një llogarie tjetër, ndaj nuk u shtua.
+= Meanwhile this number or email became another account’s, so it wasn’t added.
+
+U hoq nga llogaria.
+= Removed from your account.
+
+Zgjedhjet për njoftimet u ruajtën.
+= Notification choices saved.
+
+Dole nga pajisjet e tjera.
+= Signed out of other devices.
+
+U zhbllokua.
+= Unblocked.
+
+Tani je një nga njerëzit e dyqanit.
+= You’ve joined the store.
+
+Ftesa u refuzua.
+= Invitation declined.
+
+U largove nga dyqani.
+= You left the store.
+
+Shkruaj emrin që do të shohin të tjerët.
+= Enter the name others will see.
+
+Ky është tashmë i llogarisë sate.
+= This is already on your account.
+
+Ky është i një llogarie tjetër: hyr me të për ta përdorur.
+= This belongs to another account: sign in with it to use it.
+
+# The word that closes an account, as the English page asks for it (settings.html).
+FSHI
+= DELETE
+
+Shkruaj FSHI në kutinë sipër butonit, që të dimë se e do vërtet.
+= Type DELETE in the box above the button, so we know you mean it.
+
+# templates/saved.html
+
+# {}: how many saved searches have new listings.
+{} me njoftime të reja
+= {} with new listings
+
+Hyr në llogari për të ruajtur njoftimet që të pëlqejnë, me zemrën mbi foton e tyre, dhe për t'i gjetur këtu.
+= Sign in to save the listings you like, with the heart on their photo, and find them here.
+
+Ende s'ke ruajtur asnjë njoftim. Prek zemrën mbi foton e një njoftimi për ta ruajtur këtu.
+= You haven’t saved any listings yet. Tap the heart on a listing’s photo to save it here.
+
+Çmime më të ulëta te njoftimet që ke ruajtur
+= Lower prices on listings you’ve saved
+
+Nuk shfaqen më
+= No longer available
+
+Hiq
+= Remove
+
+# web/saved.rs: why a listing kept is no longer on the site
+
+Çaktivizuar nga shitësi
+= Paused by the seller
+
+U fshi
+= Deleted
+
+Skadoi
+= Expired
+
+Hequr nga faqja
+= Removed from the site
+
+Jo në faqe
+= Not on the site
+
+# templates/saved_searches.html
+
+Njoftimet e ruajtura
+= Saved listings
+
+Hyr në llogari për të ruajtur kërkimet që bën, me filtrat e tyre, dhe për të marrë lajmërim kur dalin njoftime të reja.
+= Sign in to save your searches, with their filters, and to hear when new listings come up.
+
+Ke ruajtur {} kërkime, sa mund të mbash: fshi një për të ruajtur një tjetër.
+= You’ve saved {} searches, as many as you can keep: delete one to save another.
+
+Ende s'ke ruajtur asnjë kërkim. Te faqja e një kategorie ose e një kërkimi, me filtrat që të duhen, prek „Ruaj kërkimin“: këtu do të shohësh sa njoftime të reja kanë dalë, dhe të vjen lajmërim kur dalin.
+= You haven’t saved any searches yet. On a category or search page, with the filters you need, tap “Save search”: here you’ll see how many new listings have come up, and you’ll be notified when they do.
+
+Mos më lajmëro më për këtë kërkim
+= Stop notifying me about this search
+
+Ndalo lajmërimet
+= Stop notifications
+
+Më lajmëro kur dalin njoftime të reja
+= Notify me when new listings come up
+
+Lajmëromë
+= Notify me
+
+Ta fshijmë kërkimin „{}“?
+= Delete the search “{}”?
+
+Fshi
+= Delete
+
+Kur dalin njoftime të reja për një kërkim me lajmërime, zemra lart merr një pikë, dhe nëse hyn me email, të vjen një email; jo më shumë se një në tri orë për kërkim.
+= When new listings come up for a search with notifications on, the heart at the top gets a dot, and if you sign in with email, you get an email; no more than one every three hours per search.
+
+# web/searches.rs: how many listings came since a search was last opened
+
+1 njoftim i ri
+= 1 new listing
+
+{}+ njoftime të reja
+= {}+ new listings
+
+{} njoftime të reja
+= {} new listings
+
+# templates/notifications.html
+
+Hyr në llogari për të parë lajmërimet: kur bie çmimi i një njoftimi që ke ruajtur, kur dalin njoftime të reja te një kërkim i ruajtur, kur një mesazh mbetet pa u lexuar, kur një njoftim yt po skadon.
+= Sign in to see your notifications: when a listing you’ve saved drops its price, when new listings come up in a saved search, when a message goes unread, when one of your listings is about to expire.
+
+Ende s'ke asnjë lajmërim. Këtu do të dalin kur bie çmimi i një njoftimi që ke ruajtur, kur dalin njoftime të reja te një kërkim i ruajtur, kur një mesazh mbetet pa u lexuar dhe kur një njoftim yt po skadon.
+= You have no notifications yet. They’ll show up here when a listing you’ve saved drops its price, when new listings come up in a saved search, when a message goes unread and when one of your listings is about to expire.
+
+# For screen readers, before an unread notification's title.
+E re:
+= New:
+
+# templates/unsubscribe.html
+
+Email-et
+= Emails
+
+T'i ndalojmë?
+= Stop them?
+
+# {}: the e-mails, as web/unsubscribe.rs names them (below).
+Nuk do të të vijnë më {}.
+= You won’t get {} any more.
+
+Po, ndalo
+= Yes, stop
+
+U ndalën
+= Stopped
+
+Rikthe
+= Undo
+
+U rikthyen
+= Turned back on
+
+Do të të vijnë sërish {}.
+= You’ll get {} again.
+
+# Before a link to "Cilësimet".
+I ndryshon kurdo te
+= You can change them any time in
+
+# web/unsubscribe.rs: the e-mails a link stops, and what goes on as before
+
+email-e për mesazhet që nuk i ke lexuar
+= emails about messages you haven’t read
+
+lajmërimet me email nga Pluribus
+= email notifications from Pluribus
+
+# {}: the saved search's name, as it was saved.
+email-e për kërkimin „{}“
+= emails for the search “{}”
+
+Mesazhet i gjen si gjithmonë te „Mesazhet“.
+= You’ll find your messages in “Messages” as always.
+
+Kërkimi mbetet te „Kërkimet e ruajtura“.
+= The search stays in “Saved searches”.
+
+Lajmërimet i gjen te faqja, te „Lajmërimet“.
+= You’ll find your notifications on the site, in “Notifications”.

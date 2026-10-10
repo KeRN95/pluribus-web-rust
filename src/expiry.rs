@@ -5,7 +5,9 @@
 //! an address, or a WhatsApp message by its template where they sign in with a number
 //! (WHATSAPP_EXPIRY_TEMPLATE), with the way to keep it ("Rifresko", on "Njoftimet e mia" and the listing's own
 //! page, keeps it up LISTING_DAYS more, at the top of "newest first" again once a week at most:
-//! db::renew_listing).
+//! db::renew_listing). The e-mail is in the language kept on the seller's account
+//! (users.preferred_language); the notifications' titles, kept in Albanian, web/notifications.rs
+//! words for whoever reads them, and a WhatsApp template's texts stay Albanian.
 
 use std::time::Duration;
 
@@ -14,6 +16,7 @@ use sqlx::PgPool;
 use crate::{
     db::{self, ExpiryNotice, LISTING_DAYS},
     format::{self, Contact},
+    i18n::{self, Lang, t1, t2},
     sender::{self, Alert, AlertTemplate},
 };
 
@@ -29,27 +32,34 @@ pub async fn run(db: &PgPool, origin: &str) -> sqlx::Result<(usize, usize)> {
     let expired = db::expire_listings(db).await?;
     for listing in &expired {
         let unsubscribe = unsubscribe_link(db, origin, listing).await?;
-        let subject = format!("Njoftimi yt skadoi: {}", listing.title);
-        let body = format!(
-            "Njoftimi yt „{}“ skadoi dhe nuk shfaqet më në Pluribus.\n\n\
-             Për ta kthyer në faqe për {LISTING_DAYS} ditë të tjera, rifreskoje te „Njoftimet e mia“: {origin}/njoftimet-e-mia\n{}",
-            listing.title,
-            no_more(&unsubscribe),
-        );
+        let (subject, body) = in_their_language(listing, || {
+            let subject = t1("Njoftimi yt skadoi: {}", &listing.title);
+            let body = format!(
+                "{}\n\n{}\n{}",
+                t1("Njoftimi yt „{}“ skadoi dhe nuk shfaqet më në Pluribus.", &listing.title),
+                t2("Për ta kthyer në faqe për {} ditë të tjera, rifreskoje te „Njoftimet e mia“: {}", LISTING_DAYS, format!("{origin}/njoftimet-e-mia")),
+                no_more(&unsubscribe),
+            );
+            (subject, body)
+        });
         let whatsapp = AlertTemplate::Expiry { title: listing.title.clone(), what: "skadoi".into() };
         tell(listing, Alert { subject, body, whatsapp, unsubscribe }).await;
     }
     let warned = db::warn_expiring(db, WARN_DAYS).await?;
     for listing in &warned {
         let unsubscribe = unsubscribe_link(db, origin, listing).await?;
+        let (subject, body) = in_their_language(listing, || {
+            let date = format::date(listing.expires_at);
+            let subject = t2("Njoftimi yt skadon më {}: {}", &date, &listing.title);
+            let body = format!(
+                "{}\n\n{}\n{}",
+                t2("Njoftimi yt „{}“ në Pluribus skadon më {}, dhe pastaj nuk shfaqet më.", &listing.title, &date),
+                t2("Për ta mbajtur {} ditë të tjera, rifreskoje te „Njoftimet e mia“: {}", LISTING_DAYS, format!("{origin}/njoftimet-e-mia")),
+                no_more(&unsubscribe),
+            );
+            (subject, body)
+        });
         let date = format::date(listing.expires_at);
-        let subject = format!("Njoftimi yt skadon më {date}: {}", listing.title);
-        let body = format!(
-            "Njoftimi yt „{}“ në Pluribus skadon më {date}, dhe pastaj nuk shfaqet më.\n\n\
-             Për ta mbajtur {LISTING_DAYS} ditë të tjera, rifreskoje te „Njoftimet e mia“: {origin}/njoftimet-e-mia\n{}",
-            listing.title,
-            no_more(&unsubscribe),
-        );
         let whatsapp = AlertTemplate::Expiry { title: listing.title.clone(), what: format!("skadon më {date}") };
         tell(listing, Alert { subject, body, whatsapp, unsubscribe }).await;
     }
@@ -67,7 +77,16 @@ async fn unsubscribe_link(db: &PgPool, origin: &str, listing: &ExpiryNotice) -> 
 
 /// The e-mail's last line, with the link that stops them: none without one.
 fn no_more(unsubscribe: &Option<String>) -> String {
-    unsubscribe.as_ref().map(|link| format!("\nPër të mos marrë më lajmërime me email nga Pluribus, me një klik: {link}\n")).unwrap_or_default()
+    unsubscribe
+        .as_ref()
+        .map(|link| format!("\n{}\n", t1("Për të mos marrë më lajmërime me email nga Pluribus, me një klik: {}", link)))
+        .unwrap_or_default()
+}
+
+/// What `say` says, in the language kept on the seller's account; the WhatsApp template's texts,
+/// outside it, stay Albanian.
+fn in_their_language<R>(listing: &ExpiryNotice, say: impl FnOnce() -> R) -> R {
+    i18n::LANG.sync_scope(Lang::from_code(&listing.language).unwrap_or_default(), say)
 }
 
 /// The alert to the listing's seller: by e-mail where they sign in with an address and allow

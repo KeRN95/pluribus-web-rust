@@ -25,6 +25,7 @@ use crate::{
     AppState,
     db::{self, SessionUser},
     format::{self, Contact},
+    i18n::t,
 };
 
 #[derive(Template)]
@@ -114,19 +115,19 @@ pub struct Done {
     u: String,
 }
 
-/// What a form did, by the word the page came back with.
+/// What a form did, by the word the page came back with, in the page's language.
 fn done_line(word: &str) -> Option<&'static str> {
     Some(match word {
-        "emri" => "Emri u ruajt.",
-        "kontakti" => "U ruajt te llogaria: hyn edhe me të tani.",
-        "zene" => "Ndërkohë ky numër ose email u bë i një llogarie tjetër, ndaj nuk u shtua.",
-        "hequr" => "U hoq nga llogaria.",
-        "njoftimet" => "Zgjedhjet për njoftimet u ruajtën.",
-        "pajisjet" => "Dole nga pajisjet e tjera.",
-        "zhbllokuar" => "U zhbllokua.",
-        "pranuar" => "Tani je një nga njerëzit e dyqanit.",
-        "refuzuar" => "Ftesa u refuzua.",
-        "larguar" => "U largove nga dyqani.",
+        "emri" => t("Emri u ruajt."),
+        "kontakti" => t("U ruajt te llogaria: hyn edhe me të tani."),
+        "zene" => t("Ndërkohë ky numër ose email u bë i një llogarie tjetër, ndaj nuk u shtua."),
+        "hequr" => t("U hoq nga llogaria."),
+        "njoftimet" => t("Zgjedhjet për njoftimet u ruajtën."),
+        "pajisjet" => t("Dole nga pajisjet e tjera."),
+        "zhbllokuar" => t("U zhbllokua."),
+        "pranuar" => t("Tani je një nga njerëzit e dyqanit."),
+        "refuzuar" => t("Ftesa u refuzua."),
+        "larguar" => t("U largove nga dyqani."),
         _ => return None,
     })
 }
@@ -154,7 +155,7 @@ pub async fn rename(State(state): State<AppState>, headers: HeaderMap, Form(form
     let Some(name) = account::display_name(&form.emri) else {
         let mut page = settings_page(&state, &user, None).await?;
         page.name = form.emri;
-        page.name_error = Some("Shkruaj emrin që do të shohin të tjerët.");
+        page.name_error = Some(t("Shkruaj emrin që do të shohin të tjerët."));
         return again(page);
     };
     db::rename_account(&state.db, user.id, &name).await?;
@@ -190,17 +191,17 @@ pub async fn add_contact(
         }
     };
     let Some(contact) = Contact::parse(&form.kontakti) else {
-        return refuse("Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i.").await;
+        return refuse(t("Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i.")).await;
     };
     let own = match &contact {
         Contact::Phone(phone) => user.phone.as_deref() == Some(phone.as_str()),
         Contact::Email(email) => user.email.as_deref().is_some_and(|own| own.eq_ignore_ascii_case(email)),
     };
     if own {
-        return refuse("Ky është tashmë i llogarisë sate.").await;
+        return refuse(t("Ky është tashmë i llogarisë sate.")).await;
     }
     if db::account_by_contact(&state.db, contact.phone(), contact.email()).await?.is_some_and(|other| other.id != user.id) {
-        return refuse("Ky është i një llogarie tjetër: hyr me të për ta përdorur.").await;
+        return refuse(t("Ky është i një llogarie tjetër: hyr me të për ta përdorur.")).await;
     }
     if let Some(limit) = account::code_limit(&state, &contact, ip.as_deref()).await? {
         return refuse(limit).await;
@@ -301,15 +302,17 @@ pub struct CloseForm {
     konfirmo: String,
 }
 
-/// POST /llogaria/fshi: closes the account for good once "FSHI" is typed (db::delete_account), its
-/// listings' photos taken out of the store after; signed out, the page that says so.
+/// POST /llogaria/fshi: closes the account for good once "FSHI" is typed (db::delete_account), or
+/// the word an English page asks for in its place (its English, "DELETE"), its listings' photos
+/// taken out of the store after; signed out, the page that says so.
 pub async fn close(State(state): State<AppState>, headers: HeaderMap, Form(form): Form<CloseForm>) -> Result<Response> {
     let Some(user) = current_user(&state, &headers).await? else {
         return Ok(Redirect::to("/llogaria").into_response());
     };
-    if !form.konfirmo.trim().eq_ignore_ascii_case("FSHI") {
+    let typed = form.konfirmo.trim();
+    if !typed.eq_ignore_ascii_case("FSHI") && !typed.eq_ignore_ascii_case(t("FSHI")) {
         let mut page = settings_page(&state, &user, None).await?;
-        page.close_error = Some("Shkruaj FSHI në kutinë sipër butonit, që të dimë se e do vërtet.");
+        page.close_error = Some(t("Shkruaj FSHI në kutinë sipër butonit, që të dimë se e do vërtet."));
         return again(page);
     }
     let photos = db::delete_account(&state.db, user.id).await?;

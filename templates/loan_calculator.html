@@ -5,20 +5,20 @@
     interest and what it all comes to; worked out at the start and as the fields change. -#}
 <div class="loan-fields">
   <div class="field">
-    <label class="field-label" for="loan-years">Vitet</label>
+    <label class="field-label" for="loan-years">{{ crate::t("Vitet") }}</label>
     <input id="loan-years" type="text" inputmode="numeric" value="10" autocomplete="off" data-loan-target="years" data-action="input->loan#calculate">
   </div>
   <div class="field">
-    <label class="field-label" for="loan-rate">Interesi vjetor (%)</label>
+    <label class="field-label" for="loan-rate">{{ crate::t("Interesi vjetor (%)") }}</label>
     <input id="loan-rate" type="text" inputmode="decimal" value="6" autocomplete="off" data-loan-target="rate" data-action="input->loan#calculate">
   </div>
 </div>
 <dl class="bubble-sum">
-  <div><dt>Paradhënia ({{ LOAN_DOWN_PERCENT }}%)</dt><dd data-loan-target="down">–</dd></div>
-  <div><dt>Kredia</dt><dd data-loan-target="loan">–</dd></div>
-  <div><dt>Interesi</dt><dd data-loan-target="interest">–</dd></div>
-  <div><dt>Gjithsej</dt><dd data-loan-target="total">–</dd></div>
-  <div class="bubble-total loan-monthly"><dt>Kësti mujor</dt><dd data-loan-target="monthly" aria-live="polite">–</dd></div>
+  <div><dt>{{ crate::t("Paradhënia") }} ({{ LOAN_DOWN_PERCENT }}%)</dt><dd data-loan-target="down">–</dd></div>
+  <div><dt>{{ crate::t("Kredia") }}</dt><dd data-loan-target="loan">–</dd></div>
+  <div><dt>{{ crate::t("Interesi") }}</dt><dd data-loan-target="interest">–</dd></div>
+  <div><dt>{{ crate::t("Gjithsej") }}</dt><dd data-loan-target="total">–</dd></div>
+  <div class="bubble-total loan-monthly"><dt>{{ crate::t("Kësti mujor") }}</dt><dd data-loan-target="monthly" aria-live="polite">–</dd></div>
 </dl>
 <p class="bubble-note loan-message" data-loan-target="message" aria-live="polite" hidden></p>
-<p class="bubble-note">Paradhënia është sa kërkojnë zakonisht bankat për një makinë të përdorur. Llogaritje orientuese: kushtet e sakta i jep banka.</p>
+<p class="bubble-note">{{ crate::t("Paradhënia është sa kërkojnë zakonisht bankat për një makinë të përdorur. Llogaritje orientuese: kushtet e sakta i jep banka.") }}</p>

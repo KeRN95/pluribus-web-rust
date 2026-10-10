@@ -1,0 +1,17 @@
+# The scripts of a listing's page, which English pages carry their texts for (i18n.js).
+
+# static/js/controllers/loan_controller.js
+Shkruaj vitet (1–50) dhe interesin.
+= Enter the years (1–50) and the interest.
+
+# static/js/controllers/share_controller.js
+Linku u kopjua
+= Link copied
+
+# static/js/controllers/copy_controller.js
+U kopjua
+= Copied
+
+# static/js/controllers/message_sheet_controller.js (and listing.html, before the script)
+Po hapet biseda…
+= Opening the conversation…

@@ -1,0 +1,100 @@
+# What goes out on its own, in its recipient's language: the sign-in code's e-mail (sender.rs),
+# the notices of unread messages (sender.rs, notices.rs), the expiry warnings (expiry.rs); and the
+# notifications' titles, kept in Albanian, as web/notifications.rs words them for an English reader.
+
+# src/sender.rs: the sign-in code
+{} është kodi yt për Pluribus
+= {} is your Pluribus code
+
+Kodi yt për të hyrë në Pluribus:
+= Your code to sign in to Pluribus:
+
+Vlen për 10 minuta. Nëse nuk e kërkove ti, mund ta injorosh këtë email.
+= It works for 10 minutes. If you didn’t ask for it, you can ignore this email.
+
+# src/sender.rs: a notice of unread messages
+{} të shkroi për „{}“
+= {} wrote to you about “{}”
+
+{} të shkroi në Pluribus
+= {} wrote to you on Pluribus
+
+{} të shkroi në Pluribus për „{}“:
+= {} wrote to you on Pluribus about “{}”:
+
+{} të shkroi në Pluribus:
+= {} wrote to you on Pluribus:
+
+(dhe 1 mesazh tjetër i palexuar)
+= (and 1 more unread message)
+
+(dhe {} mesazhe të tjera të palexuara)
+= (and {} more unread messages)
+
+Përgjigju këtu: {}
+= Reply here: {}
+
+Për një bisedë nuk të vjen më shumë se një email në orë. Për të mos i marrë më, hap {}, ose hiq shenjën te „Mesazhet që nuk i ke lexuar“ te „Cilësimet“.
+= You get at most one email an hour about a conversation. To stop them, open {}, or untick “Messages you haven’t read” in “Settings”.
+
+Për një bisedë nuk të vjen më shumë se një email në orë. Për të mos i marrë më, hiq shenjën te „Mesazhet që nuk i ke lexuar“ te „Cilësimet“.
+= You get at most one email an hour about a conversation. To stop them, untick “Messages you haven’t read” in “Settings”.
+
+# src/expiry.rs: a listing expired, or about to
+Njoftimi yt skadoi: {}
+= Your listing has expired: {}
+
+Njoftimi yt „{}“ skadoi dhe nuk shfaqet më në Pluribus.
+= Your listing “{}” has expired and no longer shows on Pluribus.
+
+Për ta kthyer në faqe për {} ditë të tjera, rifreskoje te „Njoftimet e mia“: {}
+= To put it back up for another {} days, renew it in “My listings”: {}
+
+Njoftimi yt skadon më {}: {}
+= Your listing expires on {}: {}
+
+Njoftimi yt „{}“ në Pluribus skadon më {}, dhe pastaj nuk shfaqet më.
+= Your listing “{}” on Pluribus expires on {}, and then it will no longer show.
+
+Për ta mbajtur {} ditë të tjera, rifreskoje te „Njoftimet e mia“: {}
+= To keep it up for another {} days, renew it in “My listings”: {}
+
+Për të mos marrë më lajmërime me email nga Pluribus, me një klik: {}
+= To stop all email notifications from Pluribus, in one click: {}
+
+# web/searches.rs: a saved search's alert
+Te kërkimi yt „{}“ në Pluribus ka {}:
+= Your search “{}” on Pluribus has {}:
+
+Shihi të gjitha: {}
+= See them all: {}
+
+Për një kërkim nuk të vjen më shumë se një email në tri orë. Për t'i ndalur, hap „Kërkimet e ruajtura“: {}
+= You get at most one email every three hours about a search. To stop them, open “Saved searches”: {}
+
+Për të ndalur vetëm këtë, me një klik: {}
+= To stop only this one, in one click: {}
+
+# web/stores.rs: an invitation into a store
+{} të fton në dyqan
+= {} invites you to their store
+
+Për ta pranuar, hyr në Pluribus me këtë email:
+= To accept, sign in to Pluribus with this email:
+
+# The notifications' titles as the database keeps them (db/price_drops.rs, db/expiry.rs, notices.rs,
+# searches.rs, stores.rs; the messages' and the invitations' are above)
+Çmimi ra: {}
+= Price drop: {}
+
+Njoftimi skadoi: {}
+= Listing expired: {}
+
+Njoftimi skadon së shpejti: {}
+= Listing expires soon: {}
+
+1 njoftim i ri: {}
+= 1 new listing: {}
+
+{} njoftime të reja: {}
+= {} new listings: {}

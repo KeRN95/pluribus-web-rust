@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { t } from "controllers/i18n.js";
 
 // Opens the phone's share sheet for a listing, or copies its link where there is none, and says
 // so for a moment as the copy button beside the number does: a check, "Linku u kopjua".
@@ -23,7 +24,7 @@ export default class extends Controller {
     }
     const button = this.buttonTarget;
     button.classList.add("is-copied");
-    button.setAttribute("aria-label", "Linku u kopjua");
+    button.setAttribute("aria-label", t("Linku u kopjua"));
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
       button.classList.remove("is-copied");

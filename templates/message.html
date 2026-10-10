@@ -4,9 +4,9 @@
     (messages.css); links in it are only text. -#}
 <li class="message{% if message.mine %} mine{% endif %}" id="message-{{ message.id }}" data-id="{{ message.id }}">
   {%- if let Some(author) = message.author %}
-  <span class="message-author">{{ author }}</span>
+  <span class="message-author">{{ crate::i18n::name(author) }}</span>
   {%- else %}
-  <span class="visually-hidden">{% if message.mine %}Ti{% else %}{{ other_name }}{% endif %}: </span>
+  <span class="visually-hidden">{% if message.mine %}{{ crate::t("Ti") }}{% else %}{{ other_name }}{% endif %}: </span>
   {%- endif %}
   <p class="message-body">{{ message.body }}</p>
   <time class="message-time">{{ message.when() }}</time>

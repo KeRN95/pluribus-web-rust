@@ -1,0 +1,120 @@
+# The pages about the site (web/pages.rs; each page's body is in English as a whole, in its own
+# templates/*_en.html), the promotions page (/promovo: web/promotions.rs, promote.html), and the
+# error pages (not_found.html, error.html, web/mod.rs). Their names in the footer, and "Kontakt",
+# are in base.txt; the promotions' names in data.txt; the months of the terms' and the privacy
+# page's dates in format.txt.
+
+# templates/how_it_works.html, terms.html: their headings
+
+Si funksionon Pluribus
+= How Pluribus works
+
+Kushtet e përdorimit
+= Terms of use
+
+# src/web/pages.rs: the pages' descriptions
+
+Si kërkon, ruan dhe ndjek njoftimet, si kontakton shitësin, dhe si shton një njoftim me numrin e celularit, pa fjalëkalim.
+= How to search, save and follow listings, how to contact the seller, and how to post a listing with your mobile number, no password.
+
+Si blen dhe shet pa rrezik: takohu në vend publik, shiko mallin para se të paguash, mos dërgo para paraprakisht, dhe çfarë të bësh kur diçka s'shkon.
+= How to buy and sell safely: meet in a public place, see the item before you pay, don’t send money in advance, and what to do when something goes wrong.
+
+Çfarë lejohet dhe çfarë jo në Pluribus: llogaria, njoftimet, mesazhet, moderimi dhe përgjegjësia.
+= What is and isn’t allowed on Pluribus: accounts, listings, messages, moderation and liability.
+
+Cilat të dhëna mban Pluribus, pse, kush tjetër i merr, sa kohë, dhe si i sheh, i ndryshon ose i fshin.
+= What data Pluribus keeps, why, who else gets it, for how long, and how you see, change or delete it.
+
+Si i shkruan Pluribus: për llogarinë, për një njoftim, për një ide.
+= How to write to Pluribus: about your account, a listing, an idea.
+
+# templates/promote.html
+
+Promovo një njoftim
+= Promote a listing
+
+Që ta shohin më shumë: në rreshtin „Të veçuara“ mbi njoftimet e tjera, në krye të më të rejave, ose me një kartë që dallohet.
+= So that more people see it: in the “Featured” row above the other listings, at the top of the newest, or with a card that stands out.
+
+Tani për tani nuk ka promovime.
+= There are no promotions for now.
+
+Si ta promovoj?
+= How do I promote it?
+
+# "Na shkruaj te" an e-mail address, or the contact page ("Kontakt").
+Na shkruaj te
+= Write to us via
+
+me numrin e njoftimit
+= with the listing’s number
+
+dhe promovimin që do.
+= and the promotion you want.
+
+Të tregojmë si paguhet, dhe sapo të paguhet e ndezim: të vjen një lajmërim, dhe te njoftimi yt shkruhet deri kur zgjat.
+= We’ll tell you how to pay, and as soon as it’s paid we switch it on: you get a notification, and your listing shows how long it lasts.
+
+# Either side of the example number, <strong>1234</strong>.
+Numri i njoftimit është në adresën e faqes së tij, pas /listing/: te /listing/
+= The listing’s number is in its page’s address, after /listing/: for /listing/
+
+-…, 1234. Nga faqja e njoftimit tënd, „Promovoje“ e sjell vetë.
+= -…, it’s 1234. From your listing’s page, “Promote it” brings it along.
+
+# src/web/promotions.rs: what each kind of promotion does, the page's description, and the
+# subject of the e-mail it offers to write
+
+Del te „Të veçuara“, rreshti mbi njoftimet e kategorisë së tij dhe të kërkimeve ku përputhet, me radhë me të tjerët.
+= Shows in “Featured”, the row above the listings of its category and of the searches it matches, taking turns with the others.
+
+Karta e tij dallohet me një sfond të verdhë të lehtë, kudo që shfaqet.
+= Its card stands out with a pale yellow background, wherever it appears.
+
+Ngjitet menjëherë në krye të njoftimeve më të reja, një herë.
+= Goes straight to the top of the newest listings, once.
+
+Ngjitet në krye të njoftimeve më të reja çdo ditë, sa zgjat.
+= Goes to the top of the newest listings every day, while it lasts.
+
+Si shihet më shumë një njoftim në Pluribus: në rreshtin „Të veçuara“, në krye të më të rejave, ose me një kartë që dallohet.
+= How a listing gets seen more on Pluribus: in the “Featured” row, at the top of the newest, or with a card that stands out.
+
+Promovim për njoftimin {}
+= Promotion for listing {}
+
+Promovim
+= Promotion
+
+# templates/not_found.html; its search's placeholder, "Kërko p.sh. Golf 7, apartament 2+1", is the
+# welcome page's, in browse.txt
+
+Faqja nuk u gjet
+= Page not found
+
+Njoftimi mund të jetë çaktivizuar ose hequr, ose lidhja është e gabuar.
+= The listing may have been paused or removed, or the link is wrong.
+
+Kërko
+= Search
+
+Faqja kryesore
+= Home page
+
+# templates/error.html; "Kontakt", the link after the lead, is in base.txt
+
+Diçka shkoi keq
+= Something went wrong
+
+Nuk e hapëm dot këtë faqe. Provo përsëri pas pak; nëse vazhdon, na shkruaj te
+= We couldn’t open this page. Try again in a moment; if it keeps happening, let us know via
+
+# src/web/mod.rs: the line when even the error page fails, and the answer to a form posted from
+# another site
+
+Diçka shkoi keq. Provo përsëri.
+= Something went wrong. Try again.
+
+Kjo kërkesë vjen nga një faqe tjetër.
+= This request comes from another site.

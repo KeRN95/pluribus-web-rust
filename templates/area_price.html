@@ -5,25 +5,25 @@
     compare, green under it, red over it and yellow about it, and the card says the average and by
     how much. -#}
 <details class="bubble area-price{% if let Some(zone) = area.zone %} {{ zone.tone }}{% endif %}" data-controller="dropdown">
-  <summary title="Si llogaritet">
+  <summary title="{{ crate::t("Si llogaritet") }}">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M8.5 15.5 15.5 8.5M11 8.5h4.5V13"/></svg>
     {{ area.per_area }}
     {%- if let Some(zone) = area.zone %}<span class="visually-hidden">, {{ zone.verdict|lower }}</span>{% endif %}
   </summary>
   <div class="bubble-card area-price-card">
-    <p class="bubble-title">Si llogaritet</p>
+    <p class="bubble-title">{{ crate::t("Si llogaritet") }}</p>
     <dl class="bubble-sum">
-      <div><dt>Çmimi</dt><dd>{{ area.price }}</dd></div>
-      <div><dt>Sipërfaqja</dt><dd>{{ area.area }}</dd></div>
-      <div class="bubble-total"><dt>Për m²</dt><dd>{{ area.per_area }}</dd></div>
+      <div><dt>{{ crate::t("Çmimi") }}</dt><dd>{{ area.price }}</dd></div>
+      <div><dt>{{ crate::t("Sipërfaqja") }}</dt><dd>{{ area.area }}</dd></div>
+      <div class="bubble-total"><dt>{{ crate::t("Për m²") }}</dt><dd>{{ area.per_area }}</dd></div>
       {%- if let Some(zone) = area.zone %}
-      <div><dt>Mesatarja e zonës</dt><dd>{{ zone.average }}</dd></div>
+      <div><dt>{{ crate::t("Mesatarja e zonës") }}</dt><dd>{{ zone.average }}</dd></div>
       {%- endif %}
     </dl>
     {%- if let Some(zone) = area.zone %}
     <p class="area-price-verdict">{{ zone.verdict }}{% if let Some(difference) = zone.difference %}: {{ difference }}{% endif %}</p>
     {%- endif %}
-    <p class="bubble-note">Çmimi pjesëtuar me sipërfaqen, rrumbullakuar në {{ area.rounded_to }}.
-      {%- if let Some(zone) = area.zone %} Mesatarja: {{ zone.listings }} në shitje në {{ zone.zone }} ({{ zone.category }}), pa çmimet më të ulëta e më të larta.{% endif %}</p>
+    <p class="bubble-note">{{ crate::t1("Çmimi pjesëtuar me sipërfaqen, rrumbullakuar në {}.", area.rounded_to) }}
+      {%- if let Some(zone) = area.zone %} {{ crate::t3("Mesatarja: {} në shitje në {} ({}), pa çmimet më të ulëta e më të larta.", zone.listings, zone.zone, zone.category) }}{% endif %}</p>
   </div>
 </details>

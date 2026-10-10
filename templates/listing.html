@@ -32,9 +32,9 @@
       signing in; and the ways to share it (share_note.html). -#}
   <div class="notice posted-note" role="status">
     {%- if just_published %}
-    <p><strong>Njoftimi yt u publikua.</strong> Ndaje, që ta shohin më shumë njerëz.</p>
+    <p><strong>{{ crate::t("Njoftimi yt u publikua.") }}</strong> {{ crate::t("Ndaje, që ta shohin më shumë njerëz.") }}</p>
     {%- else %}
-    <p>Njoftimi yt u publikua. Për ta ndryshuar ose fshirë më vonë, <a href="/njoftimet-e-mia">hyr</a> me numrin ose email-in që shkruajte.</p>
+    <p>{{ crate::t("Njoftimi yt u publikua.") }} {{ crate::t("Për ta ndryshuar ose fshirë më vonë,") }} <a href="/njoftimet-e-mia">{{ crate::t("hyr") }}</a> {{ crate::t("me numrin ose email-in që shkruajte.") }}</p>
     {%- endif %}
     {%- if listing.status == "ACTIVE" %}{% include "share_note.html" %}{% endif %}
   </div>
@@ -51,17 +51,17 @@
       (browse.css), and its own goes to its icon too where its name leaves the step buttons at the
       line's end no room (fit_controller.js, .is-tight). Then its status, if it isn't simply up. -#}
   <div class="listing-tags" data-controller="fit">
-    <nav class="category-path listing-path" aria-label="Kategoria e njoftimit">
-      <a class="back-button" href="{{ category.url }}" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
+    <nav class="category-path listing-path" aria-label="{{ crate::t("Kategoria e njoftimit") }}">
+      <a class="back-button" href="{{ category.url }}" aria-label="{{ crate::t("Kthehu") }}" title="{{ crate::t("Kthehu") }}" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
       {%- include "way_up.html" %}
       {%- if let Some(parent) = parent %}
       <a class="shortcut small category-up" href="{{ parent.url }}">
         {%- if let Some(icon) = parent.icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
-        {{ parent.name }}</a>
+        {{ crate::t(parent.name) }}</a>
       {%- endif %}
       <a class="shortcut small is-selected" href="{{ category.url }}">
         {%- if let Some(icon) = category.icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
-        {{ category.name }}</a>
+        {{ crate::t(category.name) }}</a>
     </nav>
     {%- if let Some(label) = listing.status_label() %}
     <span class="badge">{{ label }}</span>
@@ -71,15 +71,15 @@
         listing before this one on that list and the one after it, in the list's own order, newest
         first (db::listing_neighbours); one with nowhere to go stays, greyed, so the three keep
         their places. -#}
-    <nav class="listing-steps" aria-label="Njoftimet e tjera">
-      <a class="back-button list-button" href="{{ category.url }}" aria-label="Lista e njoftimeve" title="Lista e njoftimeve"><svg data-icon="list" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::browse::Cards::List.icon()|safe }}</svg></a>
+    <nav class="listing-steps" aria-label="{{ crate::t("Njoftimet e tjera") }}">
+      <a class="back-button list-button" href="{{ category.url }}" aria-label="{{ crate::t("Lista e njoftimeve") }}" title="{{ crate::t("Lista e njoftimeve") }}"><svg data-icon="list" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::browse::Cards::List.icon()|safe }}</svg></a>
       {%- if let Some(previous) = previous %}
-      <a class="back-button step-button" href="/listing/{{ previous.public_no }}-{{ previous.slug }}" aria-label="Njoftimi i mëparshëm" title="Njoftimi i mëparshëm"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
+      <a class="back-button step-button" href="/listing/{{ previous.public_no }}-{{ previous.slug }}" aria-label="{{ crate::t("Njoftimi i mëparshëm") }}" title="{{ crate::t("Njoftimi i mëparshëm") }}"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
       {%- else %}
       <span class="back-button step-button is-off" aria-hidden="true"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></span>
       {%- endif %}
       {%- if let Some(next) = next %}
-      <a class="back-button step-button" href="/listing/{{ next.public_no }}-{{ next.slug }}" aria-label="Njoftimi tjetër" title="Njoftimi tjetër"><svg data-icon="chevron-right" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+      <a class="back-button step-button" href="/listing/{{ next.public_no }}-{{ next.slug }}" aria-label="{{ crate::t("Njoftimi tjetër") }}" title="{{ crate::t("Njoftimi tjetër") }}"><svg data-icon="chevron-right" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
       {%- else %}
       <span class="back-button step-button is-off" aria-hidden="true"><svg data-icon="chevron-right" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>
       {%- endif %}
@@ -105,14 +105,14 @@
       ahead of anything else on the page (fetchpriority). -#}
   <div class="gallery">
     <div class="listing-photos"
-      {%- if photos.len() > 1 %} data-slides-target="track" data-action="scroll->slides#update" tabindex="0" role="region" aria-label="Fotot e njoftimit"{% endif %}>
+      {%- if photos.len() > 1 %} data-slides-target="track" data-action="scroll->slides#update" tabindex="0" role="region" aria-label="{{ crate::t("Fotot e njoftimit") }}"{% endif %}>
       {% for photo in photos %}
       <div class="gallery-photo">
         <img class="gallery-backdrop" src="{{ photo.backdrop() }}" alt=""{% if photo.placeholder.is_none() && loop.index > 2 %} loading="lazy"{% endif %}>
         {%- if let Some(webp) = photo.webp_srcset() %}
         <picture><source type="image/webp" srcset="{{ webp }}" sizes="{% if car_page %}{{ CAR_GALLERY_SIZES }}{% else if wide_photos %}{{ GALLERY_SIZES }}{% else %}{{ SPLIT_GALLERY_SIZES }}{% endif %}">
         {%- endif %}
-        <img src="{{ photo.url }}" alt="{{ listing.title }}{% if photos.len() > 1 %}, foto {{ loop.index }} nga {{ photos.len() }}{% endif %}"
+        <img src="{{ photo.url }}" alt="{{ listing.title }}{% if photos.len() > 1 %}, {{ crate::t2("foto {} nga {}", loop.index, photos.len()) }}{% endif %}"
           {%- if let Some(width) = photo.width_px %} width="{{ width }}"{% endif %}
           {%- if let Some(height) = photo.height_px %} height="{{ height }}"{% endif %}
           {%- if loop.index > 2 %} loading="lazy"{% endif %}
@@ -125,15 +125,15 @@
     <div class="gallery-dots" data-slides-target="dots" aria-hidden="true">
       {%- for _ in photos.iter() %}<span{% if loop.first %} class="is-current"{% endif %}></span>{% endfor -%}
     </div>
-    <button type="button" class="gallery-arrow gallery-previous" data-slides-target="previous" data-action="slides#previous" aria-label="Foto e mëparshme" hidden>
+    <button type="button" class="gallery-arrow gallery-previous" data-slides-target="previous" data-action="slides#previous" aria-label="{{ crate::t("Foto e mëparshme") }}" hidden>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
     </button>
-    <button type="button" class="gallery-arrow gallery-next" data-slides-target="next" data-action="slides#next" aria-label="Foto tjetër" hidden>
+    <button type="button" class="gallery-arrow gallery-next" data-slides-target="next" data-action="slides#next" aria-label="{{ crate::t("Foto tjetër") }}" hidden>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
     </button>
     {#- The counter is a button too: it shows the filmstrip over the photos' foot, which starts
         hidden, and hides it again (slides_controller.js, toggleThumbs). -#}
-    <button type="button" class="gallery-count" data-action="slides#toggleThumbs" aria-controls="listing-thumbs" aria-expanded="false" title="Të gjitha fotot"><span class="visually-hidden">Të gjitha fotot: </span><span data-slides-target="count">1 / {{ photos.len() }}</span></button>
+    <button type="button" class="gallery-count" data-action="slides#toggleThumbs" aria-controls="listing-thumbs" aria-expanded="false" title="{{ crate::t("Të gjitha fotot") }}"><span class="visually-hidden">{{ crate::t("Të gjitha fotot") }}: </span><span data-slides-target="count">1 / {{ photos.len() }}</span></button>
     {#- Over the photos' foot, just above the counter, a filmstrip of them, hidden until the
         counter is clicked, which hides it again: each photo's mini copy in a small square, the
         one that shows outlined in white, as the dots mark theirs (they give it their place
@@ -143,13 +143,13 @@
     <div class="gallery-thumbs" id="listing-thumbs" data-slides-target="filmstrip" hidden>
       <div class="thumb-strip" data-slides-target="thumbs" data-action="scroll->slides#scrolled">
         {%- for photo in photos %}
-        <button type="button" class="gallery-thumb{% if loop.first %} is-current{% endif %}"{% if loop.first %} aria-current="true"{% endif %} data-action="slides#pick" aria-label="Foto {{ loop.index }} nga {{ photos.len() }}"><img src="{{ photo.thumb() }}" alt="" width="72" height="72" loading="lazy" decoding="async"></button>
+        <button type="button" class="gallery-thumb{% if loop.first %} is-current{% endif %}"{% if loop.first %} aria-current="true"{% endif %} data-action="slides#pick" aria-label="{{ crate::t2("Foto {} nga {}", loop.index, photos.len()) }}"><img src="{{ photo.thumb() }}" alt="" width="72" height="72" loading="lazy" decoding="async"></button>
         {%- endfor %}
       </div>
-      <button type="button" class="thumb-step thumb-previous" data-slides-target="thumbsPrevious" data-action="slides#thumbsBack" aria-label="Fotot e mëparshme" hidden>
+      <button type="button" class="thumb-step thumb-previous" data-slides-target="thumbsPrevious" data-action="slides#thumbsBack" aria-label="{{ crate::t("Fotot e mëparshme") }}" hidden>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
-      <button type="button" class="thumb-step thumb-next" data-slides-target="thumbsNext" data-action="slides#thumbsOn" aria-label="Fotot e tjera" hidden>
+      <button type="button" class="thumb-step thumb-next" data-slides-target="thumbsNext" data-action="slides#thumbsOn" aria-label="{{ crate::t("Fotot e tjera") }}" hidden>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
       </button>
     </div>
@@ -162,7 +162,7 @@
   {%- if listing.location_name.is_some() || published.is_some() %}
   <p class="listing-meta">
     {%- if let Some(location) = listing.location_name %}<span translate="no">{{ location }}</span>{% endif %}
-    {%- if let Some((prefix, date)) = published %}{% if listing.location_name.is_some() %} · {% endif %}<span class="visually-hidden">{{ prefix }}</span><strong>{{ date }}</strong>{% endif -%}
+    {%- if let Some((prefix, date)) = published %}{% if listing.location_name.is_some() %} · {% endif %}<span class="visually-hidden">{{ prefix }} </span><strong>{{ date }}</strong>{% endif -%}
   </p>
   {%- endif %}
   {%- let heart_number = listing.public_no %}
@@ -170,7 +170,7 @@
   {%- if let Some(views) = views %}
   {#- At the heart's left, how many times the page was seen: an eye and the number, as on "Më të
       klikuarat". -#}
-  <p class="listing-views" title="{{ views }} shikime"><svg data-icon="eye" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::EYE|safe }}</svg><span class="visually-hidden">Shikime: </span>{{ views }}</p>
+  <p class="listing-views" title="{% if views == "1" %}{{ crate::t("1 shikime") }}{% else %}{{ crate::t1("{} shikime", views) }}{% endif %}"><svg data-icon="eye" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::EYE|safe }}</svg><span class="visually-hidden">{{ crate::t("Shikime") }}: </span>{{ views }}</p>
   {%- endif %}
   </div>
 
@@ -189,7 +189,7 @@
     <h1>{% if made %}{% if let Some(own) = listing.heading %}{{ own }}{% endif %}{% else %}{{ listing.title }}{% endif %}</h1>
     {#- What it is and in what state ("Në shitje · E përdorur"), and at the end of the line its
         number, to name it on the phone. -#}
-    <p class="card-meta listing-kind">{% if made %}<span class="listing-variant">{{ listing.title }}</span> · {% endif %}{{ listing.kind_line() }} · <span class="listing-number">Numri i njoftimit: {{ listing.public_no }}</span></p>
+    <p class="card-meta listing-kind">{% if made %}<span class="listing-variant">{{ listing.title }}</span> · {% endif %}{{ listing.kind_line() }} · <span class="listing-number">{{ crate::t("Numri i njoftimit") }}: {{ listing.public_no }}</span></p>
   </header>
   {%- if !facts.is_empty() %}
   {#- A car's key facts in a row under the title's hairline, as FINN has them (listings.rs,
@@ -199,7 +199,7 @@
     {%- for fact in facts %}
     <div class="key-fact">
       {%- if let Some(icon) = fact.icon %}<svg class="key-fact-icon" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}
-      <div class="key-fact-text"><dt>{{ fact.label }}</dt>{% for value in fact.values %}<dd>{{ value }}</dd>{% endfor %}</div>
+      <div class="key-fact-text"><dt>{{ crate::t(fact.label) }}</dt>{% for value in fact.values %}<dd>{{ fact.shown(value) }}</dd>{% endfor %}</div>
     </div>
     {%- endfor %}
   </dl>
@@ -225,10 +225,10 @@
       <details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" data-loan-down-percent-value="{{ LOAN_DOWN_PERCENT }}">
         <summary>
           <svg data-icon="phone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01"/></svg>
-          Llogarit kredinë
+          {{ crate::t("Llogarit kredinë") }}
         </summary>
         <div class="bubble-card loan-card">
-          <p class="bubble-title">Llogaritësi i kredisë</p>
+          <p class="bubble-title">{{ crate::t("Llogaritësi i kredisë") }}</p>
           {% include "loan_calculator.html" %}
         </div>
       </details>
@@ -259,7 +259,7 @@
   {#- The visitor blocked its seller, from a report's thanks (report.html) or a conversation: said
       under the buttons, quietly, with where to let them be again; the page itself offers no block,
       so that its buttons stay few. -#}
-  <p class="blocked-note">E ke bllokuar këtë shitës: njoftimet që ka vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit. E zhbllokon te <a href="/llogaria/cilesimet">Cilësimet</a>.</p>
+  <p class="blocked-note">{{ crate::t("E ke bllokuar këtë shitës: njoftimet që ka vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit.") }} {{ crate::t("E zhbllokon te") }} <a href="/llogaria/cilesimet">{{ crate::t("Cilësimet") }}</a>.</p>
   {%- endif %}
   </div>
 
@@ -270,12 +270,12 @@
   {% include "description.html" %}
   {% if !details.is_empty() %}
   <section class="listing-details">
-    <h2>Detajet</h2>
+    <h2>{{ crate::t("Detajet") }}</h2>
     <dl class="spec-grid">
       {%- for detail in details %}
       <div class="spec">
-        <dt>{% if let Some(icon) = detail.icon %}<svg class="spec-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}{{ detail.label }}</dt>
-        {%- for value in detail.values %}<dd>{{ value }}</dd>{% endfor %}
+        <dt>{% if let Some(icon) = detail.icon %}<svg class="spec-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}{{ crate::t(detail.label) }}</dt>
+        {%- for value in detail.values %}<dd>{{ detail.shown(value) }}</dd>{% endfor %}
       </div>
       {%- endfor %}
     </dl>
@@ -283,10 +283,10 @@
   {% endif %}
   {%- for detail in options %}
   <section class="listing-options">
-    <h2>{{ detail.label }}</h2>
+    <h2>{{ crate::t(detail.label) }}</h2>
     <ul class="options">
       {%- for value in detail.values %}
-      <li><svg class="option-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>{{ value }}</li>
+      <li><svg class="option-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>{{ detail.shown(value) }}</li>
       {%- endfor %}
     </ul>
   </section>
@@ -294,7 +294,7 @@
   {% else %}
   {% if !details.is_empty() %}
   <section class="listing-details">
-    <h2>Detajet</h2>
+    <h2>{{ crate::t("Detajet") }}</h2>
     {#- Pills that fill each line: a detail's icon (icons.rs), then its name where its value doesn't
         say what it is ("Kati 6", but "6 GB RAM", "Euro 6"), then its value; several values (a car's
         options) a pill each, with a check. The category's key facts, those its cards show too,
@@ -304,13 +304,13 @@
     <dl class="attributes">
       {% for detail in details %}
       <div class="attribute-group">
-        <dt class="visually-hidden">{{ detail.label }}</dt>
+        <dt class="visually-hidden">{{ crate::t(detail.label) }}</dt>
         {%- for value in detail.values %}
-        <dd class="attribute{% if detail.key %} is-key{% endif %}" title="{{ detail.label }}">
+        <dd class="attribute{% if detail.key %} is-key{% endif %}" title="{{ crate::t(detail.label) }}">
           {%- if detail.multi %}<svg class="attribute-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
           {%- else %}{% if let Some(icon) = detail.icon %}<svg class="attribute-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}
-          {%- if detail.named_before(value) %}<span class="attribute-label" aria-hidden="true">{{ detail.label }}</span>{% endif %}{% endif -%}
-          {{ value }}</dd>
+          {%- if detail.named_before(value) %}<span class="attribute-label" aria-hidden="true">{{ crate::t(detail.label) }}</span>{% endif %}{% endif -%}
+          {{ detail.shown(value) }}</dd>
         {%- endfor %}
       </div>
       {% endfor %}
@@ -328,9 +328,9 @@
     (listing.css), which loads as it comes near the screen (listing_map_controller.js). Its point
     is its place's, its town's for a zone without one of its own, so a circle round it says where
     rather than a pin; the place's name over the map's top left. -#}
-<section class="listing-map-section" aria-label="Vendndodhja"{% if aside %} data-map-aside-target="map"{% endif %}>
+<section class="listing-map-section" aria-label="{{ crate::t("Vendndodhja") }}"{% if aside %} data-map-aside-target="map"{% endif %}>
   {%- if car_page %}
-  <h2>Lokacioni</h2>
+  <h2>{{ crate::t("Lokacioni") }}</h2>
   {%- endif %}
   <div class="listing-map" data-controller="listing-map"
        data-listing-map-latitude-value="{{ map.latitude }}" data-listing-map-longitude-value="{{ map.longitude }}">
@@ -349,7 +349,7 @@
     under the listing as wide as the page, eight at a time, the next eight fetched as the last
     come into view (next_page.html; listings::related). -#}
 <section class="related" aria-labelledby="related-heading">
-  <h2 id="related-heading">Njoftime të ngjashme</h2>
+  <h2 id="related-heading">{{ crate::t("Njoftime të ngjashme") }}</h2>
   {% include "listing_grid.html" %}
 </section>
 {%- endif %}
@@ -362,20 +362,20 @@
     and blocking go on in it without leaving the listing; its messages scroll inside it. On a
     phone the sheet rises onto the keyboard as the box to write in takes the focus, rather than
     the keyboard pushing the screen up, and comes back down as the focus leaves it. -#}
-<div class="message-sheet" id="message-sheet" role="dialog" aria-modal="true" aria-label="Mesazh për shitësin" hidden
+<div class="message-sheet" id="message-sheet" role="dialog" aria-modal="true" aria-label="{{ crate::t("Mesazh për shitësin") }}" hidden
      data-message-sheet-target="sheet"
      data-action="pointerdown->message-sheet#grab pointermove->message-sheet#drag pointerup->message-sheet#release pointercancel->message-sheet#release focusin->message-sheet#raise focusout->message-sheet#lower">
   {#- The bar at its top, as on an iPhone's sheets, on a phone: dragged down far enough, or
       flicked, it closes the sheet, as the conversation's head does; let go sooner, the sheet goes
       back up. From 720 px up the sheet is a popup from the button, without it. -#}
   <div class="sheet-grabber" aria-hidden="true"></div>
-  <button type="button" class="sheet-close" aria-label="Mbyll" title="Mbyll" data-action="message-sheet#close">
+  <button type="button" class="sheet-close" aria-label="{{ crate::t("Mbyll") }}" title="{{ crate::t("Mbyll") }}" data-action="message-sheet#close">
     <svg data-icon="x" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
   </button>
   <div class="message-sheet-body" data-scroll-root data-message-sheet-target="body">
     <turbo-frame id="conversation" data-message-sheet-target="frame"
                  data-action="turbo:frame-missing->message-sheet#missing turbo:frame-load->message-sheet#loaded">
-      <p class="message-sheet-wait">Po hapet biseda…</p>
+      <p class="message-sheet-wait">{{ crate::t("Po hapet biseda…") }}</p>
     </turbo-frame>
   </div>
 </div>

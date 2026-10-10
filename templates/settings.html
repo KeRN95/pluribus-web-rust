@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {%- import "account_nav.html" as account %}
 
-{% block title %}Cilësimet | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Cilësimet") }} | Pluribus{% endblock %}
 
 {% block content %}
 {#- The account's settings (settings.rs), a section each under its heading: the name; the phone
@@ -10,85 +10,99 @@
     A form's line at the top says what it did; one sent back keeps what was typed, with why. -#}
 <section class="account settings">
   {% call account::account_nav("settings", unread) %}
-  <h1>Cilësimet</h1>
-  <p class="lead">Llogaria jote në Pluribus që nga {{ self.since() }}.</p>
+  <h1>{{ crate::t("Cilësimet") }}</h1>
+  <p class="lead">{{ crate::t1("Llogaria jote në Pluribus që nga {}.", self.since()) }}</p>
   {%- if let Some(done) = done %}
   <p class="notice" role="status">{{ done }}</p>
   {%- endif %}
 
-  <h2>Emri</h2>
+  <h2>{{ crate::t("Emri") }}</h2>
   <form class="account-form settings-form" method="post" action="/llogaria/emri">
     <div class="field">
-      <label class="field-label" for="emri">Emri që shohin të tjerët</label>
+      <label class="field-label" for="emri">{{ crate::t("Emri që shohin të tjerët") }}</label>
       <input id="emri" name="emri" value="{{ name }}" maxlength="60" required autocomplete="name"{% if name_error.is_some() %} aria-invalid="true" aria-describedby="emri-error"{% endif %}>
-      <p class="field-hint">Te njoftimet e tua, te profili dhe te bisedat.</p>
+      <p class="field-hint">{{ crate::t("Te njoftimet e tua, te profili dhe te bisedat.") }}</p>
       {%- if let Some(error) = name_error %}
       <p class="field-error" id="emri-error" role="alert">{{ error }}</p>
       {%- endif %}
     </div>
-    <button type="submit" class="button secondary">Ruaje emrin</button>
+    <button type="submit" class="button secondary">{{ crate::t("Ruaje emrin") }}</button>
   </form>
 
-  <h2>Numri dhe email-i</h2>
-  <p class="field-hint">Hyn me cilindo prej tyre. Njoftimet e tua tregojnë numrin, ose email-in kur s'ke numër.</p>
+  <h2>{{ crate::t("Numri dhe email-i") }}</h2>
+  {#- The hint has an apostrophe ("s'ke"), which escaping would write as &#39;: the catalogue's
+      text, nothing anyone typed, as it is. "Numri" below says its English here, the catalogue's
+      "Numri" being a shoe's size. #}
+  <p class="field-hint">{{ crate::t("Hyn me cilindo prej tyre. Njoftimet e tua tregojnë numrin, ose email-in kur s'ke numër.")|safe }}</p>
   <dl class="settings-contacts">
     <div class="settings-contact">
-      <dt>Numri</dt>
-      <dd>{% if let Some(phone) = self.phone() %}<strong>{{ phone }}</strong>{% else %}<span class="optional">Asnjë</span>{% endif %}</dd>
+      <dt>{% if crate::i18n::english() %}Phone number{% else %}Numri{% endif %}</dt>
+      <dd>{% if let Some(phone) = self.phone() %}<strong>{{ phone }}</strong>{% else %}<span class="optional">{{ crate::t("Asnjë") }}</span>{% endif %}</dd>
       {%- if self.both() %}
-      <dd><form method="post" action="/llogaria/kontakti/hiq"><input type="hidden" name="hiq" value="numri"><button type="submit" class="button secondary small">Hiqe</button></form></dd>
+      <dd><form method="post" action="/llogaria/kontakti/hiq"><input type="hidden" name="hiq" value="numri"><button type="submit" class="button secondary small">{{ crate::t("Hiqe") }}</button></form></dd>
       {%- endif %}
     </div>
     <div class="settings-contact">
-      <dt>Email-i</dt>
-      <dd>{% if let Some(email) = settings.email %}<strong>{{ email }}</strong>{% else %}<span class="optional">Asnjë</span>{% endif %}</dd>
+      <dt>{{ crate::t("Email-i") }}</dt>
+      <dd>{% if let Some(email) = settings.email %}<strong>{{ email }}</strong>{% else %}<span class="optional">{{ crate::t("Asnjë") }}</span>{% endif %}</dd>
       {%- if self.both() %}
-      <dd><form method="post" action="/llogaria/kontakti/hiq"><input type="hidden" name="hiq" value="email"><button type="submit" class="button secondary small">Hiqe</button></form></dd>
+      <dd><form method="post" action="/llogaria/kontakti/hiq"><input type="hidden" name="hiq" value="email"><button type="submit" class="button secondary small">{{ crate::t("Hiqe") }}</button></form></dd>
       {%- endif %}
     </div>
   </dl>
   <form class="account-form settings-form" method="post" action="/llogaria/kontakti">
     <div class="field">
-      <label class="field-label" for="kontakti">Shto ose ndrysho numrin ose email-in</label>
-      <input id="kontakti" name="kontakti" value="{{ contact }}" required autocomplete="off" placeholder="069 123 4567 ose emri@shembull.al"{% if contact_error.is_some() %} aria-invalid="true" aria-describedby="kontakti-error"{% endif %}>
-      <p class="field-hint">Të dërgojmë një kod atje. Kur e shkruan, zë vendin e atij që kishe të të njëjtit lloj, edhe te njoftimet e tua.</p>
+      <label class="field-label" for="kontakti">{{ crate::t("Shto ose ndrysho numrin ose email-in") }}</label>
+      <input id="kontakti" name="kontakti" value="{{ contact }}" required autocomplete="off" placeholder="{{ crate::t("069 123 4567 ose emri@shembull.al") }}"{% if contact_error.is_some() %} aria-invalid="true" aria-describedby="kontakti-error"{% endif %}>
+      <p class="field-hint">{{ crate::t("Të dërgojmë një kod atje. Kur e shkruan, zë vendin e atij që kishe të të njëjtit lloj, edhe te njoftimet e tua.") }}</p>
       {%- if let Some(error) = contact_error %}
       <p class="field-error" id="kontakti-error" role="alert">{{ error }}</p>
       {%- endif %}
     </div>
-    <button type="submit" class="button secondary">Dërgo kodin</button>
+    <button type="submit" class="button secondary">{{ crate::t("Dërgo kodin") }}</button>
   </form>
 
-  <h2>Njoftimet</h2>
+  {# "Njoftimet" here are the notices the account gets, where the catalogue's "Njoftimet" are
+     listings: the heading's English is its own. -#}
+  <h2>{% if crate::i18n::english() %}Notifications{% else %}Njoftimet{% endif %}</h2>
   {#- What the account hears of (db::NoticePreferences); e-mail only for one that has an address. -#}
   <form class="notice-settings settings-notices" method="post" action="/llogaria/njoftimet">
     <label class="notice-setting"><input type="checkbox" name="mesazhet" value="1"{% if preferences.message_alerts %} checked{% endif %}>
-      <span>Mesazhet që nuk i ke lexuar<span class="field-hint">Kur dikush të shkruan dhe nuk e ke lexuar pas pak minutash, të vjen një njoftim te email-i ose WhatsApp-i yt, jo më shumë se një në orë për një bisedë.</span></span></label>
+      <span>{{ crate::t("Mesazhet që nuk i ke lexuar") }}<span class="field-hint">{{ crate::t("Kur dikush të shkruan dhe nuk e ke lexuar pas pak minutash, të vjen një njoftim te email-i ose WhatsApp-i yt, jo më shumë se një në orë për një bisedë.") }}</span></span></label>
     <label class="notice-setting"><input type="checkbox" name="cmimet" value="1"{% if preferences.price_drop_alerts %} checked{% endif %}>
-      <span>Çmimet që bien<span class="field-hint">Kur ulet çmimi i një njoftimi që ke ruajtur me zemër.</span></span></label>
+      <span>{{ crate::t("Çmimet që bien") }}<span class="field-hint">{{ crate::t("Kur ulet çmimi i një njoftimi që ke ruajtur me zemër.") }}</span></span></label>
     <label class="notice-setting"><input type="checkbox" name="kerkimet" value="1"{% if preferences.saved_search_alerts %} checked{% endif %}>
-      <span>Kërkimet e ruajtura<span class="field-hint">Kur dalin njoftime të reja te kërkimet që ke ruajtur, jo më shumë se një në tri orë për një kërkim.</span></span></label>
+      <span>{{ crate::t("Kërkimet e ruajtura") }}<span class="field-hint">{{ crate::t("Kur dalin njoftime të reja te kërkimet që ke ruajtur, jo më shumë se një në tri orë për një kërkim.") }}</span></span></label>
     {%- if settings.email.is_some() %}
     <label class="notice-setting"><input type="checkbox" name="email" value="1"{% if preferences.email_enabled %} checked{% endif %}>
-      <span>Edhe me email<span class="field-hint">Pa të, lajmërimet i gjen vetëm këtu, te „Lajmërimet“, dhe te pika mbi zemër.</span></span></label>
+      <span>{{ crate::t("Edhe me email") }}<span class="field-hint">{{ crate::t("Pa të, lajmërimet i gjen vetëm këtu, te „Lajmërimet“, dhe te pika mbi zemër.") }}</span></span></label>
     {%- endif %}
-    <button type="submit" class="button secondary small">Ruaj</button>
+    <button type="submit" class="button secondary small">{{ crate::t("Ruaj") }}</button>
   </form>
 
-  <h2>Dyqanet</h2>
+  <h2>{{ crate::t("Gjuha") }}</h2>
+  {#- The language the pages and the e-mails speak (web/language.rs, kept on the account too), each
+      named in itself, the one in use pressed. -#}
+  <form class="settings-buttons language-choice" method="post" action="/gjuha">
+    <button type="submit" class="button secondary" name="gjuha" value="sq" lang="sq" aria-pressed="{{ !crate::i18n::english() }}">Shqip</button>
+    <button type="submit" class="button secondary" name="gjuha" value="en" lang="en" aria-pressed="{{ crate::i18n::english() }}">English</button>
+  </form>
+  <p class="field-hint">{{ crate::t("Faqet, dhe email-et që të dërgojmë.") }}</p>
+
+  <h2>{{ crate::t("Dyqanet") }}</h2>
   {#- The invitations waiting for the account's contacts, each to take or turn down; the stores it
       is one of the people of (stores.rs), each to its page, with its role and, for its owner
       and admins, its people and its form, for the rest the way out; and a new one, up to
       db::STORES_MOST owned. -#}
   {%- for invitation in invitations %}
   <div class="store-invitation">
-    <p><a href="/ftesa/{{ invitation.id }}">{{ invitation.store_name }}</a> të fton si „{{ crate::web::stores::role_name(invitation.role) }}“.</p>
-    <form method="post" action="/ftesa/{{ invitation.id }}/prano"><button type="submit" class="button small">Prano</button></form>
-    <form method="post" action="/ftesa/{{ invitation.id }}/refuzo"><button type="submit" class="button secondary small">Refuzo</button></form>
+    <p><a href="/ftesa/{{ invitation.id }}">{{ invitation.store_name }}</a> {{ crate::t1("të fton si „{}“.", crate::web::stores::role_name(invitation.role)) }}</p>
+    <form method="post" action="/ftesa/{{ invitation.id }}/prano"><button type="submit" class="button small">{{ crate::t("Prano") }}</button></form>
+    <form method="post" action="/ftesa/{{ invitation.id }}/refuzo"><button type="submit" class="button secondary small">{{ crate::t("Refuzo") }}</button></form>
   </div>
   {%- endfor %}
   {%- if stores.is_empty() %}
-  <p class="field-hint">Një dyqan ka faqen e vet, me logon, përshkrimin, adresën dhe orarin, dhe njoftimet që poston si ai.</p>
+  <p class="field-hint">{{ crate::t("Një dyqan ka faqen e vet, me logon, përshkrimin, adresën dhe orarin, dhe njoftimet që poston si ai.") }}</p>
   {%- else %}
   <ul class="settings-stores">
     {%- for store in stores %}
@@ -97,12 +111,12 @@
       <span class="field-hint">{{ crate::web::stores::role_name(store.role) }}</span>
       <span class="settings-store-actions">
         {%- if store.manages() %}
-        <a class="button secondary small" href="/dyqani/{{ store.slug }}/njerezit">Njerëzit</a>
-        <a class="button secondary small" href="/dyqani/{{ store.slug }}/ndrysho">Ndrysho</a>
+        <a class="button secondary small" href="/dyqani/{{ store.slug }}/njerezit">{{ crate::t("Njerëzit") }}</a>
+        <a class="button secondary small" href="/dyqani/{{ store.slug }}/ndrysho">{{ crate::t("Ndrysho") }}</a>
         {%- endif %}
         {%- if store.role != "OWNER" %}
-        <form method="post" action="/dyqani/{{ store.slug }}/largohu" data-turbo-confirm="Të largohesh nga {{ store.display_name }}?">
-          <button type="submit" class="button secondary small">Largohu</button>
+        <form method="post" action="/dyqani/{{ store.slug }}/largohu" data-turbo-confirm="{{ crate::t1("Të largohesh nga {}?", store.display_name) }}">
+          <button type="submit" class="button secondary small">{{ crate::t("Largohu") }}</button>
         </form>
         {%- endif %}
       </span>
@@ -111,51 +125,53 @@
   </ul>
   {%- endif %}
   {%- if more_stores %}
-  <p><a class="button secondary" href="/dyqani/krijo">Krijo një dyqan</a></p>
+  <p><a class="button secondary" href="/dyqani/krijo">{{ crate::t("Krijo një dyqan") }}</a></p>
   {%- endif %}
 
   {%- if !blocked.is_empty() %}
   {#- Those the user blocked, on a listing's page (safety.rs) or in a conversation (messages.rs):
       their listings leave the user's pages, and neither writes to the other. Each to let be
       again. -#}
-  <h2 class="blocked-heading">Ata që ke bllokuar</h2>
-  <p class="field-hint">Njoftimet që kanë vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit.</p>
+  <h2 class="blocked-heading">{{ crate::t("Ata që ke bllokuar") }}</h2>
+  <p class="field-hint">{{ crate::t("Njoftimet që kanë vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit.") }}</p>
   <ul class="blocked-sellers">
     {%- for seller in blocked %}
     <li class="blocked-seller">
       <a href="{{ seller.url }}">{{ seller.name }}</a>
       <form method="post" action="/llogaria/zhblloko/{{ seller.id }}">
-        <button type="submit" class="button secondary small">Zhblloko</button>
+        <button type="submit" class="button secondary small">{{ crate::t("Zhblloko") }}</button>
       </form>
     </li>
     {%- endfor %}
   </ul>
   {%- endif %}
 
-  <h2>Pajisjet</h2>
-  <p>{% if sessions > 1 %}Llogaria jote është e hapur në {{ sessions }} pajisje, kjo me to.{% else %}Llogaria jote është e hapur vetëm në këtë pajisje.{% endif %}</p>
+  <h2>{{ crate::t("Pajisjet") }}</h2>
+  <p>{% if sessions > 1 %}{{ crate::t1("Llogaria jote është e hapur në {} pajisje, kjo me to.", sessions) }}{% else %}{{ crate::t("Llogaria jote është e hapur vetëm në këtë pajisje.") }}{% endif %}</p>
   <div class="settings-buttons">
     {%- if sessions > 1 %}
     <form method="post" action="/llogaria/pajisjet">
-      <button type="submit" class="button secondary">Dil nga pajisjet e tjera</button>
+      <button type="submit" class="button secondary">{{ crate::t("Dil nga pajisjet e tjera") }}</button>
     </form>
     {%- endif %}
     <form action="/dil" method="post">
-      <button type="submit" class="button secondary">Dil nga llogaria</button>
+      <button type="submit" class="button secondary">{{ crate::t("Dil nga llogaria") }}</button>
     </form>
   </div>
 
-  <h2>Fshi llogarinë</h2>
-  <p>Njoftimet e tua fshihen bashkë me fotot, dyqanet që ke krijuar mbyllen bashkë me njoftimet e tyre, dhe numri, email-i dhe emri hiqen nga llogaria. Mesazhet që ke shkëmbyer mbeten për palën tjetër, me „Përdorues i fshirë“ në vend të emrit tënd. Llogaria nuk kthehet më.</p>
+  <h2>{{ crate::t("Fshi llogarinë") }}</h2>
+  <p>{{ crate::t("Njoftimet e tua fshihen bashkë me fotot, dyqanet që ke krijuar mbyllen bashkë me njoftimet e tyre, dhe numri, email-i dhe emri hiqen nga llogaria. Mesazhet që ke shkëmbyer mbeten për palën tjetër, me „Përdorues i fshirë“ në vend të emrit tënd. Llogaria nuk kthehet më.") }}</p>
   <form class="account-form settings-form" method="post" action="/llogaria/fshi">
     <div class="field">
-      <label class="field-label" for="konfirmo">Shkruaj FSHI që ta fshish</label>
+      {# The word to type is the page's: FSHI, or in English its English, which close (settings.rs)
+         takes as well. -#}
+      <label class="field-label" for="konfirmo">{{ crate::t("Shkruaj FSHI që ta fshish") }}</label>
       <input id="konfirmo" name="konfirmo" required autocomplete="off"{% if close_error.is_some() %} aria-invalid="true" aria-describedby="konfirmo-error"{% endif %}>
       {%- if let Some(error) = close_error %}
       <p class="field-error" id="konfirmo-error" role="alert">{{ error }}</p>
       {%- endif %}
     </div>
-    <button type="submit" class="button secondary danger">Fshi llogarinë</button>
+    <button type="submit" class="button secondary danger">{{ crate::t("Fshi llogarinë") }}</button>
   </form>
 </section>
 {% endblock %}

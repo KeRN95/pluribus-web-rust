@@ -40,10 +40,10 @@
     <div class="card-dots" data-slides-target="dots" aria-hidden="true">
       {%- for _ in card.photos.iter() %}<span{% if loop.first %} class="is-current"{% endif %}></span>{% endfor -%}
     </div>
-    <button type="button" class="card-step card-previous" data-slides-target="previous" data-action="slides#previous" aria-label="Fotoja e mëparshme" hidden>
+    <button type="button" class="card-step card-previous" data-slides-target="previous" data-action="slides#previous" aria-label="{{ crate::t("Fotoja e mëparshme") }}" hidden>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
     </button>
-    <button type="button" class="card-step card-next" data-slides-target="next" data-action="slides#next" aria-label="Fotoja tjetër" hidden>
+    <button type="button" class="card-step card-next" data-slides-target="next" data-action="slides#next" aria-label="{{ crate::t("Fotoja tjetër") }}" hidden>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
     </button>
     {%- endif %}
@@ -68,8 +68,8 @@
         struck through, and by how much, in a green pill (page.css); a car well under what cars
         of its model and year ask, by "Çmim i mirë" in one (car_prices.rs). -#}
     <p class="card-price"><span class="card-amount">{{ card.price_display() }}</span>
-      {%- if let Some((percent, was)) = card.price_drop() %}<del class="card-was"><span class="visually-hidden">Çmimi ishte </span>{{ was }}</del><span class="card-drop">−{{ percent }}%</span>{% endif %}
-      {%- if card.bargain() %}<span class="card-bargain">Çmim i mirë</span>{% endif %}</p>
+      {%- if let Some((percent, was)) = card.price_drop() %}<del class="card-was"><span class="visually-hidden">{{ crate::t("Çmimi ishte") }} </span>{{ was }}</del><span class="card-drop">−{{ percent }}%</span>{% endif %}
+      {%- if card.bargain() %}<span class="card-bargain">{{ crate::t("Çmim i mirë") }}</span>{% endif %}</p>
     {%- if let Some(place) = card.place_text() %}
     {#- In the list, under the price, where it is: the pin and the zone and town ("Blloku, Tiranë"),
         or the town, whatever the search is in, small and muted; there the details line leaves the
@@ -81,7 +81,7 @@
     {%- if let Some(views) = card.views_display() %}
     {#- On "Më të klikuarat", how many times its page was seen this week: an eye and the number on
         a dark pill like the heart's circle, at the photo's top left. -#}
-    <p class="card-views" title="{{ views }} shikime këtë javë"><svg data-icon="eye" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::EYE|safe }}</svg><span class="visually-hidden">Shikime këtë javë: </span>{{ views }}</p>
+    <p class="card-views" title="{{ crate::t1("{} shikime këtë javë", views) }}"><svg data-icon="eye" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::EYE|safe }}</svg><span class="visually-hidden">{{ crate::t("Shikime këtë javë") }}: </span>{{ views }}</p>
     {%- endif %}
     {%- if let Some(status) = card.status_label() %}
     {#- On /te-ruajturat, a kept listing reserved or sold since says so where the views would be,
@@ -93,7 +93,8 @@
       the map pin when there is one: "Tiranë · 2,4 km · 2016 · Naftë". One line, ending in "…" when
       longer. In the list, the city is left out (.card-town), as the place line over it has it,
       and when it was posted is at its right end ("para 3 ditësh"); the cards leave that out
-      (page.css). -#}
+      (page.css). The properties' values are in the page's language (ListingCard::details_line,
+      listings.rs). -#}
   <div class="card-body">
     <p class="card-summary">
       {%- let rest = card.details_line() -%}

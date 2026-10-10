@@ -3,6 +3,7 @@ import { refreshFor, refreshTo } from "controllers/refresh.js";
 import { locate } from "controllers/locate.js";
 import { forgetTown } from "controllers/place_controller.js";
 import { loadLeaflet, tiles } from "controllers/leaflet.js";
+import { t } from "controllers/i18n.js";
 
 // A map of the results, as Facebook's: its pin stays in the middle and the map moves under it,
 // on the point set before, the town picked, or Tirana's middle (filters.rs, map_start). Round the
@@ -68,7 +69,7 @@ export default class extends Controller {
     try {
       L = await loadLeaflet();
     } catch {
-      this.statusTarget.textContent = "Harta nuk u ngarkua. Provo përsëri.";
+      this.statusTarget.textContent = t("Harta nuk u ngarkua. Provo përsëri.");
       this.starting = null;
       return;
     }
@@ -227,7 +228,7 @@ export default class extends Controller {
   // "Vendos hartën" to send, or in a card to apply by itself.
   async locate() {
     if (!this.map) return;
-    this.statusTarget.textContent = "Po kërkoj vendndodhjen…";
+    this.statusTarget.textContent = t("Po kërkoj vendndodhjen…");
     try {
       const { latitude, longitude } = await locate();
       this.statusTarget.textContent = "";

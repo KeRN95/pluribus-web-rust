@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Promovo një njoftim | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Promovo një njoftim") }} | Pluribus{% endblock %}
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
@@ -9,16 +9,16 @@
     to get one, by writing to the site with the listing's number (in the e-mail's subject when a
     seller's page led here), until there are payments. -#}
 <article class="text-page promote-page">
-  <h1>Promovo një njoftim</h1>
-  <p class="lead">Që ta shohin më shumë: në rreshtin „Të veçuara“ mbi njoftimet e tjera, në krye të më të rejave, ose me një kartë që dallohet.</p>
+  <h1>{{ crate::t("Promovo një njoftim") }}</h1>
+  <p class="lead">{{ crate::t("Që ta shohin më shumë: në rreshtin „Të veçuara“ mbi njoftimet e tjera, në krye të më të rejave, ose me një kartë që dallohet.") }}</p>
   {%- if products.is_empty() %}
-  <p class="empty">Tani për tani nuk ka promovime.</p>
+  <p class="empty">{{ crate::t("Tani për tani nuk ka promovime.") }}</p>
   {%- else %}
   <ul class="promotion-products">
     {%- for product in products %}
     <li class="promotion-product">
       <div class="promotion-product-text">
-        <strong>{{ product.name }}</strong>
+        <strong>{{ crate::t(product.name) }}</strong>
         <span>{{ product.does() }}</span>
       </div>
       <span class="promotion-price">{{ product.price() }}</span>
@@ -26,12 +26,12 @@
     {%- endfor %}
   </ul>
   {%- endif %}
-  <h2>Si ta promovoj?</h2>
+  <h2>{{ crate::t("Si ta promovoj?") }}</h2>
   {%- if let Some(email) = email %}
-  <p>Na shkruaj te <a href="mailto:{{ email }}?subject={{ self.subject() }}">{{ email }}</a> me numrin e njoftimit{% if let Some(number) = number %} (<strong>{{ number }}</strong>){% endif %} dhe promovimin që do. Të tregojmë si paguhet, dhe sapo të paguhet e ndezim: të vjen një lajmërim, dhe te njoftimi yt shkruhet deri kur zgjat.</p>
+  <p>{{ crate::t("Na shkruaj te") }} <a href="mailto:{{ email }}?subject={{ self.subject() }}">{{ email }}</a> {{ crate::t("me numrin e njoftimit") }}{% if let Some(number) = number %} (<strong>{{ number }}</strong>){% endif %} {{ crate::t("dhe promovimin që do.") }} {{ crate::t("Të tregojmë si paguhet, dhe sapo të paguhet e ndezim: të vjen një lajmërim, dhe te njoftimi yt shkruhet deri kur zgjat.") }}</p>
   {%- else %}
-  <p>Na shkruaj te <a href="/kontakt">Kontakt</a> me numrin e njoftimit{% if let Some(number) = number %} (<strong>{{ number }}</strong>){% endif %} dhe promovimin që do. Të tregojmë si paguhet, dhe sapo të paguhet e ndezim: të vjen një lajmërim, dhe te njoftimi yt shkruhet deri kur zgjat.</p>
+  <p>{{ crate::t("Na shkruaj te") }} <a href="/kontakt">{{ crate::t("Kontakt") }}</a> {{ crate::t("me numrin e njoftimit") }}{% if let Some(number) = number %} (<strong>{{ number }}</strong>){% endif %} {{ crate::t("dhe promovimin që do.") }} {{ crate::t("Të tregojmë si paguhet, dhe sapo të paguhet e ndezim: të vjen një lajmërim, dhe te njoftimi yt shkruhet deri kur zgjat.") }}</p>
   {%- endif %}
-  <p class="account-note">Numri i njoftimit është në adresën e faqes së tij, pas /listing/: te /listing/<strong>1234</strong>-…, 1234. Nga faqja e njoftimit tënd, „Promovoje“ e sjell vetë.</p>
+  <p class="account-note">{{ crate::t("Numri i njoftimit është në adresën e faqes së tij, pas /listing/: te /listing/") }}<strong>1234</strong>{{ crate::t("-…, 1234. Nga faqja e njoftimit tënd, „Promovoje“ e sjell vetë.") }}</p>
 </article>
 {% endblock %}

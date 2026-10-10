@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { t, tf } from "controllers/i18n.js";
 
 // The photos on the listing form, one list wherever each came from: those the listing has (on an
 // edit) and those picked, a few at a time as phones offer them, or dropped onto the zone from a
@@ -93,11 +94,12 @@ export default class extends Controller {
     let note = "";
     if (files.length > room) {
       files = files.slice(0, Math.max(room, 0));
-      note = room > 0
-        ? `Mund të shtosh edhe ${room} foto: u morën të parat.`
-        : "Njoftimi ka sa foto lejohen. Hiq ndonjë për të shtuar të tjera.";
+      // One photo more has a text of its own, for English ("1 more photo").
+      if (room === 1) note = t("Mund të shtosh edhe 1 foto: u morën të parat.");
+      else if (room > 1) note = tf("Mund të shtosh edhe {} foto: u morën të parat.", room);
+      else note = t("Njoftimi ka sa foto lejohen. Hiq ndonjë për të shtuar të tjera.");
     }
-    if (files.length) this.statusTarget.textContent = "Po përgatiten fotot…";
+    if (files.length) this.statusTarget.textContent = t("Po përgatiten fotot…");
     const shrunk = await Promise.all(files.map((file) => shrink(file)));
     this.items.push(...shrunk.map((file) => ({ kind: "new", file })));
     this.sync();
@@ -155,7 +157,7 @@ export default class extends Controller {
     const [item] = this.items.splice(from, 1);
     this.items.splice(to, 0, item);
     this.sync();
-    this.statusTarget.textContent = to === 0 ? "Kjo është tani kopertina." : "";
+    this.statusTarget.textContent = to === 0 ? t("Kjo është tani kopertina.") : "";
     if (!button) return;
     const target = this.previewsTarget.querySelector(`[data-index="${to}"][data-action="photos#${button}"]`);
     (target && !target.disabled ? target : this.previewsTarget.querySelector(`[data-index="${to}"]`))?.focus();
@@ -184,7 +186,8 @@ export default class extends Controller {
 
   summary() {
     const count = this.picked.length;
-    return count ? `${count} foto gati për t'u ngarkuar.` : "";
+    if (!count) return "";
+    return count === 1 ? t("1 foto gati për t'u ngarkuar.") : tf("{} foto gati për t'u ngarkuar.", count);
   }
 
   render() {
@@ -212,13 +215,13 @@ export default class extends Controller {
       this.urls.push(image.src);
     }
     frame.append(image);
-    if (index === 0) frame.append(Object.assign(document.createElement("span"), { className: "photo-cover", textContent: "Kopertinë" }));
+    if (index === 0) frame.append(Object.assign(document.createElement("span"), { className: "photo-cover", textContent: t("Kopertinë") }));
     const tools = document.createElement("div");
     tools.className = "photo-tools";
     tools.append(
-      this.button(CHEVRON("m15 6-6 6 6 6"), "Më përpara", "earlier", index, index === 0),
-      this.button(CHEVRON("m9 6 6 6-6 6"), "Më pas", "later", index, index === this.items.length - 1),
-      this.button("Hiq", null, "remove", index, false),
+      this.button(CHEVRON("m15 6-6 6 6 6"), t("Më përpara"), "earlier", index, index === 0),
+      this.button(CHEVRON("m9 6 6 6-6 6"), t("Më pas"), "later", index, index === this.items.length - 1),
+      this.button(t("Hiq"), null, "remove", index, false),
     );
     element.append(frame, tools);
     return element;
@@ -229,11 +232,11 @@ export default class extends Controller {
     button.className = label ? "photo-step" : "photo-remove";
     if (label) {
       button.innerHTML = content;
-      button.setAttribute("aria-label", `${label} (foto ${index + 1})`);
+      button.setAttribute("aria-label", tf("{} (foto {})", label, index + 1));
       button.title = label;
     } else {
       button.textContent = content;
-      button.setAttribute("aria-label", `Hiq foton ${index + 1}`);
+      button.setAttribute("aria-label", tf("Hiq foton {}", index + 1));
     }
     button.dataset.index = index;
     button.dataset.action = `photos#${action}`;

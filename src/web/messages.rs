@@ -15,7 +15,7 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
 };
 use serde::Deserialize;
-use time::PrimitiveDateTime;
+use time::{PrimitiveDateTime, macros::format_description};
 use uuid::Uuid;
 
 use super::{
@@ -29,6 +29,7 @@ use crate::{
     AppState,
     db::{self, Conversation, InboxEntry, Message, MessageTarget, SessionUser},
     format,
+    i18n::{english, t, t1},
 };
 
 /// A message's length, in characters.
@@ -44,7 +45,8 @@ const UNANSWERED: i64 = 3;
 /// The conversations the inbox shows, the latest first.
 const INBOX_MOST: i64 = 200;
 
-/// First messages a buyer can start with, a tap away (conversation_controller.js).
+/// First messages a buyer can start with, a tap away (conversation_controller.js), in the page's
+/// language where conversation.html shows them (crate::t, whose catalogue has each).
 pub const QUICK: [&str; 3] = ["Përshëndetje! A është ende në dispozicion?", "Cili është çmimi i fundit?", "Kur mund ta shoh?"];
 
 /// What the conversation's page lets its visitor do: write, or why they can't.
@@ -76,9 +78,9 @@ impl Writing {
     fn refusal(self, other: &str) -> Option<String> {
         match self {
             Writing::Open => None,
-            Writing::Blocked => Some("E ke bllokuar këtë përdorues. Zhbllokoje për t'i shkruar.".to_string()),
-            Writing::BlockedBy => Some(format!("{other} nuk pranon mesazhe nga ti.")),
-            Writing::Closed => Some("Ky njoftim nuk pranon mesazhe tani.".to_string()),
+            Writing::Blocked => Some(t("E ke bllokuar këtë përdorues. Zhbllokoje për t'i shkruar.").to_string()),
+            Writing::BlockedBy => Some(t1("{} nuk pranon mesazhe nga ti.", other)),
+            Writing::Closed => Some(t("Ky njoftim nuk pranon mesazhe tani.").to_string()),
         }
     }
 }
@@ -99,9 +101,9 @@ pub struct ListingHead {
 fn listing_status(status: Option<&str>, kind: Option<&str>) -> Option<&'static str> {
     match status? {
         "ACTIVE" => None,
-        "RESERVED" => Some("Rezervuar"),
+        "RESERVED" => Some(t("Rezervuar")),
         "SOLD" => Some(format::sold(kind.unwrap_or("SELL"))),
-        _ => Some("Jo më në faqe"),
+        _ => Some(t("Jo më në faqe")),
     }
 }
 
@@ -137,7 +139,7 @@ impl ConversationPage {
                 price: format::price(target.price_amount, &target.currency, &target.price_type, &target.listing_type),
                 status: None,
             }),
-            other_name: target.seller_name.clone(),
+            other_name: crate::i18n::name(&target.seller_name).to_string(),
             store: None,
             id: None,
             messages: Vec::new(),
@@ -164,7 +166,7 @@ impl ConversationPage {
         });
         Self {
             listing,
-            other_name: conversation.other_name.clone(),
+            other_name: crate::i18n::name(&conversation.other_name).to_string(),
             store: conversation.store.clone(),
             id: Some(conversation.id),
             messages,
@@ -197,13 +199,25 @@ struct InboxPage {
     conversations: Vec<InboxEntry>,
 }
 
-/// When a message was sent, by Albania's clock: "14:32" today, "Dje, 14:32", then the date.
+/// When a message was sent, by Albania's clock: "14:32" today, "Dje, 14:32", then the date (in
+/// English "Yesterday, 14:32", "8 Oct 2026, 14:32").
 fn when(sent: PrimitiveDateTime, days_ago: i32) -> String {
     let time = format!("{:02}:{:02}", sent.hour(), sent.minute());
     match days_ago {
         0 => time,
-        1 => format!("Dje, {time}"),
-        _ => format!("{:02}.{:02}.{}, {time}", sent.day(), u8::from(sent.month()), sent.year()),
+        1 => format!("{}, {time}", t("Dje")),
+        _ => format!("{}, {time}", day(sent, true)),
+    }
+}
+
+/// The day a message was sent, by Albania's clock, with its year or without: "08.10.2026",
+/// "08.10"; in English "8 Oct 2026", "8 Oct", as format::date writes a date.
+fn day(sent: PrimitiveDateTime, year: bool) -> String {
+    match (english(), year) {
+        (false, true) => format!("{:02}.{:02}.{}", sent.day(), u8::from(sent.month()), sent.year()),
+        (false, false) => format!("{:02}.{:02}", sent.day(), u8::from(sent.month())),
+        (true, true) => sent.format(format_description!("[day padding:none] [month repr:short] [year]")).unwrap_or_default(),
+        (true, false) => sent.format(format_description!("[day padding:none] [month repr:short]")).unwrap_or_default(),
     }
 }
 
@@ -221,9 +235,9 @@ impl InboxEntry {
         };
         match days_ago {
             0 => format!("{:02}:{:02}", sent.hour(), sent.minute()),
-            1 => "Dje".to_string(),
-            _ if days_ago < 300 => format!("{:02}.{:02}", sent.day(), u8::from(sent.month())),
-            _ => format!("{:02}.{:02}.{}", sent.day(), u8::from(sent.month()), sent.year()),
+            1 => t("Dje").to_string(),
+            _ if days_ago < 300 => day(sent, false),
+            _ => day(sent, true),
         }
     }
 
@@ -258,28 +272,28 @@ async fn refusal(
 ) -> Result<Option<String>> {
     let chars = body.chars().count();
     if chars == 0 {
-        return Ok(Some("Shkruaj mesazhin.".to_string()));
+        return Ok(Some(t("Shkruaj mesazhin.").to_string()));
     }
     if chars > MAX_CHARS {
-        return Ok(Some(format!("Mesazhi mund të ketë deri në {MAX_CHARS} shkronja.")));
+        return Ok(Some(t1("Mesazhi mund të ketë deri në {} shkronja.", MAX_CHARS)));
     }
     if let Some(in_a_row) = unanswered {
         if in_a_row >= UNANSWERED {
-            return Ok(Some(format!("Prit që {other} të të përgjigjet para se të shkruash më shumë.")));
+            return Ok(Some(t1("Prit që {} të të përgjigjet para se të shkruash më shumë.", other)));
         }
         if link_count(body) > 0 {
-            return Ok(Some(format!("Lidhjet mund t'i dërgosh pasi {other} të të përgjigjet.")));
+            return Ok(Some(t1("Lidhjet mund t'i dërgosh pasi {} të të përgjigjet.", other)));
         }
     }
     let sent = db::sent_lately(&state.db, user.id).await?;
     let message = if sent.last_minute >= PER_MINUTE {
-        Some("Po dërgon shumë shpejt. Prit një minutë dhe provo përsëri.".to_string())
+        Some(t("Po dërgon shumë shpejt. Prit një minutë dhe provo përsëri.").to_string())
     } else if sent.last_day >= PER_DAY {
-        Some("Ke dërguar shumë mesazhe sot. Provo përsëri nesër.".to_string())
+        Some(t("Ke dërguar shumë mesazhe sot. Provo përsëri nesër.").to_string())
     } else if new && sent.started_last_hour >= NEW_PER_HOUR {
-        Some(format!("U ke shkruar {NEW_PER_HOUR} shitësve këtë orë. Prit pak para se t'i shkruash një tjetri."))
+        Some(t1("U ke shkruar {} shitësve këtë orë. Prit pak para se t'i shkruash një tjetri.", NEW_PER_HOUR))
     } else if new && sent.started_last_day >= NEW_PER_DAY {
-        Some(format!("U ke shkruar {NEW_PER_DAY} shitësve sot. Mund t'u shkruash të tjerëve nesër."))
+        Some(t1("U ke shkruar {} shitësve sot. Mund t'u shkruash të tjerëve nesër.", NEW_PER_DAY))
     } else {
         None
     };
@@ -453,7 +467,7 @@ pub async fn newer(
     if messages.is_empty() {
         return Ok(StatusCode::NO_CONTENT.into_response());
     }
-    render_stream(NewMessages { other_name: conversation.other_name, messages })
+    render_stream(NewMessages { other_name: crate::i18n::name(&conversation.other_name).to_string(), messages })
 }
 
 #[derive(Deserialize)]

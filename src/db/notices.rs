@@ -21,6 +21,8 @@ pub struct DueNotice {
     /// The latest message they haven't read, and how many they haven't.
     pub body: String,
     pub unread: i64,
+    /// The language their e-mail is in (users.preferred_language: "sq", "en").
+    pub language: String,
 }
 
 /// Those who have messages from the other side unread at least `after` after they came (for one
@@ -38,7 +40,8 @@ pub async fn due_notices(db: &PgPool, after: std::time::Duration, gap: std::time
                        ELSE writer.display_name END AS "writer!",
                   coalesce(l.generated_title, l.title) AS "listing?",
                   coalesce(latest.body, '') AS "body!",
-                  unread.count AS "unread!"
+                  unread.count AS "unread!",
+                  u.preferred_language AS language
            FROM conversations c
            JOIN conversation_participants p ON p.conversation_id = c.id
            JOIN users u ON u.id = p.user_id AND u.status = 'ACTIVE'

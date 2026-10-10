@@ -46,6 +46,8 @@ pub struct ExpiryNotice {
     pub phone: Option<String>,
     /// Whether its seller lets the site e-mail them (notification_preferences.email_enabled).
     pub email_ok: bool,
+    /// The language their e-mail is in (users.preferred_language: "sq", "en").
+    pub language: String,
 }
 
 /// Takes the listings up or reserved whose time is up off the site (EXPIRED, the status history
@@ -68,7 +70,8 @@ pub async fn expire_listings(db: &PgPool) -> sqlx::Result<Vec<ExpiryNotice>> {
              WHERE g.user_id IS NOT NULL
          )
          SELECT g.id AS listing_id, g.user_id, g.public_no, g.title, g.expires_at,
-                u.email::text AS email, u.phone_e164::text AS phone, coalesce(np.email_enabled, true) AS email_ok
+                u.email::text AS email, u.phone_e164::text AS phone, coalesce(np.email_enabled, true) AS email_ok,
+                u.preferred_language AS language
          FROM gone g
          JOIN users u ON u.id = g.user_id
          LEFT JOIN notification_preferences np ON np.user_id = u.id"
@@ -107,7 +110,8 @@ pub async fn warn_expiring(db: &PgPool, days: i32) -> sqlx::Result<Vec<ExpiryNot
              FROM due d
          )
          SELECT d.id AS listing_id, d.user_id, d.public_no, d.title, d.expires_at,
-                u.email::text AS email, u.phone_e164::text AS phone, coalesce(np.email_enabled, true) AS email_ok
+                u.email::text AS email, u.phone_e164::text AS phone, coalesce(np.email_enabled, true) AS email_ok,
+                u.preferred_language AS language
          FROM due d
          JOIN users u ON u.id = d.user_id
          LEFT JOIN notification_preferences np ON np.user_id = u.id"

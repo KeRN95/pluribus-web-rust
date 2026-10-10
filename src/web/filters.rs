@@ -29,6 +29,7 @@ use crate::{
         ListingFilter, Near, PriceRange, Sort, TextSearch, Zone,
     },
     format,
+    i18n::{self, Lang, t, t1},
 };
 
 /// The most characters of search words a page takes. Searches are a few words; each one widened
@@ -47,23 +48,23 @@ const DEFAULT_RADIUS_KM: u32 = 10;
 /// An order's name, as its button, its menu and the results' heading say it.
 fn sort_name(sort: Sort) -> &'static str {
     match sort {
-        Sort::Relevance => "Më të përshtatshmet",
-        Sort::Newest => "Më të rejat",
-        Sort::PriceLow => "Më të lirat",
-        Sort::PriceHigh => "Më të shtrenjtat",
-        Sort::Nearest => "Më afër",
+        Sort::Relevance => t("Më të përshtatshmet"),
+        Sort::Newest => t("Më të rejat"),
+        Sort::PriceLow => t("Më të lirat"),
+        Sort::PriceHigh => t("Më të shtrenjtat"),
+        Sort::Nearest => t("Më afër"),
     }
 }
 
 /// The order as what it makes of the listings, for their heading on a category page ("Njoftimet
-/// më të reja në Makina").
+/// më të reja në Makina"; in English it comes first, "Newest listings in Cars", browse.html).
 fn sort_adjective(sort: Sort) -> &'static str {
     match sort {
-        Sort::Relevance => "më të përshtatshme",
-        Sort::Newest => "më të reja",
-        Sort::PriceLow => "më të lira",
-        Sort::PriceHigh => "më të shtrenjta",
-        Sort::Nearest => "më afër",
+        Sort::Relevance => t("më të përshtatshme"),
+        Sort::Newest => t("më të reja"),
+        Sort::PriceLow => t("më të lira"),
+        Sort::PriceHigh => t("më të shtrenjta"),
+        Sort::Nearest => t("më afër"),
     }
 }
 
@@ -554,24 +555,28 @@ impl<'a> Filters<'a> {
     }
 
     /// The name a saved search shows by: its words, its page's category and what each filter's
-    /// chip says, "„golf“ · Makina · Tiranë · Naftë", or "Të gjitha njoftimet" for none.
+    /// chip says, "„golf“ · Makina · Tiranë · Naftë", or "Të gjitha njoftimet" for none. It is
+    /// kept in the database (searches.rs), so it is in Albanian whatever the page's language: the
+    /// chips as an Albanian page words them.
     pub fn search_name(&self) -> String {
-        let mut parts = Vec::new();
-        if let Some(q) = &self.q {
-            parts.push(format!("„{q}“"));
-        }
-        if let (false, Some(category)) = (self.category_is_filter, self.category) {
-            parts.push(category.name.clone());
-        }
-        parts.extend(self.chips().into_iter().map(|chip| chip.label));
-        if parts.is_empty() {
-            return "Të gjitha njoftimet".to_string();
-        }
-        let name = parts.join(" · ");
-        match name.char_indices().nth(119) {
-            Some((cut, _)) => format!("{}…", name[..cut].trim_end()),
-            None => name,
-        }
+        i18n::LANG.sync_scope(Lang::Sq, || {
+            let mut parts = Vec::new();
+            if let Some(q) = &self.q {
+                parts.push(format!("„{q}“"));
+            }
+            if let (false, Some(category)) = (self.category_is_filter, self.category) {
+                parts.push(category.name.clone());
+            }
+            parts.extend(self.chips().into_iter().map(|chip| chip.label));
+            if parts.is_empty() {
+                return "Të gjitha njoftimet".to_string();
+            }
+            let name = parts.join(" · ");
+            match name.char_indices().nth(119) {
+                Some((cut, _)) => format!("{}…", name[..cut].trim_end()),
+                None => name,
+            }
+        })
     }
 
     /// Another category's page, keeping the search words, the city and the map pin; the zone too,
@@ -683,7 +688,7 @@ impl<'a> Filters<'a> {
             // The properties belong to the category, so they go with it, as does a property's zone.
             let names: Vec<String> = self.properties.iter().flat_map(Property::param_names).collect();
             chip(
-                category.name.clone(),
+                t(&category.name).to_string(),
                 self.url_without(|name, _| matches!(name, "category" | "zone") || names.iter().any(|n| n == name)),
             );
         }
@@ -708,24 +713,24 @@ impl<'a> Filters<'a> {
             let code = attribute.code.as_str();
             if let (Some(_), Some(year)) = (property.fits_to, property.year) {
                 let param = year_param(attribute);
-                chip(format!("{FITS_YEAR_LABEL}: {year}"), self.url_without(|name, _| name == param));
+                chip(format!("{}: {year}", t(FITS_YEAR_LABEL)), self.url_without(|name, _| name == param));
             }
             for option in &property.selected {
                 chip(
-                    option.label.clone(),
+                    t(&option.label).to_string(),
                     self.url_without(|name, value| name == code && value == option.code),
                 );
             }
-            let unit = attribute.unit.as_deref();
+            let unit = attribute.unit.as_deref().map(t);
             if let Some(range) = range_label(property.min, property.max, unit, unit.is_some()) {
                 let (min, max) = (format!("{code}_min"), format!("{code}_max"));
                 chip(
-                    format!("{}: {range}", attribute.name),
+                    format!("{}: {range}", t(&attribute.name)),
                     self.url_without(|name, _| name == min || name == max),
                 );
             }
             if property.checked {
-                chip(attribute.name.clone(), self.url_without(|name, _| name == code));
+                chip(t(&attribute.name).to_string(), self.url_without(|name, _| name == code));
             }
         }
         chips
@@ -734,7 +739,7 @@ impl<'a> Filters<'a> {
     /// The map's point, as its chip says it, "Brenda 10 km nga pika"; not on the map page, whose
     /// map is the pin.
     fn point_label(&self) -> Option<String> {
-        (self.near.is_some() && self.path != "/harta").then(|| format!("Brenda {} km nga pika", self.radius_km))
+        (self.near.is_some() && self.path != "/harta").then(|| t1("Brenda {} km nga pika", self.radius_km))
     }
 
     /// What the filters' button says to screen readers and as its tooltip, "Filtrat: Naftë · deri
@@ -868,7 +873,7 @@ impl<'a> Filters<'a> {
                 Some(town) => format!("{} · {} km", town.name, self.radius_km),
                 None => format!("{} km", self.radius_km),
             },
-            None => "Harta".to_string(),
+            None => t("Harta").to_string(),
         }
     }
 
@@ -1021,7 +1026,7 @@ impl<'a> Filters<'a> {
     /// The prices beside the slider's name, as their chip says them, or "Çdo çmim".
     pub fn price_label(&self) -> String {
         range_label(self.price_min, self.price_max, Some(format::currency_symbol(self.currency)), true)
-            .unwrap_or_else(|| "Çdo çmim".to_string())
+            .unwrap_or_else(|| t("Çdo çmim").to_string())
     }
 
     /// What screen readers say for the slider's lower end: its price, or no limit.
@@ -1037,7 +1042,7 @@ impl<'a> Filters<'a> {
     fn price_text(&self, price: Option<Decimal>) -> String {
         match price {
             Some(price) => format!("{}\u{a0}{}", format::number(price), format::currency_symbol(self.currency)),
-            None => "Pa kufi".to_string(),
+            None => t("Pa kufi").to_string(),
         }
     }
 
@@ -1184,23 +1189,24 @@ impl<'a> Property<'a> {
         vec![code.clone(), format!("{code}_min"), format!("{code}_max")]
     }
 
+    /// Its field in the form, its name, unit and options in the page's language.
     fn field(&self, all: &[Property]) -> Field {
         let attribute = self.attribute;
         let choice = |option: &AttributeOption| Choice {
             value: option.code.clone(),
-            label: option.label.clone(),
+            label: t(&option.label).to_string(),
             selected: self.selected.iter().any(|s| s.id == option.id),
         };
         let mut field = Field {
             name: attribute.code.clone(),
-            label: attribute.name.clone(),
+            label: t(&attribute.name).to_string(),
             kind: FieldKind::Select,
             choices: Vec::new(),
             groups: Vec::new(),
             depends_on: None,
             min: self.min.map(plain).unwrap_or_default(),
             max: self.max.map(plain).unwrap_or_default(),
-            unit: attribute.unit.clone().unwrap_or_default(),
+            unit: attribute.unit.as_deref().map(t).unwrap_or_default().to_string(),
             checked: self.checked,
             half: true,
             icons: false,
@@ -1211,7 +1217,7 @@ impl<'a> Property<'a> {
         };
         if self.fits_to.is_some() {
             field.name = year_param(attribute);
-            field.label = FITS_YEAR_LABEL.to_string();
+            field.label = t(FITS_YEAR_LABEL).to_string();
             field.kind = FieldKind::Year;
             field.min = self.year.map(plain).unwrap_or_default();
             if let Some(steps) = range_steps(&attribute.code, attribute.unit.as_deref()) {
@@ -1253,7 +1259,7 @@ impl<'a> Property<'a> {
                             .collect();
                         if !choices.is_empty() {
                             field.groups.push(OptionGroup {
-                                label: parent_option.label.clone(),
+                                label: t(&parent_option.label).to_string(),
                                 parent: parent_option.code.clone(),
                                 hidden: !parent.selected.is_empty()
                                     && !parent.selected.iter().any(|chosen| chosen.id == parent_option.id),
@@ -1381,12 +1387,13 @@ pub fn city_groups(cities: &[City], selected: Option<&str>) -> Vec<ChoiceGroup> 
     groups
 }
 
-/// Every category, for a dropdown: subcategories follow their parent, indented.
+/// Every category, for a dropdown: subcategories follow their parent, indented; each name in the
+/// page's language.
 pub fn category_choices(categories: &Categories, selected: Option<&str>) -> Vec<Choice> {
     fn add(categories: &Categories, category: &Category, depth: usize, selected: Option<&str>, out: &mut Vec<Choice>) {
         out.push(Choice {
             value: category.slug.clone(),
-            label: format!("{}{}", "\u{a0}\u{a0}\u{a0}".repeat(depth), category.name),
+            label: format!("{}{}", "\u{a0}\u{a0}\u{a0}".repeat(depth), t(&category.name)),
             selected: selected == Some(category.slug.as_str()),
         });
         if depth < 5 {
@@ -1407,15 +1414,33 @@ pub fn url(path: &str, pairs: impl IntoIterator<Item = (String, String)>) -> Str
     if query.is_empty() { path.to_string() } else { format!("{path}?{query}") }
 }
 
-/// A number as people type it: "5000", "5 000", "5.000" or "12,5". Dots and spaces group
-/// thousands and a comma marks decimals, as in Albanian.
+/// A number as people type it, in Albanian's way or English's: "5000", "5 000"; "5.000" or
+/// "5,000", a mark before the last three digits (or one of several alike: "1.000.000") grouping
+/// thousands; "12,5" or "12.5", one before one, two or four digits (or after a lone "0") marking
+/// decimals, as the later of a dot and a comma does ("1.234,56", "1,234.56"). The URLs' own
+/// numbers (`plain`) read back as they were written.
 pub fn parse_number(text: &str) -> Option<Decimal> {
-    let cleaned: String = text
-        .chars()
-        .filter(|c| c.is_ascii_digit() || matches!(c, ',' | '-'))
-        .map(|c| if c == ',' { '.' } else { c })
+    let kept: String = text.chars().filter(|c| c.is_ascii_digit() || matches!(c, ',' | '.' | '-')).collect();
+    let decimal = match (kept.rfind('.'), kept.rfind(',')) {
+        (Some(dot), Some(comma)) => Some(dot.max(comma)),
+        (Some(at), None) | (None, Some(at)) => {
+            let mark = kept.as_bytes()[at];
+            let once = kept.bytes().filter(|byte| *byte == mark).count() == 1;
+            let whole = kept[..at].trim_start_matches('-');
+            let thousands = kept.len() - at - 1 == 3 && !whole.is_empty() && whole != "0";
+            (once && !thousands).then_some(at)
+        }
+        (None, None) => None,
+    };
+    let number: String = kept
+        .char_indices()
+        .filter_map(|(at, c)| match c {
+            '.' | ',' if Some(at) == decimal => Some('.'),
+            '.' | ',' => None,
+            c => Some(c),
+        })
         .collect();
-    let value: Decimal = cleaned.parse().ok()?;
+    let value: Decimal = number.parse().ok()?;
     (value.abs() < Decimal::from(1_000_000_000_000_i64)).then_some(value)
 }
 
@@ -1455,8 +1480,8 @@ fn range_label(min: Option<Decimal>, max: Option<Decimal>, unit: Option<&str>, g
     };
     Some(match (min, max) {
         (Some(min), Some(max)) => format!("{} – {}", number(min), with_unit(max)),
-        (Some(min), None) => format!("nga {}", with_unit(min)),
-        (None, Some(max)) => format!("deri {}", with_unit(max)),
+        (Some(min), None) => t1("nga {}", with_unit(min)),
+        (None, Some(max)) => t1("deri {}", with_unit(max)),
         (None, None) => return None,
     })
 }
@@ -1471,6 +1496,15 @@ mod tests {
         assert_eq!(parse_number("5 000"), Some(Decimal::from(5000)));
         assert_eq!(parse_number("5.000 €"), Some(Decimal::from(5000)));
         assert_eq!(parse_number("12,5"), Some(Decimal::new(125, 1)));
+        // English's way too, and a URL's own: a point marks decimals, a comma groups thousands.
+        assert_eq!(parse_number("12.5"), Some(Decimal::new(125, 1)));
+        assert_eq!(parse_number("9,500"), Some(Decimal::from(9500)));
+        assert_eq!(parse_number("1.000.000"), Some(Decimal::from(1_000_000)));
+        assert_eq!(parse_number("1,000,000"), Some(Decimal::from(1_000_000)));
+        assert_eq!(parse_number("1.234,56"), Some(Decimal::new(123_456, 2)));
+        assert_eq!(parse_number("1,234.56"), Some(Decimal::new(123_456, 2)));
+        assert_eq!(parse_number("0,125"), Some(Decimal::new(125, 3)));
+        assert_eq!(parse_number("6.1 inç"), Some(Decimal::new(61, 1)));
         assert_eq!(parse_number("-1"), Some(Decimal::from(-1)));
         assert_eq!(parse_number("abc"), None);
         assert_eq!(parse_number("99999999999999999999"), None);

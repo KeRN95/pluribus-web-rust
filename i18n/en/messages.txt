@@ -1,0 +1,397 @@
+# Messages and stores' accounts: the inbox and the conversations (messages.html,
+# conversation.html, message.html, web/messages.rs), and a store's form, its people and its
+# invitations (store_form.html, store_people.html, store_invitation.html, web/stores.rs). What
+# people wrote, and stores' and people's names, stay as they are.
+
+# templates/messages.html
+
+Hyr në llogari për t'u shkruar shitësve dhe për të lexuar mesazhet e tua.
+= Sign in to message sellers and read your messages.
+
+Hyr
+= Sign in
+
+Ende s'ke mesazhe. Për t'i shkruar një shitësi, prek butonin e mesazhit në faqen e njoftimit.
+= No messages yet. To message a seller, tap the message button on the listing’s page.
+
+Ti
+= You
+
+Të palexuara:
+= Unread:
+
+# templates/conversation.html
+
+Për {}
+= For {}
+
+Mesazhi për {}
+= Message to {}
+
+Shkruaj një mesazh…
+= Write a message…
+
+Dërgo
+= Send
+
+E ke bllokuar këtë përdorues: nuk të shkruan dot, as ti atij.
+= You’ve blocked this user: they can’t write to you, nor you to them.
+
+Zhblloko
+= Unblock
+
+Ta bllokojmë {}? Nuk do të të shkruajë dot më.
+= Block {}? They won’t be able to write to you any more.
+
+Blloko {}
+= Block {}
+
+# web/messages.rs: the quick first messages (QUICK), which conversation.html shows and puts in
+# the box
+
+Përshëndetje! A është ende në dispozicion?
+= Hello! Is it still available?
+
+Cili është çmimi i fundit?
+= What’s your best price?
+
+Kur mund ta shoh?
+= When can I see it?
+
+# web/messages.rs: why a message can't go, and what became of the listing
+
+E ke bllokuar këtë përdorues. Zhbllokoje për t'i shkruar.
+= You’ve blocked this user. Unblock them to write to them.
+
+{} nuk pranon mesazhe nga ti.
+= {} doesn’t accept messages from you.
+
+Ky njoftim nuk pranon mesazhe tani.
+= This listing isn’t taking messages now.
+
+Shkruaj mesazhin.
+= Write your message.
+
+Mesazhi mund të ketë deri në {} shkronja.
+= A message can have up to {} characters.
+
+Prit që {} të të përgjigjet para se të shkruash më shumë.
+= Wait for {} to reply before writing more.
+
+Lidhjet mund t'i dërgosh pasi {} të të përgjigjet.
+= You can send links once {} has replied.
+
+Po dërgon shumë shpejt. Prit një minutë dhe provo përsëri.
+= You’re sending too fast. Wait a minute and try again.
+
+Ke dërguar shumë mesazhe sot. Provo përsëri nesër.
+= You’ve sent a lot of messages today. Try again tomorrow.
+
+U ke shkruar {} shitësve këtë orë. Prit pak para se t'i shkruash një tjetri.
+= You’ve written to {} sellers this hour. Wait a while before writing to another.
+
+U ke shkruar {} shitësve sot. Mund t'u shkruash të tjerëve nesër.
+= You’ve written to {} sellers today. You can write to more tomorrow.
+
+Rezervuar
+= Reserved
+
+Jo më në faqe
+= No longer listed
+
+# templates/store_form.html, and web/stores.rs's headings and problems
+
+Krijo një dyqan
+= Create a store
+
+Ndrysho dyqanin
+= Edit store
+
+Dyqani ka faqen e vet, dhe njoftimet që poston si ai dalin me emrin dhe logon e tij.
+= The store has its own page, and the listings you post as it show its name and logo.
+
+Emri i dyqanit
+= Store name
+
+Për dyqanin
+= About the store
+
+(s'është e detyrueshme)
+= (optional)
+
+(s'është i detyrueshëm)
+= (optional)
+
+Çfarë shet, që kur, çfarë ofron
+= What you sell, since when, what you offer
+
+Logoja
+= Logo
+
+(katrore)
+= (square)
+
+Logoja e tanishme
+= Current logo
+
+Hiqe
+= Remove
+
+Kopertina
+= Cover
+
+(e gjerë, tre herë më shumë se e lartë)
+= (wide, three times its height)
+
+Kopertina e tanishme
+= Current cover
+
+Si ju gjejnë
+= How people reach you
+
+Telefoni
+= Phone
+
+069 123 4567 ose 04 222 3333
+= 069 123 4567 or 04 222 3333
+
+Njoftimet që poston si dyqani tregojnë këtë numër.
+= Listings you post as the store show this number.
+
+Ky numër ka WhatsApp
+= This number has WhatsApp
+
+Faqja e dyqanit jep edhe lidhjen për t'ju shkruar atje.
+= The store’s page also gives the link to message you there.
+
+Email-i
+= Email
+
+info@dyqani.al
+= info@yourstore.al
+
+Faqja në internet
+= Website
+
+www.dyqani.al
+= www.yourstore.al
+
+Ku ndodhet
+= Where it is
+
+Qyteti
+= Town
+
+Zgjidh qytetin
+= Choose a town
+
+Adresa
+= Address
+
+Rruga, numri, pranë çfarë
+= Street, number, what it’s near
+
+Orari
+= Hours
+
+E hënë – e shtunë, 9:00 – 19:00
+= Monday – Saturday, 9:00 – 19:00
+
+(s'është i detyrueshëm, s'shfaqet)
+= (optional, not shown)
+
+Ruaj ndryshimet
+= Save changes
+
+Krijo dyqanin
+= Create store
+
+Anulo
+= Cancel
+
+Shkruaj emrin e dyqanit, nga 2 deri në 80 shkronja.
+= Enter the store’s name, from 2 to 80 characters.
+
+Përshkrimi mund të jetë deri në 2 000 shkronja.
+= The description can be up to 2 000 characters.
+
+Shkruaj numrin si 069 123 4567 ose 04 222 3333.
+= Enter a number like 069 123 4567 or 04 222 3333.
+
+Shkruaj një adresë email-i, p.sh. info@dyqani.al.
+= Enter an email address, e.g. info@yourstore.al.
+
+Shkruaj adresën e faqes, p.sh. www.dyqani.al.
+= Enter the website’s address, e.g. www.yourstore.al.
+
+Zgjidh qytetin nga lista.
+= Choose the town from the list.
+
+Adresa mund të jetë deri në 200 shkronja.
+= The address can be up to 200 characters.
+
+Orari mund të jetë deri në 300 shkronja.
+= The opening hours can be up to 300 characters.
+
+NIPT-i ka 10 shenja, p.sh. L12345678A.
+= The NIPT has 10 characters, e.g. L12345678A.
+
+Logoja nuk u lexua. Zgjidh një foto JPG, PNG ose WebP.
+= The logo couldn’t be read. Choose a JPG, PNG or WebP image.
+
+Kopertina nuk u lexua. Zgjidh një foto JPG, PNG ose WebP.
+= The cover couldn’t be read. Choose a JPG, PNG or WebP image.
+
+Fotoja mund të jetë deri në {} MB.
+= A photo can be up to {} MB.
+
+Ke {} dyqane, sa mund të kesh.
+= You have {} stores, the most you can have.
+
+# web/stores.rs: the roles (role_name, role_does), which store_people.html,
+# store_invitation.html and settings.html show
+
+Pronar
+= Owner
+
+Administrator
+= Admin
+
+Poston njoftime
+= Posts listings
+
+Vetëm mesazhet
+= Messages only
+
+Gjithçka, edhe njerëzit e dyqanit.
+= Everything, the store’s people too.
+
+Ndryshon dyqanin dhe njerëzit e tij, poston njoftime dhe u përgjigjet mesazheve.
+= Edits the store and its people, posts listings and answers messages.
+
+Poston dhe ndryshon njoftimet e dyqanit, dhe u përgjigjet mesazheve.
+= Posts and edits the store’s listings, and answers messages.
+
+U përgjigjet mesazheve të dyqanit.
+= Answers the store’s messages.
+
+# templates/store_people.html, and what web/stores.rs says there
+
+Njerëzit e {}
+= People at {}
+
+Njerëzit e dyqanit
+= The store’s people
+
+Kush punon për
+= Who works for
+
+poston njoftimet e tij dhe u përgjigjet mesazheve të tij.
+= posting its listings and answering its messages.
+
+(ti)
+= (you)
+
+Roli i {}
+= {}’s role
+
+Ruaj
+= Save
+
+Ta heqim {} nga dyqani? Njoftimet që ka publikuar mbeten të dyqanit.
+= Remove {} from the store? The listings they posted stay the store’s.
+
+Hiq
+= Remove
+
+Ftesat në pritje
+= Pending invitations
+
+vlen deri më {}
+= valid until {}
+
+Dërgoje në WhatsApp
+= Send it on WhatsApp
+
+Kopjo lidhjen e ftesës
+= Copy the invitation link
+
+Fto dikë
+= Invite someone
+
+Celulari ose email-i
+= Mobile or email
+
+069 123 4567 ose emri@shembull.al
+= 069 123 4567 or name@example.com
+
+Roli
+= Role
+
+Dërgo ftesën
+= Send invitation
+
+Ftesa vlen 14 ditë. E pranon duke hyrë në Pluribus me këtë numër ose email.
+= The invitation is valid for 14 days. They accept it by signing in to Pluribus with this number or email.
+
+Ftesa u ruajt. Dërgoja edhe vetë: me WhatsApp, ose kopjo lidhjen.
+= Invitation saved. Send it yourself too: by WhatsApp, or copy the link.
+
+Ky numër ose email është tashmë i dyqanit.
+= This number or email is already in the store.
+
+Ftesa u anulua.
+= Invitation cancelled.
+
+Roli u ndryshua.
+= Role changed.
+
+U hoq nga dyqani.
+= Removed from the store.
+
+Shkruaj një numër celulari (069 123 4567) ose një email.
+= Enter a mobile number (069 123 4567) or an email.
+
+Zgjidh një nga rolet.
+= Choose one of the roles.
+
+Dyqani ka 20 ftesa në pritje. Anulo disa para se të dërgosh të tjera.
+= The store has 20 pending invitations. Cancel some before sending more.
+
+# templates/store_invitation.html
+
+Ftesë nga {}
+= Invitation from {}
+
+{} të fton
+= {} invites you
+
+Si „{}“: {}
+= As “{}”: {}
+
+Prano ftesën
+= Accept invitation
+
+Refuzo
+= Decline
+
+Kjo ftesë është për
+= This invitation is for
+
+Shto këtë numër ose email te llogaria jote, ose hyr me të, për ta pranuar.
+= Add this number or email to your account, or sign in with it, to accept it.
+
+Cilësimet
+= Settings
+
+Hyr në Pluribus me
+= Sign in to Pluribus with
+
+për ta pranuar.
+= to accept it.
+
+Pa llogari? Krijohet vetë, me të njëjtin kod.
+= No account? One is made for you, with the same code.
+
+Ftesa vlen deri më {}.
+= The invitation is valid until {}.

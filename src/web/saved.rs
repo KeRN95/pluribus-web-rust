@@ -19,7 +19,7 @@ use super::{
     browse::{LISTING_IDS, ListingPage},
     not_found, render,
 };
-use crate::{AppState, db, format};
+use crate::{AppState, db, format, i18n::t};
 
 /// The most listings /te-ruajturat shows.
 const SAVED_MOST: i64 = 200;
@@ -104,14 +104,14 @@ struct SavedPage {
 }
 
 impl db::GoneListing {
-    /// Why it isn't on the site, as its row says.
+    /// Why it isn't on the site, as its row says, in the page's language.
     pub fn label(&self) -> &'static str {
         match self.status.as_str() {
-            "PAUSED" => "Çaktivizuar nga shitësi",
-            "DELETED" => "U fshi",
-            "EXPIRED" => "Skadoi",
-            "SUSPENDED" | "REJECTED" => "Hequr nga faqja",
-            _ => "Jo në faqe",
+            "PAUSED" => t("Çaktivizuar nga shitësi"),
+            "DELETED" => t("U fshi"),
+            "EXPIRED" => t("Skadoi"),
+            "SUSPENDED" | "REJECTED" => t("Hequr nga faqja"),
+            _ => t("Jo në faqe"),
         }
     }
 }

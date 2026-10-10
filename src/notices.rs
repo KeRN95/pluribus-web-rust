@@ -7,7 +7,9 @@
 //! (notification_preferences.message_alerts) hears nothing, nor by e-mail someone who turned
 //! e-mail off. Each notice is a notification (NEW_MESSAGE), recorded before it goes out, so that a
 //! channel that fails doesn't make it go again every minute; without a channel set up, it goes to
-//! the log, as sign-in codes do.
+//! the log, as sign-in codes do. The e-mail is in the language kept on the reader's account
+//! (users.preferred_language); the notification's title is kept in Albanian, which
+//! web/notifications.rs words for whoever reads it.
 
 use std::time::Duration;
 
@@ -16,6 +18,7 @@ use sqlx::PgPool;
 use crate::{
     db,
     format::Contact,
+    i18n::{self, Lang},
     sender::{self, Notice},
 };
 
@@ -50,7 +53,7 @@ pub async fn send_due(db: &PgPool, origin: &str) -> sqlx::Result<usize> {
             url: format!("{origin}/mesazhet/{}", due.conversation_id),
             unsubscribe,
         };
-        let title: String = notice.title().chars().take(TITLE).collect();
+        let title: String = i18n::LANG.sync_scope(Lang::Sq, || notice.title()).chars().take(TITLE).collect();
         db::record_notice(db, due.user_id, due.conversation_id, &title, &notice.excerpt).await?;
         sent += 1;
         let contact = match (due.email, due.phone) {
@@ -58,7 +61,8 @@ pub async fn send_due(db: &PgPool, origin: &str) -> sqlx::Result<usize> {
             (_, Some(phone)) => Contact::Phone(phone),
             _ => continue,
         };
-        match sender::senders().send_notice(&contact, &notice).await {
+        let lang = Lang::from_code(&due.language).unwrap_or_default();
+        match i18n::in_lang(lang, sender::senders().send_notice(&contact, &notice)).await {
             Ok(channel) => tracing::debug!(?channel, to = %contact.masked(), "message notice sent"),
             Err(error) => tracing::warn!(%error, to = %contact.masked(), "message notice not sent"),
         }

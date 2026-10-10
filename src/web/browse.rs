@@ -30,7 +30,9 @@ use super::{
 use crate::{
     AppState,
     db::{self, Cursor, ListingCard, ListingFilter, Sort},
-    format, views,
+    format,
+    i18n::{t, t1, t2, t3},
+    views,
 };
 
 /// One page of listing cards, plus where the next page starts.
@@ -118,9 +120,9 @@ impl Cards {
     /// Its name in the view menu, which its button says too.
     pub fn label(self) -> &'static str {
         match self {
-            Cards::Small => "Kartela të vogla",
-            Cards::Big => "Kartela të mëdha",
-            Cards::List => "Listë",
+            Cards::Small => t("Kartela të vogla"),
+            Cards::Big => t("Kartela të mëdha"),
+            Cards::List => t("Listë"),
         }
     }
 
@@ -362,7 +364,8 @@ pub async fn home(
     });
     let page = if seen.is_none() && most_viewed.is_none() { page.leading() } else { page };
     let origin = seo::origin(&headers);
-    let meta = PageMeta::new(&origin, "Pluribus: njoftime në gjithë Shqipërinë", seo::SITE_DESCRIPTION, format!("{origin}/"));
+    // The title is the shared link's alone (Open Graph), which crawlers ask for in Albanian.
+    let meta = PageMeta::new(&origin, "Pluribus: njoftime në gjithë Shqipërinë", t(seo::SITE_DESCRIPTION), format!("{origin}/"));
     render(HomePage { main, others, page, seen, most_viewed, meta })
 }
 
@@ -497,7 +500,7 @@ async fn price_quarters(
 
 /// What the filters' card's button says it shows, for a count as format::listing_count says it.
 fn show_label(count: i64, count_text: &str) -> String {
-    if count == 0 { "Asnjë njoftim".to_string() } else { format!("Shfaq {count_text}") }
+    if count == 0 { t("Asnjë njoftim").to_string() } else { t1("Shfaq {}", count_text) }
 }
 
 /// A seller's profile: a private seller's (/perdorues/{id}) or a business's (/biznes/{slug}),
@@ -621,7 +624,7 @@ async fn profile_page(
     let mut meta = PageMeta::new(
         &origin,
         profile.name.clone(),
-        format!("{} në Pluribus që nga {since}: {count}.", profile.name),
+        t3("{} në Pluribus që nga {}: {}.", &profile.name, &since, &count),
         seo::canonical(&origin, &path, query.as_deref()),
     );
     if let Some((card, photo)) = page.cards.iter().find_map(|card| Some((card, card.photos_full.first()?))) {
@@ -666,8 +669,8 @@ async fn profile_page(
 /// What a seller's page and listings say of the contact they proved theirs by signing in with it.
 pub fn verified_label(kind: Option<&str>) -> Option<&'static str> {
     match kind? {
-        "EMAIL" => Some("Email i verifikuar"),
-        _ => Some("Numër i verifikuar"),
+        "EMAIL" => Some(t("Email i verifikuar")),
+        _ => Some(t("Numër i verifikuar")),
     }
 }
 
@@ -900,13 +903,13 @@ async fn browse(
     }
 
     let heading = match (&filters.q, category) {
-        (Some(q), Some(category)) => format!("„{q}“ në {}", category.name),
-        (Some(q), None) => format!("Rezultatet për „{q}“"),
-        (None, Some(category)) => category.name.clone(),
+        (Some(q), Some(category)) => t2("„{}“ në {}", q, t(&category.name)),
+        (Some(q), None) => t1("Rezultatet për „{}“", q),
+        (None, Some(category)) => t(&category.name).to_string(),
         (None, None) => match filters.city {
             // Where a plate code leads: all of a town's listings.
-            Some(city) => format!("Njoftimet në {}", city.name),
-            None => "Të gjitha njoftimet".to_string(),
+            Some(city) => t1("Njoftimet në {}", &city.name),
+            None => t("Të gjitha njoftimet").to_string(),
         },
     };
     // The category above this one, the row's first pill: a way up; the one above that, which the
@@ -929,7 +932,7 @@ async fn browse(
     // listing, in small letters ("në Makina në shitje", "në Prona me qira").
     let listings_place = match (&page_slug, category) {
         (Some(_), Some(current)) => {
-            let mut place = format!("në {}", current.name);
+            let mut place = t1("në {}", t(&current.name));
             if let Some(kind) = &filters.listing_type {
                 place.push(' ');
                 place.push_str(&format::listing_type(kind).to_lowercase());
@@ -965,6 +968,8 @@ async fn browse(
             Some(match current.parent_id {
                 Some(parent) => categories.children(parent).filter(others).map(pill).collect(),
                 None => {
+                    // Its name in the page's language where it shows, as the categories' are
+                    // (browse.html).
                     let all = Subcategory { name: "Të gjitha njoftimet".to_string(), url: filters.all_categories_url(), icon: None };
                     std::iter::once(all).chain(categories.top_level().filter(others).map(pill)).collect()
                 }
@@ -976,8 +981,8 @@ async fn browse(
     // search's results are not for search engines to list, a category's page is, with its filters.
     let origin = seo::origin(&headers);
     let description = match (category, &filters.q) {
-        (Some(_), None) => format!("{heading}: {count} në Pluribus, me foto, çmime dhe vendndodhje."),
-        _ => format!("{heading}: {count} në Pluribus."),
+        (Some(_), None) => t2("{}: {} në Pluribus, me foto, çmime dhe vendndodhje.", &heading, &count),
+        _ => t2("{}: {} në Pluribus.", &heading, &count),
     };
     let mut meta = PageMeta::new(&origin, heading.clone(), description, seo::canonical(&origin, &canonical_path, query.as_deref()));
     if let Some((card, photo)) = page.cards.iter().find_map(|card| Some((card, card.photos_full.first()?))) {

@@ -1,13 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Si funksionon | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Si funksionon") }} | Pluribus{% endblock %}
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
 {% block content %}
-{#- How the site works, for someone new to it (web/pages.rs). -#}
+{#- How the site works, for someone new to it (web/pages.rs). In English, how_it_works_en.html,
+    said as a whole: a change here is a change there too. -#}
 <article class="text-page">
-  <h1>Si funksionon Pluribus</h1>
+  <h1>{{ crate::t("Si funksionon Pluribus") }}</h1>
+  {%- if crate::i18n::english() %}{% include "how_it_works_en.html" %}{% else %}
   <p class="lead">Pluribus është një treg njoftimesh për Shqipërinë: makina, prona, elektronikë, punë, shërbime dhe gjithçka tjetër, nga njerëz dhe biznese pranë teje. Kërkimi dhe shtimi i njoftimeve janë falas.</p>
 
   <h2>Kërko</h2>
@@ -30,5 +32,6 @@
   <p>Një shitës që ka hyrë me kodin e dërguar në numrin e tij ka shenjën „Numër i verifikuar“ te njoftimet dhe te profili. Çdo njoftim ka „Raporto“: raportimet për arsye serioze e heqin nga faqja derisa ta shohë një moderator, i cili mund ta pezullojë edhe llogarinë e shitësit. Një shitës që s'do ta shohësh më e bllokon pasi e raporton njoftimin e tij, ose nga biseda: njoftimet e tij zhduken për ty dhe asnjëri s'i shkruan dot tjetrit.</p>
 
   <p>Shiko edhe <a href="/siguria">këshillat e sigurisë</a> dhe <a href="/kushtet">kushtet e përdorimit</a>.</p>
+  {%- endif %}
 </article>
 {% endblock %}

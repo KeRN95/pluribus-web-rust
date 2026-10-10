@@ -25,6 +25,11 @@
 //!   name has most of the search's words, the most of them as typed, then the shortest name. Two
 //!   still alike name neither ("shtëpi" is Vila / shtëpi and Shtëpi / kopsht alike, but "shtëpi
 //!   me qira" only the first).
+//! - On an English page (i18n.rs), English's words as well: a category by its English name, about
+//!   the last word of each part ("Flats", "Villas / houses", "Commercial vehicles"), in the singular
+//!   or the plural; the kinds (rent, sale, buy); its joining words ("in", "for") skipped. "Flat for
+//!   rent in Tirana" is the flats to rent in Tiranë; the words left stay searched, in the titles'
+//!   Albanian.
 
 use super::{filters::url, post::zoned, suggestions::PLACE_WORDS};
 use crate::{
@@ -40,6 +45,16 @@ const FILLERS: [&str; 21] = [
     "ne", "me", "per", "dhe", "e", "i", "te", "nje", "nga", "tek", "qe", "kerkoj", "kerkohet", "kerkohen", "jap", "jep",
     "jepet", "jepen", "ofroj", "ofrohet", "ofrohen",
 ];
+
+/// The words English joins others with, folded, which name nothing on an English page, as
+/// FILLERS do ("flats for rent in Tirana").
+const ENGLISH_FILLERS: [&str; 12] = ["a", "an", "the", "in", "for", "to", "with", "of", "at", "on", "near", "and"];
+
+/// Whether a folded word joins others and names nothing: an Albanian one, and on an English page
+/// an English one too.
+fn filler(word: &str) -> bool {
+    FILLERS.contains(&word) || (crate::i18n::english() && ENGLISH_FILLERS.contains(&word))
+}
 
 /// Endings sq_stem takes off a word (migration 0016), the longest first.
 const ENDINGS: [&str; 16] = ["ave", "eve", "ash", "ve", "at", "et", "it", "ut", "in", "en", "es", "ja", "a", "e", "i", "u"];
@@ -143,7 +158,7 @@ fn read_words<'a>(
         return None;
     }
     let left: Vec<&Word> = words.iter().filter(|word| !word.used).collect();
-    let rest = match left.iter().all(|word| FILLERS.contains(&word.folded.as_str())) {
+    let rest = match left.iter().all(|word| filler(&word.folded)) {
         true => None,
         false => Some(left.iter().map(|word| word.typed).collect::<Vec<_>>().join(" ")),
     };
@@ -348,6 +363,10 @@ fn kind(word: &str) -> Option<&'static str> {
         "shitje" | "shitja" | "shitjes" | "shitet" | "shiten" | "shes" => Some("SELL"),
         "qira" | "qiraja" | "qirase" | "qera" | "qeraja" | "qerase" => Some("RENT"),
         "blej" | "blejme" | "blihet" => Some("BUY"),
+        // On an English page, English's words for them too.
+        "sale" | "sell" | "selling" if crate::i18n::english() => Some("SELL"),
+        "rent" | "rental" | "rentals" | "let" | "lease" if crate::i18n::english() => Some("RENT"),
+        "buy" | "buying" | "wanted" if crate::i18n::english() => Some("BUY"),
         _ => None,
     }
 }
@@ -356,17 +375,27 @@ fn kind(word: &str) -> Option<&'static str> {
 /// words in the search marked used.
 fn read_category<'a>(words: &mut [Word], categories: &'a Categories, kind: Option<&str>) -> Option<&'a Category> {
     let sought: Vec<usize> = (0..words.len())
-        .filter(|at| !words[*at].used && !FILLERS.contains(&words[*at].folded.as_str()) && self::kind(&words[*at].folded).is_none())
+        .filter(|at| !words[*at].used && !filler(&words[*at].folded) && self::kind(&words[*at].folded).is_none())
         .collect();
     let first = &words[*sought.first()?].folded;
+    // On an English page, a category's English name says what it is about too.
+    let english = |category: &Category| crate::i18n::english().then(|| crate::i18n::in_english(&category.name)).flatten();
+    let alike = |a: &str, b: &str| same_word(a, b) || (crate::i18n::english() && same_english(a, b));
+    let name_of = |category: &Category| {
+        let mut name = name_words(&category.name);
+        name.extend(english(category).map(english_words).unwrap_or_default());
+        name
+    };
     let mut candidates: Vec<(&Category, Fit)> = categories
         .iter()
         .filter_map(|category| {
-            if !about(&category.name).iter().any(|word| same_word(first, word)) {
+            let about_it = about(&category.name).iter().any(|word| same_word(first, word))
+                || english(category).is_some_and(|name| english_about(name).iter().any(|word| same_english(first, word)));
+            if !about_it {
                 return None;
             }
-            let name = name_words(&category.name);
-            let matched = sought.iter().filter(|at| name.iter().any(|word| same_word(&words[**at].folded, word))).count();
+            let name = name_of(category);
+            let matched = sought.iter().filter(|at| name.iter().any(|word| alike(&words[**at].folded, word))).count();
             let typed = sought.iter().filter(|at| name.contains(&words[**at].folded)).count();
             let takes = kind.is_some_and(|kind| category.listing_types.iter().any(|t| t == kind));
             Some((category, (takes, matched, typed, std::cmp::Reverse(name.len()))))
@@ -377,9 +406,9 @@ fn read_category<'a>(words: &mut [Word], categories: &'a Categories, kind: Optio
     if candidates.get(1).is_some_and(|(_, other)| other == key) {
         return None;
     }
-    let name = name_words(&category.name);
+    let name = name_of(category);
     for at in sought {
-        if name.iter().any(|word| same_word(&words[at].folded, word)) {
+        if name.iter().any(|word| alike(&words[at].folded, word)) {
             words[at].used = true;
         }
     }
@@ -407,6 +436,49 @@ fn name_words(name: &str) -> Vec<String> {
         .collect()
 }
 
+/// The words an English category name is about, folded: the last of each part a "/" or "and"
+/// joins, English putting what a thing is last ("Villas / houses": villas, houses; "Commercial
+/// vehicles": vehicles; "Pet accessories": accessories).
+fn english_about(name: &str) -> Vec<String> {
+    format::fold(&name.replace(" and ", " / "))
+        .split('/')
+        .filter_map(|part| part.split(|c: char| !c.is_alphanumeric()).rfind(|word| !word.is_empty()).map(str::to_string))
+        .collect()
+}
+
+/// The words of an English category name, folded, less English's joining words.
+fn english_words(name: &str) -> Vec<String> {
+    format::fold(name)
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|word| !word.is_empty() && !ENGLISH_FILLERS.contains(word))
+        .map(str::to_string)
+        .collect()
+}
+
+/// Whether two folded English words are one, in the singular or the plural ("flat", "flats";
+/// "lorry", "lorries"; "watch", "watches"), or one of the few people type for another
+/// ("apartment" for a flat, "mobile" for a phone).
+fn same_english(a: &str, b: &str) -> bool {
+    fn singular(word: &str) -> String {
+        let word = match word {
+            "apartment" | "apartments" => "flat",
+            "mobile" | "mobiles" | "cellphone" | "cellphones" => "phone",
+            word => word,
+        };
+        if let Some(stem) = word.strip_suffix("ies").filter(|stem| stem.len() >= 2) {
+            return format!("{stem}y");
+        }
+        if let Some(stem) = word.strip_suffix("es").filter(|stem| ["sh", "ch", "x", "ss"].iter().any(|end| stem.ends_with(end))) {
+            return stem.to_string();
+        }
+        match word.strip_suffix('s').filter(|stem| stem.len() >= 2 && !stem.ends_with('s')) {
+            Some(stem) => stem.to_string(),
+            None => word.to_string(),
+        }
+    }
+    a == b || singular(a) == singular(b)
+}
+
 /// Whether two folded words are one word in two forms: the same once sq_stem's ending is off
 /// (migration 0016), keeping three letters where it keeps four, so that vila and vile meet, and
 /// qen and qeni.
@@ -426,7 +498,7 @@ fn stem(word: &str) -> &str {
 fn use_with_fillers(words: &mut [Word], at: usize) {
     words[at].used = true;
     let mut before = at;
-    while before > 0 && FILLERS.contains(&words[before - 1].folded.as_str()) {
+    while before > 0 && filler(&words[before - 1].folded) {
         before -= 1;
         words[before].used = true;
     }
@@ -441,6 +513,19 @@ mod tests {
 
     fn names(word: &str, name: &str) -> bool {
         names_place(word, &format::slug(name), name)
+    }
+
+    #[test]
+    fn english_words_meet_in_the_singular_and_the_plural() {
+        for (a, b) in [("flat", "flats"), ("apartment", "flats"), ("phone", "phones"), ("mobile", "phones"), ("lorry", "lorries"), ("watch", "watches"), ("tv", "tvs"), ("car", "cars")] {
+            assert!(same_english(a, b), "{a} {b}");
+        }
+        for (a, b) in [("phone", "headphones"), ("glass", "glas"), ("car", "cart")] {
+            assert!(!same_english(a, b), "{a} {b}");
+        }
+        assert_eq!(english_about("Villas / houses"), ["villas", "houses"]);
+        assert_eq!(english_about("Commercial vehicles"), ["vehicles"]);
+        assert_eq!(english_about("Audio and headphones"), ["audio", "headphones"]);
     }
 
     #[test]

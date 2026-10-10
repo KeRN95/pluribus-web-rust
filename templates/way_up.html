@@ -4,7 +4,7 @@
     no such button (the welcome page's house stood here once; the logo leads there). The page
     gives above_parent. -#}
 {%- if let Some(above) = above_parent %}
-<a class="back-button" href="{{ above.url }}" aria-label="{{ above.name }}" title="{{ above.name }}">
+<a class="back-button" href="{{ above.url }}" aria-label="{{ crate::t(above.name) }}" title="{{ crate::t(above.name) }}">
   {%- if let Some(icon) = above.icon %}<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>
   {%- else %}<svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{% endif -%}
 </a>

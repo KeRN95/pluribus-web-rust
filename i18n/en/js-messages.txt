@@ -1,0 +1,10 @@
+# Messages, the scripts' texts: the header's button for the conversations, which says how many
+# have messages unread (inbox_controller.js).
+
+# static/js/controllers/inbox_controller.js
+
+Mesazhet
+= Messages
+
+Mesazhet: {} të palexuara
+= Messages: {} unread

@@ -1,0 +1,63 @@
+{#- The privacy page (privacy.html), in English: a faithful translation of the whole, with the
+    Albanian's sections, elements and classes, under its heading; the Albanian is the one that
+    applies, as the note under the date says. When what the site keeps changes, both change, and
+    the date (PRIVACY_UPDATED). #}
+  <p class="updated">Updated {{ updated }}<br>This English version is a translation for convenience. Where it differs from the Albanian, the Albanian version applies.</p>
+  <p class="lead">Pluribus keeps as much data as it needs to work, and is open about it. Here is who keeps it, what it is, why, who else gets it, for how long, and how you control it.</p>
+
+  <h2>Who keeps it</h2>
+  <p>
+    {%- if let Some(operator) = operator %}Pluribus is run by {{ operator }}, who decides how your data is kept and is responsible for it.
+    {%- else %}Your data is kept by whoever runs Pluribus, who decides how it is kept and is responsible for it.{% endif %}
+    {%- if let Some(email) = email %} For any question or request about it, write to us at <a href="mailto:{{ email }}">{{ email }}</a>.
+    {%- else %} For any question or request about it, see <a href="/kontakt">Contact</a>.{% endif %}</p>
+
+  <h2>What we keep</h2>
+  <ul>
+    <li>The mobile number or email address you sign in with, the name you enter, and the language you chose for the pages and emails. Your number is shown on your listings only when someone presses the button to see it, and how many times that happens is counted for you in “My listings”.</li>
+    <li>Sign-in codes and session tokens, only as a hash (SHA-256): a code is valid for 10 minutes, a session for 30 days. With a request for a code, the IP address is kept too, to limit abuse.</li>
+    <li>Your listings: the text, the price, the place, the details, the photos (and their copies in different sizes), the history of the price and of the status.</li>
+    <li>The messages between you and the other side, and when you read them.</li>
+    <li>When you were last on the site, to within ten minutes: on your listings and profile it shows only as “Active today”, “Active yesterday” or “Active 3 days ago”, within the week. And how quickly you reply to messages, from the conversations of the last 90 days: once you have had at least three, it shows as “Usually replies within an hour”.</li>
+    <li>The stores you create: the name, description, logo, cover, address, opening hours and contacts you enter, public on the store’s page, and the NIPT (tax number), for you alone. The store’s people with each one’s role, and the invitations: the invitee’s number or email, until they accept or decline it, or it expires after 14 days.</li>
+    <li>The listings you save with the heart, the searches you save (with their filters, and when we notified you about them), the sellers you block and the reports you make.</li>
+    <li>The notifications we have given you (a price that dropped, new listings in a saved search, an unread message, a listing of yours that is expiring), and when you saw them.</li>
+    <li>Listing views are counted per day, without keeping who viewed them: a view repeated within a short time is recognised by a hash of the address and the browser, which is kept only in the server’s memory.</li>
+  </ul>
+
+  <h2>Why, and on what basis</h2>
+  <ul>
+    <li><strong>For the service you ask for.</strong> The account, listings, photos, messages, saved listings and blocks are kept so that Pluribus does what you ask of it, under the <a href="/kushtet">terms of use</a> you accept when you sign in or publish.</li>
+    <li><strong>To keep the site safe and useful.</strong> The limits on codes and on publishing, reports, moderation and the counting of views are done in the legitimate interest that Pluribus is not misused, and that sellers see how their listings are doing.</li>
+    <li><strong>Only when you ask for it.</strong> Filling in with AI happens only when you press its button, for that form.</li>
+    <li><strong>When the law requires it.</strong> We give it to the authorities only when the law obliges us to.</li>
+  </ul>
+
+  <h2>Cookies and your browser</h2>
+  <p>Pluribus uses its own cookies: <code>session</code> (signing in), <code>llogari</code> (so that pages know you’re signed in, without asking the server), <code>qyteti</code> (the town you chose), <code>cards</code> (large or small cards), <code>shikuar</code> (the numbers of the listings you opened recently, so that the home page can show them; “Clear” forgets them), <code>gjuha</code> (the language you chose, Albanian or English) and a few temporary ones while signing in and publishing. The dark theme and your recent searches, so that the search box can offer them, are kept only in your browser. There are no tracking or advertising cookies, and no third-party analytics. All of them are needed for the site to work or remember your choices, so we don’t ask for your consent to them.</p>
+
+  <h2>Who else gets it</h2>
+  <ul>
+    <li>The site is served through Cloudflare, which passes requests on to the server and protects it from attacks: for this it sees your IP address and the pages you open.</li>
+    <li>The sign-in code is sent through an email service or through WhatsApp (Meta), which receive the address or number to deliver it. So is the notice when someone writes to you and you haven’t read it after a few minutes, with the name of the person who wrote, the listing they wrote about and the start of the message; you can turn it off in “Settings”.</li>
+    <li>Photos are stored with a file storage service, from where the pages show them.</li>
+    <li>The map loads its tiles from OpenStreetMap: when you open the map, your browser connects to their servers.</li>
+    <li>If you use “Fill in the rest with AI”, the title, description and photos of that form are sent to Anthropic to be read, and for nothing else on our side.</li>
+    <li>We don’t sell your data and we don’t give it out for advertising.</li>
+  </ul>
+  <p>Some of them, such as Anthropic, Cloudflare and Meta, process the data outside Albania, mainly in the United States. We send each of them only as much as it needs for the work it does for Pluribus.</p>
+
+  <h2>For how long</h2>
+  <p>Codes expire after 10 minutes, and every request for a code, with the contact and the IP address, is deleted after a day. Sessions expire after 30 days. A listing you delete is no longer shown anywhere, but its row stays for the site’s history and for reports. Messages stay for as long as both accounts exist.</p>
+
+  <h2>Your rights</h2>
+  <p>You change your name, number and email yourself in “Settings”, and there too you choose what we notify you about and delete your account: your listings are deleted along with their photos, your number, email and name are removed, and the messages you exchanged stay for the other side, with “Deleted user” in place of your name. To see the data we keep about you, to get it in a form a computer can read, or to object to or restrict a use of it, {% if let Some(email) = email %}write to us at <a href="mailto:{{ email }}">{{ email }}</a>{% else %}<a href="/kontakt">write to us</a>{% endif %} from your account’s number or email, so that we can recognise you. We reply within 30 days.</p>
+  <p>If you think we don’t keep your data properly, you can complain to the Commissioner for the Right to Information and Personal Data Protection (<a href="https://www.idp.al" rel="noopener">idp.al</a>).</p>
+
+  <h2>Age</h2>
+  <p>Pluribus is for adults: to open an account you must be at least 18 years old.</p>
+
+  <h2>When this page changes</h2>
+  <p>When something changes in the way data is kept, this page changes too, and so does the date at its top.</p>
+
+  <p>See also the <a href="/kushtet">terms of use</a>.</p>

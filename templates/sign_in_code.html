@@ -1,31 +1,31 @@
 {% extends "base.html" %}
 
-{% block title %}Shkruaj kodin | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Shkruaj kodin") }} | Pluribus{% endblock %}
 
 {% block content %}
 <section class="account">
-  <h1>Shkruaj kodin</h1>
+  <h1>{{ crate::t("Shkruaj kodin") }}</h1>
   {% if gone %}
   <p class="form-error" role="alert">{% if let Some(error) = error %}{{ error }}{% endif %}</p>
-  <p><a class="button" href="{% if adds %}/llogaria/cilesimet{% else %}/llogaria{% endif %}">Kërko një kod të ri</a></p>
+  <p><a class="button" href="{% if adds %}/llogaria/cilesimet{% else %}/llogaria{% endif %}">{{ crate::t("Kërko një kod të ri") }}</a></p>
   {% else %}
-  <p class="lead">Të dërguam një kod me 6 shifra{{ sent_via }} te <strong>{{ sent_to }}</strong>. Vlen për 10 minuta.
-    {%- if publishes %} Shkruaje dhe njoftimi yt publikohet.{% if reviewed %} Pa kodin, e publikon një moderator pasi ta shohë.{% endif %}{% endif %}
-    {%- if adds %} Shkruaje dhe shtohet te llogaria jote.{% endif %}</p>
+  <p class="lead">{% if sent_via.is_empty() %}{{ crate::t("Të dërguam një kod me 6 shifra te") }}{% else %}{{ crate::t1("Të dërguam një kod me 6 shifra {} te", sent_via) }}{% endif %} <strong>{{ sent_to }}</strong>. {{ crate::t("Vlen për 10 minuta.") }}
+    {%- if publishes %} {{ crate::t("Shkruaje dhe njoftimi yt publikohet.") }}{% if reviewed %} {{ crate::t("Pa kodin, e publikon një moderator pasi ta shohë.") }}{% endif %}{% endif %}
+    {%- if adds %} {{ crate::t("Shkruaje dhe shtohet te llogaria jote.") }}{% endif %}</p>
 
   {% if let Some(code) = test_code %}
-  <p class="form-error test-mode">Versioni provë: kodi është <strong>{{ code }}</strong>. Në versionin e vërtetë vjen në WhatsApp ose me email.</p>
+  <p class="form-error test-mode">{{ crate::t("Versioni provë: kodi është") }} <strong>{{ code }}</strong>. {{ crate::t("Në versionin e vërtetë vjen në WhatsApp ose me email.") }}</p>
   {% endif %}
   <form class="account-form" action="/hyr/kodi" method="post">
     {% if let Some(error) = error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
     <div class="field">
-      <label class="field-label" for="code">Kodi</label>
+      <label class="field-label" for="code">{{ crate::t("Kodi") }}</label>
       <input id="code" name="code" required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}"
              maxlength="7" class="code-input" autofocus{% if let Some(code) = test_code %} value="{{ code }}"{% endif %}>
     </div>
-    <button type="submit" class="button">{% if adds %}Ruaje{% else %}Hyr{% endif %}</button>
+    <button type="submit" class="button">{% if adds %}{{ crate::t("Ruaje") }}{% else %}{{ crate::t("Hyr") }}{% endif %}</button>
   </form>
-  <p class="account-note">Nuk erdhi? <a href="{% if adds %}/llogaria/cilesimet{% else %}/llogaria{% endif %}">Kërko një kod të ri</a> pas një minute.</p>
+  <p class="account-note">{{ crate::t("Nuk erdhi?") }} <a href="{% if adds %}/llogaria/cilesimet{% else %}/llogaria{% endif %}">{{ crate::t("Kërko një kod të ri") }}</a> {{ crate::t("pas një minute.") }}</p>
   {% endif %}
 </section>
 {% endblock %}

@@ -4,14 +4,14 @@
     a dozen lines until "Shfaq të gjithë përshkrimin" unfolds it (fold_controller.js, which folds
     only one longer than that; without scripts it shows whole). -#}
 <section class="listing-description">
-  <h2>Përshkrimi</h2>
+  <h2>{{ crate::t("Përshkrimi") }}</h2>
   {%- if !car_page %}{% if let Some(heading) = listing.heading %}
   <h3 class="description-heading">{{ heading }}</h3>
   {%- endif %}{% endif %}
   <div class="description-fold" data-controller="fold">
     <p class="description" data-fold-target="text">{{ listing.description }}</p>
     <button type="button" class="description-more" data-fold-target="button" data-action="fold#open" hidden>
-      <svg data-icon="plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Shfaq të gjithë përshkrimin
+      <svg data-icon="plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{ crate::t("Shfaq të gjithë përshkrimin") }}
     </button>
   </div>
 </section>

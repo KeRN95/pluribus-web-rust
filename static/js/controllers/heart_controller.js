@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 import { visit } from "@hotwired/turbo";
 import { signedIn } from "controllers/signed_in.js";
+import { t, tf } from "controllers/i18n.js";
 
 // The heart over a listing's photo (heart.html). Which listings the visitor keeps comes from the
 // server with each page (GET /te-ruajturat/numrat), for every heart on it and those that come later
@@ -59,12 +60,16 @@ function answered(answer) {
 // the row with its search (home.html), has a dot while listings the visitor keeps dropped their
 // price since they last looked at /te-ruajturat, or saved searches have new listings they haven't
 // heard of (searches.rs), and says which to screen readers; not for what the page shows already
-// (the drops on saved.html, the searches on saved_searches.html), which it has seen.
+// (the drops on saved.html, the searches on saved_searches.html), which it has seen. English says
+// one search in the singular, where Albanian has the one form.
 function showNews(drops, searches) {
   const news = [];
-  if (drops > 0 && !document.querySelector(".price-drops")) news.push(`${drops} me çmim më të ulët`);
-  if (searches > 0 && !document.querySelector(".saved-searches")) news.push(`${searches} kërkime me njoftime të reja`);
-  const label = news.length ? `Të ruajturat: ${news.join(", ")}` : "Të ruajturat";
+  if (drops > 0 && !document.querySelector(".price-drops")) news.push(tf("{} me çmim më të ulët", drops));
+  if (searches > 0 && !document.querySelector(".saved-searches")) {
+    const one = searches === 1 && document.documentElement.lang === "en";
+    news.push(one ? t("1 kërkim me njoftime të reja") : tf("{} kërkime me njoftime të reja", searches));
+  }
+  const label = news.length ? tf("Të ruajturat: {}", news.join(", ")) : t("Të ruajturat");
   for (const button of document.querySelectorAll(".saved-shortcut, .saved-button")) {
     button.classList.toggle("has-drops", news.length > 0);
     button.setAttribute("aria-label", label);

@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { t, tf } from "controllers/i18n.js";
 
 // A new listing's form keeps what is typed, in this browser (localStorage, KEY), a moment after
 // each change: the title, the description, the category and its own fields, the price, the place,
@@ -12,8 +13,9 @@ import { Controller } from "@hotwired/stimulus";
 const KEY = "pluribus-draft";
 const DAYS = 30;
 // The months as the site writes them (format.rs): browsers' own Albanian dates vary, or are
-// English.
+// English. And on an English page, in English.
 const MONTHS = ["janar", "shkurt", "mars", "prill", "maj", "qershor", "korrik", "gusht", "shtator", "tetor", "nëntor", "dhjetor"];
+const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 // Fields of the form's own, or the photos': none of a draft.
 const SKIP = new Set(["started", "website", "photos", "photo_order", "photos_kept", "remove_photo"]);
 
@@ -72,7 +74,7 @@ export default class extends Controller {
 
   offer(draft) {
     this.draft = draft;
-    this.titleTarget.textContent = draft.fields.title?.trim() ? `„${draft.fields.title.trim()}“` : "pa titull";
+    this.titleTarget.textContent = draft.fields.title?.trim() ? tf("„{}“", draft.fields.title.trim()) : t("pa titull");
     this.whenTarget.textContent = when(draft.saved);
     this.noteTarget.hidden = false;
   }
@@ -121,12 +123,23 @@ export default class extends Controller {
   }
 }
 
-// When it was kept: "sot në 14:32", "dje në 9:05", "më 10 tetor".
+// When it was kept, after "të ruajtur" (saved): "sot në 14:32", "dje në 9:05", "më 10 tetor"; on
+// an English page in its own words, "5 minutes ago" within the hour, "today at 14:32", "yesterday
+// at 9:05", "on 10 October".
 function when(time) {
   const saved = new Date(time);
   const day = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   const days = Math.round((day(new Date()) - day(saved)) / 86_400_000);
   const clock = `${saved.getHours()}:${String(saved.getMinutes()).padStart(2, "0")}`;
+  if (document.documentElement.lang === "en") {
+    const minutes = Math.floor((Date.now() - saved.getTime()) / 60_000);
+    if (days === 0 && minutes < 1) return "just now";
+    if (days === 0 && minutes === 1) return "1 minute ago";
+    if (days === 0 && minutes < 60) return `${minutes} minutes ago`;
+    if (days === 0) return `today at ${clock}`;
+    if (days === 1) return `yesterday at ${clock}`;
+    return `on ${saved.getDate()} ${MONTHS_EN[saved.getMonth()]}`;
+  }
   if (days === 0) return `sot në ${clock}`;
   if (days === 1) return `dje në ${clock}`;
   return `më ${saved.getDate()} ${MONTHS[saved.getMonth()]}`;

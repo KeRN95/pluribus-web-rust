@@ -1,0 +1,16 @@
+{#- The contact page (contact.html), in English: said as a whole rather than sentence by sentence,
+    with the Albanian's elements and classes, under its heading. A change to one is a change to
+    the other. #}
+  <p class="lead">For anything about Pluribus: a problem with your account, a listing that shouldn’t be there, an idea, or a question from the press.</p>
+  {%- if let Some(email) = email %}
+  <p>Write to us at <a href="mailto:{{ email }}">{{ email }}</a>. For a question about your account, write from the number or email address you sign in with, so that we can recognise you.</p>
+  {%- endif %}
+
+  <h2>Quicker than an email</h2>
+  <ul>
+    <li>A suspicious or wrong listing: press “Report” on its page. The moderators look at it, and many reports take the listing down at once.</li>
+    <li>A seller you don’t want to see again: “Block seller” after reporting their listing, or in your conversation.</li>
+    <li>A listing of yours: edit, pause or delete it in “My listings”.</li>
+  </ul>
+
+  <p>See also <a href="/si-funksionon">how Pluribus works</a> and the <a href="/siguria">safety tips</a>.</p>

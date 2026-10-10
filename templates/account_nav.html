@@ -3,11 +3,11 @@
     notifications with how many are new, its conversations, the listings it keeps, its settings.
     The page it is on is marked, as what is picked is (posting.css, .account-nav). -#}
 {%- macro account_nav(here, unread) -%}
-<nav class="account-nav" aria-label="Llogaria jote">
-  <a href="/njoftimet-e-mia"{% if here == "listings" %} aria-current="page"{% endif %}>Njoftimet e mia</a>
-  <a href="/lajmerimet"{% if here == "notifications" %} aria-current="page"{% endif %}>Lajmërimet{% if unread == 1 %} · 1 e re{% else if unread > 1 %} · {{ unread }} të reja{% endif %}</a>
-  <a href="/mesazhet">Mesazhet</a>
-  <a href="/te-ruajturat">Të ruajturat</a>
-  <a href="/llogaria/cilesimet"{% if here == "settings" %} aria-current="page"{% endif %}>Cilësimet</a>
+<nav class="account-nav" aria-label="{{ crate::t("Llogaria jote") }}">
+  <a href="/njoftimet-e-mia"{% if here == "listings" %} aria-current="page"{% endif %}>{{ crate::t("Njoftimet e mia") }}</a>
+  <a href="/lajmerimet"{% if here == "notifications" %} aria-current="page"{% endif %}>{{ crate::t("Lajmërimet") }}{% if unread == 1 %} · {{ crate::t("1 e re") }}{% else if unread > 1 %} · {{ crate::t1("{} të reja", unread) }}{% endif %}</a>
+  <a href="/mesazhet">{{ crate::t("Mesazhet") }}</a>
+  <a href="/te-ruajturat">{{ crate::t("Të ruajturat") }}</a>
+  <a href="/llogaria/cilesimet"{% if here == "settings" %} aria-current="page"{% endif %}>{{ crate::t("Cilësimet") }}</a>
 </nav>
 {%- endmacro %}

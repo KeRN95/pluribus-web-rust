@@ -29,6 +29,7 @@ use crate::{
     AppState,
     db::{self, City, ImageChange, SessionUser, StoreFields, StoreImage},
     format::{self, Contact},
+    i18n::{self, Lang, in_lang, t, t1, t2},
     media, sender,
 };
 
@@ -156,48 +157,48 @@ fn check(form: &StoreForm, towns: &[City], errors: &mut HashMap<String, String>)
     let text = |value: &str| Some(value.trim().to_string()).filter(|value| !value.is_empty());
     let name = form.name.split_whitespace().collect::<Vec<_>>().join(" ");
     if name.chars().count() < 2 || name.chars().count() > NAME_CHARS {
-        fail("name", "Shkruaj emrin e dyqanit, nga 2 deri në 80 shkronja.");
+        fail("name", t("Shkruaj emrin e dyqanit, nga 2 deri në 80 shkronja."));
     }
     let description = text(&form.description);
     if description.as_ref().is_some_and(|text| text.chars().count() > DESCRIPTION_CHARS) {
-        fail("description", "Përshkrimi mund të jetë deri në 2 000 shkronja.");
+        fail("description", t("Përshkrimi mund të jetë deri në 2 000 shkronja."));
     }
     let phone = text(&form.phone).map(|typed| store_phone(&typed).ok_or(()));
     if matches!(phone, Some(Err(()))) {
-        fail("phone", "Shkruaj numrin si 069 123 4567 ose 04 222 3333.");
+        fail("phone", t("Shkruaj numrin si 069 123 4567 ose 04 222 3333."));
     }
     let email = text(&form.email).map(|typed| match Contact::parse(&typed) {
         Some(Contact::Email(email)) => Ok(email),
         _ => Err(()),
     });
     if matches!(email, Some(Err(()))) {
-        fail("email", "Shkruaj një adresë email-i, p.sh. info@dyqani.al.");
+        fail("email", t("Shkruaj një adresë email-i, p.sh. info@dyqani.al."));
     }
     let site = text(&form.website).map(|typed| website(&typed).ok_or(()));
     if matches!(site, Some(Err(()))) {
-        fail("website", "Shkruaj adresën e faqes, p.sh. www.dyqani.al.");
+        fail("website", t("Shkruaj adresën e faqes, p.sh. www.dyqani.al."));
     }
     let town = match form.city.as_str() {
         "" => None,
         slug => {
             let town = towns.iter().find(|town| town.slug == slug);
             if town.is_none() {
-                fail("city", "Zgjidh qytetin nga lista.");
+                fail("city", t("Zgjidh qytetin nga lista."));
             }
             town
         }
     };
     let address = text(&form.address);
     if address.as_ref().is_some_and(|text| text.chars().count() > ADDRESS_CHARS) {
-        fail("address", "Adresa mund të jetë deri në 200 shkronja.");
+        fail("address", t("Adresa mund të jetë deri në 200 shkronja."));
     }
     let hours = text(&form.hours);
     if hours.as_ref().is_some_and(|text| text.chars().count() > HOURS_CHARS) {
-        fail("hours", "Orari mund të jetë deri në 300 shkronja.");
+        fail("hours", t("Orari mund të jetë deri në 300 shkronja."));
     }
     let nipt = text(&form.nipt).map(|typed| typed.to_uppercase().replace(' ', ""));
     if nipt.as_ref().is_some_and(|nipt| nipt.len() != 10 || !nipt.chars().all(|c| c.is_ascii_alphanumeric())) {
-        fail("nipt", "NIPT-i ka 10 shenja, p.sh. L12345678A.");
+        fail("nipt", t("NIPT-i ka 10 shenja, p.sh. L12345678A."));
     }
     let phone = phone.and_then(Result::ok);
     StoreFields {
@@ -222,11 +223,11 @@ async fn store_image(state: &AppState, files: &[(String, Bytes)], field: &str, e
         return Ok(None);
     };
     let unreadable = match field {
-        "logo" => "Logoja nuk u lexua. Zgjidh një foto JPG, PNG ose WebP.",
-        _ => "Kopertina nuk u lexua. Zgjidh një foto JPG, PNG ose WebP.",
+        "logo" => t("Logoja nuk u lexua. Zgjidh një foto JPG, PNG ose WebP."),
+        _ => t("Kopertina nuk u lexua. Zgjidh një foto JPG, PNG ose WebP."),
     };
     if bytes.len() > media::MAX_UPLOAD_BYTES {
-        errors.entry(field.to_string()).or_insert_with(|| format!("Fotoja mund të jetë deri në {} MB.", media::MAX_UPLOAD_BYTES / 1024 / 1024));
+        errors.entry(field.to_string()).or_insert_with(|| t1("Fotoja mund të jetë deri në {} MB.", media::MAX_UPLOAD_BYTES / 1024 / 1024));
         return Ok(None);
     }
     let bytes = bytes.clone();
@@ -264,10 +265,10 @@ pub async fn new_store(State(state): State<AppState>, headers: HeaderMap) -> Res
     let towns = db::cities(&state.db).await?;
     let mut errors = HashMap::new();
     if db::stores_owned(&state.db, user.id).await? >= db::STORES_MOST {
-        errors.insert("form".to_string(), format!("Ke {} dyqane, sa mund të kesh.", db::STORES_MOST));
+        errors.insert("form".to_string(), t1("Ke {} dyqane, sa mund të kesh.", db::STORES_MOST));
     }
     let form = StoreForm { phone: user.phone.as_deref().map(crate::format::phone).unwrap_or_default(), ..Default::default() };
-    render(StoreFormPage { heading: "Krijo një dyqan", action: "/dyqani/krijo".to_string(), store: None, form, errors, towns })
+    render(StoreFormPage { heading: t("Krijo një dyqan"), action: "/dyqani/krijo".to_string(), store: None, form, errors, towns })
 }
 
 /// POST /dyqani/krijo: the store made, the user its owner, its pictures made and kept; to its page.
@@ -279,7 +280,7 @@ pub async fn create_store(State(state): State<AppState>, headers: HeaderMap, sub
     let form = StoreForm::from_pairs(submission.pairs);
     let mut errors = HashMap::new();
     if db::stores_owned(&state.db, user.id).await? >= db::STORES_MOST {
-        errors.insert("form".to_string(), format!("Ke {} dyqane, sa mund të kesh.", db::STORES_MOST));
+        errors.insert("form".to_string(), t1("Ke {} dyqane, sa mund të kesh.", db::STORES_MOST));
     }
     let fields = check(&form, &towns, &mut errors);
     let (logo, cover) = if errors.is_empty() {
@@ -290,7 +291,7 @@ pub async fn create_store(State(state): State<AppState>, headers: HeaderMap, sub
     if !errors.is_empty() {
         let made: Vec<String> = [&logo, &cover].into_iter().flatten().map(|image| image.key.clone()).collect();
         forget_files(&state, &made).await;
-        return again(StoreFormPage { heading: "Krijo një dyqan", action: "/dyqani/krijo".to_string(), store: None, form, errors, towns });
+        return again(StoreFormPage { heading: t("Krijo një dyqan"), action: "/dyqani/krijo".to_string(), store: None, form, errors, towns });
     }
     let slug = db::create_store(&state.db, user.id, &fields, logo.as_ref(), cover.as_ref()).await?;
     Ok(Redirect::to(&format!("/biznes/{slug}")).into_response())
@@ -324,7 +325,7 @@ pub async fn edit_store(State(state): State<AppState>, headers: HeaderMap, Path(
     let towns = db::cities(&state.db).await?;
     let form = StoreForm::of(&store, &towns);
     render(StoreFormPage {
-        heading: "Ndrysho dyqanin",
+        heading: t("Ndrysho dyqanin"),
         action: format!("/dyqani/{slug}/ndrysho"),
         store: Some(store),
         form,
@@ -352,7 +353,7 @@ pub async fn update_store(State(state): State<AppState>, headers: HeaderMap, Pat
         let made: Vec<String> = [&logo, &cover].into_iter().flatten().map(|image| image.key.clone()).collect();
         forget_files(&state, &made).await;
         return again(StoreFormPage {
-            heading: "Ndrysho dyqanin",
+            heading: t("Ndrysho dyqanin"),
             action: format!("/dyqani/{slug}/ndrysho"),
             store: Some(store),
             form,
@@ -370,23 +371,24 @@ pub async fn update_store(State(state): State<AppState>, headers: HeaderMap, Pat
     Ok(Redirect::to(&format!("/biznes/{slug}")).into_response())
 }
 
-/// A role's name, as the pages say it.
+/// A role's name, as the pages say it, in their language.
 pub fn role_name(role: &str) -> &'static str {
     match role {
-        "OWNER" => "Pronar",
-        "ADMIN" => "Administrator",
-        "EDITOR" => "Poston njoftime",
-        _ => "Vetëm mesazhet",
+        "OWNER" => t("Pronar"),
+        "ADMIN" => t("Administrator"),
+        "EDITOR" => t("Poston njoftime"),
+        _ => t("Vetëm mesazhet"),
     }
 }
 
-/// What a role lets someone do, as the invitation form and the invitation say it.
+/// What a role lets someone do, as the invitation form and the invitation say it, in their
+/// language.
 pub fn role_does(role: &str) -> &'static str {
     match role {
-        "OWNER" => "Gjithçka, edhe njerëzit e dyqanit.",
-        "ADMIN" => "Ndryshon dyqanin dhe njerëzit e tij, poston njoftime dhe u përgjigjet mesazheve.",
-        "EDITOR" => "Poston dhe ndryshon njoftimet e dyqanit, dhe u përgjigjet mesazheve.",
-        _ => "U përgjigjet mesazheve të dyqanit.",
+        "OWNER" => t("Gjithçka, edhe njerëzit e dyqanit."),
+        "ADMIN" => t("Ndryshon dyqanin dhe njerëzit e tij, poston njoftime dhe u përgjigjet mesazheve."),
+        "EDITOR" => t("Poston dhe ndryshon njoftimet e dyqanit, dhe u përgjigjet mesazheve."),
+        _ => t("U përgjigjet mesazheve të dyqanit."),
     }
 }
 
@@ -486,11 +488,11 @@ pub struct PeopleDone {
 /// The line at the top of the page of people saying what the last form did.
 fn people_done(word: &str) -> Option<&'static str> {
     Some(match word {
-        "ftuar" => "Ftesa u ruajt. Dërgoja edhe vetë: me WhatsApp, ose kopjo lidhjen.",
-        "anetar" => "Ky numër ose email është tashmë i dyqanit.",
-        "anuluar" => "Ftesa u anulua.",
-        "roli" => "Roli u ndryshua.",
-        "hequr" => "U hoq nga dyqani.",
+        "ftuar" => t("Ftesa u ruajt. Dërgoja edhe vetë: me WhatsApp, ose kopjo lidhjen."),
+        "anetar" => t("Ky numër ose email është tashmë i dyqanit."),
+        "anuluar" => t("Ftesa u anulua."),
+        "roli" => t("Roli u ndryshua."),
+        "hequr" => t("U hoq nga dyqani."),
         _ => return None,
     })
 }
@@ -535,11 +537,11 @@ pub async fn invite(State(state): State<AppState>, headers: HeaderMap, Path(slug
     };
     let contact = Contact::parse(&form.kontakti);
     let error = if contact.is_none() {
-        Some("Shkruaj një numër celulari (069 123 4567) ose një email.")
+        Some(t("Shkruaj një numër celulari (069 123 4567) ose një email."))
     } else if !given_by(&role).contains(&form.roli.as_str()) {
-        Some("Zgjidh një nga rolet.")
+        Some(t("Zgjidh një nga rolet."))
     } else if db::store_invitations(&state.db, store.id).await?.len() >= INVITATIONS_MOST {
-        Some("Dyqani ka 20 ftesa në pritje. Anulo disa para se të dërgosh të tjera.")
+        Some(t("Dyqani ka 20 ftesa në pritje. Anulo disa para se të dërgosh të tjera."))
     } else {
         None
     };
@@ -549,14 +551,23 @@ pub async fn invite(State(state): State<AppState>, headers: HeaderMap, Path(slug
         return Ok((StatusCode::UNPROCESSABLE_ENTITY, render(page)?).into_response());
     };
     let title: String = format!("{} të fton në dyqan", store.display_name).chars().take(180).collect();
-    let body = format!("Si „{}“: {}", role_name(&form.roli), role_does(&form.roli));
+    // The notification and the e-mail speak Albanian for now, whatever the page's language (their
+    // English is a later step): the role's words in Albanian too.
+    let body = in_lang(Lang::Sq, async { format!("Si „{}“: {}", role_name(&form.roli), role_does(&form.roli)) }).await;
     let id = match db::invite(&state.db, store.id, &contact, &form.roli, user.id, &title, &body).await? {
         db::Invited::Member => return Ok(Redirect::to(&format!("/dyqani/{slug}/njerezit?u=anetar")).into_response()),
         db::Invited::Sent(id) => id,
     };
-    if let Contact::Email(_) = contact {
-        let text = format!("{body}\n\nPër ta pranuar, hyr në Pluribus me këtë email:\n{}/ftesa/{id}", site_origin());
-        if let Err(error) = sender::senders().send_text(&contact, &title, &text).await {
+    if let Contact::Email(email) = &contact {
+        // The e-mail in the language of the account the address signs in to, if one does; else
+        // Albanian.
+        let lang = db::language_of_email(&state.db, email).await?.and_then(|code| Lang::from_code(&code)).unwrap_or_default();
+        let (subject, text) = i18n::LANG.sync_scope(lang, || {
+            let invites = t1("{} të fton në dyqan", &store.display_name);
+            let role = t2("Si „{}“: {}", role_name(&form.roli), role_does(&form.roli));
+            (invites, format!("{role}\n\n{}\n{}/ftesa/{id}", t("Për ta pranuar, hyr në Pluribus me këtë email:"), site_origin()))
+        });
+        if let Err(error) = sender::senders().send_text(&contact, &subject, &text).await {
             tracing::warn!(%error, to = %contact.masked(), "store invitation not sent");
         }
     }

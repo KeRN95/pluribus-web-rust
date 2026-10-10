@@ -1,0 +1,496 @@
+# Posting and editing a listing, and "My listings": the form (listing_form.html and its
+# properties, listing_properties.html), its checks and limits (post.rs, properties.rs, photos.rs,
+# ai_fill.rs), and the seller's list (my_listings.html). The texts the scripts show too ("Hiq",
+# the map's, the AI's) are in js-posting.txt.
+
+# templates/listing_form.html
+
+Ndryshimet shfaqen menjëherë.
+= Changes show at once.
+
+Publikohet menjëherë.
+= It goes up at once.
+
+Blerësit të kontaktojnë te
+= Buyers reach you at
+
+S'ke llogari? S'ka problem: në fund shkruaj celularin ose email-in, dhe njoftimi publikohet menjëherë; llogaria krijohet vetë.
+= No account? No problem: type your mobile number or email at the end, and the listing goes up at once; your account is made for you.
+
+Nëse ke llogari me të, të dërgojmë një kod, dhe njoftimi publikohet sapo ta shkruash.
+= If you already have an account with it, we send you a code, and the listing goes up as soon as you type it in.
+
+Ke llogari? Hyr
+= Have an account? Sign in
+
+Ke një njoftim të pambaruar,
+= You have an unfinished listing,
+
+të ruajtur
+= saved
+
+Fotot nuk ruhen.
+= Photos aren’t kept.
+
+Vazhdo
+= Continue
+
+Fshije
+= Discard
+
+Posto si
+= Post as
+
+Unë
+= Me
+
+Si dyqan, njoftimi del me emrin, logon dhe numrin e dyqanit.
+= As a store, the listing shows the store’s name, logo and number.
+
+Çfarë shet
+= What you’re selling
+
+Titulli
+= Title
+
+p.sh. Golf 7, 2016, naftë
+= e.g. Golf 7, 2016, diesel
+
+Përshkrimi
+= Description
+
+Gjendja, çfarë ka, pse e shet, kur mund ta shohin…
+= Its condition, what comes with it, why you’re selling, when people can see it…
+
+Fotot
+= Photos
+
+Shto foto
+= Add photos
+
+ose tërhiqi këtu
+= or drag them here
+
+Deri në {} foto.
+= Up to {} photos.
+
+E para, kopertina, del në karta dhe në krye të njoftimit; i rendit me shigjetat ose duke i tërhequr.
+= The first, the cover, shows on cards and at the top of the listing; put them in order with the arrows or by dragging.
+
+Plotëso pjesën tjetër me AI
+= Fill in the rest with AI
+
+Nga titulli, përshkrimi dhe fotot, AI plotëson detajet që mungojnë. Ato që ke vënë nuk i prek.
+= From the title, description and photos, the AI fills in the missing details. It leaves what you’ve entered alone.
+
+Nga titulli, përshkrimi dhe fotot, AI zgjedh kategorinë dhe plotëson detajet, çmimin dhe qytetin. Ti i kontrollon para se ta publikosh.
+= From the title, description and photos, the AI chooses the category and fills in the details, price and town. You check them before posting.
+
+Kategoria dhe çmimi
+= Category and price
+
+Kategoria
+= Category
+
+Zgjidh kategorinë
+= Choose a category
+
+Lloji
+= Type
+
+Gjendja
+= Condition
+
+Zgjidh
+= Choose
+
+Çmimi
+= Price
+
+Shuma
+= Amount
+
+# An example of what to type: without a separator, which English would write as a comma (and the
+# form reads as a decimal one).
+p.sh. 9 500
+= e.g. 9,500
+
+Monedha
+= Currency
+
+Vendi dhe kontakti
+= Location and contact
+
+Vendi
+= Location
+
+Qyteti
+= Town
+
+Zgjidh qytetin
+= Choose a town
+
+Zona
+= Area
+
+(s'është e detyrueshme)
+= (optional)
+
+Zgjidh zonën
+= Choose an area
+
+Vendi në hartë
+= Place on the map
+
+(s'është i detyrueshëm)
+= (optional)
+
+Shiko në hartë
+= View on the map
+
+Hiqe pikën
+= Remove the point
+
+Njoftimi del te pika që vendose, afërsisht.
+= The listing shows at the point you set, roughly.
+
+Celulari ose email-i
+= Mobile or email
+
+p.sh. 069 123 4567
+= e.g. 069 123 4567
+
+Emri
+= Name
+
+Blerësit të kontaktojnë këtu; e shohin vetëm kur shtypin butonin e telefonit te njoftimi. Me të hyn më vonë, për ta ndryshuar njoftimin.
+= Buyers reach you here; they see it only when they press the phone button on the listing. You sign in with it later to change the listing.
+
+Anulo
+= Cancel
+
+Që të shitet më shpejt
+= To sell it faster
+
+Fotot.
+= Photos.
+
+E para del në karta dhe në krye të njoftimit: zgjidh më të mirën. Në dritë dite, nga disa anë, me defektet që ka.
+= The first shows on cards and at the top of the listing: choose your best. In daylight, from several sides, with any flaws it has.
+
+Titulli.
+= Title.
+
+Çfarë është, me markën, modelin dhe vitin: „Golf 7, 2016, naftë“, jo „Shes makinë“.
+= What it is, with the brand, model and year: “Golf 7, 2016, diesel”, not “Car for sale”.
+
+Çmimi.
+= Price.
+
+Një çmim i qartë sjell më shumë mesazhe se „me marrëveshje“. Për një makinë, forma të thotë çfarë kërkojnë të ngjashmet.
+= A clear price brings more messages than “on request”. For a car, the form tells you what similar ones ask.
+
+Pas publikimit.
+= After posting.
+
+Njoftimi qëndron 60 ditë, dhe e rifreskon me një klik te „Njoftimet e mia“.
+= The listing stays up for 60 days, and you renew it in one click in “My listings”.
+
+Duke publikuar, pranon
+= By posting, you accept
+
+kushtet e përdorimit
+= the terms of use
+
+Si i mbajmë të dhënat e tua:
+= How we keep your data:
+
+Njoftimet e mia
+= My listings
+
+Nuk je ti?
+= Not you?
+
+Dil
+= Sign out
+
+# templates/listing_properties.html (the category's own fields: their names, units and options
+# come from the database, data.txt)
+
+Detajet
+= Details
+
+Tjetër…
+= Other…
+
+Shkruaje këtu
+= Type it here
+
+{}: tjetër
+= {}: other
+
+e detyrueshme
+= required
+
+# templates/my_listings.html
+
+Njoftimet e kujt
+= Whose listings
+
+Të miat
+= Mine
+
+Njoftimet e
+= Listings of
+
+nga kushdo që i ka publikuar.
+= by whoever posted them.
+
+Njoftimet që ke publikuar me
+= Listings you’ve posted with
+
+Për miratim ({})
+= For approval ({})
+
+Nuk ke publikuar asnjë njoftim ende.
+= You haven’t posted any listings yet.
+
+Shikime
+= Views
+
+Kontakte
+= Contacts
+
+Ruajtje
+= Saves
+
+Kontakte: sa herë dikush pa numrin ose email-in tënd.
+= Contacts: how many times someone saw your number or email.
+
+deri më {}
+= until {}
+
+Rifresko
+= Renew
+
+Ndrysho
+= Edit
+
+Rezervo
+= Reserve
+
+Hiq rezervimin
+= Unreserve
+
+Çaktivizo
+= Pause
+
+Aktivizo
+= Reactivate
+
+Ta fshijmë njoftimin „{}“? Nuk mund ta kthesh më.
+= Delete the listing “{}”? You can’t undo this.
+
+Fshi
+= Delete
+
+Dil nga llogaria
+= Sign out
+
+# src/web/post.rs: the kinds of price (PRICE_TYPES; "Falas" is in format.txt)
+
+Çmim fiks
+= Fixed price
+
+I diskutueshëm
+= Negotiable
+
+Me marrëveshje
+= On request
+
+# src/web/post.rs: the form's heading and button
+
+Publiko njoftimin
+= Post listing
+
+Ndrysho njoftimin
+= Edit listing
+
+Ruaj ndryshimet
+= Save changes
+
+# src/web/post.rs: the form's checks and limits
+
+Zgjidh fotot përsëri: formulari i harron kur ka një gabim.
+= Choose the photos again: the form forgets them when there’s an error.
+
+Prit një çast dhe provo përsëri.
+= Wait a moment and try again.
+
+Zgjidh kategorinë.
+= Choose a category.
+
+Zgjidh nënkategorinë, p.sh. Makina te Automjete.
+= Choose a subcategory, e.g. Cars under Vehicles.
+
+Zgjidh llojin e njoftimit.
+= Choose the type of listing.
+
+Titulli duhet të ketë 5 deri në 120 shkronja.
+= The title needs 5 to 120 characters.
+
+Titulli nuk mund të ketë lidhje.
+= The title can’t contain links.
+
+Përshkrimi duhet të ketë 10 deri në 5000 shkronja.
+= The description needs 10 to 5000 characters.
+
+Përshkrimi mund të ketë deri në 2 lidhje.
+= The description can have up to 2 links.
+
+Shkruaj çmimin, ose zgjidh „Falas“ ose „Me marrëveshje“.
+= Type the price, or choose “Free” or “On request”.
+
+Zgjidh qytetin.
+= Choose a town.
+
+Zgjidh një zonë të qytetit.
+= Choose one of the town’s areas.
+
+Emri mund të ketë deri në 60 shkronja.
+= The name can have up to 60 characters.
+
+Pika në hartë është larg qytetit që zgjodhe: vendose te qyteti, ose hiqe.
+= The point on the map is far from the town you chose: put it in the town, or remove it.
+
+Pika në hartë nuk u lexua: vendose përsëri.
+= The point on the map couldn’t be read: put it there again.
+
+Zgjidh një nga dyqanet e tua, ose veten.
+= Choose one of your stores, or yourself.
+
+Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i.
+= Enter a mobile number (e.g. 069 123 4567) or an email address.
+
+Kjo llogari është pezulluar.
+= This account has been suspended.
+
+Ke publikuar {} njoftime sot. Mund të publikosh të tjera nesër.
+= You’ve posted {} listings today. You can post more tomorrow.
+
+Ke publikuar tashmë një njoftim me këtë titull sot.
+= You’ve already posted a listing with this title today.
+
+Shumë njoftime nga ky rrjet brenda një ore. Provo përsëri më vonë.
+= Too many listings from this network within an hour. Try again later.
+
+# src/web/post.rs: "My listings" (a listing's state, what it drew)
+
+Rezervuar
+= Reserved
+
+Skaduar
+= Expired
+
+Në pritje
+= Pending
+
+Çaktivizuar
+= Paused
+
+Në shqyrtim
+= Under review
+
+Hequr nga moderatorët
+= Removed by moderators
+
+Jo aktiv
+= Inactive
+
+1 shikim
+= 1 view
+
+{} shikime
+= {} views
+
+{}, {} këtë javë
+= {}, {} this week
+
+1 kontakt
+= 1 contact
+
+{} kontakte
+= {} contacts
+
+1 ruajtje
+= 1 save
+
+{} ruajtje
+= {} saves
+
+Asnjë këtë javë
+= None this week
+
++{} këtë javë
+= +{} this week
+
+# src/web/properties.rs (NAME_PROBLEM, given to t at its use, first)
+
+Shkruaj vetëm emrin, me 2 deri në 40 shkronja.
+= Type just the name, 2 to 40 characters.
+
+Plotëso „{}“.
+= Fill in “{}”.
+
+Shkruaj „{}“.
+= Type in “{}”.
+
+Ky model nuk i përket markës së zgjedhur.
+= This model doesn’t belong to the chosen brand.
+
+Zgjidh një nga mundësitë.
+= Choose one of the options.
+
+Duhet të jetë nga {} deri në {}.
+= Must be from {} to {}.
+
+Duhet të jetë të paktën {}.
+= Must be at least {}.
+
+Duhet të jetë deri në {}.
+= Must be at most {}.
+
+Shkruaj një numër.
+= Type a number.
+
+Deri në 200 shkronja.
+= Up to 200 characters.
+
+Duhet të jetë {} ose më vonë.
+= Must be {} or later.
+
+# src/web/photos.rs
+
+Fotot janë shumë të mëdha. Zgjidh më pak, ose më të vogla.
+= The photos are too big. Choose fewer, or smaller ones.
+
+Formulari nuk arriti i plotë. Provo përsëri.
+= The form didn’t arrive whole. Try again.
+
+Një njoftim mund të ketë deri në {} foto.
+= A listing can have up to {} photos.
+
+Secila foto mund të jetë deri në {} MB.
+= Each photo can be up to {} MB.
+
+Një nga fotot nuk u lexua. Zgjidh foto JPG, PNG ose WebP.
+= One of the photos couldn’t be read. Choose JPG, PNG or WebP photos.
+
+# src/web/ai_fill.rs (its consts TOO_MANY and BUSY, given to t in refusal; WRITE_FIRST and
+# UNAVAILABLE, which the script says too, are in js-posting.txt)
+
+Ke kërkuar plotësim me AI shumë herë brenda një ore. Plotëso vetë fushat, ose provo më vonë.
+= You’ve asked the AI to fill in the form too many times within an hour. Fill in the fields yourself, or try again later.
+
+AI ka pasur shumë kërkesa sot. Plotëso vetë fushat, ose provo nesër.
+= The AI has had too many requests today. Fill in the fields yourself, or try again tomorrow.

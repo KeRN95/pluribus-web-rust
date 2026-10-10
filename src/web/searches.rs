@@ -30,6 +30,7 @@ use crate::{
     AppState,
     db::{self, Categories, City, ListingFilter, NewSearch, SavedSearch, Sort},
     format::Contact,
+    i18n::{self, Lang, t1, t2},
     sender,
 };
 
@@ -99,12 +100,14 @@ fn address(path: &str, query: &str) -> String {
     }
 }
 
-/// "1 njoftim i ri", "12 njoftime të reja", "99+ njoftime të reja".
+/// "1 njoftim i ri", "12 njoftime të reja", "99+ njoftime të reja", in the language now: a page's,
+/// or an alert's e-mail's, its recipient's; Albanian for the notification it keeps and for its
+/// WhatsApp template.
 pub fn new_listings(count: i64) -> String {
     match count {
-        1 => "1 njoftim i ri".to_string(),
-        count if count > NEW_MOST => format!("{NEW_MOST}+ njoftime të reja"),
-        count => format!("{count} njoftime të reja"),
+        1 => i18n::t("1 njoftim i ri").to_string(),
+        count if count > NEW_MOST => t1("{}+ njoftime të reja", NEW_MOST),
+        count => t1("{} njoftime të reja", count),
     }
 }
 
@@ -202,6 +205,7 @@ pub struct SearchRow {
 }
 
 impl SearchRow {
+    /// How many listings came, as new_listings says it, in the page's language.
     pub fn new_text(&self) -> Option<String> {
         self.new.filter(|count| *count > 0).map(new_listings)
     }
@@ -277,7 +281,9 @@ pub async fn send_search_alerts(db: &PgPool, origin: &str) -> sqlx::Result<usize
         }
         let newest = db::listing_page(db, &page.filter).await?;
         let url = format!("{origin}/kerkimet/{}", search.id);
-        let title = format!("{}: {}", new_listings(count), search.name);
+        // The notification keeps its title in Albanian (web/notifications.rs words it for its
+        // reader), as the WhatsApp template's texts are; the e-mail is in its recipient's language.
+        let title = i18n::LANG.sync_scope(Lang::Sq, || format!("{}: {}", new_listings(count), search.name));
         db::record_search_alert(db, search.user_id, search.id, &title, count, &url).await?;
         sent += 1;
         let contact = match (search.email, search.phone) {
@@ -290,21 +296,29 @@ pub async fn send_search_alerts(db: &PgPool, origin: &str) -> sqlx::Result<usize
             Contact::Email(_) => Some(format!("{origin}/ndalo/{}/kerkimi-{}", db::notice_token(db, search.user_id).await?, search.id)),
             Contact::Phone(_) => None,
         };
-        let mut body = format!("Te kërkimi yt „{}“ në Pluribus ka {}:\n\n", search.name, new_listings(count));
-        for card in newest.iter().take(ALERT_LISTINGS) {
-            body.push_str(&format!("    {} · {}\n", card.title, card.price_display()));
-        }
-        body.push_str(&format!(
-            "\nShihi të gjitha: {url}\n\nPër një kërkim nuk të vjen më shumë se një email në tri orë. \
-             Për t'i ndalur, hap „Kërkimet e ruajtura“: {origin}/kerkimet-e-ruajtura\n"
-        ));
-        if let Some(link) = &unsubscribe {
-            body.push_str(&format!("Për të ndalur vetëm këtë, me një klik: {link}\n"));
-        }
+        let (subject, body) = i18n::LANG.sync_scope(Lang::from_code(&search.language).unwrap_or_default(), || {
+            let mut body = format!("{}\n\n", t2("Te kërkimi yt „{}“ në Pluribus ka {}:", &search.name, new_listings(count)));
+            for card in newest.iter().take(ALERT_LISTINGS) {
+                body.push_str(&format!("    {} · {}\n", card.title, card.price_display()));
+            }
+            body.push_str(&format!(
+                "\n{}\n\n{}\n",
+                t1("Shihi të gjitha: {}", &url),
+                t1(
+                    "Për një kërkim nuk të vjen më shumë se një email në tri orë. Për t'i ndalur, hap „Kërkimet e ruajtura“: {}",
+                    format!("{origin}/kerkimet-e-ruajtura")
+                ),
+            ));
+            if let Some(link) = &unsubscribe {
+                body.push_str(&format!("{}\n", t1("Për të ndalur vetëm këtë, me një klik: {}", link)));
+            }
+            (format!("{}: {}", new_listings(count), search.name), body)
+        });
+        let new = i18n::LANG.sync_scope(Lang::Sq, || new_listings(count));
         let alert = sender::Alert {
-            subject: title,
+            subject,
             body,
-            whatsapp: sender::AlertTemplate::Search { new: new_listings(count), name: search.name.clone(), id: search.id.to_string() },
+            whatsapp: sender::AlertTemplate::Search { new, name: search.name.clone(), id: search.id.to_string() },
             unsubscribe,
         };
         match sender::senders().send_alert(&contact, &alert).await {

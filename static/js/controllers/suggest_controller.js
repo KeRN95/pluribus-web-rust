@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus";
 import { forgetSearches, recentSearches } from "controllers/recent_searches.js";
+import { t } from "controllers/i18n.js";
 
 // Suggestions under a search box as its words are typed (web/suggestions.rs sends them as rows of
 // links): the words finished as listings use them, the categories they are in, makes and models,
@@ -117,7 +118,7 @@ export default class extends Controller {
     forget.className = "suggestion suggestion-forget";
     forget.setAttribute("role", "option");
     forget.tabIndex = -1;
-    forget.textContent = "Pastro kërkimet e fundit";
+    forget.textContent = t("Pastro kërkimet e fundit");
     forget.addEventListener("click", () => {
       forgetSearches();
       this.close();

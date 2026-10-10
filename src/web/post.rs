@@ -34,6 +34,7 @@ use crate::{
         OwnListing, OwnPhoto, SessionUser, Zone,
     },
     format::{self, Contact},
+    i18n::{t, t1, t2},
     media::MAX_PHOTOS,
 };
 
@@ -45,6 +46,7 @@ const MAX_DESCRIPTION_CHARS: usize = 5000;
 /// Links in a listing; spam is mostly links.
 const MAX_LINKS: usize = 2;
 
+/// The kinds of price, each with its label, which the form shows in the page's language (t).
 pub(super) const PRICE_TYPES: [(&str, &str); 4] = [
     ("FIXED", "Çmim fiks"),
     ("NEGOTIABLE", "I diskutueshëm"),
@@ -315,10 +317,11 @@ fn page(
     form: ListingForm,
     errors: HashMap<String, String>,
 ) -> ListingFormPage {
-    // Listings go into the most specific category: under each heading, its subcategories.
+    // Listings go into the most specific category: under each heading, its subcategories. Their
+    // names in the page's language.
     let option = |category: &Category| CategoryOption {
         value: category.slug.clone(),
-        label: category.name.clone(),
+        label: t(&category.name).to_string(),
         selected: category.slug == form.category,
         types: category.listing_types.join(","),
         uses_condition: category.uses_condition,
@@ -329,7 +332,7 @@ fn page(
     let mut category_groups = Vec::new();
     for top in categories.top_level() {
         match categories.has_children(top.id) {
-            true => add_category_groups(categories, top, top.name.clone(), &option, &mut category_groups),
+            true => add_category_groups(categories, top, t(&top.name).to_string(), &option, &mut category_groups),
             false => category_groups.push(CategoryGroup { label: None, options: vec![option(top)] }),
         }
     }
@@ -358,11 +361,11 @@ fn page(
     let zone_shown = categories.by_slug(&form.category).is_some_and(|category| zoned(categories, category))
         && zones.iter().any(|group| group.city == form.city);
     let (heading, action, submit_label, cancel_url) = match purpose {
-        Purpose::New => ("Shto një njoftim", "/shto".to_string(), "Publiko njoftimin", None),
+        Purpose::New => (t("Shto një njoftim"), "/shto".to_string(), t("Publiko njoftimin"), None),
         Purpose::Edit { public_no, slug } => (
-            "Ndrysho njoftimin",
+            t("Ndrysho njoftimin"),
             format!("/listing/{public_no}/ndrysho"),
-            "Ruaj ndryshimet",
+            t("Ruaj ndryshimet"),
             Some(format!("/listing/{public_no}-{slug}")),
         ),
     };
@@ -378,8 +381,11 @@ fn page(
         zone_shown,
         types: choices(LISTING_TYPES.iter().map(|code| (*code, format::listing_type(code))), &form.listing_type),
         conditions: choices(CONDITIONS.iter().map(|code| (*code, format::condition(code))), &form.condition),
-        price_types: choices(PRICE_TYPES.into_iter(), if form.price_type.is_empty() { "FIXED" } else { &form.price_type }),
-        currencies: choices([("EUR", "€"), ("ALL", "Lekë")].into_iter(), currency),
+        price_types: choices(
+            PRICE_TYPES.into_iter().map(|(code, label)| (code, t(label))),
+            if form.price_type.is_empty() { "FIXED" } else { &form.price_type },
+        ),
+        currencies: choices([("EUR", "€"), ("ALL", t("Lekë"))].into_iter(), currency),
         fields: properties::fields(attributes, &form.properties, &errors),
         form,
         errors,
@@ -433,7 +439,8 @@ pub async fn guess_zone(State(state): State<AppState>, Form(words): Form<ZoneWor
 
 /// The categories listings go into under `parent`, at any depth, as the form's groups: one for
 /// those right under it, labelled with its path ("Automjete"), then one for each subcategory that
-/// has its own ("Automjete › Pjesë / aksesorë"). A select can't nest its groups, hence the path.
+/// has its own ("Automjete › Pjesë / aksesorë"). A select can't nest its groups, hence the path,
+/// its names in the page's language.
 fn add_category_groups(
     categories: &Categories,
     parent: &Category,
@@ -450,7 +457,7 @@ fn add_category_groups(
         groups.push(CategoryGroup { label: Some(path.clone()), options });
     }
     for child in categories.children(parent.id).filter(|child| categories.has_children(child.id)) {
-        add_category_groups(categories, child, format!("{path} \u{203a} {}", child.name), option, groups);
+        add_category_groups(categories, child, format!("{path} \u{203a} {}", t(&child.name)), option, groups);
     }
 }
 
@@ -481,7 +488,7 @@ async fn read_photos(
         return Ok(Some(processed));
     }
     if !photos.is_empty() && !kept {
-        fail(errors, "photos", "Zgjidh fotot përsëri: formulari i harron kur ka një gabim.");
+        fail(errors, "photos", t("Zgjidh fotot përsëri: formulari i harron kur ka një gabim."));
     }
     Ok(None)
 }
@@ -577,18 +584,18 @@ fn check<'a>(
 ) -> Option<Checked<'a>> {
     let too_fast = form.started.is_none_or(|started| now() - started < MIN_FORM_SECONDS);
     if !form.website.is_empty() || too_fast {
-        fail(errors, "form", "Prit një çast dhe provo përsëri.");
+        fail(errors, "form", t("Prit një çast dhe provo përsëri."));
     }
 
     let category = categories.by_slug(&form.category);
     if category.is_none() {
-        fail(errors, "category", "Zgjidh kategorinë.");
+        fail(errors, "category", t("Zgjidh kategorinë."));
     }
     // A category with subcategories only groups them.
     let category = category.filter(|category| {
         let leaf = !categories.has_children(category.id);
         if !leaf {
-            fail(errors, "category", "Zgjidh nënkategorinë, p.sh. Makina te Automjete.");
+            fail(errors, "category", t("Zgjidh nënkategorinë, p.sh. Makina te Automjete."));
         }
         leaf
     });
@@ -598,7 +605,7 @@ fn check<'a>(
         None => None,
     };
     if category.is_some() && listing_type.is_none() {
-        fail(errors, "listing_type", "Zgjidh llojin e njoftimit.");
+        fail(errors, "listing_type", t("Zgjidh llojin e njoftimit."));
     }
     let condition = match category {
         Some(category) if category.uses_condition => CONDITIONS.into_iter().find(|c| *c == form.condition),
@@ -608,14 +615,14 @@ fn check<'a>(
     let title = form.title.trim();
     let description = form.description.trim();
     if !(5..=MAX_TITLE_CHARS).contains(&title.chars().count()) {
-        fail(errors, "title", "Titulli duhet të ketë 5 deri në 120 shkronja.");
+        fail(errors, "title", t("Titulli duhet të ketë 5 deri në 120 shkronja."));
     } else if link_count(title) > 0 {
-        fail(errors, "title", "Titulli nuk mund të ketë lidhje.");
+        fail(errors, "title", t("Titulli nuk mund të ketë lidhje."));
     }
     if !(10..=MAX_DESCRIPTION_CHARS).contains(&description.chars().count()) {
-        fail(errors, "description", "Përshkrimi duhet të ketë 10 deri në 5000 shkronja.");
+        fail(errors, "description", t("Përshkrimi duhet të ketë 10 deri në 5000 shkronja."));
     } else if link_count(description) > MAX_LINKS {
-        fail(errors, "description", "Përshkrimi mund të ketë deri në 2 lidhje.");
+        fail(errors, "description", t("Përshkrimi mund të ketë deri në 2 lidhje."));
     }
 
     let price_type = PRICE_TYPES.iter().map(|(code, _)| *code).find(|code| *code == form.price_type).unwrap_or("FIXED");
@@ -623,7 +630,7 @@ fn check<'a>(
         "FIXED" | "NEGOTIABLE" => match parse_number(&form.price) {
             Some(price) if price > Decimal::ZERO => Some(price.round_dp(2)),
             _ => {
-                fail(errors, "price", "Shkruaj çmimin, ose zgjidh \u{201e}Falas\u{201c} ose \u{201e}Me marrëveshje\u{201c}.");
+                fail(errors, "price", t("Shkruaj çmimin, ose zgjidh „Falas“ ose „Me marrëveshje“."));
                 None
             }
         },
@@ -636,7 +643,7 @@ fn check<'a>(
 
     let city = cities.iter().find(|city| city.slug == form.city);
     if city.is_none() {
-        fail(errors, "city", "Zgjidh qytetin.");
+        fail(errors, "city", t("Zgjidh qytetin."));
     }
     // A property may say its zone in the town; another town's is a mistake. Other listings have
     // none.
@@ -644,7 +651,7 @@ fn check<'a>(
         (Some(category), Some(city)) if !form.zone.is_empty() && zoned(categories, category) => {
             let zone = city.zones.iter().find(|zone| zone.slug == form.zone);
             if zone.is_none() {
-                fail(errors, "zone", "Zgjidh një zonë të qytetit.");
+                fail(errors, "zone", t("Zgjidh një zonë të qytetit."));
             }
             zone
         }
@@ -652,7 +659,7 @@ fn check<'a>(
     };
     let name = form.name.trim();
     if name.chars().count() > 60 {
-        fail(errors, "name", "Emri mund të ketë deri në 60 shkronja.");
+        fail(errors, "name", t("Emri mund të ketë deri në 60 shkronja."));
     }
     // Where on the map, more exactly than the town's point: a property's or a car's alone, near
     // the town chosen, rounded to about a hundred metres. Another category's is let go.
@@ -664,12 +671,12 @@ fn check<'a>(
                 if distance_km((latitude, longitude), (city.latitude, city.longitude)) <= POINT_NEAR_KM {
                     Some(rounded((latitude, longitude)))
                 } else {
-                    fail(errors, "point", "Pika në hartë është larg qytetit që zgjodhe: vendose te qyteti, ose hiqe.");
+                    fail(errors, "point", t("Pika në hartë është larg qytetit që zgjodhe: vendose te qyteti, ose hiqe."));
                     None
                 }
             }
             _ => {
-                fail(errors, "point", "Pika në hartë nuk u lexua: vendose përsëri.");
+                fail(errors, "point", t("Pika në hartë nuk u lexua: vendose përsëri."));
                 None
             }
         },
@@ -742,7 +749,7 @@ pub async fn create_listing(
         slug => {
             let store = stores.iter().find(|store| store.slug == slug);
             if store.is_none() {
-                fail(&mut errors, "si", "Zgjidh një nga dyqanet e tua, ose veten.");
+                fail(&mut errors, "si", t("Zgjidh një nga dyqanet e tua, ose veten."));
             }
             store
         }
@@ -759,7 +766,7 @@ pub async fn create_listing(
         None => {
             let contact = Contact::parse(&form.contact);
             if contact.is_none() {
-                fail(&mut errors, "contact", "Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i.");
+                fail(&mut errors, "contact", t("Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i."));
             }
             contact
         }
@@ -769,7 +776,7 @@ pub async fn create_listing(
         None => None,
     };
     if existing.as_ref().is_some_and(|account| account.status == "SUSPENDED") {
-        fail(&mut errors, "contact", "Kjo llogari është pezulluar.");
+        fail(&mut errors, "contact", t("Kjo llogari është pezulluar."));
     }
 
     // Limits per account: a few listings a day, and the same one only once.
@@ -777,14 +784,14 @@ pub async fn create_listing(
     if let (true, Some(account_id)) = (errors.is_empty(), account_id) {
         let recent = db::recent_posts(&state.db, account_id, form.title.trim()).await?;
         if recent.count >= POSTS_PER_DAY {
-            fail(&mut errors, "form", &format!("Ke publikuar {POSTS_PER_DAY} njoftime sot. Mund të publikosh të tjera nesër."));
+            fail(&mut errors, "form", &t1("Ke publikuar {} njoftime sot. Mund të publikosh të tjera nesër.", POSTS_PER_DAY));
         } else if recent.same_title {
-            fail(&mut errors, "title", "Ke publikuar tashmë një njoftim me këtë titull sot.");
+            fail(&mut errors, "title", t("Ke publikuar tashmë një njoftim me këtë titull sot."));
         }
     }
     // And per network without signing in, since no code stands in a script's way.
     if user.is_none() && errors.is_empty() && !unsigned_post_allowed(ip.as_deref()) {
-        fail(&mut errors, "form", "Shumë njoftime nga ky rrjet brenda një ore. Provo përsëri më vonë.");
+        fail(&mut errors, "form", t("Shumë njoftime nga ky rrjet brenda një ore. Provo përsëri më vonë."));
     }
     // A contact an account has: the code's own limits, before anything is kept.
     let waits = user.is_none() && existing.is_some();
@@ -1066,14 +1073,14 @@ impl MyListing {
     pub fn status_label(&self) -> Option<&'static str> {
         match self.status.as_str() {
             "ACTIVE" => None,
-            "RESERVED" => Some("Rezervuar"),
+            "RESERVED" => Some(t("Rezervuar")),
             "SOLD" => Some(format::sold(&self.listing_type)),
-            "EXPIRED" => Some("Skaduar"),
-            "PENDING_REVIEW" | "DRAFT" => Some("Në pritje"),
-            "PAUSED" => Some("Çaktivizuar"),
-            "SUSPENDED" => Some("Në shqyrtim"),
-            "REJECTED" => Some("Hequr nga moderatorët"),
-            _ => Some("Jo aktiv"),
+            "EXPIRED" => Some(t("Skaduar")),
+            "PENDING_REVIEW" | "DRAFT" => Some(t("Në pritje")),
+            "PAUSED" => Some(t("Çaktivizuar")),
+            "SUSPENDED" => Some(t("Në shqyrtim")),
+            "REJECTED" => Some(t("Hequr nga moderatorët")),
+            _ => Some(t("Jo aktiv")),
         }
     }
 
@@ -1216,36 +1223,41 @@ pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap, Quer
     render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending, notifications, stores, store, promotions })
 }
 
-/// What a listing drew, or all of a seller's listings together, as "Njoftimet e mia" says it.
+/// What a listing drew, or all of a seller's listings together, as "Njoftimet e mia" says it, in
+/// the page's language.
 impl db::ListingStats {
     /// A listing's views, for the tooltip over their count: "1 234 shikime, 56 këtë javë".
     pub fn views_title(&self) -> String {
         let views = match self.views {
-            1 => "1 shikim".to_string(),
-            views => format!("{} shikime", format::count(views)),
+            1 => t("1 shikim").to_string(),
+            views => t1("{} shikime", format::count(views)),
         };
-        format!("{views}, {} këtë javë", format::count(self.views_week))
+        t2("{}, {} këtë javë", views, format::count(self.views_week))
     }
 
     /// "12 kontakte, 3 këtë javë": how many times the number or address was shown.
     pub fn contacts_title(&self) -> String {
         let contacts = match self.contacts {
-            1 => "1 kontakt".to_string(),
-            contacts => format!("{} kontakte", format::count(contacts)),
+            1 => t("1 kontakt").to_string(),
+            contacts => t1("{} kontakte", format::count(contacts)),
         };
-        format!("{contacts}, {} këtë javë", format::count(self.contacts_week))
+        t2("{}, {} këtë javë", contacts, format::count(self.contacts_week))
     }
 
-    /// "5 ruajtje, 1 këtë javë".
+    /// "5 ruajtje, 1 këtë javë"; one alone has a text of its own for English ("1 save").
     pub fn saves_title(&self) -> String {
-        format!("{} ruajtje, {} këtë javë", format::count(self.saves), format::count(self.saves_week))
+        let saves = match self.saves {
+            1 => t("1 ruajtje").to_string(),
+            saves => t1("{} ruajtje", format::count(saves)),
+        };
+        t2("{}, {} këtë javë", saves, format::count(self.saves_week))
     }
 }
 
 /// The last seven days' under a total: "+56 këtë javë", or "Asnjë këtë javë".
 pub fn this_week(count: impl std::borrow::Borrow<i64>) -> String {
     match *count.borrow() {
-        0 => "Asnjë këtë javë".to_string(),
-        count => format!("+{} këtë javë", format::count(count)),
+        0 => t("Asnjë këtë javë").to_string(),
+        count => t1("+{} këtë javë", format::count(count)),
     }
 }

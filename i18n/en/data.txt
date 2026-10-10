@@ -1,0 +1,2028 @@
+# The database's own labels in English, which the pages show through t() (and t_value() for a
+# property's value): the categories' names, the properties' names and the names some categories
+# give a property instead, the units after a number, the choices' labels, and the promotion
+# products' names. Brand, model and place names, which no language changes, aren't here, nor
+# labels whose English is the same ("IT", "RAM", "Euro 6", "1+1", "4x4", "Wi-Fi").
+
+# Categories: the main ones
+
+Automjete
+= Vehicles
+
+Prona
+= Property
+
+Elektronikë
+= Electronics
+
+Shtëpi / kopsht
+= Home / garden
+
+Punë
+= Jobs
+
+Shërbime
+= Services
+
+Veshje / aksesorë
+= Clothes / accessories
+
+Sport / hobi
+= Sport / hobbies
+
+Kafshë shtëpiake
+= Pets
+
+Makineri / biznes
+= Machinery / business
+
+# Also "Të tjera" under Pjesë / aksesorë and Sport / hobi, and a choice of pet_for and sport_type
+Të tjera
+= Other
+
+# Categories: under Automjete
+
+Makina
+= Cars
+
+Motoçikleta
+= Motorbikes
+
+Automjete tregtare
+= Commercial vehicles
+
+Pjesë / aksesorë
+= Parts / accessories
+
+# Categories: under Pjesë / aksesorë ("Audio / video" is the same in English)
+
+Pjesë këmbimi
+= Spare parts
+
+Goma / disqe
+= Tyres / rims
+
+GPS / navigatorë
+= GPS / sat navs
+
+Styling / pajisje sportive
+= Styling / tuning
+
+Tapete makine
+= Car mats
+
+Rimorkio
+= Trailers
+
+Mbushës për makina elektrike
+= EV chargers
+
+# Categories: under Prona. "Truall" is a choice of property_type too, and the category has
+# agricultural land as well (land_type "Bujqësor"): "Land", with "Building plot" for "Për ndërtim".
+
+Apartamente
+= Flats
+
+Garsoniera
+= Studios
+
+Vila / shtëpi
+= Villas / houses
+
+Dyqane
+= Shops
+
+Zyra
+= Offices
+
+Truall
+= Land
+
+Garazhe
+= Garages
+
+# Categories: under Elektronikë
+
+Telefona
+= Phones
+
+Laptopë
+= Laptops
+
+Kompjuterë
+= Computers
+
+Tableta
+= Tablets
+
+Televizorë
+= TVs
+
+Konsola lojërash
+= Games consoles
+
+Aparate fotografike
+= Cameras
+
+Audio / kufje
+= Audio / headphones
+
+# Categories: under Shtëpi / kopsht (each a choice of home_type too)
+
+Mobilje
+= Furniture
+
+Elektroshtëpiake
+= Appliances
+
+Kopsht
+= Garden
+
+Dekor
+= Decor
+
+# Categories: under Punë ("IT" and "Transport" are the same in English)
+
+Turizëm / gastronomi
+= Tourism / hospitality
+
+Ndërtim
+= Construction
+
+Shëndetësi
+= Healthcare
+
+Shitje
+= Sales
+
+Call center
+= Call centre
+
+# Categories: under Shërbime
+
+Riparime
+= Repairs
+
+Transport / transferime
+= Transport / transfers
+
+Pastrim
+= Cleaning
+
+Mësime
+= Lessons
+
+Foto / video
+= Photo / video
+
+Ndërtim / lyerje
+= Building / painting
+
+# Categories: under Veshje / aksesorë (most are choices of fashion_type too). "Këpucë" is also ski
+# and snowboard boots (winter_type): "Footwear" says both.
+
+Xhaketa / pallto
+= Jackets / coats
+
+Këpucë
+= Footwear
+
+Fustane
+= Dresses
+
+Çanta
+= Bags
+
+Ora
+= Watches
+
+Aksesorë
+= Accessories
+
+# Categories: under Sport / hobi (most are choices of sport_type too)
+
+Biçikleta
+= Bicycles
+
+Fitnes
+= Fitness
+
+Instrumente muzikore
+= Musical instruments
+
+Kamping / peshkim
+= Camping / fishing
+
+Sporte dimërore
+= Winter sports
+
+# Categories: under Kafshë shtëpiake (the animals are choices of pet_type and pet_for too)
+
+Qen
+= Dogs
+
+Mace
+= Cats
+
+Zogj
+= Birds
+
+Peshq
+= Fish
+
+Aksesorë për kafshë
+= Pet accessories
+
+# Categories: under Makineri / biznes
+
+Makineri ndërtimi
+= Construction machinery
+
+Makineri bujqësore
+= Farm machinery
+
+Energji / gjeneratorë
+= Energy / generators
+
+Makineri industriale
+= Industrial machinery
+
+# Properties' names ("RAM" and "Smart TV" are the same in English). A yes/no property's name is its
+# value too, when it is ticked ("Under warranty"), and its box's label in the form. "Marka" names
+# makes and brands alike, cars' and clothes': "Brand" fits both. "Pajisja" (appliance_type,
+# electronics_device, fitness_type) is "Type", as "Lloji" is: no category shows both.
+
+Marka
+= Brand
+
+Pajisja
+= Type
+
+Anulim zhurme
+= Noise cancelling
+
+Me valë (Bluetooth)
+= Wireless (Bluetooth)
+
+Marshet
+= Gears
+
+Lloji
+= Type
+
+Montimi i objektivit
+= Lens mount
+
+Sensori
+= Sensor
+
+Numri i shkrepjeve
+= Shutter count
+
+Kapaciteti
+= Capacity
+
+Spina
+= Connector
+
+Procesori
+= Processor
+
+Lloji i diskut
+= Storage type
+
+Karta grafike
+= Graphics card
+
+Me monitor
+= Monitor included
+
+Sistemi operativ
+= Operating system
+
+Kontrollues
+= Controllers
+
+Edicioni
+= Edition
+
+Me lojëra
+= Games included
+
+Konsola
+= Console
+
+Përmasat
+= Dimensions
+
+Ngjyra
+= Colour
+
+Veçori
+= Features
+
+Vjen me
+= Comes with
+
+Ekrani
+= Screen
+
+Memoria
+= Storage
+
+Me garanci
+= Under warranty
+
+Klasa energjetike
+= Energy rating
+
+Për
+= For
+
+Masa
+= Size
+
+Nga viti
+= From year
+
+Deri në vitin
+= To year
+
+Korniza
+= Frame size
+
+Instrumenti
+= Instrument
+
+Me akomodim
+= Accommodation provided
+
+Kontrata
+= Contract
+
+Arsimi
+= Education
+
+Përvoja
+= Experience
+
+Fusha
+= Sector
+
+Gjuhët
+= Languages
+
+Me ushqim
+= Meals provided
+
+Vendi i punës
+= Workplace
+
+Orari
+= Hours
+
+Turni
+= Shift
+
+Masa për fëmijë
+= Children’s size
+
+Me leje ndërtimi
+= Planning permission
+
+Me rrugë hyrëse
+= Road access
+
+Lloji i truallit
+= Land type
+
+Gjatësia
+= Length
+
+Niveli
+= Level
+
+Mënyra
+= Format
+
+Lënda
+= Subject
+
+Orët e punës
+= Hours
+
+Pesha
+= Weight
+
+Viti
+= Year
+
+Materiali
+= Material
+
+Modeli
+= Model
+
+Leja e drejtimit
+= Licence
+
+Ambientet
+= Rooms
+
+Vende parkimi
+= Parking spaces
+
+Kodi i pjesës
+= Part number
+
+Kapaciteti mbajtës
+= Payload
+
+Mosha
+= Age
+
+Raca
+= Breed
+
+Me çip / pasaportë
+= Microchip / passport
+
+E sterilizuar
+= Neutered
+
+Me pedigre
+= Pedigree
+
+Gjinia
+= Sex
+
+Kafsha
+= Animal
+
+E vaksinuar
+= Vaccinated
+
+Faza
+= Phase
+
+Bateria
+= Battery health
+
+I zhbllokuar
+= Unlocked
+
+Fuqia
+= Power
+
+Sipërfaqja
+= Area
+
+Banjo
+= Bathrooms
+
+Gjendja
+= Condition
+
+Lehtësitë
+= Features
+
+Kati
+= Floor
+
+Fronti
+= Frontage
+
+Mobilimi
+= Furnishing
+
+Ngrohja
+= Heating
+
+Orientimi
+= Orientation
+
+Sipërfaqja e truallit
+= Plot size
+
+Dhoma
+= Rooms
+
+Katet e ndërtesës
+= Total floors
+
+Lloji i pronës
+= Property type
+
+Viti i ndërtimit
+= Year built
+
+Sasia
+= Quantity
+
+Depozita
+= Deposit
+
+Lejohen kafshët
+= Pets allowed
+
+Për studentë
+= For students
+
+Shpenzimet përfshihen
+= Bills included
+
+Diametri
+= Rim size
+
+Zonat ku shërben
+= Areas covered
+
+Në shtëpi të klientit
+= Comes to you
+
+Disponueshmëria
+= Availability
+
+Lëshon faturë
+= Issues invoices
+
+Lloji i shërbimit
+= Service type
+
+Punimet
+= Type of work
+
+Numri
+= Shoe size
+
+Lidhja
+= Connectivity
+
+Profili
+= Profile
+
+Sezoni
+= Season
+
+Gjerësia
+= Width
+
+Mjeti
+= Vehicle
+
+Teknologjia e ekranit
+= Screen type
+
+Rezolucioni
+= Resolution
+
+Karroceria
+= Body type
+
+Dogana
+= Customs
+
+Dyert
+= Doors
+
+Tërheqja
+= Drive
+
+Klasa Euro
+= Emission class
+
+Motorri
+= Engine
+
+Opsionet
+= Features
+
+Karburanti
+= Fuel
+
+Me kolaudim
+= Valid MOT
+
+Me siguracion
+= Insured
+
+Kilometrazhi
+= Mileage
+
+Pa aksident
+= Accident-free
+
+Pronarë
+= Owners
+
+Targat
+= Plates
+
+Vendet
+= Seats
+
+Me libër servisi
+= Service history
+
+Kambio
+= Gearbox
+
+Mekanizmi
+= Movement
+
+Rrotat
+= Wheel size
+
+# The names some categories give a property instead of its own ("Lloji" for a bird's or a fish's
+# kind, "Kapaciteti" for a trailer's payload and "Për" for what a photographer shoots are above)
+
+Diagonalja
+= Screen size
+
+Katet
+= Floors
+
+Kubatura
+= Engine size
+
+Marka e automjetit
+= Vehicle make
+
+Materiali i kornizës
+= Frame material
+
+Modeli i automjetit
+= Vehicle model
+
+Numri i këpucëve
+= Boot size
+
+Pastron
+= Cleans
+
+Riparon
+= Repairs
+
+Tualete
+= Toilets
+
+Vende për pasagjerë
+= Passenger seats
+
+Vitrina
+= Shop front
+
+# Units after a number ("5 vite"), as t_value() words a property's value. The symbols (km, m², kW,
+# cm³, HP, %, cm, m, mm, kg) are the same in English. Then a yes/no property's values.
+
+inç
+= in
+
+shkrepje
+= shots
+
+orë
+= hours
+
+ton
+= t
+
+copë
+= pcs
+
+muaj
+= months
+
+vite
+= years
+
+Po
+= Yes
+
+Jo
+= No
+
+# Choices, by the property they belong to. A label several properties share is here once, where it
+# first comes ("Tjetër" under appliance_type, the colours under electronics_color); those that are
+# categories' names too are with the categories, above.
+
+# appliance_type
+
+Frigorifer
+= Fridge
+
+Ngrirës
+= Freezer
+
+Lavatriçe
+= Washing machine
+
+Tharëse
+= Tumble dryer
+
+Pjatalarëse
+= Dishwasher
+
+Sobë / furrë
+= Cooker / oven
+
+Pianurë
+= Hob
+
+Mikrovalë
+= Microwave
+
+# Also property_features and vehicle_features
+Kondicioner
+= Air conditioning
+
+Bojler
+= Water heater
+
+Ngrohës / stufë
+= Heater / stove
+
+Fshesë elektrike
+= Vacuum cleaner
+
+Makinë kafeje
+= Coffee machine
+
+Pajisje të vogla
+= Small appliances
+
+Tjetër
+= Other
+
+# bike_type ("BMX" is the same in English). "Qyteti" is the pages' "Town" too: a town bike.
+
+Malore (MTB)
+= Mountain (MTB)
+
+Rrugore
+= Road
+
+Qyteti
+= Town
+
+Trekking / hibride
+= Trekking / hybrid
+
+# Also property_heating and service_work (electrical work)
+Elektrike
+= Electric
+
+Për fëmijë
+= Children’s
+
+Palosëse
+= Folding
+
+# camera_mount: names, the same in English. camera_sensor:
+
+1″ e më i vogël
+= 1″ or smaller
+
+# camping_type
+
+Çadër
+= Tent
+
+Thes gjumi
+= Sleeping bag
+
+Çantë shpine
+= Rucksack
+
+Kallam peshkimi
+= Fishing rod
+
+Makinetë
+= Fishing reel
+
+Varkë / kajak
+= Boat / kayak
+
+# charger_connector (the plugs' names are the same in English)
+
+Prizë shtëpie
+= Household socket
+
+# commercial_type ("Pick-up" and "Minibus" are the same in English)
+
+Furgon
+= Van
+
+Kamion
+= Lorry
+
+Kokë tërheqëse
+= Tractor unit
+
+Autobus
+= Bus
+
+Kamper
+= Campervan
+
+# computer_gpu
+
+E integruar
+= Integrated
+
+# computer_os
+
+Pa sistem
+= None
+
+# console_edition ("Digital" is the same in English)
+
+Me disk
+= Disc
+
+# decor_type
+
+Ndriçim / llamba
+= Lighting / lamps
+
+Tapet
+= Rug
+
+Perde
+= Curtains
+
+Piktura dhe posterë
+= Pictures and posters
+
+Pasqyrë
+= Mirror
+
+Vazo dhe objekte
+= Vases and ornaments
+
+Orë muri
+= Wall clock
+
+Tekstile shtëpie
+= Home textiles
+
+# electronics_color, item_color and vehicle_color
+
+E zezë
+= Black
+
+E bardhë
+= White
+
+Gri
+= Grey
+
+Argjendi
+= Silver
+
+E artë
+= Gold
+
+Blu
+= Blue
+
+E gjelbër
+= Green
+
+E kuqe
+= Red
+
+Vjollcë
+= Purple
+
+Rozë
+= Pink
+
+Bezhë
+= Beige
+
+Kafe
+= Brown
+
+Blu e errët
+= Navy
+
+E verdhë
+= Yellow
+
+Portokalli
+= Orange
+
+Shumëngjyrëshe
+= Multicoloured
+
+# electronics_device
+
+PC desktop
+= Desktop PC
+
+PC gaming
+= Gaming PC
+
+Kufje
+= Headphones
+
+Kufje në vesh
+= Earbuds
+
+Altoparlant
+= Speaker
+
+# Also instrument
+Amplifikator
+= Amplifier
+
+Gramafon
+= Turntable
+
+Mikrofon
+= Microphone
+
+Pa pasqyrë (mirrorless)
+= Mirrorless
+
+Kompakte
+= Compact
+
+Kamerë aksioni
+= Action camera
+
+Kamerë video
+= Camcorder
+
+Analoge (me film)
+= Film camera
+
+Objektiv
+= Lens
+
+Dron
+= Drone
+
+# electronics_features
+
+Ekran me prekje
+= Touchscreen
+
+Tastierë me ndriçim
+= Backlit keyboard
+
+2-në-1
+= 2-in-1
+
+# electronics_included
+
+Kutia origjinale
+= Original box
+
+Fatura
+= Receipt
+
+Karikuesi
+= Charger
+
+Mbulesë
+= Case
+
+Laps
+= Stylus
+
+Tastierë
+= Keyboard
+
+Telekomanda
+= Remote
+
+# electronics_ram and electronics_storage
+
+64 GB RAM e më shumë
+= 64 GB RAM or more
+
+2 TB e më shumë
+= 2 TB or more
+
+# electronics_type
+
+Telefon
+= Phone
+
+Kompjuter (PC)
+= Computer (PC)
+
+Televizor
+= TV
+
+Konsolë lojërash
+= Games console
+
+Aparat fotografik
+= Camera
+
+Audio dhe kufje
+= Audio and headphones
+
+# energy_class
+
+D e më poshtë
+= D or lower
+
+# fashion_for
+
+Meshkuj
+= Men
+
+Femra
+= Women
+
+Fëmijë
+= Children
+
+# fashion_type
+
+Xhaketa dhe pallto
+= Jackets and coats
+
+# fitness_type
+
+Rrip vrapimi
+= Treadmill
+
+Biçikletë palestre
+= Exercise bike
+
+Eliptik
+= Cross trainer
+
+Vozitëse
+= Rowing machine
+
+Pesha dhe shufra
+= Weights and bars
+
+Stol
+= Bench
+
+Stacion i plotë
+= Home gym
+
+Tapete dhe aksesorë
+= Mats and accessories
+
+# furniture_type
+
+Divan / kolltuk
+= Sofa / armchair
+
+Krevat
+= Bed
+
+Dyshek
+= Mattress
+
+Dhomë gjumi e plotë
+= Bedroom set
+
+Tavolinë
+= Table
+
+Karrige
+= Chair
+
+Dollap / garderobë
+= Cupboard / wardrobe
+
+Kuzhinë
+= Kitchen
+
+Raft / bibliotekë
+= Shelf / bookcase
+
+Tavolinë pune
+= Desk
+
+Mobilje TV
+= TV unit
+
+Mobilje fëmijësh
+= Children’s furniture
+
+Mobilje zyre
+= Office furniture
+
+# garden_type
+
+Vegla pune
+= Tools
+
+Kositëse bari
+= Lawnmower
+
+Mobilje kopshti
+= Garden furniture
+
+Bimë dhe fidanë
+= Plants and seedlings
+
+Vazo
+= Pots
+
+Ujitje
+= Watering
+
+Skarë / barbekju
+= Grill / barbecue
+
+Pishinë dhe aksesorë
+= Pool and accessories
+
+# instrument. "Bateri" is also a battery (machine_kind, under Energji / gjeneratorë): drums are
+# the commoner sense.
+
+Kitarë
+= Guitar
+
+Kitarë bas
+= Bass guitar
+
+Piano / tastierë
+= Piano / keyboard
+
+Bateri
+= Drums
+
+Violinë
+= Violin
+
+Fizarmonikë
+= Accordion
+
+Instrumente frymore
+= Wind instruments
+
+DJ dhe studio
+= DJ and studio
+
+# instrument_kind
+
+Akustik
+= Acoustic
+
+# Also vehicle_fuel
+Elektrik
+= Electric
+
+Elektro-akustik
+= Electro-acoustic
+
+# job_contract
+
+E përhershme
+= Permanent
+
+Me afat
+= Fixed-term
+
+Praktikë
+= Internship
+
+Me projekt / freelance
+= Project / freelance
+
+# job_education
+
+Pa kërkesë
+= None required
+
+# Also lesson_level
+E mesme
+= Secondary
+
+Bachelor
+= Bachelor’s degree
+
+Master e lart
+= Master’s or higher
+
+# job_experience
+
+Pa përvojë
+= No experience
+
+1–2 vite
+= 1–2 years
+
+3–5 vite
+= 3–5 years
+
+Mbi 5 vite
+= Over 5 years
+
+# job_field
+
+Turizëm dhe gastronomi
+= Tourism and hospitality
+
+# job_languages (and lesson_subject)
+
+Anglisht
+= English
+
+Italisht
+= Italian
+
+Gjermanisht
+= German
+
+Frëngjisht
+= French
+
+Greqisht
+= Greek
+
+Spanjisht
+= Spanish
+
+Turqisht
+= Turkish
+
+# job_place
+
+Në vendin e punës
+= On-site
+
+# Also vehicle_fuel
+Hibrid
+= Hybrid
+
+Nga shtëpia
+= Remote
+
+# job_schedule
+
+Me kohë të plotë
+= Full-time
+
+Me kohë të pjesshme
+= Part-time
+
+Sezonale
+= Seasonal
+
+# job_shift
+
+Ditë
+= Day
+
+Natë
+= Night
+
+Me turne
+= Rotating
+
+# kids_size ("3–6 muaj" and "6–12 muaj" are pet_age's too)
+
+0–3 muaj
+= 0–3 months
+
+3–6 muaj
+= 3–6 months
+
+6–12 muaj
+= 6–12 months
+
+1–2 vjeç
+= 1–2 years
+
+2–3 vjeç
+= 2–3 years
+
+3–4 vjeç
+= 3–4 years
+
+4–6 vjeç
+= 4–6 years
+
+6–8 vjeç
+= 6–8 years
+
+8–10 vjeç
+= 8–10 years
+
+10–12 vjeç
+= 10–12 years
+
+12–14 vjeç
+= 12–14 years
+
+# land_type
+
+Për ndërtim
+= Building plot
+
+Bujqësor
+= Agricultural
+
+# lesson_level
+
+Fillore
+= Primary
+
+9-vjeçare
+= Lower secondary
+
+Universitet
+= University
+
+Të rritur
+= Adults
+
+# lesson_mode ("Online" is the same in English)
+
+Fizikisht
+= In person
+
+Online dhe fizikisht
+= Online and in person
+
+# lesson_subject
+
+Gjuhë të tjera
+= Other languages
+
+Gjuhë shqipe
+= Albanian
+
+Matematikë
+= Maths
+
+Fizikë
+= Physics
+
+Kimi
+= Chemistry
+
+Biologji
+= Biology
+
+Programim
+= Programming
+
+Muzikë
+= Music
+
+Autoshkollë
+= Driving
+
+Përgatitje për provime
+= Exam preparation
+
+# machine_kind ("Inverter" is the same in English; "Bateri" is under instrument)
+
+Ekskavator
+= Excavator
+
+Mini ekskavator
+= Mini excavator
+
+Fadroma
+= Loader
+
+Fadroma-ekskavator
+= Backhoe loader
+
+Buldozer
+= Bulldozer
+
+Vinç
+= Crane
+
+Rul
+= Roller
+
+Betonierë
+= Cement mixer
+
+Pirun ngritës
+= Forklift
+
+Skela
+= Scaffolding
+
+Traktor
+= Tractor
+
+Motokultivator
+= Two-wheel tractor
+
+Kombajnë
+= Combine harvester
+
+Frezë
+= Rotavator
+
+Plug
+= Plough
+
+Spërkatës
+= Sprayer
+
+Rimorkio bujqësore
+= Farm trailer
+
+Gjenerator
+= Generator
+
+Panel diellor
+= Solar panel
+
+UPS / stabilizator
+= UPS / stabiliser
+
+# machine_type
+
+Bujqësi
+= Agriculture
+
+Energji
+= Energy
+
+Industri
+= Industry
+
+# material ("Metal" is the same in English)
+
+Dru
+= Wood
+
+MDF / laminat
+= MDF / laminate
+
+Çelik
+= Steel
+
+Alumin
+= Aluminium
+
+Karbon
+= Carbon
+
+Xham
+= Glass
+
+Gur / mermer
+= Stone / marble
+
+Qeramikë
+= Ceramic
+
+Lëkurë
+= Leather
+
+Lëkurë artificiale
+= Faux leather
+
+Pëlhurë
+= Fabric
+
+Pambuk
+= Cotton
+
+Lesh
+= Wool
+
+Xhins
+= Denim
+
+Mëndafsh
+= Silk
+
+Li
+= Linen
+
+Sintetik
+= Synthetic
+
+Plastikë
+= Plastic
+
+Rattan / thurje
+= Rattan / wicker
+
+Ar
+= Gold
+
+Argjend
+= Silver
+
+# moto_type (the others are the same in English)
+
+Skuter
+= Scooter
+
+Mopeda (deri 50 cm³)
+= Moped (up to 50 cm³)
+
+ATV / Kuad
+= ATV / quad
+
+# pet_accessory
+
+Ushqim
+= Food
+
+Kafaz / shtëpizë
+= Cage / kennel
+
+Akuarium
+= Aquarium
+
+Shtrat
+= Bed
+
+Rrip dhe qafore
+= Lead and collar
+
+Transportues
+= Carrier
+
+Lodra
+= Toys
+
+Higjienë dhe kujdes
+= Grooming and care
+
+# pet_age
+
+Deri 3 muaj
+= Up to 3 months
+
+1–3 vjeç
+= 1–3 years
+
+Mbi 3 vjeç
+= Over 3 years
+
+# pet_breed (the breeds whose names English shares aren't here)
+
+Pastor gjerman
+= German Shepherd
+
+Pudël
+= Poodle
+
+Maltez
+= Maltese
+
+Bulldog francez
+= French Bulldog
+
+Qen Sharri
+= Sharr Mountain Dog
+
+Persiane
+= Persian
+
+Siameze
+= Siamese
+
+Papagall i vogël
+= Budgie
+
+Papagall
+= Parrot
+
+Nimfa
+= Cockatiel
+
+Agapornis
+= Lovebird
+
+Kanarinë
+= Canary
+
+Pëllumb
+= Pigeon
+
+Peshk i kuq
+= Goldfish
+
+Skalar
+= Angelfish
+
+Përzier
+= Mixed
+
+# pet_sex
+
+Mashkull
+= Male
+
+Femër
+= Female
+
+Çift
+= Pair
+
+# phase
+
+Monofazë
+= Single-phase
+
+Trefazë
+= Three-phase
+
+# property_condition ("E re", New, is in format.txt)
+
+Në ndërtim
+= Under construction
+
+E rinovuar
+= Renovated
+
+Në gjendje të mirë
+= Good condition
+
+Për rinovim
+= Needs renovation
+
+# property_features
+
+Ashensor
+= Lift
+
+Parkim
+= Parking
+
+Ballkon
+= Balcony
+
+Pamje nga deti
+= Sea view
+
+Tarracë
+= Terrace
+
+# Also property_type
+Garazh
+= Garage
+
+Depo / bodrum
+= Storeroom / basement
+
+Pishinë
+= Pool
+
+Depozitë uji
+= Water tank
+
+Sigurim / kamera
+= Security / CCTV
+
+Me hipotekë
+= Title deed
+
+# property_furnished
+
+I mobiluar
+= Furnished
+
+Gjysmë i mobiluar
+= Part furnished
+
+I pamobiluar
+= Unfurnished
+
+# property_heating
+
+Qendrore
+= Central
+
+Me gaz
+= Gas
+
+Me kondicioner
+= Air conditioning
+
+Me dru / pelet
+= Wood / pellets
+
+Nën dysheme
+= Underfloor
+
+Pa ngrohje
+= No heating
+
+# property_orientation
+
+Veri
+= North
+
+Jug
+= South
+
+Lindje
+= East
+
+Perëndim
+= West
+
+# property_rooms
+
+4+1 e më shumë
+= 4+1 or more
+
+# property_type
+
+Apartament
+= Flat
+
+Garsonierë
+= Studio
+
+Vilë / Shtëpi
+= Villa / house
+
+Dyqan
+= Shop
+
+Zyrë
+= Office
+
+# service_availability ("24/7" is the same in English)
+
+Ditë pune
+= Weekdays
+
+Mbrëmje
+= Evenings
+
+Fundjavë
+= Weekends
+
+# service_type
+
+Transport dhe transferime
+= Transport and transfers
+
+Foto dhe video
+= Photo and video
+
+Ndërtim dhe lyerje
+= Building and painting
+
+# service_work
+
+Kondicionerë
+= Air conditioners
+
+Hidraulikë
+= Plumbing
+
+Shtëpi
+= Homes
+
+Pas ndërtimit
+= After building work
+
+Tapete dhe divane
+= Carpets and sofas
+
+Xhama
+= Windows
+
+Larje makinash
+= Car washing
+
+Dasma
+= Weddings
+
+Evente
+= Events
+
+Portrete
+= Portraits
+
+Produkte
+= Products
+
+Me dron
+= Drone
+
+Lyerje
+= Painting
+
+Suvatim
+= Plastering
+
+Pllakë
+= Tiling
+
+Rigips
+= Plasterboard
+
+Parket / dysheme
+= Parquet / flooring
+
+Çati
+= Roofing
+
+Termoizolim
+= Insulation
+
+Rikonstruksion i plotë
+= Full renovation
+
+# sport_type
+
+Kamping dhe peshkim
+= Camping and fishing
+
+# tire_kind
+
+Goma
+= Tyres
+
+Disqe
+= Rims
+
+Goma me disqe
+= Tyres with rims
+
+# tire_season
+
+Verore
+= Summer
+
+Dimërore
+= Winter
+
+Për të gjitha stinët
+= All-season
+
+# transport_vehicle
+
+Makinë
+= Car
+
+Autoatrezi
+= Recovery truck
+
+# vehicle_body_type ("Hatchback" is the same in English)
+
+Sedan
+= Saloon
+
+Karavan
+= Estate
+
+SUV / Xhip
+= SUV / 4x4
+
+Kupe
+= Coupe
+
+Kabriolet
+= Convertible
+
+Minivan
+= MPV
+
+# vehicle_customs
+
+E zhdoganuar
+= Customs cleared
+
+Pa zhdoganuar
+= Not customs cleared
+
+# vehicle_doors
+
+2/3 dyer
+= 2/3 doors
+
+4/5 dyer
+= 4/5 doors
+
+# vehicle_drive
+
+Përpara
+= Front-wheel drive
+
+Prapa
+= Rear-wheel drive
+
+# vehicle_emission
+
+Euro 3 e më e vjetër
+= Euro 3 or older
+
+# vehicle_features
+
+Navigacion
+= Sat nav
+
+Sensorë parkimi
+= Parking sensors
+
+Klimatronik
+= Climate control
+
+Kamerë mbrapa
+= Reversing camera
+
+Ndezje pa çelës
+= Keyless start
+
+Ulëse lëkure
+= Leather seats
+
+Ulëse me ngrohje
+= Heated seats
+
+Tavan panoramik
+= Panoramic roof
+
+Drita LED / Xenon
+= LED / xenon lights
+
+Disqe alumini
+= Alloy wheels
+
+Grep rimorkioje
+= Tow bar
+
+# vehicle_fuel
+
+Benzinë
+= Petrol
+
+Naftë
+= Diesel
+
+Benzinë + Gaz
+= Petrol + LPG
+
+# vehicle_plates
+
+Shqiptare
+= Albanian
+
+Të huaja
+= Foreign
+
+Pa targa
+= No plates
+
+# vehicle_transmission
+
+Manuale
+= Manual
+
+Automatike
+= Automatic
+
+# watch_movement ("Smartwatch" is the same in English)
+
+Automatik
+= Automatic
+
+Me bateri (kuarc)
+= Battery (quartz)
+
+Me kurdisje
+= Hand-wound
+
+# wheel_size (the others are the same in English)
+
+27,5″
+= 27.5″
+
+# winter_type ("Ski" and "Snowboard" are the same in English)
+
+Kask
+= Helmet
+
+Veshje
+= Clothing
+
+# Promotion products, with the English the database has for them (promotion_products.name_i18n)
+
+Ngritje në krye
+= Bump listing
+
+I theksuar për 7 ditë
+= Highlighted for 7 days
+
+I veçuar për 3 ditë
+= Featured for 3 days
+
+I veçuar për 7 ditë
+= Featured for 7 days
+
+Në krye të kategorisë për 7 ditë
+= Top of category for 7 days

@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 import { refreshFor } from "controllers/refresh.js";
 import { locate } from "controllers/locate.js";
 import { forgetTown } from "controllers/place_controller.js";
+import { t } from "controllers/i18n.js";
 
 // The filter panel: a card the "Filtrat" button opens over the results and closes ("Mbyll", or the
 // button at its foot that shows the results), on every screen. Its options apply by themselves, as
@@ -131,7 +132,7 @@ export default class extends Controller {
   // "Afër meje": the visitor's point, as far around it as the distance picked, or 10 km, in place
   // of the town.
   async locate() {
-    this.say("Po kërkoj vendndodhjen…");
+    this.say(t("Po kërkoj vendndodhjen…"));
     try {
       const { latitude, longitude } = await locate();
       this.say("");

@@ -1,29 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}Email-et | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Email-et") }} | Pluribus{% endblock %}
 
 {% block content %}
 {#- A link from an e-mail notice (unsubscribe.rs): whether to stop those e-mails, that they stopped
     with "Rikthe" to take it back, or that they come again; and what goes on as before. No signing
-    in: the link's token is the account's. "Cilësimet" changes all of it. -#}
+    in: the link's token is the account's. "Cilësimet" changes all of it. The question has an
+    apostrophe ("T'i"), which escaping would write as &#39;: the catalogue's text as it is (|safe). -#}
 <section class="account">
   {%- match step %}
   {%- when crate::web::unsubscribe::Step::Ask %}
-  <h1>T'i ndalojmë?</h1>
-  <p class="lead">Nuk do të të vijnë më {{ about }}. {{ stays }}</p>
+  <h1>{{ crate::t("T'i ndalojmë?")|safe }}</h1>
+  <p class="lead">{{ crate::t1("Nuk do të të vijnë më {}.", about) }} {{ stays }}</p>
   <form method="post" action="{{ action }}">
-    <button type="submit" class="button">Po, ndalo</button>
+    <button type="submit" class="button">{{ crate::t("Po, ndalo") }}</button>
   </form>
   {%- when crate::web::unsubscribe::Step::Stopped %}
-  <h1>U ndalën</h1>
-  <p class="lead">Nuk do të të vijnë më {{ about }}. {{ stays }}</p>
+  <h1>{{ crate::t("U ndalën") }}</h1>
+  <p class="lead">{{ crate::t1("Nuk do të të vijnë më {}.", about) }} {{ stays }}</p>
   <form method="post" action="{{ action }}/rikthe">
-    <button type="submit" class="button secondary">Rikthe</button>
+    <button type="submit" class="button secondary">{{ crate::t("Rikthe") }}</button>
   </form>
   {%- when crate::web::unsubscribe::Step::Back %}
-  <h1>U rikthyen</h1>
-  <p class="lead">Do të të vijnë sërish {{ about }}.</p>
+  <h1>{{ crate::t("U rikthyen") }}</h1>
+  <p class="lead">{{ crate::t1("Do të të vijnë sërish {}.", about) }}</p>
   {%- endmatch %}
-  <p class="account-note">I ndryshon kurdo te <a href="/llogaria/cilesimet">Cilësimet</a>.</p>
+  <p class="account-note">{{ crate::t("I ndryshon kurdo te") }} <a href="/llogaria/cilesimet">{{ crate::t("Cilësimet") }}</a>.</p>
 </section>
 {% endblock %}

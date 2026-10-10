@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Privatësia | Pluribus{% endblock %}
+{% block title %}{{ crate::t("Privatësia") }} | Pluribus{% endblock %}
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
@@ -11,9 +11,11 @@
     long, and the visitor's rights, a complaint to the Commissioner among them. Who runs the site
     and the address to write to come from .env (OPERATOR, CONTACT_EMAIL). When any of it changes
     (what is kept, who else gets it, for how long), change this page too, and its date
-    (PRIVACY_UPDATED). -#}
+    (PRIVACY_UPDATED), and its English, privacy_en.html, a faithful translation of the whole,
+    which says the Albanian applies. -#}
 <article class="text-page">
-  <h1>Privatësia</h1>
+  <h1>{{ crate::t("Privatësia") }}</h1>
+  {%- if crate::i18n::english() %}{% include "privacy_en.html" %}{% else %}
   <p class="updated">Përditësuar më {{ updated }}</p>
   <p class="lead">Pluribus mban aq të dhëna sa i duhen për të funksionuar, dhe i thotë hapur. Ja kush i mban, cilat janë, pse, kush tjetër i merr, sa kohë, dhe si i kontrollon.</p>
 
@@ -26,7 +28,7 @@
 
   <h2>Çfarë mbajmë</h2>
   <ul>
-    <li>Numrin e celularit ose email-in me të cilin hyn, dhe emrin që shkruan. Numri shfaqet te njoftimet e tua vetëm kur dikush shtyp butonin për ta parë, dhe sa herë ndodh kjo numërohet për ty te „Njoftimet e mia“.</li>
+    <li>Numrin e celularit ose email-in me të cilin hyn, emrin që shkruan, dhe gjuhën që zgjodhe për faqet dhe email-et. Numri shfaqet te njoftimet e tua vetëm kur dikush shtyp butonin për ta parë, dhe sa herë ndodh kjo numërohet për ty te „Njoftimet e mia“.</li>
     <li>Kodet e hyrjes dhe shenjat e sesionit, vetëm si hash (SHA-256): kodi vlen 10 minuta, sesioni 30 ditë. Me kërkesën për një kod ruhet edhe adresa IP, për të kufizuar abuzimet.</li>
     <li>Njoftimet e tua: tekstin, çmimin, vendin, detajet, fotot (dhe kopjet e tyre në madhësi të ndryshme), historinë e çmimit dhe të statusit.</li>
     <li>Mesazhet mes teje dhe palës tjetër, dhe kur i lexove.</li>
@@ -46,7 +48,7 @@
   </ul>
 
   <h2>Cookies dhe shfletuesi</h2>
-  <p>Pluribus përdor cookies të vetat: <code>session</code> (hyrja), <code>llogari</code> (që faqet të dinë se ke hyrë, pa pyetur serverin), <code>qyteti</code> (qyteti që zgjodhe), <code>cards</code> (kartela të mëdha a të vogla), <code>shikuar</code> (numrat e njoftimeve që hape së fundmi, që faqja e parë t'i tregojë; „Pastro“ i harron) dhe pak të përkohshme gjatë hyrjes dhe publikimit. Tema e errët dhe kërkimet e fundit, që kutia e kërkimit t'i ofrojë, mbahen vetëm në shfletuesin tënd. Nuk ka cookies gjurmimi a reklamash, dhe asnjë analitikë të palëve të treta. Të gjitha i duhen faqes për të punuar ose kujtojnë zgjedhjet e tua, ndaj nuk të kërkojmë pëlqim për to.</p>
+  <p>Pluribus përdor cookies të vetat: <code>session</code> (hyrja), <code>llogari</code> (që faqet të dinë se ke hyrë, pa pyetur serverin), <code>qyteti</code> (qyteti që zgjodhe), <code>cards</code> (kartela të mëdha a të vogla), <code>shikuar</code> (numrat e njoftimeve që hape së fundmi, që faqja e parë t'i tregojë; „Pastro“ i harron), <code>gjuha</code> (gjuha që zgjodhe, shqip ose anglisht) dhe pak të përkohshme gjatë hyrjes dhe publikimit. Tema e errët dhe kërkimet e fundit, që kutia e kërkimit t'i ofrojë, mbahen vetëm në shfletuesin tënd. Nuk ka cookies gjurmimi a reklamash, dhe asnjë analitikë të palëve të treta. Të gjitha i duhen faqes për të punuar ose kujtojnë zgjedhjet e tua, ndaj nuk të kërkojmë pëlqim për to.</p>
 
   <h2>Kush tjetër i merr</h2>
   <ul>
@@ -73,5 +75,6 @@
   <p>Kur ndryshon diçka në mënyrën si mbahen të dhënat, ndryshon edhe kjo faqe, dhe data në krye të saj.</p>
 
   <p>Shiko edhe <a href="/kushtet">kushtet e përdorimit</a>.</p>
+  {%- endif %}
 </article>
 {% endblock %}

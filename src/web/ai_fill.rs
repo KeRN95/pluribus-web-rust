@@ -35,6 +35,7 @@ use crate::{
     AppState,
     ai::Tool,
     db::{self, CatalogueProperty, Categories, Category, City, FormAttribute},
+    i18n::t,
     media::{self, MAX_UPLOAD_BYTES},
 };
 
@@ -52,6 +53,8 @@ const FILLS_PER_DAY: usize = 2_000;
 const TITLE_CHARS: usize = 120;
 const DESCRIPTION_CHARS: usize = 5000;
 
+// What the seller is told, which `refusal` says in the page's language: the catalogue (i18n/en/)
+// has each of these texts.
 const WRITE_FIRST: &str = "Shkruaj së pari titullin dhe përshkrimin: AI plotëson pjesën tjetër prej tyre.";
 const TOO_MANY: &str = "Ke kërkuar plotësim me AI shumë herë brenda një ore. Plotëso vetë fushat, ose provo më vonë.";
 const BUSY: &str = "AI ka pasur shumë kërkesa sot. Plotëso vetë fushat, ose provo nesër.";
@@ -165,8 +168,9 @@ pub async fn fill(
     Ok(Json(filled).into_response())
 }
 
+/// A message for the form to show, in the page's language.
 fn refusal(status: StatusCode, message: &str) -> Response {
-    (status, Json(json!({ "message": message }))).into_response()
+    (status, Json(json!({ "message": t(message) }))).into_response()
 }
 
 /// The first PHOTOS photos, as JPEGs no bigger than PHOTO_SIDE; one that can't be read is left out.
