@@ -42,6 +42,12 @@ pub const SPLIT_GALLERY_SIZES: &str =
 pub const CAR_GALLERY_SIZES: &str =
     "(min-width: 992px) 960px, (min-width: 960px) calc(100vw - 2rem), (min-width: 792px) 760px, calc(100vw - 2rem)";
 
+/// The down payment the loan calculator takes for given, as a percentage of the price
+/// (loan_calculator.html, loan_controller.js): what Albania's banks ask for a used car, which
+/// they finance 60 to 65% of (Intesa Sanpaolo 65%, Tirana Bank 60%, in 2026; a new car 70 to
+/// 75%, a lease 80%). The loan is the rest of the price.
+pub const LOAN_DOWN_PERCENT: u32 = 35;
+
 /// A car's key facts, in a row under its title (listing.html, .key-facts), in this order: the
 /// year, the mileage, the gearbox and the fuel, as FINN has them. They leave the details.
 const CAR_FACTS: [&str; 4] = ["vehicle_year", "vehicle_mileage", "vehicle_transmission", "vehicle_fuel"];

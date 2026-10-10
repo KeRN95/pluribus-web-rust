@@ -1905,18 +1905,20 @@ async fn a_listing_steps_to_its_neighbours_on_its_categorys_page(pool: PgPool) {
 async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     let car = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
     // On a car's page, under the key facts, the calculator in a card of its own, as FINN has it:
-    // the down payment, the years and the interest, and what they come to, the monthly payment
-    // last, and the way to all the loan offers, a button in the site's colour; no bubble beside
-    // a car's price. Under it the two rows for the partners to come, the car's insurance and its
-    // history; then the description.
-    let start = r#"<section class="listing-loan" data-controller="loan" data-loan-price-value="21500.00" data-loan-currency-value="€" aria-labelledby="loan-heading">"#;
+    // the years and the interest, and what they come to, the down payment a set share of the
+    // price (what the banks ask, LOAN_DOWN_PERCENT), the monthly payment last, and the way to all
+    // the loan offers, a button in the site's colour; no bubble beside a car's price. Under it
+    // the two rows for the partners to come, the car's insurance and its history; then the
+    // description.
+    let start = r#"<section class="listing-loan" data-controller="loan" data-loan-price-value="21500.00" data-loan-currency-value="€" data-loan-down-percent-value="35" aria-labelledby="loan-heading">"#;
     let loan = &car[car.find(start).expect("the loan calculator's section")..];
     let loan = &loan[..loan.find("</section>").unwrap()];
+    assert!(!loan.contains("loan-down\""), "no field for the down payment");
     let card = positions(loan, &[
         "Sa do të kushtojë kredia në muaj</h2>",
-        r#"<input id="loan-down""#,
         r#"<input id="loan-years""#,
         r#"<input id="loan-rate""#,
+        "<dt>Paradhënia (35%)</dt>",
         "<dt>Kredia</dt>",
         "<dt>Kësti mujor</dt>",
         r##"<a class="button loan-offers" href="#">Shiko të gjitha ofertat e kredisë</a>"##,

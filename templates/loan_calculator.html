@@ -1,12 +1,9 @@
 {#- The loan calculator's fields and sums (loan_controller.js): in the bubble's card under a price
-    (listing.html, .loan), or in the loan section of a car's page (.listing-loan). A down payment,
-    years and yearly interest give the monthly payment, with the loan, its interest and what it all
-    comes to; worked out at the start and as the fields change. -#}
+    (listing.html, .loan), or in the loan section of a car's page (.listing-loan). The years and
+    the yearly interest, 6% to start, give the monthly payment; the down payment is a set share of
+    the price, what the banks ask (LOAN_DOWN_PERCENT, listings.rs), and the loan the rest, with its
+    interest and what it all comes to; worked out at the start and as the fields change. -#}
 <div class="loan-fields">
-  <div class="field">
-    <label class="field-label" for="loan-down">Paradhënia ({{ listing.currency_symbol() }})</label>
-    <input id="loan-down" type="text" inputmode="decimal" value="0" autocomplete="off" data-loan-target="down" data-action="input->loan#calculate">
-  </div>
   <div class="field">
     <label class="field-label" for="loan-years">Vitet</label>
     <input id="loan-years" type="text" inputmode="numeric" value="10" autocomplete="off" data-loan-target="years" data-action="input->loan#calculate">
@@ -17,10 +14,11 @@
   </div>
 </div>
 <dl class="bubble-sum">
+  <div><dt>Paradhënia ({{ LOAN_DOWN_PERCENT }}%)</dt><dd data-loan-target="down">–</dd></div>
   <div><dt>Kredia</dt><dd data-loan-target="loan">–</dd></div>
   <div><dt>Interesi</dt><dd data-loan-target="interest">–</dd></div>
   <div><dt>Gjithsej</dt><dd data-loan-target="total">–</dd></div>
   <div class="bubble-total loan-monthly"><dt>Kësti mujor</dt><dd data-loan-target="monthly" aria-live="polite">–</dd></div>
 </dl>
 <p class="bubble-note loan-message" data-loan-target="message" aria-live="polite" hidden></p>
-<p class="bubble-note">Llogaritje orientuese. Kushtet e sakta i jep banka.</p>
+<p class="bubble-note">Paradhënia është sa kërkojnë zakonisht bankat për një makinë të përdorur. Llogaritje orientuese: kushtet e sakta i jep banka.</p>

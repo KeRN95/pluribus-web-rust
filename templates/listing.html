@@ -89,7 +89,8 @@
       SPLIT_GALLERY_SIZES where the photo stands beside the rest), with its JPEG for browsers
       without WebP. Several make a strip to slide through one at a time, as a
       big card's photos (slides_controller.js): a finger or a mouse, pressed and moved, slides them,
-      dots over their foot say which shows, a counter in its corner its number, and under a mouse
+      dots over their foot say which shows, a counter in its corner its number (a click on it
+      shows or hides the filmstrip under them, below), and under a mouse
       arrows, each near its edge, step them round and round; the first two load at once, the first
       ahead of anything else on the page (fetchpriority). -#}
   <div class="gallery">
@@ -120,16 +121,19 @@
     <button type="button" class="gallery-arrow gallery-next" data-slides-target="next" data-action="slides#next" aria-label="Foto tjetër" hidden>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
     </button>
-    <span class="gallery-count" data-slides-target="count">1 / {{ photos.len() }}</span>
+    {#- The counter is a button too: it shows the filmstrip under the photos, which starts hidden,
+        and hides it again (slides_controller.js, toggleThumbs). -#}
+    <button type="button" class="gallery-count" data-action="slides#toggleThumbs" aria-controls="listing-thumbs" aria-expanded="false" title="Të gjitha fotot"><span class="visually-hidden">Të gjitha fotot: </span><span data-slides-target="count">1 / {{ photos.len() }}</span></button>
     {%- endif %}
   </div>
   {%- if photos.len() > 1 %}
-  {#- Under the photos, a filmstrip of them, as the classifieds sites have it: each photo's mini
-      copy in a square, the one that shows outlined in the page's colour, a tap on any going to
-      its photo; more than fit slide sideways, the one that shows kept in view, and under a mouse
-      an arrow at either end steps the strip, each there while it can go that way
-      (slides_controller.js, listing.css). -#}
-  <div class="gallery-thumbs">
+  {#- Under the photos, a filmstrip of them, as the classifieds sites have it, hidden until the
+      counter over the photo is clicked, which hides it again: each photo's mini copy in a square,
+      the one that shows outlined in the page's colour, a tap on any going to its photo; more than
+      fit slide sideways, the one that shows kept in view, and under a mouse an arrow at either
+      end steps the strip, each there while it can go that way (slides_controller.js,
+      listing.css). -#}
+  <div class="gallery-thumbs" id="listing-thumbs" data-slides-target="filmstrip" hidden>
     <div class="thumb-strip" data-slides-target="thumbs" data-action="scroll->slides#scrolled">
       {%- for photo in photos %}
       <button type="button" class="gallery-thumb{% if loop.first %} is-current{% endif %}"{% if loop.first %} aria-current="true"{% endif %} data-action="slides#pick" aria-label="Foto {{ loop.index }} nga {{ photos.len() }}"><img src="{{ photo.thumb() }}" alt="" width="72" height="72" loading="lazy" decoding="async"></button>
@@ -212,7 +216,7 @@
     <div class="price-row{% if area_price.is_some() %} with-area{% endif %}">
       <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{{ note }}</span>{% endif %}{% include "price_drop.html" %}</p>
       {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
-      <details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}">
+      <details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" data-loan-down-percent-value="{{ LOAN_DOWN_PERCENT }}">
         <summary>
           <svg data-icon="phone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01"/></svg>
           Llogarit kredinë
@@ -308,9 +312,10 @@
   {%- if let Some(amount) = listing.car_loan_amount() %}
   {#- Under the facts, as FINN has it, the loan calculator in a card of its own (loan_controller.js,
       loan_calculator.html), for any car on sale with a price: what the car costs a month, from the
-      down payment, the years and the interest, with the loan, its interest and the whole; and the
-      way to all the loan offers, a button in the site's own colour, which leads nowhere yet. -#}
-  <section class="listing-loan" data-controller="loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" aria-labelledby="loan-heading">
+      years and the interest, the down payment a set share of the price, with the loan, its
+      interest and the whole; and the way to all the loan offers, a button in the site's own
+      colour, which leads nowhere yet. -#}
+  <section class="listing-loan" data-controller="loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" data-loan-down-percent-value="{{ LOAN_DOWN_PERCENT }}" aria-labelledby="loan-heading">
     <h2 id="loan-heading" class="listing-loan-title">Sa do të kushtojë kredia në muaj</h2>
     {% include "loan_calculator.html" %}
     <a class="button loan-offers" href="#">Shiko të gjitha ofertat e kredisë</a>

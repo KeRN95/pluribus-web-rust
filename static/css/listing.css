@@ -577,16 +577,15 @@
 .price-row.with-area > .listing-price { flex-basis: 100%; }
 /* The loan calculator's card: on a phone under the price's row and as wide as it, since its bubble
    stands too near the middle of the screen for the card to fit beside either of the bubble's
-   edges; on wider screens under the bubble, as the square metre's card is. The three fields side
-   by side, the years' narrower so that the others' names ("Paradhënia (Lekë)", "Interesi vjetor
-   (%)") fit on a line; then the loan, its interest and the two together, and last the monthly
-   payment, larger. */
+   edges; on wider screens under the bubble, as the square metre's card is. The two fields side
+   by side, the years and the yearly interest; then the down payment, a set share of the price,
+   the loan, its interest and the two together, and last the monthly payment, larger. */
 .loan-card { width: min(26rem, 100%); }
 @media (min-width: 720px) {
   .loan { position: relative; }
   .loan-card { width: 24rem; }
 }
-.loan-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .6fr) minmax(0, 1fr); align-items: end; gap: .6rem; margin-bottom: .8rem; }
+.loan-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: .6rem; margin-bottom: .8rem; }
 .loan-monthly { align-items: baseline; }
 .loan-monthly dd { font-size: var(--text-lg); font-weight: var(--bold); letter-spacing: -.01em; }
 .loan-message { color: var(--text); }
