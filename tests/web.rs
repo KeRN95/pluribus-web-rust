@@ -1712,6 +1712,50 @@ async fn the_map_has_a_dot_for_every_result_up_to_its_limit(pool: PgPool) {
     assert!(!card.contains("map-note"));
 }
 
+/// A search's listings, count and categories as one plan reads them: walking its order, or, once a
+/// query walked too long (db::ListingFilter::few_matches), through the words' index.
+async fn search_read(pool: &PgPool, words: &str, categories: Option<Vec<sqlx::types::Uuid>>, sort: marketplace::db::Sort, through_index: bool) -> (Vec<i64>, i64, Vec<(sqlx::types::Uuid, i64)>) {
+    let search = marketplace::db::text_search(pool, Some(words)).await.unwrap();
+    let filter = marketplace::db::ListingFilter { search, category_ids: categories, sort, ..Default::default() };
+    filter.few_matches.store(through_index, std::sync::atomic::Ordering::Relaxed);
+    let cards = marketplace::db::listing_page(pool, &filter).await.unwrap();
+    let count = marketplace::db::listing_count(pool, &filter).await.unwrap();
+    let found_in = marketplace::db::listing_categories(pool, &filter, 8).await.unwrap();
+    (cards.iter().map(|card| card.public_no).collect(), count, found_in)
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_search_reads_the_same_listings_through_its_words_index(pool: PgPool) {
+    use marketplace::db::Sort;
+    let vehicles: Vec<sqlx::types::Uuid> = sqlx::query_scalar(
+        "WITH RECURSIVE sub AS (SELECT id FROM categories WHERE slug = 'automjete'
+                                UNION ALL SELECT c.id FROM categories c JOIN sub ON c.parent_id = sub.id)
+         SELECT id FROM sub",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    // Words that meet often and seldom, alone and among the vehicles, a kind's word, in each order.
+    for (words, categories) in [
+        ("golf", None),
+        ("tirane", None),
+        ("golf", Some(vehicles.clone())),
+        ("apartament", Some(vehicles.clone())),
+        ("makina apartament", None),
+        ("shitje", None),
+    ] {
+        for sort in [Sort::Relevance, Sort::Newest, Sort::PriceLow] {
+            let walked = search_read(&pool, words, categories.clone(), sort, false).await;
+            let indexed = search_read(&pool, words, categories.clone(), sort, true).await;
+            assert_eq!(walked, indexed, "{words} {sort:?}");
+        }
+    }
+    let (golf, ..) = search_read(&pool, "golf", Some(vehicles.clone()), Sort::Newest, true).await;
+    assert!(golf.contains(&1001), "{golf:?}");
+    let (none, count, found_in) = search_read(&pool, "apartament", Some(vehicles), Sort::Relevance, true).await;
+    assert_eq!((none.len(), count, found_in.len()), (0, 0, 0));
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn search_ignores_accents(pool: PgPool) {
     // "vlore" names the town, which the page then filters by, and "shtepi" is searched there.
