@@ -245,13 +245,36 @@
 .key-fact dd { margin: 0; font-weight: var(--semibold); overflow-wrap: anywhere; }
 /* Room between the photos and the title, and a hairline under the kind's line, the page's one;
    "Lokacioni" over the map, as the description and the details have their headings. The price a
-   size down, and what qualifies it ("i diskutueshëm") on a line of its own under it, quietly. */
+   phone's size on every screen (1.75rem; other pages' grow from 720 px up), and what qualifies it
+   ("i diskutueshëm") on a line of its own under it, quietly. */
 .listing-car > .listing-side { margin-top: 1.075rem; }
 .listing-car .listing-header { padding-bottom: 1.05rem; border-bottom: 1px solid var(--border); }
 .listing-car .listing-side > .listing-map-section { margin-top: 1.75rem; }
 .listing-car .listing-map-section > h2 { margin-top: 0; }
-.listing-car .listing-price { font-size: 1.5rem; }
+.listing-car .listing-price { font-size: 1.75rem; }
 .listing-car .price-note { display: block; margin-top: .3rem; color: var(--muted); font-size: var(--text-sm); font-weight: 400; }
+/* "Llogarit kredinë" a pill like the phone's, "Shfaq numrin" (.contact-bar): on a line of its own
+   under the price, as wide as the price's box (from 720 px up to 960 as the contact bar under it,
+   below), as tall, its calculator's icon quiet beside its words; the calculator's card opens under
+   it, as wide as it. */
+.listing-car .price-row { flex-direction: column; align-items: stretch; gap: .9rem; }
+.listing-car .loan > summary {
+  display: flex;
+  justify-content: center;
+  gap: .5rem;
+  height: 3.1rem;
+  padding: 0 1.3rem 0 1.1rem;
+  border-color: var(--menu-border);
+  font: inherit;
+  font-weight: var(--semibold);
+}
+.listing-car .loan > summary svg { width: 20px; height: 20px; color: var(--muted); }
+.listing-car .loan .bubble-card { left: 0; right: 0; width: auto; }
+/* The message's pill drawn as a picked pill is, the path's own (browse.css, .category-path
+   .shortcut.is-selected): the page's colour's tint, a border of that colour and its words in it;
+   the phone's pill as on every page. */
+.listing-car .contact-bar .message-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+.listing-car .contact-bar .message-button:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--badge)); }
 .spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.25rem; margin: 0; }
 .spec { min-width: 0; }
 .spec dt { display: flex; align-items: center; gap: .35rem; color: var(--muted); font-size: var(--text-sm); }
@@ -274,20 +297,25 @@
    under the key facts' hairline as the facts stand over it (1.25rem), rather than on the line. */
 @media (max-width: 959px) {
   .listing-car .price-box { margin-top: 1.25rem; }
-  .listing-car .listing-deal > .seller-section { display: contents; }
-  .listing-car .listing-deal > .seller-section > :is(h2, .seller-head),
+  .listing-car .listing-deal > .seller-section,
+  .listing-car .listing-deal .seller-card { display: contents; }
+  .listing-car .listing-deal > .seller-section > h2,
+  .listing-car .listing-deal .seller-card > .seller-head,
   .listing-car .listing-side > .listing-map-section { order: 2; }
-  .listing-car .listing-deal > .seller-section > :is(h2, .seller-head) { min-width: 0; }
+  .listing-car .listing-deal > .seller-section > h2,
+  .listing-car .listing-deal .seller-card > .seller-head { min-width: 0; }
   .listing-car .listing-deal > .seller-section > h2 { margin-top: 1.75rem; }
 }
 @media (max-width: 719px) {
   .listing-car .listing-deal > .seller-section > h2 { margin-top: 2.5rem; }
 }
 @media (min-width: 720px) and (max-width: 959px) {
-  .listing-car .listing-deal > .seller-section > :is(h2, .seller-head) { grid-column: 1 / -1; }
-  .listing-car .listing-deal > .seller-section > .contact-bar { grid-column: 1; margin-right: .5rem; }
-  .listing-car .listing-deal > .seller-section > .actions,
+  .listing-car .listing-deal > .seller-section > h2,
+  .listing-car .listing-deal .seller-card > .seller-head { grid-column: 1 / -1; }
+  .listing-car .listing-deal .seller-card > .contact-bar { grid-column: 1; margin-right: .5rem; }
+  .listing-car .listing-deal .seller-card > .actions,
   .listing-car .listing-deal > .seller-section + .actions { grid-column: 2; align-self: center; }
+  .listing-car .loan { width: calc(50% - .5rem); }
 }
 @media (min-width: 960px) {
   .listing-page:has(> .listing-car) { display: block; max-width: 60rem; margin-inline: auto; }
@@ -305,22 +333,21 @@
   .listing-car .listing-deal > * { grid-column: 1; align-self: auto; max-width: none; margin-right: 0; }
   .listing-car .listing-header h1 { margin-top: 0; }
   .listing-car .price-box { padding: 1rem 1.15rem 1.1rem; border: 1px solid var(--menu-border); border-radius: 16px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%); }
-  /* The loan calculator's card hangs from the bubble's right edge, the column's edge being near. */
-  .listing-car .loan .bubble-card { left: auto; right: 0; transform-origin: top right; }
-  /* The seller's card holds the ways to reach them (seller_card.html): the card's chrome, the
-     price card's, goes to the section, the seller's row losing its own; the heading inside it, a
-     small quiet line; the initial 3rem; since when and after a dot how many listings, wrapping
-     rather than cut short, the count kept whole; the verified check in its words on a line of its
-     own; and under a hairline the bar's pills on a line each, the message's first, and the share
-     and the report beside it (below; on the seller's own page they stay under the card). */
-  .listing-car .listing-deal > .seller-section { margin-top: 1.5rem; padding: .85rem 1.15rem 1.1rem; border: 1px solid var(--menu-border); border-radius: 16px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%); }
-  .listing-car .listing-deal > .seller-section > h2 { margin: 0 0 .35rem; color: var(--muted); font-size: var(--text-xs); line-height: 1.25; }
+  /* The seller's card (seller_card.html, .seller-card) under "Shitësi", a heading as the
+     column's "Lokacioni" and the page's others are, holds the ways to reach them: the price card's
+     chrome, the seller's row losing its own; the initial 3rem; the verified check beside the name,
+     as on every page; since when and after a dot how many listings, wrapping rather than cut short,
+     each part kept whole; and under a hairline the bar's pills on a line each, the message's first,
+     and the share and the report beside it (below; on the seller's own page they stay under the
+     card). */
+  .listing-car .listing-deal > .seller-section { margin-top: 1.5rem; }
+  .listing-car .listing-deal > .seller-section > h2 { margin-top: 0; }
+  .listing-car .listing-deal .seller-card { padding: 1rem 1.15rem 1.1rem; border: 1px solid var(--menu-border); border-radius: 16px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%); }
   .listing-car .listing-deal .seller-head { padding: 0; border: 0; border-radius: 0; box-shadow: none; }
   .listing-car .listing-deal .seller-head .seller { margin: 0 -.6rem; }
   .listing-car .listing-deal .seller-text { gap: .125rem; }
   .listing-car .listing-deal .seller-name { font-size: var(--text-md); }
   .listing-car .listing-deal .seller-summary { font-size: var(--text-sm); white-space: normal; }
-  .listing-car .listing-deal .seller-head .verified { margin: .1rem 0 0; }
   .listing-car .listing-deal .contact-bar { flex-direction: column; align-items: stretch; margin-top: .8rem; padding-top: .9rem; border-top: 1px solid var(--border); }
   .listing-car .contact-bar .button { flex: none; }
   .listing-car .contact-bar .message-button { order: -1; }
@@ -333,11 +360,11 @@
      .5rem apart and .5rem from it, its sides a little tighter so that its words fit whole. With
      no message to write (a listing off the site), they come under the bar. On the seller's own
      page they stay under the card, with their own buttons. */
-  .listing-car .listing-deal > .seller-section:has(.message-button) { display: grid; grid-template-columns: minmax(0, 1fr); }
-  .listing-car .listing-deal > .seller-section:has(.message-button) > :is(.contact-bar, .actions) { grid-row: 3; grid-column: 1; }
-  .listing-car .listing-deal > .seller-section:has(.message-button) > .actions { justify-self: end; align-self: start; margin-top: calc(.8rem + 1px + .9rem + .125rem); }
+  .listing-car .listing-deal .seller-card:has(.message-button) { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .listing-car .listing-deal .seller-card:has(.message-button) > :is(.contact-bar, .actions) { grid-row: 2; grid-column: 1; }
+  .listing-car .listing-deal .seller-card:has(.message-button) > .actions { justify-self: end; align-self: start; margin-top: calc(.8rem + 1px + .9rem + .125rem); }
   .listing-car .listing-deal .contact-bar .message-button { width: calc(100% - 6.7rem); padding: 0 .9rem; }
-  .listing-car .listing-deal > .seller-section > .actions,
+  .listing-car .listing-deal .seller-card > .actions,
   .listing-car .listing-deal > .actions { margin-top: .75rem; }
 }
 /* Where a car's page is narrower than its 60rem (under 1024 px), its key facts closer together, so

@@ -4,27 +4,23 @@
     their profile (listing.css, .seller-head), under a heading of its own, "Shitësi", as the
     details and the description have theirs. Under the description, across the page or the column
     beside the photo; the ways to reach them are the buttons under the price. On a car's page the
-    card stands in the deal's column at the right (.listing-deal) and holds those too: the heading
-    inside it, small and quiet, the initial bigger, since when they are on the site and after a dot
-    how many listings ("Që nga tetor 2026 · 5 njoftime", each part kept whole should the line
-    wrap, which it then does before the dot), the check in its words on a line of its own, and under a hairline the contact bar
+    card (.seller-card, under the heading as every page has it) stands in the deal's column at the
+    right (.listing-deal) and holds those too: the initial bigger, since when they are on the site
+    and after a dot how many listings ("Që nga tetor 2026 · 5 njoftime", each part kept whole
+    should the line wrap, which it then does before the dot), and under a hairline the contact bar
     (contact_bar.html), the share and the report beside the message (listing_actions.html; on the
     seller's own page those stay under the card, with their own buttons); on a phone the card is no
     box, the bar at the screen's foot as on every page and the seller on their own (listing.css,
     .listing-car). -#}
 <section class="seller-section" aria-labelledby="seller-heading">
   <h2 id="seller-heading">Shitësi</h2>
+  {%- if car_page %}
+  <div class="seller-card">
+  {%- endif %}
   <div class="seller-head">
     <a class="seller" href="{{ listing.seller_url }}">
       <span class="avatar{% if car_page %} large{% endif %}" aria-hidden="true">{{ listing.seller_initial() }}</span>
       <span class="seller-text">
-        {%- if car_page %}
-        <span class="seller-name">{{ listing.seller_name }}</span>
-        <span class="seller-summary"><span class="seller-since">{{ listing.seller_since_line() }}</span> <span class="seller-count">· {{ listing.seller_count_text() }}</span></span>
-        {%- if let Some(verified) = verified %}
-        <span class="verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::VERIFIED|safe }}</svg>{{ verified }}</span>
-        {%- endif %}
-        {%- else %}
         <span class="seller-name">{{ listing.seller_name }}
           {%- if let Some(verified) = verified %}
           {#- A check beside the name: the number (or address) it shows is one they signed in with
@@ -32,11 +28,16 @@
           <span class="verified" title="{{ verified }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::VERIFIED|safe }}</svg><span class="visually-hidden">{{ verified }}</span></span>
           {%- endif -%}
         </span>
+        {%- if car_page %}
+        <span class="seller-summary"><span class="seller-since">{{ listing.seller_since_line() }}</span> <span class="seller-count">· {{ listing.seller_count_text() }}</span></span>
+        {%- else %}
         <span class="seller-summary">{{ listing.seller_summary() }}</span>
         {%- endif %}
       </span>
       <svg class="seller-chevron" data-icon="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
     </a>
   </div>
-  {%- if car_page %}{% include "contact_bar.html" %}{% if !own %}{% include "listing_actions.html" %}{% endif %}{% endif %}
+  {%- if car_page %}{% include "contact_bar.html" %}{% if !own %}{% include "listing_actions.html" %}{% endif %}
+  </div>
+  {%- endif %}
 </section>

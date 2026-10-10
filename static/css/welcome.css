@@ -9,24 +9,25 @@
 .lead { margin: 0 0 1.25rem; color: var(--muted); font-size: var(--text-lg); font-weight: var(--light); line-height: 1.45; }
 
 
-/* The search, drawn like the message box in Claude's app: a pill on the surface with the menus'
-   hairline and a soft shadow, the words in it, and inside it at the end a round coral button
-   with a magnifier, like Claude's send button. While it is being typed in, its edge darkens and
-   its shadow deepens a little, as Claude's does, rather than a ring round it. */
+/* The search, drawn like the message box in Claude's app: a pill, the words in it, and at the end
+   a round button with a magnifier, like Claude's send button; the whole pill in the page's colour,
+   the buttons', its words in the buttons' white (the hint a little softer), and the magnifier's
+   circle a lighter shade of it. While it is being typed in, its edge darkens and its shadow
+   deepens a little, as Claude's does, rather than a ring round it. */
 .welcome-form {
   display: flex;
   align-items: center;
   gap: .6rem;
   padding: .35rem .35rem .35rem 1.4rem;
-  border: 1px solid var(--menu-border);
+  border: 1px solid var(--button);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--button);
   box-shadow: 0 4px 20px rgb(0 0 0 / 5%);
   transition: border-color .15s, box-shadow .15s;
 }
 .welcome-form:focus-within {
-  border-color: color-mix(in srgb, var(--text) 30%, transparent);
-  box-shadow: 0 4px 20px rgb(0 0 0 / 9%);
+  border-color: var(--button-hover);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 12%);
 }
 .welcome-form input {
   flex: 1;
@@ -34,23 +35,24 @@
   padding: .35rem 0; /* no taller than the button, which sits as far from every edge */
   border: 0;
   background: none;
-  color: var(--text);
+  color: var(--on-button);
+  caret-color: var(--on-button);
   font: inherit;
   font-size: max(16px, var(--text-lg)); /* a little bigger than other fields; 16px at least, or phones zoom in */
   appearance: none;
   outline: none;
 }
-.welcome-form input::placeholder { color: var(--muted); text-overflow: ellipsis; }
+.welcome-form input::placeholder { color: color-mix(in srgb, var(--on-button) 85%, transparent); text-overflow: ellipsis; }
 /* No clearing cross: the pill keeps only its button, as Claude's box does. */
 .welcome-form input::-webkit-search-cancel-button { appearance: none; }
 .welcome-search {
   width: 3rem;
   height: 3rem;
-  background: var(--button);
+  background: color-mix(in srgb, var(--on-button) 16%, transparent);
   color: var(--on-button);
   transition: background-color .15s, transform .1s;
 }
-.welcome-search:hover { background: var(--button-hover); }
+.welcome-search:hover { background: color-mix(in srgb, var(--on-button) 26%, transparent); }
 .welcome-search:active { transform: scale(.94); }
 @media (prefers-reduced-motion: reduce) {
   .welcome-search:active { transform: none; }
@@ -287,8 +289,8 @@
 }
 /* The row over the categories (home.html): the search bar, which takes the width the buttons
    leave it, then the round buttons, as tall as the pills under them and as far apart; the bar's
-   magnifier its whole height, a circle in the page's colour at its end, over the bar's hairline
-   there, as big as the round buttons beside it. */
+   magnifier its whole height, a lighter circle at its end of the bar's own colour (above), as big
+   as the round buttons beside it. */
 .welcome-tools { display: flex; align-items: center; gap: var(--column-gap); margin-bottom: var(--row-gap); }
 .welcome-tools .welcome-form { flex: 1 1 auto; min-width: 0; height: var(--pill); padding: 0 0 0 1.2rem; box-shadow: none; }
 .welcome-tools .welcome-search { width: var(--pill); height: var(--pill); margin-right: -1px; }

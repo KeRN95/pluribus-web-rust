@@ -4645,6 +4645,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         r#"<p class="listing-price">"#,
         r#"<section class="seller-section" aria-labelledby="seller-heading">"#,
         r#"<h2 id="seller-heading">Shitësi</h2>"#,
+        r#"<div class="seller-card">"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="avatar large" aria-hidden="true">A</span>"#,
         r#"<span class="seller-name">Ana</span>"#,
@@ -5742,12 +5743,11 @@ async fn the_number_a_seller_signed_in_with_shows_as_verified(pool: PgPool) {
     // Ana signs in with a code sent to her number: her listings say so beside her name, and her
     // profile under it.
     sign_in_with_code(&pool, "069 000 0001", "+355690000001").await;
-    // On a car's page, in its words on a line of the seller's card; on every other listing, a
-    // check beside her name, which says what it means as a tooltip and to screen readers; on her
-    // profile, the words under her name.
+    // On every listing, a car's too, a check beside her name, which says what it means as a
+    // tooltip and to screen readers; on her profile, the words under her name.
     let page = html(pool.clone(), golf).await;
-    assert!(page.contains(r#"<span class="verified"><svg width="14""#) && page.contains("</svg>Numër i verifikuar</span>"), "{page}");
-    assert!(!page.contains(r#"title="Numër i verifikuar""#));
+    assert!(page.contains(r#"<span class="seller-name">Ana<span class="verified" title="Numër i verifikuar">"#), "{page}");
+    assert!(!page.contains("</svg>Numër i verifikuar</span>"));
     let iphone = html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await;
     assert!(iphone.contains(r#"<span class="seller-name">Ana<span class="verified" title="Numër i verifikuar">"#), "{iphone}");
     assert!(iphone.contains(r#"<span class="visually-hidden">Numër i verifikuar</span></span></span>"#));
