@@ -316,6 +316,20 @@ pub async fn set_listing_point(db: &PgPool, listing_id: Uuid, latitude: f64, lon
     Ok(())
 }
 
+/// Where the listing's photos are kept, the full copies, the cover first: at most `limit`, for
+/// the AI to look at on an edit (web/ai_fill.rs).
+pub async fn listing_photo_keys(db: &PgPool, listing_id: Uuid, limit: i64) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar(
+        "SELECT storage_key FROM listing_media
+         WHERE listing_id = $1 AND media_type = 'IMAGE' AND status = 'READY' AND storage_key IS NOT NULL
+         ORDER BY is_cover DESC, sort_order LIMIT $2",
+    )
+    .bind(listing_id)
+    .bind(limit)
+    .fetch_all(db)
+    .await
+}
+
 /// The listing's point on the map: its own, or its town's.
 pub async fn listing_point(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Option<(f64, f64)>> {
     sqlx::query_as("SELECT latitude::float8, longitude::float8 FROM listings WHERE id = $1 AND latitude IS NOT NULL")

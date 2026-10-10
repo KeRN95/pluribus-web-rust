@@ -3247,6 +3247,53 @@ async fn the_listing_form_names_its_fields_in_three_sections(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_ai_on_an_edit_sees_the_listings_own_photos(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let started = started();
+    let posted = post_with_photos(pool.clone(), "/shto", &listing_fields(("", ""), &started), &[jpeg(800, 600), jpeg(600, 800)], &ana).await;
+    let no = posted.location.expect("posted").trim_start_matches("/listing/").split('-').next().unwrap().to_string();
+    let (url, asked) = ai_stand_in(Some(json!({"category": "telefona", "listing_type": "SELL"}))).await;
+    let fill = |cookie: String| {
+        let (pool, url, no) = (pool.clone(), url.clone(), no.clone());
+        async move {
+            let fields = [("title", "Samsung Galaxy S21, 128 GB"), ("description", "Telefon në gjendje shumë të mirë, me kuti."), ("listing", no.as_str())];
+            let (content_type, body) = multipart(&fields, &[jpeg(1000, 500)]);
+            let request = Request::post("/shto/ploteso")
+                .header(header::CONTENT_TYPE, content_type)
+                .header(header::COOKIE, cookie)
+                .body(Body::from(body))
+                .unwrap();
+            send_to(app_with_ai(pool, &url), request).await.status
+        }
+    };
+    // The photos the AI was asked about, each by its width and height, in order.
+    let shown = |request: &Value| -> Vec<(u32, u32)> {
+        use base64::Engine;
+        request["messages"][0]["content"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|block| block["type"] == "image")
+            .map(|block| {
+                let photo = base64::engine::general_purpose::STANDARD.decode(block["source"]["data"].as_str().unwrap()).unwrap();
+                let photo = image::load_from_memory(&photo).unwrap();
+                (photo.width(), photo.height())
+            })
+            .collect()
+    };
+
+    // Its seller asking from its edit form: its two photos, the cover first, then the one picked.
+    assert_eq!(fill(ana).await, StatusCode::OK);
+    // Someone else naming it: the photo they picked alone.
+    assert_eq!(fill(besa).await, StatusCode::OK);
+    let asked = asked.lock().unwrap();
+    assert_eq!(asked.len(), 2);
+    assert_eq!(shown(&asked[0].1), vec![(800, 600), (600, 800), (1000, 500)]);
+    assert_eq!(shown(&asked[1].1), vec![(1000, 500)]);
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_listing_form_asks_for_the_writing_first_and_offers_ai_when_it_is_set_up(pool: PgPool) {
     // The title, the description and the photos first, then the category, the price and the town.
     let form = html(pool.clone(), "/shto").await;
@@ -3260,7 +3307,7 @@ async fn the_listing_form_asks_for_the_writing_first_and_offers_ai_when_it_is_se
     assert!(answer["message"].as_str().unwrap().contains("Plotëso vetë"), "{answer}");
 
     // With it, a new listing's form has the button, between the photos and the category; the
-    // edit form doesn't.
+    // edit form too, for what is missing (the_ai_on_an_edit_sees_the_listings_own_photos).
     let (url, _) = ai_stand_in(None).await;
     let new = send_to(app_with_ai(pool.clone(), &url), Request::get("/shto").body(Body::empty()).unwrap()).await.body;
     let order = positions(&new, &[r#"name="photos""#, "Plotëso pjesën tjetër me AI", r#"id="category""#]);
@@ -3270,7 +3317,8 @@ async fn the_listing_form_asks_for_the_writing_first_and_offers_ai_when_it_is_se
     let session = session_for(&pool, "11111111-1111-4111-8111-111111111111").await;
     let request = Request::get("/listing/1001/ndrysho").header(header::COOKIE, &session).body(Body::empty()).unwrap();
     let edit = send_to(app_with_ai(pool, &url), request).await.body;
-    assert!(edit.contains(r#"id="category""#) && !edit.contains("Plotëso pjesën tjetër me AI"));
+    assert!(edit.contains(r#"id="category""#) && edit.contains("Plotëso pjesën tjetër me AI") && edit.contains(r#"data-ai-fill-listing-value="1001""#), "{edit}");
+    assert!(edit.contains("AI plotëson detajet që mungojnë. Ato që ke vënë nuk i prek."));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

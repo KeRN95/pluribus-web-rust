@@ -259,6 +259,8 @@ struct ListingFormPage {
     photos: Vec<OwnPhoto>,
     /// Sent back with an error, photos the browser holds: it puts them back as they were.
     photos_again: bool,
+    /// The listing's number on its edit form, which the AI looks at the photos of.
+    editing: Option<i64>,
     /// Whether the category chosen can say where it is on the map (mapped), and each town's point
     /// by its slug, as JSON, which the form's map starts on (map_pin_controller.js).
     map_shown: bool,
@@ -384,6 +386,10 @@ fn page(
         started: now(),
         photos: Vec::new(),
         photos_again: false,
+        editing: match purpose {
+            Purpose::Edit { public_no, .. } => Some(*public_no),
+            Purpose::New => None,
+        },
         map_shown,
         towns: serde_json::Value::Object(
             cities.iter().map(|city| (city.slug.clone(), serde_json::json!([city.latitude, city.longitude]))).collect(),
@@ -940,6 +946,7 @@ pub async fn edit_listing(
     }
     let mut page = page(&purpose, Some(&user), &categories, &cities, &attributes, form, HashMap::new());
     page.photos = listing_photos;
+    page.ai_fill = state.ai.is_some();
     render(page)
 }
 
@@ -978,6 +985,7 @@ pub async fn update_listing(
         let mut page = page(&purpose, Some(&user), &categories, &cities, &attributes, form, errors);
         page.photos = listing_photos;
         page.photos_again = kept;
+        page.ai_fill = state.ai.is_some();
         return form_again(page);
     };
     let slug = format::slug(checked.title);

@@ -138,7 +138,21 @@ pub async fn fill(
             path(&categories, category)
         ));
     }
-    let photos = small_copies(photos).await;
+    // On an edit (`listing`, its number, the seller's own), the photos it has too, the cover
+    // first, before those just picked: what buyers will see.
+    let mut kept = Vec::new();
+    if let (Ok(number), Some(user)) = (field("listing").parse::<i64>(), &user)
+        && let Some(listing) = db::own_listing(&state.db, number, user.id).await?
+    {
+        for key in db::listing_photo_keys(&state.db, listing.id, PHOTOS as i64).await? {
+            match state.media.get(&key).await {
+                Ok(Some(photo)) => kept.push(photo),
+                Ok(None) => {}
+                Err(error) => tracing::warn!(error = %format!("{error:#}"), key, "a listing's photo couldn't be read for the AI"),
+            }
+        }
+    }
+    let photos = small_copies(kept.into_iter().chain(photos).collect()).await;
     let instructions = instructions(&categories, &leaves, &cities, &codes, &catalogue);
     let answer = match ai.call_tool(&instructions, &tool(&leaves), &photos, &text).await {
         Ok(answer) => answer,

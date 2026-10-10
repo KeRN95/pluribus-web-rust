@@ -17,6 +17,8 @@ const FAILED = "AI nuk u përgjigj tani. Plotëso vetë fushat e tjera, ose prov
 export default class extends Controller {
   static targets = ["button", "status"];
   static outlets = ["photos"];
+  // listing: on an edit, the listing's number, whose own photos the AI sees too.
+  static values = { listing: Number };
 
   connect() {
     // The fields the seller changed themselves, in the pickers or by typing: a fill leaves them
@@ -29,6 +31,12 @@ export default class extends Controller {
     };
     this.element.addEventListener("input", this.noted);
     this.element.addEventListener("change", this.noted);
+    // An edit's form comes filled in: what it holds stands, and a fill fills what is missing.
+    if (this.listingValue) {
+      for (const element of this.element.elements) {
+        if (element.name && (element.type === "checkbox" ? element.checked : element.value)) this.byHand.add(element.name);
+      }
+    }
   }
 
   disconnect() {
@@ -53,6 +61,7 @@ export default class extends Controller {
       body.append("description", description);
       // A category the seller chose themselves stands.
       if (this.byHand.has("category") && form.elements.category.value) body.append("category", form.elements.category.value);
+      if (this.listingValue) body.append("listing", String(this.listingValue));
       const photos = this.hasPhotosOutlet ? this.photosOutlet.picked.slice(0, PHOTOS) : [];
       for (const photo of await Promise.all(photos.map((file) => shrink(file, PHOTO_SIDE)))) body.append("photos", photo);
       const response = await fetch("/shto/ploteso", { method: "POST", body, headers: { Accept: "application/json" } });

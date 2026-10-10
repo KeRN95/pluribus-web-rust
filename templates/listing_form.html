@@ -30,7 +30,7 @@
       it is (and, for someone not signed in, how to reach them). Every field has its name over it;
       a placeholder, where there is one, is an example. -#}
   <form class="account-form listing-form" action="{{ action }}" method="post" enctype="multipart/form-data"
-        data-controller="listing-form narrow price-hint{% if new_listing %} draft{% endif %}{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% endif %}{% if new_listing %} data-listing-form-guess-value="true"{% endif %}>
+        data-controller="listing-form narrow price-hint{% if new_listing %} draft{% endif %}{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% if let Some(number) = editing %} data-ai-fill-listing-value="{{ number }}"{% endif %}{% endif %}{% if new_listing %} data-listing-form-guess-value="true"{% endif %}>
     {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
     {%- if new_listing %}
     {#- What this browser kept of a listing begun and left (draft_controller.js), offered on an
@@ -116,13 +116,18 @@
       {%- if ai_fill %}
       {#- "Plotëso pjesën tjetër me AI" (ai_fill_controller.js, web/ai_fill.rs): from the title, the
           description and the photos, the AI chooses the category and fills in its details, the price
-          and the town, for the seller to check; what it filled is tinted until changed. -#}
+          and the town, for the seller to check; what it filled is tinted until changed. On an edit,
+          what is missing alone, from the listing's own photos too. -#}
       <div class="ai-fill">
         <button type="button" class="button secondary ai-fill-button" data-ai-fill-target="button" data-action="ai-fill#fill">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.9 5 5.1 1.9-5.1 1.9-1.9 5-1.9-5L5 10.4l5.1-1.9z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>
           Plotëso pjesën tjetër me AI
         </button>
+        {%- if editing.is_some() %}
+        <p class="field-hint" data-ai-fill-target="status" role="status">Nga titulli, përshkrimi dhe fotot, AI plotëson detajet që mungojnë. Ato që ke vënë nuk i prek.</p>
+        {%- else %}
         <p class="field-hint" data-ai-fill-target="status" role="status">Nga titulli, përshkrimi dhe fotot, AI zgjedh kategorinë dhe plotëson detajet, çmimin dhe qytetin. Ti i kontrollon para se ta publikosh.</p>
+        {%- endif %}
       </div>
       {%- endif %}
     </section>
