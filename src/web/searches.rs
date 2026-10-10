@@ -293,7 +293,12 @@ pub async fn send_search_alerts(db: &PgPool, origin: &str) -> sqlx::Result<usize
             "\nShihi të gjitha: {url}\n\nPër një kërkim nuk të vjen më shumë se një email në tri orë. \
              Për t'i ndalur, hap „Kërkimet e ruajtura“: {origin}/kerkimet-e-ruajtura\n"
         ));
-        match sender::senders().send_text(&contact, &title, &body).await {
+        let alert = sender::Alert {
+            subject: title,
+            body,
+            whatsapp: sender::AlertTemplate::Search { new: new_listings(count), name: search.name.clone(), id: search.id.to_string() },
+        };
+        match sender::senders().send_alert(&contact, &alert).await {
             Ok(channel) => tracing::debug!(?channel, to = %contact.masked(), "saved search alert sent"),
             Err(error) => tracing::warn!(%error, to = %contact.masked(), "saved search alert not sent"),
         }

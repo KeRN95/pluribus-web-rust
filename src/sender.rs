@@ -2,8 +2,11 @@
 //! SES, Postmark, Brevo...), and to a phone number by WhatsApp, through Meta's WhatsApp Cloud API
 //! and an authentication template. Each is set up in .env (see .env.example); a channel that isn't
 //! writes its codes to the server's log instead, which is how development runs. The same channels
-//! carry the notices of messages someone hasn't read (notices.rs): by e-mail, or by WhatsApp with
-//! a utility template of its own (WHATSAPP_NOTICE_TEMPLATE).
+//! carry the notices of messages someone hasn't read (notices.rs), the alerts of saved searches
+//! (web/searches.rs) and the warnings of listings about to expire or expired (expiry.rs): by
+//! e-mail, or by WhatsApp with a utility template of each one's own (WHATSAPP_NOTICE_TEMPLATE,
+//! WHATSAPP_SEARCH_TEMPLATE, WHATSAPP_EXPIRY_TEMPLATE); a phone number gets none of a kind
+//! whose template isn't set up.
 
 use std::{sync::OnceLock, time::Duration};
 
@@ -68,6 +71,26 @@ impl Notice {
     }
 }
 
+/// An alert, for the channel that takes it: an e-mail's subject and text, and what its WhatsApp
+/// template fills in.
+#[derive(Debug, Clone)]
+pub struct Alert {
+    pub subject: String,
+    pub body: String,
+    pub whatsapp: AlertTemplate,
+}
+
+/// What an alert's WhatsApp template fills in.
+#[derive(Debug, Clone)]
+pub enum AlertTemplate {
+    /// A saved search's new listings: how many ("3 njoftime të reja", {{1}}) and the search's
+    /// name ({{2}}); its id ends the button's address (/kerkimet/{{1}}), which opens it.
+    Search { new: String, name: String, id: String },
+    /// A listing about to expire or expired: its title ({{1}}) and what becomes of it ("skadon më
+    /// 16.10.2026", "skadoi", {{2}}); its button opens "Njoftimet e mia", the same for all.
+    Expiry { title: String, what: String },
+}
+
 /// Meta's WhatsApp Cloud API, sending an authentication template: Meta's fixed text with the code
 /// in it, and a button that copies the code. With a notice template too (WHATSAPP_NOTICE_TEMPLATE,
 /// a utility template), the notices of messages someone hasn't read.
@@ -81,6 +104,10 @@ pub struct WhatsApp {
     /// ({{1}}) and about what ({{2}}), and its button opens the conversation, its address's end
     /// the conversation's own (the template's URL ending in {{1}}).
     notice_template: Option<String>,
+    /// The utility templates of the alerts (AlertTemplate): a saved search's new listings, and a
+    /// listing about to expire or expired.
+    search_template: Option<String>,
+    expiry_template: Option<String>,
 }
 
 impl WhatsApp {
@@ -92,6 +119,8 @@ impl WhatsApp {
             template: template.to_string(),
             language: language.to_string(),
             notice_template: None,
+            search_template: None,
+            expiry_template: None,
         }
     }
 
@@ -101,28 +130,45 @@ impl WhatsApp {
         self
     }
 
+    /// The same, sending the alerts with these utility templates too, those set up.
+    pub fn with_alerts(mut self, search: Option<String>, expiry: Option<String>) -> Self {
+        self.search_template = search;
+        self.expiry_template = expiry;
+        self
+    }
+
     /// The notice: the template's text with who wrote and about what, and its button to the
     /// conversation, the end of whose address (after /mesazhet/) it fills in.
     pub fn notice_payload(&self, phone: &str, notice: &Notice) -> Option<Value> {
         let template = self.notice_template.as_ref()?;
         let conversation = notice.url.rsplit('/').next().unwrap_or_default();
-        Some(json!({
+        let texts = [notice.writer.as_str(), notice.listing.as_deref().unwrap_or("Pluribus")];
+        Some(self.template_payload(phone, template, &texts, Some(conversation)))
+    }
+
+    /// An alert, by its kind's template if one is set up.
+    pub fn alert_payload(&self, phone: &str, alert: &AlertTemplate) -> Option<Value> {
+        Some(match alert {
+            AlertTemplate::Search { new, name, id } => self.template_payload(phone, self.search_template.as_ref()?, &[new.as_str(), name.as_str()], Some(id.as_str())),
+            AlertTemplate::Expiry { title, what } => self.template_payload(phone, self.expiry_template.as_ref()?, &[title.as_str(), what.as_str()], None),
+        })
+    }
+
+    /// A utility template's message: its body's texts in order, and the end of its URL button's
+    /// address where that address takes one.
+    fn template_payload(&self, phone: &str, template: &str, texts: &[&str], button: Option<&str>) -> Value {
+        let texts: Vec<Value> = texts.iter().map(|text| json!({ "type": "text", "text": text })).collect();
+        let mut components = vec![json!({ "type": "body", "parameters": texts })];
+        if let Some(button) = button {
+            components.push(json!({ "type": "button", "sub_type": "url", "index": "0",
+                                    "parameters": [{ "type": "text", "text": button }] }));
+        }
+        json!({
             "messaging_product": "whatsapp",
             "to": phone.trim_start_matches('+'),
             "type": "template",
-            "template": {
-                "name": template,
-                "language": { "code": self.language },
-                "components": [
-                    { "type": "body", "parameters": [
-                        { "type": "text", "text": notice.writer },
-                        { "type": "text", "text": notice.listing.as_deref().unwrap_or("Pluribus") }
-                    ] },
-                    { "type": "button", "sub_type": "url", "index": "0",
-                      "parameters": [{ "type": "text", "text": conversation }] }
-                ]
-            }
-        }))
+            "template": { "name": template, "language": { "code": self.language }, "components": components }
+        })
     }
 
     async fn post(&self, payload: &Value) -> Result<(), String> {
@@ -167,6 +213,14 @@ impl WhatsApp {
     /// Sends a notice, if a notice template is set up; false if none is.
     pub async fn send_notice(&self, phone: &str, notice: &Notice) -> Result<bool, String> {
         match self.notice_payload(phone, notice) {
+            Some(payload) => self.post(&payload).await.map(|_| true),
+            None => Ok(false),
+        }
+    }
+
+    /// Sends an alert, if its kind's template is set up; false if none is.
+    pub async fn send_alert(&self, phone: &str, alert: &AlertTemplate) -> Result<bool, String> {
+        match self.alert_payload(phone, alert) {
             Some(payload) => self.post(&payload).await.map(|_| true),
             None => Ok(false),
         }
@@ -229,7 +283,7 @@ impl Email {
         self.transport.send(self.notice_message(to, notice)?).await.map(|_| ()).map_err(|error| format!("SMTP: {error}"))
     }
 
-    /// Any e-mail of plain text: the alerts of saved searches (web/searches.rs).
+    /// Any e-mail of plain text: the alerts (Alert), the invitations into stores (web/stores.rs).
     pub async fn send_text(&self, to: &str, subject: &str, body: &str) -> Result<(), String> {
         let message = self.text(to, subject.to_string(), body.to_string())?;
         self.transport.send(message).await.map(|_| ()).map_err(|error| format!("SMTP: {error}"))
@@ -275,7 +329,8 @@ impl Senders {
                     &template,
                     &env("WHATSAPP_LANGUAGE").unwrap_or_else(|| "sq".to_string()),
                 )
-                .with_notices(env("WHATSAPP_NOTICE_TEMPLATE")),
+                .with_notices(env("WHATSAPP_NOTICE_TEMPLATE"))
+                .with_alerts(env("WHATSAPP_SEARCH_TEMPLATE"), env("WHATSAPP_EXPIRY_TEMPLATE")),
             ),
             (None, None, None) => None,
             _ => {
@@ -306,13 +361,27 @@ impl Senders {
     }
 
     /// Sends an e-mail of `subject` and `body` where `contact` is an address and e-mail is set up
-    /// (the alerts of saved searches); a phone number, which has no WhatsApp template for these,
-    /// or a channel not set up, goes to the log.
+    /// (an invitation into a store); a phone number, which has no WhatsApp template for these, or
+    /// a channel not set up, goes to the log.
     pub async fn send_text(&self, contact: &Contact, subject: &str, body: &str) -> Result<Channel, String> {
         match (contact, &self.email) {
             (Contact::Email(address), Some(email)) => email.send_text(address, subject, body).await.map(|_| Channel::Email),
             _ => {
                 tracing::info!(to = %contact.masked(), subject, "alert: this channel isn't set up, so it only goes to this log");
+                Ok(Channel::Log)
+            }
+        }
+    }
+
+    /// Sends an alert to `contact`: by e-mail, or by WhatsApp where its kind's template is set up;
+    /// otherwise it goes to the log.
+    pub async fn send_alert(&self, contact: &Contact, alert: &Alert) -> Result<Channel, String> {
+        match (contact, &self.email, &self.whatsapp) {
+            (Contact::Email(address), Some(email), _) => email.send_text(address, &alert.subject, &alert.body).await.map(|_| Channel::Email),
+            // The guard sends it, where its template is set up.
+            (Contact::Phone(phone), _, Some(whatsapp)) if whatsapp.send_alert(phone, &alert.whatsapp).await? => Ok(Channel::WhatsApp),
+            _ => {
+                tracing::info!(to = %contact.masked(), subject = %alert.subject, "alert: this channel isn't set up, so it only goes to this log");
                 Ok(Channel::Log)
             }
         }
@@ -432,6 +501,28 @@ mod tests {
         assert_eq!(payload["template"]["components"][0]["parameters"][0]["text"], "Besa");
         assert_eq!(payload["template"]["components"][0]["parameters"][1]["text"], "Volkswagen Golf 1.6, 2016");
         assert_eq!(payload["template"]["components"][1]["parameters"][0]["text"], "0192f0c1-0000-7000-8000-000000000001");
+    }
+
+    #[test]
+    fn whatsapp_alerts_need_their_kinds_templates() {
+        let search = AlertTemplate::Search { new: "3 njoftime të reja".into(), name: "Golf në Tiranë".into(), id: "0192f0c1-0000-7000-8000-00000000000a".into() };
+        let expiry = AlertTemplate::Expiry { title: "Volkswagen Golf 1.6, 2016".into(), what: "skadon më 16.10.2026".into() };
+        let whatsapp = WhatsApp::new("http://localhost", "v21.0", "123", "secret", "kodi_hyrjes", "sq");
+        assert!(whatsapp.alert_payload("+355691234567", &search).is_none());
+        let whatsapp = whatsapp.with_alerts(Some("kerkim_i_ruajtur".into()), None);
+        let payload = whatsapp.alert_payload("+355691234567", &search).unwrap();
+        assert_eq!(payload["template"]["name"], "kerkim_i_ruajtur");
+        assert_eq!(payload["template"]["components"][0]["parameters"][0]["text"], "3 njoftime të reja");
+        assert_eq!(payload["template"]["components"][0]["parameters"][1]["text"], "Golf në Tiranë");
+        assert_eq!(payload["template"]["components"][1]["parameters"][0]["text"], "0192f0c1-0000-7000-8000-00000000000a");
+        assert!(whatsapp.alert_payload("+355691234567", &expiry).is_none());
+        let whatsapp = whatsapp.with_alerts(None, Some("njoftim_skadon".into()));
+        let payload = whatsapp.alert_payload("+355691234567", &expiry).unwrap();
+        assert_eq!(payload["to"], "355691234567");
+        assert_eq!(payload["template"]["name"], "njoftim_skadon");
+        assert_eq!(payload["template"]["components"][0]["parameters"][1]["text"], "skadon më 16.10.2026");
+        // Its button's address is the same for all: nothing to fill in.
+        assert_eq!(payload["template"]["components"].as_array().unwrap().len(), 1);
     }
 
     #[test]

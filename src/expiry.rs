@@ -2,7 +2,8 @@
 //! so that the site doesn't fill with things long gone. Every CHECK_EVERY the server takes off the
 //! site those whose time is up (EXPIRED), and tells their sellers WARN_DAYS before and when it
 //! happens: a notification each (EXPIRING, EXPIRED), and an e-mail where the seller signs in with
-//! an address, with the way to keep it ("Rifresko", on "Njoftimet e mia" and the listing's own
+//! an address, or a WhatsApp message by its template where they sign in with a number
+//! (WHATSAPP_EXPIRY_TEMPLATE), with the way to keep it ("Rifresko", on "Njoftimet e mia" and the listing's own
 //! page, keeps it up LISTING_DAYS more, at the top of "newest first" again once a week at most:
 //! db::renew_listing).
 
@@ -13,7 +14,7 @@ use sqlx::PgPool;
 use crate::{
     db::{self, ExpiryNotice, LISTING_DAYS},
     format::{self, Contact},
-    sender,
+    sender::{self, Alert, AlertTemplate},
 };
 
 /// How many days before a listing expires its seller hears of it.
@@ -33,7 +34,7 @@ pub async fn run(db: &PgPool, origin: &str) -> sqlx::Result<(usize, usize)> {
              Për ta kthyer në faqe për {LISTING_DAYS} ditë të tjera, rifreskoje te „Njoftimet e mia“: {origin}/njoftimet-e-mia\n",
             listing.title
         );
-        tell(listing, &subject, &body).await;
+        tell(listing, Alert { subject, body, whatsapp: AlertTemplate::Expiry { title: listing.title.clone(), what: "skadoi".into() } }).await;
     }
     let warned = db::warn_expiring(db, WARN_DAYS).await?;
     for listing in &warned {
@@ -44,20 +45,22 @@ pub async fn run(db: &PgPool, origin: &str) -> sqlx::Result<(usize, usize)> {
              Për ta mbajtur {LISTING_DAYS} ditë të tjera, rifreskoje te „Njoftimet e mia“: {origin}/njoftimet-e-mia\n",
             listing.title
         );
-        tell(listing, &subject, &body).await;
+        let what = format!("skadon më {date}");
+        tell(listing, Alert { subject, body, whatsapp: AlertTemplate::Expiry { title: listing.title.clone(), what } }).await;
     }
     Ok((warned.len(), expired.len()))
 }
 
-/// An e-mail to the listing's seller, where they sign in with an address and allow e-mail; else
-/// the log has it (sender.rs), as for a phone number, which has no WhatsApp template for these.
-async fn tell(listing: &ExpiryNotice, subject: &str, body: &str) {
+/// The alert to the listing's seller: by e-mail where they sign in with an address and allow
+/// e-mail, by WhatsApp where they sign in with a number and its template is set up; else the log
+/// has it (sender.rs).
+async fn tell(listing: &ExpiryNotice, alert: Alert) {
     let contact = match (&listing.email, &listing.phone) {
         (Some(email), _) if listing.email_ok => Contact::Email(email.clone()),
         (_, Some(phone)) => Contact::Phone(phone.clone()),
         _ => return,
     };
-    match sender::senders().send_text(&contact, subject, body).await {
+    match sender::senders().send_alert(&contact, &alert).await {
         Ok(channel) => tracing::debug!(?channel, listing = listing.public_no, "expiry notice sent"),
         Err(error) => tracing::warn!(%error, listing = listing.public_no, "expiry notice not sent"),
     }
