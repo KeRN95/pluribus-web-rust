@@ -1793,22 +1793,24 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     // What kind of listing it is, and its condition, over the price, not among the details.
     assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur · <span class="listing-number">"#));
     assert!(!response.body.contains(">Gjendja</dt>"));
-    // A car's page, laid out as FINN's: its key facts, the year, the mileage, the gearbox and the
-    // fuel, in a row under the title, each with its icon and its name over its value; the rest of
-    // its details in a grid after the description, a name with its icon over its value, the facts
-    // left out; and its options in a list of their own, each with a check. No pills.
-    let facts = &response.body[response.body.find(r#"<dl class="key-facts">"#).expect("the key facts")..];
-    let facts = &facts[..facts.find("</dl>").unwrap()];
-    let order = positions(facts, &["<dd>2016</dd>", "<dd>148\u{a0}000\u{a0}km</dd>", "<dd>Manuale</dd>", "<dd>Naftë</dd>"]);
-    assert!(order.is_sorted(), "{order:?}");
-    assert_eq!(facts.matches(r#"<div class="key-fact">"#).count(), 4, "{facts}");
-    assert_eq!(facts.matches(r#"<svg class="key-fact-icon""#).count(), 4, "{facts}");
-    assert!(facts.contains("<dt>Kilometrazhi</dt><dd>148\u{a0}000\u{a0}km</dd>"), "{facts}");
+    // A car's page, laid out as FINN's: its details in a grid after the description, a name with
+    // its icon over its value, the year, the mileage, the gearbox and the fuel among them (no row
+    // of key facts under the title); and its options in a list of their own, each with a check.
+    // No pills.
+    assert!(!response.body.contains("key-facts"));
     let specs = &response.body[response.body.find(r#"<dl class="spec-grid">"#).expect("the details' grid")..];
     let specs = &specs[..specs.find("</dl>").unwrap()];
     assert!(specs.contains("Karroceria</dt><dd>Hatchback</dd>"), "{specs}");
     assert!(specs.contains(r#"<div class="spec">"#) && specs.contains(r#"<dt><svg class="spec-icon""#), "{specs}");
-    assert!(!specs.contains("Kilometrazhi") && !specs.contains("Naftë"), "the facts leave the details: {specs}");
+    for value in ["<dd>2016</dd>", "<dd>148\u{a0}000\u{a0}km</dd>", "<dd>Manuale</dd>", "<dd>Naftë</dd>"] {
+        assert!(specs.contains(value), "{value}: {specs}");
+    }
+    // The map under its own heading, "Lokacioni", on a car's page.
+    let order = positions(&response.body, &[r#"<section class="listing-map-section""#, "<h2>Lokacioni</h2>", r#"<div class="listing-map""#]);
+    assert!(order.is_sorted(), "{order:?}");
+    // What qualifies the price on a line of its own under it, without its brackets.
+    let mercedes = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
+    assert!(mercedes.contains(r#"<span class="price-note">i diskutueshëm</span>"#), "{mercedes}");
     assert!(!response.body.contains(r#"<dd class="attribute"#), "no pills on a car's page");
     assert!(response.body.contains("</svg>ABS</li>") && response.body.contains("</svg>Kondicioner</li>"));
     let order = positions(&response.body, &["<h2>Përshkrimi</h2>", "<h2>Detajet</h2>", r#"<section class="listing-options">"#, r#"<ul class="options">"#]);
@@ -4149,13 +4151,12 @@ async fn a_cars_title_is_made_from_what_it_is(pool: PgPool) {
         .unwrap();
     assert_eq!(generated.as_deref(), Some("Volkswagen Golf 1.6, 2017"));
     // The seller's own heads the description; the details leave out what the title says, but for
-    // the engine's exact size, and the year, which stands among the key facts under the title (as
-    // FINN has it), not in the grid.
+    // the engine's exact size; the year is under the title, after the make and model.
     assert!(page.contains(r#"<h3 class="description-heading">Volkswagen Golf 7 1.6 TDI, 2017</h3>"#));
     for said in ["Marka", "Modeli"] {
         assert!(!page.contains(&format!(">{said}</dt>")), "{said}");
     }
-    assert!(page.contains("<dt>Viti</dt><dd>2017</dd>") && page.matches("Viti</dt>").count() == 1);
+    assert!(!page.contains("Viti</dt>"));
     for shown in ["Karroceria", "Ngjyra", "Motorri"] {
         assert!(page.contains(&format!("{shown}</dt>")), "{shown}");
     }
@@ -4617,11 +4618,10 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // A private seller: Ana, with the five fixture listings she sells.
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
-    // The category above the photo; the title, and on a car's page its key facts, under it; then
-    // the deal, the price in its box, the contact bar, the phone and the message, wide pills,
-    // the share, a link in a circle, and the report, and (a car's page) her initial, her name,
-    // since when and how many listings, leading to her profile; then the description and the
-    // details; then her other listings.
+    // The category above the photo; the title under it; then the deal, the price in its box, on a
+    // car's page her initial, her name, since when and how many listings, leading to her profile,
+    // then the contact bar, the phone and the message, wide pills, the share, a link in a circle,
+    // and the report; then the description and the details; then her other listings.
     let order = positions(&page, &[
         r#"<nav class="category-path listing-path""#,
         r#"<div class="gallery">"#,
@@ -4629,20 +4629,19 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         "<h1>Volkswagen Golf</h1>",
         r#"<p class="listing-variant">7, 2016, naftë</p>"#,
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur · "#,
-        r#"<dl class="key-facts">"#,
         r#"<div class="listing-deal">"#,
         r#"<div class="price-box">"#,
         r#"<p class="listing-price">"#,
-        r#"<aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">"#,
-        r#"<form id="phone-reveal" method="post""#,
-        "</aside>",
-        r#"<div class="actions">"#,
-        r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
         r#"<section class="seller-section" aria-labelledby="seller-heading">"#,
         r#"<h2 id="seller-heading">Shitësi</h2>"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="seller-name">Ana</span>"#,
         r#"<span class="seller-summary">Në Pluribus që nga "#,
+        r#"<aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">"#,
+        r#"<form id="phone-reveal" method="post""#,
+        "</aside>",
+        r#"<div class="actions">"#,
+        r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
         "<h2>Përshkrimi</h2>",
         "<h2>Detajet</h2>",
     ]);

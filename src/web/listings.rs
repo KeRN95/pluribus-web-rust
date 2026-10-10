@@ -48,10 +48,6 @@ pub const CAR_GALLERY_SIZES: &str =
 /// 75%, a lease 80%). The loan is the rest of the price.
 pub const LOAN_DOWN_PERCENT: u32 = 35;
 
-/// A car's key facts, in a row under its title (listing.html, .key-facts), in this order: the
-/// year, the mileage, the gearbox and the fuel, as FINN has them. They leave the details.
-const CAR_FACTS: [&str; 4] = ["vehicle_year", "vehicle_mileage", "vehicle_transmission", "vehicle_fuel"];
-
 /// A car's title as FINN shows one: its make and model as the title ("Volkswagen Golf"), and
 /// what the rest of the title says under it, quieter ("1.6, 2017"); for a title that starts with
 /// its make and model, as a made one does (properties.rs).
@@ -264,6 +260,12 @@ impl ListingDetail {
     }
 
     /// "/muaj", " (i diskutueshëm)", or empty.
+    /// The note on a line of its own under the price, as a car's page has it: without its
+    /// brackets, "i diskutueshëm", "/muaj i diskutueshëm".
+    pub fn price_note_alone(&self) -> String {
+        self.price_note().replace(['(', ')'], "").trim().to_string()
+    }
+
     pub fn price_note(&self) -> String {
         format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).1
     }
@@ -429,16 +431,13 @@ struct ListingShow {
     /// (.listing-split, listing.css), its photos sized for that (SPLIT_GALLERY_SIZES).
     wide_photos: bool,
     /// A car's page (Makina), laid out as FINN's from 960 px up (.listing-car, listing.css): the
-    /// photos across the page, and under them the title, the key facts, the description and the
-    /// details at the left, and the price, the ways to the seller and the seller's card in a
+    /// photos across the page, and under them the title, the description and the details at the
+    /// left, and the price, the ways to the seller and the seller's card in a
     /// column at the right (.listing-deal), its photos sized for the page (CAR_GALLERY_SIZES).
     car_page: bool,
     /// On a car's page, its make and model as the title and the rest of the title under them
     /// (CarTitle); None where the title doesn't start with them, and on every other page.
     car_title: Option<CarTitle>,
-    /// A car's key facts, in a row under its title: the year, the mileage, the gearbox and the
-    /// fuel (CAR_FACTS), each with its icon; none on any other page.
-    facts: Vec<Detail>,
     /// On a car's page, its options, the details with several values (a multi-select's), listed
     /// under their own names after the grid of the others; elsewhere among the details.
     options: Vec<Detail>,
@@ -637,18 +636,12 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             values: attribute.shown.clone(),
         }
     };
-    // A car's page (Makina) has its key facts in a row under the title, which leave the details,
-    // and its options under their own names after the grid of the others (listing.html).
+    // A car's page (Makina) has its options under their own names after the grid of the other
+    // details (listing.html).
     let car_page = slugs.contains(&"makina");
-    let facts: Vec<Detail> = if car_page {
-        CAR_FACTS.iter().filter_map(|code| attributes.iter().find(|attribute| attribute.code == *code)).map(detail_of).collect()
-    } else {
-        Vec::new()
-    };
     let mut details: Vec<Detail> = attributes
         .iter()
         .filter(|attribute| !(titled && properties::TITLE_CODES.contains(&attribute.code.as_str())))
-        .filter(|attribute| !(car_page && CAR_FACTS.contains(&attribute.code.as_str())))
         .map(detail_of)
         .collect();
     // A property's zone in its town comes first among its details, lit as its cards say it too.
@@ -701,7 +694,6 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             wide_photos,
             car_page,
             car_title,
-            facts,
             options,
             page,
             views,

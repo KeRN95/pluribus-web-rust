@@ -208,32 +208,31 @@
 
 /* A car's page (car_page in listings.rs; .listing-car), laid out as FINN has its: the path, then
    the photos across the page, four by three, with the filmstrip over their foot, and from 960 px up two
-   columns under those. At the left the title and the kind, the car's key facts in a row (the
-   year, the mileage, the gearbox and the fuel, each with its icon, its name quiet over its value;
-   .key-facts), the description, the other details in a grid, a name over its value with its
+   columns under those. At the left the title and the kind, a hairline under them, the
+   description, the other details in a grid, a name over its value with its
    icon, three to a line (.spec-grid), the options in columns with a check each under their own
-   names (.options), and the map. At the right, in a column of 19.5rem, which goes with the page
-   (it stuck under the top bar at first), the price in a card, the bar's pills on a line each, the
-   message's first, the share and the report, and the seller's card under its heading: the deal
+   names (.options), and the map under "Lokacioni". At the right, in a column of 19.5rem, which
+   goes with the page (it stuck under the top bar at first), the price in a card, the seller's
+   card under its heading, the bar's pills on a line each, the message's first, and the share and
+   the report: the deal
    (.listing-deal), which on every other page, and on a phone, is no box at all, its parts in the
    rest's grid (display: contents). The page is 60rem wide, as a split page is. On a phone one
-   column: the title, the facts, the price, the bar, the circles, the description, the details,
-   the options, the seller and the map. */
+   column: the title, the price, the bar, the circles, the description, the details, the
+   options, the seller and the map. */
 .listing-deal { display: contents; }
 /* The title a size up on a car's page, its make and model alone, and the rest of the title under
    it, quieter, as FINN has it (CarTitle, listings.rs); the kind's line under that. */
 .listing-car .listing-header h1 { font-size: 1.75rem; }
 .listing-variant { margin: .35rem 0 0; color: var(--muted); font-size: var(--text-md); }
-/* Room between the photos and the title, and a hairline under the facts, as over the description. */
+/* Room between the photos and the title, and a hairline under the kind's line, the page's one;
+   "Lokacioni" over the map, as the description and the details have their headings. The price a
+   size down, and what qualifies it ("i diskutueshëm") on a line of its own under it, quietly. */
 .listing-car > .listing-side { margin-top: 1.25rem; }
-.key-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1rem; margin: 1rem 0 0; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
-.key-fact { display: flex; align-items: center; gap: .6rem; min-width: 0; }
-.key-fact-icon { flex: none; width: 38px; height: 38px; color: var(--text); }
-/* A hairline over the description, the details and the map, as FINN parts them. */
-.listing-car .listing-side > :is(.listing-description, .listing-details, .listing-map-section) { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
-.key-fact-text { display: grid; min-width: 0; }
-.key-fact dt { color: var(--muted); font-size: var(--text-sm); }
-.key-fact dd { margin: 0; font-weight: var(--semibold); overflow-wrap: anywhere; }
+.listing-car .listing-header { padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+.listing-car .listing-side > .listing-map-section { margin-top: 1.75rem; }
+.listing-car .listing-map-section > h2 { margin-top: 0; }
+.listing-car .listing-price { font-size: 1.5rem; }
+.listing-car .price-note { display: block; margin-top: .3rem; color: var(--muted); font-size: var(--text-sm); font-weight: 400; }
 .spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.25rem; margin: 0; }
 .spec { min-width: 0; }
 .spec dt { display: flex; align-items: center; gap: .35rem; color: var(--muted); font-size: var(--text-sm); }
@@ -244,7 +243,6 @@
 .option-check { flex: none; color: var(--accent); }
 @media (min-width: 720px) {
   .listing-car .listing-header h1 { font-size: 2rem; }
-  .key-facts { grid-template-columns: repeat(4, auto); justify-content: start; gap: 1rem 2.25rem; }
   .spec-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .options { columns: 3; }
 }
@@ -271,6 +269,7 @@
   .listing-car .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
   .listing-car .listing-deal > .actions { margin-top: .75rem; }
   .listing-car .listing-deal > .seller-section { margin-top: 1.5rem; }
+  .listing-car .listing-deal > .seller-section + .contact-bar { margin-top: 1rem; }
 }
 
 .listing-photo {

@@ -183,19 +183,6 @@
         number, to name it on the phone. -#}
     <p class="card-meta listing-kind">{{ listing.kind_line() }} · <span class="listing-number">Numri i njoftimit: {{ listing.public_no }}</span></p>
   </header>
-  {%- if !facts.is_empty() %}
-  {#- A car's key facts in a row under the title, as FINN has them (listings.rs, CAR_FACTS): the
-      year, the mileage, the gearbox and the fuel, each with its icon, its name quiet over its
-      value (listing.css, .key-facts). -#}
-  <dl class="key-facts">
-    {%- for fact in facts %}
-    <div class="key-fact">
-      {%- if let Some(icon) = fact.icon %}<svg class="key-fact-icon" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}
-      <div class="key-fact-text"><dt>{{ fact.label }}</dt>{% for value in fact.values %}<dd>{{ value }}</dd>{% endfor %}</div>
-    </div>
-    {%- endfor %}
-  </dl>
-  {%- endif %}
   {#- The deal: the price, the ways to the seller, the share and the report, and on a car's page
       the seller's card. Its parts stand in the rest's grid with the others (display: contents),
       but on a car's page from 960 px up it is a column at the page's right (listing.css,
@@ -211,7 +198,7 @@
         the calculator (loan_calculator.html); a tap outside or Escape closes it
         (dropdown_controller.js). -#}
     <div class="price-row{% if area_price.is_some() %} with-area{% endif %}">
-      <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{{ note }}</span>{% endif %}{% include "price_drop.html" %}</p>
+      <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if car_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
       {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
       <details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" data-loan-down-percent-value="{{ LOAN_DOWN_PERCENT }}">
         <summary>
@@ -227,10 +214,13 @@
     {%- else %}
     {#- The price, and smaller after it what qualifies it: "/muaj", "(i diskutueshëm)"; a property
         on sale says under it what a square metre of it costs (area_price.html). -#}
-    <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{{ note }}</span>{% endif %}{% include "price_drop.html" %}</p>
+    <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if car_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
     {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
     {%- endif %}
   </div>
+  {#- On a car's page the seller's card comes under the price, and the ways to reach them under
+      it. -#}
+  {%- if car_page %}{% include "seller_card.html" %}{% endif %}
 
   {#- How to reach the seller, under the price: the phone (an envelope for a seller who signed in
       by e-mail) and a message, wide pills that say their names, the way to the seller being what
@@ -301,7 +291,6 @@
       so that its buttons stay few. -#}
   <p class="blocked-note">E ke bllokuar këtë shitës: njoftimet që ka vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit. E zhbllokon te <a href="/njoftimet-e-mia">Njoftimet e mia</a>.</p>
   {%- endif %}
-  {%- if car_page %}{% include "seller_card.html" %}{% endif %}
   </div>
 
   {% if car_page %}
@@ -370,6 +359,9 @@
     is its place's, its town's for a zone without one of its own, so a circle round it says where
     rather than a pin; the place's name over the map's top left. -#}
 <section class="listing-map-section" aria-label="Vendndodhja">
+  {%- if car_page %}
+  <h2>Lokacioni</h2>
+  {%- endif %}
   <div class="listing-map" data-controller="listing-map"
        data-listing-map-latitude-value="{{ map.latitude }}" data-listing-map-longitude-value="{{ map.longitude }}">
     <div class="map-canvas listing-map-canvas" data-listing-map-target="canvas"></div>
