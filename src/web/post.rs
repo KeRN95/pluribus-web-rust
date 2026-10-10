@@ -78,6 +78,8 @@ pub struct ListingForm {
     name: String,
     /// Posting without being signed in: the phone number or e-mail address to post with.
     contact: String,
+    /// "Posto si": the address of the store it is posted as (stores.rs); empty for the poster's own.
+    si: String,
     /// Hidden from people; see sign_in.html.
     website: String,
     started: Option<i64>,
@@ -108,6 +110,7 @@ impl ListingForm {
                 "zone" => &mut form.zone,
                 "name" => &mut form.name,
                 "contact" => &mut form.contact,
+                "si" => &mut form.si,
                 "website" => &mut form.website,
                 "started" => {
                     form.started = value.parse().ok();
@@ -140,6 +143,7 @@ impl ListingForm {
             zone: listing.zone.unwrap_or_default(),
             name: listing.contact_name.unwrap_or_default(),
             contact: String::new(),
+            si: String::new(),
             website: String::new(),
             started: None,
             properties: values,
@@ -207,6 +211,9 @@ struct ListingFormPage {
     /// A new listing's form: "Zona" follows the zone its title or description names (guess_zone,
     /// listing_form_controller.js), and its foot names the terms it is posted under.
     new_listing: bool,
+    /// The stores a signed-in poster may post for (stores.rs), offered as "Posto si" on a new
+    /// listing's form; none, and the form doesn't ask.
+    stores: Vec<db::MyStore>,
 }
 
 impl ListingFormPage {
@@ -319,6 +326,7 @@ fn page(
         photos: Vec::new(),
         ai_fill: false,
         new_listing: matches!(purpose, Purpose::New),
+        stores: Vec::new(),
     }
 }
 
@@ -428,17 +436,27 @@ struct Checked<'a> {
     name: &'a str,
 }
 
-/// Who a listing is posted as: the account, and the contact buyers get.
+/// Who a listing is posted as: the account, the contact buyers get, and the store it is posted
+/// for, if any.
 struct Poster<'a> {
     id: uuid::Uuid,
     phone: Option<&'a str>,
     email: Option<&'a str>,
+    business_id: Option<uuid::Uuid>,
 }
 
 impl<'a> Poster<'a> {
     fn of(user: &'a SessionUser) -> Self {
         let phone = user.phone.as_deref();
-        Self { id: user.id, phone, email: if phone.is_none() { user.email.as_deref() } else { None } }
+        Self { id: user.id, phone, email: if phone.is_none() { user.email.as_deref() } else { None }, business_id: None }
+    }
+
+    /// Posting for a store: buyers get its public number, or the poster's contact when it has none.
+    fn for_store(user: &'a SessionUser, store: &'a db::MyStore) -> Self {
+        match store.public_phone.as_deref() {
+            Some(phone) => Self { id: user.id, phone: Some(phone), email: None, business_id: Some(store.id) },
+            None => Self { business_id: Some(store.id), ..Self::of(user) },
+        }
     }
 }
 
@@ -467,6 +485,7 @@ impl<'a> Checked<'a> {
             email: poster.email,
             properties,
             publish,
+            business_id: poster.business_id,
         }
     }
 }
@@ -580,7 +599,16 @@ pub async fn new_listing(State(state): State<AppState>, headers: HeaderMap) -> R
     let (categories, cities) = tokio::try_join!(db::categories(&state.db), db::cities(&state.db))?;
     let mut page = page(&Purpose::New, user.as_ref(), &categories, &cities, &[], ListingForm::default(), HashMap::new());
     page.ai_fill = state.ai.is_some();
+    page.stores = posting_stores(&state, user.as_ref()).await?;
     render(page)
+}
+
+/// The stores this poster may post for (db::POSTING_ROLES); none for someone not signed in.
+async fn posting_stores(state: &AppState, user: Option<&SessionUser>) -> Result<Vec<db::MyStore>> {
+    let Some(user) = user else {
+        return Ok(Vec::new());
+    };
+    Ok(db::my_stores(&state.db, user.id).await?.into_iter().filter(db::MyStore::posts).collect())
 }
 
 /// The properties of the category the form names, if it is one listings go into.
@@ -598,7 +626,7 @@ pub async fn create_listing(
     State(state): State<AppState>,
     ClientIp(ip): ClientIp,
     headers: HeaderMap,
-    Submission { pairs, photos }: Submission,
+    Submission { pairs, photos, .. }: Submission,
 ) -> Result<Response> {
     let form = ListingForm::from_pairs(pairs);
     let user = current_user(&state, &headers).await?;
@@ -608,6 +636,18 @@ pub async fn create_listing(
     let checked = check(&form, &categories, &cities, &mut errors);
     let properties = properties::check(&attributes, &form.properties, &mut errors);
     photos::check(&photos, 0, &mut errors);
+    // "Posto si": a store the poster may post for, or their own.
+    let stores = posting_stores(&state, user.as_ref()).await?;
+    let store = match form.si.as_str() {
+        "" => None,
+        slug => {
+            let store = stores.iter().find(|store| store.slug == slug);
+            if store.is_none() {
+                fail(&mut errors, "si", "Zgjidh një nga dyqanet e tua, ose veten.");
+            }
+            store
+        }
+    };
 
     // Not signed in: the listing goes under the phone number or e-mail address typed with it, and
     // the account that has it, or one made with the listing under the name typed. No code, so
@@ -649,12 +689,16 @@ pub async fn create_listing(
     let (Some(checked), Some(processed)) = (checked, processed) else {
         let mut again = page(&Purpose::New, user.as_ref(), &categories, &cities, &attributes, form, errors);
         again.ai_fill = state.ai.is_some();
+        again.stores = stores;
         return form_again(again);
     };
 
     // All checked: the account of someone not signed in, made now if their contact has none.
     let poster = match (&user, &contact) {
-        (Some(user), _) => Poster::of(user),
+        (Some(user), _) => match store {
+            Some(store) => Poster::for_store(user, store),
+            None => Poster::of(user),
+        },
         (None, Some(contact)) => {
             let name = display_name(&form.name);
             let account = db::poster_account(&state.db, contact.phone(), contact.email(), name.as_deref()).await?;
@@ -662,7 +706,7 @@ pub async fn create_listing(
                 // Waiting for a code from when posting needed one: it needs none now.
                 db::confirm_account(&state.db, account.id, name.as_deref()).await?;
             }
-            Poster { id: account.id, phone: contact.phone(), email: contact.email() }
+            Poster { id: account.id, phone: contact.phone(), email: contact.email(), business_id: None }
         }
         (None, None) => unreachable!("without a contact, the form went back with an error"),
     };
@@ -744,7 +788,7 @@ pub async fn update_listing(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(public_no): Path<i64>,
-    Submission { pairs, photos }: Submission,
+    Submission { pairs, photos, .. }: Submission,
 ) -> Result<Response> {
     // Photos ticked "Hiq"; only the listing's own count, whatever the form says.
     let removed: Vec<uuid::Uuid> = pairs

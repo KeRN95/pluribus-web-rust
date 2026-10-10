@@ -346,6 +346,32 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 }
 .profile-header h1 { margin: 0; font-size: var(--text-2xl); line-height: 1.2; }
 .profile-header p { margin: .15rem 0 0; color: var(--muted); font-size: var(--text-sm); }
+/* A store's page (profile.html, stores.rs): its cover across the column over its head, rounded
+   as the cards are; its logo round in place of the initial; "Ndrysho dyqanin" at the head's end
+   for its people; under it what it says, its address and hours as a short list, and its ways to
+   reach it as buttons on a line that wraps. */
+.store-cover { display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; margin: 1rem 0 0; border-radius: var(--radius); object-fit: cover; background: var(--surface-muted); }
+.avatar-logo { object-fit: cover; background: #fff; }
+.store-edit { margin-left: auto; }
+.store-info { max-width: 42rem; margin: 0 0 1.25rem; }
+.store-about { margin: 0 0 .6rem; white-space: pre-line; }
+.store-facts { display: grid; gap: .35rem; margin: .75rem 0; }
+.store-facts div { display: flex; gap: .75rem; }
+.store-facts dt { flex: 0 0 4rem; color: var(--muted); }
+.store-facts dd { margin: 0; }
+.store-contacts { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0 0; }
+.store-contacts svg { flex: none; }
+/* A store's form (store_form.html): its sections' headings, its pictures now with "Hiqe". */
+.store-form h2 { margin: 1.75rem 0 .5rem; font-size: var(--text-lg); }
+.store-current { display: flex; align-items: center; gap: .9rem; margin: .25rem 0 .5rem; }
+.store-logo-preview { border-radius: 50%; object-fit: cover; }
+.store-cover-preview { border-radius: 8px; object-fit: cover; }
+.store-whatsapp { margin: -.25rem 0 1rem; }
+/* The stores in "Cilësimet": a line each, its name, the user's role, "Ndrysho". */
+.settings-stores { margin: .5rem 0 1rem; padding: 0; list-style: none; }
+.settings-store { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; padding: .55rem 0; border-top: 1px solid var(--border); }
+.settings-store a:first-child { color: var(--text); font-weight: var(--semibold); text-decoration: none; }
+.settings-store .button { margin-left: auto; }
 /* Its verified number keeps the green its badge has everywhere (page.css), its size too. */
 .profile-header .verified { margin-top: .3rem; color: var(--below); font-size: var(--text-xs); }
 /* Searching one seller's listings: a small field under their name. */

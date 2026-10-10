@@ -5,9 +5,19 @@
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
 {% block content %}
-{#- A seller's public profile: who they are and their active listings, newest first. -#}
+{#- A seller's public profile: who they are and their active listings, newest first. A store's
+    (stores.rs) has its cover over it, its logo in place of the initial, and under it what it
+    says of itself, where it is, when it is open and how to reach it: its number, WhatsApp, its
+    e-mail and its website; its owner and admins have "Ndrysho dyqanin" in its head. -#}
+{%- if let Some(store) = store %}{% if let Some(cover) = store.cover_url %}
+<img class="store-cover" src="{{ cover }}" alt="" width="1500" height="500">
+{%- endif %}{% endif %}
 <header class="profile-header">
+  {%- if let Some(logo) = self.logo() %}
+  <img class="avatar large avatar-logo" src="{{ logo }}" alt="" width="64" height="64">
+  {%- else %}
   <span class="avatar large" aria-hidden="true">{{ initial }}</span>
+  {%- endif %}
   <div>
     <h1>{{ name }}</h1>
     <p>{% if business %}Biznes · {% endif %}Në Pluribus që nga {{ since }} · {{ count }}</p>
@@ -16,7 +26,41 @@
     <p class="verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::VERIFIED|safe }}</svg>{{ verified }}</p>
     {%- endif %}
   </div>
+  {%- if let Some(edit) = edit_url %}
+  <a class="button secondary small store-edit" href="{{ edit }}">Ndrysho dyqanin</a>
+  {%- endif %}
 </header>
+{%- if let Some(store) = store %}
+<section class="store-info" aria-label="Për dyqanin">
+  {%- for paragraph in self.store_paragraphs() %}
+  <p class="store-about">{{ paragraph }}</p>
+  {%- endfor %}
+  {%- if store.address.is_some() || store.town.is_some() || store.opening_hours.is_some() %}
+  <dl class="store-facts">
+    {%- if store.address.is_some() || store.town.is_some() %}
+    <div><dt>Adresa</dt><dd>{% if let Some(address) = store.address %}{{ address }}{% if store.town.is_some() %}, {% endif %}{% endif %}{% if let Some(town) = store.town %}{{ town }}{% endif %}</dd></div>
+    {%- endif %}
+    {%- if let Some(hours) = store.opening_hours %}
+    <div><dt>Orari</dt><dd>{{ hours }}</dd></div>
+    {%- endif %}
+  </dl>
+  {%- endif %}
+  <p class="store-contacts">
+    {%- if let Some(phone) = self.store_phone() %}
+    <a class="button secondary" href="tel:{% if let Some(e164) = store.public_phone %}{{ e164 }}{% endif %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CALL|safe }}</svg>{{ phone }}</a>
+    {%- endif %}
+    {%- if let Some(whatsapp) = self.store_whatsapp() %}
+    <a class="button secondary" href="{{ whatsapp }}" rel="noopener" target="_blank"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::WHATSAPP|safe }}</svg>WhatsApp</a>
+    {%- endif %}
+    {%- if let Some(email) = store.public_email %}
+    <a class="button secondary" href="mailto:{{ email }}">{{ email }}</a>
+    {%- endif %}
+    {%- if let Some(site) = self.store_site() %}
+    <a class="button secondary" href="{% if let Some(url) = store.website_url %}{{ url }}{% endif %}" rel="nofollow ugc noopener" target="_blank">{{ site }}</a>
+    {%- endif %}
+  </p>
+</section>
+{%- endif %}
 {#- A search within this seller's listings only. -#}
 <form class="profile-search" action="{{ path }}" method="get" role="search">
   <input type="search" name="q" value="{% if let Some(q) = query %}{{ q }}{% endif %}" placeholder="Kërko te njoftimet e {{ name }}"

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}{{ heading }} | Pluribus{% endblock %}
+
+{% block content %}
+{#- A store's form (stores.rs), new or its own: the name and what it says of itself, its logo and
+    cover (each kept, replaced or taken off), how to reach it, where it is and when it is open, and
+    its NIPT, which only this form shows. Multipart, for the pictures. A problem stays under its
+    field, the rest as typed; pictures are chosen again. -#}
+<section class="account store-form">
+  <h1>{{ heading }}</h1>
+  <p class="lead">Dyqani ka faqen e vet, dhe njoftimet që poston si ai dalin me emrin dhe logon e tij.</p>
+  <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data">
+    {%- if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+
+    <div class="field">
+      <label class="field-label" for="name">Emri i dyqanit</label>
+      <input id="name" name="name" value="{{ form.name }}" required minlength="2" maxlength="80" autocomplete="organization">
+      {%- if let Some(error) = self.error("name") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="description">Për dyqanin <span class="optional">(s'është e detyrueshme)</span></label>
+      <textarea id="description" name="description" rows="5" maxlength="2000" placeholder="Çfarë shet, që kur, çfarë ofron">{{ form.description }}</textarea>
+      {%- if let Some(error) = self.error("description") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="logo">Logoja <span class="optional">(katrore)</span></label>
+      {%- if let Some(store) = store %}{% if let Some(logo) = store.logo_url %}
+      <p class="store-current"><img class="store-logo-preview" src="{{ logo }}" alt="Logoja e tanishme" width="64" height="64">
+        <label class="notice-setting"><input type="checkbox" name="remove_logo" value="1"{% if form.remove_logo %} checked{% endif %}><span>Hiqe</span></label></p>
+      {%- endif %}{% endif %}
+      <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp">
+      {%- if let Some(error) = self.error("logo") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="cover">Kopertina <span class="optional">(e gjerë, tre herë më shumë se e lartë)</span></label>
+      {%- if let Some(store) = store %}{% if let Some(cover) = store.cover_url %}
+      <p class="store-current"><img class="store-cover-preview" src="{{ cover }}" alt="Kopertina e tanishme" width="240" height="80">
+        <label class="notice-setting"><input type="checkbox" name="remove_cover" value="1"{% if form.remove_cover %} checked{% endif %}><span>Hiqe</span></label></p>
+      {%- endif %}{% endif %}
+      <input id="cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp">
+      {%- if let Some(error) = self.error("cover") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    <h2>Si ju gjejnë</h2>
+    <div class="field">
+      <label class="field-label" for="phone">Telefoni</label>
+      <input id="phone" name="phone" value="{{ form.phone }}" inputmode="tel" autocomplete="tel" placeholder="069 123 4567 ose 04 222 3333">
+      <p class="field-hint">Njoftimet që poston si dyqani tregojnë këtë numër.</p>
+      {%- if let Some(error) = self.error("phone") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+    <label class="notice-setting store-whatsapp"><input type="checkbox" name="whatsapp" value="1"{% if form.whatsapp %} checked{% endif %}>
+      <span>Ky numër ka WhatsApp<span class="field-hint">Faqja e dyqanit jep edhe lidhjen për t'ju shkruar atje.</span></span></label>
+    <div class="field">
+      <label class="field-label" for="email">Email-i <span class="optional">(s'është i detyrueshëm)</span></label>
+      <input id="email" name="email" type="email" value="{{ form.email }}" autocomplete="email" placeholder="info@dyqani.al">
+      {%- if let Some(error) = self.error("email") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+    <div class="field">
+      <label class="field-label" for="website">Faqja në internet <span class="optional">(s'është e detyrueshme)</span></label>
+      <input id="website" name="website" value="{{ form.website }}" inputmode="url" autocomplete="url" placeholder="www.dyqani.al">
+      {%- if let Some(error) = self.error("website") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    <h2>Ku ndodhet</h2>
+    <div class="field">
+      <label class="field-label" for="city">Qyteti</label>
+      <select id="city" name="city">
+        <option value="">Zgjidh qytetin</option>
+        {%- for town in towns %}
+        <option value="{{ town.slug }}"{% if town.slug == form.city %} selected{% endif %}>{{ town.name }}</option>
+        {%- endfor %}
+      </select>
+      {%- if let Some(error) = self.error("city") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+    <div class="field">
+      <label class="field-label" for="address">Adresa</label>
+      <input id="address" name="address" value="{{ form.address }}" maxlength="200" autocomplete="street-address" placeholder="Rruga, numri, pranë çfarë">
+      {%- if let Some(error) = self.error("address") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+    <div class="field">
+      <label class="field-label" for="hours">Orari</label>
+      <input id="hours" name="hours" value="{{ form.hours }}" maxlength="300" placeholder="E hënë – e shtunë, 9:00 – 19:00">
+      {%- if let Some(error) = self.error("hours") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+    <div class="field">
+      <label class="field-label" for="nipt">NIPT <span class="optional">(s'është i detyrueshëm, s'shfaqet)</span></label>
+      <input id="nipt" name="nipt" value="{{ form.nipt }}" maxlength="12" autocomplete="off" placeholder="L12345678A">
+      {%- if let Some(error) = self.error("nipt") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+
+    <button type="submit" class="button">{% if store.is_some() %}Ruaj ndryshimet{% else %}Krijo dyqanin{% endif %}</button>
+  </form>
+  {%- if let Some(store) = store %}
+  <p class="account-note"><a href="/biznes/{{ store.slug }}">Anulo</a></p>
+  {%- else %}
+  <p class="account-note"><a href="/llogaria/cilesimet">Anulo</a></p>
+  {%- endif %}
+</section>
+{% endblock %}

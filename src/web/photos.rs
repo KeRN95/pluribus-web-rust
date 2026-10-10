@@ -33,10 +33,12 @@ const EARLIER_CARD: &str = "-card.jpg";
 const STAND_IN: &str = "public, max-age=300";
 
 /// The posting and edit forms: their fields, and the photos chosen, if any. The forms are sent
-/// as multipart (enctype in listing_form.html); a plain form, with no photos, is read too.
+/// as multipart (enctype in listing_form.html); a plain form, with no photos, is read too. Other
+/// files, by their field's name (a store's "logo" and "cover", store_form.html), go to `files`.
 pub struct Submission {
     pub pairs: Vec<(String, String)>,
     pub photos: Vec<Bytes>,
+    pub files: Vec<(String, Bytes)>,
 }
 
 impl<S: Send + Sync> FromRequest<S> for Submission {
@@ -52,10 +54,10 @@ impl<S: Send + Sync> FromRequest<S> for Submission {
             let Form(pairs) = Form::<Vec<(String, String)>>::from_request(request, state)
                 .await
                 .map_err(IntoResponse::into_response)?;
-            return Ok(Self { pairs, photos: Vec::new() });
+            return Ok(Self { pairs, photos: Vec::new(), files: Vec::new() });
         }
         let mut multipart = Multipart::from_request(request, state).await.map_err(IntoResponse::into_response)?;
-        let (mut pairs, mut photos) = (Vec::new(), Vec::new());
+        let (mut pairs, mut photos, mut files) = (Vec::new(), Vec::new(), Vec::new());
         while let Some(field) = multipart.next_field().await.map_err(refused)? {
             let name = field.name().unwrap_or_default().to_string();
             if name == "photos" {
@@ -64,11 +66,16 @@ impl<S: Send + Sync> FromRequest<S> for Submission {
                 if !data.is_empty() {
                     photos.push(data);
                 }
+            } else if field.file_name().is_some() {
+                let data = field.bytes().await.map_err(refused)?;
+                if !data.is_empty() {
+                    files.push((name, data));
+                }
             } else {
                 pairs.push((name, field.text().await.map_err(refused)?));
             }
         }
-        Ok(Self { pairs, photos })
+        Ok(Self { pairs, photos, files })
     }
 }
 
@@ -301,7 +308,9 @@ fn webp_twin(key: &str) -> Option<String> {
 /// then is made as it is (Media::make_copy), and an AVIF one, which takes longer, has its WebP twin
 /// stand in for it, kept a few minutes only (STAND_IN).
 pub async fn serve(State(state): State<AppState>, Path(key): Path<String>) -> Result<Response> {
-    let safe = key.starts_with("photos/") && key.chars().all(|c| c.is_ascii_alphanumeric() || "/-.".contains(c)) && !key.contains("..");
+    let safe = (key.starts_with("photos/") || key.starts_with("stores/"))
+        && key.chars().all(|c| c.is_ascii_alphanumeric() || "/-.".contains(c))
+        && !key.contains("..");
     if !safe {
         return not_found().await;
     }

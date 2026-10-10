@@ -108,6 +108,11 @@ const AVIF_BUDGET: f64 = 0.14;
 const AVIF_TEXTURE_QUALITY: u8 = 60;
 const PLACEHOLDER_QUALITY: f32 = 40.0;
 const JPEG_QUALITY: f32 = 80.0;
+/// A store's logo (web/stores.rs): the middle square of the picture sent, this many pixels a side;
+/// and its cover, a band three times as wide as it is tall, this wide at most. Kept under
+/// stores/, apart from the listings' photos, whose copies the server's start looks over.
+pub const LOGO_SIDE: u32 = 320;
+pub const COVER_WIDTH: u32 = 1500;
 /// The AI's copies (small_copy) are made as quickly as they can be, by the image crate's encoder.
 const QUICK_JPEG_QUALITY: u8 = 82;
 /// A stored file never changes: a new photo gets new names. Browsers and CDNs may keep it a year.
@@ -484,6 +489,48 @@ pub fn copy_from(webp_copy: &[u8], ending: &str) -> Result<Vec<u8>, NotAPhoto> {
 /// the AI looks at when it fills in the listing form (web/ai_fill.rs). Slow work too.
 pub fn small_copy(bytes: &[u8], side: u32) -> Result<Vec<u8>, NotAPhoto> {
     quick_jpeg(&shrink(decode(bytes)?, side))
+}
+
+/// A store's logo as WebP: the middle square of the picture, LOGO_SIDE a side (less for a smaller
+/// one), what is see-through in it white, as the pages' light theme is. Slow work too.
+pub fn logo(bytes: &[u8]) -> Result<Vec<u8>, NotAPhoto> {
+    let image = on_white(decode(bytes)?);
+    let side = image.width().min(image.height());
+    let square = image.crop_imm((image.width() - side) / 2, (image.height() - side) / 2, side, side);
+    let logo = if side > LOGO_SIDE { square.resize_exact(LOGO_SIDE, LOGO_SIDE, FilterType::Lanczos3) } else { square };
+    webp(&logo, WEBP_QUALITY)
+}
+
+/// A store's cover as WebP: the middle band of the picture three times as wide as it is tall,
+/// COVER_WIDTH wide at most. Slow work too.
+pub fn store_cover(bytes: &[u8]) -> Result<Vec<u8>, NotAPhoto> {
+    let image = on_white(decode(bytes)?);
+    let (width, height) = (image.width(), image.height());
+    let (band_width, band_height) = if width >= height * 3 { (height * 3, height) } else { (width, (width / 3).max(1)) };
+    let band = image.crop_imm((width - band_width) / 2, (height - band_height) / 2, band_width, band_height);
+    let cover = if band_width > COVER_WIDTH {
+        band.resize_exact(COVER_WIDTH, COVER_WIDTH / 3, FilterType::Lanczos3)
+    } else {
+        band
+    };
+    webp(&cover, WEBP_QUALITY)
+}
+
+/// A picture with what is see-through in it laid on white: a logo's background, which WebP
+/// written as RGB would otherwise turn black.
+fn on_white(image: DynamicImage) -> DynamicImage {
+    if !image.color().has_alpha() {
+        return image;
+    }
+    let mut rgba = image.to_rgba8();
+    for pixel in rgba.pixels_mut() {
+        let alpha = u16::from(pixel[3]);
+        for channel in 0..3 {
+            pixel[channel] = ((u16::from(pixel[channel]) * alpha + 255 * (255 - alpha)) / 255) as u8;
+        }
+        pixel[3] = 255;
+    }
+    DynamicImage::from(rgba)
 }
 
 /// The size of a copy of a `width` × `height` photo with no side longer than `side` (the full

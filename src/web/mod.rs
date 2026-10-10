@@ -18,6 +18,7 @@ mod safety;
 mod saved;
 mod searches;
 mod settings;
+mod stores;
 mod seo;
 mod suggestions;
 
@@ -119,6 +120,8 @@ pub fn router(state: AppState) -> Router {
         .route("/llogaria", get(account::account_page))
         .route("/perdorues/{id}", get(browse::user_profile))
         .route("/biznes/{slug}", get(browse::business_profile))
+        .route("/dyqani/krijo", get(stores::new_store).post(stores::create_store).layer(with_photos()))
+        .route("/dyqani/{slug}/ndrysho", get(stores::edit_store).post(stores::update_store).layer(with_photos()))
         .route("/hyr", post(account::request_code))
         .route("/hyr/kodi", get(account::code_page).post(account::check_code))
         .route("/dil", post(account::sign_out))

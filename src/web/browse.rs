@@ -514,6 +514,42 @@ struct ProfilePage {
     meta: PageMeta,
     /// "Numër i verifikuar" when the number they signed in with is theirs, or the address.
     verified: Option<&'static str>,
+    /// A store's page (stores.rs): its cover, logo and what it says of itself, where it is, when it
+    /// is open and how to reach it; and, for its owner and admins, the way to change it.
+    store: Option<db::Store>,
+    edit_url: Option<String>,
+}
+
+impl ProfilePage {
+    /// A store's logo, in place of the initial.
+    fn logo(&self) -> Option<&str> {
+        self.store.as_ref()?.logo_url.as_deref()
+    }
+
+    /// The store's description, a paragraph for each block of lines.
+    fn store_paragraphs(&self) -> Vec<&str> {
+        self.store
+            .as_ref()
+            .and_then(|store| store.description.as_deref())
+            .map(|text| text.split("\n\n").map(str::trim).filter(|block| !block.is_empty()).collect())
+            .unwrap_or_default()
+    }
+
+    /// The store's public number as people write it, and as a WhatsApp link where it takes it.
+    fn store_phone(&self) -> Option<String> {
+        self.store.as_ref()?.public_phone.as_deref().map(format::phone)
+    }
+
+    fn store_whatsapp(&self) -> Option<String> {
+        let store = self.store.as_ref().filter(|store| store.whatsapp)?;
+        Some(format!("https://wa.me/{}", store.public_phone.as_deref()?.trim_start_matches('+')))
+    }
+
+    /// The website without its scheme, as the page writes it ("www.dyqani.al").
+    fn store_site(&self) -> Option<&str> {
+        let url = self.store.as_ref()?.website_url.as_deref()?;
+        Some(url.trim_start_matches("https://").trim_start_matches("http://").trim_end_matches('/'))
+    }
 }
 
 pub async fn user_profile(
@@ -528,7 +564,7 @@ pub async fn user_profile(
     let Some(profile) = db::user_profile(&state.db, id).await? else {
         return not_found().await;
     };
-    profile_page(&state, &headers, query, profile, format!("/perdorues/{id}")).await
+    profile_page(&state, &headers, query, profile, format!("/perdorues/{id}"), None).await
 }
 
 pub async fn business_profile(
@@ -537,10 +573,10 @@ pub async fn business_profile(
     Path(slug): Path<String>,
     RawQuery(query): RawQuery,
 ) -> Result<Response> {
-    let Some(profile) = db::business_profile(&state.db, &slug).await? else {
+    let (Some(profile), store) = tokio::try_join!(db::business_profile(&state.db, &slug), db::store_by_slug(&state.db, &slug))? else {
         return not_found().await;
     };
-    profile_page(&state, &headers, query, profile, format!("/biznes/{slug}")).await
+    profile_page(&state, &headers, query, profile, format!("/biznes/{slug}"), store).await
 }
 
 async fn profile_page(
@@ -549,6 +585,7 @@ async fn profile_page(
     query: Option<String>,
     profile: db::Profile,
     path: String,
+    store: Option<db::Store>,
 ) -> Result<Response> {
     let params = Params::parse(query.as_deref());
     let after = params.first("after").and_then(|value| Cursor::decode(Sort::Newest, value));
@@ -584,7 +621,26 @@ async fn profile_page(
         meta = meta.with_image(&origin, photo, card.title.clone());
     }
     meta.noindex = words.is_some();
+    // A store's people who may change it have the way to, on its page.
+    let edit_url = match &store {
+        Some(store) => match current_user(state, headers).await? {
+            Some(user) => db::my_stores(&state.db, user.id)
+                .await?
+                .iter()
+                .any(|mine| mine.id == store.id && mine.manages())
+                .then(|| format!("/dyqani/{}/ndrysho", store.slug)),
+            None => None,
+        },
+        None => None,
+    };
+    if let Some(store) = &store
+        && let Some(cover) = store.cover_url.as_deref().or(store.logo_url.as_deref())
+    {
+        meta = meta.with_image(&origin, cover, store.display_name.clone());
+    }
     render(ProfilePage {
+        store,
+        edit_url,
         meta,
         path,
         query: words,

@@ -19,7 +19,11 @@
   {%- endif %}
   <div class="seller-head">
     <a class="seller" href="{{ listing.seller_url }}">
+      {%- if let Some(logo) = listing.seller_logo %}
+      <img class="avatar avatar-logo{% if car_page %} large{% endif %}" src="{{ logo }}" alt="" width="48" height="48" loading="lazy">
+      {%- else %}
       <span class="avatar{% if car_page %} large{% endif %}" aria-hidden="true">{{ listing.seller_initial() }}</span>
+      {%- endif %}
       <span class="seller-text">
         <span class="seller-name">{{ listing.seller_name }}
           {%- if let Some(verified) = verified %}

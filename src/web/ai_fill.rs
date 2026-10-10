@@ -100,7 +100,7 @@ pub async fn fill(
     State(state): State<AppState>,
     ClientIp(ip): ClientIp,
     headers: HeaderMap,
-    Submission { pairs, photos }: Submission,
+    Submission { pairs, photos, .. }: Submission,
 ) -> Result<Response> {
     let Some(ai) = state.ai.clone() else {
         return Ok(refusal(StatusCode::SERVICE_UNAVAILABLE, UNAVAILABLE));

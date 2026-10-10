@@ -16,7 +16,7 @@ let count = 0;
 const CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 
 export default class extends Controller {
-  static values = { tree: Boolean };
+  static values = { tree: Boolean, placeholder: { type: Boolean, default: true } };
 
   connect() {
     this.select = this.element.querySelector("select");
@@ -136,8 +136,9 @@ export default class extends Controller {
     const chosen = this.select.selectedOptions[0];
     this.value.textContent = chosen ? chosen.textContent.trim() : "";
     // Nothing chosen yet: where the empty choice names the field (the posting form), it looks
-    // like a placeholder.
-    this.button.classList.toggle("is-empty", !this.select.value);
+    // like a placeholder; not where it is a choice itself ("Posto si: Unë",
+    // data-picker-placeholder-value="false").
+    this.button.classList.toggle("is-empty", this.placeholderValue && !this.select.value);
     for (const item of this.list.querySelectorAll("[data-value]")) {
       item.setAttribute("aria-selected", String(item.dataset.value === this.select.value));
     }

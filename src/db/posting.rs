@@ -41,6 +41,8 @@ pub struct NewListing<'a> {
     pub properties: &'a [ListingProperty],
     /// Published at once, or kept as a draft until the seller confirms their contact.
     pub publish: bool,
+    /// The store it is posted as (stores.rs), one its poster may post for; None for their own.
+    pub business_id: Option<Uuid>,
 }
 
 /// A property's value on a listing, as the form gives it.
@@ -193,15 +195,15 @@ pub const LISTING_DAYS: i32 = 60;
 pub const BUMP_DAYS: i32 = 7;
 
 /// Saves a listing at its place's point on the map (its town's, for a zone without one), with the
-/// seller's contact, published at once or as a draft (`publish`), when it expires with it, and
-/// returns its id and number.
+/// seller's contact, published at once or as a draft (`publish`), when it expires with it, its
+/// seller its poster or the store it is posted as (`business_id`), and returns its id and number.
 pub async fn create_listing(db: &PgPool, listing: &NewListing<'_>) -> sqlx::Result<(Uuid, i64)> {
     let mut tx = db.begin().await?;
     let row = sqlx::query!(
-        "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, location_id, slug, title,
+        "INSERT INTO listings (seller_user_id, seller_business_id, created_by_user_id, category_id, location_id, slug, title,
                                description, listing_type, condition, price_amount, currency, price_type,
                                price_normalized, latitude, longitude, status, published_at, expires_at)
-         SELECT $1, $1, $2, loc.id, $4, $5, $6, $7, $8, $9, $10::text::currency_code, $11,
+         SELECT CASE WHEN $14::uuid IS NULL THEN $1::uuid END, $14, $1, $2, loc.id, $4, $5, $6, $7, $8, $9, $10::text::currency_code, $11,
                 price_in_eur($9, $10::text::currency_code),
                 coalesce(loc.latitude, town.latitude), coalesce(loc.longitude, town.longitude),
                 CASE WHEN $12 THEN 'ACTIVE' ELSE 'DRAFT' END, CASE WHEN $12 THEN now() END,
@@ -223,6 +225,7 @@ pub async fn create_listing(db: &PgPool, listing: &NewListing<'_>) -> sqlx::Resu
         listing.price_type,
         listing.publish,
         LISTING_DAYS,
+        listing.business_id,
     )
     .fetch_one(&mut *tx)
     .await?;

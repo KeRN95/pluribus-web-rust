@@ -45,6 +45,8 @@ pub struct ListingDetail {
     /// The seller: a business's name, or the private seller's, with their profile's address.
     pub seller_name: String,
     pub seller_url: String,
+    /// A store's logo (stores.rs), which its card shows in place of the initial.
+    pub seller_logo: Option<String>,
     pub seller_since: OffsetDateTime,
     pub seller_listings: i64,
     /// The account that posted it: its seller, or one of a business's people.
@@ -112,6 +114,7 @@ pub async fn listing_by_public_no(
                   l.published_at, l.expires_at,
                   coalesce(b.display_name, u.display_name) AS "seller_name!",
                   CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || u.id END AS "seller_url!",
+                  b.logo_url AS "seller_logo?",
                   coalesce(b.created_at, u.created_at) AS "seller_since!",
                   (SELECT count(*) FROM listings o
                    WHERE o.status = 'ACTIVE'

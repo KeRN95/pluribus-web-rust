@@ -24,6 +24,24 @@
   <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data"
         data-controller="listing-form narrow{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% endif %}{% if new_listing %} data-listing-form-guess-value="true"{% endif %}>
     {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+    {%- if new_listing && !stores.is_empty() %}
+    {#- "Posto si": the poster, or a store they may post for (stores.rs), whose name, logo and
+        number the listing then shows. Its empty choice is the poster, a choice and not a
+        placeholder, so it keeps the text's colour (picker_controller.js). -#}
+    <div class="field">
+      <label class="field-label" for="si">Posto si</label>
+      <div class="picker" data-controller="picker" data-picker-placeholder-value="false">
+      <select id="si" name="si">
+        <option value="">Unë{% if let Some(who) = signed_in_as %} ({{ who }}){% endif %}</option>
+        {%- for store in stores %}
+        <option value="{{ store.slug }}"{% if store.slug == form.si %} selected{% endif %}>{{ store.display_name }}</option>
+        {%- endfor %}
+      </select>
+      </div>
+      <p class="field-hint">Si dyqan, njoftimi del me emrin, logon dhe numrin e dyqanit.</p>
+      {%- if let Some(error) = self.error("si") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+    {%- endif %}
 
     {#- No labels in sight: each field says what it is inside it, as its placeholder or a list's
         empty choice (in the placeholder's grey until something is chosen, picker_controller.js).

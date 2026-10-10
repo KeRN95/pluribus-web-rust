@@ -142,6 +142,146 @@ fn multipart(fields: &[(&str, &str)], photos: &[Vec<u8>]) -> (String, Vec<u8>) {
     (format!("multipart/form-data; boundary={boundary}"), body)
 }
 
+/// A form with named files as the browser sends it (a store's "logo" and "cover"): its content
+/// type and its body.
+fn multipart_files(fields: &[(&str, &str)], files: &[(&str, Vec<u8>)]) -> (String, Vec<u8>) {
+    let boundary = "----marketplace-test-boundary";
+    let mut body = Vec::new();
+    for (name, value) in fields {
+        body.extend_from_slice(format!("--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n").as_bytes());
+    }
+    for (name, bytes) in files {
+        body.extend_from_slice(
+            format!("--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"; filename=\"{name}.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n").as_bytes(),
+        );
+        body.extend_from_slice(bytes);
+        body.extend_from_slice(b"\r\n");
+    }
+    body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+    (format!("multipart/form-data; boundary={boundary}"), body)
+}
+
+/// A store's form sent, with its files, as `cookie`.
+async fn post_store(pool: &PgPool, uri: &str, fields: &[(&str, &str)], files: &[(&str, Vec<u8>)], cookie: &str) -> TestResponse {
+    let (content_type, body) = multipart_files(fields, files);
+    let request = Request::post(uri)
+        .header(header::CONTENT_TYPE, content_type)
+        .header(header::COOKIE, cookie)
+        .body(Body::from(body))
+        .unwrap();
+    send(pool.clone(), request).await
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_store_has_its_page_and_its_people_post_as_it(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let store_row = |pool: PgPool| async move {
+        sqlx::query_as::<_, (String, Option<String>, Option<String>, Option<String>)>(
+            "SELECT display_name, public_phone::text, logo_key, logo_url FROM businesses WHERE slug = 'auto-elbasani'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+    };
+
+    // Signed out, the form asks to sign in; signed in, it starts from the account's number.
+    assert!(get(pool.clone(), "/dyqani/krijo").await.body.contains(r#"action="/hyr""#));
+    let form = get_with_cookie(pool.clone(), "/dyqani/krijo", &ana).await.body;
+    assert!(form.contains(r#"<input id="phone" name="phone" value="+355 69 111 2233""#), "{form}");
+
+    // Its fields checked, each problem under its own.
+    let refused = post_store(&pool, "/dyqani/krijo", &[("name", "A"), ("phone", "123"), ("website", "dyqani"), ("nipt", "123")], &[], &ana).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    for why in ["Shkruaj emrin e dyqanit", "Shkruaj numrin si", "Shkruaj adresën e faqes", "NIPT-i ka 10 shenja"] {
+        assert!(refused.body.contains(why), "{why}");
+    }
+
+    // Made: to its page, at an address made from its name, with its logo and cover.
+    let fields = [
+        ("name", "Auto Elbasani"),
+        ("description", "Makina të përdorura nga Gjermania.\n\nShërbim pas shitjes."),
+        ("phone", "069 111 2233"),
+        ("whatsapp", "1"),
+        ("email", "info@autoelbasani.al"),
+        ("website", "www.autoelbasani.al"),
+        ("city", "elbasan"),
+        ("address", "Rruga e Durrësit 10"),
+        ("hours", "E hënë – e shtunë, 9:00 – 19:00"),
+        ("nipt", "l12345678a"),
+    ];
+    let made = post_store(&pool, "/dyqani/krijo", &fields, &[("logo", jpeg(80, 60)), ("cover", jpeg(300, 100))], &ana).await;
+    assert_eq!(made.location.as_deref(), Some("/biznes/auto-elbasani"), "{}", made.body);
+    let (_, phone, logo_key, logo_url) = store_row(pool.clone()).await;
+    assert_eq!(phone.as_deref(), Some("+355691112233"));
+    let logo_key = logo_key.expect("a logo");
+    assert!(media().get(&logo_key).await.unwrap().is_some());
+    let page = get_with_cookie(pool.clone(), "/biznes/auto-elbasani", &ana).await.body;
+    assert!(page.contains("<h1>Auto Elbasani</h1>") && page.contains(r#"<img class="store-cover" src="/media/stores/"#), "{page}");
+    assert!(page.contains(&format!(r#"<img class="avatar large avatar-logo" src="{}""#, logo_url.unwrap())));
+    assert!(page.contains(r#"<p class="store-about">Makina të përdorura nga Gjermania.</p>"#) && page.contains(r#"<p class="store-about">Shërbim pas shitjes.</p>"#));
+    assert!(page.contains("<dd>Rruga e Durrësit 10, Elbasan</dd>") && page.contains("<dd>E hënë – e shtunë, 9:00 – 19:00</dd>"));
+    assert!(page.contains(r#"href="tel:+355691112233""#) && page.contains(r#"href="https://wa.me/355691112233""#));
+    assert!(page.contains(r#"href="mailto:info@autoelbasani.al""#) && page.contains(r#"href="https://www.autoelbasani.al" rel="nofollow ugc noopener" target="_blank">www.autoelbasani.al</a>"#));
+    assert!(page.contains(r#"<a class="button secondary small store-edit" href="/dyqani/auto-elbasani/ndrysho">Ndrysho dyqanin</a>"#));
+    assert!(!get(pool.clone(), "/biznes/auto-elbasani").await.body.contains("Ndrysho dyqanin"));
+    assert!(!page.contains("L12345678A"), "the NIPT stays on the form");
+    // "Cilësimet" lists it, and makes another.
+    let settings = get_with_cookie(pool.clone(), "/llogaria/cilesimet", &ana).await.body;
+    assert!(settings.contains(r#"<a href="/biznes/auto-elbasani">Auto Elbasani</a>"#) && settings.contains("Pronar") && settings.contains(r#"href="/dyqani/krijo""#));
+
+    // Posted as the store: its seller the store, its number the store's; its card has the logo
+    // and leads to the store, whose page lists it.
+    let form = get_with_cookie(pool.clone(), "/shto", &ana).await.body;
+    assert!(form.contains(r#"<option value="auto-elbasani">Auto Elbasani</option>"#), "{form}");
+    let not_hers = post_form(pool.clone(), "/shto", &[listing_fields(("", ""), &started()), vec![("si", "nje-tjeter")]].concat(), Some(&ana)).await;
+    assert_eq!(not_hers.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(not_hers.body.contains("Zgjidh një nga dyqanet e tua, ose veten."));
+    let posted = post_form(pool.clone(), "/shto", &[listing_fields(("", ""), &started()), vec![("si", "auto-elbasani")]].concat(), Some(&ana)).await;
+    let url = posted.location.expect("posted");
+    let no: i64 = url.trim_start_matches("/listing/").split('-').next().unwrap().parse().unwrap();
+    let (seller_user, store_name, contact): (Option<String>, String, Option<String>) = sqlx::query_as(
+        "SELECT l.seller_user_id::text, b.display_name, c.phone_e164::text
+         FROM listings l JOIN businesses b ON b.id = l.seller_business_id JOIN listing_contacts c ON c.listing_id = l.id
+         WHERE l.public_no = $1",
+    )
+    .bind(no)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!((seller_user, store_name.as_str(), contact.as_deref()), (None, "Auto Elbasani", Some("+355691112233")));
+    let listing = get(pool.clone(), &url).await.body;
+    assert!(listing.contains(r#"<img class="avatar avatar-logo"#) && listing.contains(r#"href="/biznes/auto-elbasani""#), "{listing}");
+    assert!(card_numbers(&get(pool.clone(), "/biznes/auto-elbasani").await.body).contains(&no));
+
+    // Changed by its owner, nobody else: its name, a fixed line for its number, which its listing
+    // shows now, and its logo taken off, the file with it; its address stays.
+    assert_eq!(get_with_cookie(pool.clone(), "/dyqani/auto-elbasani/ndrysho", &besa).await.status, StatusCode::NOT_FOUND);
+    let form = get_with_cookie(pool.clone(), "/dyqani/auto-elbasani/ndrysho", &ana).await.body;
+    assert!(form.contains(r#"value="Auto Elbasani""#) && form.contains(r#"name="remove_logo""#) && form.contains(r#"value="L12345678A""#), "{form}");
+    let changed = [("name", "Auto Elbasani Plus"), ("phone", "054 222 333"), ("city", "elbasan"), ("remove_logo", "1")];
+    let saved = post_store(&pool, "/dyqani/auto-elbasani/ndrysho", &changed, &[], &ana).await;
+    assert_eq!(saved.location.as_deref(), Some("/biznes/auto-elbasani"), "{}", saved.body);
+    let (name, phone, logo, _) = store_row(pool.clone()).await;
+    assert_eq!((name.as_str(), phone.as_deref(), logo), ("Auto Elbasani Plus", Some("+35554222333"), None));
+    assert!(media().get(&logo_key).await.unwrap().is_none());
+    let contact: Option<String> = sqlx::query_scalar(
+        "SELECT c.phone_e164::text FROM listing_contacts c JOIN listings l ON l.id = c.listing_id WHERE l.public_no = $1",
+    )
+    .bind(no)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(contact.as_deref(), Some("+35554222333"));
+    assert_eq!(post_store(&pool, "/dyqani/auto-elbasani/ndrysho", &changed, &[], &besa).await.status, StatusCode::NOT_FOUND);
+
+    // Another of the same name gets an address of its own.
+    let second = post_store(&pool, "/dyqani/krijo", &[("name", "Auto Elbasani Plus")], &[], &besa).await;
+    assert_eq!(second.location.as_deref(), Some("/biznes/auto-elbasani-plus"));
+    let third = post_store(&pool, "/dyqani/krijo", &[("name", "Auto Elbasani Plus")], &[], &besa).await;
+    assert_eq!(third.location.as_deref(), Some("/biznes/auto-elbasani-plus-2"));
+}
+
 /// What the AI stand-in was asked: the key each call came with, and the request.
 type Asked = Arc<Mutex<Vec<(Option<String>, Value)>>>;
 
@@ -5677,7 +5817,7 @@ async fn search_engines_find_the_listings_and_the_categories_by_the_sitemaps(poo
     // robots.txt keeps crawlers out of a visitor's own pages, and says where the sitemaps are.
     let robots = send(pool.clone(), from_the_site("/robots.txt")).await;
     assert_eq!(robots.content_type.as_deref(), Some("text/plain; charset=utf-8"));
-    for page in ["/hyr", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet", "/lajmerimet", "/shto", "/listing/*/ndrysho"] {
+    for page in ["/hyr", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet", "/lajmerimet", "/shto", "/listing/*/ndrysho", "/dyqani"] {
         assert!(robots.body.contains(&format!("\nDisallow: {page}\n")), "{page}");
     }
     assert!(robots.body.ends_with(&format!("\nSitemap: {site}/sitemap.xml\n")));

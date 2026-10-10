@@ -75,6 +75,28 @@
     <button type="submit" class="button secondary small">Ruaj</button>
   </form>
 
+  <h2>Dyqanet</h2>
+  {#- The stores the account is one of the people of (stores.rs), each to its page and, for its
+      owner and admins, its form; and a new one, up to db::STORES_MOST owned. -#}
+  {%- if stores.is_empty() %}
+  <p class="field-hint">Një dyqan ka faqen e vet, me logon, përshkrimin, adresën dhe orarin, dhe njoftimet që poston si ai.</p>
+  {%- else %}
+  <ul class="settings-stores">
+    {%- for store in stores %}
+    <li class="settings-store">
+      <a href="/biznes/{{ store.slug }}">{{ store.display_name }}</a>
+      <span class="field-hint">{% if store.role == "OWNER" %}Pronar{% else if store.role == "ADMIN" %}Administrator{% else if store.role == "EDITOR" %}Poston njoftime{% else %}Shikon{% endif %}</span>
+      {%- if store.manages() %}
+      <a class="button secondary small" href="/dyqani/{{ store.slug }}/ndrysho">Ndrysho</a>
+      {%- endif %}
+    </li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
+  {%- if more_stores %}
+  <p><a class="button secondary" href="/dyqani/krijo">Krijo një dyqan</a></p>
+  {%- endif %}
+
   {%- if !blocked.is_empty() %}
   {#- Those the user blocked, on a listing's page (safety.rs) or in a conversation (messages.rs):
       their listings leave the user's pages, and neither writes to the other. Each to let be
