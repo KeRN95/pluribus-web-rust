@@ -485,6 +485,7 @@ impl<'a> Checked<'a> {
             email: poster.email,
             properties,
             publish,
+            review: None,
             business_id: poster.business_id,
         }
     }
@@ -725,29 +726,53 @@ pub async fn create_listing(
     };
     let stored = photos::store(&state.media, processed).await?;
     let slug = format::slug(checked.title);
-    let (listing_id, public_no) = db::create_listing(&state.db, &checked.listing(&poster, &slug, &properties, !waits)).await?;
+    // On a site with moderators, what waits for them first (db::review): one with a photo
+    // another seller's listing has, the very same file; and, posted without signing in, the
+    // first listing of an account made with it, its contact confirmed by no code.
+    let hashes: Vec<Vec<u8>> = stored.iter().map(|photo| photo.sha256.clone()).collect();
+    let review = if state.moderators.is_empty() {
+        None
+    } else if db::photos_elsewhere(&state.db, &hashes, poster.business_id.unwrap_or(poster.id)).await? {
+        Some(db::DUPLICATE_PHOTOS)
+    } else if user.is_none() && existing.is_none() {
+        Some(db::NEW_ACCOUNT)
+    } else {
+        None
+    };
+    let mut listing = checked.listing(&poster, &slug, &properties, !waits);
+    listing.review = review;
+    let (listing_id, public_no) = db::create_listing(&state.db, &listing).await?;
     db::add_listing_photos(&state.db, listing_id, &stored).await?;
     let to = format!("/listing/{public_no}-{slug}");
     if user.is_some() {
         return Ok(Redirect::to(&to).into_response());
     }
     record_unsigned_post(ip.as_deref());
-    if let (true, Some(contact)) = (waits, &contact) {
-        // To the code page, which says the listing goes up once the code is typed. A code that
-        // couldn't go out leaves the listing waiting, to go a day on (db::forget_drafts).
-        let purpose = db::CodePurpose { listing_id: Some(listing_id), ..Default::default() };
-        return match account::send_code_and_ask(&state, &headers, contact, ip.as_deref(), &purpose).await? {
-            Ok(response) => Ok(response),
-            Err(message) => {
-                let mut errors = HashMap::new();
-                fail(&mut errors, "form", message);
-                let mut again = page(&Purpose::New, None, &categories, &cities, &attributes, form, errors);
-                again.ai_fill = state.ai.is_some();
-                form_again(again)
+    if let Some(contact) = &contact
+        && (waits || review == Some(db::NEW_ACCOUNT))
+    {
+        // To the code page, which says the listing goes up once the code is typed: for a contact
+        // an account has, the only way (a code that couldn't go out leaves the listing waiting,
+        // to go a day on, db::forget_drafts); for a new account's first listing, the quick way,
+        // a moderator's the other, which a code too soon or too many leaves it to.
+        let limited = if waits { None } else { account::code_limit(&state, contact, ip.as_deref()).await? };
+        if limited.is_none() {
+            let purpose = db::CodePurpose { listing_id: Some(listing_id), ..Default::default() };
+            match account::send_code_and_ask(&state, &headers, contact, ip.as_deref(), &purpose).await? {
+                Ok(response) => return Ok(response),
+                Err(message) if waits => {
+                    let mut errors = HashMap::new();
+                    fail(&mut errors, "form", message);
+                    let mut again = page(&Purpose::New, None, &categories, &cities, &attributes, form, errors);
+                    again.ai_fill = state.ai.is_some();
+                    return form_again(again);
+                }
+                Err(_) => {}
             }
-        };
+        }
     }
-    // Its page says it is up, once, and how to change it later: by signing in (listings.rs).
+    // Its page says it is up (or waits for a moderator), once, and how to change it later: by
+    // signing in (listings.rs).
     let posted = cookie_header(&headers, POSTED_COOKIE, &public_no.to_string(), 600);
     Ok(redirect_with_cookies(&to, vec![posted]))
 }
@@ -1028,8 +1053,12 @@ pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap, Quer
     )?;
     let pending = match state.moderators.include(&user) {
         true => {
-            let (options, reported) = tokio::try_join!(db::pending_option_count(&state.db), db::reported_count(&state.db))?;
-            Some(options + reported)
+            let (options, reported, waiting) = tokio::try_join!(
+                db::pending_option_count(&state.db),
+                db::reported_count(&state.db),
+                db::pending_listing_count(&state.db)
+            )?;
+            Some(options + reported + waiting)
         }
         false => None,
     };

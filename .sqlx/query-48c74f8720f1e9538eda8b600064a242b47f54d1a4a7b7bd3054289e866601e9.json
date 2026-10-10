@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT contact, listing_id IS NOT NULL AS \"publishes!\",\n                  EXISTS (SELECT 1 FROM listings l WHERE l.id = login_codes.listing_id AND l.status = 'PENDING_REVIEW') AS \"reviewed!\",\n                  user_id IS NOT NULL AS \"adds!\" FROM login_codes\n           WHERE id = $1 AND used_at IS NULL AND expires_at > now() AND attempts < $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "contact",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "publishes!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "reviewed!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "adds!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "48c74f8720f1e9538eda8b600064a242b47f54d1a4a7b7bd3054289e866601e9"
+}

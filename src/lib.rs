@@ -50,6 +50,11 @@ impl Moderators {
         Self::new(std::env::var("MODERATORS").unwrap_or_default().split(','))
     }
 
+    /// Whether the site has none, and so no one to review listings (db::review).
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     /// Whether this signed-in user is one, by the phone number or address of their account.
     pub fn include(&self, user: &SessionUser) -> bool {
         self.0.iter().any(|contact| match contact {

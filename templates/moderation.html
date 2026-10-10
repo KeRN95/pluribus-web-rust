@@ -6,6 +6,52 @@
 <section class="account">
   <h1>Për miratim</h1>
 
+  {#- The listings that wait before they go up (db::review): why, the other sellers' listings with
+      the same photos, if that is why; approved, it goes up; refused, its seller reads why; and
+      its seller suspended, if it is that bad. -#}
+  <h2 class="moderation-heading">Njoftime në pritje</h2>
+  <p class="lead">Njoftimet që presin para se të dalin në faqe: nga një llogari e re që s'e ka konfirmuar numrin me kod, ose me foto të njëjta me njoftimin e një shitësi tjetër. Miratoje, dhe del; refuzoje, dhe shitësi sheh pse.</p>
+  {% if pending.is_empty() %}
+  <p class="empty">Asnjë njoftim në pritje.</p>
+  {% else %}
+  <ul class="pending-options">
+    {% for listing in pending %}
+    <li class="pending-option">
+      <div class="pending-head">
+        <span class="pending-attribute">{{ listing.why() }} · {{ listing.when() }}</span>
+        <a class="pending-label" href="{{ listing.url() }}">{{ listing.title }}</a>
+        <span class="my-listing-meta">nga <a href="{{ listing.seller_url }}">{{ listing.seller_name }}</a></span>
+      </div>
+      {%- if !listing.twins.is_empty() %}
+      <p class="field-hint">Të njëjtat foto: {% for (url, label) in listing.twins_shown() %}<a href="{{ url }}">{{ label }}</a>{% if !loop.last %}, {% endif %}{% endfor %}</p>
+      {%- endif %}
+      <div class="pending-actions">
+        <form method="post" action="/moderim/njoftim/{{ listing.public_no }}/mirato">
+          <button type="submit" class="button small">Mirato</button>
+        </form>
+        <form class="pending-form" method="post" action="/moderim/njoftim/{{ listing.public_no }}/refuzo">
+          <div class="picker" data-controller="picker" data-picker-placeholder-value="false">
+          <select name="arsye" aria-label="Pse refuzohet „{{ listing.title }}“">
+            {%- for (code, label) in crate::web::moderation::REFUSALS %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+          </select>
+          </div>
+          <button type="submit" class="button secondary small danger">Refuzo</button>
+        </form>
+        <form class="pending-form" method="post" action="/moderim/perdorues/{{ listing.created_by_user_id }}/pezullo"
+              data-turbo-confirm="Ta pezullojmë {{ listing.seller_name }}? Nuk hyn dot më, dhe njoftimet e tij dalin nga faqja.">
+          <div class="picker" data-controller="picker" data-picker-placeholder-value="false">
+          <select name="arsye" aria-label="Pse pezullohet">
+            {%- for (code, label) in crate::web::moderation::SUSPENSIONS %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+          </select>
+          </div>
+          <button type="submit" class="button secondary small danger">Pezullo shitësin</button>
+        </form>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
   {#- The listings people reported (safety.rs), those the reports took off the site first: each
       with how many reported it, why, and what they wrote; kept, it goes back up, taken down, it is
       off the site for good. -#}
@@ -36,6 +82,15 @@
         </form>
         <form method="post" action="/moderim/njoftim/{{ listing.public_no }}/hiq" data-turbo-confirm="Ta heqim „{{ listing.title }}“ nga faqja?">
           <button type="submit" class="button secondary small danger">Hiqe</button>
+        </form>
+        <form class="pending-form" method="post" action="/moderim/perdorues/{{ listing.created_by_user_id }}/pezullo"
+              data-turbo-confirm="Ta pezullojmë {{ listing.seller_name }}? Nuk hyn dot më, dhe njoftimet e tij dalin nga faqja.">
+          <div class="picker" data-controller="picker" data-picker-placeholder-value="false">
+          <select name="arsye" aria-label="Pse pezullohet">
+            {%- for (code, label) in crate::web::moderation::SUSPENSIONS %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+          </select>
+          </div>
+          <button type="submit" class="button secondary small danger">Pezullo shitësin</button>
         </form>
       </div>
     </li>
@@ -82,6 +137,30 @@
       </div>
       {%- endif %}
       {%- if let Some(error) = row.error %}<p class="field-error">{{ error }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {#- The accounts suspended: who, how they sign in, why and since when, and "Rikthe", which brings
+      back what their suspension took off the site. -#}
+  <h2 class="moderation-heading">Llogari të pezulluara</h2>
+  {% if suspended.is_empty() %}
+  <p class="empty">Asnjë llogari e pezulluar.</p>
+  {% else %}
+  <ul class="pending-options">
+    {% for account in suspended %}
+    <li class="pending-option">
+      <div class="pending-head">
+        <span class="pending-attribute">{{ account.why() }}</span>
+        <strong class="pending-label">{{ account.display_name }}</strong>
+        <span class="my-listing-meta">{{ account.contact() }}</span>
+      </div>
+      <div class="pending-actions">
+        <form method="post" action="/moderim/perdorues/{{ account.id }}/rikthe">
+          <button type="submit" class="button secondary small">Rikthe</button>
+        </form>
+      </div>
     </li>
     {% endfor %}
   </ul>

@@ -133,6 +133,8 @@ pub struct ReportedListing {
     pub status: String,
     pub seller_name: String,
     pub seller_url: String,
+    /// The account that posted it, which a moderator may suspend.
+    pub created_by_user_id: Uuid,
     /// How many people report it.
     pub reporters: i64,
     /// The reasons given (REASONS), the most given first, and how many gave each.
@@ -150,7 +152,7 @@ pub async fn reported_listings(db: &PgPool) -> sqlx::Result<Vec<ReportedListing>
         "SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.status,
                 coalesce(b.display_name, u.display_name, '') AS seller_name,
                 CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || l.seller_user_id END AS seller_url,
-                r.reporters, reasons.codes AS reason_codes, reasons.counts AS reason_counts, r.notes, r.last_reported
+                l.created_by_user_id, r.reporters, reasons.codes AS reason_codes, reasons.counts AS reason_counts, r.notes, r.last_reported
          FROM (SELECT listing_id, count(DISTINCT reporter_user_id) AS reporters, max(created_at) AS last_reported,
                       coalesce(array_agg(details ORDER BY created_at DESC) FILTER (WHERE details IS NOT NULL), '{}') AS notes
                FROM reports

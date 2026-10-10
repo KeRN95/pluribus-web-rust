@@ -2,8 +2,10 @@
 //! took off the site first: a moderator keeps one, which goes back up, or takes it down for good.
 //! And the makes, models and brands sellers typed in when a list lacked theirs ("Tjetër",
 //! properties.rs): a moderator approves one, its spelling put right, and the lists and filters
-//! offer it; or merges it into the listed one it is, spelt another way. Only for the moderators
-//! .env names (MODERATORS); anyone else finds nothing here.
+//! offer it; or merges it into the listed one it is, spelt another way. The listings that wait
+//! before they go up (db::review): approved, they go up; refused, their seller is told why. And
+//! accounts: suspended, from a waiting or a reported listing, and restored. Only for the
+//! moderators .env names (MODERATORS); anyone else finds nothing here.
 
 use std::collections::HashMap;
 
@@ -55,6 +57,73 @@ impl PendingRow {
     }
 }
 
+/// Why a moderator refuses a waiting listing, by its code in the form, as its seller reads it.
+pub const REFUSALS: [(&str, &str); 4] = [
+    ("foto", "Fotot janë marrë nga një njoftim tjetër"),
+    ("mashtrim", "Duket mashtrim"),
+    ("ndaluar", "Shet diçka që nuk lejohet"),
+    ("gabim", "Kategoria ose përshkrimi nuk përputhen me atë që shitet"),
+];
+
+/// Why a moderator suspends an account, by its code in the form.
+pub const SUSPENSIONS: [(&str, &str); 4] = [
+    ("mashtrim", "Mashtrim"),
+    ("spam", "Spam"),
+    ("ndaluar", "Shet gjëra të ndaluara"),
+    ("tjeter", "Tjetër"),
+];
+
+/// A listing waiting for a moderator, as /moderim shows it.
+impl db::PendingListing {
+    pub fn url(&self) -> String {
+        format!("/listing/{}-{}", self.public_no, self.slug)
+    }
+
+    /// Why it waits.
+    pub fn why(&self) -> &'static str {
+        match self.reason.as_str() {
+            db::DUPLICATE_PHOTOS => "Foto të njëjta me njoftimin e një shitësi tjetër",
+            _ => "Llogari e re, pa e konfirmuar numrin me kod",
+        }
+    }
+
+    /// The other sellers' listings with one of its photos: each address, and its number ("nr. 1001").
+    pub fn twins_shown(&self) -> Vec<(String, String)> {
+        self.twins
+            .iter()
+            .map(|url| {
+                let no = url.trim_start_matches("/listing/").split('-').next().unwrap_or_default();
+                (url.clone(), format!("nr. {no}"))
+            })
+            .collect()
+    }
+
+    pub fn when(&self) -> String {
+        format::date(self.created_at)
+    }
+}
+
+/// A suspended account, as /moderim lists it.
+impl db::SuspendedUser {
+    /// The phone number or address it signs in with.
+    pub fn contact(&self) -> String {
+        match (&self.phone, &self.email) {
+            (Some(phone), _) => format::phone(phone),
+            (None, email) => email.clone().unwrap_or_default(),
+        }
+    }
+
+    /// Why, and since when: "Mashtrim · 10.10.2026".
+    pub fn why(&self) -> String {
+        let reason = SUSPENSIONS.iter().find(|(code, _)| self.reason.as_deref() == Some(*code)).map_or("", |(_, label)| *label);
+        match self.suspended_at {
+            Some(at) if reason.is_empty() => format::date(at),
+            Some(at) => format!("{reason} · {}", format::date(at)),
+            None => reason.to_string(),
+        }
+    }
+}
+
 /// A reported listing, as /moderim shows it.
 impl ReportedListing {
     pub fn url(&self) -> String {
@@ -88,8 +157,12 @@ impl ReportedListing {
 #[derive(Template)]
 #[template(path = "moderation.html")]
 struct ModerationPage {
+    /// The listings that wait before they go up (db::review).
+    pending: Vec<db::PendingListing>,
     /// The listings people reported, which wait for a decision.
     reported: Vec<ReportedListing>,
+    /// The accounts suspended, to restore.
+    suspended: Vec<db::SuspendedUser>,
     rows: Vec<PendingRow>,
     /// How many people reporting a listing take it off the site (db::HIDE_AFTER).
     hide_after: i64,
@@ -98,8 +171,9 @@ struct ModerationPage {
 impl ModerationPage {
     /// The page as things stand, with `error` beside the typed option it is about.
     async fn now(state: &AppState, error: Option<(Uuid, String)>) -> Result<Self> {
-        let reported = db::reported_listings(&state.db).await?;
-        Ok(Self { reported, rows: rows(state, error).await?, hide_after: db::HIDE_AFTER })
+        let (pending, reported, suspended) =
+            tokio::try_join!(db::pending_listings(&state.db), db::reported_listings(&state.db), db::suspended_users(&state.db))?;
+        Ok(Self { pending, reported, suspended, rows: rows(state, error).await?, hide_after: db::HIDE_AFTER })
     }
 }
 
@@ -222,6 +296,77 @@ pub async fn keep(State(state): State<AppState>, headers: HeaderMap, Path(public
 /// site for good; its seller sees it on "Njoftimet e mia" as taken down by the moderators.
 pub async fn remove(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
     decide(&state, &headers, public_no, Decision::Remove).await
+}
+
+/// POST /moderim/njoftim/{number}/mirato: a waiting listing goes up.
+pub async fn approve_listing(State(state): State<AppState>, headers: HeaderMap, Path(public_no): Path<i64>) -> Result<Response> {
+    let Some(user) = moderator(&state, &headers).await? else {
+        return not_found().await;
+    };
+    if db::approve_listing(&state.db, public_no, user.id).await? {
+        tracing::info!(moderator = %user.id, listing = public_no, "approved a waiting listing");
+    }
+    Ok(Redirect::to("/moderim").into_response())
+}
+
+#[derive(Deserialize)]
+pub struct ReasonForm {
+    #[serde(default)]
+    arsye: String,
+}
+
+/// POST /moderim/njoftim/{number}/refuzo: a waiting listing comes off the site for good, its
+/// seller told why (one of REFUSALS).
+pub async fn reject_listing(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(public_no): Path<i64>,
+    Form(form): Form<ReasonForm>,
+) -> Result<Response> {
+    let Some(user) = moderator(&state, &headers).await? else {
+        return not_found().await;
+    };
+    let Some((_, reason)) = REFUSALS.iter().find(|(code, _)| *code == form.arsye) else {
+        return Ok(Redirect::to("/moderim").into_response());
+    };
+    if db::reject_listing(&state.db, public_no, user.id, reason).await? {
+        tracing::info!(moderator = %user.id, listing = public_no, reason, "refused a waiting listing");
+    }
+    Ok(Redirect::to("/moderim").into_response())
+}
+
+/// POST /moderim/perdorues/{id}/pezullo: suspends the account (one of SUSPENSIONS for why), its
+/// listings and stores off the site; never the moderator's own.
+pub async fn suspend_user(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Form(form): Form<ReasonForm>,
+) -> Result<Response> {
+    let Some(user) = moderator(&state, &headers).await? else {
+        return not_found().await;
+    };
+    let (Ok(id), Some((code, _))) = (id.parse::<Uuid>(), SUSPENSIONS.iter().find(|(code, _)| *code == form.arsye)) else {
+        return Ok(Redirect::to("/moderim").into_response());
+    };
+    if id != user.id && db::suspend_user(&state.db, id, user.id, code).await? {
+        tracing::info!(moderator = %user.id, account = %id, reason = code, "suspended an account");
+    }
+    Ok(Redirect::to("/moderim").into_response())
+}
+
+/// POST /moderim/perdorues/{id}/rikthe: restores a suspended account, and what its suspension
+/// took off the site.
+pub async fn restore_user(State(state): State<AppState>, headers: HeaderMap, Path(id): Path<String>) -> Result<Response> {
+    let Some(user) = moderator(&state, &headers).await? else {
+        return not_found().await;
+    };
+    if let Ok(id) = id.parse::<Uuid>()
+        && db::restore_user(&state.db, id, user.id).await?
+    {
+        tracing::info!(moderator = %user.id, account = %id, "restored an account");
+    }
+    Ok(Redirect::to("/moderim").into_response())
 }
 
 async fn decide(state: &AppState, headers: &HeaderMap, public_no: i64, decision: Decision) -> Result<Response> {

@@ -53,6 +53,8 @@ pub struct ListingDetail {
     pub created_by_user_id: Uuid,
     /// The store it is posted as, whose people who post may change it (manages_listing).
     pub seller_business_id: Option<Uuid>,
+    /// Why the moderators refused it, which its seller is told.
+    pub rejection_reason: Option<String>,
     /// How quickly the seller usually answers: the middle time, in seconds, from a buyer's first
     /// message to their first answer over the last 90 days (seller_response_times), once they had
     /// three conversations and answered half of them at least.
@@ -128,7 +130,7 @@ pub async fn listing_by_public_no(
                   (SELECT count(*) FROM listings o
                    WHERE o.status = 'ACTIVE'
                      AND (o.seller_business_id = l.seller_business_id OR o.seller_user_id = l.seller_user_id)) AS "seller_listings!",
-                  l.created_by_user_id, l.seller_business_id,
+                  l.created_by_user_id, l.seller_business_id, l.rejection_reason,
                   (SELECT r.median_seconds FROM seller_response_times r
                    WHERE r.seller_id = coalesce(l.seller_business_id, l.seller_user_id) AND r.conversations >= 3 AND r.answered * 2 >= r.conversations) AS "seller_answers?",
                   CASE WHEN l.seller_business_id IS NULL THEN u.last_seen_at
@@ -150,7 +152,8 @@ pub async fn listing_by_public_no(
            LEFT JOIN zone_area_prices zone_price ON zone_price.zone_id = l.location_id AND zone_price.category_id = l.category_id
            LEFT JOIN users u ON u.id = l.seller_user_id
            LEFT JOIN businesses b ON b.id = l.seller_business_id
-           WHERE l.public_no = $1 AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD', 'PAUSED', 'EXPIRED', 'SUSPENDED', 'REJECTED')"#,
+           WHERE l.public_no = $1
+             AND l.status IN ('ACTIVE', 'RESERVED', 'SOLD', 'PAUSED', 'EXPIRED', 'SUSPENDED', 'REJECTED', 'PENDING_REVIEW')"#,
         public_no
     )
     .fetch_optional(db)

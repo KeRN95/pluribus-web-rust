@@ -80,6 +80,7 @@ mod stores;
 mod expiry;
 mod notifications;
 mod rates;
+mod review;
 
 pub use account::*;
 pub use categories::*;
@@ -100,6 +101,7 @@ pub use stores::*;
 pub use expiry::*;
 pub use notifications::*;
 pub use rates::*;
+pub use review::*;
 
 #[cfg(test)]
 mod tests {

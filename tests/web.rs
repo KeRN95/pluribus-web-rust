@@ -5549,26 +5549,32 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     }
 }
 
+/// A form sent to the site as one without moderators runs it, where nothing waits for review.
+async fn post_form_unmoderated(pool: PgPool, uri: &str, fields: &[(&str, &str)]) -> TestResponse {
+    let body = form_urlencoded::Serializer::new(String::new()).extend_pairs(fields).finish();
+    let request = Request::post(uri).header(header::CONTENT_TYPE, "application/x-www-form-urlencoded").body(Body::from(body)).unwrap();
+    send_to(marketplace::app_with(pool, media(), Moderators::new([])), request).await
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
-async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
-    // Not signed in, the form asks for a phone number or an e-mail address as well, and no code.
+async fn a_listing_posted_without_signing_in_goes_up_by_its_code_or_a_moderator(pool: PgPool) {
+    // Not signed in, the form asks for a phone number or an e-mail address as well.
     let form = get(pool.clone(), "/shto").await.body;
     assert!(form.contains(r#"<input id="contact" name="contact" value="" required"#));
     assert!(form.contains("njoftimi publikohet menjëherë"));
     assert!(form.contains("llogaria krijohet vetë"));
     assert!(form.contains("Nëse ke llogari me të, të dërgojmë një kod, dhe njoftimi publikohet sapo ta shkruash."));
 
+    // Where nobody moderates, it goes up at once, with its seller: a new account, active, named
+    // as typed. Posting signs no one in: that takes a code, so typing someone's number opens
+    // nothing. Its page says it is up, once, to whoever posted it, and how to change it later.
     let started = started();
     let mut fields = listing_fields(("name", "Dorina"), &started);
     fields.push(("contact", "069 777 8899"));
-    let posted = post_form(pool.clone(), "/shto", &fields, None).await;
-    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    let posted = post_form_unmoderated(pool.clone(), "/shto", &fields).await;
     let url = posted.location.clone().unwrap();
     assert!(url.ends_with("-samsung-galaxy-s21-128-gb"), "{url}");
-    // Posting signs no one in: that takes a code, so typing someone's number opens nothing.
     assert!(posted.cookie("session").is_none());
-
-    // Live at once, with its seller: a new account, active, named as typed.
     assert!(get(pool.clone(), "/search?q=galaxy").await.body.contains("Samsung Galaxy S21"));
     let page = get(pool.clone(), &url).await.body;
     assert!(page.contains(r#"<span class="seller-name">Dorina</span>"#));
@@ -5578,8 +5584,6 @@ async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
             .await
             .unwrap();
     assert_eq!((name.as_str(), status.as_str()), ("Dorina", "ACTIVE"));
-
-    // Its page says so, once, to whoever posted it, and how to change it later.
     let notice = "Njoftimi yt u publikua. Për ta ndryshuar ose fshirë më vonë";
     assert!(!page.contains(notice));
     let posted_cookie = format!("posted={}", posted.cookie("posted").unwrap());
@@ -5587,22 +5591,63 @@ async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
     assert!(shown.body.contains(notice));
     assert_eq!(shown.cookie("posted"), Some(""), "said once");
 
-    // Changing it takes signing in, with a code sent to that number.
-    let sent = post_form(pool.clone(), "/hyr", &[("contact", "069 777 8899"), ("started", &started)], None).await;
-    let login = format!("login={}", sent.cookie("login").unwrap());
-    sqlx::query("UPDATE login_codes SET code_hash = sha256(convert_to(contact || ':123456', 'UTF8'))")
+    // Where moderators are, a new account's first listing waits for one, out of sight, and the
+    // code sent with it puts it up at once: typed, it signs the account in.
+    let review = |title: &'static str| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_as::<_, (String, Option<String>)>("SELECT status, review_reason FROM listings WHERE title = $1")
+                .bind(title)
+                .fetch_one(&pool)
+                .await
+                .unwrap()
+        }
+    };
+    let waiting = ("PENDING_REVIEW".to_string(), Some("NEW_ACCOUNT".to_string()));
+    let up = ("ACTIVE".to_string(), None);
+    let mut fields = listing_fields(("name", "Erjona"), &started);
+    fields.extend([("title", "Laptop Lenovo ThinkPad X13 me karikues"), ("contact", "069 777 8800")]);
+    let posted = post_form(pool.clone(), "/shto", &fields, None).await;
+    assert_eq!(posted.location.as_deref(), Some("/hyr/kodi"), "{}", posted.body);
+    assert_eq!(review("Laptop Lenovo ThinkPad X13 me karikues").await, waiting);
+    assert!(!get(pool.clone(), "/search?q=x13").await.body.contains("Lenovo ThinkPad"));
+    let login = format!("login={}", posted.cookie("login").unwrap());
+    let asked = get_with_cookie(pool.clone(), "/hyr/kodi", &login).await.body;
+    assert!(asked.contains("Shkruaje dhe njoftimi yt publikohet. Pa kodin, e publikon një moderator pasi ta shohë."), "{asked}");
+    sqlx::query("UPDATE login_codes SET code_hash = sha256(convert_to(contact || ':123456', 'UTF8')) WHERE contact = '+355697778800'")
         .execute(&pool)
         .await
         .unwrap();
-    let signed = post_form(pool.clone(), "/hyr/kodi", &[("code", "123456")], Some(&login)).await;
-    let session = format!("session={}", signed.cookie("session").unwrap());
-    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &session).await.body.contains("Samsung Galaxy S21"));
+    let typed = post_form(pool.clone(), "/hyr/kodi", &[("code", "123456")], Some(&login)).await;
+    let session = format!("session={}", typed.cookie("session").unwrap());
+    assert!(typed.location.as_deref().is_some_and(|to| to.ends_with("-laptop-lenovo-thinkpad-x13-me-karikues")), "{:?}", typed.location);
+    assert_eq!(review("Laptop Lenovo ThinkPad X13 me karikues").await, up);
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &session).await.body.contains("Lenovo ThinkPad"));
 
-    // An e-mail address does as well; with no name, the account is "Përdorues".
+    // One whose code can't go yet (one went a moment ago) waits for a moderator: its poster sees
+    // it waiting, nobody else does, until a moderator puts it up. With no name, the account is
+    // "Përdorues".
+    sqlx::query("INSERT INTO login_codes (contact, code_hash, expires_at) VALUES ('ana.re@example.com', sha256('x'), now() + interval '10 minutes')")
+        .execute(&pool)
+        .await
+        .unwrap();
     let mut fields = listing_fields(("name", ""), &started);
-    fields.extend([("title", "Laptop Lenovo ThinkPad T14"), ("contact", "Ana.Re@Example.com")]);
+    fields.extend([("title", "Biçikletë qyteti me marsha"), ("contact", "Ana.Re@Example.com")]);
     let posted = post_form(pool.clone(), "/shto", &fields, None).await;
-    assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
+    let url = posted.location.clone().unwrap();
+    assert!(url.starts_with("/listing/"), "{url}");
+    assert_eq!(review("Biçikletë qyteti me marsha").await, waiting);
+    let posted_cookie = format!("posted={}", posted.cookie("posted").unwrap());
+    let theirs = get_with_cookie(pool.clone(), &url, &posted_cookie).await.body;
+    assert!(theirs.contains("Njoftimi yt pret miratimin e një moderatori") && !theirs.contains("Njoftimi yt u publikua"), "{theirs}");
+    assert_eq!(get(pool.clone(), &url).await.status, StatusCode::NOT_FOUND);
+    let moderator = new_seller(&pool, MODERATOR).await;
+    let queue = get_with_cookie(pool.clone(), "/moderim", &moderator).await.body;
+    assert!(queue.contains("Llogari e re, pa e konfirmuar numrin me kod") && queue.contains("Biçikletë qyteti me marsha"), "{queue}");
+    let no = url.trim_start_matches("/listing/").split('-').next().unwrap().to_string();
+    post_form(pool.clone(), &format!("/moderim/njoftim/{no}/mirato"), &[], Some(&moderator)).await;
+    assert_eq!(review("Biçikletë qyteti me marsha").await, up);
+    assert_eq!(get(pool.clone(), &url).await.status, StatusCode::OK);
     let name: String = sqlx::query_scalar("SELECT display_name FROM users WHERE email = 'ana.re@example.com'")
         .fetch_one(&pool)
         .await
@@ -5676,6 +5721,76 @@ async fn a_listing_posted_without_signing_in_goes_live_at_once(pool: PgPool) {
         assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY, "{contact}");
         assert!(refused.body.contains(message), "{contact}");
     }
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn moderators_review_listings_with_anothers_photos_and_suspend_accounts(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let moderator = new_seller(&pool, MODERATOR).await;
+    let started = started();
+    let status = |title: &'static str| {
+        let pool = pool.clone();
+        async move { sqlx::query_scalar::<_, String>("SELECT status FROM listings WHERE title = $1").bind(title).fetch_one(&pool).await.unwrap() }
+    };
+    let post = |cookie: String, title: &'static str, photo: Vec<u8>| {
+        let pool = pool.clone();
+        let started = started.clone();
+        async move {
+            let fields = listing_fields(("title", title), &started);
+            let posted = post_with_photos(pool, "/shto", &fields, &[photo], &cookie).await;
+            posted.location.unwrap_or_else(|| panic!("{title}: {}", posted.body))
+        }
+    };
+
+    // Ana's photo, then the very same file on Besa's listing: hers waits for a moderator, which
+    // she sees on its page and "Njoftimet e mia"; nobody else sees it. Ana posting it again is
+    // nothing new.
+    let photo = jpeg(64, 48);
+    let first = post(ana.clone(), "Samsung Galaxy S21, i pari", photo.clone()).await;
+    let copied = post(besa.clone(), "Samsung Galaxy S21, i kopjuari", photo.clone()).await;
+    post(ana.clone(), "Samsung Galaxy S21, përsëri", photo.clone()).await;
+    assert_eq!(status("Samsung Galaxy S21, i pari").await, "ACTIVE");
+    assert_eq!(status("Samsung Galaxy S21, i kopjuari").await, "PENDING_REVIEW");
+    assert_eq!(status("Samsung Galaxy S21, përsëri").await, "ACTIVE");
+    assert!(get_with_cookie(pool.clone(), &copied, &besa).await.body.contains("Njoftimi yt pret miratimin e një moderatori"));
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &besa).await.body.contains("Në pritje"));
+    assert_eq!(get(pool.clone(), &copied).await.status, StatusCode::NOT_FOUND);
+    // Besa's other listing, with a photo of her own, goes up.
+    post(besa.clone(), "Laptop i Besës", jpeg(70, 50)).await;
+    assert_eq!(status("Laptop i Besës").await, "ACTIVE");
+
+    // The moderators see why it waits, and the listing it took the photo from; refused, Besa
+    // reads why. Nobody else may.
+    let queue = get_with_cookie(pool.clone(), "/moderim", &moderator).await.body;
+    let first_no = first.trim_start_matches("/listing/").split('-').next().unwrap();
+    assert!(queue.contains("Foto të njëjta me njoftimin e një shitësi tjetër") && queue.contains(&format!(">nr. {first_no}</a>")), "{queue}");
+    let no = copied.trim_start_matches("/listing/").split('-').next().unwrap().to_string();
+    assert_eq!(post_form(pool.clone(), &format!("/moderim/njoftim/{no}/refuzo"), &[("arsye", "foto")], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+    post_form(pool.clone(), &format!("/moderim/njoftim/{no}/refuzo"), &[("arsye", "foto")], Some(&moderator)).await;
+    assert_eq!(status("Samsung Galaxy S21, i kopjuari").await, "REJECTED");
+    let told = get_with_cookie(pool.clone(), &copied, &besa).await.body;
+    assert!(told.contains("Moderatorët e hoqën këtë njoftim nga faqja: Fotot janë marrë nga një njoftim tjetër."), "{told}");
+
+    // Suspended, Besa is signed out and her listing leaves the site; the moderators have her
+    // with "Rikthe", which brings it back, and leaves the refused one refused.
+    let besa_id = account_of(&besa).to_string();
+    assert_eq!(post_form(pool.clone(), &format!("/moderim/perdorues/{besa_id}/pezullo"), &[("arsye", "mashtrim")], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+    post_form(pool.clone(), &format!("/moderim/perdorues/{besa_id}/pezullo"), &[("arsye", "mashtrim")], Some(&moderator)).await;
+    assert_eq!(status("Laptop i Besës").await, "SUSPENDED");
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &besa).await.body.contains(r#"action="/hyr""#));
+    let queue = get_with_cookie(pool.clone(), "/moderim", &moderator).await.body;
+    assert!(queue.contains("Llogari të pezulluara") && queue.contains("Mashtrim · ") && queue.contains(&format!("/moderim/perdorues/{besa_id}/rikthe")), "{queue}");
+    post_form(pool.clone(), &format!("/moderim/perdorues/{besa_id}/rikthe"), &[], Some(&moderator)).await;
+    assert_eq!(status("Laptop i Besës").await, "ACTIVE");
+    assert_eq!(status("Samsung Galaxy S21, i kopjuari").await, "REJECTED");
+    let account: String = sqlx::query_scalar("SELECT status FROM users WHERE id = $1::uuid").bind(&besa_id).fetch_one(&pool).await.unwrap();
+    assert_eq!(account, "ACTIVE");
+    // A moderator doesn't suspend themself.
+    let own = account_of(&moderator).to_string();
+    post_form(pool.clone(), &format!("/moderim/perdorues/{own}/pezullo"), &[("arsye", "spam")], Some(&moderator)).await;
+    let theirs: String = sqlx::query_scalar("SELECT status FROM users WHERE id = $1::uuid").bind(&own).fetch_one(&pool).await.unwrap();
+    assert_eq!(theirs, "ACTIVE");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

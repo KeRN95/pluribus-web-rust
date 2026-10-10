@@ -306,6 +306,8 @@ pub struct CodePage {
     gone: bool,
     /// The code publishes a listing posted before signing in.
     publishes: bool,
+    /// That listing waits for a moderator meanwhile, who may put it up without the code.
+    reviewed: bool,
     /// The code adds its contact to the account signed in (settings.rs): it saves rather than
     /// signs in, and a new one is asked for from the settings.
     adds: bool,
@@ -321,6 +323,7 @@ impl CodePage {
             error: Some("Kodi skadoi ose u provua shumë herë. Kërko një kod të ri.".to_string()),
             gone: true,
             publishes: false,
+            reviewed: false,
             adds,
             test_code: None,
         }
@@ -336,13 +339,13 @@ pub async fn code_page(State(state): State<AppState>, headers: HeaderMap) -> Res
         Some(id) => db::pending_login_code(&state.db, id, CODE_ATTEMPTS).await?,
         None => None,
     };
-    let Some((contact, publishes, adds)) =
-        pending.and_then(|pending| Some((Contact::parse(&pending.contact)?, pending.publishes, pending.adds)))
+    let Some((contact, publishes, reviewed, adds)) =
+        pending.and_then(|pending| Some((Contact::parse(&pending.contact)?, pending.publishes, pending.reviewed, pending.adds)))
     else {
         return Ok(Redirect::to("/llogaria").into_response());
     };
     let test_code = pending_id(&headers).and_then(|id| shown_codes().lock().unwrap().get(&id).cloned());
-    render(CodePage { sent_to: contact.masked(), sent_via: sent_via(&contact), error: None, gone: false, publishes, adds, test_code })
+    render(CodePage { sent_to: contact.masked(), sent_via: sent_via(&contact), error: None, gone: false, publishes, reviewed, adds, test_code })
 }
 
 #[derive(Deserialize)]
@@ -387,6 +390,7 @@ pub async fn check_code(
                     error: Some("Kjo llogari është pezulluar.".to_string()),
                     gone: true,
                     publishes: false,
+                    reviewed: false,
                     adds: false,
                     test_code: None,
                 });
@@ -418,6 +422,7 @@ pub async fn check_code(
             )),
             gone: false,
             publishes: pending.publishes,
+            reviewed: pending.reviewed,
             adds: pending.adds,
             test_code: None,
         }),

@@ -79,13 +79,17 @@ pub async fn delete_login_code(db: &PgPool, id: Uuid) -> sqlx::Result<()> {
 pub struct PendingCode {
     pub contact: String,
     pub publishes: bool,
+    /// The listing it publishes waits for a moderator meanwhile (review.rs, NEW_ACCOUNT).
+    pub reviewed: bool,
     pub adds: bool,
 }
 
 pub async fn pending_login_code(db: &PgPool, id: Uuid, max_attempts: i16) -> sqlx::Result<Option<PendingCode>> {
     sqlx::query_as!(
         PendingCode,
-        r#"SELECT contact, listing_id IS NOT NULL AS "publishes!", user_id IS NOT NULL AS "adds!" FROM login_codes
+        r#"SELECT contact, listing_id IS NOT NULL AS "publishes!",
+                  EXISTS (SELECT 1 FROM listings l WHERE l.id = login_codes.listing_id AND l.status = 'PENDING_REVIEW') AS "reviewed!",
+                  user_id IS NOT NULL AS "adds!" FROM login_codes
            WHERE id = $1 AND used_at IS NULL AND expires_at > now() AND attempts < $2"#,
         id,
         max_attempts,
@@ -232,12 +236,19 @@ pub async fn poster_account(db: &PgPool, phone: Option<&str>, email: Option<&str
     }
 }
 
-/// Publishes a listing posted before signing in, once its seller confirmed their contact;
-/// returns its address.
+/// Publishes a listing posted before signing in, once its seller confirmed their contact: a draft,
+/// or a new account's first listing waiting for a moderator only for that (review.rs,
+/// NEW_ACCOUNT); a draft with a photo another seller's listing has goes on to wait for them
+/// (DUPLICATE_PHOTOS). Returns its address.
 pub async fn publish_draft(db: &PgPool, listing_id: Uuid, user_id: Uuid) -> sqlx::Result<Option<String>> {
     sqlx::query_scalar!(
-        r#"UPDATE listings SET status = 'ACTIVE', published_at = now(), expires_at = now() + make_interval(days => $3)
-           WHERE id = $1 AND created_by_user_id = $2 AND status = 'DRAFT'
+        r#"UPDATE listings
+           SET status = CASE WHEN review_reason = 'DUPLICATE_PHOTOS' THEN 'PENDING_REVIEW' ELSE 'ACTIVE' END,
+               published_at = CASE WHEN review_reason = 'DUPLICATE_PHOTOS' THEN NULL ELSE now() END,
+               expires_at = CASE WHEN review_reason = 'DUPLICATE_PHOTOS' THEN NULL ELSE now() + make_interval(days => $3) END,
+               review_reason = CASE WHEN review_reason = 'DUPLICATE_PHOTOS' THEN review_reason END
+           WHERE id = $1 AND created_by_user_id = $2
+             AND (status = 'DRAFT' OR (status = 'PENDING_REVIEW' AND review_reason = 'NEW_ACCOUNT'))
            RETURNING '/listing/' || public_no || '-' || slug AS "url!""#,
         listing_id,
         user_id,

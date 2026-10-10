@@ -10,7 +10,7 @@
   <p><a class="button" href="{% if adds %}/llogaria/cilesimet{% else %}/llogaria{% endif %}">Kërko një kod të ri</a></p>
   {% else %}
   <p class="lead">Të dërguam një kod me 6 shifra{{ sent_via }} te <strong>{{ sent_to }}</strong>. Vlen për 10 minuta.
-    {%- if publishes %} Shkruaje dhe njoftimi yt publikohet.{% endif %}
+    {%- if publishes %} Shkruaje dhe njoftimi yt publikohet.{% if reviewed %} Pa kodin, e publikon një moderator pasi ta shohë.{% endif %}{% endif %}
     {%- if adds %} Shkruaje dhe shtohet te llogaria jote.{% endif %}</p>
 
   {% if let Some(code) = test_code %}

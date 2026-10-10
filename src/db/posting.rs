@@ -41,6 +41,9 @@ pub struct NewListing<'a> {
     pub properties: &'a [ListingProperty],
     /// Published at once, or kept as a draft until the seller confirms their contact.
     pub publish: bool,
+    /// Why it waits for a moderator instead of going up (review.rs, NEW_ACCOUNT or
+    /// DUPLICATE_PHOTOS), if it does; a draft keeps it for when its contact is confirmed.
+    pub review: Option<&'a str>,
     /// The store it is posted as (stores.rs), one its poster may post for; None for their own.
     pub business_id: Option<Uuid>,
 }
@@ -202,12 +205,13 @@ pub async fn create_listing(db: &PgPool, listing: &NewListing<'_>) -> sqlx::Resu
     let row = sqlx::query!(
         "INSERT INTO listings (seller_user_id, seller_business_id, created_by_user_id, category_id, location_id, slug, title,
                                description, listing_type, condition, price_amount, currency, price_type,
-                               price_normalized, latitude, longitude, status, published_at, expires_at)
+                               price_normalized, latitude, longitude, status, published_at, expires_at, review_reason)
          SELECT CASE WHEN $14::uuid IS NULL THEN $1::uuid END, $14, $1, $2, loc.id, $4, $5, $6, $7, $8, $9, $10::text::currency_code, $11,
                 price_in_eur($9, $10::text::currency_code),
                 coalesce(loc.latitude, town.latitude), coalesce(loc.longitude, town.longitude),
-                CASE WHEN $12 THEN 'ACTIVE' ELSE 'DRAFT' END, CASE WHEN $12 THEN now() END,
-                CASE WHEN $12 THEN now() + make_interval(days => $13) END
+                CASE WHEN NOT $12 THEN 'DRAFT' WHEN $15::text IS NULL THEN 'ACTIVE' ELSE 'PENDING_REVIEW' END,
+                CASE WHEN $12 AND $15::text IS NULL THEN now() END,
+                CASE WHEN $12 AND $15::text IS NULL THEN now() + make_interval(days => $13) END, $15
          FROM locations loc
          LEFT JOIN locations town ON town.id = location_municipality(loc.id)
          WHERE loc.id = $3
@@ -226,6 +230,7 @@ pub async fn create_listing(db: &PgPool, listing: &NewListing<'_>) -> sqlx::Resu
         listing.publish,
         LISTING_DAYS,
         listing.business_id,
+        listing.review,
     )
     .fetch_one(&mut *tx)
     .await?;

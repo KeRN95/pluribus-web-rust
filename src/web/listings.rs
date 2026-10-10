@@ -504,7 +504,7 @@ struct ListingShow {
     /// "Numër i verifikuar" when the number it shows is one its seller signed in with.
     verified: Option<&'static str>,
     /// Why it isn't on the site, for its seller and the moderators, who alone see it then.
-    hidden_note: Option<&'static str>,
+    hidden_note: Option<String>,
     /// The main category it is in, which the page's body names (base.html, data-section), as a
     /// category page's does: Elektronikë's listings are in Claude's blue and Shtëpi / kopsht's in
     /// its olive (base.css).
@@ -613,7 +613,11 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         (Some(user), Some(store)) => db::posts_for(&state.db, store, user.id).await?,
     };
     let moderator = user.as_ref().is_some_and(|user| state.moderators.include(user));
-    if !listing.on_site() && !own && !moderator {
+    // Posted just now (post.rs): whoever did, signed in or not, sees it while it waits for a
+    // moderator.
+    let just_posted = cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
+    let waiting = listing.status == "PENDING_REVIEW";
+    if !listing.on_site() && !own && !moderator && !(waiting && just_posted) {
         return not_found().await;
     }
     let canonical = format!("{}-{}", listing.public_no, listing.slug);
@@ -674,12 +678,19 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let related_next = related_next(&mut related, listing.public_no, 0);
     safety::without_hidden(&mut related, &hidden);
     let hidden_note = match listing.status.as_str() {
-        "SUSPENDED" => Some("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë."),
-        "REJECTED" => Some("Moderatorët e hoqën këtë njoftim nga faqja."),
-        "PAUSED" if own => Some("E ke çaktivizuar këtë njoftim: askush tjetër nuk e sheh. „Aktivizo“ e kthen në faqe aty ku ishte."),
-        "PAUSED" => Some("Shitësi e ka çaktivizuar këtë njoftim: askush tjetër nuk e sheh."),
-        "EXPIRED" if own => Some("Ky njoftim skadoi: askush tjetër nuk e sheh. „Rifresko“ e kthen në faqe për 60 ditë të tjera."),
-        "EXPIRED" => Some("Ky njoftim skadoi: askush tjetër nuk e sheh."),
+        "PENDING_REVIEW" if own || just_posted => {
+            Some("Njoftimi yt pret miratimin e një moderatori: askush tjetër nuk e sheh ende. Zakonisht brenda pak orësh.".to_string())
+        }
+        "PENDING_REVIEW" => Some("Ky njoftim pret miratimin e moderatorëve.".to_string()),
+        "SUSPENDED" => Some("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë.".to_string()),
+        "REJECTED" => Some(match listing.rejection_reason.as_deref().filter(|_| own) {
+            Some(reason) => format!("Moderatorët e hoqën këtë njoftim nga faqja: {reason}."),
+            None => "Moderatorët e hoqën këtë njoftim nga faqja.".to_string(),
+        }),
+        "PAUSED" if own => Some("E ke çaktivizuar këtë njoftim: askush tjetër nuk e sheh. „Aktivizo“ e kthen në faqe aty ku ishte.".to_string()),
+        "PAUSED" => Some("Shitësi e ka çaktivizuar këtë njoftim: askush tjetër nuk e sheh.".to_string()),
+        "EXPIRED" if own => Some("Ky njoftim skadoi: askush tjetër nuk e sheh. „Rifresko“ e kthen në faqe për 60 ditë të tjera.".to_string()),
+        "EXPIRED" => Some("Ky njoftim skadoi: askush tjetër nuk e sheh.".to_string()),
         _ => None,
     };
     // A car's title says its make, model and year: its details leave them out.
@@ -726,7 +737,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         _ => None,
     };
     // Said once: the cookie that says so (post.rs) goes with this answer.
-    let posted = !own && cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
+    let posted = !own && just_posted && !waiting;
     let page = ListingPage::related(related, related_next);
     let meta = listing_meta(&seo::origin(&headers), &listing, &photos);
     let mut response =
