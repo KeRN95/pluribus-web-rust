@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{%- import "account_nav.html" as account %}
 
 {% block title %}Lajmërimet | Pluribus{% endblock %}
 
@@ -6,9 +7,12 @@
 {#- The user's notifications (notifications.rs), the latest first, each a line leading to what it
     is about: its kind's icon, its title, what a message said, when. Those unread wear a dot, and
     say so to screen readers, until the page has been shown (data-seen-url, application.js), which
-    reads them, and with them the heart's and the account's dots. "Njoftimet e mia" is a tap back. -#}
+    reads them, and with them the heart's and the account's dots. The account's other pages are
+    in the row over the heading (account_nav.html). -#}
 <section class="notifications"{% if let Some(url) = seen_url %} data-seen-url="{{ url }}"{% endif %}>
-  <p class="saved-switch"><a href="/njoftimet-e-mia">‹ Njoftimet e mia</a></p>
+  {%- if signed_in %}
+  {% call account::account_nav("notifications", 0) %}
+  {%- endif %}
   <h1>Lajmërimet</h1>
   {%- if !signed_in %}
   <p class="lead">Hyr në llogari për të parë lajmërimet: kur bie çmimi i një njoftimi që ke ruajtur, kur dalin njoftime të reja te një kërkim i ruajtur, kur një mesazh mbetet pa u lexuar, kur një njoftim yt po skadon.</p>

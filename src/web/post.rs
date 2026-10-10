@@ -795,11 +795,7 @@ struct MyListingsPage {
     totals: db::ListingStats,
     /// For a moderator, how many typed options and reported listings wait on /moderim.
     pending: Option<i64>,
-    /// Those the user blocked, on a listing's page or in a conversation, to let be again.
-    blocked: Vec<db::BlockedSeller>,
-    /// Whether they hear of the messages they haven't read (notices.rs), the box they can untick.
-    message_alerts: bool,
-    /// How many of their notifications they haven't seen, by the link to /lajmerimet.
+    /// How many of their notifications they haven't seen, by "Lajmërimet" in the account's row.
     notifications: db::Unread,
 }
 
@@ -936,12 +932,8 @@ pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap) -> R
     let Some(user) = current_user(&state, &headers).await? else {
         return render(SignInPage::new());
     };
-    let (listings, blocked, message_alerts, notifications) = tokio::try_join!(
-        db::my_listings(&state.db, user.id),
-        db::blocked_sellers(&state.db, user.id),
-        db::message_alerts(&state.db, user.id),
-        db::unread_notifications(&state.db, user.id),
-    )?;
+    let (listings, notifications) =
+        tokio::try_join!(db::my_listings(&state.db, user.id), db::unread_notifications(&state.db, user.id))?;
     let pending = match state.moderators.include(&user) {
         true => {
             let (options, reported) = tokio::try_join!(db::pending_option_count(&state.db), db::reported_count(&state.db))?;
@@ -950,7 +942,7 @@ pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap) -> R
         false => None,
     };
     let totals = listings.iter().map(|listing| listing.stats).sum();
-    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending, blocked, message_alerts, notifications })
+    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending, notifications })
 }
 
 /// What a listing drew, or all of a seller's listings together, as "Njoftimet e mia" says it.

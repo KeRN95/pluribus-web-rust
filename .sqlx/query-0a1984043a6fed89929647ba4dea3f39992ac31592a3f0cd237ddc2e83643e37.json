@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT contact, listing_id IS NOT NULL AS \"publishes!\" FROM login_codes\n           WHERE id = $1 AND used_at IS NULL AND expires_at > now() AND attempts < $2",
+  "query": "SELECT contact, listing_id IS NOT NULL AS \"publishes!\", user_id IS NOT NULL AS \"adds!\" FROM login_codes\n           WHERE id = $1 AND used_at IS NULL AND expires_at > now() AND attempts < $2",
   "describe": {
     "columns": [
       {
@@ -12,6 +12,11 @@
         "ordinal": 1,
         "name": "publishes!",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "adds!",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -22,8 +27,9 @@
     },
     "nullable": [
       false,
+      null,
       null
     ]
   },
-  "hash": "61db9011b5db1bff89a1b6101af692b16e1b66c1aace1151aeeb76dc49015203"
+  "hash": "0a1984043a6fed89929647ba4dea3f39992ac31592a3f0cd237ddc2e83643e37"
 }

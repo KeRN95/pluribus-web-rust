@@ -24,7 +24,7 @@ use sha2::{Digest, Sha256};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use super::{Result, cookie, render, saved};
+use super::{Result, cookie, render, saved, settings};
 use crate::{
     AppState,
     db::{self, CodeCheck, CodePurpose, SessionUser},
@@ -89,6 +89,16 @@ pub fn cookie_header(headers: &HeaderMap, name: &str, value: &str, max_age: i64)
     let secure = if https { "; Secure" } else { "" };
     HeaderValue::from_str(&format!("{name}={value}; Path=/; Max-Age={max_age}; HttpOnly; SameSite=Lax{secure}"))
         .expect("cookie values are ASCII")
+}
+
+/// The Set-Cookie that forgets which code was waiting (LOGIN_COOKIE), once it came back.
+pub fn forget_login(headers: &HeaderMap) -> HeaderValue {
+    cookie_header(headers, LOGIN_COOKIE, "", 0)
+}
+
+/// The Set-Cookie that ends the session in this browser.
+pub fn forget_session(headers: &HeaderMap) -> HeaderValue {
+    cookie_header(headers, SESSION_COOKIE, "", 0)
 }
 
 pub fn redirect_with_cookies(to: &str, cookies: Vec<HeaderValue>) -> Response {
@@ -278,7 +288,7 @@ pub async fn request_code(
     if let Some(limit) = code_limit(&state, &contact, ip.as_deref()).await? {
         return again(limit);
     }
-    let purpose = CodePurpose { listing_id: None, display_name: display_name(&form.name) };
+    let purpose = CodePurpose { display_name: display_name(&form.name), ..Default::default() };
     match send_code_and_ask(&state, &headers, &contact, ip.as_deref(), &purpose).await? {
         Ok(response) => Ok(response),
         Err(message) => again(message),
@@ -296,18 +306,22 @@ pub struct CodePage {
     gone: bool,
     /// The code publishes a listing posted before signing in.
     publishes: bool,
+    /// The code adds its contact to the account signed in (settings.rs): it saves rather than
+    /// signs in, and a new one is asked for from the settings.
+    adds: bool,
     /// In test mode, the code itself.
     test_code: Option<String>,
 }
 
 impl CodePage {
-    fn gone(sent_to: String) -> Self {
+    fn gone(sent_to: String, adds: bool) -> Self {
         Self {
             sent_to,
             sent_via: "",
             error: Some("Kodi skadoi ose u provua shumë herë. Kërko një kod të ri.".to_string()),
             gone: true,
             publishes: false,
+            adds,
             test_code: None,
         }
     }
@@ -322,13 +336,13 @@ pub async fn code_page(State(state): State<AppState>, headers: HeaderMap) -> Res
         Some(id) => db::pending_login_code(&state.db, id, CODE_ATTEMPTS).await?,
         None => None,
     };
-    let Some((contact, publishes)) =
-        pending.and_then(|pending| Some((Contact::parse(&pending.contact)?, pending.publishes)))
+    let Some((contact, publishes, adds)) =
+        pending.and_then(|pending| Some((Contact::parse(&pending.contact)?, pending.publishes, pending.adds)))
     else {
         return Ok(Redirect::to("/llogaria").into_response());
     };
     let test_code = pending_id(&headers).and_then(|id| shown_codes().lock().unwrap().get(&id).cloned());
-    render(CodePage { sent_to: contact.masked(), sent_via: sent_via(&contact), error: None, gone: false, publishes, test_code })
+    render(CodePage { sent_to: contact.masked(), sent_via: sent_via(&contact), error: None, gone: false, publishes, adds, test_code })
 }
 
 #[derive(Deserialize)]
@@ -338,7 +352,8 @@ pub struct CodeForm {
 }
 
 /// The code typed back: the contact is confirmed, so its account is (created earlier, PENDING,
-/// it becomes active), the visitor is signed in, and a listing posted before signing in goes live.
+/// it becomes active), the visitor is signed in, and a listing posted before signing in goes live;
+/// or, for a contact being added to the account signed in, it joins it (settings.rs).
 pub async fn check_code(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -348,13 +363,16 @@ pub async fn check_code(
         return Ok(Redirect::to("/llogaria").into_response());
     };
     let Some(pending) = db::pending_login_code(&state.db, id, CODE_ATTEMPTS).await? else {
-        return unprocessable(CodePage::gone(String::new()));
+        return unprocessable(CodePage::gone(String::new(), false));
     };
     let sent_to = Contact::parse(&pending.contact).map(|contact| contact.masked()).unwrap_or_default();
     let typed: String = form.code.chars().filter(char::is_ascii_digit).collect();
     match db::check_login_code(&state.db, id, &code_hash(&pending.contact, &typed), CODE_ATTEMPTS).await? {
         CodeCheck::Signed { contact, purpose } => {
             shown_codes().lock().unwrap().remove(&id);
+            if let Some(owner) = purpose.adds_to {
+                return settings::contact_confirmed(&state, &headers, owner, &contact).await;
+            }
             let (phone, email) = match Contact::parse(&contact) {
                 Some(Contact::Phone(phone)) => (Some(phone), None),
                 Some(Contact::Email(email)) => (None, Some(email)),
@@ -369,6 +387,7 @@ pub async fn check_code(
                     error: Some("Kjo llogari është pezulluar.".to_string()),
                     gone: true,
                     publishes: false,
+                    adds: false,
                     test_code: None,
                 });
             }
@@ -399,9 +418,10 @@ pub async fn check_code(
             )),
             gone: false,
             publishes: pending.publishes,
+            adds: pending.adds,
             test_code: None,
         }),
-        CodeCheck::Gone => unprocessable(CodePage::gone(sent_to)),
+        CodeCheck::Gone => unprocessable(CodePage::gone(sent_to, pending.adds)),
     }
 }
 
@@ -412,20 +432,3 @@ pub async fn sign_out(State(state): State<AppState>, headers: HeaderMap) -> Resu
     Ok(redirect_with_cookies("/", vec![cookie_header(&headers, SESSION_COOKIE, "", 0)]))
 }
 
-#[derive(Deserialize)]
-pub struct NoticeSettings {
-    /// "1" while "Më njofto për mesazhet" is ticked; a box left unticked sends nothing.
-    #[serde(default)]
-    mesazhet: String,
-}
-
-/// POST /llogaria/njoftimet: whether the signed-in user hears, by e-mail or WhatsApp, of the
-/// messages they haven't read a few minutes after they came (notices.rs), from "Njoftimet e mia",
-/// which it goes back to.
-pub async fn notice_settings(State(state): State<AppState>, headers: HeaderMap, Form(form): Form<NoticeSettings>) -> Result<Response> {
-    let Some(user) = current_user(&state, &headers).await? else {
-        return Ok(Redirect::to("/llogaria").into_response());
-    };
-    db::set_message_alerts(&state.db, user.id, form.mesazhet == "1").await?;
-    Ok(Redirect::to("/njoftimet-e-mia").into_response())
-}

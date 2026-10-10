@@ -97,24 +97,3 @@ pub async fn record_notice(db: &PgPool, user_id: Uuid, conversation_id: Uuid, ti
     .await
     .map(|_| ())
 }
-
-/// Whether the user wants to hear of the messages they haven't read (on unless they said no).
-pub async fn message_alerts(db: &PgPool, user_id: Uuid) -> sqlx::Result<bool> {
-    let on = sqlx::query_scalar!("SELECT message_alerts FROM notification_preferences WHERE user_id = $1", user_id)
-        .fetch_optional(db)
-        .await?;
-    Ok(on.unwrap_or(true))
-}
-
-/// Says whether the user wants to hear of the messages they haven't read.
-pub async fn set_message_alerts(db: &PgPool, user_id: Uuid, on: bool) -> sqlx::Result<()> {
-    sqlx::query!(
-        "INSERT INTO notification_preferences (user_id, message_alerts) VALUES ($1, $2)
-         ON CONFLICT (user_id) DO UPDATE SET message_alerts = EXCLUDED.message_alerts, updated_at = now()",
-        user_id,
-        on,
-    )
-    .execute(db)
-    .await
-    .map(|_| ())
-}

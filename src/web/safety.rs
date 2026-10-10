@@ -209,14 +209,14 @@ pub async fn block(
     Ok(Redirect::to(&format!("/listing/{public_no}/raporto")).into_response())
 }
 
-/// POST /llogaria/zhblloko/{id}: lets someone the user blocked be again, from "Njoftimet e mia",
+/// POST /llogaria/zhblloko/{id}: lets someone the user blocked be again, from "Cilësimet",
 /// whichever page they were blocked on.
 pub async fn unblock(State(state): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>) -> Result<Response> {
     let Some(user) = current_user(&state, &headers).await? else {
         return Ok(Redirect::to("/llogaria").into_response());
     };
     db::unblock(&state.db, user.id, id).await?;
-    Ok(Redirect::to("/njoftimet-e-mia").into_response())
+    Ok(Redirect::to("/llogaria/cilesimet?u=zhbllokuar").into_response())
 }
 
 /// The accounts the visitor blocked, whose listings the pages leave out for them; none, without

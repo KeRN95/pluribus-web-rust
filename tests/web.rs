@@ -6162,19 +6162,20 @@ async fn a_message_left_unread_brings_a_notice_at_most_once_an_hour(pool: PgPool
     let buyer_id: String = sqlx::query_scalar("SELECT buyer_user_id::text FROM conversations").fetch_one(&pool).await.unwrap();
     assert_eq!(message_notices(&pool).await[2].0, buyer_id);
 
-    // "Njoftimet e mia" says she hears of them, and lets her stop: then nothing, until she says
-    // yes again.
+    // "Cilësimet" says she hears of them, and lets her stop: then nothing, until she says yes
+    // again. The form sends every box ticked, the others as they were.
     let checkbox = r#"<input type="checkbox" name="mesazhet" value="1""#;
-    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
-    assert!(mine.contains(r#"<form class="notice-settings" method="post" action="/llogaria/njoftimet">"#));
-    assert!(mine.contains(&format!("{checkbox} checked>")), "{mine}");
-    let off = post_form(pool.clone(), "/llogaria/njoftimet", &[], Some(&ana)).await;
-    assert_eq!(off.location.as_deref(), Some("/njoftimet-e-mia"));
-    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(&format!("{checkbox}>")));
+    let settings = get_with_cookie(pool.clone(), "/llogaria/cilesimet", &ana).await.body;
+    assert!(settings.contains(r#"<form class="notice-settings settings-notices" method="post" action="/llogaria/njoftimet">"#));
+    assert!(settings.contains(&format!("{checkbox} checked>")), "{settings}");
+    let off = post_form(pool.clone(), "/llogaria/njoftimet", &[("cmimet", "1"), ("kerkimet", "1")], Some(&ana)).await;
+    assert_eq!(off.location.as_deref(), Some("/llogaria/cilesimet?u=njoftimet"));
+    let settings = get_with_cookie(pool.clone(), "/llogaria/cilesimet?u=njoftimet", &ana).await.body;
+    assert!(settings.contains(&format!("{checkbox}>")) && settings.contains("Zgjedhjet për njoftimet u ruajtën."), "{settings}");
     write(&pool, &thread, "A je aty?", &buyer).await;
     minutes_pass(&pool, 120).await;
     assert_eq!(due().await.unwrap(), 0);
-    post_form(pool.clone(), "/llogaria/njoftimet", &[("mesazhet", "1")], Some(&ana)).await;
+    post_form(pool.clone(), "/llogaria/njoftimet", &[("mesazhet", "1"), ("cmimet", "1"), ("kerkimet", "1")], Some(&ana)).await;
     assert_eq!(due().await.unwrap(), 1);
     // Not signed in, the form leads to signing in.
     assert_eq!(post_form(pool.clone(), "/llogaria/njoftimet", &[], None).await.location.as_deref(), Some("/llogaria"));
@@ -6266,7 +6267,9 @@ async fn the_notifications_page_lists_every_kind_and_reads_them_once_shown(pool:
     // listing, for the account button's dot. "Njoftimet e mia" leads there, saying how many are new.
     assert_eq!(counts(&ana).await, (2, 1));
     let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
-    assert!(mine.contains(r#"<p class="saved-switch"><a href="/lajmerimet">"#) && mine.contains("Lajmërimet · 2 të reja</a>"), "{mine}");
+    assert!(mine.contains(r#"<nav class="account-nav" aria-label="Llogaria jote">"#), "{mine}");
+    assert!(mine.contains(r#"<a href="/njoftimet-e-mia" aria-current="page">Njoftimet e mia</a>"#), "{mine}");
+    assert!(mine.contains(r#"<a href="/lajmerimet">Lajmërimet · 2 të reja</a>"#), "{mine}");
     let page = get_with_cookie(pool.clone(), "/lajmerimet", &ana).await.body;
     let lines = positions(
         &page,
@@ -6284,11 +6287,11 @@ async fn the_notifications_page_lists_every_kind_and_reads_them_once_shown(pool:
     assert_eq!(marketplace::expiry::run(&pool, "https://pluribus.example").await.unwrap(), (0, 1));
     saw(&page, &ana).await;
     assert_eq!(counts(&ana).await, (1, 1));
-    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains("Lajmërimet · 1 e re</a>"));
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(r#"<a href="/lajmerimet">Lajmërimet · 1 e re</a>"#));
     // Renewing the listing reads what was said of its expiry.
     post_form(pool.clone(), &format!("/listing/{no}/rifresko"), &[], Some(&ana)).await;
     assert_eq!(counts(&ana).await, (0, 0));
-    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains("Lajmërimet</a>"));
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(r#"<a href="/lajmerimet">Lajmërimet</a>"#));
 
     // Another message left unread an hour on brings another notice; reading the conversation reads it.
     write(&pool, &thread, "Mund ta shoh nesër?", &buyer).await;
@@ -6299,6 +6302,211 @@ async fn the_notifications_page_lists_every_kind_and_reads_them_once_shown(pool:
     let last = message_ids(&conversation).pop().unwrap();
     post_form(pool.clone(), &format!("{thread}/lexuar?deri={last}"), &[], Some(&ana)).await;
     assert_eq!(counts(&ana).await, (0, 0));
+}
+
+/// Adds a contact to the account signed in with `session`, as "Cilësimet" does: the form, then the
+/// code sent to it (made known), typed back. Returns where that leads.
+async fn add_contact(pool: &PgPool, session: &str, typed: &str, contact: &str) -> TestResponse {
+    let sent = post_form(pool.clone(), "/llogaria/kontakti", &[("kontakti", typed)], Some(session)).await;
+    assert_eq!(sent.location.as_deref(), Some("/hyr/kodi"), "{}", sent.body);
+    let login = format!("login={}", sent.cookie("login").unwrap());
+    sqlx::query("UPDATE login_codes SET code_hash = sha256(convert_to(contact || ':123456', 'UTF8')) WHERE contact = $1")
+        .bind(contact)
+        .execute(pool)
+        .await
+        .unwrap();
+    let page = get_with_cookie(pool.clone(), "/hyr/kodi", &format!("{session}; {login}")).await.body;
+    assert!(page.contains("Shkruaje dhe shtohet te llogaria jote.") && page.contains(r#"<button type="submit" class="button">Ruaje</button>"#), "{page}");
+    post_form(pool.clone(), "/hyr/kodi", &[("code", "123456")], Some(&format!("{session}; {login}"))).await
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_settings_change_the_name_the_contacts_what_one_hears_and_the_devices(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let ana_id: String = sqlx::query_scalar("SELECT id::text FROM users WHERE phone_e164 = '+355691112233'").fetch_one(&pool).await.unwrap();
+    let no = post_listing(&pool, &ana).await;
+    let contact_of_listing = |pool: PgPool, no: String| async move {
+        sqlx::query_as::<_, (Option<String>, Option<String>)>(
+            "SELECT c.phone_e164::text, c.email::text FROM listing_contacts c JOIN listings l ON l.id = c.listing_id WHERE l.public_no = $1::bigint",
+        )
+        .bind(no)
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+    };
+    let account = |pool: PgPool| async move {
+        sqlx::query_as::<_, (String, Option<String>, Option<String>, String)>(
+            "SELECT display_name, phone_e164::text, email::text, auth_subject FROM users WHERE phone_e164 = '+355691119999' OR display_name = 'Ana Kola'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+    };
+
+    // Signed out, the page asks to sign in; signed in, it is the account's, the row over its
+    // heading marking it.
+    assert!(get(pool.clone(), "/llogaria/cilesimet").await.body.contains(r#"action="/hyr""#));
+    let page = get_with_cookie(pool.clone(), "/llogaria/cilesimet", &ana).await.body;
+    assert!(page.contains(r#"<a href="/llogaria/cilesimet" aria-current="page">Cilësimet</a>"#), "{page}");
+    assert!(page.contains(r#"<input id="emri" name="emri" value="Përdorues""#) && page.contains("<strong>+355 69 111 2233</strong>"));
+    assert!(!page.contains("Hiqe") && !page.contains(r#"name="email""#), "one contact, and no e-mail to send to");
+    assert!(page.contains("Llogaria jote është e hapur vetëm në këtë pajisje."));
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(r#"<a href="/llogaria/cilesimet">Cilësimet</a>"#));
+
+    // The name, tidied; an empty one goes back with why.
+    let renamed = post_form(pool.clone(), "/llogaria/emri", &[("emri", "  Ana   Kola ")], Some(&ana)).await;
+    assert_eq!(renamed.location.as_deref(), Some("/llogaria/cilesimet?u=emri"));
+    assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet?u=emri", &ana).await.body.contains("Emri u ruajt."));
+    assert_eq!(account(pool.clone()).await.0, "Ana Kola");
+    let empty = post_form(pool.clone(), "/llogaria/emri", &[("emri", "   ")], Some(&ana)).await;
+    assert_eq!(empty.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(empty.body.contains("Shkruaj emrin që do të shohin të tjerët."));
+
+    // An e-mail address added, once the code sent to it comes back: verified, beside the number,
+    // either of which can now be taken off.
+    let added = add_contact(&pool, &ana, "Ana.Kola@Example.test", "ana.kola@example.test").await;
+    assert_eq!(added.location.as_deref(), Some("/llogaria/cilesimet?u=kontakti"));
+    let (_, phone, email, _) = account(pool.clone()).await;
+    assert_eq!((phone.as_deref(), email.as_deref()), (Some("+355691112233"), Some("ana.kola@example.test")));
+    let verified: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM user_verifications WHERE user_id = $1::uuid AND verification_type = 'EMAIL' AND verified_value = 'ana.kola@example.test')",
+    )
+    .bind(&ana_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(verified);
+    let page = get_with_cookie(pool.clone(), "/llogaria/cilesimet?u=kontakti", &ana).await.body;
+    assert!(page.contains("U ruajt te llogaria") && page.contains("<strong>ana.kola@example.test</strong>") && page.matches(">Hiqe</button>").count() == 2, "{page}");
+    // Not one the account has, nor another account's.
+    for (typed, why) in [("069 111 2233", "Ky është tashmë i llogarisë sate."), ("069 111 2244", "Ky është i një llogarie tjetër")] {
+        let refused = post_form(pool.clone(), "/llogaria/kontakti", &[("kontakti", typed)], Some(&ana)).await;
+        assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert!(refused.body.contains(why) && refused.body.contains(&format!(r#"value="{typed}""#)), "{}", refused.body);
+    }
+
+    // A new number in place of the old: on the account, and on its listing, which showed the old;
+    // the old one free, for whoever signs in with it next.
+    let changed = add_contact(&pool, &ana, "069 111 9999", "+355691119999").await;
+    assert_eq!(changed.location.as_deref(), Some("/llogaria/cilesimet?u=kontakti"));
+    let (_, phone, _, subject) = account(pool.clone()).await;
+    assert_eq!(phone.as_deref(), Some("+355691119999"));
+    assert_eq!(subject, format!("user:{ana_id}"));
+    assert_eq!(contact_of_listing(pool.clone(), no.clone()).await, (Some("+355691119999".to_string()), None));
+    let someone_else = sign_in_with_code(&pool, "069 111 2233", "+355691112233").await;
+    assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet", &someone_else).await.body.contains("<strong>+355 69 111 2233</strong>"));
+
+    // The number taken off: the listing shows the address instead. The address, the last one
+    // left, stays.
+    let removed = post_form(pool.clone(), "/llogaria/kontakti/hiq", &[("hiq", "numri")], Some(&ana)).await;
+    assert_eq!(removed.location.as_deref(), Some("/llogaria/cilesimet?u=hequr"));
+    assert_eq!(account(pool.clone()).await.1, None);
+    assert_eq!(contact_of_listing(pool.clone(), no.clone()).await, (None, Some("ana.kola@example.test".to_string())));
+    post_form(pool.clone(), "/llogaria/kontakti/hiq", &[("hiq", "email")], Some(&ana)).await;
+    assert_eq!(account(pool.clone()).await.2.as_deref(), Some("ana.kola@example.test"));
+
+    // What it hears of, as the boxes say; the e-mail box now that there is an address.
+    assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet", &ana).await.body.contains(r#"<input type="checkbox" name="email" value="1" checked>"#));
+    let saved = post_form(pool.clone(), "/llogaria/njoftimet", &[("mesazhet", "1")], Some(&ana)).await;
+    assert_eq!(saved.location.as_deref(), Some("/llogaria/cilesimet?u=njoftimet"));
+    let preferences: (bool, bool, bool, bool) = sqlx::query_as(
+        "SELECT message_alerts, price_drop_alerts, saved_search_alerts, email_enabled FROM notification_preferences WHERE user_id = $1::uuid",
+    )
+    .bind(&ana_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(preferences, (true, false, false, false));
+
+    // Signed in on another device too: out of it from here, this one staying.
+    sqlx::query(
+        "INSERT INTO sessions (token_hash, user_id, expires_at)
+         VALUES (sha256(convert_to('another-device', 'UTF8')), $1::uuid, now() + interval '1 day')",
+    )
+    .bind(&ana_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let other = "session=another-device".to_string();
+    assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet", &ana).await.body.contains("e hapur në 2 pajisje"));
+    let out = post_form(pool.clone(), "/llogaria/pajisjet", &[], Some(&ana)).await;
+    assert_eq!(out.location.as_deref(), Some("/llogaria/cilesimet?u=pajisjet"));
+    assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet", &other).await.body.contains(r#"action="/hyr""#));
+    assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet?u=pajisjet", &ana).await.body.contains("Dole nga pajisjet e tjera."));
+    let _ = besa;
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn closing_an_account_takes_its_listings_photos_and_contacts_away(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let ana_id: String = sqlx::query_scalar("SELECT id::text FROM users WHERE phone_e164 = '+355691112233'").fetch_one(&pool).await.unwrap();
+    // Ana's phone with a photo, which Besa keeps and asks about; a search Ana keeps.
+    let posted = post_with_photos(pool.clone(), "/shto", &listing_fields(("", ""), &started()), &[jpeg(40, 30)], &ana).await;
+    let url = posted.location.expect("posted");
+    let no = url.trim_start_matches("/listing/").split('-').next().unwrap().to_string();
+    let photo: String = sqlx::query_scalar(
+        "SELECT m.storage_key FROM listing_media m JOIN listings l ON l.id = m.listing_id WHERE l.public_no = $1::bigint",
+    )
+    .bind(&no)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(media().get(&photo).await.unwrap().is_some());
+    send(pool.clone(), tap_heart(&no, "1", Some(&besa))).await;
+    let thread = write(&pool, &format!("/listing/{no}/mesazh"), "A është ende në shitje?", &besa).await.location.unwrap();
+    post_form(pool.clone(), "/kerkimet/ruaj", &[("adresa", "/c/telefona")], Some(&ana)).await;
+
+    // Not without "FSHI" typed: back, with why, and nothing gone.
+    let refused = post_form(pool.clone(), "/llogaria/fshi", &[("konfirmo", "po")], Some(&ana)).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(refused.body.contains("Shkruaj FSHI"));
+    assert_eq!(get(pool.clone(), &url).await.status, StatusCode::OK);
+
+    // Closed: signed out, the page says what became of it.
+    let closed = post_form(pool.clone(), "/llogaria/fshi", &[("konfirmo", " fshi ")], Some(&ana)).await;
+    assert_eq!(closed.status, StatusCode::OK);
+    assert!(closed.body.contains("<h1>Llogaria u fshi</h1>"), "{}", closed.body);
+    assert_eq!(closed.cookie("session"), Some(""));
+    // Its listing gone, its contact and its photo with it, the file out of the store.
+    assert_eq!(get(pool.clone(), &url).await.status, StatusCode::NOT_FOUND);
+    let (status, contacts, photos): (String, i64, i64) = sqlx::query_as(
+        "SELECT l.status, (SELECT count(*) FROM listing_contacts c WHERE c.listing_id = l.id), (SELECT count(*) FROM listing_media m WHERE m.listing_id = l.id)
+         FROM listings l WHERE l.public_no = $1::bigint",
+    )
+    .bind(&no)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!((status.as_str(), contacts, photos), ("DELETED", 0, 0));
+    assert!(media().get(&photo).await.unwrap().is_none());
+    // The account anonymised, what only it had gone.
+    let (name, phone, subject, user_status): (String, Option<String>, String, String) =
+        sqlx::query_as("SELECT display_name, phone_e164::text, auth_subject, status FROM users WHERE id = $1::uuid")
+            .bind(&ana_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!((name.as_str(), phone, subject, user_status.as_str()), ("Përdorues i fshirë", None, format!("deleted:{ana_id}"), "DELETED"));
+    let left: i64 = sqlx::query_scalar(
+        "SELECT (SELECT count(*) FROM sessions WHERE user_id = $1::uuid) + (SELECT count(*) FROM saved_searches WHERE user_id = $1::uuid)",
+    )
+    .bind(&ana_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(left, 0);
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(r#"action="/hyr""#));
+    assert_eq!(get(pool.clone(), &format!("/perdorues/{ana_id}")).await.status, StatusCode::NOT_FOUND);
+    // Besa keeps her message, Ana shown as a deleted user; the listing she kept says it went.
+    let conversation = get_with_cookie(pool.clone(), &thread, &besa).await.body;
+    assert!(conversation.contains("Përdorues i fshirë") && conversation.contains("A është ende në shitje?"), "{conversation}");
+    let kept = get_with_cookie(pool.clone(), "/te-ruajturat", &besa).await.body;
+    assert!(section(&kept, "saved-gone-heading").contains(r#"<span class="badge">U fshi</span>"#), "{kept}");
+    // The number is free again: signing in with it opens a new account.
+    let again = sign_in_with_code(&pool, "069 111 2233", "+355691112233").await;
+    assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet", &again).await.body.contains("<strong>+355 69 111 2233</strong>"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -6534,14 +6742,15 @@ async fn a_blocked_sellers_listings_leave_the_pages_of_whoever_blocked_them(pool
     assert!(!his(mercedes).await.contains(&1001));
     // Her listing's own page, which he can still open, says so, and where to let her be again.
     let page = get_with_cookie(pool.clone(), golf, &besnik).await.body;
-    assert!(page.contains("E ke bllokuar këtë shitës") && page.contains(r#"E zhbllokon te <a href="/njoftimet-e-mia">Njoftimet e mia</a>."#));
+    assert!(page.contains("E ke bllokuar këtë shitës") && page.contains(r#"E zhbllokon te <a href="/llogaria/cilesimet">Cilësimet</a>."#));
     assert!(!page.contains("Zhblloko shitësin") && !page.contains("listing-safety"));
 
-    // "Njoftimet e mia" lists her, to let be again.
-    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &besnik).await.body;
-    assert!(mine.contains(r#"<a href="/perdorues/11111111-1111-4111-8111-111111111111">Ana</a>"#), "{mine}");
+    // "Cilësimet" lists her, to let be again, and says so after.
+    let settings = get_with_cookie(pool.clone(), "/llogaria/cilesimet", &besnik).await.body;
+    assert!(settings.contains(r#"<a href="/perdorues/11111111-1111-4111-8111-111111111111">Ana</a>"#), "{settings}");
     let unblocked = post_form(pool.clone(), "/llogaria/zhblloko/11111111-1111-4111-8111-111111111111", &[], Some(&besnik)).await;
-    assert_eq!(unblocked.location.as_deref(), Some("/njoftimet-e-mia"));
+    assert_eq!(unblocked.location.as_deref(), Some("/llogaria/cilesimet?u=zhbllokuar"));
+    assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet?u=zhbllokuar", &besnik).await.body.contains("U zhbllokua."));
     assert!(his("/c/makina").await.contains(&1001));
 
     // Nobody blocks themselves.

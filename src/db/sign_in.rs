@@ -28,11 +28,13 @@ pub async fn code_requests(db: &PgPool, contact: &str, ip: Option<&str>) -> sqlx
 }
 
 /// What a sign-in code carries besides the contact: a listing to publish once it is confirmed
-/// (posted before signing in), and a name for a new account.
+/// (posted before signing in), a name for a new account, or the account the contact joins
+/// ("Cilësimet", web/settings.rs), which then signs no one in.
 #[derive(Debug, Default, Clone)]
 pub struct CodePurpose {
     pub listing_id: Option<Uuid>,
     pub display_name: Option<String>,
+    pub adds_to: Option<Uuid>,
 }
 
 pub async fn create_login_code(
@@ -44,8 +46,8 @@ pub async fn create_login_code(
     purpose: &CodePurpose,
 ) -> sqlx::Result<Uuid> {
     sqlx::query_scalar!(
-        "INSERT INTO login_codes (contact, code_hash, client_ip, expires_at, listing_id, display_name)
-         VALUES ($1, $2, $3::text::inet, now() + make_interval(mins => $4), $5, $6)
+        "INSERT INTO login_codes (contact, code_hash, client_ip, expires_at, listing_id, display_name, user_id)
+         VALUES ($1, $2, $3::text::inet, now() + make_interval(mins => $4), $5, $6, $7)
          RETURNING id",
         contact,
         code_hash,
@@ -53,6 +55,7 @@ pub async fn create_login_code(
         minutes,
         purpose.listing_id,
         purpose.display_name,
+        purpose.adds_to,
     )
     .fetch_one(db)
     .await
@@ -71,17 +74,18 @@ pub async fn delete_login_code(db: &PgPool, id: Uuid) -> sqlx::Result<()> {
     sqlx::query!("DELETE FROM login_codes WHERE id = $1", id).execute(db).await.map(|_| ())
 }
 
-/// A code waiting to be typed in: who it went to, and whether it publishes a listing, if it can
-/// still be used.
+/// A code waiting to be typed in: who it went to, whether it publishes a listing, and whether it
+/// adds its contact to an account, if it can still be used.
 pub struct PendingCode {
     pub contact: String,
     pub publishes: bool,
+    pub adds: bool,
 }
 
 pub async fn pending_login_code(db: &PgPool, id: Uuid, max_attempts: i16) -> sqlx::Result<Option<PendingCode>> {
     sqlx::query_as!(
         PendingCode,
-        r#"SELECT contact, listing_id IS NOT NULL AS "publishes!" FROM login_codes
+        r#"SELECT contact, listing_id IS NOT NULL AS "publishes!", user_id IS NOT NULL AS "adds!" FROM login_codes
            WHERE id = $1 AND used_at IS NULL AND expires_at > now() AND attempts < $2"#,
         id,
         max_attempts,
@@ -103,7 +107,7 @@ pub enum CodeCheck {
 pub async fn check_login_code(db: &PgPool, id: Uuid, code_hash: &[u8], max_attempts: i16) -> sqlx::Result<CodeCheck> {
     let mut tx = db.begin().await?;
     let Some(row) = sqlx::query!(
-        "SELECT contact, code_hash, attempts, listing_id, display_name FROM login_codes
+        "SELECT contact, code_hash, attempts, listing_id, display_name, user_id FROM login_codes
          WHERE id = $1 AND used_at IS NULL AND expires_at > now()
          FOR UPDATE",
         id,
@@ -120,7 +124,7 @@ pub async fn check_login_code(db: &PgPool, id: Uuid, code_hash: &[u8], max_attem
         sqlx::query!("UPDATE login_codes SET used_at = now() WHERE id = $1", id).execute(&mut *tx).await?;
         CodeCheck::Signed {
             contact: row.contact,
-            purpose: CodePurpose { listing_id: row.listing_id, display_name: row.display_name },
+            purpose: CodePurpose { listing_id: row.listing_id, display_name: row.display_name, adds_to: row.user_id },
         }
     } else {
         sqlx::query!("UPDATE login_codes SET attempts = attempts + 1 WHERE id = $1", id).execute(&mut *tx).await?;

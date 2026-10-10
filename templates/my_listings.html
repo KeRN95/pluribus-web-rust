@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{%- import "account_nav.html" as account %}
 
 {% block title %}Njoftimet e mia | Pluribus{% endblock %}
 
@@ -9,9 +10,10 @@
 
 {% block content %}
 <section class="account">
-  {#- Over the heading, the notifications (notifications.rs), with how many are new: a listing
-      about to expire, a price dropped, a saved search's new listings, a message left unread. -#}
-  <p class="saved-switch"><a href="/lajmerimet"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BELL|safe }}</svg>Lajmërimet{% if notifications.all == 1 %} · 1 e re{% else if notifications.all > 1 %} · {{ notifications.all }} të reja{% endif %}</a></p>
+  {#- Over the heading, the account's pages (account_nav.html), the notifications with how many
+      are new: a listing about to expire, a price dropped, a saved search's new listings, a
+      message left unread. -#}
+  {% call account::account_nav("listings", notifications.all) %}
   <h1>Njoftimet e mia</h1>
   <p class="lead">Njoftimet që ke publikuar me <strong>{{ signed_in_as }}</strong>.</p>
   {%- if let Some(pending) = pending %}
@@ -104,33 +106,8 @@
   </ul>
   {% endif %}
   <p><a class="button" href="/shto">+ Shto një njoftim</a></p>
-  {#- Whether they hear, by e-mail or WhatsApp, of the messages they haven't read a few minutes
-      after they came, at most once an hour per conversation (notices.rs); on unless they untick
-      it, which the notice itself says how to. -#}
-  <form class="notice-settings" method="post" action="/llogaria/njoftimet">
-    <label class="notice-setting"><input type="checkbox" name="mesazhet" value="1"{% if message_alerts %} checked{% endif %}>
-      <span>Më njofto për mesazhet<span class="field-hint">Kur dikush të shkruan dhe nuk e ke lexuar pas pak minutash, të vjen një njoftim te email-i ose WhatsApp-i yt, jo më shumë se një në orë për një bisedë.</span></span></label>
-    <button type="submit" class="button secondary small">Ruaj</button>
-  </form>
-  {%- if !blocked.is_empty() %}
-  {#- Those the user blocked, on a listing's page (safety.rs) or in a conversation (messages.rs):
-      their listings leave the user's pages, and neither writes to the other. Each to let be
-      again. -#}
-  <h2 class="blocked-heading">Ata që ke bllokuar</h2>
-  <p class="field-hint">Njoftimet që kanë vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit.</p>
-  <ul class="blocked-sellers">
-    {%- for seller in blocked %}
-    <li class="blocked-seller">
-      <a href="{{ seller.url }}">{{ seller.name }}</a>
-      <form method="post" action="/llogaria/zhblloko/{{ seller.id }}">
-        <button type="submit" class="button secondary small">Zhblloko</button>
-      </form>
-    </li>
-    {%- endfor %}
-  </ul>
-  {%- endif %}
-  {#- Last, signing out (account::sign_out, /dil): the session ends and the welcome page comes,
-      as the posting form's note offers too. -#}
+  {#- Last, signing out (account::sign_out, /dil), as "Cilësimet" has it too: the session ends
+      and the welcome page comes, as the posting form's note offers too. -#}
   <form class="sign-out" action="/dil" method="post">
     <button type="submit" class="button secondary">Dil nga llogaria</button>
   </form>

@@ -17,6 +17,7 @@ mod properties;
 mod safety;
 mod saved;
 mod searches;
+mod settings;
 mod seo;
 mod suggestions;
 
@@ -121,7 +122,13 @@ pub fn router(state: AppState) -> Router {
         .route("/hyr", post(account::request_code))
         .route("/hyr/kodi", get(account::code_page).post(account::check_code))
         .route("/dil", post(account::sign_out))
-        .route("/llogaria/njoftimet", post(account::notice_settings))
+        .route("/llogaria/njoftimet", post(settings::notices))
+        .route("/llogaria/cilesimet", get(settings::page))
+        .route("/llogaria/emri", post(settings::rename))
+        .route("/llogaria/kontakti", post(settings::add_contact))
+        .route("/llogaria/kontakti/hiq", post(settings::remove_contact))
+        .route("/llogaria/pajisjet", post(settings::other_devices))
+        .route("/llogaria/fshi", post(settings::close))
         .route("/si-funksionon", get(pages::how_it_works))
         .route("/siguria", get(pages::safety_tips))
         .route("/kushtet", get(pages::terms))

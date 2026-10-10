@@ -3,6 +3,23 @@
 /* Signing in and posting a listing */
 
 .account { max-width: 600px; padding-top: 1.25rem; }
+/* The account's pages, a row of pills over each one's heading (account_nav.html), as the
+   category pages' pills are drawn, wrapping onto a second line on a phone; the page it is on
+   marked as what is picked is, the tint and its colour. */
+.account-nav { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 1rem; }
+.account-nav a { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 .85rem; border: 1px solid var(--menu-border); border-radius: 999px; background: var(--surface); color: var(--text); font-size: var(--text-sm); font-weight: var(--medium); text-decoration: none; }
+.account-nav a:hover { background: var(--surface-muted); }
+.account-nav a[aria-current="page"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+/* "Cilësimet" (settings.html): a section each under its heading, the contacts a line each with
+   "Hiqe" at its end, the buttons of the devices' section side by side. */
+.settings h2 { margin-top: 2rem; }
+.settings-form { margin-bottom: .5rem; }
+.settings-contacts { margin: .75rem 0 1rem; }
+.settings-contact { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; padding: .55rem 0; border-top: 1px solid var(--border); }
+.settings-contact dt { flex: 0 0 5rem; color: var(--muted); }
+.settings-contact dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.settings-contact dd:last-child:not(:nth-child(2)) { margin-left: auto; }
+.settings-buttons { display: flex; flex-wrap: wrap; gap: .6rem; }
 .account h1 { margin: 0 0 .3rem; }
 .account .lead { margin: 0 0 1.25rem; color: var(--muted); }
 .account .lead strong { white-space: nowrap; }
@@ -61,9 +78,10 @@
 .my-listing-stats > span { display: inline-flex; align-items: center; gap: .3rem; }
 .my-stat svg,
 .my-listing-stats svg { flex: none; }
-/* "Më njofto për mesazhet" (my_listings.html): a box, its name and what it does, and "Ruaj". */
-.notice-settings { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin: 1.5rem 0; }
-.notice-setting { display: flex; flex: 1 1 18rem; align-items: flex-start; gap: .6rem; font-weight: var(--semibold); cursor: pointer; }
+/* What the account hears of (settings.html): a box a line, its name and what it does, and "Ruaj"
+   under them. */
+.notice-settings { display: grid; justify-items: start; gap: .9rem; margin: 1rem 0 1.5rem; }
+.notice-setting { display: flex; align-items: flex-start; gap: .6rem; font-weight: var(--semibold); cursor: pointer; }
 .notice-setting input { flex: none; width: 1.1rem; height: 1.1rem; margin: .15rem 0 0; accent-color: var(--button); }
 .notice-setting .field-hint { display: block; margin-top: .15rem; font-weight: var(--regular); }
 /* Each listing's buttons; on phones, and wherever they leave the title too little room, they go
@@ -96,9 +114,9 @@
 .report-reason-text { display: grid; gap: .1rem; }
 .report-reason-label { font-weight: var(--semibold); }
 .report-reason .field-hint { margin: 0; }
-/* "Njoftimet e mia": the sellers the user blocked, each with its button to let them be again. */
+/* "Cilësimet": the sellers the user blocked, each with its button to let them be again. */
 .blocked-heading { margin: 2rem 0 .2rem; font-size: var(--text-xl); }
-/* "Dil nga llogaria", the page's last thing, a little apart from what is over it. */
+/* "Dil nga llogaria", "Njoftimet e mia"'s last thing, a little apart from what is over it. */
 .sign-out { margin-top: 2.5rem; }
 .blocked-sellers { display: grid; gap: .45rem; margin: .7rem 0 0; padding: 0; list-style: none; }
 .blocked-seller {

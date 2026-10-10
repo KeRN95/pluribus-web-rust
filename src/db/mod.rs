@@ -61,6 +61,7 @@ macro_rules! price_was {
     };
 }
 
+mod account;
 mod categories;
 mod properties;
 mod listing_pages;
@@ -79,6 +80,7 @@ mod expiry;
 mod notifications;
 mod rates;
 
+pub use account::*;
 pub use categories::*;
 pub use properties::*;
 pub use listing_pages::*;

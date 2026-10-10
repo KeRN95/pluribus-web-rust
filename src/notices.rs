@@ -3,7 +3,7 @@
 //! conversation that their reader hasn't read NOTICE_AFTER after they came (db::due_notices), and
 //! tells them by e-mail, or by WhatsApp with its notice template (sender.rs), about the latest
 //! with a link to answer it: at most once per conversation in NOTICE_GAP, and only of messages
-//! newer than the last notice about it. Someone who turned them off on "Njoftimet e mia"
+//! newer than the last notice about it. Someone who turned them off in "Cilësimet"
 //! (notification_preferences.message_alerts) hears nothing, nor by e-mail someone who turned
 //! e-mail off. Each notice is a notification (NEW_MESSAGE), recorded before it goes out, so that a
 //! channel that fails doesn't make it go again every minute; without a channel set up, it goes to

@@ -60,7 +60,7 @@ impl Notice {
         format!(
             "{} të shkroi në Pluribus{about}:\n\n    {}\n{more}\nPërgjigju këtu: {}\n\n\
              Për një bisedë nuk të vjen më shumë se një email në orë. Për të mos i marrë më, \
-             hiq shenjën te „Më njofto për mesazhet“ te „Njoftimet e mia“.\n",
+             hiq shenjën te „Mesazhet që nuk i ke lexuar“ te „Cilësimet“.\n",
             self.writer,
             self.excerpt.replace('\n', "\n    "),
             self.url,
@@ -414,7 +414,7 @@ mod tests {
         assert!(text.starts_with("Besa të shkroi në Pluribus për „Volkswagen Golf 1.6, 2016“:\n\n    A është ende në shitje?\n    Mund ta shoh nesër.\n"), "{text}");
         assert!(text.contains("(dhe 2 mesazhe të tjera të palexuara)"));
         assert!(text.contains("Përgjigju këtu: https://pluribus.example/mesazhet/0192f0c1-0000-7000-8000-000000000001"));
-        assert!(text.contains("„Më njofto për mesazhet“"));
+        assert!(text.contains("„Mesazhet që nuk i ke lexuar“ te „Cilësimet“"));
         assert!(!notice(1).text().contains("palexuar"));
         assert!(notice(2).text().contains("(dhe 1 mesazh tjetër i palexuar)"));
         let no_listing = Notice { listing: None, ..notice(1) };
