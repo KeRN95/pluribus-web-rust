@@ -688,6 +688,49 @@ pub const STORE: &str = r#"<path d="M4.5 4h15L21 9H3z"/><path d="M3 9a3 3 0 0 0 
 /// A paper plane: sending a message (conversation.html).
 pub const SEND: &str = r#"<path d="m21 3-6.5 18-4-7.5-7.5-4Z"/><path d="M21 3 10.5 13.5"/>"#;
 
+// ---------------------------------------------------------------- the redesign's
+
+// Drawn as the "Calmer Pluribus" canvas has them, before the pages that take them are redrawn:
+// each is expected to be unused until then, and the compiler says when that stops being so (an
+// unfulfilled expectation), for its mark to come off as its page takes it.
+
+/// Three lines: the menu (the header's "Menyja" button, which opens the drawer).
+#[expect(dead_code, reason = "the header's menu button takes it when it is redrawn")]
+pub const MENU: &str = r#"<path d="M4 6.5h16M4 12h16M4 17.5h16"/>"#;
+
+/// A bookmark: keeping a search ("Ruaj kërkimin", its mark in the accent), and the searches kept
+/// (the menu's "Kërkimet e ruajtura", saved_searches.html), where the bell is now; the bell stays
+/// for the notifications.
+#[expect(dead_code, reason = "Ruaj kërkimin and the menu take it when they are redrawn")]
+pub const BOOKMARK: &str = r#"<path d="M6.5 3.5h11v17l-5.5-4-5.5 4z"/>"#;
+
+/// A globe: the language (the menu's "Gjuha", Shqip | English).
+#[expect(dead_code, reason = "the menu takes it when it is drawn")]
+pub const GLOBE: &str = r#"<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13.5 13.5 0 0 1 0 18 13.5 13.5 0 0 1 0-18Z"/>"#;
+
+/// A big A and a small one: the text's size (the menu's "Madhësia e shkrimit").
+#[expect(dead_code, reason = "the menu takes it when it is drawn")]
+pub const TEXT_SIZE: &str = r#"<path d="M4 19 9 5l5 14M5.8 14h6.4"/><path d="M15 19l3-8 3 8M15.9 16.5h4.2"/>"#;
+
+/// A door's frame and an arrow out of it: signing out ("Dil nga llogaria", in "Njoftimet e
+/// mia" and "Cilësimet").
+#[expect(dead_code, reason = "the account's pages take it when they are redrawn")]
+pub const LOG_OUT: &str = r#"<path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14"/><path d="M10 16.5 5.5 12 10 7.5M5.5 12h10"/>"#;
+
+/// An i in a circle: a note on how things stand (a seller's own listing awaiting review,
+/// expired or paused), and the page that something went wrong on.
+#[expect(dead_code, reason = "the notices and the error page take it when they are redrawn")]
+pub const INFO: &str = r#"<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>"#;
+
+/// A crosshair: finding where the visitor is (the map's "Vendndodhja ime", where the pin is now).
+#[expect(dead_code, reason = "the map's panel takes it when it is redrawn")]
+pub const LOCATE: &str = r#"<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5"/>"#;
+
+/// An office block with a lower wing: a business without a logo of its own, in its round avatar
+/// (a seller's row, a store's page), as a person has the initial of their name.
+#[expect(dead_code, reason = "the avatars take it when they are redrawn")]
+pub const BUSINESS: &str = r#"<rect x="4" y="3.5" width="11" height="17" rx="1.5"/><path d="M15 9.5h4a1 1 0 0 1 1 1v10H4"/><path d="M7.5 7.5h1M10.5 7.5h1M7.5 11h1M10.5 11h1M7.5 14.5h1M10.5 14.5h1"/>"#;
+
 /// Other things, and a category without an icon of its own yet: a box.
 const BOX: &str = r#"<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5"/><path d="M12 12v9"/>"#;
 
