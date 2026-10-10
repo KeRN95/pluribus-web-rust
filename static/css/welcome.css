@@ -245,9 +245,9 @@
 
 /* The welcome page's categories, all of them at once, as pills like the listing page's details
    (.attribute): the menus' hairline on the surface, each as wide as its name, one after another
-   and on to the next line; the icon before the name, in the muted colour. Under the pointer or a
-   finger a pill takes a warm shade and its icon the text's colour, and a press sinks it a
-   little. */
+   and on to the next line; the icon before the name, in the name's colour (it was muted until
+   2026-10-10, a shade apart from its label). Under the pointer or a finger a pill takes a warm
+   shade, and a press sinks it a little. */
 .shortcuts { display: flex; flex-wrap: wrap; gap: .55rem; margin: 1.25rem 0 0; }
 /* A little bigger than the details' pills, being the way into the site. */
 .shortcut {
@@ -266,12 +266,10 @@
   transition: background-color .15s, transform .1s;
   -webkit-tap-highlight-color: transparent;
 }
-.shortcut-icon { flex: none; color: var(--muted); transition: color .15s; }
+.shortcut-icon { flex: none; }
 .shortcut:active { background: var(--surface-muted); transform: scale(.97); }
-.shortcut:active .shortcut-icon { color: var(--text); }
 @media (hover: hover) {
   .shortcut:hover { background: var(--surface-muted); }
-  .shortcut:hover .shortcut-icon { color: var(--text); }
 }
 @media (prefers-reduced-motion: reduce) {
   .shortcut:active { transform: none; }

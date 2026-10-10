@@ -2678,17 +2678,20 @@ async fn each_kind_of_thing_asks_for_what_fits_it(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_site_is_called_pluribus(pool: PgPool) {
-    // The logo is the name in lowercase, the word alone, in a typeface of its own that comes with
-    // the page. The pages' titles and the footer say the name.
+    // The logo is the name in lowercase, the word alone, in the site's one typeface, Geist, which
+    // comes with the page, the only font that does: the headings' Inter and the logo's Playfair
+    // Display went with their files. The pages' titles and the footer say the name.
     let home = html(pool.clone(), "/").await;
     assert!(home.contains(r#"<a class="logo" id="logo" href="/" data-turbo-permanent><span class="logo-word">pluribus</span></a>"#));
     assert!(!home.contains("thinking"));
     assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
-    for font in ["inter-5.3.0-latin-wght.woff2", "playfair-display-5.3.0-latin-600.woff2"] {
-        assert!(home.contains(&format!(
-            r#"<link rel="preload" href="/static/vendor/fonts/{font}" as="font" type="font/woff2" crossorigin>"#
-        )));
-        assert_eq!(get(pool.clone(), &format!("/static/vendor/fonts/{font}")).await.status, StatusCode::OK, "{font}");
+    assert!(home.contains(
+        r#"<link rel="preload" href="/static/vendor/fonts/geist-v5-latin.woff2" as="font" type="font/woff2" crossorigin>"#
+    ));
+    assert_eq!(home.matches(r#"<link rel="preload" href="/static/vendor/fonts/"#).count(), 1);
+    for gone in ["inter-5.3.0-latin-wght.woff2", "playfair-display-5.3.0-latin-600.woff2"] {
+        assert!(!home.contains(gone), "{gone}");
+        assert_eq!(get(pool.clone(), &format!("/static/vendor/fonts/{gone}")).await.status, StatusCode::NOT_FOUND, "{gone}");
     }
     let listing = html(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await;
     assert!(listing.contains(" | Pluribus</title>") && !listing.contains("Marketplace"), "{listing}");
@@ -2848,21 +2851,20 @@ async fn static_files_have_cache_headers(pool: PgPool) {
         "public, max-age=31536000, immutable"
     );
 
-    for uri in ["/static/vendor/fonts/geist-v5-latin.woff2", "/static/vendor/fonts/inter-5.3.0-latin-wght.woff2"] {
-        let font = app(pool.clone())
-            .oneshot(
-                Request::get(uri)
-                    .header(header::ACCEPT_ENCODING, "br, gzip")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(font.status(), StatusCode::OK, "{uri}");
-        assert_eq!(font.headers()[header::CONTENT_TYPE], "font/woff2");
-        assert_eq!(font.headers()[header::CACHE_CONTROL], "public, max-age=31536000, immutable");
-        assert!(!font.headers().contains_key(header::CONTENT_ENCODING), "WOFF2 is compressed already");
-    }
+    let uri = "/static/vendor/fonts/geist-v5-latin.woff2";
+    let font = app(pool)
+        .oneshot(
+            Request::get(uri)
+                .header(header::ACCEPT_ENCODING, "br, gzip")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(font.status(), StatusCode::OK, "{uri}");
+    assert_eq!(font.headers()[header::CONTENT_TYPE], "font/woff2");
+    assert_eq!(font.headers()[header::CACHE_CONTROL], "public, max-age=31536000, immutable");
+    assert!(!font.headers().contains_key(header::CONTENT_ENCODING), "WOFF2 is compressed already");
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

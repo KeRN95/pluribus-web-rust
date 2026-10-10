@@ -1,8 +1,9 @@
 import { Controller } from "@hotwired/stimulus";
 
 // Trying typefaces and icons (TYPE_TRIAL=true in .env; base.html, .type-menu): the top bar's "Aa"
-// panel picks the headings' typeface and the text's from the list below, the site's own three and
-// Google Fonts', and sets their weights, the headings' (h1) and the subheadings' (h2), the text's
+// panel picks the headings' typeface and the text's from the list below, the site's own, Geist,
+// and Google Fonts' (Inter and Playfair Display among those, which the site served itself until
+// 2026-10-10), and sets their weights, the headings' (h1) and the subheadings' (h2), the text's
 // and its strong's (labels, buttons, card titles); and an icon library in place of the site's own
 // drawings, for the icons that have a name in it (ICONS, LIBRARIES below), fetched from unpkg as
 // picked. What is picked goes on the page at once, as the root's custom properties (base.css reads
@@ -14,8 +15,8 @@ const KEY = "type-trial";
 // Name, Google Fonts' weight range (null for a font the site serves itself), the fallbacks.
 const FONTS = [
   ["Geist", null, 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif'],
-  ["Inter", null, '"Geist", system-ui, sans-serif'],
-  ["Playfair Display", null, "Georgia, serif"],
+  ["Inter", "100..900", "sans-serif"],
+  ["Playfair Display", "400..900", "Georgia, serif"],
   ["Instrument Sans", "400..700", "sans-serif"],
   ["Hanken Grotesk", "100..900", "sans-serif"],
   ["Familjen Grotesk", "400..700", "sans-serif"],
@@ -33,7 +34,7 @@ const FONTS = [
   ["Lora", "400..700", "Georgia, serif"],
 ];
 const DEFAULTS = {
-  headingFont: "Inter",
+  headingFont: "Geist",
   headingWeight: 700,
   subheadingWeight: 700,
   textFont: "Geist",

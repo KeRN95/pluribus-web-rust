@@ -59,7 +59,6 @@
    icon and name in the coral. */
 .category-path .shortcut-icon,
 .back-button svg { width: 20px; height: 20px; }
-.category-path .is-selected .shortcut-icon { color: inherit; }
 .category-path .shortcut.is-selected {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
   background: var(--badge);
@@ -354,9 +353,9 @@
   .browse-tools .button.round-button.labelled { gap: .4rem; padding: 0 .85rem 0 .7rem; font-size: .9375rem; }
 }
 .browse-tools .button.map-button { flex: 0 1 auto; }
-/* Their icons are the category pills': outlines in the muted colour, the text's under the pointer,
-   the coral with their words while what they open is open; the map's pin the same whether a
-   place is set or not. */
+/* Their icons: outlines in the muted colour, the text's under the pointer (as the category pills'
+   were, before those took their names' colour), the coral with their words while what they open
+   is open; the map's pin the same whether a place is set or not. */
 .browse-tools .labelled svg { color: var(--muted); transition: color .15s; }
 .browse-tools .labelled[aria-expanded="true"] svg,
 .browse-tools .labelled[aria-expanded="true"]:hover svg { color: inherit; }
