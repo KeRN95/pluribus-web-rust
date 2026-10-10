@@ -167,7 +167,11 @@
   {#- The rest: the title and the price, the ways to the seller, the details, the description, the
       seller's card and, for a property or a car, the map. Under the photo, and from 960 px up on a
       split page in the column at its right (listing.css, .listing-side). -#}
-  <div class="listing-side">
+  {%- let aside = car_page && map.is_some() %}
+  {#- A car's map moves into the column at the right from 960 px up, under the seller's card and
+      the buttons, where that column leaves room under them for a square map as wide as it
+      (map_aside_controller.js). -#}
+  <div class="listing-side"{% if aside %} data-controller="map-aside"{% endif %}>
   <header class="listing-header">
     {%- let made = car_page && listing.heading.is_some() %}
     {#- A car's title as its seller wrote it; the one made from what the car is (generated_title:
@@ -194,7 +198,7 @@
       the seller's card. Its parts stand in the rest's grid with the others (display: contents),
       but on a car's page from 960 px up it is a column at the page's right (listing.css,
       .listing-deal). -#}
-  <div class="listing-deal">
+  <div class="listing-deal"{% if aside %} data-map-aside-target="deal"{% endif %}>
   <div class="price-box">
     {%- let area_price = listing.area_price() %}
     {%- let loan = listing.loan_amount() %}
@@ -365,7 +369,7 @@
     (listing.css), which loads as it comes near the screen (listing_map_controller.js). Its point
     is its place's, its town's for a zone without one of its own, so a circle round it says where
     rather than a pin; the place's name over the map's top left. -#}
-<section class="listing-map-section" aria-label="Vendndodhja">
+<section class="listing-map-section" aria-label="Vendndodhja"{% if aside %} data-map-aside-target="map"{% endif %}>
   {%- if car_page %}
   <h2>Lokacioni</h2>
   {%- endif %}

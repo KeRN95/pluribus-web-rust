@@ -261,6 +261,10 @@
   .listing-page:has(> .listing-car) { display: block; max-width: 60rem; margin-inline: auto; }
   /* No room for a banner over a car's path: its page starts at the top, as a phone's does. */
   .listing-car > .listing-banner { display: none; }
+  /* The map in the column at the right, where it has room enough (map_aside_controller.js): under
+     the buttons, a square as wide as the column. */
+  .listing-car .listing-deal > .listing-map-section { margin-top: 1.5rem; }
+  .listing-car .listing-deal .listing-map { aspect-ratio: 1; height: auto; }
   .listing-car .listing-media .gallery-photo,
   .listing-car .listing-media .listing-photo { aspect-ratio: 4 / 3; height: auto; max-height: calc(100vh - 12.05rem - 1px); }
   .listing-car .listing-side { grid-template-columns: minmax(0, 1fr) 19.5rem; column-gap: 2rem; }

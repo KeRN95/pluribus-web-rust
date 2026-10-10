@@ -2228,7 +2228,7 @@ async fn a_property_or_a_car_shows_where_it_is_on_a_map_under_its_seller(pool: P
     // under the seller's card.
     for uri in ["/listing/1003-apartament-2-1-me-qira-ne-tirane", "/listing/1001-volkswagen-golf-7-2016-nafte"] {
         let page = html(pool.clone(), uri).await;
-        let map = page.find(r#"<section class="listing-map-section" aria-label="Vendndodhja">"#).unwrap_or_else(|| panic!("{uri}"));
+        let map = page.find(r#"<section class="listing-map-section" aria-label="Vendndodhja""#).unwrap_or_else(|| panic!("{uri}"));
         assert!(page.find(r#"<section class="seller-section""#).unwrap() < map, "{uri}");
         let section = &page[map..map + page[map..].find("</section>").unwrap()];
         assert!(section.contains(r#"<div class="listing-map" data-controller="listing-map""#), "{section}");
@@ -4640,7 +4640,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur · "#,
         r#"<dl class="key-facts">"#,
-        r#"<div class="listing-deal">"#,
+        r#"<div class="listing-deal""#,
         r#"<div class="price-box">"#,
         r#"<p class="listing-price">"#,
         r#"<section class="seller-section" aria-labelledby="seller-heading">"#,
@@ -5220,8 +5220,14 @@ async fn a_listing_but_a_cars_or_a_propertys_stands_beside_its_photo(pool: PgPoo
     // A car's page is laid out as FINN's (.listing-car): the seller's card in the deal, at the
     // right from 960 px up (listing_page_shows_price_and_attributes has the rest).
     let golf = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
-    assert!(golf.contains(r#"<article class="listing listing-car""#) && golf.contains(r#"<div class="listing-side">"#), "{golf}");
-    let deal = &golf[golf.find(r#"<div class="listing-deal">"#).unwrap()..golf.find(r#"<section class="listing-description">"#).unwrap()];
+    assert!(golf.contains(r#"<article class="listing listing-car""#), "{golf}");
+    // Its map can move into that column, where it has room enough (map_aside_controller.js): the
+    // controller on the columns' box, the column and the map its targets.
+    assert!(golf.contains(r#"<div class="listing-side" data-controller="map-aside">"#), "{golf}");
+    assert!(golf.contains(r#"<div class="listing-deal" data-map-aside-target="deal">"#));
+    assert!(golf.contains(r#"<section class="listing-map-section" aria-label="Vendndodhja" data-map-aside-target="map">"#));
+    assert!(!phone.contains("map-aside"), "only a car's page");
+    let deal = &golf[golf.find(r#"<div class="listing-deal""#).unwrap()..golf.find(r#"<section class="listing-description">"#).unwrap()];
     assert!(deal.contains(r#"<div class="price-box">"#) && deal.contains(r#"<section class="seller-section""#), "{deal}");
     // A property's keeps its photos across the page, its details as pills, the seller's card after
     // the description and the map under it.
