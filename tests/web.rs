@@ -4630,11 +4630,11 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
     // The category above the photo; the title under it; then the deal, the price in its box, on a
-    // car's page the seller's card, her initial, her name, since when she is a user and how many
-    // listings on a line each, leading to her profile, and in the card the contact bar, the phone
-    // and the message, wide pills (contact_bar.html; under the price on every other page); then
-    // the share, a link in a circle, and the report; then the description and the details; then
-    // her other listings.
+    // car's page the seller's card, her initial, her name, since when she is on the site and after
+    // a dot how many listings, leading to her profile, and in the card the contact bar, the phone
+    // and the message, wide pills (contact_bar.html; under the price on every other page), and
+    // the share, a link in a circle, and the report, beside the message (listing.css); then the
+    // description and the details; then her other listings.
     let order = positions(&page, &[
         r#"<nav class="category-path listing-path""#,
         r#"<div class="gallery">"#,
@@ -4650,8 +4650,8 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="avatar large" aria-hidden="true">A</span>"#,
         r#"<span class="seller-name">Ana</span>"#,
-        r#"<span class="seller-summary">Përdorues që nga "#,
-        r#"<span class="seller-summary">5 njoftime</span>"#,
+        r#"<span class="seller-summary"><span class="seller-since">Që nga "#,
+        r#"</span> <span class="seller-count">· 5 njoftime</span></span>"#,
         r#"<aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">"#,
         r#"<form id="phone-reveal" method="post""#,
         "</aside>",
@@ -4666,6 +4666,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     let card = &page[page.find(r#"<section class="seller-section""#).unwrap()..];
     let card = &card[..card.find("</section>").unwrap()];
     assert!(card.contains(r#"<aside class="contact-bar""#) && page.matches(r#"<aside class="contact-bar""#).count() == 1, "{card}");
+    assert!(card.contains(r#"<div class="actions">"#) && page.matches(r#"<div class="actions">"#).count() == 1, "the share and the report in the card: {card}");
     let iphone = html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await;
     let card = &iphone[iphone.find(r#"<section class="seller-section""#).unwrap()..];
     let card = &card[..card.find("</section>").unwrap()];
@@ -4685,7 +4686,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     let page = get(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await.body;
     assert!(page.contains(r#"<a class="seller" href="/biznes/auto-durresi">"#));
     // A business says so on the since line of a car's card.
-    assert!(page.contains(r#"<span class="seller-summary">Biznes · që nga "#) && page.contains(r#"<span class="seller-summary">1 njoftim</span>"#), "{page}");
+    assert!(page.contains(r#"<span class="seller-summary"><span class="seller-since">Biznes · që nga "#) && page.contains(r#"</span> <span class="seller-count">· 1 njoftim</span></span>"#), "{page}");
     let business = get(pool.clone(), "/biznes/auto-durresi").await.body;
     assert!(business.contains("<h1>Auto Durrësi</h1>") && business.contains("Biznes · "));
     assert_eq!(card_numbers(&business), vec![1002]);

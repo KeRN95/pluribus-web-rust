@@ -221,10 +221,11 @@
    columns under those. At the left the title and the kind, a hairline under them, the key
    facts in a row, the description, the other details in a grid, a name over its value with its
    icon, three to a line (.spec-grid), the options in columns with a check each under their own
-   names (.options), and the map under "Lokacioni". At the right, in a column of 19.5rem, which
-   goes with the page (it stuck under the top bar at first), the price in a card, the seller's
-   card, which holds the bar's pills on a line each, the message's first, and under it the share
-   and the report: the deal
+   names (.options), and the map under "Lokacioni". At the right, in a column of 21rem (wide
+   enough for the message's pill and the two circles beside it), which goes with the page (it
+   stuck under the top bar at first), the price in a card, the seller's card, which holds the
+   bar's pills on a line each, the message's first with the share and the report beside it: the
+   deal
    (.listing-deal), which on every other page, and on a phone, is no box at all, its parts in the
    rest's grid (display: contents). The page is 60rem wide, as a split page is. On a phone one
    column: the title, the facts, the price, the bar, the circles, the description, the details, the
@@ -283,6 +284,7 @@
 @media (min-width: 720px) and (max-width: 959px) {
   .listing-car .listing-deal > .seller-section > :is(h2, .seller-head) { grid-column: 1 / -1; }
   .listing-car .listing-deal > .seller-section > .contact-bar { grid-column: 1; margin-right: .5rem; }
+  .listing-car .listing-deal > .seller-section > .actions,
   .listing-car .listing-deal > .seller-section + .actions { grid-column: 2; align-self: center; }
 }
 @media (min-width: 960px) {
@@ -295,7 +297,7 @@
   .listing-car .listing-deal .listing-map { aspect-ratio: 1; height: auto; }
   .listing-car .listing-media .gallery-photo,
   .listing-car .listing-media .listing-photo { aspect-ratio: 4 / 3; height: auto; max-height: calc(100vh - 12.05rem - 1px); }
-  .listing-car .listing-side { grid-template-columns: minmax(0, 1fr) 19.5rem; column-gap: 2rem; }
+  .listing-car .listing-side { grid-template-columns: minmax(0, 1fr) 21rem; column-gap: 2rem; }
   .listing-car .listing-side > * { grid-column: 1; max-width: none; }
   .listing-car .listing-side > .listing-deal { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; grid-row: 1 / span 40; align-self: start; }
   .listing-car .listing-deal > * { grid-column: 1; align-self: auto; max-width: none; margin-right: 0; }
@@ -305,10 +307,10 @@
   .listing-car .loan .bubble-card { left: auto; right: 0; transform-origin: top right; }
   /* The seller's card holds the ways to reach them (seller_card.html): the card's chrome, the
      price card's, goes to the section, the seller's row losing its own; the heading inside it, a
-     small quiet line; the initial 3rem; since when and how many listings on a line each, wrapping
-     rather than cut short (the column is too narrow for one line); the verified check in its words
-     on a line of its own; and under a hairline the bar's pills on a line each, the message's
-     first. The share and the report stay under the card. */
+     small quiet line; the initial 3rem; since when and after a dot how many listings, wrapping
+     rather than cut short, the count kept whole; the verified check in its words on a line of its
+     own; and under a hairline the bar's pills on a line each, the message's first, and the share
+     and the report beside it (below; on the seller's own page they stay under the card). */
   .listing-car .listing-deal > .seller-section { margin-top: 1.5rem; padding: .85rem 1.15rem 1.1rem; border: 1px solid var(--menu-border); border-radius: 16px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%); }
   .listing-car .listing-deal > .seller-section > h2 { margin: 0 0 .35rem; color: var(--muted); font-size: var(--text-xs); line-height: 1.25; }
   .listing-car .listing-deal .seller-head { padding: 0; border: 0; border-radius: 0; box-shadow: none; }
@@ -321,7 +323,25 @@
   .listing-car .contact-bar .button { flex: none; }
   .listing-car .contact-bar .message-button { order: -1; }
   .listing-car .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
+  .listing-car .listing-deal :is(.seller-since, .seller-count) { white-space: nowrap; }
+  /* The share and the report in the card (listing_actions.html), beside the message's pill: the
+     bar and the circles share a row of the card's grid, the circles at its right end, level with
+     the pill (the bar's room over its hairline, the hairline and its room under it, and half of
+     the pill's 3.1rem over the circles' 2.85rem), the pill leaving them their room, two circles
+     .5rem apart and .5rem from it, its sides a little tighter so that its words fit whole. With
+     no message to write (a listing off the site), they come under the bar. On the seller's own
+     page they stay under the card, with their own buttons. */
+  .listing-car .listing-deal > .seller-section:has(.message-button) { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .listing-car .listing-deal > .seller-section:has(.message-button) > :is(.contact-bar, .actions) { grid-row: 3; grid-column: 1; }
+  .listing-car .listing-deal > .seller-section:has(.message-button) > .actions { justify-self: end; align-self: start; margin-top: calc(.8rem + 1px + .9rem + .125rem); }
+  .listing-car .listing-deal .contact-bar .message-button { width: calc(100% - 6.7rem); padding: 0 .9rem; }
+  .listing-car .listing-deal > .seller-section > .actions,
   .listing-car .listing-deal > .actions { margin-top: .75rem; }
+}
+/* Where a car's page is narrower than its 60rem (under 1024 px), its key facts closer together, so
+   that the four keep their line whole beside the deal's 21rem column. */
+@media (min-width: 960px) and (max-width: 1023px) {
+  .key-facts { column-gap: 1.25rem; }
 }
 
 .listing-photo {
