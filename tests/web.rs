@@ -790,8 +790,8 @@ async fn home_page_lists_categories(pool: PgPool) {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     let body = get(pool.clone(), "/").await.body;
-    // The question is for screen readers alone, with no line under it; the creature of the site's
-    // icon is on no page (it was the logo's, and once stood behind the search too).
+    // The question is for screen readers alone, with no line under it; the creature that was the
+    // site's icon is on no page (it was the logo's too, and once stood behind the search).
     assert!(body.contains(r#"<h1 class="visually-hidden">Çfarë po kërkon?</h1>"#));
     assert!(!body.contains("Shkruaj atë që të duhet"));
     assert!(!body.contains(r#"<svg class="thinking""#));
@@ -4012,6 +4012,11 @@ async fn the_site_has_its_icon(pool: PgPool) {
     for icon in ["/static/img/icon.svg", "/static/img/apple-touch-icon.png"] {
         assert_eq!(get(pool.clone(), icon).await.status, StatusCode::OK, "{icon}");
     }
+    // The icon is the logo's p, light on an eerie black tile, with the i's lime square.
+    let svg = get(pool.clone(), "/static/img/icon.svg").await.body;
+    assert!(svg.contains(r##"rx="264" fill="#1b1b1b"/>"##), "{svg}");
+    assert!(svg.contains(r##"<path fill="#f7f7f7" d="M190 1060L40 1060"##), "{svg}");
+    assert!(svg.contains(r##"<rect x="479" y="220" width="150" height="118" fill="#c8ff00"/>"##), "{svg}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

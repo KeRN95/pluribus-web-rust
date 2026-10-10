@@ -325,10 +325,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    accent, with a dark edge inside it on the light theme, where lime alone hardly shows on white
    (--dot-edge, transparent on the dark theme and with a darker accent). The drawing is the font's
    line, ascender to descender, 1.14em tall and 4.126em wide: at 26px, 107 x 30, and on phones at
-   24px, 99 x 27, in pixels, as the round buttons beside it set the bar's height. (The creature,
-   thinking.svg, is the site's icon alone now, in the tab and on home screens.) The logo stays
-   from page to page (data-turbo-permanent, base.html), so as the theme changes its colours slide
-   to the other theme's rather than changing at once. */
+   24px, 99 x 27, in pixels, as the round buttons beside it set the bar's height. (The site's icon,
+   in the tab and on home screens, is its p, light on eerie black, the lime square over it.) The
+   logo stays from page to page (data-turbo-permanent, base.html), so as the theme changes its
+   colours slide to the other theme's rather than changing at once. */
 .logo {
   display: inline-flex;
   align-items: center;

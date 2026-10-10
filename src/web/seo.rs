@@ -66,8 +66,8 @@ impl PageMeta {
 /// What the site is, for the welcome page and the pages that say nothing of their own (base.html).
 pub const SITE_DESCRIPTION: &str = "Pluribus: njoftime në gjithë Shqipërinë. Makina, prona, elektronikë, punë, shërbime dhe më shumë, me foto, çmime dhe vendndodhje.";
 
-/// The site's own picture, for a page without a photo of its own: the logo's creature and the
-/// name on the ivory page, 1200 by 630, as the previews want it.
+/// The site's own picture, for a page without a photo of its own: the wordmark and "Njoftime në
+/// gjithë Shqipërinë" under it on the page's grey, 1200 by 630, as the previews want it.
 pub const SITE_IMAGE: &str = "/static/img/pluribus.png";
 
 /// How many listings a sitemap file lists, by their numbers: a file has those numbered from

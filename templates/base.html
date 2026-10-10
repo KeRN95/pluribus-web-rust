@@ -13,9 +13,10 @@
       script is web::THEME_SCRIPT, whose hash the Content-Security-Policy lets run. -#}
   <script>{{ crate::web::THEME_SCRIPT|safe }}</script>
   <meta name="view-transition" content="same-origin">
-  {#- The site's icon, the creature (thinking.svg, standing still): a favicon.ico (16, 32 and 48 px) for browsers that
-      want one, the SVG for those that take it, a 180 px one on the ivory for iPhones' home
-      screens, and the manifest's for Android's (static/img/). -#}
+  {#- The site's icon, the logo's p, light on eerie black, with the i's lime square over its bowl:
+      a favicon.ico (16, 32 and 48 px) for browsers that want one, the SVG for those that take it,
+      a 180 px square one for iPhones' home screens, which round it themselves, and the manifest's
+      for Android's (static/img/). -#}
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="icon" href="/static/img/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
@@ -57,10 +58,9 @@
       {#- The search is the welcome page's pill, and on the browse pages the round button before
           the filters. -#}
       {#- The logo: the name in lowercase in Clash Display Semibold, drawn as shapes (logo.svg),
-          its i's dot apart in the accent, and the word for screen readers (the creature of
-          thinking.svg is the site's icon, above, and no longer in the header). Turbo keeps it
-          from page to page (data-turbo-permanent), so that its colours slide to the other
-          theme's rather than changing at once (base.css, .logo). -#}
+          its i's dot apart in the accent, and the word for screen readers (the site's icon,
+          above, is its p). Turbo keeps it from page to page (data-turbo-permanent), so that its
+          colours slide to the other theme's rather than changing at once (base.css, .logo). -#}
       <a class="logo" id="logo" href="/" data-turbo-permanent translate="no">{% include "logo.svg" %}<span class="visually-hidden">pluribus</span></a>
       {%- if crate::web::type_trial() %}
       {#- Trying typefaces (TYPE_TRIAL=true, web::type_trial): "Aa" opens a panel that picks the
