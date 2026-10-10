@@ -1,5 +1,7 @@
 {#- The seller's number (or address), a tap calls it (or writes to it), and beside it a button
-    that copies it, as Claude's copy buttons do: a check for a moment once done (copy_controller.js). -#}
+    that copies it, as Claude's copy buttons do: a check for a moment once done (copy_controller.js);
+    then, for a number WhatsApp can reach, a circle with its mark that opens a chat with it in a new
+    tab or the app, a first message naming the listing typed in (listings.rs, whatsapp_url). -#}
 <turbo-stream action="replace" target="phone-reveal">
   <template>
     <div id="phone-reveal" class="contact-revealed">
@@ -8,6 +10,11 @@
         <svg class="icon-copy" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 8.5V6A2.5 2.5 0 0 0 13 3.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/></svg>
         <svg class="icon-copied" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
       </button>
+      {%- if let Some(whatsapp) = whatsapp %}
+      <a class="button secondary icon-circle whatsapp-button" href="{{ whatsapp }}" target="_blank" rel="noopener" aria-label="Shkruaj në WhatsApp" title="Shkruaj në WhatsApp">
+        <svg data-icon="whatsapp" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::WHATSAPP|safe }}</svg>
+      </a>
+      {%- endif %}
     </div>
   </template>
 </turbo-stream>

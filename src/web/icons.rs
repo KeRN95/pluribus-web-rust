@@ -649,9 +649,14 @@ pub const VERIFIED: &str = r#"<path d="M12 3 4.5 6v5.5c0 4.5 3.2 8.3 7.5 9.5 4.3
 /// many times it was shown (my_listings.html).
 pub const CALL: &str = r#"<path d="M5 4h3.2l1.6 4.2-2.1 1.4a11 11 0 0 0 6.7 6.7l1.4-2.1 4.2 1.6V19a2 2 0 0 1-2.2 2A17 17 0 0 1 3 6.2 2 2 0 0 1 5 4Z"/>"#;
 
-/// A speech bubble: messages (the header's button in base.html, the welcome page's at the end of
-/// its categories in home.html, and the button on a listing's page that writes to its seller).
+/// A speech bubble: messages (the header's button in base.html, the welcome page's in the row with
+/// its search in home.html, and the button on a listing's page that writes to its seller).
 pub const CHAT: &str = r#"<path d="M20.5 11.5a8 8 0 0 1-11.6 7.2L4 20l1.3-4.4A8 8 0 1 1 20.5 11.5Z"/>"#;
+
+/// WhatsApp's mark as a line drawing: a round bubble, its tail at the lower left, and a handset
+/// filled in it; the button beside a seller's revealed number that opens a chat with it
+/// (phone_stream.html).
+pub const WHATSAPP: &str = r#"<path d="M4.6 16.4A8.6 8.6 0 1 1 7.6 19.4L3.2 20.8Z"/><path fill="currentColor" stroke="none" d="M9.2 8.1c.4-.4 1-.3 1.3.1l.9 1.5c.2.4.1.8-.2 1.1l-.5.5c.5 1.1 1.4 2 2.5 2.5l.5-.5c.3-.3.7-.4 1.1-.2l1.5.9c.4.3.5.9.1 1.3l-.6.6c-.7.7-1.7.8-2.6.4a9 9 0 0 1-4.4-4.4c-.4-.9-.3-1.9.4-2.6z"/>"#;
 
 /// A crescent moon: the theme's button on the light theme, which switches to the dark one (the
 /// header's in base.html, the welcome page's at the end of its categories in home.html).

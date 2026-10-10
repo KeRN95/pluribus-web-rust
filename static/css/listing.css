@@ -204,6 +204,11 @@
   .listing-split .contact-bar:has(.message-button) :is(.reveal-button, .contact-revealed),
   .listing-split .contact-bar:has(.message-button):not(:has(.reveal-button, .contact-revealed)) .message-button { width: calc(100% - 6.7rem); }
   .listing-split .listing-deal > .contact-bar:has(.message-button) + .actions { grid-column: 2; align-self: start; margin-top: -2.975rem; margin-bottom: .125rem; }
+  /* A revealed number with its WhatsApp circle (phone_stream.html) is three things on that last
+     line, which leaves the two circles no room beside it: it takes the line's whole width, and
+     the share and the report stay in the row under the bar, at its right end. */
+  .listing-split .contact-bar:has(.message-button):has(.whatsapp-button) .contact-revealed { width: 100%; }
+  .listing-split .listing-deal > .contact-bar:has(.message-button):has(.whatsapp-button) + .actions { margin-top: .5rem; }
   /* The seller's own view: the phone's pill across the column but for the share's circle, which
      stands beside it at the line's end, level with it, as the circles do for anyone else (it
      leaves the row under, which it would not fit, by standing out of it); and under them their

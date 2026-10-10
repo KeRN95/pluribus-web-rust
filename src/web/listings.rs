@@ -803,6 +803,33 @@ struct PhoneStream {
     display: String,
     /// What the copy button copies: the number as a phone dials it, or the address.
     copy: String,
+    /// For a number WhatsApp can reach, the address that opens a chat with it, a first message
+    /// naming the listing already typed (whatsapp_url).
+    whatsapp: Option<String>,
+}
+
+/// The address that opens a WhatsApp chat with `phone` (E.164), its first message typed in
+/// ("Përshëndetje! Ju shkruaj për njoftimin „…“ në Pluribus: <its address>"), so that a seller
+/// with many listings knows which one; the buyer can change it before sending. None for an
+/// Albanian landline (+355 but not 6x, the mobiles), which has no WhatsApp; a number abroad may.
+pub fn whatsapp_url(phone: &str, title: &str, url: &str) -> Option<String> {
+    let digits = phone.strip_prefix('+')?;
+    if digits.starts_with("355") && !digits[3..].starts_with('6') {
+        return None;
+    }
+    let text = format!("Përshëndetje! Ju shkruaj për njoftimin „{title}“ në Pluribus: {url}");
+    Some(format!("https://wa.me/{digits}?text={}", percent_encoded(&text)))
+}
+
+/// `text` percent-encoded byte by byte, all but the characters a URL never needs to escape: a
+/// space is %20 rather than a form's "+", which WhatsApp would show as it is.
+fn percent_encoded(text: &str) -> String {
+    text.bytes()
+        .map(|byte| match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (byte as char).to_string(),
+            _ => format!("%{byte:02X}"),
+        })
+        .collect()
 }
 
 /// POST /listing/{public_no}/pare: the listing's page was shown to a visitor (application.js says
@@ -874,17 +901,41 @@ pub async fn related(
     browse::frame(format!("page-related-{offset}"), &ListingPage::related(related, next))
 }
 
-/// Swaps the button for the seller's number (a tap calls it) or e-mail address.
+/// Swaps the button for the seller's number (a tap calls it) or e-mail address; beside a number
+/// WhatsApp can reach, a button that opens a chat with it about the listing.
 pub async fn reveal_phone(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(public_no): Path<i64>,
 ) -> Result<Response> {
-    let Some(contact) = db::reveal_contact(&state.db, public_no).await? else {
+    let Some(revealed) = db::reveal_contact(&state.db, public_no).await? else {
         return not_found().await;
     };
-    let (reveal, href, display, copy) = match contact {
-        SellerContact::Phone(phone) => (Reveal::Phone, format!("tel:{phone}"), format::phone(&phone), phone),
-        SellerContact::Email(email) => (Reveal::Email, format!("mailto:{email}"), email.clone(), email),
+    let url = format!("{}/listing/{public_no}-{}", seo::origin(&headers), revealed.slug);
+    let (reveal, href, display, copy, whatsapp) = match revealed.contact {
+        SellerContact::Phone(phone) => {
+            let whatsapp = whatsapp_url(&phone, &revealed.title, &url);
+            (Reveal::Phone, format!("tel:{phone}"), format::phone(&phone), phone, whatsapp)
+        }
+        SellerContact::Email(email) => (Reveal::Email, format!("mailto:{email}"), email.clone(), email, None),
     };
-    render_stream(PhoneStream { reveal, href, display, copy })
+    render_stream(PhoneStream { reveal, href, display, copy, whatsapp })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::whatsapp_url;
+
+    #[test]
+    fn whatsapp_reaches_mobiles_and_numbers_abroad_but_not_albanian_landlines() {
+        let url = whatsapp_url("+355691234567", "Golf 7", "https://pluribus.al/listing/1-golf-7").unwrap();
+        assert_eq!(
+            url,
+            "https://wa.me/355691234567?text=P%C3%ABrsh%C3%ABndetje%21%20Ju%20shkruaj%20p%C3%ABr%20njoftimin%20\
+             %E2%80%9EGolf%207%E2%80%9C%20n%C3%AB%20Pluribus%3A%20https%3A%2F%2Fpluribus.al%2Flisting%2F1-golf-7"
+        );
+        assert!(whatsapp_url("+393331234567", "Golf", "/listing/1").is_some_and(|url| url.starts_with("https://wa.me/393331234567?")));
+        assert_eq!(whatsapp_url("+35542234567", "Golf", "/listing/1"), None);
+        assert_eq!(whatsapp_url("0691234567", "Golf", "/listing/1"), None);
+    }
 }

@@ -3072,12 +3072,33 @@ async fn revealing_a_phone_returns_a_turbo_stream_and_counts_it(pool: PgPool) {
     // Beside it, a button that copies it, as a phone dials it.
     assert!(response.body.contains(r#"data-controller="copy" data-copy-text-value="+355690000001""#));
     assert!(response.body.contains(r#"aria-label="Kopjo numrin""#));
+    // Then a circle that opens a WhatsApp chat with it, in a new tab or the app, a first message
+    // naming the listing and its address typed in, percent-encoded (a space %20, not "+"). The
+    // number was in no page until the reveal, which counted it.
+    let whatsapp = r#"<a class="button secondary icon-circle whatsapp-button" href="https://wa.me/355690000001?text=P%C3%ABrsh%C3%ABndetje%21%20Ju%20shkruaj%20p%C3%ABr%20njoftimin%20%E2%80%9E"#;
+    assert!(response.body.contains(whatsapp), "{}", response.body);
+    assert!(response.body.contains(r#"%E2%80%9C%20n%C3%AB%20Pluribus%3A%20http%3A%2F%2F"#), "{}", response.body);
+    assert!(response.body.contains(r#"%2Flisting%2F1001-volkswagen-golf-7-2016-nafte" target="_blank" rel="noopener" aria-label="Shkruaj në WhatsApp" title="Shkruaj në WhatsApp">"#), "{}", response.body);
+    assert!(response.body.find("copy-button").unwrap() < response.body.find("whatsapp-button").unwrap());
 
     let reveals: i64 = sqlx::query_scalar("SELECT phone_reveals FROM listing_daily_stats")
         .fetch_one(&pool)
         .await
         .unwrap();
     assert_eq!(reveals, 1);
+
+    // An Albanian landline (+355 4..., Tirana's) has no WhatsApp: the number and its copy alone.
+    sqlx::query(
+        "UPDATE listing_contacts SET phone_e164 = '+35542234567'
+         WHERE listing_id = (SELECT id FROM listings WHERE public_no = 1003)",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let request = Request::post("/listing/1003/phone").body(Body::empty()).unwrap();
+    let landline = send(pool, request).await.body;
+    assert!(landline.contains(r#"href="tel:+35542234567""#) && landline.contains("copy-button"), "{landline}");
+    assert!(!landline.contains("whatsapp"), "{landline}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

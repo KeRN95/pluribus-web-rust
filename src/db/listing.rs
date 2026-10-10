@@ -327,15 +327,27 @@ pub async fn visible_contact(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Opti
     }))
 }
 
+/// What a reveal shows: how to reach the seller, and the listing's title and slug, which the
+/// message a WhatsApp button starts names (web/listings.rs).
+pub struct Revealed {
+    pub contact: SellerContact,
+    pub title: String,
+    pub slug: String,
+}
+
 /// The listing's phone number, or its e-mail address if it has no number to show. Each reveal
 /// is counted in today's statistics.
-pub async fn reveal_contact(db: &PgPool, public_no: i64) -> sqlx::Result<Option<SellerContact>> {
-    let Some(id) = sqlx::query_scalar!("SELECT id FROM listings WHERE public_no = $1", public_no)
-        .fetch_optional(db)
-        .await?
+pub async fn reveal_contact(db: &PgPool, public_no: i64) -> sqlx::Result<Option<Revealed>> {
+    let Some(listing) = sqlx::query!(
+        r#"SELECT id, coalesce(generated_title, title) AS "title!", slug FROM listings WHERE public_no = $1"#,
+        public_no
+    )
+    .fetch_optional(db)
+    .await?
     else {
         return Ok(None);
     };
+    let id = listing.id;
     let Some(contact) = visible_contact(db, id).await? else {
         return Ok(None);
     };
@@ -350,7 +362,7 @@ pub async fn reveal_contact(db: &PgPool, public_no: i64) -> sqlx::Result<Option<
     .execute(db)
     .await?;
 
-    Ok(Some(contact))
+    Ok(Some(Revealed { contact, title: listing.title, slug: listing.slug }))
 }
 
 /// A listing's neighbour on its category's page, the one before it or the one after it: its
