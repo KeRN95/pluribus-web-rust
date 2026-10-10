@@ -560,8 +560,8 @@ const ENERGY: &str = r#"<path d="M3.5 6h6M3.5 12h10M3.5 18h14"/><path d="m9.5 4.
 /// A measuring jug.
 const JUG: &str = r#"<path d="M5.5 4.5h11l-1 15.5a1.5 1.5 0 0 1-1.5 1.5H8a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M16.3 7.5h1.7a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2.2"/><path d="M9 9.5h3M9 13h2M9 16.5h3"/>"#;
 
-/// A clock.
-const CLOCK: &str = r#"<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>"#;
+/// A clock: reserving a listing, and a listing about to expire (notifications.rs).
+pub const CLOCK: &str = r#"<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>"#;
 
 /// A document.
 const DOCUMENT: &str = r#"<path d="M14 2.5H6.5A1.5 1.5 0 0 0 5 4v16a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 20V7.5z"/><path d="M14 2.5v5h5"/><path d="M8.5 12.5h7M8.5 16h5"/>"#;
@@ -746,8 +746,8 @@ const HARD_HAT: &str = r#"<path d="M2.5 18h19"/><path d="M5 18v-2.5a7 7 0 0 1 14
 /// Code brackets.
 const CODE: &str = r#"<path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4.5l-4 15"/>"#;
 
-/// A price tag.
-const PRICE_TAG: &str = r#"<path d="M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8.5 8.5a1.5 1.5 0 0 1 0 2.1l-6.9 6.9a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.4"/>"#;
+/// A price tag: also a kept listing's price dropped (notifications.rs).
+pub const PRICE_TAG: &str = r#"<path d="M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8.5 8.5a1.5 1.5 0 0 1 0 2.1l-6.9 6.9a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.4"/>"#;
 
 /// A steering wheel.
 const STEERING_WHEEL: &str = r#"<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2"/><path d="M3.8 10.5c3.5-1 12.9-1 16.4 0M10.2 13.5 7 19.5M13.8 13.5l3.2 6"/>"#;

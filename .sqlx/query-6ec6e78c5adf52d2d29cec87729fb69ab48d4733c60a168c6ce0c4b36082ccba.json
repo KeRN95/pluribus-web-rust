@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE notifications SET read_at = now()\n         WHERE user_id = $1 AND notification_type IN ('EXPIRING', 'EXPIRED') AND read_at IS NULL\n           AND payload ->> 'listing_id' = $2::uuid::text",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6ec6e78c5adf52d2d29cec87729fb69ab48d4733c60a168c6ce0c4b36082ccba"
+}

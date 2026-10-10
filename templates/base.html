@@ -103,9 +103,11 @@
       </a>
       {%- endblock %}
       {#- The account at the bar's right end: creating one, or for a signed-in visitor, their
-          listings (account.rs, account_page). Posting is the welcome page's round plus, in the row
-          with its search (home.html), and no top bar's. -#}
-      <a class="icon-button account-button" href="/llogaria" aria-label="Llogaria" title="Llogaria">
+          listings (account.rs, account_page), with a dot while one of them is about to expire or
+          expired and they haven't seen it (account_controller.js, notifications.rs). Posting is
+          the welcome page's round plus, in the row with its search (home.html), and no top
+          bar's. -#}
+      <a class="icon-button account-button" href="/llogaria" aria-label="Llogaria" title="Llogaria" data-controller="account">
         <svg data-icon="user" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
       </a>
       {#- After the account, the theme: a moon on the light one, a sun on the dark, the theme it

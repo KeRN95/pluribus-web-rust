@@ -420,11 +420,14 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .inbox-button:hover,
 .account-button:hover,
 .theme-toggle:hover { background: var(--surface-muted); }
-/* The conversations' count (messages.css) and the kept listings' dot sit on the button's edge,
+/* The conversations' count (messages.css), the kept listings' dot and the account's (a listing of
+   the user's about to expire or expired, account_controller.js) sit on the button's edge,
    ringed in its surface. */
 .saved-button,
-.inbox-button { position: relative; }
-.saved-button.has-drops::before {
+.inbox-button,
+.account-button { position: relative; }
+.saved-button.has-drops::before,
+.account-button.has-news::before {
   content: "";
   position: absolute;
   top: 12%;

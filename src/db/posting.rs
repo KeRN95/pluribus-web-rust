@@ -422,31 +422,43 @@ pub async fn change_own_listing(db: &PgPool, public_no: i64, user_id: Uuid, acti
 
 /// "Rifresko": one of the user's listings, up, reserved or expired, stays up for LISTING_DAYS from
 /// now, an expired one back up, and comes back to the top of "newest first" if it was published
-/// or last brought up (`sort_at`) BUMP_DAYS ago or more. False if it isn't theirs, or isn't in a
-/// state to renew (paused, sold, deleted, taken off the site).
+/// or last brought up (`sort_at`) BUMP_DAYS ago or more. Its notifications that it expires or
+/// expired are read, and the account button loses its dot for them. False if it isn't theirs, or
+/// isn't in a state to renew (paused, sold, deleted, taken off the site).
 pub async fn renew_listing(db: &PgPool, public_no: i64, user_id: Uuid) -> sqlx::Result<bool> {
     let mut tx = db.begin().await?;
     sqlx::query!("SELECT set_config('app.user_id', $1, true)", user_id.to_string())
         .fetch_one(&mut *tx)
         .await?;
-    let renewed = sqlx::query!(
+    let Some(id) = sqlx::query_scalar!(
         "UPDATE listings
          SET status = CASE WHEN status = 'EXPIRED' THEN 'ACTIVE' ELSE status END,
              expires_at = now() + make_interval(days => $3),
              bumped_at = CASE WHEN sort_at < now() - make_interval(days => $4) THEN now() ELSE bumped_at END,
              updated_at = now()
-         WHERE public_no = $1 AND created_by_user_id = $2 AND status IN ('ACTIVE', 'RESERVED', 'EXPIRED')",
+         WHERE public_no = $1 AND created_by_user_id = $2 AND status IN ('ACTIVE', 'RESERVED', 'EXPIRED')
+         RETURNING id",
         public_no,
         user_id,
         LISTING_DAYS,
         BUMP_DAYS,
     )
-    .execute(&mut *tx)
+    .fetch_optional(&mut *tx)
     .await?
-    .rows_affected()
-        == 1;
+    else {
+        return Ok(false);
+    };
+    sqlx::query!(
+        "UPDATE notifications SET read_at = now()
+         WHERE user_id = $1 AND notification_type IN ('EXPIRING', 'EXPIRED') AND read_at IS NULL
+           AND payload ->> 'listing_id' = $2::uuid::text",
+        user_id,
+        id,
+    )
+    .execute(&mut *tx)
+    .await?;
     tx.commit().await?;
-    Ok(renewed)
+    Ok(true)
 }
 
 /// A row on "Njoftimet e mia".

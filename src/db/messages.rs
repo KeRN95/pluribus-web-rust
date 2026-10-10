@@ -300,7 +300,9 @@ pub async fn messages(db: &PgPool, conversation_id: Uuid, user_id: Uuid, after: 
     Ok(messages)
 }
 
-/// The user has read the conversation up to the message `upto`, which their page showed.
+/// The user has read the conversation up to the message `upto`, which their page showed. With
+/// nothing from the other side left unread, the notices they had of it (notices.rs,
+/// NEW_MESSAGE) are read too, on /lajmerimet.
 pub async fn mark_read(db: &PgPool, conversation_id: Uuid, user_id: Uuid, upto: Uuid) -> sqlx::Result<()> {
     sqlx::query!(
         "UPDATE conversation_participants p
@@ -311,6 +313,19 @@ pub async fn mark_read(db: &PgPool, conversation_id: Uuid, user_id: Uuid, upto: 
         conversation_id,
         user_id,
         upto,
+    )
+    .execute(db)
+    .await?;
+    sqlx::query!(
+        "UPDATE notifications n SET read_at = now()
+         WHERE n.user_id = $2 AND n.notification_type = 'NEW_MESSAGE' AND n.read_at IS NULL
+           AND n.payload ->> 'conversation' = $1::uuid::text
+           AND NOT EXISTS (SELECT 1 FROM messages m
+                           JOIN conversation_participants p ON p.conversation_id = m.conversation_id AND p.user_id = $2
+                           WHERE m.conversation_id = $1 AND m.sender_user_id <> $2
+                             AND m.created_at > coalesce(p.last_read_at, '-infinity'))",
+        conversation_id,
+        user_id,
     )
     .execute(db)
     .await?;

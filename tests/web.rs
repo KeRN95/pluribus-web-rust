@@ -5484,7 +5484,7 @@ async fn search_engines_find_the_listings_and_the_categories_by_the_sitemaps(poo
     // robots.txt keeps crawlers out of a visitor's own pages, and says where the sitemaps are.
     let robots = send(pool.clone(), from_the_site("/robots.txt")).await;
     assert_eq!(robots.content_type.as_deref(), Some("text/plain; charset=utf-8"));
-    for page in ["/hyr", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet", "/shto", "/listing/*/ndrysho"] {
+    for page in ["/hyr", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet", "/lajmerimet", "/shto", "/listing/*/ndrysho"] {
         assert!(robots.body.contains(&format!("\nDisallow: {page}\n")), "{page}");
     }
     assert!(robots.body.ends_with(&format!("\nSitemap: {site}/sitemap.xml\n")));
@@ -5985,6 +5985,118 @@ async fn a_message_left_unread_brings_a_notice_at_most_once_an_hour(pool: PgPool
     assert_eq!(due().await.unwrap(), 1);
     // Not signed in, the form leads to signing in.
     assert_eq!(post_form(pool.clone(), "/llogaria/njoftimet", &[], None).await.location.as_deref(), Some("/llogaria"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_notifications_page_lists_every_kind_and_reads_them_once_shown(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112244").await;
+    let buyer = new_seller(&pool, "+355691112233").await;
+    let buyer_id: uuid::Uuid = sqlx::query_scalar("SELECT id FROM users WHERE phone_e164 = '+355691112233'").fetch_one(&pool).await.unwrap();
+    // What the account button asks for (account_controller.js): how many are unread, and how many
+    // of those are about the user's own listings.
+    let counts = |session: &str| {
+        let (pool, session) = (pool.clone(), session.to_string());
+        async move {
+            let answer: Value = serde_json::from_str(&get_with_cookie(pool, "/lajmerimet/numri", &session).await.body).unwrap();
+            (answer["unread"].as_i64().unwrap(), answer["own"].as_i64().unwrap())
+        }
+    };
+    // Shown, the page says so (application.js) at the address it names.
+    let saw = |page: &str, session: &str| {
+        let url = attribute(page, "data-seen-url");
+        let pool = pool.clone();
+        let request = Request::post(url).header(header::COOKIE, session).body(Body::empty()).unwrap();
+        async move { assert_eq!(send(pool, request).await.status, StatusCode::NO_CONTENT) }
+    };
+
+    // Not signed in, the page asks to sign in, and there is nothing to count.
+    assert!(get(pool.clone(), "/lajmerimet").await.body.contains("Hyr në llogari për të parë lajmërimet"));
+    assert_eq!(counts("").await, (0, 0));
+    // Nothing yet: the page says what will come there.
+    let empty = get_with_cookie(pool.clone(), "/lajmerimet", &buyer).await.body;
+    assert!(empty.contains("Ende s'ke asnjë lajmërim.") && !empty.contains("data-seen-url"), "{empty}");
+    // Every page's account button asks for its dot.
+    assert!(empty.contains(r#"<a class="icon-button account-button" href="/llogaria" aria-label="Llogaria" title="Llogaria" data-controller="account">"#));
+
+    // The buyer keeps Ana's phone, whose price she then lowers, and keeps a search that has new
+    // listings; and writes to her about it, which she leaves unread. Her phone is days from expiring.
+    let no = post_listing(&pool, &ana).await;
+    send(pool.clone(), tap_heart(&no, "1", Some(&buyer))).await;
+    let edited = post_form(pool.clone(), &format!("/listing/{no}/ndrysho"), &listing_fields(("price", "29 000"), &started()), Some(&ana)).await;
+    assert_eq!(edited.status, StatusCode::SEE_OTHER);
+    post_form(pool.clone(), "/kerkimet/ruaj", &[("adresa", "/c/telefona?city=tirane")], Some(&buyer)).await;
+    let search: uuid::Uuid = sqlx::query_scalar("SELECT id FROM saved_searches").fetch_one(&pool).await.unwrap();
+    marketplace::db::record_search_alert(&pool, buyer_id, search, "2 njoftime të reja: Telefona · Tiranë", 2, "https://pluribus.example/kerkimet")
+        .await
+        .unwrap();
+    let thread = write(&pool, &format!("/listing/{no}/mesazh"), "A është ende në shitje?", &buyer).await.location.unwrap();
+    minutes_pass(&pool, 4).await;
+    assert_eq!(marketplace::notices::send_due(&pool, "https://pluribus.example").await.unwrap(), 1);
+    sqlx::query("UPDATE listings SET expires_at = now() + interval '2 days' WHERE public_no = $1::bigint").bind(&no).execute(&pool).await.unwrap();
+    assert_eq!(marketplace::expiry::run(&pool, "https://pluribus.example").await.unwrap(), (1, 0));
+
+    // The buyer's: the search's alert, then the price drop, both new, each leading to what it is
+    // about; nothing about listings of his own.
+    assert_eq!(counts(&buyer).await, (2, 0));
+    let page = get_with_cookie(pool.clone(), "/lajmerimet", &buyer).await.body;
+    let lines = positions(
+        &page,
+        &[
+            &format!(r#"<a class="notification-line" href="/kerkimet/{search}">"#),
+            r#"<span class="notification-title"><span class="visually-hidden">E re: </span>2 njoftime të reja: Telefona · Tiranë</span>"#,
+            &format!(r#"<a class="notification-line" href="/listing/{no}-samsung-galaxy-s21-128-gb">"#),
+            r#"<span class="notification-title"><span class="visually-hidden">E re: </span>Çmimi ra: Samsung Galaxy S21, 128 GB</span>"#,
+        ],
+    );
+    assert!(lines.is_sorted(), "{page}");
+    assert_eq!(page.matches(r#"<li class="notification is-unread">"#).count(), 2);
+    assert!(page.contains(r#"<span class="notification-when">Sot</span>"#));
+    // Fetched, the page reads nothing; shown, it reads them, and the heart loses its dot too.
+    assert_eq!(counts(&buyer).await, (2, 0));
+    saw(&page, &buyer).await;
+    assert_eq!(counts(&buyer).await, (0, 0));
+    let heart: Value = serde_json::from_str(&get_with_cookie(pool.clone(), "/te-ruajturat/numrat", &buyer).await.body).unwrap();
+    assert_eq!((heart["price_drops"].as_i64(), heart["searches"].as_i64()), (Some(0), Some(0)));
+    let page = get_with_cookie(pool.clone(), "/lajmerimet", &buyer).await.body;
+    assert!(!page.contains("is-unread") && !page.contains("data-seen-url") && page.contains("Çmimi ra: Samsung Galaxy S21, 128 GB"));
+
+    // Ana's: her phone expiring, then the buyer's message, with what he wrote; one about her own
+    // listing, for the account button's dot. "Njoftimet e mia" leads there, saying how many are new.
+    assert_eq!(counts(&ana).await, (2, 1));
+    let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
+    assert!(mine.contains(r#"<p class="saved-switch"><a href="/lajmerimet">"#) && mine.contains("Lajmërimet · 2 të reja</a>"), "{mine}");
+    let page = get_with_cookie(pool.clone(), "/lajmerimet", &ana).await.body;
+    let lines = positions(
+        &page,
+        &[
+            &format!(r#"<a class="notification-line" href="/listing/{no}-samsung-galaxy-s21-128-gb">"#),
+            "Njoftimi skadon së shpejti: Samsung Galaxy S21, 128 GB</span>",
+            &format!(r#"<a class="notification-line" href="{thread}">"#),
+            r#"<span class="notification-body">A është ende në shitje?</span>"#,
+        ],
+    );
+    assert!(lines.is_sorted(), "{page}");
+    // Her phone expires after the page was made: not read with it, as when the browser shows its
+    // copy again.
+    sqlx::query("UPDATE listings SET expires_at = now() - interval '1 minute' WHERE public_no = $1::bigint").bind(&no).execute(&pool).await.unwrap();
+    assert_eq!(marketplace::expiry::run(&pool, "https://pluribus.example").await.unwrap(), (0, 1));
+    saw(&page, &ana).await;
+    assert_eq!(counts(&ana).await, (1, 1));
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains("Lajmërimet · 1 e re</a>"));
+    // Renewing the listing reads what was said of its expiry.
+    post_form(pool.clone(), &format!("/listing/{no}/rifresko"), &[], Some(&ana)).await;
+    assert_eq!(counts(&ana).await, (0, 0));
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains("Lajmërimet</a>"));
+
+    // Another message left unread an hour on brings another notice; reading the conversation reads it.
+    write(&pool, &thread, "Mund ta shoh nesër?", &buyer).await;
+    minutes_pass(&pool, 70).await;
+    assert_eq!(marketplace::notices::send_due(&pool, "https://pluribus.example").await.unwrap(), 1);
+    assert_eq!(counts(&ana).await, (1, 0));
+    let conversation = get_with_cookie(pool.clone(), &thread, &ana).await.body;
+    let last = message_ids(&conversation).pop().unwrap();
+    post_form(pool.clone(), &format!("{thread}/lexuar?deri={last}"), &[], Some(&ana)).await;
+    assert_eq!(counts(&ana).await, (0, 0));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

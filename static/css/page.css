@@ -696,7 +696,9 @@
 .saved-gone-title { flex: 1; min-width: 0; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
 .saved-gone-entry .badge { flex: none; margin: 0; }
 /* Between the listings kept and the searches kept (saved.html, saved_searches.html): a quiet link
-   over the heading, the bell before it on the listings' page, with how many searches have news. */
+   over the heading, the bell before it on the listings' page, with how many searches have news;
+   and between "Njoftimet e mia" and the notifications (my_listings.html, notifications.html), the
+   bell before it there, with how many are new. */
 .saved-switch { margin: 0 0 .25rem; font-size: var(--text-sm); }
 .saved-switch a { display: inline-flex; align-items: center; gap: .35rem; color: var(--muted); font-weight: var(--medium); text-decoration: none; }
 .saved-switch a:hover { color: var(--text); }
@@ -710,6 +712,22 @@
 .saved-search-name:hover { text-decoration: underline; text-underline-offset: .15em; }
 .saved-search .badge { flex: none; margin: 0; color: var(--accent); }
 .saved-search form { display: contents; }
+/* The notifications (notifications.html): a line each, its kind's icon in the muted colour, its
+   title, what a message said in two lines at most, and when; one unread has its title in the
+   semibold and the heart's dot at the line's end, which the page's being shown takes away; the
+   column as wide as "Njoftimet e mia"'s, so that the dot stays near the words. */
+.notifications { max-width: 600px; }
+.notification-list { margin: 1rem 0; padding: 0; list-style: none; }
+.notification { border-top: 1px solid var(--border); }
+.notification-line { display: flex; align-items: flex-start; gap: .75rem; padding: .8rem 0; color: var(--text); text-decoration: none; }
+a.notification-line:hover .notification-title { text-decoration: underline; text-underline-offset: .15em; }
+.notification-icon { flex: none; margin-top: .1rem; color: var(--muted); }
+.notification-text { display: flex; flex: 1; flex-direction: column; gap: .15rem; min-width: 0; }
+.notification-title { font-weight: var(--medium); overflow-wrap: anywhere; }
+.is-unread .notification-title { font-weight: var(--semibold); }
+.notification-body { display: -webkit-box; overflow: hidden; color: var(--muted); font-size: var(--text-sm); -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.notification-when { color: var(--muted); font-size: var(--text-sm); }
+.is-unread .notification-line::after { content: ""; flex: none; width: .5rem; height: .5rem; margin-top: .45rem; border-radius: 50%; background: var(--button); }
 
 /* Form fields */
 

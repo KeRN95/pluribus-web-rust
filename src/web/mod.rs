@@ -9,6 +9,7 @@ mod listings;
 mod messages;
 mod moderation;
 mod named;
+mod notifications;
 mod pages;
 mod photos;
 mod post;
@@ -86,6 +87,9 @@ pub fn router(state: AppState) -> Router {
         .route("/te-ruajturat/numrat", get(saved::numbers))
         .route("/te-ruajturat/pare", post(saved::seen))
         .route("/kerkimet-e-ruajtura", get(searches::page))
+        .route("/lajmerimet", get(notifications::page))
+        .route("/lajmerimet/pare", post(notifications::seen))
+        .route("/lajmerimet/numri", get(notifications::counts))
         .route("/kerkimet/ruaj", post(searches::save))
         .route("/kerkimet/pare", post(searches::seen))
         .route("/kerkimet/{id}", get(searches::open))

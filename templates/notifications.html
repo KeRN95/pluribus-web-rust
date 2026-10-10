@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Lajmërimet | Pluribus{% endblock %}
+
+{% block content %}
+{#- The user's notifications (notifications.rs), the latest first, each a line leading to what it
+    is about: its kind's icon, its title, what a message said, when. Those unread wear a dot, and
+    say so to screen readers, until the page has been shown (data-seen-url, application.js), which
+    reads them, and with them the heart's and the account's dots. "Njoftimet e mia" is a tap back. -#}
+<section class="notifications"{% if let Some(url) = seen_url %} data-seen-url="{{ url }}"{% endif %}>
+  <p class="saved-switch"><a href="/njoftimet-e-mia">‹ Njoftimet e mia</a></p>
+  <h1>Lajmërimet</h1>
+  {%- if !signed_in %}
+  <p class="lead">Hyr në llogari për të parë lajmërimet: kur bie çmimi i një njoftimi që ke ruajtur, kur dalin njoftime të reja te një kërkim i ruajtur, kur një mesazh mbetet pa u lexuar, kur një njoftim yt po skadon.</p>
+  <p><a class="button" href="/llogaria">Hyr</a></p>
+  {%- else if rows.is_empty() %}
+  <p class="empty">Ende s'ke asnjë lajmërim. Këtu do të dalin kur bie çmimi i një njoftimi që ke ruajtur, kur dalin njoftime të reja te një kërkim i ruajtur, kur një mesazh mbetet pa u lexuar dhe kur një njoftim yt po skadon.</p>
+  {%- else %}
+  <ul class="notification-list">
+    {%- for row in rows %}
+    <li class="notification{% if row.unread %} is-unread{% endif %}">
+      {%- if let Some(href) = row.href %}
+      <a class="notification-line" href="{{ href }}">
+      {%- else %}
+      <div class="notification-line">
+      {%- endif %}
+        <svg class="notification-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ row.icon|safe }}</svg>
+        <span class="notification-text">
+          <span class="notification-title">{% if row.unread %}<span class="visually-hidden">E re: </span>{% endif %}{{ row.title }}</span>
+          {%- if let Some(body) = row.body %}
+          <span class="notification-body">{{ body }}</span>
+          {%- endif %}
+          <span class="notification-when">{{ row.when }}</span>
+        </span>
+      {%- if row.href.is_some() %}
+      </a>
+      {%- else %}
+      </div>
+      {%- endif %}
+    </li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
+</section>
+{% endblock %}

@@ -9,6 +9,9 @@
 
 {% block content %}
 <section class="account">
+  {#- Over the heading, the notifications (notifications.rs), with how many are new: a listing
+      about to expire, a price dropped, a saved search's new listings, a message left unread. -#}
+  <p class="saved-switch"><a href="/lajmerimet"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BELL|safe }}</svg>Lajmërimet{% if notifications.all == 1 %} · 1 e re{% else if notifications.all > 1 %} · {{ notifications.all }} të reja{% endif %}</a></p>
   <h1>Njoftimet e mia</h1>
   <p class="lead">Njoftimet që ke publikuar me <strong>{{ signed_in_as }}</strong>.</p>
   {%- if let Some(pending) = pending %}

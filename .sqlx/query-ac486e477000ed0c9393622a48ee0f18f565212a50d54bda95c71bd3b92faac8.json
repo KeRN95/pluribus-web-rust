@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE listings\n         SET status = CASE WHEN status = 'EXPIRED' THEN 'ACTIVE' ELSE status END,\n             expires_at = now() + make_interval(days => $3),\n             bumped_at = CASE WHEN sort_at < now() - make_interval(days => $4) THEN now() ELSE bumped_at END,\n             updated_at = now()\n         WHERE public_no = $1 AND created_by_user_id = $2 AND status IN ('ACTIVE', 'RESERVED', 'EXPIRED')\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ac486e477000ed0c9393622a48ee0f18f565212a50d54bda95c71bd3b92faac8"
+}
