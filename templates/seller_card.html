@@ -1,0 +1,25 @@
+{#- Who sells it (listing.html), under a heading of its own as the details and the description
+    have theirs, in a card: a small initial, the name, "Numër i verifikuar" when the number (or
+    address) it shows is one they signed in with (safety.rs), and since when and how many
+    listings, leading to their profile (listing.css, .seller-head). Under the description, across
+    the page or the column beside the photo; on a car's page in the deal's column at the right
+    (.listing-deal). The ways to reach them are the buttons under the price alone. -#}
+<section class="seller-section" aria-labelledby="seller-heading">
+  <h2 id="seller-heading">Shitësi</h2>
+  <div class="seller-head">
+    <a class="seller" href="{{ listing.seller_url }}">
+      <span class="avatar" aria-hidden="true">{{ listing.seller_initial() }}</span>
+      <span class="seller-text">
+        <span class="seller-name">{{ listing.seller_name }}
+          {%- if let Some(verified) = verified %}
+          {#- A check beside the name: the number (or address) it shows is one they signed in with
+              (safety.rs); what it means, as a tooltip and to screen readers. -#}
+          <span class="verified" title="{{ verified }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::VERIFIED|safe }}</svg><span class="visually-hidden">{{ verified }}</span></span>
+          {%- endif -%}
+        </span>
+        <span class="seller-summary">{{ listing.seller_summary() }}</span>
+      </span>
+      <svg class="seller-chevron" data-icon="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+  </div>
+</section>

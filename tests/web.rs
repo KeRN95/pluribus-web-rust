@@ -1793,15 +1793,26 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     // What kind of listing it is, and its condition, over the price, not among the details.
     assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur · <span class="listing-number">"#));
     assert!(!response.body.contains(">Gjendja</dt>"));
-    // A car's key facts, its mileage and fuel (its year is in the title), are lit; its body type not.
-    assert!(response.body.contains(r#"<dd class="attribute is-key" title="Kilometrazhi"><svg class="attribute-icon""#));
-    assert!(response.body.contains(r#"<dd class="attribute is-key" title="Karburanti">"#));
-    assert!(response.body.contains(r#"<dd class="attribute" title="Karroceria">"#));
-    assert!(response.body.contains(r#"<dt class="visually-hidden">Kilometrazhi</dt>"#));
-    assert!(response.body.contains("</svg>148\u{a0}000\u{a0}km</dd>"));
-    assert!(response.body.contains("</svg>Naftë</dd>"));
-    assert!(response.body.contains("</svg>Hatchback</dd>"));
-    assert!(response.body.contains("</svg>ABS</dd>") && response.body.contains("</svg>Kondicioner</dd>"));
+    // A car's page, laid out as FINN's: its key facts, the year, the mileage, the gearbox and the
+    // fuel, in a row under the title, each with its icon and its name over its value; the rest of
+    // its details in a grid after the description, a name with its icon over its value, the facts
+    // left out; and its options in a list of their own, each with a check. No pills.
+    let facts = &response.body[response.body.find(r#"<dl class="key-facts">"#).expect("the key facts")..];
+    let facts = &facts[..facts.find("</dl>").unwrap()];
+    let order = positions(facts, &["<dd>2016</dd>", "<dd>148\u{a0}000\u{a0}km</dd>", "<dd>Manuale</dd>", "<dd>Naftë</dd>"]);
+    assert!(order.is_sorted(), "{order:?}");
+    assert_eq!(facts.matches(r#"<div class="key-fact">"#).count(), 4, "{facts}");
+    assert_eq!(facts.matches(r#"<svg class="key-fact-icon""#).count(), 4, "{facts}");
+    assert!(facts.contains("<dt>Kilometrazhi</dt><dd>148\u{a0}000\u{a0}km</dd>"), "{facts}");
+    let specs = &response.body[response.body.find(r#"<dl class="spec-grid">"#).expect("the details' grid")..];
+    let specs = &specs[..specs.find("</dl>").unwrap()];
+    assert!(specs.contains("Karroceria</dt><dd>Hatchback</dd>"), "{specs}");
+    assert!(specs.contains(r#"<div class="spec">"#) && specs.contains(r#"<dt><svg class="spec-icon""#), "{specs}");
+    assert!(!specs.contains("Kilometrazhi") && !specs.contains("Naftë"), "the facts leave the details: {specs}");
+    assert!(!response.body.contains(r#"<dd class="attribute"#), "no pills on a car's page");
+    assert!(response.body.contains("</svg>ABS</li>") && response.body.contains("</svg>Kondicioner</li>"));
+    let order = positions(&response.body, &["<h2>Përshkrimi</h2>", "<h2>Detajet</h2>", r#"<section class="listing-options">"#, r#"<ul class="options">"#]);
+    assert!(order.is_sorted(), "{order:?}");
     // Its category in pills, as a category page's head has them, after a round back button that
     // leads to its category without scripts, and no house (the logo leads to the welcome page):
     // the category above it, quieter, a way up, and its own, filled, each with its icon and
@@ -1852,7 +1863,7 @@ async fn a_listing_steps_to_its_neighbours_on_its_categorys_page(pool: PgPool) {
     // Over the path, room for a banner, as tall on every listing (listing.css), so that stepping
     // through them leaves the path and its buttons where they are: empty for now, kept for an ad.
     let top = positions(&page, &[
-        r#"<article class="listing""#,
+        r#"<article class="listing"#,
         r#"<div class="listing-banner" aria-hidden="true"></div>"#,
         r#"<div class="listing-tags">"#,
     ]);
@@ -2622,21 +2633,22 @@ async fn each_kind_of_thing_asks_for_what_fits_it(pool: PgPool) {
     let posted = post_form(pool.clone(), "/shto", &fields, Some(&ana)).await;
     assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
     let page = get(pool.clone(), &posted.location.unwrap()).await.body;
-    for value in [">E zhdoganuar</dd>", ">Shqiptare</dd>", "1\u{a0}598\u{a0}cm³</dd>", "115\u{a0}HP</dd>", r#"title="Pa aksident""#] {
+    for value in [">E zhdoganuar</dd>", ">Shqiptare</dd>", "1\u{a0}598\u{a0}cm³</dd>", "115\u{a0}HP</dd>", "Pa aksident</dt>"] {
         assert!(page.contains(value), "{value}");
     }
-    // Each with its icon: a value that says what it is alone beside it, one that doesn't after
-    // its name; a box ticked says its name, not "Po".
-    let pill = |label: &str| {
-        let start = page.find(&format!(r#"<dd class="attribute" title="{label}">"#)).unwrap_or_else(|| panic!("{label}"));
-        page[start..start + page[start..].find("</dd>").unwrap()].to_string()
+    // On a car's page the details stand in a grid, each its name with its icon over its value; a
+    // box ticked says its name, not "Po".
+    let spec = |label: &str| {
+        let end = page.find(&format!("{label}</dt>")).unwrap_or_else(|| panic!("{label}"));
+        let start = page[..end].rfind("<dt>").unwrap();
+        page[start..end + page[end..].find("</dd>").unwrap()].to_string()
     };
     for label in ["Dogana", "Targat", "Motorri", "Fuqia", "Pronarë", "Pa aksident"] {
-        assert!(pill(label).contains(r#"<svg class="attribute-icon""#), "{label}");
+        assert!(spec(label).starts_with(r#"<dt><svg class="spec-icon""#), "{label}: {}", spec(label));
     }
-    assert!(pill("Dogana").ends_with("</svg>E zhdoganuar"));
-    assert!(pill("Pronarë").ends_with(r#"</svg><span class="attribute-label" aria-hidden="true">Pronarë</span>1"#));
-    assert!(pill("Pa aksident").ends_with("</svg>Pa aksident"));
+    assert!(spec("Dogana").ends_with("Dogana</dt><dd>E zhdoganuar"));
+    assert!(spec("Pronarë").ends_with("Pronarë</dt><dd>1"));
+    assert!(spec("Pa aksident").ends_with("Pa aksident</dt><dd>Pa aksident"));
     for (uri, found) in [
         ("/c/makina?vehicle_customs=CLEARED", 1),
         ("/c/makina?vehicle_customs=NOT_CLEARED", 0),
@@ -4131,13 +4143,15 @@ async fn a_cars_title_is_made_from_what_it_is(pool: PgPool) {
         .unwrap();
     assert_eq!(generated.as_deref(), Some("Volkswagen Golf 1.6, 2017"));
     // The seller's own heads the description; the details leave out what the title says, but for
-    // the engine's exact size.
+    // the engine's exact size, and the year, which stands among the key facts under the title (as
+    // FINN has it), not in the grid.
     assert!(page.contains(r#"<h3 class="description-heading">Volkswagen Golf 7 1.6 TDI, 2017</h3>"#));
-    for said in ["Marka", "Modeli", "Viti"] {
+    for said in ["Marka", "Modeli"] {
         assert!(!page.contains(&format!(">{said}</dt>")), "{said}");
     }
+    assert!(page.contains("<dt>Viti</dt><dd>2017</dd>") && page.matches("Viti</dt>").count() == 1);
     for shown in ["Karroceria", "Ngjyra", "Motorri"] {
-        assert!(page.contains(&format!(r#"<dt class="visually-hidden">{shown}</dt>"#)), "{shown}");
+        assert!(page.contains(&format!("{shown}</dt>")), "{shown}");
     }
     // Its card says it too.
     let card = format!(r#"href="{url}">Volkswagen Golf 1.6, 2017</a>"#);
@@ -4594,29 +4608,33 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // A private seller: Ana, with the five fixture listings she sells.
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
-    // The category above the photo; the title and the price under it; then the contact bar, the
-    // phone and the message, wide pills; then the share, a link in a circle, and the report; then
-    // the details and the description; then her initial, her name, since when and how many
-    // listings, leading to her profile; then her other listings.
+    // The category above the photo; the title, and on a car's page its key facts, under it; then
+    // the deal, the price in its box, the contact bar, the phone and the message, wide pills,
+    // the share, a link in a circle, and the report, and (a car's page) her initial, her name,
+    // since when and how many listings, leading to her profile; then the description and the
+    // details; then her other listings.
     let order = positions(&page, &[
         r#"<nav class="category-path listing-path""#,
         r#"<div class="gallery">"#,
         r#"<p class="listing-meta">"#,
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur · "#,
+        r#"<dl class="key-facts">"#,
+        r#"<div class="listing-deal">"#,
+        r#"<div class="price-box">"#,
         r#"<p class="listing-price">"#,
         r#"<aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">"#,
         r#"<form id="phone-reveal" method="post""#,
         "</aside>",
         r#"<div class="actions">"#,
         r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
-        "<h2>Detajet</h2>",
-        "<h2>Përshkrimi</h2>",
         r#"<section class="seller-section" aria-labelledby="seller-heading">"#,
         r#"<h2 id="seller-heading">Shitësi</h2>"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="seller-name">Ana</span>"#,
         r#"<span class="seller-summary">Në Pluribus që nga "#,
+        "<h2>Përshkrimi</h2>",
+        "<h2>Detajet</h2>",
     ]);
     assert!(order.is_sorted(), "{order:?}");
     // The seller's card has no buttons of its own: the ways to reach them are under the price.
@@ -5172,10 +5190,23 @@ async fn a_listing_but_a_cars_or_a_propertys_stands_beside_its_photo(pool: PgPoo
     let article_end = side.find("</article>").unwrap();
     assert!(side.find(r#"<section class="seller-section" aria-labelledby="seller-heading">"#).unwrap() < article_end);
     assert!(side[..article_end].contains(r#"<h2>Përshkrimi</h2>"#) && !phone.contains("listing-map-section"));
+    // The deal (the price, the bar, the circles) is in the flow there, the seller's card after
+    // the description, not in it.
+    let deal = &phone[phone.find(r#"<div class="listing-deal">"#).unwrap()..phone.find(r#"<section class="listing-details">"#).unwrap()];
+    assert!(deal.contains(r#"<div class="price-box">"#) && !deal.contains("seller-section"), "{deal}");
+    assert!(!phone.contains("key-facts") && !phone.contains("spec-grid"));
+    let order = positions(&phone, &["<h2>Detajet</h2>", "<h2>Përshkrimi</h2>", r#"<section class="seller-section""#]);
+    assert!(order.is_sorted(), "{order:?}");
+    // A car's page is laid out as FINN's (.listing-car): the seller's card in the deal, at the
+    // right from 960 px up (listing_page_shows_price_and_attributes has the rest).
     let golf = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
-    assert!(!golf.contains("listing-split") && golf.contains(r#"<div class="listing-side">"#));
+    assert!(golf.contains(r#"<article class="listing listing-car""#) && golf.contains(r#"<div class="listing-side">"#), "{golf}");
+    let deal = &golf[golf.find(r#"<div class="listing-deal">"#).unwrap()..golf.find(r#"<section class="listing-description">"#).unwrap()];
+    assert!(deal.contains(r#"<div class="price-box">"#) && deal.contains(r#"<section class="seller-section""#), "{deal}");
+    // A property's keeps its photos across the page, its details as pills, the seller's card after
+    // the description and the map under it.
     let flat = html(pool, "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
-    assert!(!flat.contains("listing-split"), "{flat}");
+    assert!(!flat.contains("listing-split") && !flat.contains("listing-car") && flat.contains(r#"<dl class="attributes">"#), "{flat}");
     let side = &flat[flat.find(r#"<div class="listing-side">"#).unwrap()..];
     assert!(side.find(r#"<section class="listing-map-section""#).unwrap() < side.find("</article>").unwrap());
 }

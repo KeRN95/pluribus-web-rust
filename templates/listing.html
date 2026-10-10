@@ -13,12 +13,15 @@
     hear its message button, under the price. -#}
 <div class="listing-page" data-controller="message-sheet"
      data-action="keydown.esc@document->message-sheet#close turbo:before-cache@document->message-sheet#close">
-{#- Shown to anyone but its seller, the page says so (application.js), for "Më të klikuarat". For
-    all but a car's or a property's listing (wide_photos, listings.rs) the page is split from
-    960 px up, as the classifieds sites have it (listing.css, .listing-split): the photo at the
-    left in a frame taller than wide, and the rest (.listing-side, below) in a column at its
-    right. -#}
-<article class="listing{% if !wide_photos %} listing-split{% endif %}"{% if !own && listing.on_site() %} data-seen-url="/listing/{{ listing.public_no }}/pare"{% endif %}>
+{#- Shown to anyone but its seller, the page says so (application.js), for "Më të klikuarat". A
+    car's page (car_page, listings.rs) is laid out as FINN has its from 960 px up (listing.css,
+    .listing-car): the photos across the page, and under them the title, the key facts, the
+    description and the details at the left, and the price, the ways to the seller and the
+    seller's card in a column at the right (.listing-deal, below). For all but a car's or a
+    property's listing (wide_photos) the page is split there, as the classifieds sites have it
+    (.listing-split): the photo at the left in a frame taller than wide, and the rest
+    (.listing-side, below) in a column at its right. -#}
+<article class="listing{% if car_page %} listing-car{% else if !wide_photos %} listing-split{% endif %}"{% if !own && listing.on_site() %} data-seen-url="/listing/{{ listing.public_no }}/pare"{% endif %}>
   {#- Room for a banner over the path, from 960 px up about a fifth as tall as the photo
       (listing.css, .listing-banner): empty for now, kept for an ad, so that the path, its
       buttons and the photo stand at the same height on every listing as one steps through
@@ -96,7 +99,7 @@
       <div class="gallery-photo">
         <img class="gallery-backdrop" src="{{ photo.backdrop() }}" alt=""{% if photo.placeholder.is_none() && loop.index > 2 %} loading="lazy"{% endif %}>
         {%- if let Some(webp) = photo.webp_srcset() %}
-        <picture><source type="image/webp" srcset="{{ webp }}" sizes="{% if wide_photos %}{{ GALLERY_SIZES }}{% else %}{{ SPLIT_GALLERY_SIZES }}{% endif %}">
+        <picture><source type="image/webp" srcset="{{ webp }}" sizes="{% if car_page %}{{ CAR_GALLERY_SIZES }}{% else if wide_photos %}{{ GALLERY_SIZES }}{% else %}{{ SPLIT_GALLERY_SIZES }}{% endif %}">
         {%- endif %}
         <img src="{{ photo.url }}" alt="{{ listing.title }}{% if photos.len() > 1 %}, foto {{ loop.index }} nga {{ photos.len() }}{% endif %}"
           {%- if let Some(width) = photo.width_px %} width="{{ width }}"{% endif %}
@@ -165,10 +168,29 @@
   <div class="listing-side">
   <header class="listing-header">
     <h1>{{ listing.title }}</h1>
-    {#- What kind it is and its condition, quietly: "Në shitje · E përdorur". -#}
     {#- What it is and in what state ("Në shitje · E përdorur"), and at the end of the line its
         number, to name it on the phone. -#}
     <p class="card-meta listing-kind">{{ listing.kind_line() }} · <span class="listing-number">Numri i njoftimit: {{ listing.public_no }}</span></p>
+  </header>
+  {%- if !facts.is_empty() %}
+  {#- A car's key facts in a row under the title, as FINN has them (listings.rs, CAR_FACTS): the
+      year, the mileage, the gearbox and the fuel, each with its icon, its name quiet over its
+      value (listing.css, .key-facts). -#}
+  <dl class="key-facts">
+    {%- for fact in facts %}
+    <div class="key-fact">
+      {%- if let Some(icon) = fact.icon %}<svg class="key-fact-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}
+      <div class="key-fact-text"><dt>{{ fact.label }}</dt>{% for value in fact.values %}<dd>{{ value }}</dd>{% endfor %}</div>
+    </div>
+    {%- endfor %}
+  </dl>
+  {%- endif %}
+  {#- The deal: the price, the ways to the seller, the share and the report, and on a car's page
+      the seller's card. Its parts stand in the rest's grid with the others (display: contents),
+      but on a car's page from 960 px up it is a column at the page's right, which stays put under
+      the top bar while the rest scrolls (listing.css, .listing-deal). -#}
+  <div class="listing-deal">
+  <div class="price-box">
     {%- let area_price = listing.area_price() %}
     {%- if let Some(amount) = listing.loan_amount() %}
     {#- The price, and the bubble that opens the loan calculator (loan_controller.js): beside the
@@ -218,7 +240,7 @@
     <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{{ note }}</span>{% endif %}{% include "price_drop.html" %}</p>
     {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
     {%- endif %}
-  </header>
+  </div>
 
   {#- How to reach the seller, under the price: the phone (an envelope for a seller who signed in
       by e-mail) and a message, wide pills that say their names, the way to the seller being what
@@ -289,7 +311,38 @@
       so that its buttons stay few. -#}
   <p class="blocked-note">E ke bllokuar këtë shitës: njoftimet që ka vënë nuk të dalin te faqet e njoftimeve, dhe nuk i shkruani dot njëri-tjetrit. E zhbllokon te <a href="/njoftimet-e-mia">Njoftimet e mia</a>.</p>
   {%- endif %}
+  {%- if car_page %}{% include "seller_card.html" %}{% endif %}
+  </div>
 
+  {% if car_page %}
+  {#- A car's page, as FINN has its: the description first, then the details in a grid, a name
+      over its value, each with its icon (listing.css, .spec-grid), and the options, a car's
+      several-valued details, in columns with a check each, under their own names (.options). -#}
+  {% include "description.html" %}
+  {% if !details.is_empty() %}
+  <section class="listing-details">
+    <h2>Detajet</h2>
+    <dl class="spec-grid">
+      {%- for detail in details %}
+      <div class="spec">
+        <dt>{% if let Some(icon) = detail.icon %}<svg class="spec-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}{{ detail.label }}</dt>
+        {%- for value in detail.values %}<dd>{{ value }}</dd>{% endfor %}
+      </div>
+      {%- endfor %}
+    </dl>
+  </section>
+  {% endif %}
+  {%- for detail in options %}
+  <section class="listing-options">
+    <h2>{{ detail.label }}</h2>
+    <ul class="options">
+      {%- for value in detail.values %}
+      <li><svg class="option-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>{{ value }}</li>
+      {%- endfor %}
+    </ul>
+  </section>
+  {%- endfor %}
+  {% else %}
   {% if !details.is_empty() %}
   <section class="listing-details">
     <h2>Detajet</h2>
@@ -316,47 +369,10 @@
   </section>
   {% endif %}
 
-  <section class="listing-description">
-    <h2>Përshkrimi</h2>
-    {%- if let Some(heading) = listing.heading %}
-    {#- A car's own title, as its seller wrote it: the page's is made from what the car is. -#}
-    <h3 class="description-heading">{{ heading }}</h3>
-    {%- endif %}
-    {#- A long description shows a dozen lines, fading out at the foot, until "Shfaq të gjithë
-        përshkrimin" unfolds it (fold_controller.js, which folds only one longer than that; without
-        scripts it shows whole). -#}
-    <div class="description-fold" data-controller="fold">
-      <p class="description" data-fold-target="text">{{ listing.description }}</p>
-      <button type="button" class="description-more" data-fold-target="button" data-action="fold#open" hidden>
-        <svg data-icon="plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Shfaq të gjithë përshkrimin
-      </button>
-    </div>
-  </section>
-
-{#- Who sells it, under the description, under a heading of its own as the details and the
-    description have theirs, in a card across the page or the column beside the photo: a small
-    initial, the name, "Numër i verifikuar" when the number (or address) it shows is one they
-    signed in with (safety.rs), and since when and how many listings, leading to their profile
-    (listing.css, .seller-head). The ways to reach them are the buttons under the price alone. -#}
-<section class="seller-section" aria-labelledby="seller-heading">
-  <h2 id="seller-heading">Shitësi</h2>
-  <div class="seller-head">
-    <a class="seller" href="{{ listing.seller_url }}">
-      <span class="avatar" aria-hidden="true">{{ listing.seller_initial() }}</span>
-      <span class="seller-text">
-        <span class="seller-name">{{ listing.seller_name }}
-          {%- if let Some(verified) = verified %}
-          {#- A check beside the name: the number (or address) it shows is one they signed in with
-              (safety.rs); what it means, as a tooltip and to screen readers. -#}
-          <span class="verified" title="{{ verified }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::VERIFIED|safe }}</svg><span class="visually-hidden">{{ verified }}</span></span>
-          {%- endif -%}
-        </span>
-        <span class="seller-summary">{{ listing.seller_summary() }}</span>
-      </span>
-      <svg class="seller-chevron" data-icon="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-    </a>
-  </div>
-</section>
+  {#- The description (description.html), then the seller's card (seller_card.html), under it. -#}
+  {% include "description.html" %}
+  {% include "seller_card.html" %}
+  {% endif %}
 
 {%- if let Some(map) = map %}
 {#- Where a property or a car is, under its seller: a map half as tall as the photos over it

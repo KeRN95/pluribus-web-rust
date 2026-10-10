@@ -31,14 +31,20 @@
 /* The banner's room (listing.html): none on a phone. */
 .listing-banner { display: none; }
 .listing > *,
-.listing-side > * { min-width: 0; }
-.listing-side > :is(.listing-details, .listing-description) { margin-top: 1.75rem; }
-.listing-side > :is(.listing-details, .listing-description, .seller-section) > h2 { margin-top: 0; }
+.listing-side > *,
+.listing-deal > * { min-width: 0; }
+.listing-side > :is(.listing-details, .listing-description, .listing-options) { margin-top: 1.75rem; }
+.listing-side > :is(.listing-details, .listing-description, .listing-options, .seller-section) > h2,
+.listing-deal > .seller-section > h2 { margin-top: 0; }
+/* The deal's parts (the price, the contact bar, the share and the report; listing.html,
+   .listing-deal) are the rest's grid items like the others, the deal itself no box (display:
+   contents, in the car page's rules below). */
 @media (min-width: 720px) {
   .listing-side { grid-template-columns: auto minmax(0, 1fr); }
-  .listing-side > * { grid-column: 1 / -1; }
-  .listing-side > .contact-bar { grid-column: 1; margin-right: .5rem; }
-  .listing-side > .contact-bar + .actions { grid-column: 2; align-self: center; }
+  .listing-side > *,
+  .listing-deal > * { grid-column: 1 / -1; }
+  .listing-deal > .contact-bar { grid-column: 1; margin-right: .5rem; }
+  .listing-deal > .contact-bar + .actions { grid-column: 2; align-self: center; }
 }
 /* Listings like it, under it: the browse pages' grid, as wide as the page, set apart by space
    alone. */
@@ -60,7 +66,8 @@
 .seller-section { margin-top: 1.75rem; }
 @media (max-width: 719px) {
   .seller-section { margin-top: 2.5rem; }
-  .listing-side > :is(.seller-section, .listing-map-section) { order: 2; }
+  .listing-side > :is(.seller-section, .listing-map-section),
+  .listing-deal > .seller-section { order: 2; }
 }
 .seller-head {
   display: flex;
@@ -134,7 +141,8 @@
      the frame's own cap (below). It is in the page, whose min-height takes it in, "Njoftime të
      ngjashme" still just out of view under a short listing. */
   .listing-banner { display: block; height: min(14vh, 7.6rem); margin-bottom: var(--gutter); }
-  .listing-side > :is(.listing-header, .listing-details, .listing-description) { max-width: 46rem; }
+  .listing-side > :is(.listing-header, .listing-details, .listing-description, .listing-options),
+  .listing-deal > .price-box { max-width: 46rem; }
   /* Across the page a photo's frame is wider than the photo, and no taller than most screens
      leave room for: the photo whole in the middle, its blurred copy filling the sides. */
   .listing-media .gallery-photo,
@@ -165,14 +173,15 @@
   .listing-split > .listing-side { grid-column: 2; grid-template-columns: minmax(0, 1fr) auto; }
   .listing-split .listing-media .gallery-photo,
   .listing-split .listing-media .listing-photo { aspect-ratio: 3 / 4; height: auto; max-height: calc(100vh - 12.05rem - 1px); }
-  .listing-split .listing-side > :is(.listing-header, .listing-details, .listing-description) { max-width: none; }
+  .listing-split .listing-side > :is(.listing-header, .listing-details, .listing-description),
+  .listing-split .listing-deal > .price-box { max-width: none; }
   .listing-split .listing-header h1 { margin-top: 0; }
   /* The bar's pills on a line each, the message's first, the phone's under it (by order; a
      phone's bar keeps the phone first). The seller's own view, with the phone alone and their
      own buttons after it: the bar in the first track, the buttons in the second, level with it
      (the circles are .25rem shorter than the pills). */
-  .listing-split .listing-side > .contact-bar { grid-column: 1; flex-direction: column; align-items: stretch; margin-right: .5rem; }
-  .listing-split .listing-side > .contact-bar + .actions { grid-column: 2; align-self: end; margin-bottom: .125rem; }
+  .listing-split .listing-deal > .contact-bar { grid-column: 1; flex-direction: column; align-items: stretch; margin-right: .5rem; }
+  .listing-split .listing-deal > .contact-bar + .actions { grid-column: 2; align-self: end; margin-bottom: .125rem; }
   .listing-split .contact-bar .button { flex: none; }
   .listing-split .contact-bar .message-button { order: -1; }
   /* Anyone else's view, with the message pill: the bar across both tracks, the message as wide
@@ -181,20 +190,78 @@
      from the pill), and the circles come up from the row under the bar to stand level with that
      last line, the row left with no height of its own (the margins add up to none). The
      revealed number takes the phone's room with its copy button. */
-  .listing-split .listing-side > .contact-bar:has(.message-button) { grid-column: 1 / -1; margin-right: 0; }
+  .listing-split .listing-deal > .contact-bar:has(.message-button) { grid-column: 1 / -1; margin-right: 0; }
   .listing-split .contact-bar:has(.message-button) :is(.reveal-button, .contact-revealed),
   .listing-split .contact-bar:has(.message-button):not(:has(.reveal-button, .contact-revealed)) .message-button { width: calc(100% - 6.7rem); }
-  .listing-split .listing-side > .contact-bar:has(.message-button) + .actions { grid-column: 2; align-self: start; margin-top: -2.975rem; margin-bottom: .125rem; }
+  .listing-split .listing-deal > .contact-bar:has(.message-button) + .actions { grid-column: 2; align-self: start; margin-top: -2.975rem; margin-bottom: .125rem; }
   /* The seller's own view: the phone's pill across the column but for the share's circle, which
      stands beside it at the line's end, level with it, as the circles do for anyone else (it
      leaves the row under, which it would not fit, by standing out of it); and under them their
      own buttons, Ndrysho, Çaktivizo and Fshi, each with its icon, on a line of their own, as wide
      as their words. */
-  .listing-split .listing-side > .contact-bar:has(+ .actions .danger) { grid-column: 1 / -1; margin-right: 0; }
+  .listing-split .listing-deal > .contact-bar:has(+ .actions .danger) { grid-column: 1 / -1; margin-right: 0; }
   .listing-split .contact-bar:has(+ .actions .danger) :is(.reveal-button, .contact-revealed) { width: calc(100% - 3.35rem); }
-  .listing-split .listing-side > .contact-bar + .actions:has(.danger) { grid-column: 1 / -1; position: relative; align-self: auto; margin-top: .6rem; margin-bottom: 0; }
+  .listing-split .listing-deal > .contact-bar + .actions:has(.danger) { grid-column: 1 / -1; position: relative; align-self: auto; margin-top: .6rem; margin-bottom: 0; }
   .listing-split .actions:has(.danger) .share-button { position: absolute; top: -3.575rem; right: 0; }
   .listing-split .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
+}
+
+/* A car's page (car_page in listings.rs; .listing-car), laid out as FINN has its: the path, then
+   the photos across the page, four by three, with the filmstrip under them, and from 960 px up two
+   columns under those. At the left the title and the kind, the car's key facts in a row (the
+   year, the mileage, the gearbox and the fuel, each with its icon, its name quiet over its value;
+   .key-facts), the description, the other details in a grid, a name over its value with its
+   icon, three to a line (.spec-grid), the options in columns with a check each under their own
+   names (.options), and the map. At the right, in a column of 19.5rem that stays put under the
+   top bar while the left scrolls, the price in a card, the bar's pills on a line each, the
+   message's first, the share and the report, and the seller's card under its heading: the deal
+   (.listing-deal), which on every other page, and on a phone, is no box at all, its parts in the
+   rest's grid (display: contents). The page is 60rem wide, as a split page is. On a phone one
+   column: the title, the facts, the price, the bar, the circles, the description, the details,
+   the options, the seller and the map. */
+.listing-deal { display: contents; }
+.key-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1rem; margin: 1rem 0 0; }
+.key-fact { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.key-fact-icon { flex: none; width: 24px; height: 24px; color: var(--text); }
+.key-fact-text { display: grid; min-width: 0; }
+.key-fact dt { color: var(--muted); font-size: var(--text-sm); }
+.key-fact dd { margin: 0; font-weight: var(--semibold); overflow-wrap: anywhere; }
+.spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.25rem; margin: 0; }
+.spec { min-width: 0; }
+.spec dt { display: flex; align-items: center; gap: .35rem; color: var(--muted); font-size: var(--text-sm); }
+.spec-icon { flex: none; }
+.spec dd { margin: .15rem 0 0; font-weight: var(--semibold); overflow-wrap: anywhere; }
+.options { columns: 2; column-gap: 1.25rem; margin: 0; padding: 0; list-style: none; }
+.options li { display: flex; align-items: center; gap: .45rem; margin-bottom: .45rem; break-inside: avoid; }
+.option-check { flex: none; color: var(--accent); }
+@media (min-width: 720px) {
+  .key-facts { grid-template-columns: repeat(4, auto); justify-content: start; gap: 1rem 2.25rem; }
+  .spec-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .options { columns: 3; }
+}
+@media (max-width: 959px) {
+  .listing-car .listing-deal > .seller-section,
+  .listing-car .listing-side > .listing-map-section { order: 2; }
+}
+@media (min-width: 960px) {
+  .listing-page:has(> .listing-car) { display: block; max-width: 60rem; margin-inline: auto; }
+  .listing-car .listing-media .gallery-photo,
+  .listing-car .listing-media .listing-photo { aspect-ratio: 4 / 3; height: auto; max-height: calc(100vh - 12.05rem - 1px); }
+  .listing-car .listing-side { grid-template-columns: minmax(0, 1fr) 19.5rem; column-gap: 2rem; }
+  .listing-car .listing-side > * { grid-column: 1; max-width: none; }
+  .listing-car .listing-side > .listing-deal { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; grid-row: 1 / span 40; align-self: start; position: sticky; top: calc(4.55rem + 1px); }
+  .listing-car .listing-deal > *,
+  .listing-car .listing-deal > .contact-bar + .actions { grid-column: 1; align-self: auto; max-width: none; margin-right: 0; }
+  .listing-car .listing-header h1 { margin-top: 0; }
+  .listing-car .price-box { padding: 1rem 1.15rem 1.1rem; border: 1px solid var(--menu-border); border-radius: 16px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%); }
+  /* The loan calculator's card hangs from the bubble's right edge, the column's edge being near. */
+  .listing-car .loan .bubble-card { left: auto; right: 0; transform-origin: top right; }
+  .listing-car .listing-deal > .contact-bar { flex-direction: column; align-items: stretch; }
+  .listing-car .contact-bar .button { flex: none; }
+  .listing-car .contact-bar .message-button { order: -1; }
+  .listing-car .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
+  .listing-car .listing-deal > .actions { margin-top: .75rem; }
+  .listing-car .listing-deal > .seller-section { margin-top: 1.5rem; }
 }
 
 .listing-photo {
@@ -453,7 +520,7 @@
 }
 /* What a square metre costs: its card under it, as wide as what it says. */
 .area-price { position: relative; width: fit-content; }
-.listing-header > .area-price { margin-top: .4rem; }
+.price-box > .area-price { margin-top: .4rem; }
 .area-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw - 2rem)); }
 /* In a zone with an average, how the square metre compares with it, under the sum: a dot and the
    words in the bubble's colour. */

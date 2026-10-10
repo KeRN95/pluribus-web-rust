@@ -37,6 +37,14 @@ pub const GALLERY_SIZES: &str =
 /// (.listing-split, listing.css).
 pub const SPLIT_GALLERY_SIZES: &str =
     "(min-width: 992px) 541px, (min-width: 960px) calc((100vw - 4rem) * .5833), (min-width: 792px) 760px, calc(100vw - 2rem)";
+/// The same for a car's page, whose photos run across the page, which is 60rem at most from 960 px
+/// up (.listing-car, listing.css).
+pub const CAR_GALLERY_SIZES: &str =
+    "(min-width: 992px) 960px, (min-width: 960px) calc(100vw - 2rem), (min-width: 792px) 760px, calc(100vw - 2rem)";
+
+/// A car's key facts, in a row under its title (listing.html, .key-facts), in this order: the
+/// year, the mileage, the gearbox and the fuel, as FINN has them. They leave the details.
+const CAR_FACTS: [&str; 4] = ["vehicle_year", "vehicle_mileage", "vehicle_transmission", "vehicle_fuel"];
 
 /// The categories whose listings' pages show where they are on a map, under the seller: property
 /// (Prona and those under it) and cars (Makina), which buyers go to see.
@@ -406,6 +414,17 @@ struct ListingShow {
     /// other listing's is split there, the photo at the left and the rest at its right
     /// (.listing-split, listing.css), its photos sized for that (SPLIT_GALLERY_SIZES).
     wide_photos: bool,
+    /// A car's page (Makina), laid out as FINN's from 960 px up (.listing-car, listing.css): the
+    /// photos across the page, and under them the title, the key facts, the description and the
+    /// details at the left, and the price, the ways to the seller and the seller's card in a
+    /// column at the right (.listing-deal), its photos sized for the page (CAR_GALLERY_SIZES).
+    car_page: bool,
+    /// A car's key facts, in a row under its title: the year, the mileage, the gearbox and the
+    /// fuel (CAR_FACTS), each with its icon; none on any other page.
+    facts: Vec<Detail>,
+    /// On a car's page, its options, the details with several values (a multi-select's), listed
+    /// under their own names after the grid of the others; elsewhere among the details.
+    options: Vec<Detail>,
     /// Listings like it, under it (db::related_listings): `page`, the name listing_card.html
     /// reads its cards by.
     page: ListingPage,
@@ -590,20 +609,30 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     };
     // A car's title says its make, model and year: its details leave them out.
     let titled = listing.heading.is_some();
+    let detail_of = |attribute: &db::AttributeValue| {
+        let look = icons::look(&slugs, &attribute.code);
+        Detail {
+            icon: look.map(|look| look.icon),
+            named: look.is_none_or(|look| look.reads == Reads::Named),
+            multi: attribute.multi,
+            key: attribute.key,
+            label: attribute.label.clone(),
+            values: attribute.shown.clone(),
+        }
+    };
+    // A car's page (Makina) has its key facts in a row under the title, which leave the details,
+    // and its options under their own names after the grid of the others (listing.html).
+    let car_page = slugs.contains(&"makina");
+    let facts: Vec<Detail> = if car_page {
+        CAR_FACTS.iter().filter_map(|code| attributes.iter().find(|attribute| attribute.code == *code)).map(detail_of).collect()
+    } else {
+        Vec::new()
+    };
     let mut details: Vec<Detail> = attributes
-        .into_iter()
+        .iter()
         .filter(|attribute| !(titled && properties::TITLE_CODES.contains(&attribute.code.as_str())))
-        .map(|attribute| {
-            let look = icons::look(&slugs, &attribute.code);
-            Detail {
-                icon: look.map(|look| look.icon),
-                named: look.is_none_or(|look| look.reads == Reads::Named),
-                multi: attribute.multi,
-                key: attribute.key,
-                label: attribute.label,
-                values: attribute.shown,
-            }
-        })
+        .filter(|attribute| !(car_page && CAR_FACTS.contains(&attribute.code.as_str())))
+        .map(detail_of)
         .collect();
     // A property's zone in its town comes first among its details, lit as its cards say it too.
     if let Some(zone) = &listing.zone {
@@ -611,6 +640,8 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             Detail { label: "Zona".to_string(), values: vec![zone.clone()], icon: Some(icons::PIN), named: false, multi: false, key: true };
         details.insert(0, zone);
     }
+    let (details, options): (Vec<Detail>, Vec<Detail>) =
+        if car_page { details.into_iter().partition(|detail| !detail.multi) } else { (details, Vec::new()) };
     // A property or a car: its photos across the page, and where it is, on a map under the seller.
     let wide_photos = slugs.iter().any(|slug| MAPPED.contains(slug));
     let map = match (listing.latitude, listing.longitude) {
@@ -639,6 +670,9 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             posted,
             map,
             wide_photos,
+            car_page,
+            facts,
+            options,
             page,
             views,
             meta,
