@@ -55,19 +55,19 @@
   --muted: #5e5d59;
   --border: #e8e6dc;
   --border-strong: #d1cfc5;
-  --accent: #c96442;            /* Clay: logo and focus rings */
-  --button: #c6613f;
+  --accent: #a54d2f;            /* Clay, deep enough for text on its tint and the ivory (4.6:1): what is picked, focus rings */
+  --button: #ba5837;             /* white on it at 4.6:1, as on every button colour below */
   --button-hover: #ae5530;
   --on-button: #ffffff;
   --badge: #f7e4da;
   --location: #4a7fb0;           /* Claude blue, deeper on the ivory */
-  --blue: #4a7fb0;               /* Claude blue: the welcome page's plus and moon */
+  --blue: #3f6c96;               /* Claude blue, deep enough for text on its tint: the welcome page's plus and moon */
   --blue-bg: #e2ecf6;            /* its tint, as --badge is the coral's */
-  --blue-button: #4a7fb0;        /* the buttons in it, in Elektronikë (below) */
+  --blue-button: #4679a7;        /* the buttons in it, in Elektronikë (below) */
   --blue-button-hover: #41709b;
-  --olive: #6a7d50;              /* Claude's olive, a toned-down green, deeper on the ivory: Shtëpi / kopsht (below) */
+  --olive: #5d6d46;              /* Claude's olive, a toned-down green, deeper on the ivory: Shtëpi / kopsht (below) */
   --olive-bg: #e6ecdc;
-  --olive-button: #6a7d50;
+  --olive-button: #687b4f;
   --olive-button-hover: #5c6d45;
   --burgundy: #7a1f33;           /* burgundy: Automjete (below) */
   --burgundy-bg: #f5dfe4;
@@ -140,25 +140,25 @@
   --muted: #b0aea5;
   --border: #3d3d3a;
   --border-strong: #57554f;
-  --accent: #d97757;
-  --button: #c6613f;
+  --accent: #de886c;
+  --button: #ba5837;
   --button-hover: #d97757;
   --on-button: #ffffff;
   --badge: #43302a;
   --location: #6a9bcc;
-  --blue: #6a9bcc;
+  --blue: #75a2d0;
   --blue-bg: #293642;
-  --blue-button: #4a7fb0;
+  --blue-button: #4679a7;
   --blue-button-hover: #6a9bcc;
-  --olive: #788c5d;
+  --olive: #91a477;
   --olive-bg: #313627;
-  --olive-button: #6a7d50;
+  --olive-button: #687b4f;
   --olive-button-hover: #788c5d;
   --burgundy: #c45270;
   --burgundy-bg: #3f232b;
   --burgundy-button: #8f2a46;
   --burgundy-button-hover: #a8365a;
-  --darkred: #e0605f;
+  --darkred: #e37170;
   --darkred-bg: #432223;
   --darkred-button: #a42424;
   --darkred-button-hover: #c02c2c;
@@ -194,25 +194,25 @@
     --muted: #b0aea5;
     --border: #3d3d3a;
     --border-strong: #57554f;
-    --accent: #d97757;
-    --button: #c6613f;
+    --accent: #de886c;
+    --button: #ba5837;
     --button-hover: #d97757;
     --on-button: #ffffff;
     --badge: #43302a;
     --location: #6a9bcc;
-    --blue: #6a9bcc;
+    --blue: #75a2d0;
     --blue-bg: #293642;
-    --blue-button: #4a7fb0;
+    --blue-button: #4679a7;
     --blue-button-hover: #6a9bcc;
-    --olive: #788c5d;
+    --olive: #91a477;
     --olive-bg: #313627;
-    --olive-button: #6a7d50;
+    --olive-button: #687b4f;
     --olive-button-hover: #788c5d;
     --burgundy: #c45270;
     --burgundy-bg: #3f232b;
     --burgundy-button: #8f2a46;
     --burgundy-button-hover: #a8365a;
-    --darkred: #e0605f;
+    --darkred: #e37170;
     --darkred-bg: #432223;
     --darkred-button: #a42424;
     --darkred-button-hover: #c02c2c;
@@ -359,8 +359,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    of the page's colour, the one its section picks (the coral, Elektronikë's blue, Shtëpi /
    kopsht's olive, Automjete's burgundy; the section rules above set --button and --button-hover
    on the body, which the word takes from there): on the light theme the buttons' darker shade,
-   the one they take under a pointer, and on the dark theme the buttons' own colour, the one they
-   have on the light theme, where the dark theme's shade would be the lighter one. A size up from
+   the one they take under a pointer, and on the dark theme the colour's text shade, --accent,
+   light enough to read on the dark (4.5:1 and over; the buttons' own colour was too dim there). A size up from
    the text's headings, since a lowercase word stands lower and shorter. (The creature,
    thinking.svg, is the site's icon alone now, in the tab and on home screens.) The word stays
    from page to page (data-turbo-permanent, base.html), so as a page of another section comes its
@@ -377,9 +377,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   text-decoration: none;
   transition: color .45s ease;
 }
-:root[data-theme="dark"] .logo { color: var(--button); }
+:root[data-theme="dark"] .logo { color: var(--accent); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .logo { color: var(--button); }
+  :root:not([data-theme="light"]) .logo { color: var(--accent); }
 }
 @media (prefers-reduced-motion: reduce) {
   .logo { transition: none; }
