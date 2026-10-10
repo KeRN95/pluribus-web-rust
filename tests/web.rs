@@ -6021,7 +6021,16 @@ async fn the_notifications_page_lists_every_kind_and_reads_them_once_shown(pool:
     // The buyer keeps Ana's phone, whose price she then lowers, and keeps a search that has new
     // listings; and writes to her about it, which she leaves unread. Her phone is days from expiring.
     let no = post_listing(&pool, &ana).await;
-    send(pool.clone(), tap_heart(&no, "1", Some(&buyer))).await;
+    // Its first price an hour old, so that the drop comes after it whatever the clock does.
+    sqlx::query(
+        "UPDATE listing_price_history SET changed_at = changed_at - interval '1 hour'
+         WHERE listing_id = (SELECT id FROM listings WHERE public_no = $1::bigint)",
+    )
+    .bind(&no)
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert_eq!(send(pool.clone(), tap_heart(&no, "1", Some(&buyer))).await.status, StatusCode::NO_CONTENT);
     let edited = post_form(pool.clone(), &format!("/listing/{no}/ndrysho"), &listing_fields(("price", "29 000"), &started()), Some(&ana)).await;
     assert_eq!(edited.status, StatusCode::SEE_OTHER);
     post_form(pool.clone(), "/kerkimet/ruaj", &[("adresa", "/c/telefona?city=tirane")], Some(&buyer)).await;
