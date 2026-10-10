@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE notifications n SET read_at = now()\n         WHERE n.user_id = $2 AND n.notification_type = 'NEW_MESSAGE' AND n.read_at IS NULL\n           AND n.payload ->> 'conversation' = $1::uuid::text\n           AND NOT EXISTS (SELECT 1 FROM messages m\n                           JOIN conversations c ON c.id = m.conversation_id\n                           JOIN conversation_participants p ON p.conversation_id = m.conversation_id AND p.user_id = $2\n                           WHERE m.conversation_id = $1\n                             AND CASE WHEN c.buyer_user_id = $2 THEN m.sender_user_id <> c.buyer_user_id\n                                      ELSE m.sender_user_id = c.buyer_user_id END\n                             AND m.created_at > coalesce(p.last_read_at, '-infinity'))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f0d2409e0d3224a9e3e9aac3fa81596e782152e07da5c02a7ac8551de9582f4b"
+}

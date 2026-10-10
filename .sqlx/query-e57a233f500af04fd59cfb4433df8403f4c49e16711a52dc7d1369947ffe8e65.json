@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"unread!\"\n           FROM conversations c\n           LEFT JOIN conversation_participants me ON me.conversation_id = c.id AND me.user_id = $1\n           LEFT JOIN LATERAL (SELECT bm.created_at AS at FROM business_members bm\n                              WHERE bm.business_id = c.seller_business_id AND bm.user_id = $1) joined ON true\n           WHERE (c.buyer_user_id = $1 OR c.seller_user_id = $1\n                  OR c.seller_business_id = ANY (ARRAY(SELECT bm.business_id FROM business_members bm WHERE bm.user_id = $1)))\n             AND me.archived_at IS NULL\n             AND EXISTS (SELECT 1 FROM messages m\n                         WHERE m.conversation_id = c.id\n                           AND CASE WHEN c.buyer_user_id = $1 THEN m.sender_user_id <> c.buyer_user_id\n                                    ELSE m.sender_user_id = c.buyer_user_id END\n                           AND m.created_at > coalesce(me.last_read_at, joined.at, '-infinity'))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "unread!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e57a233f500af04fd59cfb4433df8403f4c49e16711a52dc7d1369947ffe8e65"
+}

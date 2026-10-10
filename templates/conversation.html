@@ -19,7 +19,8 @@
     {#- Who with first, on a line of their own (in the sheet, with "Mbyll" at its end), a hairline
         under it; then the listing, its title the heading, beside its photo and over its price,
         leading to it. -#}
-    <p class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span>{{ other_name }}</p>
+    <p class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span>{{ other_name }}
+      {%- if let Some(store) = store %}<span class="conversation-store">Për {{ store }}</span>{% endif %}</p>
     <a class="conversation-listing" href="{{ listing.url }}" data-turbo-frame="_top">
       {%- if let Some(photo) = listing.photo %}
       <img src="{{ photo }}" alt="" width="56" height="56">

@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (SELECT 1 FROM conversations c\n                          WHERE c.id = $1\n                            AND (c.buyer_user_id = $2 OR c.seller_user_id = $2\n                                 OR EXISTS (SELECT 1 FROM business_members bm\n                                            WHERE bm.business_id = c.seller_business_id AND bm.user_id = $2))) AS \"may_see!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "may_see!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6839bf0d2d17c1d15b529afea28964b75d71d63d5934d1ebc0686e3402c17d83"
+}

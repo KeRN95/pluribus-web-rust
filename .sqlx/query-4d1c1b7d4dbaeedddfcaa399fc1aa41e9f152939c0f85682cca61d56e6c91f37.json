@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM user_blocks k\n         USING conversations c, conversation_participants p\n         WHERE c.id = $1 AND p.conversation_id = c.id AND p.user_id <> c.buyer_user_id\n           AND ((k.blocker_user_id = c.buyer_user_id AND k.blocked_user_id = p.user_id)\n                OR (k.blocker_user_id = p.user_id AND k.blocked_user_id = c.buyer_user_id))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4d1c1b7d4dbaeedddfcaa399fc1aa41e9f152939c0f85682cca61d56e6c91f37"
+}

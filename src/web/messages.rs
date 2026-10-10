@@ -4,7 +4,8 @@
 //! (inbox_controller.js). Spam is kept down by who may write and how much: only someone signed in,
 //! which takes a code sent to a phone number or an e-mail address (account.rs); to a few new
 //! sellers an hour and a day; until the other side answers, three messages at most and no links,
-//! which is what spam and scams mostly send; and anyone can block whoever writes to them.
+//! which is what spam and scams mostly send; and anyone can block whoever writes to them. A
+//! store's conversations are its people's, each of whom sees and answers them (db/messages.rs).
 
 use askama::Template;
 use axum::{
@@ -110,6 +111,8 @@ fn listing_status(status: Option<&str>, kind: Option<&str>) -> Option<&'static s
 struct ConversationPage {
     listing: Option<ListingHead>,
     other_name: String,
+    /// For one of a store's people, the store whose conversation it is.
+    store: Option<String>,
     /// The conversation, once there is one.
     id: Option<Uuid>,
     messages: Vec<Message>,
@@ -135,6 +138,7 @@ impl ConversationPage {
                 status: None,
             }),
             other_name: target.seller_name.clone(),
+            store: None,
             id: None,
             messages: Vec::new(),
             action: format!("/listing/{}/mesazh", target.public_no),
@@ -161,6 +165,7 @@ impl ConversationPage {
         Self {
             listing,
             other_name: conversation.other_name.clone(),
+            store: conversation.store.clone(),
             id: Some(conversation.id),
             messages,
             action: format!("/mesazhet/{}", conversation.id),
@@ -304,10 +309,10 @@ pub async fn compose(State(state): State<AppState>, headers: HeaderMap, Path(pub
     if let Some(id) = target.conversation_id {
         return Ok(Redirect::to(&format!("/mesazhet/{id}")).into_response());
     }
-    if target.seller_side_id == user.id {
+    if target.own {
         return Ok(Redirect::to(&format!("/listing/{}-{}", target.public_no, target.slug)).into_response());
     }
-    let (blocked, blocked_by) = db::blocks_between(&state.db, user.id, target.seller_side_id).await?;
+    let (blocked, blocked_by) = db::blocks_with_seller(&state.db, user.id, &target).await?;
     render(ConversationPage::start(&target, Writing::of(target.open, blocked, blocked_by), None, String::new()))
 }
 
@@ -328,10 +333,10 @@ pub async fn start(
     if let Some(id) = target.conversation_id {
         return send_into(&state, &user, id, form).await;
     }
-    if target.seller_side_id == user.id {
+    if target.own {
         return Ok(Redirect::to(&format!("/listing/{}-{}", target.public_no, target.slug)).into_response());
     }
-    let (blocked, blocked_by) = db::blocks_between(&state.db, user.id, target.seller_side_id).await?;
+    let (blocked, blocked_by) = db::blocks_with_seller(&state.db, user.id, &target).await?;
     let writing = Writing::of(target.open, blocked, blocked_by);
     let body = tidy(&form.body);
     let error = match writing.refusal(&target.seller_name) {
@@ -366,7 +371,8 @@ pub async fn unread(State(state): State<AppState>, headers: HeaderMap) -> Result
     Ok(([(header::CACHE_CONTROL, HeaderValue::from_static("no-store"))], Json(body)).into_response())
 }
 
-/// The conversation with this id in the address, for someone who takes part in it.
+/// The conversation with this id in the address, for someone who may see it (its buyer, its
+/// seller, or one of the store's people).
 async fn find(state: &AppState, user: &SessionUser, id: &str) -> Result<Option<Conversation>> {
     let Ok(id) = id.parse::<Uuid>() else {
         return Ok(None);
@@ -374,7 +380,7 @@ async fn find(state: &AppState, user: &SessionUser, id: &str) -> Result<Option<C
     Ok(db::conversation(&state.db, id, user.id).await?)
 }
 
-/// GET /mesazhet/{id}: the conversation, for those who take part in it; "not found" for anyone else.
+/// GET /mesazhet/{id}: the conversation, for those who may see it; "not found" for anyone else.
 pub async fn conversation(State(state): State<AppState>, headers: HeaderMap, Path(id): Path<String>) -> Result<Response> {
     let Some(user) = current_user(&state, &headers).await? else {
         let back = id.parse::<Uuid>().map_or_else(|_| "/mesazhet".to_string(), |id| format!("/mesazhet/{id}"));
@@ -466,7 +472,7 @@ pub async fn read(
     Query(Upto { deri }): Query<Upto>,
 ) -> Result<Response> {
     if let (Some(user), Ok(id)) = (current_user(&state, &headers).await?, id.parse::<Uuid>())
-        && db::takes_part(&state.db, id, user.id).await?
+        && db::may_see(&state.db, id, user.id).await?
     {
         db::mark_read(&state.db, id, user.id, deri).await?;
     }
@@ -474,7 +480,8 @@ pub async fn read(
 }
 
 /// POST /mesazhet/{id}/blloko and /zhblloko: blocks the other side of the conversation, who can't
-/// write to the visitor any more, nor start another conversation with them; or lets them again.
+/// write to the visitor any more, nor start another conversation with them; or lets them again,
+/// lifting a colleague's block too on a store's side.
 pub async fn block(state: State<AppState>, headers: HeaderMap, id: Path<String>) -> Result<Response> {
     set_blocked(state, headers, id, true).await
 }
@@ -490,7 +497,7 @@ async fn set_blocked(State(state): State<AppState>, headers: HeaderMap, Path(id)
     let Some(conversation) = find(&state, &user, &id).await? else {
         return not_found().await;
     };
-    db::set_user_blocked(&state.db, user.id, conversation.other_id, on).await?;
+    db::set_conversation_blocked(&state.db, conversation.id, user.id, conversation.other_id, on).await?;
     Ok(Redirect::to(&format!("/mesazhet/{}", conversation.id)).into_response())
 }
 

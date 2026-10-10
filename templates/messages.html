@@ -4,7 +4,8 @@
 
 {% block content %}
 {#- The visitor's conversations, the latest written in first (messages.rs, inbox): each with the
-    listing's photo, who with, the listing, the start of the latest message and when it came; those
+    listing's photo, who with (and for a store's people, the store), the listing, the start of the
+    latest message (who sent it, if it was the visitor or a colleague) and when it came; those
     with messages unread in bold, with how many. -#}
 <section class="inbox">
   <h1>Mesazhet</h1>
@@ -25,14 +26,14 @@
         {%- endif %}
         <span class="inbox-text">
           <span class="inbox-line">
-            <span class="inbox-name">{{ entry.other_name }}</span>
+            <span class="inbox-name">{{ entry.other_name }}{% if let Some(store) = entry.store %} <span class="inbox-store">{{ store }}</span>{% endif %}</span>
             <span class="inbox-when">{{ entry.when() }}</span>
           </span>
           {%- if let Some(title) = entry.listing_title %}
           <span class="inbox-listing">{{ title }}</span>
           {%- endif %}
           <span class="inbox-line">
-            <span class="inbox-last">{% if entry.last_mine %}Ti: {% endif %}{{ entry.preview() }}</span>
+            <span class="inbox-last">{% if let Some(author) = entry.last_author %}{{ author }}: {% else if entry.last_mine %}Ti: {% endif %}{{ entry.preview() }}</span>
             {%- if entry.unread > 0 %}
             <span class="inbox-unread"><span class="visually-hidden">Të palexuara: </span>{{ entry.unread }}</span>
             {%- endif %}

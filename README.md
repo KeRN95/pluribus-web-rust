@@ -90,7 +90,7 @@ docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v views=1 < de
 docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v drops=1 < dev/generate_listings.sql
 ```
 
-The tests need the database running; each test gets a fresh database of its own, which is most of what a test costs. Two things keep that cheap. `compose.yaml` runs the development database for speed over durability (no waiting for the disk on each commit), with the lock memory and connections for a dozen test databases at once. And `dev/test_template.sh` makes the cluster's `template1` a migrated copy of the schema (sqlx-cli needed: `cargo install sqlx-cli --no-default-features --features postgres`), so that the `create database` behind every `#[sqlx::test]` copies 12 MB of files in a tenth of a second instead of running the 35 migrations, which the migrator then finds applied. Run it once after `docker compose up -d`, and again whenever `migrations/` changes: a new migration only costs the tests its own run until then, but a migration changed under the tests fails them all with "migration N was previously applied but has been modified". Scratch databases made with `sqlx database create` come migrated too. The 145 request tests then take about 13 seconds, eight at a time:
+The tests need the database running; each test gets a fresh database of its own, which is most of what a test costs. Two things keep that cheap. `compose.yaml` runs the development database for speed over durability (no waiting for the disk on each commit), with the lock memory and connections for a dozen test databases at once. And `dev/test_template.sh` makes the cluster's `template1` a migrated copy of the schema (sqlx-cli needed: `cargo install sqlx-cli --no-default-features --features postgres`), so that the `create database` behind every `#[sqlx::test]` copies 12 MB of files in a tenth of a second instead of running the 35 migrations, which the migrator then finds applied. Run it once after `docker compose up -d`, and again whenever `migrations/` changes: a new migration only costs the tests its own run until then, but a migration changed under the tests fails them all with "migration N was previously applied but has been modified". Scratch databases made with `sqlx database create` come migrated too. The 146 request tests then take about 13 seconds, eight at a time:
 
 ```bash
 sh dev/test_template.sh
@@ -129,7 +129,7 @@ Every test in `tests/web.rs` names the file's one embedded copy of the migration
 | `src/web/searches.rs` | Saved searches: "Ruaj kërkimin" on a category or search page, `/kerkimet-e-ruajtura` with how many listings came since each was last opened, opening, letting go, alerts on or off; a saved search's page made again from its path and query as `browse.rs` makes it (`replay`); and the alerts, every `ALERT_CHECK_EVERY`, at most one per search in `ALERT_GAP` (`send_search_alerts`, which the tests call) |
 | `src/web/notifications.rs` | The notifications centre, `/lajmerimet`: every notification the user had in the last 90 days, the latest first, each with its kind's icon and leading to what it is about, those unread marked until the page has been shown (`seen`, up to the latest it showed); and the account button's count (`counts`): how many are unread, and how many of those are about the user's own listings |
 | `src/web/saved.rs` | The hearts: keeping a listing, the page of those kept (`/te-ruajturat`) with the price drops not seen yet, keeping one after signing in, and the header heart's dot |
-| `src/web/messages.rs` | Messages between buyers and sellers: the page that starts a conversation from a listing, a conversation, the inbox (`/mesazhet`), the header's unread count, blocking, and the limits that keep spam out |
+| `src/web/messages.rs` | Messages between buyers and sellers: the page that starts a conversation from a listing, a conversation, the inbox (`/mesazhet`), the header's unread count, blocking, and the limits that keep spam out; a store's conversations shared by its people, who don't write to their own store (`MessageTarget::own`) |
 | `src/web/post.rs` | Posting, editing, pausing, putting back and deleting listings, "Njoftimet e mia" with what each listing drew (views, contacts, saves), and the limits that keep spam out; posting as a store the poster may post for ("Posto si", `posting_stores`, `Poster::for_store`: the listing shows the store's name and logo, and its number, else the poster's contact) |
 | `src/web/properties.rs` | A category's properties in the listing form (the fields, a car's tiles, the body types' drawings), and checking what a seller picked or typed |
 | `src/web/ai_fill.rs` | "Plotëso pjesën tjetër me AI": the listing form filled in by the AI, its answer checked against the form's own lists |
@@ -151,11 +151,11 @@ Every test in `tests/web.rs` names the file's one embedded copy of the migration
 | `src/db/listing.rs` | One listing: its page (with a store's logo for its seller, `seller_logo`), its photos and properties, the contact it reveals, and its neighbours on its category's page |
 | `src/db/saved.rs` | The listings a signed-in user keeps |
 | `src/db/searches.rs` | Saved searches: keeping one (once per page and filters, `SEARCHES_MOST` at most), opening one, which counts its new listings from then on and sees its alerts, its alerts on or off, letting it go; the searches due an alert, recording one (`notifications`, `SAVED_SEARCH`), and how many have alerts unseen |
-| `src/db/messages.rs` | Conversations and their messages: starting one, writing, reading up to a message, the inbox with its unread counts, what an account sent lately (for the limits), blocks |
+| `src/db/messages.rs` | Conversations and their messages: starting one, writing, reading up to a message, the inbox with its unread counts, what an account sent lately (for the limits), blocks. A store's conversations are its people's (`conversation`, `may_see`, `inbox`, `unread_conversations`): whoever posted the listing takes part from the start (else its owner, `seller_side_id`), the others from their first message or read (`write`, `mark_read`), and who left the store sees them no more; a message is the other side's by who sent it, the buyer or anyone on the seller's, so a colleague's is "ours", with their name (`Message::author`, `InboxEntry::last_author`), and no news; a member's unread count runs from their last read, or from when they joined; blocks count across the seller's side, and lifting one lifts a colleague's (`blocks_with_seller`, `set_conversation_blocked`) |
 | `src/db/safety.rs` | Reports (one open per person and listing; `HIDE_AFTER` people with a serious reason take a listing off the site, the rule's doing in `moderation_actions`), the moderators' decisions on them, blocks, and the contacts people proved theirs by signing in (`user_verifications`) |
 | `src/db/expiry.rs` | Listings whose time is up taken off the site (`expire_listings`: status `EXPIRED`, the status history saying "Skadoi", a notification `EXPIRED` each), and those a few days from it whose sellers haven't heard of this expiry (`warn_expiring`: a notification `EXPIRING` with the expiry it warns of, so that a renewed listing is warned of again), each with how to reach its seller |
 | `src/db/rates.rs` | The euro rate prices are worked out at (`exchange_rates`): reading it (`euro_rate`), taking the official one when it is `RATE_STEP` (half a percent) or more from it (`take_euro_rate`), and the listings priced in lekë worked out in euros again, `REPRICE_BATCH` a time by id, their `updated_at` left as it was (`reprice_batch`, `repriced`) |
-| `src/db/notices.rs` | The notices of unread messages: who is due one (`due_notices`), recording each sent (`notifications`, `NEW_MESSAGE`, the conversation in its payload), and whether a user wants them (`message_alerts`, `set_message_alerts`; `notification_preferences.message_alerts`, on unless a row says otherwise) |
+| `src/db/notices.rs` | The notices of unread messages: who is due one (`due_notices`: those who took part and still see the conversation, of the other side's messages, the store's name for a store's answer), recording each sent (`notifications`, `NEW_MESSAGE`, the conversation in its payload), and whether a user wants them (`message_alerts`, `set_message_alerts`; `notification_preferences.message_alerts`, on unless a row says otherwise) |
 | `src/db/notifications.rs` | A user's notifications of every kind (`notifications`: the last `NOTIFICATIONS_DAYS`, at most `NOTIFICATIONS_MOST`, each with the listing, saved search, conversation or invitation into a store it is about while it is still there to open), how many are unread, all and those about their own listings (`unread_notifications`, `OWN_LISTING_KINDS`: `EXPIRING`, `EXPIRED`), and reading them up to one (`notifications_seen`) |
 | `src/db/price_drops.rs` | Price drops: what a listing's price dropped from, for its page; the notifications to those who keep it when its seller lowers it (`notify_price_drop`); those not seen yet, and seeing them |
 | `src/db/sign_in.rs` | Sign-in codes, sessions and users; a code may carry a listing to publish, a new account's name or the account its contact joins (`CodePurpose`); codes asked for over a day ago forgotten (`forget_old_codes`) |
@@ -214,7 +214,7 @@ Every test in `tests/web.rs` names the file's one embedded copy of the migration
 | `migrations/0033_account_settings.sql` | The account a sign-in code adds its contact to (`login_codes.user_id`), for a phone number or an e-mail address added in "Cilësimet" |
 | `migrations/0034_stores.sql` | What a store's page shows beyond the schema's `businesses`: its town (`location_id`), its address, its opening hours, whether its number has WhatsApp, and the files of its logo and cover in the store (`logo_key`, `cover_key`) |
 | `migrations/0035_store_people.sql` | A store's invitations (`business_invitations`: a phone number or an e-mail address, the role, two weeks, one per store and contact), and `manages_listing()`, whether someone may change a listing: a private seller's own, or one of a store's people who post for its listings, whoever of them posted one, not someone who left |
-| `tests/web.rs` | 145 request tests: each sends requests to the app, with a database of its own, and checks the pages, redirects, cookies and what the database holds after |
+| `tests/web.rs` | 146 request tests: each sends requests to the app, with a database of its own, and checks the pages, redirects, cookies and what the database holds after |
 | `tests/schema.rs` | Runs `schema_checks.sql` against a freshly migrated database |
 | `tests/schema_checks.sql` | 83 checks of the schema's constraints and behaviour (35 checks, 36 statements that must fail, 12 that must succeed), in one transaction rolled back at the end |
 | `tests/fixtures/listings.sql` | The tests' sample listings, which can also be loaded into the development database |
@@ -274,12 +274,12 @@ Every page and action, from `web::router`. Anything else is the 404 page. A form
 | POST | `/lajmerimet/pare?deri=…` | `/lajmerimet` was shown with notifications unread: they are read, up to the latest it showed (`notifications::seen`) |
 | GET | `/lajmerimet/numri` | How many of the user's notifications are unread, and how many of those are about their own listings, as JSON, for the account button's dot: `{"unread": 3, "own": 1}` (`notifications::counts`) |
 | GET, POST | `/listing/{number}/mesazh` | The page that starts a conversation with the listing's seller, and its first message; the conversation the visitor has about it already, if any (`messages::compose`, `messages::start`) |
-| GET | `/mesazhet` | The visitor's conversations, the latest written in first (`messages::inbox`) |
+| GET | `/mesazhet` | The visitor's conversations, the latest written in first, a store's among them for its people, marked with its name (`messages::inbox`) |
 | GET | `/mesazhet/numri` | How many of the visitor's conversations have messages unread, as JSON, for the top bar's button (the welcome page's, in the row with its search): `{"unread": 2}` (`messages::unread`) |
-| GET, POST | `/mesazhet/{id}` | A conversation, for the two in it ("not found" for anyone else), and a message in it (`messages::conversation`, `messages::reply`) |
+| GET, POST | `/mesazhet/{id}` | A conversation, for its buyer and its seller, a store's people for a store's listing ("not found" for anyone else), and a message in it (`messages::conversation`, `messages::reply`) |
 | GET | `/mesazhet/{id}/te-rejat?pas=…` | The messages after one, as a Turbo Stream that adds them at the page's end; 204 when none came (`messages::newer`) |
 | POST | `/mesazhet/{id}/lexuar?deri=…` | The conversation's page showed its messages up to one: they are read (`messages::read`) |
-| POST | `/mesazhet/{id}/blloko`, `/mesazhet/{id}/zhblloko` | Blocks the other side of the conversation, or lets them write again (`messages::block`, `messages::unblock`) |
+| POST | `/mesazhet/{id}/blloko`, `/mesazhet/{id}/zhblloko` | Blocks the other side of the conversation, or lets them write again, whoever on a store's side blocked them (`messages::block`, `messages::unblock`) |
 | GET | `/perdorues/{id}` | A private seller's profile and active listings (`browse::user_profile`) |
 | GET | `/biznes/{slug}` | A business's page and active listings; a store's with its cover, its logo, what it says of itself, its address and hours, its number, WhatsApp, e-mail and website, and "Ndrysho dyqanin" for its owner and admins (`browse::business_profile`) |
 | GET, POST | `/dyqani/krijo` | A new store: its form, and making it, its maker its owner, up to five an account owns (`stores::new_store`, `stores::create_store`) |
@@ -483,9 +483,9 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 | `saved_searches.html` | The saved searches: a link back to the listings kept, each search its name, leading to it, how many listings came since it was last opened, "Ndalo lajmërimet" or "Lajmëromë", and "Fshi"; what the alerts are; the beacon that sees them once shown |
 | `notifications.html` | The notifications: the account's row of pills, each notification a line leading to what it is about, its kind's icon, its title, what a message said, when; those unread with the dot at the line's end until the page is shown (`data-seen-url`) |
 | `saved.html` | The link to the saved searches (with how many have new listings unheard of), then the listings the user keeps, a reserved or sold one saying so over its photo, under those whose price dropped since they last looked, from what to what, and over those no longer on the site ("Nuk shfaqen më"), each saying why, with "Hiq" |
-| `messages.html` | The inbox: the visitor's conversations, those with messages unread in bold |
-| `conversation.html` | A conversation, or the page that starts one: the listing leading, its title the heading, its status after its price once it is reserved, sold or off the site, who with under it, the messages, the box to write in (with the quick first messages), blocking; in the `conversation` frame, which a listing's message sheet takes it into |
-| `message.html` | One message in a conversation, the visitor's own on the right |
+| `messages.html` | The inbox: the visitor's conversations, those with messages unread in bold; for a store's people, the store's name after who with, and a colleague's name before the last message they sent |
+| `conversation.html` | A conversation, or the page that starts one: the listing leading, its title the heading, its status after its price once it is reserved, sold or off the site, who with under it, for a store's people "Për" and the store after who with, the messages, the box to write in (with the quick first messages), blocking; in the `conversation` frame, which a listing's message sheet takes it into |
+| `message.html` | One message in a conversation, the visitor's side's on the right, a colleague's in a store's with their name over it |
 | `messages_stream.html` | New messages, as a Turbo Stream that adds them at a conversation's end |
 | `price_drop.html` | After a listing's price, when it dropped lately: what it was, struck through, and by how much |
 | `profile.html` | A seller's profile, with "Numër i verifikuar" when it is; a store's with its cover over it, its logo in place of the initial, "Njerëzit" and "Ndrysho dyqanin" for its owner and admins, and under it what it says of itself, its address and hours, and its ways to reach it as buttons |
@@ -510,7 +510,7 @@ Askama templates in `templates/`, compiled into the binary, so a template change
 | `map.css` | The map, on its own page and over a browse page's results, where it fills the card, a square as wide as the row or as high as the screen has left, its circle, the pills of "Vendndodhja ime" and the towns' menu and the distance badge over it, the order's menu |
 | `posting.css` | Signing in, and the posting and edit forms: photos, a car's tiles, the AI's button; "Njoftimet e mia", its tiles and its rows, each row's buttons under its title wherever they leave it less than 16rem; the account's row of pills (`.account-nav`), and "Cilësimet": its sections, the contacts a line each, what it hears of a box a line (`.notice-settings`), a store a line (`.settings-store`), an invitation waiting a card (`.store-invitation`); a store's page (its cover, `.store-cover`, its round logo, `.avatar-logo`, what it says, its facts and its ways to reach it, `.store-info`), its form (`.store-form`), its people (`.people`, `.person`) and an invitation's page (`.store-invite-actions`); the pills of whose listings "Njoftimet e mia" shows (`.whose-listings`) |
 | `listing.css` | A listing's page: the banner's room over its path (`.listing-banner`), its category's pills over the photo (styled by `browse.css`'s `.category-path`), its three layouts from 960 px up (a car's as FINN's, the photos across the page and two columns under them, the deal at the right, `.listing-car`, `.listing-deal`; the photos across the page for a property; the page split beside a tall photo for the rest, `.listing-split`), the gallery, its counter (the filmstrip's button) and its filmstrip, the price's bubbles (on a car's page the price a phone's size everywhere and "Llogarit kredinë" a pill under it), the buttons (on a car's page the message's pill tinted as the path's picked pill), the seller's card (on a car's page the column's card under its heading, the buttons under a hairline), the map under it, the details' pills, a car's key facts, details grid and options (`.key-facts`, `.spec-grid`, `.options`), the section of listings like it under it |
-| `messages.css` | Messages: the header's unread count, the inbox, a conversation's bubbles and the box to write in, a listing's message sheet (on a phone the screen's lower half, sliding up; from 720 px up a popup card from the button) |
+| `messages.css` | Messages: the header's unread count, the inbox, a conversation's bubbles and the box to write in, a store's name and a colleague's (`.inbox-store`, `.conversation-store`, `.message-author`), a listing's message sheet (on a phone the screen's lower half, sliding up; from 720 px up a popup card from the button) |
 
 ### JavaScript
 
@@ -976,15 +976,23 @@ A double click returns the same conversation instead of creating a second one.
 SELECT c.id, c.listing_id, c.last_message_at,
        (SELECT count(*) FROM messages m
         WHERE m.conversation_id = c.id
-          AND m.created_at > coalesce(p.last_read_at, '-infinity')
-          AND m.sender_user_id IS DISTINCT FROM p.user_id
+          -- the other side's: the buyer's for the seller's side, anyone else's for the buyer
+          AND CASE WHEN c.buyer_user_id = :me THEN m.sender_user_id <> c.buyer_user_id
+                   ELSE m.sender_user_id = c.buyer_user_id END
+          AND m.created_at > coalesce(p.last_read_at, joined.at, '-infinity')
           AND m.deleted_at IS NULL) AS unread
-FROM conversation_participants p
-JOIN conversations c ON c.id = p.conversation_id
-WHERE p.user_id = :me AND p.archived_at IS NULL
+FROM conversations c
+LEFT JOIN conversation_participants p ON p.conversation_id = c.id AND p.user_id = :me
+LEFT JOIN LATERAL (SELECT created_at AS at FROM business_members
+                   WHERE business_id = c.seller_business_id AND user_id = :me) joined ON true
+WHERE (c.buyer_user_id = :me OR c.seller_user_id = :me
+       OR c.seller_business_id = ANY (ARRAY(SELECT business_id FROM business_members WHERE user_id = :me)))
+  AND p.archived_at IS NULL
 ORDER BY c.last_message_at DESC NULLS LAST
 LIMIT 30;
 ```
+
+A store's conversations are shared by its people (`db/messages.rs`): each takes part, a row in `conversation_participants` with their own read state, from their first message or read; until then, their count runs from when they joined the store.
 
 Update `conversations.last_message_at` whenever a message is inserted.
 

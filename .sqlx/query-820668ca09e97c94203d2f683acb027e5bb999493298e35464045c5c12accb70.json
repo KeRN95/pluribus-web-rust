@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO conversation_participants AS p (conversation_id, user_id, last_read_at)\n         SELECT $1, $2, m.created_at FROM messages m WHERE m.id = $3 AND m.conversation_id = $1\n         ON CONFLICT (conversation_id, user_id) DO UPDATE SET last_read_at = excluded.last_read_at\n         WHERE p.last_read_at IS NULL OR p.last_read_at < excluded.last_read_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "820668ca09e97c94203d2f683acb027e5bb999493298e35464045c5c12accb70"
+}

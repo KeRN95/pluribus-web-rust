@@ -45,6 +45,10 @@
 .inbox-listing,
 .inbox-last { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .inbox-name { font-weight: var(--semibold); }
+/* A store's conversation, for its people: the store after who with, small and muted. */
+.inbox-store { margin-left: .15rem; }
+.inbox-store,
+.conversation-store { color: var(--muted); font-size: var(--text-xs); font-weight: var(--medium); }
 .inbox-when { flex: none; color: var(--muted); font-size: var(--text-xs); }
 .inbox-listing,
 .inbox-last { color: var(--muted); font-size: var(--text-sm); }
@@ -113,6 +117,8 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
   background: var(--surface);
 }
 .message.mine { align-self: flex-end; border-color: transparent; border-radius: 18px 18px 6px 18px; background: var(--badge); }
+/* A colleague's message in a store's conversation: their name over it. */
+.message-author { display: block; margin-bottom: .1rem; color: var(--muted); font-size: .7rem; font-weight: var(--semibold); }
 .message-body { margin: 0; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 .message-time { display: block; margin-top: .1rem; color: var(--muted); font-size: .7rem; text-align: right; }
 

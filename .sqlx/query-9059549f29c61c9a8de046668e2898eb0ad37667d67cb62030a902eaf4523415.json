@@ -1,0 +1,71 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.user_id, p.conversation_id,\n                  u.email::text AS email, u.phone_e164::text AS phone,\n                  coalesce(np.email_enabled, true) AS \"email_ok!\",\n                  CASE WHEN p.user_id = c.buyer_user_id AND b.display_name IS NOT NULL THEN b.display_name\n                       ELSE writer.display_name END AS \"writer!\",\n                  coalesce(l.generated_title, l.title) AS \"listing?\",\n                  coalesce(latest.body, '') AS \"body!\",\n                  unread.count AS \"unread!\"\n           FROM conversations c\n           JOIN conversation_participants p ON p.conversation_id = c.id\n           JOIN users u ON u.id = p.user_id AND u.status = 'ACTIVE'\n           LEFT JOIN listings l ON l.id = c.listing_id\n           LEFT JOIN businesses b ON b.id = c.seller_business_id\n           LEFT JOIN notification_preferences np ON np.user_id = p.user_id\n           LEFT JOIN LATERAL (\n               SELECT max(n.created_at) AS at\n               FROM notifications n\n               WHERE n.user_id = p.user_id AND n.notification_type = 'NEW_MESSAGE'\n                 AND n.payload ->> 'conversation' = c.id::text\n           ) last ON true\n           JOIN LATERAL (\n               SELECT m.body, m.sender_user_id\n               FROM messages m\n               WHERE m.conversation_id = c.id\n                 AND CASE WHEN p.user_id = c.buyer_user_id THEN m.sender_user_id <> c.buyer_user_id\n                          ELSE m.sender_user_id = c.buyer_user_id END\n                 AND m.deleted_at IS NULL\n                 AND m.created_at > coalesce(p.last_read_at, '-infinity')\n                 AND m.created_at > coalesce(last.at, '-infinity')\n                 AND m.created_at <= now() - make_interval(secs => $1)\n               ORDER BY m.created_at DESC\n               LIMIT 1\n           ) latest ON true\n           JOIN users writer ON writer.id = latest.sender_user_id\n           CROSS JOIN LATERAL (\n               SELECT count(*) AS count\n               FROM messages m\n               WHERE m.conversation_id = c.id\n                 AND CASE WHEN p.user_id = c.buyer_user_id THEN m.sender_user_id <> c.buyer_user_id\n                          ELSE m.sender_user_id = c.buyer_user_id END\n                 AND m.deleted_at IS NULL\n                 AND m.created_at > coalesce(p.last_read_at, '-infinity')\n           ) unread\n           WHERE c.last_message_at > now() - interval '1 day'\n             AND (p.user_id = c.buyer_user_id OR p.user_id = c.seller_user_id\n                  OR EXISTS (SELECT 1 FROM business_members bm\n                             WHERE bm.business_id = c.seller_business_id AND bm.user_id = p.user_id))\n             AND p.archived_at IS NULL\n             AND (p.muted_until IS NULL OR p.muted_until < now())\n             AND (last.at IS NULL OR last.at < now() - make_interval(secs => $2))\n             AND coalesce(np.message_alerts, true)\n           ORDER BY c.last_message_at, p.user_id\n           LIMIT 100",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "conversation_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "phone",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "email_ok!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "writer!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "listing?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "body!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "unread!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Float8",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "9059549f29c61c9a8de046668e2898eb0ad37667d67cb62030a902eaf4523415"
+}

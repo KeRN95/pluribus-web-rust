@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH side AS (SELECT $2::uuid AS user_id\n                         UNION SELECT m.user_id FROM business_members m WHERE m.business_id = $3)\n           SELECT EXISTS (SELECT 1 FROM user_blocks k JOIN side ON side.user_id = k.blocked_user_id\n                          WHERE k.blocker_user_id = $1) AS \"blocked!\",\n                  EXISTS (SELECT 1 FROM user_blocks k JOIN side ON side.user_id = k.blocker_user_id\n                          WHERE k.blocked_user_id = $1) AS \"blocked_by!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "blocked!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 1,
+        "name": "blocked_by!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "5554388a27ed18c2d0b335b20d8dbbb632db26cfa5a8d48250de8534b540e603"
+}

@@ -448,6 +448,98 @@ async fn closing_an_account_closes_the_stores_it_owns(pool: PgPool) {
     assert_eq!(people, 1);
 }
 
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_stores_people_share_its_conversations(pool: PgPool) {
+    let ana = new_seller(&pool, "+355691112233").await;
+    let besa = new_seller(&pool, "+355691112244").await;
+    let carla = new_seller(&pool, "+355691112255").await;
+    let dan = new_seller(&pool, "+355691112266").await;
+    let erion = new_seller(&pool, "+355691112277").await;
+    for (cookie, name) in [(&ana, "Ana"), (&besa, "Besa"), (&carla, "Carla"), (&dan, "Dan")] {
+        sqlx::query("UPDATE users SET display_name = $2 WHERE id = $1::uuid").bind(account_of(cookie)).bind(name).execute(&pool).await.unwrap();
+    }
+    post_store(&pool, "/dyqani/krijo", &[("name", "Auto Elbasani"), ("phone", "069 111 2233")], &[], &ana).await;
+    sqlx::query(
+        "INSERT INTO business_members (business_id, user_id, role)
+         SELECT b.id, p.id::uuid, p.role FROM businesses b, (VALUES ($1, 'EDITOR'), ($2, 'VIEWER')) AS p (id, role)
+         WHERE b.slug = 'auto-elbasani'",
+    )
+    .bind(account_of(&besa))
+    .bind(account_of(&carla))
+    .execute(&pool)
+    .await
+    .unwrap();
+    // Besa posts for the store; its people don't write to their own store.
+    let posted = post_form(pool.clone(), "/shto", &[listing_fields(("", ""), &started()), vec![("si", "auto-elbasani")]].concat(), Some(&besa)).await;
+    let no = posted.location.expect("posted").trim_start_matches("/listing/").split('-').next().unwrap().to_string();
+    assert!(get_with_cookie(pool.clone(), &format!("/listing/{no}/mesazh"), &carla).await.location.is_some_and(|to| to.starts_with(&format!("/listing/{no}-"))));
+
+    // Dan writes: every one of the store's people has it unread, in an inbox that names the store.
+    let thread = write(&pool, &format!("/listing/{no}/mesazh"), "A është ende në shitje?", &dan).await.location.unwrap();
+    for cookie in [&ana, &besa, &carla] {
+        assert_eq!(unread(&pool, cookie).await, r#"{"unread":1}"#);
+        let inbox = get_with_cookie(pool.clone(), "/mesazhet", cookie).await.body;
+        assert!(inbox.contains(r#"<span class="inbox-name">Dan <span class="inbox-store">Auto Elbasani</span></span>"#), "{inbox}");
+    }
+    assert!(!get_with_cookie(pool.clone(), "/mesazhet", &erion).await.body.contains(&thread));
+    assert_eq!(get_with_cookie(pool.clone(), &thread, &erion).await.status, StatusCode::NOT_FOUND);
+
+    // Ana answers, though she didn't post it; Dan hears from the store. For Besa, Ana's answer is
+    // the store's, on her side with Ana's name, and no news: Dan's message is still unread.
+    let page = get_with_cookie(pool.clone(), &thread, &ana).await.body;
+    assert!(page.contains(r#"<span class="conversation-store">Për Auto Elbasani</span>"#) && page.contains("A është ende në shitje?"), "{page}");
+    assert_eq!(write(&pool, &thread, "Po, është.", &ana).await.location.as_deref(), Some(thread.as_str()));
+    let his = get_with_cookie(pool.clone(), &thread, &dan).await.body;
+    assert!(his.contains(r#"<li class="message" id="message-"#) && !his.contains("message-author") && his.contains("Auto Elbasani"), "{his}");
+    let hers = get_with_cookie(pool.clone(), &thread, &besa).await.body;
+    assert!(hers.contains(r#"<span class="message-author">Ana</span>"#), "{hers}");
+    assert_eq!(hers.matches(r#"<li class="message mine""#).count(), 1, "{hers}");
+    assert_eq!(unread(&pool, &besa).await, r#"{"unread":1}"#);
+    assert_eq!(unread(&pool, &ana).await, r#"{"unread":0}"#);
+    assert!(get_with_cookie(pool.clone(), "/mesazhet", &besa).await.body.contains("Ana: Po, është."));
+    // Read, Besa's count goes; Carla's stays hers.
+    let read = attribute(&hers, "data-conversation-read-url-value");
+    let last = message_ids(&hers).pop().unwrap();
+    post_form(pool.clone(), &format!("{read}?deri={last}"), &[], Some(&besa)).await;
+    assert_eq!(unread(&pool, &besa).await, r#"{"unread":0}"#);
+    assert_eq!(unread(&pool, &carla).await, r#"{"unread":1}"#);
+
+    // Left unread a while, Dan's next message is news to those who took part, Besa who posted it
+    // and Ana who answered, not to Carla; and the store's answer to Dan, under its name, while a
+    // colleague's answer tells nobody on the store's side.
+    let due = || marketplace::notices::send_due(&pool, "https://pluribus.example");
+    write(&pool, &thread, "Sa është çmimi i fundit?", &dan).await;
+    minutes_pass(&pool, 4).await;
+    due().await.unwrap();
+    let notices = message_notices(&pool).await;
+    let mut told: Vec<&str> = notices.iter().map(|notice| notice.0.as_str()).collect();
+    told.sort_unstable();
+    let mut took_part = [account_of(&besa), account_of(&ana)];
+    took_part.sort_unstable();
+    assert_eq!(told, took_part, "{notices:?}");
+    write(&pool, &thread, "32 000 lekë.", &carla).await;
+    minutes_pass(&pool, 70).await;
+    due().await.unwrap();
+    let notices = message_notices(&pool).await;
+    let last = notices.last().unwrap();
+    assert_eq!(last.0, account_of(&dan));
+    assert!(last.1.starts_with("Auto Elbasani"), "{notices:?}");
+
+    // Besa blocks Dan: he can't write to the store; Ana sees it blocked, and lets him again.
+    post_form(pool.clone(), &format!("{thread}/blloko"), &[], Some(&besa)).await;
+    let refused = write(&pool, &thread, "Përshëndetje?", &dan).await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(get_with_cookie(pool.clone(), &thread, &ana).await.body.contains(&format!(r#"action="{thread}/zhblloko""#)));
+    post_form(pool.clone(), &format!("{thread}/zhblloko"), &[], Some(&ana)).await;
+    assert_eq!(write(&pool, &thread, "Përshëndetje?", &dan).await.location.as_deref(), Some(thread.as_str()));
+
+    // Let go, Besa sees it no more.
+    sqlx::query("DELETE FROM business_members WHERE user_id = $1::uuid").bind(account_of(&besa)).execute(&pool).await.unwrap();
+    assert_eq!(get_with_cookie(pool.clone(), &thread, &besa).await.status, StatusCode::NOT_FOUND);
+    assert!(!get_with_cookie(pool.clone(), "/mesazhet", &besa).await.body.contains(&thread));
+    assert_eq!(unread(&pool, &besa).await, r#"{"unread":0}"#);
+}
+
 /// What the AI stand-in was asked: the key each call came with, and the request.
 type Asked = Arc<Mutex<Vec<(Option<String>, Value)>>>;
 
