@@ -3165,6 +3165,9 @@ async fn the_listing_form_names_its_fields_in_three_sections(pool: PgPool) {
     );
     assert!(sections.windows(2).all(|pair| pair[0] < pair[1]), "{sections:?}");
     assert!(form.contains(r#"placeholder="p.sh. Golf 7, 2016, naftë""#));
+    // A listing begun and left in this browser is offered back (draft_controller.js), on a new
+    // listing's form alone.
+    assert!(form.contains(r#"<div class="notice draft-note" data-draft-target="note" role="status" hidden>"#), "{form}");
 
     // Signed in, where alone: the name and the contact are the account's.
     let ana = session_for(&pool, ANA_ID).await;
@@ -3174,6 +3177,7 @@ async fn the_listing_form_names_its_fields_in_three_sections(pool: PgPool) {
     // An edit has no tips: it was written once already.
     let edit = get_with_cookie(pool.clone(), "/listing/1001/ndrysho", &ana).await.body;
     assert!(edit.contains(r#"<h2 id="section-what">Çfarë shet</h2>"#) && !edit.contains("listing-form-tips") && !edit.contains(r#"id="name""#), "{edit}");
+    assert!(!edit.contains("draft-note") && !edit.contains(" draft\""));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -3195,7 +3199,7 @@ async fn the_listing_form_asks_for_the_writing_first_and_offers_ai_when_it_is_se
     let new = send_to(app_with_ai(pool.clone(), &url), Request::get("/shto").body(Body::empty()).unwrap()).await.body;
     let order = positions(&new, &[r#"name="photos""#, "Plotëso pjesën tjetër me AI", r#"id="category""#]);
     assert!(order.is_sorted(), "{order:?}");
-    assert!(new.contains(r##"data-controller="listing-form narrow price-hint ai-fill" data-ai-fill-photos-outlet="#listing-photos""##));
+    assert!(new.contains(r##"data-controller="listing-form narrow price-hint draft ai-fill" data-ai-fill-photos-outlet="#listing-photos""##));
     assert!(new.contains(r#"<div class="field" id="listing-photos" data-controller="photos""#));
     let session = session_for(&pool, "11111111-1111-4111-8111-111111111111").await;
     let request = Request::get("/listing/1001/ndrysho").header(header::COOKIE, &session).body(Body::empty()).unwrap();

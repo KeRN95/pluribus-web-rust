@@ -30,8 +30,19 @@
       it is (and, for someone not signed in, how to reach them). Every field has its name over it;
       a placeholder, where there is one, is an example. -#}
   <form class="account-form listing-form" action="{{ action }}" method="post" enctype="multipart/form-data"
-        data-controller="listing-form narrow price-hint{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% endif %}{% if new_listing %} data-listing-form-guess-value="true"{% endif %}>
+        data-controller="listing-form narrow price-hint{% if new_listing %} draft{% endif %}{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% endif %}{% if new_listing %} data-listing-form-guess-value="true"{% endif %}>
     {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+    {%- if new_listing %}
+    {#- What this browser kept of a listing begun and left (draft_controller.js), offered on an
+        empty form: "Vazhdo" fills it in, "Fshije" lets it go. -#}
+    <div class="notice draft-note" data-draft-target="note" role="status" hidden>
+      <p>Ke një njoftim të pambaruar, <strong data-draft-target="title"></strong>, të ruajtur <span data-draft-target="when"></span>. Fotot nuk ruhen.</p>
+      <div class="draft-actions">
+        <button type="button" class="button small" data-action="draft#restore">Vazhdo</button>
+        <button type="button" class="button secondary small" data-action="draft#discard">Fshije</button>
+      </div>
+    </div>
+    {%- endif %}
     {%- if new_listing && !stores.is_empty() %}
     {#- "Posto si": the poster, or a store they may post for (stores.rs), whose name, logo and
         number the listing then shows. Its empty choice is the poster, a choice and not a

@@ -242,6 +242,9 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .listing-form-tips h2 { margin: 0 0 .7rem; font-size: var(--text-md); }
 .listing-form-tips ul { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
 .listing-form-tips strong { color: var(--text); font-weight: var(--semibold); }
+/* A listing begun and left, offered back: what it was, and "Vazhdo" or "Fshije" under it. */
+.draft-note p { margin: 0 0 .6rem; }
+.draft-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 .form-section { display: grid; gap: 1rem; min-width: 0; }
 .form-section + .form-section { margin-top: .5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
 .form-section > h2 { margin: 0; font-size: var(--text-lg); }
