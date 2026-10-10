@@ -1904,25 +1904,40 @@ async fn a_listing_steps_to_its_neighbours_on_its_categorys_page(pool: PgPool) {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     let car = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
-    // A bubble beside the price, like the price per square metre's, which opens the calculator in a
-    // card under it the same way: the down payment, the years and the interest, and what they come
-    // to, the monthly payment last.
-    let start = r#"<details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="21500.00" data-loan-currency-value="€">"#;
-    let loan = &car[car.find(start).expect("the loan calculator's bubble")..];
-    let loan = &loan[..loan.find("</details>").unwrap()];
-    assert!(loan[..loan.find("</summary>").unwrap()].contains("Llogarit kredinë"));
+    // On a car's page, under the key facts, the calculator in a card of its own, as FINN has it:
+    // the down payment, the years and the interest, and what they come to, the monthly payment
+    // last, and the way to all the loan offers, a button in the site's colour; no bubble beside
+    // a car's price. Under it the two rows for the partners to come, the car's insurance and its
+    // history; then the description.
+    let start = r#"<section class="listing-loan" data-controller="loan" data-loan-price-value="21500.00" data-loan-currency-value="€" aria-labelledby="loan-heading">"#;
+    let loan = &car[car.find(start).expect("the loan calculator's section")..];
+    let loan = &loan[..loan.find("</section>").unwrap()];
     let card = positions(loan, &[
-        r#"<div class="bubble-card loan-card">"#,
+        "Sa do të kushtojë kredia në muaj</h2>",
         r#"<input id="loan-down""#,
         r#"<input id="loan-years""#,
         r#"<input id="loan-rate""#,
         "<dt>Kredia</dt>",
         "<dt>Kësti mujor</dt>",
+        r##"<a class="button loan-offers" href="#">Shiko të gjitha ofertat e kredisë</a>"##,
     ]);
     assert!(card.is_sorted(), "{card:?}");
-    // Under 10 000 € or 1 000 000 Lekë it isn't worth a loan.
+    assert!(!car.contains("bubble loan"), "no bubble beside a car's price");
+    let order = positions(&car, &[
+        r#"<dl class="key-facts">"#,
+        r#"<section class="listing-loan""#,
+        r#"<div class="listing-partners">"#,
+        "<strong>Siguro makinën</strong>",
+        "<strong>Kontrollo historikun e makinës</strong>",
+        "<h2>Përshkrimi</h2>",
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
+    // Every other page has the calculator in a bubble beside the price, like the price per square
+    // metre's, which opens it in a card under it the same way (the house, below). Under 10 000 €
+    // or 1 000 000 Lekë it isn't worth a loan: no section on the Golf's page, no bubble on the
+    // iPhone's.
     for cheap in ["/listing/1001-volkswagen-golf-7-2016-nafte", "/listing/1005-iphone-13-128-gb-si-i-ri"] {
-        assert!(!html(pool.clone(), cheap).await.contains("Llogarit kredinë"), "{cheap}");
+        assert!(!html(pool.clone(), cheap).await.contains("data-loan-price-value"), "{cheap}");
     }
     // In Lekë, the limit is about the same as in euros: 500 000 Lekë isn't enough, 1 000 000 is.
     for (price, offered) in [(500_000, false), (999_999, false), (1_000_000, true)] {
@@ -4135,7 +4150,7 @@ async fn a_cars_title_is_made_from_what_it_is(pool: PgPool) {
     // The page's title is made from its make, model, engine (in litres, to a tenth) and year, and
     // kept with it.
     let page = get(pool.clone(), &url).await.body;
-    assert!(page.contains("<h1>Volkswagen Golf 1.6, 2017</h1>"), "{page}");
+    assert!(page.contains("<h1>Volkswagen Golf</h1>") && page.contains(r#"<p class="listing-variant">1.6, 2017</p>"#), "{page}");
     let generated: Option<String> = sqlx::query_scalar("SELECT generated_title FROM listings WHERE public_no = $1")
         .bind(no)
         .fetch_one(&pool)
@@ -4161,7 +4176,8 @@ async fn a_cars_title_is_made_from_what_it_is(pool: PgPool) {
     let fields = car_fields(("prop_vehicle_year", "2018"), &started);
     let saved = post_form(pool.clone(), &format!("/listing/{no}/ndrysho"), &fields, Some(&ana)).await;
     assert_eq!(saved.status, StatusCode::SEE_OTHER);
-    assert!(get(pool.clone(), &url).await.body.contains("<h1>Volkswagen Golf, 2018</h1>"));
+    let edited = get(pool.clone(), &url).await.body;
+    assert!(edited.contains("<h1>Volkswagen Golf</h1>") && edited.contains(r#"<p class="listing-variant">2018</p>"#), "{edited}");
     // The edit form keeps the seller's own.
     let form = get_with_cookie(pool.clone(), &format!("/listing/{no}/ndrysho"), &ana).await.body;
     assert!(form.contains(r#"value="Volkswagen Golf 7 1.6 TDI, 2017""#));
@@ -4226,8 +4242,9 @@ async fn sellers_type_a_make_or_model_the_list_lacks(pool: PgPool) {
     assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
     let url = posted.location.unwrap();
     let page = get(pool.clone(), &url).await.body;
-    // They make its title, as a listed make and model would.
-    assert!(page.contains("<h1>Zastava Yugo, 2017</h1>"), "{page}");
+    // They make its title, as a listed make and model would: the two as the heading, the year
+    // under it.
+    assert!(page.contains("<h1>Zastava Yugo</h1>") && page.contains(r#"<p class="listing-variant">2017</p>"#), "{page}");
     // Search finds it by them; the lists and filters don't offer them until someone approves them.
     assert!(get(pool.clone(), "/search?q=yugo").await.body.contains(&url));
     assert!(!get(pool.clone(), "/shto/fushat?category=makina").await.body.contains(">Zastava<"));
@@ -4268,7 +4285,8 @@ async fn sellers_type_a_make_or_model_the_list_lacks(pool: PgPool) {
     buzz.iter_mut().find(|field| field.0 == "title").unwrap().1 = "Volkswagen ID. Buzz, 2023";
     let posted = post_form(pool.clone(), "/shto", &buzz, Some(&besa)).await;
     assert_eq!(posted.status, StatusCode::SEE_OTHER, "{}", posted.body);
-    assert!(get(pool.clone(), &posted.location.unwrap()).await.body.contains("<h1>Volkswagen ID. Buzz, 2017</h1>"));
+    let buzz = get(pool.clone(), &posted.location.unwrap()).await.body;
+    assert!(buzz.contains("<h1>Volkswagen ID. Buzz</h1>") && buzz.contains(r#"<p class="listing-variant">2017</p>"#), "{buzz}");
     let typed: i64 = sqlx::query_scalar("SELECT count(*) FROM attribute_options WHERE lower(label) = 'id buzz'")
         .fetch_one(&pool)
         .await
@@ -4379,7 +4397,7 @@ async fn moderators_approve_or_merge_what_sellers_typed(pool: PgPool) {
     let approved = post_form(pool.clone(), &format!("/moderim/{yugo_id}/mirato"), &[("label", "Koral")], Some(&moderator)).await;
     assert_eq!(approved.status, StatusCode::SEE_OTHER);
     assert_eq!(option_active(&pool, "Koral").await, Some(true));
-    assert!(get(pool.clone(), &yugo).await.body.contains("<h1>Zastava Koral, 2017</h1>"));
+    assert!(get(pool.clone(), &yugo).await.body.contains("<h1>Zastava Koral</h1>"));
     assert!(get(pool.clone(), "/search?q=koral").await.body.contains(&yugo));
     assert!(get(pool.clone(), "/c/makina").await.body.contains(">Zastava<"));
 
@@ -4396,11 +4414,11 @@ async fn moderators_approve_or_merge_what_sellers_typed(pool: PgPool) {
     assert_eq!(merged.status, StatusCode::SEE_OTHER);
     assert_eq!(option_active(&pool, "Golf IV").await, None);
     let page = get(pool.clone(), &golf).await.body;
-    assert!(page.contains("<h1>Volkswagen Golf, 2017</h1>") && !page.contains(">Golf IV<"));
+    assert!(page.contains("<h1>Volkswagen Golf</h1>") && !page.contains(">Golf IV<"));
     // A typed make merged into the listed one takes its typed model along, under the listed make.
     let merged = post_form(pool.clone(), &format!("/moderim/{mercedes_id}/bashko"), &[("into", &mercedes_benz_id)], Some(&moderator)).await;
     assert_eq!(merged.status, StatusCode::SEE_OTHER);
-    assert!(get(pool.clone(), &mercedes).await.body.contains("<h1>Mercedes-Benz C 220, 2017</h1>"));
+    assert!(get(pool.clone(), &mercedes).await.body.contains("<h1>Mercedes-Benz C 220</h1>"));
     let page = get_with_cookie(pool.clone(), "/moderim", &moderator).await.body;
     assert!(page.contains(r#"<span class="pending-attribute">Modeli · Mercedes-Benz</span>"#));
     assert!(page.contains(r#"<strong class="pending-label">C 220</strong>"#));
@@ -4617,7 +4635,8 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         r#"<nav class="category-path listing-path""#,
         r#"<div class="gallery">"#,
         r#"<p class="listing-meta">"#,
-        "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
+        "<h1>Volkswagen Golf</h1>",
+        r#"<p class="listing-variant">7, 2016, naftë</p>"#,
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur · "#,
         r#"<dl class="key-facts">"#,
         r#"<div class="listing-deal">"#,
