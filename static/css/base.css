@@ -430,13 +430,15 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .search .icon-button { background: var(--button); color: var(--on-button); }
 .search .icon-button:hover { background: var(--button-hover); }
 
-/* The account: a round button on the surface at the top bar's right end, the logo's margin taking
-   the room before it; the bar holds nothing else. Posting, the listings kept, the conversations
-   and the theme are the welcome page's round buttons, at the end of its categories (home.html,
-   welcome.css), and no bar's. */
+/* The account and, after it, the theme: round buttons on the surface at the top bar's right end,
+   the logo's margin taking the room before them. Posting, the listings kept and the
+   conversations are the welcome page's round buttons, at the end of its categories (home.html,
+   welcome.css), and no bar's; the welcome page's theme is among them too, not in its bar. */
 .logo { margin-right: auto; }
-.account-button { background: var(--surface); border-color: var(--border); }
-.account-button:hover { background: var(--surface-muted); }
+.account-button,
+.theme-toggle { background: var(--surface); border-color: var(--border); }
+.account-button:hover,
+.theme-toggle:hover { background: var(--surface-muted); }
 /* Trying typefaces (TYPE_TRIAL=true; base.html, type_trial_controller.js): "Aa" before the
    account, a round button like it, marked as an open menu is while its panel shows; the panel
    under the bar's right end, a card like the menus', with the headings' and the text's lists and
@@ -471,8 +473,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .type-range output { color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
 .type-reset { justify-self: start; }
 
-/* The theme button (the welcome page's) shows the theme it switches to: a moon in light mode, a
-   sun in dark mode. */
+/* The theme buttons (the bar's and the welcome page's) show the theme they switch to: a moon in
+   light mode, a sun in dark mode. */
 .icon-sun { display: none; }
 :root[data-theme="dark"] .icon-sun { display: block; }
 :root[data-theme="dark"] .icon-moon { display: none; }

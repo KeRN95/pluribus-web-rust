@@ -89,13 +89,22 @@
         </form>
       </details>
       {%- endif %}
-      {#- The account alone at the bar's right end: creating one, or for a signed-in visitor, their
-          listings (account.rs, account_page). Posting, the listings kept, the conversations and
-          the theme are the welcome page's round buttons, at the end of its categories
-          (home.html), and no top bar's. -#}
+      {#- The account at the bar's right end: creating one, or for a signed-in visitor, their
+          listings (account.rs, account_page). Posting, the listings kept and the conversations
+          are the welcome page's round buttons, at the end of its categories (home.html), and no
+          top bar's. -#}
       <a class="icon-button account-button" href="/llogaria" aria-label="Llogaria" title="Llogaria">
         <svg data-icon="user" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
       </a>
+      {#- After the account, the theme: a moon on the light one, a sun on the dark, the theme it
+          switches to (theme_controller.js). The welcome page has it among its round buttons
+          instead (home.html, which empties this block). -#}
+      {%- block theme_toggle %}
+      <button type="button" class="icon-button theme-toggle" data-controller="theme" data-action="theme#toggle" aria-label="Tema e errët" aria-pressed="false" title="Tema e errët">
+        <svg class="icon-moon" data-icon="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MOON|safe }}</svg>
+        <svg class="icon-sun" data-icon="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SUN|safe }}</svg>
+      </button>
+      {%- endblock %}
     </div>
   </header>
   <main class="container">

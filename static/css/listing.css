@@ -233,8 +233,8 @@
 /* Room between the photos and the title, and a hairline under the kind's line, the page's one;
    "Lokacioni" over the map, as the description and the details have their headings. The price a
    size down, and what qualifies it ("i diskutueshëm") on a line of its own under it, quietly. */
-.listing-car > .listing-side { margin-top: .9rem; }
-.listing-car .listing-header { padding-bottom: .85rem; border-bottom: 1px solid var(--border); }
+.listing-car > .listing-side { margin-top: 1.075rem; }
+.listing-car .listing-header { padding-bottom: 1.05rem; border-bottom: 1px solid var(--border); }
 .listing-car .listing-side > .listing-map-section { margin-top: 1.75rem; }
 .listing-car .listing-map-section > h2 { margin-top: 0; }
 .listing-car .listing-price { font-size: 1.5rem; }

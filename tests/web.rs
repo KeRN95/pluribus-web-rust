@@ -364,19 +364,25 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     ]);
     assert!(order.is_sorted(), "{order:?}");
     assert!(order[4] < nav + body[nav..].find("</nav>").unwrap());
-    // Every page's top bar has the account alone, at its right end: the plus, the heart, the
-    // conversations and the theme are the welcome page's round buttons and no bar's.
+    // Every page's top bar has the account at its right end, and after it the theme, but the
+    // welcome page's, whose theme is among its round buttons: the plus, the heart and the
+    // conversations are the welcome page's round buttons and no bar's.
     let cars = get(pool.clone(), "/c/automjete").await.body;
-    for page in [&body, &cars] {
-        for gone in ["post-button", "saved-button", "inbox-button", "theme-toggle"] {
+    for (page, theme) in [(&body, false), (&cars, true)] {
+        for gone in ["post-button", "saved-button", "inbox-button"] {
             assert!(!page.contains(gone), "{gone}");
         }
         // The typeface panel ("Aa") stands there only while TYPE_TRIAL is on (.env).
         let trial = std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true");
         assert_eq!(page.contains(r#"<details class="type-menu" data-controller="dropdown type-trial""#), trial);
         let bar = &page[page.find(r#"<header class="site-header">"#).unwrap()..page.find("</header>").unwrap()];
-        assert_eq!(bar.matches("icon-button").count(), 1 + usize::from(trial), "{bar}");
+        assert_eq!(bar.matches("icon-button").count(), 1 + usize::from(theme) + usize::from(trial), "{bar}");
         assert!(bar.contains(r#"<a class="icon-button account-button" href="/llogaria""#));
+        let toggle = r#"<button type="button" class="icon-button theme-toggle" data-controller="theme" data-action="theme#toggle""#;
+        assert_eq!(bar.contains(toggle), theme, "{bar}");
+        if theme {
+            assert!(bar.find("account-button").unwrap() < bar.find("theme-toggle").unwrap());
+        }
     }
     assert!(!cars.contains("circle-shortcut"));
     assert!(!body.contains("data-panel-target") && !body.contains("<noscript>"));

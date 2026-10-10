@@ -11,6 +11,9 @@
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
+{#- The theme is among the welcome page's round buttons, not in its top bar (base.html). -#}
+{% block theme_toggle %}{% endblock %}
+
 {% block content %}
 <section class="welcome">
   {#- The question, for screen readers: on the page the search and the categories ask it. -#}
