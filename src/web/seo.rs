@@ -146,6 +146,7 @@ pub async fn robots(headers: HeaderMap) -> Response {
          Disallow: /llogaria\n\
          Disallow: /njoftimet-e-mia\n\
          Disallow: /te-ruajturat\n\
+         Disallow: /kerkimet\n\
          Disallow: /moderim\n\
          Disallow: /shto\n\
          Disallow: /sugjerime\n\

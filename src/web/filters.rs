@@ -443,6 +443,7 @@ impl<'a> Filters<'a> {
             seller: None,
             // The page adds the accounts the visitor blocked (safety.rs).
             hidden_accounts: Vec::new(),
+            since: None,
         }
     }
 
@@ -526,6 +527,35 @@ impl<'a> Filters<'a> {
         let mut pairs = self.pairs();
         pairs.push(("after".to_string(), cursor.to_string()));
         url(&self.path, pairs)
+    }
+
+    /// What a saved search keeps of this page (searches.rs): its path, and its filters as a query
+    /// string in their fixed order (pairs), the town a cookie remembered among them, without the
+    /// order, which its page sets when it is opened.
+    pub fn search_address(&self) -> (String, String) {
+        let pairs = self.pairs().into_iter().filter(|(name, _)| name != "sort");
+        (self.path.clone(), form_urlencoded::Serializer::new(String::new()).extend_pairs(pairs).finish())
+    }
+
+    /// The name a saved search shows by: its words, its page's category and what each filter's
+    /// chip says, "„golf“ · Makina · Tiranë · Naftë", or "Të gjitha njoftimet" for none.
+    pub fn search_name(&self) -> String {
+        let mut parts = Vec::new();
+        if let Some(q) = &self.q {
+            parts.push(format!("„{q}“"));
+        }
+        if let (false, Some(category)) = (self.category_is_filter, self.category) {
+            parts.push(category.name.clone());
+        }
+        parts.extend(self.chips().into_iter().map(|chip| chip.label));
+        if parts.is_empty() {
+            return "Të gjitha njoftimet".to_string();
+        }
+        let name = parts.join(" · ");
+        match name.char_indices().nth(119) {
+            Some((cut, _)) => format!("{}…", name[..cut].trim_end()),
+            None => name,
+        }
     }
 
     /// Another category's page, keeping the search words, the city and the map pin; the zone too,

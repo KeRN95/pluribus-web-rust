@@ -237,6 +237,9 @@ pub struct ListingFilter {
     pub attributes: Vec<AttributeFilter>,
     pub sort: Sort,
     pub after: Option<Cursor>,
+    /// Only listings put up or brought up after this moment (`sort_at`): a saved search's new
+    /// ones (web/searches.rs).
+    pub since: Option<OffsetDateTime>,
 }
 
 /// A visitor's words as a search, which forgives typos and finds other forms of a word: "golff"
@@ -935,6 +938,9 @@ fn push_conditions(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilte
     }
     if !filter.hidden_accounts.is_empty() {
         query.push(" AND l.created_by_user_id <> ALL(").push_bind(filter.hidden_accounts.clone()).push(")");
+    }
+    if let Some(since) = filter.since {
+        query.push(" AND l.sort_at > ").push_bind(since);
     }
     if let Some(ids) = &filter.category_ids {
         if per_category {

@@ -460,6 +460,14 @@
   -webkit-tap-highlight-color: transparent;
 }
 .small-pill > svg { flex: none; }
+/* "Ruaj kërkimin" (searches.rs), at the end of the count's and chips' line, pushed to its right
+   end: a small pill with a bell in the muted colour; kept, "Kërkimi u ruajt", marked as what is
+   picked is (the accent's tint, a border of it, its words and bell in it). */
+.save-search { display: contents; }
+.save-search-button { margin-left: auto; }
+.save-search-button > svg { color: var(--muted); }
+.save-search-button.is-saved { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+.save-search-button.is-saved > svg { color: var(--accent); }
 .sort-button { list-style: none; }
 .sort-button::-webkit-details-marker { display: none; }
 /* The cards' view, the row's last button (browse-tools): round, as the search's is, with the icon

@@ -36,7 +36,7 @@ function store() {
 
 function ask() {
   if (!signedIn()) {
-    answered({ numbers: [], price_drops: 0 });
+    answered({ numbers: [], price_drops: 0, searches: 0 });
     return;
   }
   asking ??= fetch("/te-ruajturat/numrat", { headers: { Accept: "application/json" }, cache: "no-store" })
@@ -52,18 +52,21 @@ function answered(answer) {
   for (const heart of document.querySelectorAll(".heart[data-heart-number-value]")) {
     show(heart, kept.has(Number(heart.dataset.heartNumberValue)));
   }
-  showDrops(answer.price_drops);
+  showNews(answer.price_drops, answer.searches ?? 0);
 }
 
 // The heart that leads to the listings kept, in the top bar (base.html) or, on the welcome page, in
 // the row with its search (home.html), has a dot while listings the visitor keeps dropped their
-// price since they last looked at /te-ruajturat, and says how many to screen readers; not on that
-// page, which shows them (saved.html) and so has them seen.
-function showDrops(count) {
-  const news = count > 0 && !document.querySelector(".price-drops");
-  const label = news ? `Të ruajturat: ${count} me çmim më të ulët` : "Të ruajturat";
+// price since they last looked at /te-ruajturat, or saved searches have new listings they haven't
+// heard of (searches.rs), and says which to screen readers; not for what the page shows already
+// (the drops on saved.html, the searches on saved_searches.html), which it has seen.
+function showNews(drops, searches) {
+  const news = [];
+  if (drops > 0 && !document.querySelector(".price-drops")) news.push(`${drops} me çmim më të ulët`);
+  if (searches > 0 && !document.querySelector(".saved-searches")) news.push(`${searches} kërkime me njoftime të reja`);
+  const label = news.length ? `Të ruajturat: ${news.join(", ")}` : "Të ruajturat";
   for (const button of document.querySelectorAll(".saved-shortcut, .saved-button")) {
-    button.classList.toggle("has-drops", news);
+    button.classList.toggle("has-drops", news.length > 0);
     button.setAttribute("aria-label", label);
     button.title = label;
   }

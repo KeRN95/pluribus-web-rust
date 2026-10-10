@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Kërkimet e ruajtura | Pluribus{% endblock %}
+
+{% block content %}
+{#- The visitor's saved searches (searches.rs), the last saved first: each its name, leading to its
+    page through /kerkimet/{id}, which counts its new listings from then on; how many listings came
+    since it was last opened; its alerts, on or off; and "Fshi". The listings kept are a tap away,
+    as this page is from theirs. Once shown, its alerts are seen (data-seen-url, application.js),
+    and the heart loses its dot. -#}
+<section class="saved-searches"{% if unseen > 0 %} data-seen-url="/kerkimet/pare"{% endif %}>
+  <p class="saved-switch"><a href="/te-ruajturat">‹ Njoftimet e ruajtura</a></p>
+  <h1>Kërkimet e ruajtura</h1>
+  {%- if !signed_in %}
+  <p class="lead">Hyr në llogari për të ruajtur kërkimet që bën, me filtrat e tyre, dhe për të marrë lajmërim kur dalin njoftime të reja.</p>
+  <p><a class="button" href="/llogaria">Hyr</a></p>
+  {%- else %}
+  {%- if full %}
+  <p class="notice" role="status">Ke ruajtur {{ crate::db::SEARCHES_MOST }} kërkime, sa mund të mbash: fshi një për të ruajtur një tjetër.</p>
+  {%- endif %}
+  {%- if rows.is_empty() %}
+  <p class="empty">Ende s'ke ruajtur asnjë kërkim. Te faqja e një kategorie ose e një kërkimi, me filtrat që të duhen, prek „Ruaj kërkimin“: këtu do të shohësh sa njoftime të reja kanë dalë, dhe të vjen lajmërim kur dalin.</p>
+  {%- else %}
+  <ul class="saved-search-list">
+    {%- for row in rows %}
+    <li class="saved-search">
+      <a class="saved-search-name" href="/kerkimet/{{ row.search.id }}">{{ row.search.name }}</a>
+      {%- if let Some(new) = row.new_text() %}<span class="badge">{{ new }}</span>{% endif %}
+      <form method="post" action="/kerkimet/{{ row.search.id }}/lajmerime">
+        {%- if row.search.alerts_enabled %}
+        <button type="submit" class="button secondary small" title="Mos më lajmëro më për këtë kërkim">Ndalo lajmërimet</button>
+        {%- else %}
+        <input type="hidden" name="lajmero" value="1">
+        <button type="submit" class="button secondary small" title="Më lajmëro kur dalin njoftime të reja">Lajmëromë</button>
+        {%- endif %}
+      </form>
+      <form method="post" action="/kerkimet/{{ row.search.id }}/fshi" data-turbo-confirm="Ta fshijmë kërkimin „{{ row.search.name }}“?">
+        <button type="submit" class="button secondary small danger">Fshi</button>
+      </form>
+    </li>
+    {%- endfor %}
+  </ul>
+  <p class="field-hint">Kur dalin njoftime të reja për një kërkim me lajmërime, zemra lart merr një pikë, dhe nëse hyn me email, të vjen një email; jo më shumë se një në tri orë për kërkim.</p>
+  {%- endif %}
+  {%- endif %}
+</section>
+{% endblock %}

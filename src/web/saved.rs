@@ -73,15 +73,20 @@ pub async fn save(
 }
 
 /// GET /te-ruajturat/numrat: for the hearts on a page and the header's (heart_controller.js), as
-/// JSON: the numbers of the listings the visitor keeps, and how many of them dropped their price
-/// since the visitor last saw /te-ruajturat (db::price_drops); none for someone not signed in.
-/// `{"numbers": [1001, 1005], "price_drops": 1}`.
+/// JSON: the numbers of the listings the visitor keeps, how many of them dropped their price since
+/// the visitor last saw /te-ruajturat (db::price_drops), and how many alerts of their saved searches
+/// they haven't seen (searches.rs); none for someone not signed in.
+/// `{"numbers": [1001, 1005], "price_drops": 1, "searches": 2}`.
 pub async fn numbers(State(state): State<AppState>, headers: HeaderMap) -> Result<Response> {
-    let (numbers, drops) = match current_user(&state, &headers).await? {
-        Some(user) => tokio::try_join!(db::saved_numbers(&state.db, user.id), db::price_drops(&state.db, user.id))?,
-        None => (Vec::new(), Vec::new()),
+    let (numbers, drops, searches) = match current_user(&state, &headers).await? {
+        Some(user) => tokio::try_join!(
+            db::saved_numbers(&state.db, user.id),
+            db::price_drops(&state.db, user.id),
+            db::unseen_search_alerts(&state.db, user.id),
+        )?,
+        None => (Vec::new(), Vec::new(), 0),
     };
-    let body = serde_json::json!({ "numbers": numbers, "price_drops": drops.len() });
+    let body = serde_json::json!({ "numbers": numbers, "price_drops": drops.len(), "searches": searches });
     Ok(([(header::CACHE_CONTROL, HeaderValue::from_static("no-store"))], Json(body)).into_response())
 }
 
@@ -94,6 +99,8 @@ struct SavedPage {
     page: ListingPage,
     /// Under them, those kept that no one can open any more, each to let go.
     gone: Vec<db::GoneListing>,
+    /// How many alerts of the visitor's saved searches they haven't seen, by the link to them.
+    search_alerts: i64,
 }
 
 impl db::GoneListing {
@@ -133,19 +140,20 @@ impl db::PriceDrop {
 /// dropped since they last looked, and over those no longer on the site; for someone not signed
 /// in, the way to sign in.
 pub async fn page(State(state): State<AppState>, headers: HeaderMap) -> Result<Response> {
-    let (signed_in, drops, cards, gone) = match current_user(&state, &headers).await? {
+    let (signed_in, drops, cards, gone, search_alerts) = match current_user(&state, &headers).await? {
         Some(user) => {
-            let (drops, cards, gone) = tokio::try_join!(
+            let (drops, cards, gone, search_alerts) = tokio::try_join!(
                 db::price_drops(&state.db, user.id),
                 db::saved_cards(&state.db, user.id, SAVED_MOST),
                 db::saved_gone(&state.db, user.id),
+                db::unseen_search_alerts(&state.db, user.id),
             )?;
-            (true, drops, cards, gone)
+            (true, drops, cards, gone, search_alerts)
         }
-        None => (false, Vec::new(), Vec::new(), Vec::new()),
+        None => (false, Vec::new(), Vec::new(), Vec::new(), 0),
     };
     let page = ListingPage { cards, next: None, layout: Default::default(), eager: 4, card_ids: LISTING_IDS, lead: false };
-    render(SavedPage { signed_in, drops, page, gone })
+    render(SavedPage { signed_in, drops, page, gone, search_alerts })
 }
 
 #[derive(Deserialize)]

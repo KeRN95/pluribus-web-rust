@@ -671,6 +671,10 @@ pub const MOON: &str = r#"<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z
 /// A sun: the theme's button on the dark theme, which switches back to the light one.
 pub const SUN: &str = r#"<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>"#;
 
+/// A bell: keeping a search to hear of its new listings ("Ruaj kërkimin", browse.html), and the
+/// searches kept (saved.html, saved_searches.html).
+pub const BELL: &str = r#"<path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 4.8 2 6.8 2 6.8h-15s2-2 2-6.8Z"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/>"#;
+
 /// A paper plane: sending a message (conversation.html).
 pub const SEND: &str = r#"<path d="m21 3-6.5 18-4-7.5-7.5-4Z"/><path d="M21 3 10.5 13.5"/>"#;
 

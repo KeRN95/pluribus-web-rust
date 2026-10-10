@@ -553,7 +553,7 @@ async fn a_heart_keeps_a_listing_for_a_signed_in_user(pool: PgPool) {
     assert_eq!(send(pool.clone(), request).await.location.as_deref(), Some("/c/automjete"));
     assert_eq!(kept(pool.clone()).await, [1001, 1003]);
     // Nobody signed in keeps nothing, and their page says how to.
-    assert_eq!(get(pool.clone(), "/te-ruajturat/numrat").await.body, r#"{"numbers":[],"price_drops":0}"#);
+    assert_eq!(get(pool.clone(), "/te-ruajturat/numrat").await.body, r#"{"numbers":[],"price_drops":0,"searches":0}"#);
     let page = get(pool, "/te-ruajturat").await.body;
     assert!(page.contains(r#"<a class="button" href="/llogaria">Hyr</a>"#) && card_numbers(&page).is_empty());
 }
@@ -580,7 +580,7 @@ async fn a_heart_tapped_before_signing_in_keeps_the_listing_once_signed_in(pool:
     assert_eq!(signed.location.as_deref(), Some("/c/automjete?vehicle_fuel=DIESEL"));
     assert_eq!((signed.cookie("ruaj"), signed.cookie("kthehu")), (Some(""), Some("")));
     let session = format!("session={}", signed.cookie("session").unwrap());
-    assert_eq!(get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body, r#"{"numbers":[1001],"price_drops":0}"#);
+    assert_eq!(get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body, r#"{"numbers":[1001],"price_drops":0,"searches":0}"#);
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -4192,6 +4192,99 @@ async fn sellers_say_a_listing_is_reserved_or_sold(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_saved_search_counts_and_tells_of_its_new_listings(pool: PgPool) {
+    let besa = new_seller(&pool, "+355691112244").await;
+    let ana = new_seller(&pool, "+355691112233").await;
+    let search = "/c/telefona?city=tirane";
+    let alerts = || marketplace::web::send_search_alerts(&pool, "https://pluribus.example");
+    let unseen = |pool: PgPool, session: String| async move {
+        let answer: Value = serde_json::from_str(&get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body).unwrap();
+        answer["searches"].as_i64().unwrap()
+    };
+
+    // The page offers to keep it, as its filters write it; not signed in, keeping it signs in first
+    // and comes back to it.
+    let page = get(pool.clone(), search).await.body;
+    assert!(page.contains(r#"<form class="save-search" method="post" action="/kerkimet/ruaj">"#), "{page}");
+    assert!(page.contains(&format!(r#"<input type="hidden" name="adresa" value="{search}">"#)));
+    let signed_out = post_form(pool.clone(), "/kerkimet/ruaj", &[("adresa", search)], None).await;
+    assert_eq!(signed_out.location.as_deref(), Some("/llogaria"));
+    assert_eq!(signed_out.cookie("kthehu").map(|value| value.split(';').next().unwrap()), Some(search));
+    // Only a category's or a search's page can be kept.
+    assert_eq!(post_form(pool.clone(), "/kerkimet/ruaj", &[("adresa", "/mesazhet")], Some(&besa)).await.status, StatusCode::NOT_FOUND);
+
+    // Kept: back on the page, which says so, once however often it is kept.
+    for _ in 0..2 {
+        let kept = post_form(pool.clone(), "/kerkimet/ruaj", &[("adresa", search)], Some(&besa)).await;
+        assert_eq!(kept.location.as_deref(), Some(search));
+    }
+    let id: String = sqlx::query_scalar("SELECT id::text FROM saved_searches").fetch_one(&pool).await.unwrap();
+    let page = get_with_cookie(pool.clone(), search, &besa).await.body;
+    assert!(page.contains(&format!(r#"<form class="save-search" method="post" action="/kerkimet/{id}/fshi">"#)), "{page}");
+    assert!(page.contains("</svg>Kërkimi u ruajt</button>"));
+    // Its page names it by its category and filters, with nothing new yet.
+    let list = get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body;
+    assert!(list.contains(&format!(r#"<a class="saved-search-name" href="/kerkimet/{id}">Telefona · Tiranë</a>"#)), "{list}");
+    assert!(!list.contains(r#"<span class="badge">"#));
+
+    // A phone put up in Tiranë since: one new listing, and, once the alerts' gap has passed since
+    // it was kept, an alert: a notification, the heart's dot, a word by the link on /te-ruajturat.
+    post_listing(&pool, &ana).await;
+    let list = get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body;
+    assert!(list.contains(r#"<span class="badge">1 njoftim i ri</span>"#), "{list}");
+    assert_eq!(alerts().await.unwrap(), 0);
+    // Four hours pass, for the search and the listings alike.
+    sqlx::query("UPDATE saved_searches SET created_at = created_at - interval '4 hours'").execute(&pool).await.unwrap();
+    sqlx::query("UPDATE listings SET published_at = published_at - interval '4 hours', bumped_at = bumped_at - interval '4 hours'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(alerts().await.unwrap(), 1);
+    let (title, url): (String, String) = sqlx::query_as(
+        "SELECT title, payload ->> 'url' FROM notifications WHERE notification_type = 'SAVED_SEARCH'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(title, "1 njoftim i ri: Telefona · Tiranë");
+    assert_eq!(url, format!("https://pluribus.example/kerkimet/{id}"));
+    assert_eq!(unseen(pool.clone(), besa.clone()).await, 1);
+    assert!(get_with_cookie(pool.clone(), "/te-ruajturat", &besa).await.body.contains("Kërkimet e ruajtura · 1 me njoftime të reja"));
+    // Not again within the gap.
+    assert_eq!(alerts().await.unwrap(), 0);
+    // Its page, once shown, says so, and the alert is seen; another alert would bring the dot back.
+    let list = get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body;
+    assert!(list.contains(r#"<section class="saved-searches" data-seen-url="/kerkimet/pare">"#), "{list}");
+    assert_eq!(post_form(pool.clone(), "/kerkimet/pare", &[], Some(&besa)).await.status, StatusCode::NO_CONTENT);
+    assert_eq!(unseen(pool.clone(), besa.clone()).await, 0);
+    assert!(!get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body.contains("data-seen-url"));
+
+    // Opened, from its page or an alert: to its page, its new listings counted from now, its alert
+    // seen. Nobody else opens or lets it go.
+    assert_eq!(get_with_cookie(pool.clone(), &format!("/kerkimet/{id}"), &ana).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(post_form(pool.clone(), &format!("/kerkimet/{id}/fshi"), &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
+    let opened = get_with_cookie(pool.clone(), &format!("/kerkimet/{id}"), &besa).await;
+    assert_eq!(opened.location.as_deref(), Some(search));
+    assert!(!get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body.contains(r#"<span class="badge">"#));
+    assert_eq!(unseen(pool.clone(), besa.clone()).await, 0);
+
+    // Its alerts off, none, however much comes; on again from its page.
+    let off = post_form(pool.clone(), &format!("/kerkimet/{id}/lajmerime"), &[], Some(&besa)).await;
+    assert_eq!(off.location.as_deref(), Some("/kerkimet-e-ruajtura"));
+    assert!(get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body.contains("Lajmëromë</button>"));
+    sqlx::query("UPDATE saved_searches SET last_alerted_at = now() - interval '4 hours', last_seen_at = now() - interval '4 hours'").execute(&pool).await.unwrap();
+    assert_eq!(alerts().await.unwrap(), 0);
+    post_form(pool.clone(), &format!("/kerkimet/{id}/lajmerime"), &[("lajmero", "1")], Some(&besa)).await;
+    assert!(get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body.contains("Ndalo lajmërimet</button>"));
+
+    // Let go: the page offers to keep it again.
+    let gone = post_form(pool.clone(), &format!("/kerkimet/{id}/fshi"), &[], Some(&besa)).await;
+    assert_eq!(gone.location.as_deref(), Some("/kerkimet-e-ruajtura"));
+    assert!(get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body.contains("Ende s'ke ruajtur asnjë kërkim."));
+    assert!(get_with_cookie(pool.clone(), search, &besa).await.body.contains("</svg>Ruaj kërkimin</button>"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn listings_go_into_subcategories(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     // The form groups subcategories under their category.
@@ -5257,7 +5350,7 @@ async fn search_engines_find_the_listings_and_the_categories_by_the_sitemaps(poo
     // robots.txt keeps crawlers out of a visitor's own pages, and says where the sitemaps are.
     let robots = send(pool.clone(), from_the_site("/robots.txt")).await;
     assert_eq!(robots.content_type.as_deref(), Some("text/plain; charset=utf-8"));
-    for page in ["/hyr", "/njoftimet-e-mia", "/te-ruajturat", "/shto", "/listing/*/ndrysho"] {
+    for page in ["/hyr", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet", "/shto", "/listing/*/ndrysho"] {
         assert!(robots.body.contains(&format!("\nDisallow: {page}\n")), "{page}");
     }
     assert!(robots.body.ends_with(&format!("\nSitemap: {site}/sitemap.xml\n")));

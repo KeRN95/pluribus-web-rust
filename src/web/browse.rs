@@ -18,7 +18,9 @@ use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use super::{
-    Result, cookie,
+    Result,
+    account::current_user,
+    cookie,
     filters::{Chip, Field, FieldKind, Filters, Params, PriceChoice, TOWN_COOKIE},
     icons, is_next_page_request,
     listings::Slide,
@@ -407,6 +409,11 @@ struct BrowsePage<'a> {
     /// body names (base.html, data-section): Elektronikë's pages are in Claude's blue and Shtëpi /
     /// kopsht's in its olive where the rest of the site is coral (base.css).
     section: Option<String>,
+    /// "Ruaj kërkimin" (searches.rs): the page's address as a saved search keeps it, its filters
+    /// written as the page writes them, and the saved search it is, for a signed-in visitor who
+    /// keeps it.
+    save_address: String,
+    saved_search: Option<Uuid>,
 }
 
 /// How long a category's price quarters, its price's quick choices, are kept before they are
@@ -882,7 +889,16 @@ async fn browse(
     let type_waits = !filters.type_first() && filters.type_chosen();
     let more_open = fields.iter().any(|field| !field.primary && field.active) || (has_more && type_waits);
     let price_choices = quarters.map(|quarters| filters.price_choices(quarters)).unwrap_or_default();
+    // "Ruaj kërkimin": the page as a saved search keeps it, and whether the visitor keeps it.
+    let (search_path, search_query) = filters.search_address();
+    let save_address = if search_query.is_empty() { search_path.clone() } else { format!("{search_path}?{search_query}") };
+    let saved_search = match current_user(&state, &headers).await? {
+        Some(user) => db::saved_search_id(&state.db, user.id, &search_path, &search_query).await?,
+        None => None,
+    };
     render(BrowsePage {
+        save_address,
+        saved_search,
         meta,
         show_label: show_label(count_number, &count),
         heading,

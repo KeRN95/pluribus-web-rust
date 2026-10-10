@@ -15,6 +15,7 @@ mod post;
 mod properties;
 mod safety;
 mod saved;
+mod searches;
 mod seo;
 mod suggestions;
 
@@ -84,6 +85,12 @@ pub fn router(state: AppState) -> Router {
         .route("/te-ruajturat", get(saved::page))
         .route("/te-ruajturat/numrat", get(saved::numbers))
         .route("/te-ruajturat/pare", post(saved::seen))
+        .route("/kerkimet-e-ruajtura", get(searches::page))
+        .route("/kerkimet/ruaj", post(searches::save))
+        .route("/kerkimet/pare", post(searches::seen))
+        .route("/kerkimet/{id}", get(searches::open))
+        .route("/kerkimet/{id}/fshi", post(searches::delete))
+        .route("/kerkimet/{id}/lajmerime", post(searches::alerts))
         .route("/listing/{public_no}/mesazh", get(messages::compose).post(messages::start))
         .route("/mesazhet", get(messages::inbox))
         .route("/mesazhet/numri", get(messages::unread))
@@ -253,6 +260,14 @@ pub fn type_trial() -> bool {
 pub fn site_origin() -> String {
     seo::origin(&HeaderMap::new())
 }
+
+/// The saved searches' alerts (searches.rs): sent as they fall due, every 15 minutes from now
+/// on, in the background; and those due now, which the tests send.
+pub fn start_search_alerts(db: sqlx::PgPool) {
+    searches::start_alerts(db);
+}
+
+pub use searches::send_search_alerts;
 
 /// How long browsers keep a file whose address changes whenever the file does: a year, without
 /// asking again.

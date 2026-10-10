@@ -228,6 +228,12 @@ impl Email {
     pub async fn send_notice(&self, to: &str, notice: &Notice) -> Result<(), String> {
         self.transport.send(self.notice_message(to, notice)?).await.map(|_| ()).map_err(|error| format!("SMTP: {error}"))
     }
+
+    /// Any e-mail of plain text: the alerts of saved searches (web/searches.rs).
+    pub async fn send_text(&self, to: &str, subject: &str, body: &str) -> Result<(), String> {
+        let message = self.text(to, subject.to_string(), body.to_string())?;
+        self.transport.send(message).await.map(|_| ()).map_err(|error| format!("SMTP: {error}"))
+    }
 }
 
 /// The channels set up in the environment.
@@ -294,6 +300,19 @@ impl Senders {
             (Contact::Phone(phone), _, Some(whatsapp)) => whatsapp.send(phone, code).await.map(|_| Channel::WhatsApp),
             _ => {
                 tracing::warn!(to = %contact.masked(), code, "sign-in code: this channel isn't set up, so it only goes to this log");
+                Ok(Channel::Log)
+            }
+        }
+    }
+
+    /// Sends an e-mail of `subject` and `body` where `contact` is an address and e-mail is set up
+    /// (the alerts of saved searches); a phone number, which has no WhatsApp template for these,
+    /// or a channel not set up, goes to the log.
+    pub async fn send_text(&self, contact: &Contact, subject: &str, body: &str) -> Result<Channel, String> {
+        match (contact, &self.email) {
+            (Contact::Email(address), Some(email)) => email.send_text(address, subject, body).await.map(|_| Channel::Email),
+            _ => {
+                tracing::info!(to = %contact.masked(), subject, "alert: this channel isn't set up, so it only goes to this log");
                 Ok(Channel::Log)
             }
         }
