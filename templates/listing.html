@@ -5,7 +5,6 @@
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
-{% block section %}{% if let Some(section) = section %} data-section="{{ section }}"{% endif %}{% endblock %}
 
 {% block content %}
 {%- let sheet = signed_in && !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}

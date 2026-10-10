@@ -454,10 +454,6 @@ struct BrowsePage<'a> {
     /// with the page: one of them is on, or the kind of listing waiting there is.
     has_more: bool,
     more_open: bool,
-    /// The main category the page is in, its category's own or the one above it, which the page's
-    /// body names (base.html, data-section): Elektronikë's pages are in Claude's blue and Shtëpi /
-    /// kopsht's in its olive where the rest of the site is coral (base.css).
-    section: Option<String>,
     /// "Ruaj kërkimin" (searches.rs): the page's address as a saved search keeps it, its filters
     /// written as the page writes them, and the saved search it is, for a signed-in visitor who
     /// keeps it.
@@ -685,8 +681,6 @@ struct MapPage<'a> {
     points: Vec<db::MapPoint>,
     /// Whether more results have a point than the map shows.
     more_points: bool,
-    /// The main category the page is in (BrowsePage::section).
-    section: Option<String>,
 }
 
 /// How a browse page shows its listings: as a grid with filters, or beside a map.
@@ -750,7 +744,6 @@ async fn browse(
         safety::hidden_accounts(&state, &headers),
     )?;
     let category = category_slug.and_then(|slug| categories.by_slug(slug));
-    let section = category.map(|category| categories.main_of(category).slug.clone());
     let path = match (&page_slug, category, view) {
         (Some(_), None, _) => return not_found().await,
         (Some(slug), Some(_), _) => format!("/c/{slug}"),
@@ -899,7 +892,7 @@ async fn browse(
     points.truncate(db::MAP_POINTS as usize);
     if view == View::Map {
         let chips = filters.chips();
-        return render(MapPage { count, filters: &filters, chips, page, points, more_points, section });
+        return render(MapPage { count, filters: &filters, chips, page, points, more_points });
     }
 
     let heading = match (&filters.q, category) {
@@ -1045,6 +1038,5 @@ async fn browse(
         most_viewed_shown,
         page,
         points,
-        section,
     })
 }

@@ -532,10 +532,6 @@ struct ListingShow {
     verified: Option<&'static str>,
     /// Why it isn't on the site, for its seller and the moderators, who alone see it then.
     hidden_note: Option<String>,
-    /// The main category it is in, which the page's body names (base.html, data-section), as a
-    /// category page's does: Elektronikë's listings are in Claude's blue and Shtëpi / kopsht's in
-    /// its olive (base.css).
-    section: Option<String>,
 }
 
 /// What a listing's page says about itself (seo.rs). Its preview: the title and the price, where
@@ -671,7 +667,6 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let price_drop = price_drop(price_was, listing.price_amount, &listing.currency);
     let views = (views > 0).then(|| format::number(Decimal::from(views)));
     let category = categories.by_slug(&listing.category_slug);
-    let section = category.map(|category| categories.main_of(category).slug.clone());
     // Its category and the one above it as pills, as a category page's head has them, and the one
     // above that, where there is one, for the round button before them.
     let pill = |category: &db::Category| Subcategory {
@@ -820,7 +815,6 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             blocked,
             verified,
             hidden_note,
-            section,
         })?;
     if posted || just_published {
         response.headers_mut().append(header::SET_COOKIE, cookie_header(&headers, POSTED_COOKIE, "", 0));

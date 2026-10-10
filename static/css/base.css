@@ -1,4 +1,5 @@
-/* Warm and quiet: ivory and charcoal with a terracotta accent, soft rounded surfaces, and one
+/* Calm and grey: a pale grey page under white surfaces, eerie black words and buttons (light grey on
+   the dark theme's eerie black), a lime accent for what is new, soft rounded surfaces, and one
    typeface, Geist, for everything: headings, prices, text and the logo (the name, "pluribus", in
    the font's black weight) differ only in weight and colour. */
 
@@ -18,60 +19,66 @@
 
 :root {
   color-scheme: light;
-  --bg: #faf9f5;                /* Pampas */
-  --surface: #ffffff;
-  --surface-muted: #f0eee6;
+  /* Greys, and one main colour: the text's, which the solid buttons, what is picked and the focus
+     rings take too (the "Calmer Pluribus" canvas, 2026-10-11). */
+  --bg: #f7f7f7;                /* the page */
+  --surface: #ffffff;           /* the header, cards, fields, menus */
+  --surface-muted: #ececec;     /* grey buttons and the other secondary controls */
   --input: #ffffff;
-  --text: #141413;
-  --muted: #5e5d59;
-  --border: #e8e6dc;
-  --border-strong: #d1cfc5;
-  --accent: #a54d2f;            /* Clay, deep enough for text on its tint and the ivory (4.6:1): what is picked, focus rings */
-  --button: #ba5837;             /* white on it at 4.6:1, as on every button colour below */
-  --button-hover: #ae5530;
-  --on-button: #ffffff;
-  --badge: #f7e4da;
-  --location: #4a7fb0;           /* Claude blue, deeper on the ivory */
-  --blue: #3f6c96;               /* Claude blue, deep enough for text on its tint: the welcome page's plus and moon */
-  --blue-bg: #e2ecf6;            /* its tint, as --badge is the coral's */
-  --blue-button: #4679a7;        /* the buttons in it, in Elektronikë (below) */
-  --blue-button-hover: #41709b;
-  --olive: #5d6d46;              /* Claude's olive, a toned-down green, deeper on the ivory: Shtëpi / kopsht (below) */
-  --olive-bg: #e6ecdc;
-  --olive-button: #687b4f;
-  --olive-button-hover: #5c6d45;
-  --burgundy: #7a1f33;           /* burgundy: Automjete (below) */
-  --burgundy-bg: #f5dfe4;
-  --burgundy-button: #7a1f33;
-  --burgundy-button-hover: #651a2a;
-  --darkred: #9b1b1b;            /* a dark red: Automjete (below) */
-  --darkred-bg: #f6dcdc;
-  --darkred-button: #9b1b1b;
-  --darkred-button-hover: #821616;
-  --red: #e0203a;                /* a bright red: a kept listing's heart */
+  --text: #1b1b1b;              /* eerie black */
+  --muted: #707070;             /* secondary text, 4.6:1 on the page */
+  --placeholder: #949494;
+  --border: #dedede;
+  --border-soft: #e8e8e8;       /* lines inside a card or a list */
+  --border-strong: #c6c6c6;
+  --main: #1b1b1b;              /* the main colour, the text's: solid buttons, what is picked */
+  --main-hover: #383838;
+  --on-main: #ffffff;
+  /* The accent, lime by default, one of five the menu offers (data-accent on <html>, below): the
+     logo's dot and what is new or unread, the dots and counts. Light as lime is, it is only ever a
+     background on the light theme, behind dark icons or numbers (--highlight-knob and
+     --highlight-icon: a magnifier or a bookmark dark on a lime circle), and an unread dot has a
+     dark edge (--dot-edge) on the white bar; the darker choices colour the icon on the grey
+     instead, and take white numbers. */
+  --lime: #c8ff00;
+  --lime-knob: var(--lime);
+  --lime-icon: #1b1b1b;
+  --lime-edge: inset 0 0 0 1.5px rgb(27 27 27 / 45%);
+  --choice-darkred: #9b1b1b;
+  --choice-terracotta: #ba5837;
+  --choice-blue: #4679a7;
+  --choice-olive: #5d6d46;
+  --on-choice: #ffffff;
+  /* States: a kept listing's heart, places on a map, what is wrong. */
+  --location: #4a7fb0;
+  --red: #e0203a;
   --red-bg: #fbe0e2;
-  --yellow: #bb8b1b;             /* and a yellow: the theme's sun, on the dark theme */
-  --yellow-bg: #f9f2dc;
   --danger: #b42318;
-  /* A property's square metre against its zone's average: under it, about it, over it. */
+  /* Under, about and over an average: a property's square metre against its zone's, a car's price
+     against its model's and year's; the first green also says what went well (a price drop, a
+     verified seller). */
   --below: #566a3c;
   --below-bg: #e9eee0;
   --near: #7a5900;
   --near-bg: #fbefc6;
   --above: #b42318;
   --above-bg: #fbe5e1;
-  --placeholder-from: #f0eee6;
-  --placeholder-to: #e8e6dc;
-  --shadow: 0 1px 2px rgb(31 30 29 / 5%), 0 4px 16px rgb(31 30 29 / 5%);
-  --scrim: rgb(31 30 29 / 20%); /* the page dimmed under what floats over it */
+  /* A promoted card's panel: a warm yellow, the one colour the greys leave the cards. */
+  --promo: #f9f2dc;
+  --promo-edge: rgb(187 139 27 / 35%);
+  --placeholder-from: #ececec;
+  --placeholder-to: #e4e4e4;
+  --shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 4px 16px rgb(0 0 0 / 5%);
+  --shadow-float: 0 16px 48px rgb(0 0 0 / 14%), 0 2px 6px rgb(0 0 0 / 5%); /* what floats: sheets, the menu */
+  --scrim: rgb(0 0 0 / 20%); /* the page dimmed under what floats over it */
   /* Glass: the welcome page's open search and its suggestions, over the pills (welcome.css): the
-     text input's colour (Claude's box: white, and the dark theme's own dark) at 65%, blurred, with
-     its edge and the words and their shading on it, those in the theme's colours below. */
+     text input's colour (white, and the dark theme's own dark) at 65%, blurred, with its edge and
+     the words and their shading on it, those in the theme's colours below. */
   --glass: color-mix(in srgb, var(--input) 65%, transparent);
-  --glass-edge: rgb(20 20 19 / 18%);
+  --glass-edge: rgb(27 27 27 / 18%);
   --on-glass: var(--text);
   --on-glass-muted: var(--muted);
-  --on-glass-hover: rgb(20 20 19 / 7%);
+  --on-glass-hover: rgb(27 27 27 / 7%);
   --radius: 14px;
   /* The room between the page and the screen's sides (.container), and as much over the first
      line of the welcome page and of a category page, under the header. */
@@ -103,43 +110,35 @@
 }
 
 /* Dark theme: the visitor's choice (data-theme on <html>, set by theme_controller.js) or, until
-   they make one, the device setting. The two blocks hold the same values. */
+   they make one, the device setting. The two blocks hold the same values. Eerie black under light
+   grey words, its surfaces a few steps up; the main colour the words' grey, with dark words on it;
+   lime a line on the grey there, light enough to show. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #262624;
-  --surface: #30302e;
-  --surface-muted: #3a3a37;
-  --input: #262624;
-  --text: #faf9f5;
-  --muted: #b0aea5;
-  --border: #3d3d3a;
-  --border-strong: #57554f;
-  --accent: #de886c;
-  --button: #ba5837;
-  --button-hover: #d97757;
-  --on-button: #ffffff;
-  --badge: #43302a;
+  --bg: #1b1b1b;
+  --surface: #242424;
+  --surface-muted: #2c2c2c;
+  --input: #242424;
+  --text: #e8e8e8;
+  --muted: #a3a3a3;
+  --placeholder: #7d7d7d;
+  --border: #333333;
+  --border-soft: #2a2a2a;
+  --border-strong: #4f4f4f;
+  --main: #e8e8e8;
+  --main-hover: #ffffff;
+  --on-main: #1b1b1b;
+  --lime-knob: var(--surface-muted);
+  --lime-icon: var(--lime);
+  --lime-edge: none;
+  --choice-darkred: #e37170;
+  --choice-terracotta: #de886c;
+  --choice-blue: #75a2d0;
+  --choice-olive: #91a477;
+  --on-choice: #1b1b1b;
   --location: #6a9bcc;
-  --blue: #75a2d0;
-  --blue-bg: #293642;
-  --blue-button: #4679a7;
-  --blue-button-hover: #6a9bcc;
-  --olive: #91a477;
-  --olive-bg: #313627;
-  --olive-button: #687b4f;
-  --olive-button-hover: #788c5d;
-  --burgundy: #c45270;
-  --burgundy-bg: #3f232b;
-  --burgundy-button: #8f2a46;
-  --burgundy-button-hover: #a8365a;
-  --darkred: #e37170;
-  --darkred-bg: #432223;
-  --darkred-button: #a42424;
-  --darkred-button-hover: #c02c2c;
   --red: #ff4f5e;
   --red-bg: #4a2428;
-  --yellow: #e2be5a;
-  --yellow-bg: #463d25;
   --danger: #f97066;
   --below: #a3b887;
   --below-bg: #2b3322;
@@ -147,10 +146,13 @@
   --near-bg: #463b1f;
   --above: #fb8a80;
   --above-bg: #4b2c2a;
-  --placeholder-from: #34332f;
-  --placeholder-to: #3c3b36;
+  --promo: #2f2a17;
+  --promo-edge: rgb(240 199 90 / 30%);
+  --placeholder-from: #2a2a2a;
+  --placeholder-to: #303030;
   --shadow: 0 1px 2px rgb(0 0 0 / 30%);
-  --scrim: rgb(0 0 0 / 40%);
+  --shadow-float: 0 16px 48px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 30%);
+  --scrim: rgb(0 0 0 / 45%);
   --glass-edge: rgb(255 255 255 / 25%);
   --on-glass: #fff;
   --on-glass-muted: rgb(255 255 255 / 72%);
@@ -160,40 +162,30 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #262624;
-    --surface: #30302e;
-    --surface-muted: #3a3a37;
-    --input: #262624;
-    --text: #faf9f5;
-    --muted: #b0aea5;
-    --border: #3d3d3a;
-    --border-strong: #57554f;
-    --accent: #de886c;
-    --button: #ba5837;
-    --button-hover: #d97757;
-    --on-button: #ffffff;
-    --badge: #43302a;
+    --bg: #1b1b1b;
+    --surface: #242424;
+    --surface-muted: #2c2c2c;
+    --input: #242424;
+    --text: #e8e8e8;
+    --muted: #a3a3a3;
+    --placeholder: #7d7d7d;
+    --border: #333333;
+    --border-soft: #2a2a2a;
+    --border-strong: #4f4f4f;
+    --main: #e8e8e8;
+    --main-hover: #ffffff;
+    --on-main: #1b1b1b;
+    --lime-knob: var(--surface-muted);
+    --lime-icon: var(--lime);
+    --lime-edge: none;
+    --choice-darkred: #e37170;
+    --choice-terracotta: #de886c;
+    --choice-blue: #75a2d0;
+    --choice-olive: #91a477;
+    --on-choice: #1b1b1b;
     --location: #6a9bcc;
-    --blue: #75a2d0;
-    --blue-bg: #293642;
-    --blue-button: #4679a7;
-    --blue-button-hover: #6a9bcc;
-    --olive: #91a477;
-    --olive-bg: #313627;
-    --olive-button: #687b4f;
-    --olive-button-hover: #788c5d;
-    --burgundy: #c45270;
-    --burgundy-bg: #3f232b;
-    --burgundy-button: #8f2a46;
-    --burgundy-button-hover: #a8365a;
-    --darkred: #e37170;
-    --darkred-bg: #432223;
-    --darkred-button: #a42424;
-    --darkred-button-hover: #c02c2c;
     --red: #ff4f5e;
     --red-bg: #4a2428;
-    --yellow: #e2be5a;
-    --yellow-bg: #463d25;
     --danger: #f97066;
     --below: #a3b887;
     --below-bg: #2b3322;
@@ -201,10 +193,13 @@
     --near-bg: #463b1f;
     --above: #fb8a80;
     --above-bg: #4b2c2a;
-    --placeholder-from: #34332f;
-    --placeholder-to: #3c3b36;
+    --promo: #2f2a17;
+    --promo-edge: rgb(240 199 90 / 30%);
+    --placeholder-from: #2a2a2a;
+    --placeholder-to: #303030;
     --shadow: 0 1px 2px rgb(0 0 0 / 30%);
-    --scrim: rgb(0 0 0 / 40%);
+    --shadow-float: 0 16px 48px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 30%);
+    --scrim: rgb(0 0 0 / 45%);
     --glass-edge: rgb(255 255 255 / 25%);
     --on-glass: #fff;
     --on-glass-muted: rgb(255 255 255 / 72%);
@@ -212,42 +207,37 @@
   }
 }
 
-/* Five parts of the site have a colour of their own wherever the rest is coral, on their pages, their
-   own, those of the categories under them and their listings' (the body's data-section,
-   base.html): what is picked or open, the buttons, their tints. Elektronikë and Punë in Claude's
-   blue; Shtëpi / kopsht and Prona in Claude's olive, a toned-down green (#788c5d, deeper on the
-   ivory, as the blue is); Automjete in a dark red (lighter on the dark theme, its buttons a little
-   less so). Set on <body>, under the themes' colours on <html>, so that each theme's own comes
-   through. */
-body[data-section="automjete"] {
-  --accent: var(--darkred);
-  --button: var(--darkred-button);
-  --button-hover: var(--darkred-button-hover);
-  --badge: var(--darkred-bg);
+/* The accent the visitor picked (data-accent on <html>; lime when there is none): the colour
+   itself, what stands on it, the circle a magnifier or a bookmark sits in and its line, and the
+   unread dots' edge. Each theme gives the choices its own shade above. */
+:root {
+  --highlight: var(--lime);
+  --on-highlight: #1b1b1b;
+  --highlight-knob: var(--lime-knob);
+  --highlight-icon: var(--lime-icon);
+  --dot-edge: var(--lime-edge);
 }
-body[data-section="elektronike"] {
-  --accent: var(--blue);
-  --button: var(--blue-button);
-  --button-hover: var(--blue-button-hover);
-  --badge: var(--blue-bg);
+:root[data-accent="darkred"] { --highlight: var(--choice-darkred); }
+:root[data-accent="terracotta"] { --highlight: var(--choice-terracotta); }
+:root[data-accent="blue"] { --highlight: var(--choice-blue); }
+:root[data-accent="olive"] { --highlight: var(--choice-olive); }
+:root:is([data-accent="darkred"], [data-accent="terracotta"], [data-accent="blue"], [data-accent="olive"]) {
+  --on-highlight: var(--on-choice);
+  --highlight-knob: var(--surface-muted);
+  --highlight-icon: var(--highlight);
+  --dot-edge: none;
 }
-body[data-section="pune"] {
-  --accent: var(--blue);
-  --button: var(--blue-button);
-  --button-hover: var(--blue-button-hover);
-  --badge: var(--blue-bg);
-}
-body[data-section="prona"] {
-  --accent: var(--olive);
-  --button: var(--olive-button);
-  --button-hover: var(--olive-button-hover);
-  --badge: var(--olive-bg);
-}
-body[data-section="shtepi-dhe-kopsht"] {
-  --accent: var(--olive);
-  --button: var(--olive-button);
-  --button-hover: var(--olive-button-hover);
-  --badge: var(--olive-bg);
+
+/* The old names, pointing at the new colours while the pages move to them one by one (until the
+   clean-up, step 44 of the redesign): the old accent, buttons and their tint are the main colour
+   now, the tint the grey of secondary controls. One main colour on every page: the five parts of
+   the site lost their colours of their own. */
+:root {
+  --accent: var(--main);
+  --button: var(--main);
+  --button-hover: var(--main-hover);
+  --on-button: var(--on-main);
+  --badge: var(--surface-muted);
 }
 
 * { box-sizing: border-box; }
@@ -330,20 +320,15 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* The logo: the name in lowercase (text-transform keeps it so) in Geist, the site's one typeface,
    at its black weight (900; it was Playfair Display SemiBold, a serif, until 2026-10-10), its
-   letters a touch closer than the headings', the word alone, in a dark shade
-   of the page's colour, the one its section picks (the coral, Elektronikë's blue, Shtëpi /
-   kopsht's olive, Automjete's burgundy; the section rules above set --button and --button-hover
-   on the body, which the word takes from there): on the light theme the buttons' darker shade,
-   the one they take under a pointer, and on the dark theme the colour's text shade, --accent,
-   light enough to read on the dark (4.5:1 and over; the buttons' own colour was too dim there). A size up from
+   letters a touch closer than the headings', the word alone, in the text's colour. A size up from
    the text's headings, since a lowercase word stands lower and shorter. (The creature,
    thinking.svg, is the site's icon alone now, in the tab and on home screens.) The word stays
-   from page to page (data-turbo-permanent, base.html), so as a page of another section comes its
-   colour slides to that section's rather than changing at once, and so with the theme. */
+   from page to page (data-turbo-permanent, base.html), so as the theme changes its colour slides
+   to the other theme's rather than changing at once. */
 .logo {
   display: inline-flex;
   align-items: center;
-  color: var(--button-hover);
+  color: var(--text);
   font-family: var(--font);
   font-size: var(--text-2xl);
   font-weight: var(--black);
@@ -352,10 +337,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   line-height: 1;
   text-decoration: none;
   transition: color .45s ease;
-}
-:root[data-theme="dark"] .logo { color: var(--accent); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .logo { color: var(--accent); }
 }
 @media (prefers-reduced-motion: reduce) {
   .logo { transition: none; }

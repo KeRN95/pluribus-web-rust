@@ -4520,40 +4520,31 @@ async fn nobody_else_can_edit_a_listing(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
-async fn elektronike_and_shtepi_kopsht_have_colours_of_their_own(pool: PgPool) {
-    // A page in a main category names it on its body: Elektronikë's own, a category's under it, a
-    // search in it, its map, and its listings; Shtëpi / kopsht's, and the other categories', theirs,
-    // and the welcome page none.
-    for page in [
-        "/c/elektronike",
-        "/c/telefona",
-        "/search?category=elektronike&q=iphone",
-        "/harta?category=elektronike",
-        "/listing/1005-iphone-13-128-gb-si-i-ri",
-    ] {
-        assert!(html(pool.clone(), page).await.contains(r#"<body data-section="elektronike">"#), "{page}");
+async fn every_part_of_the_site_has_the_one_main_colour(pool: PgPool) {
+    // The five parts of the site lost their colours of their own (the redesign's first step): no
+    // page names its main category on its body any more, and the stylesheet has no rules for
+    // them.
+    for page in ["/", "/c/elektronike", "/c/shtepi-dhe-kopsht", "/c/makina", "/harta?category=elektronike", "/listing/1005-iphone-13-128-gb-si-i-ri"] {
+        let page_html = html(pool.clone(), page).await;
+        assert!(page_html.contains("<body>") && !page_html.contains("data-section"), "{page}");
     }
-    for page in ["/c/shtepi-dhe-kopsht", "/c/kopsht", "/listing/1007-divan-qoshe-ngjyre-gri"] {
-        assert!(html(pool.clone(), page).await.contains(r#"<body data-section="shtepi-dhe-kopsht">"#), "{page}");
-    }
-    assert!(html(pool.clone(), "/c/makina").await.contains(r#"<body data-section="automjete">"#));
-    let home = html(pool.clone(), "/").await;
-    assert!(home.contains("<body>") && !home.contains("data-section"));
-    // Elektronikë's are in Claude's blue and Shtëpi / kopsht's in its olive wherever the rest of
-    // the site is coral: what is picked or open, the buttons, their tints.
     // (The stylesheet comes minified: web::site_css.)
-    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    for (section, colour) in [("elektronike", "blue"), ("pune", "blue"), ("shtepi-dhe-kopsht", "olive"), ("prona", "olive"), ("automjete", "darkred")] {
-        let rule = &css[css.find(&format!(r#"body[data-section="{section}"]{{"#)).expect(section)..];
-        let rule = &rule[..rule.find('}').unwrap()];
-        for token in [
-            format!("--accent:var(--{colour});"),
-            format!("--button:var(--{colour}-button);"),
-            format!("--button-hover:var(--{colour}-button-hover);"),
-            format!("--badge:var(--{colour}-bg)"),
-        ] {
-            assert!(rule.contains(&token), "{token} in {rule}");
-        }
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    assert!(!css.contains("data-section"));
+    // The greys and the main colour, the text's, in either theme; the old names point at them
+    // until the pages have all moved over.
+    let light = &css[css.find(":root{color-scheme:light;").expect("the light theme")..];
+    let light = &light[..light.find('}').unwrap()];
+    for token in ["--bg:#f7f7f7;", "--surface:#fff", "--surface-muted:#ececec;", "--border:#dedede;", "--text:#1b1b1b;", "--muted:#707070;", "--main:#1b1b1b;", "--lime:#c8ff00;"] {
+        assert!(light.contains(token), "{token} in {light}");
+    }
+    let dark = &css[css.find(r#":root[data-theme="dark"]{"#).expect("the dark theme")..];
+    let dark = &dark[..dark.find('}').unwrap()];
+    for token in ["--bg:#1b1b1b;", "--surface:#242424;", "--surface-muted:#2c2c2c;", "--text:#e8e8e8;", "--muted:#a3a3a3;", "--main:#e8e8e8;"] {
+        assert!(dark.contains(token), "{token} in {dark}");
+    }
+    for token in ["--accent:var(--main)", "--button:var(--main)", "--on-button:var(--on-main)", "--badge:var(--surface-muted)"] {
+        assert!(css.contains(token), "{token}");
     }
     // A kept listing's heart is filled with the site's one red, in every part of the site, lined
     // thinly in white over a photo; the welcome page's heart and conversations buttons are plain,

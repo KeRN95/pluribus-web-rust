@@ -112,8 +112,8 @@
   padding: .25rem .7rem .25rem .55rem;
   overflow: hidden;
   border-radius: 999px;
-  background: rgb(38 38 36 / 60%);
-  color: #faf9f5;
+  background: rgb(27 27 27 / 60%);
+  color: #f7f7f7;
   font-size: var(--text-xs);
   font-weight: var(--medium);
   white-space: nowrap;
@@ -444,7 +444,7 @@
   padding: 0 .55rem;
   border: 0;
   border-radius: 999px;
-  background: rgb(38 38 36 / 45%);
+  background: rgb(27 27 27 / 45%);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   color: #fff;
@@ -458,11 +458,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 .gallery-count::after { content: ""; position: absolute; inset: -.6rem -.4rem; }
-.gallery-count[aria-expanded="true"] { background: rgb(250 249 245 / 90%); color: #262624; }
+.gallery-count[aria-expanded="true"] { background: rgb(247 247 247 / 90%); color: #1b1b1b; }
 .gallery-count:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 @media (hover: hover) {
-  .gallery-count:hover { background: rgb(38 38 36 / 65%); }
-  .gallery-count[aria-expanded="true"]:hover { background: #faf9f5; }
+  .gallery-count:hover { background: rgb(27 27 27 / 65%); }
+  .gallery-count[aria-expanded="true"]:hover { background: #f7f7f7; }
 }
 .gallery-arrow { display: none; }
 @media (hover: hover) and (pointer: fine) {
@@ -475,9 +475,9 @@
     height: 2.5rem;
     border: 0;
     border-radius: 50%;
-    background: rgb(250 249 245 / 90%);
+    background: rgb(247 247 247 / 90%);
     box-shadow: var(--shadow);
-    color: #262624;
+    color: #1b1b1b;
     cursor: pointer;
     translate: 0 -50%;
     transition: opacity .15s;
@@ -541,7 +541,7 @@
   max-width: calc(100% - 2 * var(--over-edge));
   padding: .3rem;
   border-radius: 14px;
-  background: rgb(38 38 36 / 45%);
+  background: rgb(27 27 27 / 45%);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   translate: -50% 0;
@@ -591,15 +591,15 @@
     padding: 0;
     border: 0;
     border-radius: 50%;
-    background: rgb(250 249 245 / 90%);
+    background: rgb(247 247 247 / 90%);
     box-shadow: var(--shadow);
-    color: #262624;
+    color: #1b1b1b;
     cursor: pointer;
     translate: 0 -50%;
   }
   .thumb-previous { left: .15rem; }
   .thumb-next { right: .15rem; }
-  .thumb-step:hover { background: #faf9f5; }
+  .thumb-step:hover { background: #f7f7f7; }
 }
 .thumb-step[hidden] { display: none; }
 @media (max-width: 719px) {

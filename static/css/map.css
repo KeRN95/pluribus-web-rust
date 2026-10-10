@@ -75,8 +75,8 @@
   margin: 0;
   padding: .2rem .6rem;
   border-radius: 999px;
-  background: rgb(38 38 36 / 60%);
-  color: #faf9f5;
+  background: rgb(27 27 27 / 60%);
+  color: #f7f7f7;
   font-size: var(--text-xs);
   pointer-events: none;
 }
@@ -221,7 +221,7 @@
 
 /* Two classes, so these win over leaflet.css, which loads after this file (and colours links blue). */
 .map-canvas.leaflet-container { background: var(--surface-muted); font-family: var(--font); }
-.map-canvas .map-popup { display: grid; gap: .15rem; min-width: 10rem; color: #1f1e1d; font: 500 var(--text-sm)/1.35 var(--font); text-decoration: none; }
+.map-canvas .map-popup { display: grid; gap: .15rem; min-width: 10rem; color: #1b1b1b; font: 500 var(--text-sm)/1.35 var(--font); text-decoration: none; }
 .map-popup span { font-weight: var(--bold); }
 
 /* The dark theme dims the (light) map tiles and turns them dark. */

@@ -42,10 +42,7 @@
   {{ crate::web::MODULES_HERE|safe }}
   <script type="module" src="/static/js/application.js?v={{ crate::web::asset_version() }}" data-turbo-track="reload"></script>
 </head>
-{#- A page in a main category, its own page, those under it and their listings', names it
-    (data-section, the block section): Elektronikë's are in Claude's blue and Shtëpi / kopsht's in
-    its olive where the rest of the site is coral (base.css). -#}
-<body{% block section %}{% endblock %}>
+<body>
   {%- if crate::i18n::offer_english() %}
   {#- To a visitor who hasn't chosen a language and whose browser reads no Albanian, English
       offered in English, until they choose either (web/language.rs). -#}
@@ -61,8 +58,8 @@
           the filters. -#}
       {#- The logo: the name in lowercase, in Geist's black weight, the word alone (the creature of
           thinking.svg is the site's icon, above, and no longer in the header). Turbo keeps it
-          from page to page (data-turbo-permanent), so that its colour, the page's section's,
-          slides to the next page's rather than changing at once (base.css, .logo). -#}
+          from page to page (data-turbo-permanent), so that its colour slides to the other
+          theme's rather than changing at once (base.css, .logo). -#}
       <a class="logo" id="logo" href="/" data-turbo-permanent translate="no"><span class="logo-word">pluribus</span></a>
       {%- if crate::web::type_trial() %}
       {#- Trying typefaces (TYPE_TRIAL=true, web::type_trial): "Aa" opens a panel that picks the
