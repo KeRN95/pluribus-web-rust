@@ -78,6 +78,22 @@ pub async fn set_notice_preferences(db: &PgPool, user_id: Uuid, preferences: Not
     Ok(())
 }
 
+/// The account's token in the links that stop its e-mail notices without signing in
+/// (web/unsubscribe.rs): made at random the first time one goes out (migration 0039).
+pub async fn notice_token(db: &PgPool, user_id: Uuid) -> sqlx::Result<String> {
+    let fresh = format!("{:032x}", rand::random::<u128>());
+    sqlx::query_scalar("UPDATE users SET notice_token = coalesce(notice_token, $2) WHERE id = $1 RETURNING notice_token")
+        .bind(user_id)
+        .bind(fresh)
+        .fetch_one(db)
+        .await
+}
+
+/// The account a notice link's token is, while it is up.
+pub async fn notice_token_user(db: &PgPool, token: &str) -> sqlx::Result<Option<Uuid>> {
+    sqlx::query_scalar("SELECT id FROM users WHERE notice_token = $1 AND status = 'ACTIVE'").bind(token).fetch_optional(db).await
+}
+
 /// Puts a contact its code just confirmed on the account, in place of the one of its kind it had,
 /// and on the account's listings that showed that one. The account's identity (auth_subject) stops
 /// being a contact, which someone else may sign in with one day. False when another account has
@@ -273,7 +289,7 @@ pub async fn delete_account(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<Stri
         sqlx::query(statement).bind(user_id).execute(&mut *tx).await?;
     }
     sqlx::query(
-        "UPDATE users SET email = NULL, phone_e164 = NULL, avatar_url = NULL, display_name = $2,
+        "UPDATE users SET email = NULL, phone_e164 = NULL, avatar_url = NULL, notice_token = NULL, display_name = $2,
                           auth_subject = 'deleted:' || id::text, status = 'DELETED', deleted_at = now(), updated_at = now()
          WHERE id = $1",
     )

@@ -6332,7 +6332,7 @@ async fn search_engines_find_the_listings_and_the_categories_by_the_sitemaps(poo
     // robots.txt keeps crawlers out of a visitor's own pages, and says where the sitemaps are.
     let robots = send(pool.clone(), from_the_site("/robots.txt")).await;
     assert_eq!(robots.content_type.as_deref(), Some("text/plain; charset=utf-8"));
-    for page in ["/hyr", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet", "/lajmerimet", "/shto", "/listing/*/ndrysho", "/dyqani", "/ftesa"] {
+    for page in ["/hyr", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet", "/lajmerimet", "/shto", "/listing/*/ndrysho", "/dyqani", "/ftesa", "/ndalo"] {
         assert!(robots.body.contains(&format!("\nDisallow: {page}\n")), "{page}");
     }
     assert!(robots.body.ends_with(&format!("\nSitemap: {site}/sitemap.xml\n")));
@@ -6834,6 +6834,86 @@ async fn a_message_left_unread_brings_a_notice_at_most_once_an_hour(pool: PgPool
     assert_eq!(due().await.unwrap(), 1);
     // Not signed in, the form leads to signing in.
     assert_eq!(post_form(pool.clone(), "/llogaria/njoftimet", &[], None).await.location.as_deref(), Some("/llogaria"));
+}
+
+/// Ana's choice of `column` in notification_preferences: on, where she has made none.
+async fn ana_wants(pool: &PgPool, column: &str) -> bool {
+    sqlx::query_scalar(&format!("SELECT coalesce((SELECT {column} FROM notification_preferences WHERE user_id = $1::uuid), true)"))
+        .bind(ANA_ID)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn an_emails_link_stops_its_kind_without_signing_in(pool: PgPool) {
+    // Ana signs in with an address as well: her notice goes by e-mail, with the link that stops
+    // them, its token made as it went; the buyer, with a number alone, has none.
+    let buyer = new_seller(&pool, "+355691112233").await;
+    write(&pool, "/listing/1001/mesazh", "A është ende në shitje?", &buyer).await;
+    minutes_pass(&pool, 4).await;
+    assert_eq!(marketplace::notices::send_due(&pool, "https://pluribus.example").await.unwrap(), 1);
+    let tokens: Vec<(String, String)> = sqlx::query_as("SELECT id::text, notice_token FROM users WHERE notice_token IS NOT NULL").fetch_all(&pool).await.unwrap();
+    assert_eq!(tokens.len(), 1);
+    let (whose, token) = &tokens[0];
+    assert_eq!((whose.as_str(), token.len()), (ANA_ID, 32));
+
+    // Opened, the link only asks: a link checker following it stops nothing.
+    let link = format!("/ndalo/{token}/mesazhet");
+    let asked = get(pool.clone(), &link).await;
+    assert_eq!(asked.status, StatusCode::OK);
+    assert!(asked.body.contains("<h1>T'i ndalojmë?</h1>"), "{}", asked.body);
+    assert!(asked.body.contains("Nuk do të të vijnë më email-e për mesazhet që nuk i ke lexuar. Mesazhet i gjen si gjithmonë te „Mesazhet“."), "{}", asked.body);
+    assert!(asked.body.contains(&format!(r#"<form method="post" action="{link}">"#)));
+    assert!(ana_wants(&pool, "message_alerts").await);
+    // A mail program's one-click POST (List-Unsubscribe-Post), with no cookie and nothing more,
+    // stops them, as the box on "Cilësimet" does; "Rikthe" takes it back.
+    let stopped = post_form(pool.clone(), &link, &[("List-Unsubscribe", "One-Click")], None).await;
+    assert_eq!(stopped.status, StatusCode::OK);
+    assert!(stopped.body.contains("<h1>U ndalën</h1>"), "{}", stopped.body);
+    assert!(stopped.body.contains(&format!(r#"<form method="post" action="{link}/rikthe">"#)));
+    assert!(!ana_wants(&pool, "message_alerts").await);
+    assert!(post_form(pool.clone(), &format!("{link}/rikthe"), &[], None).await.body.contains("<h1>U rikthyen</h1>"));
+    assert!(ana_wants(&pool, "message_alerts").await);
+
+    // A token or a kind it doesn't know is no page.
+    for wrong in [format!("/ndalo/{}/mesazhet", "0".repeat(32)), format!("/ndalo/{token}/tjeter"), format!("/ndalo/{token}/kerkimi-jo")] {
+        assert_eq!(get(pool.clone(), &wrong).await.status, StatusCode::NOT_FOUND, "{wrong}");
+        assert_eq!(post_form(pool.clone(), &wrong, &[], None).await.status, StatusCode::NOT_FOUND, "{wrong}");
+    }
+
+    // A search's link stops that search's alerts, and only a search of Ana's own.
+    for user in [ANA_ID, BESNIK_ID] {
+        let session = session_for(&pool, user).await;
+        post_form(pool.clone(), "/kerkimet/ruaj", &[("adresa", "/c/telefona?city=tirane")], Some(&session)).await;
+    }
+    let searches: Vec<(String, String)> = sqlx::query_as("SELECT id::text, name FROM saved_searches ORDER BY user_id").fetch_all(&pool).await.unwrap();
+    let ((hers, name), (his, _)) = (&searches[0], &searches[1]);
+    let alerts = |id: String| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, bool>("SELECT alerts_enabled FROM saved_searches WHERE id = $1::uuid").bind(id).fetch_one(&pool).await.unwrap()
+        }
+    };
+    let link = format!("/ndalo/{token}/kerkimi-{hers}");
+    let asked = get(pool.clone(), &link).await.body;
+    assert!(asked.contains(&format!("Nuk do të të vijnë më email-e për kërkimin „{name}“. Kërkimi mbetet te „Kërkimet e ruajtura“.")), "{asked}");
+    post_form(pool.clone(), &link, &[("List-Unsubscribe", "One-Click")], None).await;
+    assert!(!alerts(hers.clone()).await);
+    post_form(pool.clone(), &format!("{link}/rikthe"), &[], None).await;
+    assert!(alerts(hers.clone()).await);
+    assert_eq!(get(pool.clone(), &format!("/ndalo/{token}/kerkimi-{his}")).await.status, StatusCode::NOT_FOUND);
+
+    // The expiry warnings' link stops every notice by e-mail, the notifications staying on the
+    // site; the other choices stay as they were.
+    let link = format!("/ndalo/{token}/email");
+    let stopped = post_form(pool.clone(), &link, &[], None).await.body;
+    assert!(stopped.contains("Nuk do të të vijnë më lajmërimet me email nga Pluribus. Lajmërimet i gjen te faqja, te „Lajmërimet“."), "{stopped}");
+    assert!(!ana_wants(&pool, "email_enabled").await && ana_wants(&pool, "message_alerts").await);
+
+    // A suspended account's link is no page.
+    sqlx::query("UPDATE users SET status = 'SUSPENDED' WHERE id = $1::uuid").bind(ANA_ID).execute(&pool).await.unwrap();
+    assert_eq!(get(pool.clone(), &link).await.status, StatusCode::NOT_FOUND);
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

@@ -154,6 +154,7 @@ pub async fn robots(headers: HeaderMap) -> Response {
          Disallow: /listing/*/ndrysho\n\
          Disallow: /dyqani\n\
          Disallow: /ftesa\n\
+         Disallow: /ndalo\n\
          \n\
          Sitemap: {}/sitemap.xml\n",
         origin(&headers)

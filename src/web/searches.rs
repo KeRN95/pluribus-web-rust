@@ -285,6 +285,11 @@ pub async fn send_search_alerts(db: &PgPool, origin: &str) -> sqlx::Result<usize
             (_, Some(phone)) => Contact::Phone(phone),
             _ => continue,
         };
+        // An e-mail carries the link that stops this search's alerts (web/unsubscribe.rs).
+        let unsubscribe = match &contact {
+            Contact::Email(_) => Some(format!("{origin}/ndalo/{}/kerkimi-{}", db::notice_token(db, search.user_id).await?, search.id)),
+            Contact::Phone(_) => None,
+        };
         let mut body = format!("Te kërkimi yt „{}“ në Pluribus ka {}:\n\n", search.name, new_listings(count));
         for card in newest.iter().take(ALERT_LISTINGS) {
             body.push_str(&format!("    {} · {}\n", card.title, card.price_display()));
@@ -293,10 +298,14 @@ pub async fn send_search_alerts(db: &PgPool, origin: &str) -> sqlx::Result<usize
             "\nShihi të gjitha: {url}\n\nPër një kërkim nuk të vjen më shumë se një email në tri orë. \
              Për t'i ndalur, hap „Kërkimet e ruajtura“: {origin}/kerkimet-e-ruajtura\n"
         ));
+        if let Some(link) = &unsubscribe {
+            body.push_str(&format!("Për të ndalur vetëm këtë, me një klik: {link}\n"));
+        }
         let alert = sender::Alert {
             subject: title,
             body,
             whatsapp: sender::AlertTemplate::Search { new: new_listings(count), name: search.name.clone(), id: search.id.to_string() },
+            unsubscribe,
         };
         match sender::senders().send_alert(&contact, &alert).await {
             Ok(channel) => tracing::debug!(?channel, to = %contact.masked(), "saved search alert sent"),

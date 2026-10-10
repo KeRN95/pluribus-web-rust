@@ -37,12 +37,18 @@ pub async fn send_due(db: &PgPool, origin: &str) -> sqlx::Result<usize> {
     let due = db::due_notices(db, NOTICE_AFTER, NOTICE_GAP).await?;
     let mut sent = 0;
     for due in due {
+        // An e-mail carries the link that stops these (web/unsubscribe.rs).
+        let unsubscribe = match (&due.email, due.email_ok) {
+            (Some(_), true) => Some(format!("{origin}/ndalo/{}/mesazhet", db::notice_token(db, due.user_id).await?)),
+            _ => None,
+        };
         let notice = Notice {
             writer: due.writer,
             listing: due.listing,
             excerpt: excerpt(&due.body),
             unread: due.unread,
             url: format!("{origin}/mesazhet/{}", due.conversation_id),
+            unsubscribe,
         };
         let title: String = notice.title().chars().take(TITLE).collect();
         db::record_notice(db, due.user_id, due.conversation_id, &title, &notice.excerpt).await?;

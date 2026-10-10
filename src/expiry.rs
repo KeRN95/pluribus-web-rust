@@ -28,27 +28,46 @@ pub async fn run(db: &PgPool, origin: &str) -> sqlx::Result<(usize, usize)> {
     // Expired first, so that one whose time is up isn't warned of as well.
     let expired = db::expire_listings(db).await?;
     for listing in &expired {
+        let unsubscribe = unsubscribe_link(db, origin, listing).await?;
         let subject = format!("Njoftimi yt skadoi: {}", listing.title);
         let body = format!(
             "Njoftimi yt „{}“ skadoi dhe nuk shfaqet më në Pluribus.\n\n\
-             Për ta kthyer në faqe për {LISTING_DAYS} ditë të tjera, rifreskoje te „Njoftimet e mia“: {origin}/njoftimet-e-mia\n",
-            listing.title
+             Për ta kthyer në faqe për {LISTING_DAYS} ditë të tjera, rifreskoje te „Njoftimet e mia“: {origin}/njoftimet-e-mia\n{}",
+            listing.title,
+            no_more(&unsubscribe),
         );
-        tell(listing, Alert { subject, body, whatsapp: AlertTemplate::Expiry { title: listing.title.clone(), what: "skadoi".into() } }).await;
+        let whatsapp = AlertTemplate::Expiry { title: listing.title.clone(), what: "skadoi".into() };
+        tell(listing, Alert { subject, body, whatsapp, unsubscribe }).await;
     }
     let warned = db::warn_expiring(db, WARN_DAYS).await?;
     for listing in &warned {
+        let unsubscribe = unsubscribe_link(db, origin, listing).await?;
         let date = format::date(listing.expires_at);
         let subject = format!("Njoftimi yt skadon më {date}: {}", listing.title);
         let body = format!(
             "Njoftimi yt „{}“ në Pluribus skadon më {date}, dhe pastaj nuk shfaqet më.\n\n\
-             Për ta mbajtur {LISTING_DAYS} ditë të tjera, rifreskoje te „Njoftimet e mia“: {origin}/njoftimet-e-mia\n",
-            listing.title
+             Për ta mbajtur {LISTING_DAYS} ditë të tjera, rifreskoje te „Njoftimet e mia“: {origin}/njoftimet-e-mia\n{}",
+            listing.title,
+            no_more(&unsubscribe),
         );
-        let what = format!("skadon më {date}");
-        tell(listing, Alert { subject, body, whatsapp: AlertTemplate::Expiry { title: listing.title.clone(), what } }).await;
+        let whatsapp = AlertTemplate::Expiry { title: listing.title.clone(), what: format!("skadon më {date}") };
+        tell(listing, Alert { subject, body, whatsapp, unsubscribe }).await;
     }
     Ok((warned.len(), expired.len()))
+}
+
+/// For an e-mail, the link that stops every notice by e-mail (web/unsubscribe.rs): these have no
+/// box of their own on "Cilësimet".
+async fn unsubscribe_link(db: &PgPool, origin: &str, listing: &ExpiryNotice) -> sqlx::Result<Option<String>> {
+    if listing.email.is_none() || !listing.email_ok {
+        return Ok(None);
+    }
+    Ok(Some(format!("{origin}/ndalo/{}/email", db::notice_token(db, listing.user_id).await?)))
+}
+
+/// The e-mail's last line, with the link that stops them: none without one.
+fn no_more(unsubscribe: &Option<String>) -> String {
+    unsubscribe.as_ref().map(|link| format!("\nPër të mos marrë më lajmërime me email nga Pluribus, me një klik: {link}\n")).unwrap_or_default()
 }
 
 /// The alert to the listing's seller: by e-mail where they sign in with an address and allow

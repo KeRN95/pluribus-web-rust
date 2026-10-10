@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Email-et | Pluribus{% endblock %}
+
+{% block content %}
+{#- A link from an e-mail notice (unsubscribe.rs): whether to stop those e-mails, that they stopped
+    with "Rikthe" to take it back, or that they come again; and what goes on as before. No signing
+    in: the link's token is the account's. "Cilësimet" changes all of it. -#}
+<section class="account">
+  {%- match step %}
+  {%- when crate::web::unsubscribe::Step::Ask %}
+  <h1>T'i ndalojmë?</h1>
+  <p class="lead">Nuk do të të vijnë më {{ about }}. {{ stays }}</p>
+  <form method="post" action="{{ action }}">
+    <button type="submit" class="button">Po, ndalo</button>
+  </form>
+  {%- when crate::web::unsubscribe::Step::Stopped %}
+  <h1>U ndalën</h1>
+  <p class="lead">Nuk do të të vijnë më {{ about }}. {{ stays }}</p>
+  <form method="post" action="{{ action }}/rikthe">
+    <button type="submit" class="button secondary">Rikthe</button>
+  </form>
+  {%- when crate::web::unsubscribe::Step::Back %}
+  <h1>U rikthyen</h1>
+  <p class="lead">Do të të vijnë sërish {{ about }}.</p>
+  {%- endmatch %}
+  <p class="account-note">I ndryshon kurdo te <a href="/llogaria/cilesimet">Cilësimet</a>.</p>
+</section>
+{% endblock %}

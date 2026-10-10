@@ -12,7 +12,10 @@ use std::{sync::OnceLock, time::Duration};
 
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
-    message::{Mailbox, header::ContentType},
+    message::{
+        Mailbox,
+        header::{ContentType, Header, HeaderName, HeaderValue},
+    },
     transport::smtp::authentication::Credentials,
 };
 use serde_json::{Value, json};
@@ -37,6 +40,8 @@ pub struct Notice {
     pub excerpt: String,
     pub unread: i64,
     pub url: String,
+    /// The link that stops these e-mails without signing in (web/unsubscribe.rs), for an e-mail.
+    pub unsubscribe: Option<String>,
 }
 
 impl Notice {
@@ -60,9 +65,13 @@ impl Notice {
             2 => "\n(dhe 1 mesazh tjetër i palexuar)\n".to_string(),
             unread => format!("\n(dhe {} mesazhe të tjera të palexuara)\n", unread - 1),
         };
+        let stop = match &self.unsubscribe {
+            Some(link) => format!("hap {link}, ose "),
+            None => String::new(),
+        };
         format!(
             "{} të shkroi në Pluribus{about}:\n\n    {}\n{more}\nPërgjigju këtu: {}\n\n\
-             Për një bisedë nuk të vjen më shumë se një email në orë. Për të mos i marrë më, \
+             Për një bisedë nuk të vjen më shumë se një email në orë. Për të mos i marrë më, {stop}\
              hiq shenjën te „Mesazhet që nuk i ke lexuar“ te „Cilësimet“.\n",
             self.writer,
             self.excerpt.replace('\n', "\n    "),
@@ -78,6 +87,47 @@ pub struct Alert {
     pub subject: String,
     pub body: String,
     pub whatsapp: AlertTemplate,
+    /// The link that stops these e-mails without signing in (web/unsubscribe.rs), for an e-mail;
+    /// its body says it too.
+    pub unsubscribe: Option<String>,
+}
+
+/// The List-Unsubscribe header (RFC 2369): the link that stops an e-mail's kind, which mail
+/// programs offer beside it.
+#[derive(Debug, Clone)]
+struct ListUnsubscribe(String);
+
+impl Header for ListUnsubscribe {
+    fn name() -> HeaderName {
+        HeaderName::new_from_ascii_str("List-Unsubscribe")
+    }
+
+    fn parse(value: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(Self(value.trim_start_matches('<').trim_end_matches('>').to_string()))
+    }
+
+    fn display(&self) -> HeaderValue {
+        HeaderValue::new(Self::name(), format!("<{}>", self.0))
+    }
+}
+
+/// The List-Unsubscribe-Post header (RFC 8058): that a POST to the link stops them at once, no
+/// page between, which big mailboxes ask of senders.
+#[derive(Debug, Clone)]
+struct OneClick;
+
+impl Header for OneClick {
+    fn name() -> HeaderName {
+        HeaderName::new_from_ascii_str("List-Unsubscribe-Post")
+    }
+
+    fn parse(_: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(Self)
+    }
+
+    fn display(&self) -> HeaderValue {
+        HeaderValue::new(Self::name(), "List-Unsubscribe=One-Click".to_string())
+    }
 }
 
 /// What an alert's WhatsApp template fills in.
@@ -262,17 +312,30 @@ impl Email {
 
     /// A notice of messages someone hasn't read (Notice): its title the subject.
     pub fn notice_message(&self, to: &str, notice: &Notice) -> Result<Message, String> {
-        self.text(to, notice.title(), notice.text())
+        self.unsubscribable(to, notice.title(), notice.text(), notice.unsubscribe.as_deref())
+    }
+
+    /// An alert (Alert): its subject and text, and the link that stops its kind.
+    pub fn alert_message(&self, to: &str, alert: &Alert) -> Result<Message, String> {
+        self.unsubscribable(to, alert.subject.clone(), alert.body.clone(), alert.unsubscribe.as_deref())
     }
 
     fn text(&self, to: &str, subject: String, body: String) -> Result<Message, String> {
-        Message::builder()
+        self.unsubscribable(to, subject, body, None)
+    }
+
+    /// A plain text e-mail; with `unsubscribe`, the link that stops its kind as
+    /// List-Unsubscribe, and List-Unsubscribe-Post for mail programs' one-click button.
+    fn unsubscribable(&self, to: &str, subject: String, body: String, unsubscribe: Option<&str>) -> Result<Message, String> {
+        let mut builder = Message::builder()
             .from(self.from.clone())
             .to(to.parse().map_err(|error| format!("address: {error}"))?)
             .subject(subject)
-            .header(ContentType::TEXT_PLAIN)
-            .body(body)
-            .map_err(|error| format!("message: {error}"))
+            .header(ContentType::TEXT_PLAIN);
+        if let Some(link) = unsubscribe {
+            builder = builder.header(ListUnsubscribe(link.to_string())).header(OneClick);
+        }
+        builder.body(body).map_err(|error| format!("message: {error}"))
     }
 
     pub async fn send(&self, to: &str, code: &str) -> Result<(), String> {
@@ -283,10 +346,14 @@ impl Email {
         self.transport.send(self.notice_message(to, notice)?).await.map(|_| ()).map_err(|error| format!("SMTP: {error}"))
     }
 
-    /// Any e-mail of plain text: the alerts (Alert), the invitations into stores (web/stores.rs).
+    /// Any e-mail of plain text: the invitations into stores (web/stores.rs).
     pub async fn send_text(&self, to: &str, subject: &str, body: &str) -> Result<(), String> {
         let message = self.text(to, subject.to_string(), body.to_string())?;
         self.transport.send(message).await.map(|_| ()).map_err(|error| format!("SMTP: {error}"))
+    }
+
+    pub async fn send_alert(&self, to: &str, alert: &Alert) -> Result<(), String> {
+        self.transport.send(self.alert_message(to, alert)?).await.map(|_| ()).map_err(|error| format!("SMTP: {error}"))
     }
 }
 
@@ -377,7 +444,7 @@ impl Senders {
     /// otherwise it goes to the log.
     pub async fn send_alert(&self, contact: &Contact, alert: &Alert) -> Result<Channel, String> {
         match (contact, &self.email, &self.whatsapp) {
-            (Contact::Email(address), Some(email), _) => email.send_text(address, &alert.subject, &alert.body).await.map(|_| Channel::Email),
+            (Contact::Email(address), Some(email), _) => email.send_alert(address, alert).await.map(|_| Channel::Email),
             // The guard sends it, where its template is set up.
             (Contact::Phone(phone), _, Some(whatsapp)) if whatsapp.send_alert(phone, &alert.whatsapp).await? => Ok(Channel::WhatsApp),
             _ => {
@@ -469,6 +536,7 @@ mod tests {
             excerpt: "A është ende në shitje?\nMund ta shoh nesër.".into(),
             unread,
             url: "https://pluribus.example/mesazhet/0192f0c1-0000-7000-8000-000000000001".into(),
+            unsubscribe: None,
         }
     }
 
@@ -488,6 +556,28 @@ mod tests {
         assert!(notice(2).text().contains("(dhe 1 mesazh tjetër i palexuar)"));
         let no_listing = Notice { listing: None, ..notice(1) };
         assert_eq!(no_listing.title(), "Besa të shkroi në Pluribus");
+    }
+
+    #[test]
+    fn notices_and_alerts_carry_the_link_that_stops_them() {
+        let email = Email::new("smtp.example.com", 587, "user", "password", "Pluribus <kodi@example.com>").unwrap();
+        let link = "https://pluribus.example/ndalo/abc123/mesazhet";
+        let stopped = Notice { unsubscribe: Some(link.into()), ..notice(1) };
+        assert!(stopped.text().contains(&format!("Për të mos i marrë më, hap {link}, ose hiq shenjën")), "{}", stopped.text());
+        let message = String::from_utf8(email.notice_message("ana@example.com", &stopped).unwrap().formatted()).unwrap();
+        assert!(message.contains(&format!("List-Unsubscribe: <{link}>")), "{message}");
+        assert!(message.contains("List-Unsubscribe-Post: List-Unsubscribe=One-Click"), "{message}");
+        // Without a link, neither header; a code or an invitation has none.
+        let plain = String::from_utf8(email.notice_message("ana@example.com", &notice(1)).unwrap().formatted()).unwrap();
+        assert!(!plain.contains("List-Unsubscribe"));
+        let alert = Alert {
+            subject: "3 njoftime të reja: Golf".into(),
+            body: "…".into(),
+            whatsapp: AlertTemplate::Search { new: "3 njoftime të reja".into(), name: "Golf".into(), id: "x".into() },
+            unsubscribe: Some("https://pluribus.example/ndalo/abc123/kerkimi-x".into()),
+        };
+        let message = String::from_utf8(email.alert_message("ana@example.com", &alert).unwrap().formatted()).unwrap();
+        assert!(message.contains("List-Unsubscribe: <https://pluribus.example/ndalo/abc123/kerkimi-x>"), "{message}");
     }
 
     #[test]

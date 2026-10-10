@@ -19,6 +19,7 @@ mod saved;
 mod searches;
 mod settings;
 mod stores;
+mod unsubscribe;
 mod seo;
 mod suggestions;
 
@@ -131,6 +132,8 @@ pub fn router(state: AppState) -> Router {
         .route("/dyqani/{slug}/njerezit/{user_id}/hiq", post(stores::remove))
         .route("/dyqani/{slug}/ftesat/{id}/anulo", post(stores::cancel))
         .route("/dyqani/{slug}/largohu", post(stores::leave))
+        .route("/ndalo/{token}/{what}", get(unsubscribe::ask).post(unsubscribe::stop))
+        .route("/ndalo/{token}/{what}/rikthe", post(unsubscribe::back))
         .route("/ftesa/{id}", get(stores::invitation))
         .route("/ftesa/{id}/prano", post(stores::accept))
         .route("/ftesa/{id}/refuzo", post(stores::decline))
