@@ -370,9 +370,9 @@
 </section>
 {%- endif %}
 {%- if sheet %}
-{#- The message sheet: a message button opens it, on a phone sliding up from the screen's bottom
-    to its middle, from 720 px up as a popup from the button (message_sheet_controller.js,
-    messages.css).
+{#- The message sheet: a message button opens it, on a phone sliding up from the screen's bottom,
+    the page dimmed under it, from 720 px up as a popup from the button
+    (message_sheet_controller.js, messages.css).
     The button loads the conversation into its frame: the page that starts one, or the one
     already going on (conversation.html, whose frame has the same name), and writing, sending
     and blocking go on in it without leaving the listing; its messages scroll inside it. On a

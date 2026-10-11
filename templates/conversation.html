@@ -4,86 +4,92 @@
 
 {% block content %}
 {#- A conversation between a listing's buyer and its seller (messages.rs), or the page that starts
-    one: who with, then the listing it is about, at the top; the messages, the visitor's own on the
-    right; then the box to write in, at the bottom of the screen. While the page is open, new
-    messages come every few seconds (conversation_controller.js); those shown are read, as the page
-    shows and as they come, and the header's count follows. -#}
+    one, as the canvas has it: the way back to the inbox over a white box (.conversation-box,
+    messages.css; none on a phone) with who with, then the listing it is about, at the top; the
+    messages, the visitor's own on the right; then the box to write in, at the box's foot, and at
+    the bottom of the screen while the messages scroll. While the page is open, new messages come
+    every few seconds (conversation_controller.js); those shown are read, as the page shows and as
+    they come, and the header's count follows. -#}
 {#- In a frame, for a listing's message sheet to show it (listing.html), where it goes on in place;
     on its own page, it follows the frame's address, as a page would. -#}
 <turbo-frame id="conversation" data-turbo-action="advance">
 <section class="conversation" data-controller="conversation"
   {%- if let Some(id) = id %} data-conversation-newer-url-value="/mesazhet/{{ id }}/te-rejat" data-conversation-read-url-value="/mesazhet/{{ id }}/lexuar"{% endif %}>
-  <p class="conversation-back"><a href="/mesazhet" data-turbo-frame="_top">‹ {{ crate::t("Mesazhet") }}</a></p>
-  <header class="conversation-head">
-    {%- if let Some(listing) = listing %}
-    {#- Who with first, on a line of their own (in the sheet, with "Mbyll" at its end), a hairline
-        under it; then the listing, its title the heading, beside its photo and over its price,
-        leading to it. -#}
-    <p class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span><span translate="no">{{ other_name }}</span>
-      {%- if let Some(store) = store %}<span class="conversation-store">{{ crate::i18n::t1("Për {}", store) }}</span>{% endif %}</p>
-    <a class="conversation-listing" href="{{ listing.url }}" data-turbo-frame="_top">
-      {%- if let Some(photo) = listing.photo %}
-      <img src="{{ photo }}" alt="" width="56" height="56">
+  <p class="conversation-back"><a href="/mesazhet" data-turbo-frame="_top"><svg data-icon="chevron-left" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{{ crate::t("Mesazhet") }}</a></p>
+  {#- A new conversation's box as tall as the canvas draws it, the box to write in at its foot under
+      the room the messages will take (is-first). -#}
+  <div class="conversation-box{% if first %} is-first{% endif %}">
+    <header class="conversation-head">
+      {%- if let Some(listing) = listing %}
+      {#- Who with first, on a line of their own (in the sheet, with "Mbyll" at its end), a hairline
+          under it; then the listing, its title the heading, beside its photo and over its price,
+          leading to it. -#}
+      <p class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span><span translate="no">{{ other_name }}</span>
+        {%- if let Some(store) = store %}<span class="conversation-store">{{ crate::i18n::t1("Për {}", store) }}</span>{% endif %}</p>
+      <a class="conversation-listing" href="{{ listing.url }}" data-turbo-frame="_top">
+        {%- if let Some(photo) = listing.photo %}
+        <img src="{{ photo }}" alt="" width="56" height="56">
+        {%- else %}
+        <span class="placeholder" aria-hidden="true"></span>
+        {%- endif %}
+        <div class="conversation-listing-text">
+          <h1 class="conversation-title">{{ listing.title }}</h1>
+          {#- Its price, and after it, once it is no longer simply up, what became of it. -#}
+          <span class="conversation-price">{{ listing.price }}{% if let Some(status) = listing.status %}<span class="badge conversation-status">{{ status }}</span>{% endif %}</span>
+        </div>
+      </a>
       {%- else %}
-      <span class="placeholder" aria-hidden="true"></span>
+      <h1 class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span><span translate="no">{{ other_name }}</span></h1>
       {%- endif %}
-      <div class="conversation-listing-text">
-        <h1 class="conversation-title">{{ listing.title }}</h1>
-        {#- Its price, and after it, once it is no longer simply up, what became of it. -#}
-        <span class="conversation-price">{{ listing.price }}{% if let Some(status) = listing.status %}<span class="badge conversation-status">{{ status }}</span>{% endif %}</span>
-      </div>
-    </a>
-    {%- else %}
-    <h1 class="conversation-with"><span class="avatar" aria-hidden="true">{{ self.initial() }}</span><span translate="no">{{ other_name }}</span></h1>
-    {%- endif %}
-  </header>
+    </header>
 
-  <ol class="thread" id="thread" data-conversation-target="thread">
-    {%- for message in messages %}
-    {% include "message.html" %}
-    {%- endfor %}
-  </ol>
-
-  {%- match writing %}
-  {%- when Writing::Open %}
-  {#- The box grows with what is typed, up to a few lines; Enter sends where there is a keyboard
-      (Shift+Enter starts a new line), the button everywhere. The first message can be one of the
-      quick ones, which fill the box in. -#}
-  <form class="composer" id="composer" method="post" action="{{ action }}" data-conversation-target="form">
-    {%- if first %}
-    <div class="quick-messages">
-      {%- for text in crate::web::messages::QUICK %}
-      <button type="button" class="quick-message" data-action="conversation#fill" data-conversation-text-param="{{ crate::t(text) }}">{{ crate::t(text) }}</button>
+    <ol class="thread" id="thread" data-conversation-target="thread">
+      {%- for message in messages %}
+      {% include "message.html" %}
       {%- endfor %}
-    </div>
-    {%- endif %}
-    {%- if let Some(error) = error %}
-    <p class="field-error composer-error" role="alert">{{ error }}</p>
-    {%- endif %}
-    <div class="composer-row">
-      <label class="visually-hidden" for="message-body">{{ crate::i18n::t1("Mesazhi për {}", other_name) }}</label>
-      <textarea id="message-body" name="body" rows="1" maxlength="{{ crate::web::messages::MAX_CHARS }}" required
-        placeholder="{{ crate::t("Shkruaj një mesazh…") }}" data-conversation-target="body"
-        data-action="input->conversation#grow keydown->conversation#key">{{ body }}</textarea>
-      <button type="submit" class="button composer-send" aria-label="{{ crate::t("Dërgo") }}" title="{{ crate::t("Dërgo") }}">
-        <svg data-icon="send" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SEND|safe }}</svg>
-      </button>
-    </div>
-  </form>
-  {%- when Writing::Blocked %}
-  <div class="composer-closed">
-    <p>{{ crate::t("E ke bllokuar këtë përdorues: nuk të shkruan dot, as ti atij.") }}</p>
-    {%- if let Some(id) = id %}
-    <form method="post" action="/mesazhet/{{ id }}/zhblloko">
-      <button type="submit" class="button secondary">{{ crate::t("Zhblloko") }}</button>
+    </ol>
+
+    {%- match writing %}
+    {%- when Writing::Open %}
+    {#- The box grows with what is typed, up to a few lines; Enter sends where there is a keyboard
+        (Shift+Enter starts a new line), the button everywhere. The first message can be one of the
+        quick ones, which fill the box in. -#}
+    <form class="composer" id="composer" method="post" action="{{ action }}" data-conversation-target="form">
+      {%- if first %}
+      <div class="quick-messages">
+        {%- for text in crate::web::messages::QUICK %}
+        <button type="button" class="quick-message" data-action="conversation#fill" data-conversation-text-param="{{ crate::t(text) }}">{{ crate::t(text) }}</button>
+        {%- endfor %}
+      </div>
+      {%- endif %}
+      {%- if let Some(error) = error %}
+      <p class="field-error composer-error" role="alert">{{ error }}</p>
+      {%- endif %}
+      <div class="composer-row">
+        <label class="visually-hidden" for="message-body">{{ crate::i18n::t1("Mesazhi për {}", other_name) }}</label>
+        <textarea id="message-body" name="body" rows="1" maxlength="{{ crate::web::messages::MAX_CHARS }}" required
+          placeholder="{{ crate::t("Shkruaj një mesazh…") }}" data-conversation-target="body"
+          data-action="input->conversation#grow keydown->conversation#key">{{ body }}</textarea>
+        <button type="submit" class="button composer-send" aria-label="{{ crate::t("Dërgo") }}" title="{{ crate::t("Dërgo") }}">
+          <svg data-icon="send" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SEND|safe }}</svg>
+        </button>
+      </div>
     </form>
-    {%- endif %}
+    {%- when Writing::Blocked %}
+    <div class="composer-closed">
+      <p>{{ crate::t("E ke bllokuar këtë përdorues: nuk të shkruan dot, as ti atij.") }}</p>
+      {%- if let Some(id) = id %}
+      <form method="post" action="/mesazhet/{{ id }}/zhblloko">
+        <button type="submit" class="button secondary">{{ crate::t("Zhblloko") }}</button>
+      </form>
+      {%- endif %}
+    </div>
+    {%- when Writing::BlockedBy %}
+    <p class="composer-closed">{{ crate::i18n::t1("{} nuk pranon mesazhe nga ti.", other_name) }}</p>
+    {%- when Writing::Closed %}
+    <p class="composer-closed">{{ crate::t("Ky njoftim nuk pranon mesazhe tani.") }}</p>
+    {%- endmatch %}
   </div>
-  {%- when Writing::BlockedBy %}
-  <p class="composer-closed">{{ crate::i18n::t1("{} nuk pranon mesazhe nga ti.", other_name) }}</p>
-  {%- when Writing::Closed %}
-  <p class="composer-closed">{{ crate::t("Ky njoftim nuk pranon mesazhe tani.") }}</p>
-  {%- endmatch %}
 
   {%- if let Some(id) = id %}
   {%- if writing != Writing::Blocked %}

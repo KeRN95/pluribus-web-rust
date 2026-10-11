@@ -3,7 +3,7 @@
 /* The button for the conversations, in the top bar (base.html) or the welcome page's row with its
    search (home.html, welcome.css, which rings it in the button's grey): how many have messages
    unread, at its top right, in the accent as everything unread is (--highlight), the number dark
-   on lime (--on-highlight), 11px bold in a pill 18px tall, as the canvas draws it
+   on it (--on-highlight), 11px bold in a pill 18px tall, as the canvas draws it
    (inbox_controller.js). */
 .inbox-count {
   position: absolute;
@@ -68,42 +68,49 @@
   text-align: center;
 }
 
-/* A conversation: who with, then the listing in a card like the posting form's, then the messages
-   and, at the bottom of the screen, the box to write in. */
-.conversation { max-width: 760px; }
-.conversation-back { margin: 1rem 0 0; font-size: var(--text-sm); }
-.conversation-back a { color: var(--muted); text-decoration: none; }
+/* A conversation (conversation.html), as the canvas has it: the way back to the inbox, small and
+   muted after a chevron, over a white box (.conversation-box) as wide as a line reads well, 720px,
+   in the middle of the page, with who with, then the listing, the messages (18px from the head
+   and from the box to write in) and, at its foot, the box to write in; a new conversation's box
+   (is-first) as tall as the canvas draws it, 720px, or what the screen has room for, the box to
+   write in at its foot under the room the messages will take. It was no box once, the page's
+   column 760px wide at the left. On a phone no box (below). */
+.conversation { max-width: 720px; margin-inline: auto; }
+.conversation-back { margin: 22px 0 0; font-size: var(--text-sm); }
+.conversation-back a { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); text-decoration: none; }
 .conversation-back a:hover { color: var(--text); }
-/* The conversation's head: who with first, their initial in a small circle and their name,
-   quieter, on a line of their own with a hairline under it; then, a little apart from the line, the
-   listing, its photo beside its title, the heading, on up to two lines, and its price under it,
-   all one link to it. Without a listing, who with is the heading. */
-.conversation-head { display: grid; gap: .9rem; margin: .5rem 0 1.25rem; }
-.conversation-head > .conversation-with { padding-bottom: .7rem; border-bottom: 1px solid var(--border); }
-.conversation-listing { display: flex; align-items: center; gap: .8rem; color: inherit; text-decoration: none; }
-.conversation-listing img,
-.conversation-listing .placeholder { flex: none; width: 3.5rem; height: 3.5rem; border-radius: 10px; object-fit: cover; }
-.conversation-listing-text { display: grid; gap: .1rem; min-width: 0; }
-.conversation-title {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  font-size: var(--text-lg);
-  line-height: 1.25;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+.conversation-box {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+  padding: 16px 20px 20px;
+  border-radius: var(--radius-box);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
+.conversation-box.is-first { min-height: min(720px, calc(100dvh - var(--size-header) - 80px)); }
+.conversation-box .thread { flex: 1; padding: 18px 0; }
+/* The conversation's head: who with first, their initial in a ring of 32px and their name,
+   semibold, a hairline under them; then the listing, its photo (56px, its corners 12px) beside its
+   title, the heading, bold on one line, and its price under it, quieter, all one link to it, a
+   hairline under it too. Who with's name was quieter once, and the title on up to two lines.
+   Without a listing, who with is the heading. */
+.conversation-head { display: grid; }
+.conversation-with { display: flex; align-items: center; gap: 10px; margin: 0; padding: 0 0 12px; border-bottom: 1px solid var(--border-soft); font-size: .9375rem; font-weight: var(--semibold); }
+.conversation-with .avatar { width: 32px; height: 32px; font-size: .8125rem; }
+h1.conversation-with { font-size: var(--text-xl); }
+h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px; font-size: var(--text-md); }
+.conversation-listing { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-soft); color: inherit; text-decoration: none; }
+.conversation-listing img,
+.conversation-listing .placeholder { flex: none; width: 56px; height: 56px; border-radius: 12px; object-fit: cover; }
+.conversation-listing-text { display: grid; gap: 2px; min-width: 0; }
+.conversation-title { margin: 0; overflow: hidden; font-size: 1rem; font-weight: var(--bold); line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
 @media (hover: hover) {
   .conversation-listing:hover .conversation-title { text-decoration: underline; text-underline-offset: .15em; }
 }
-.conversation-price { color: var(--muted); font-size: var(--text-sm); font-weight: var(--semibold); }
+.conversation-price { color: var(--muted); font-size: var(--text-sm); }
 /* After the price, once the listing is no longer simply up: reserved, sold or off the site. */
 .conversation-status { margin-left: .5rem; padding: .05rem .5rem; color: var(--text); font-size: var(--text-xs); }
-.conversation-with { display: flex; align-items: center; gap: .45rem; margin: 0; color: var(--muted); font-size: var(--text-sm); font-weight: var(--medium); }
-.conversation-with .avatar { width: 1.6rem; height: 1.6rem; font-size: .75rem; }
-h1.conversation-with { color: var(--text); font-size: var(--text-xl); }
-h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px; font-size: var(--text-md); }
 
 /* The messages: the other side's on the left on the surface, the visitor's on the right in the
    coral's tint, each rounded but for its corner on its own side, with when under it. Line breaks
@@ -123,71 +130,108 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 .message-body { margin: 0; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 .message-time { display: block; margin-top: .1rem; color: var(--muted); font-size: .7rem; text-align: right; }
 
-/* The box to write in, which stays at the bottom of the screen over the messages as they scroll,
-   above the phone's home bar: a pill that grows with what is typed up to a few lines, the send
-   button inside it at its right end, a paper plane in a coral circle, which turns to point up as
-   soon as something is typed. Before the first message, quick ones to start with. */
+/* The box to write in, as the canvas has it, at the conversation's box's foot, and at the bottom
+   of the screen over the messages while they scroll past (sticky, on the box's white), above a
+   phone's home bar: a field with corners of 24px that grows with what is typed, up to a few lines,
+   one line as tall as the send button beside it, a circle as tall as a button (48px), filled as
+   the buttons are, with a paper plane in it, which turns to point up as soon as something is
+   typed. Before the first message, quick ones to start with over them, grey pills 36px tall that
+   fill it in. The plane was in a smaller circle inside the field once, at its right end, and the
+   quick messages white pills with a hairline. */
 .composer {
   position: sticky;
   bottom: 0;
   z-index: 2;
-  margin: 0 -1rem;
-  padding: .6rem 1rem calc(.6rem + env(safe-area-inset-bottom));
-  background: var(--bg);
+  margin: 0 -20px -20px;
+  padding: 14px 20px 20px;
+  border-radius: 0 0 var(--radius-box) var(--radius-box);
+  background: var(--surface);
 }
-.composer-row { position: relative; display: flex; align-items: flex-end; }
+.composer-row { display: flex; align-items: flex-end; gap: 8px; }
 .composer textarea {
   flex: 1;
   min-width: 0;
-  min-height: 2.75rem;
+  min-height: var(--size-field);
   max-height: 9.5rem;
-  padding: .62rem 3.1rem .62rem 1rem;
-  border: 1px solid var(--border-strong);
-  border-radius: 22px;
+  /* One line as tall as the button: what the line leaves of its 48px, over and under it. */
+  padding: 13px 18px;
+  padding-block: calc((var(--size-field) - 2px - 1lh) / 2);
+  border: 1px solid var(--border);
+  border-radius: 24px;
   background: var(--input);
   color: var(--text);
   font: inherit;
-  /* 16px at least, or an iPhone zooms the page into the box as it takes the focus. */
-  font-size: max(16px, var(--text-md));
+  font-size: .9375rem;
   line-height: 1.4;
   resize: none;
+  transition: border-color .15s, box-shadow .15s;
 }
-.composer textarea::placeholder { color: var(--muted); }
-/* With the focus, the box lights up as a picked button does (the accent's tint, a border of the
-   accent) rather than taking the site's focus ring. */
-.composer textarea:focus { outline: none; border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); }
+/* 16px where a finger types, or an iPhone zooms the page into the field as it takes the focus. */
+@media (pointer: coarse) {
+  .composer textarea { font-size: max(16px, var(--text-md)); }
+}
+.composer textarea::placeholder { color: var(--placeholder); }
+/* With the focus, its hairline in the main colour and a soft ring round it, as every field has
+   (it lit up in the accent's tint once). */
+.composer textarea:focus { outline: none; border-color: var(--main); box-shadow: var(--focus-field); }
 .composer-send {
-  position: absolute;
-  right: .3rem;
-  bottom: .3rem;
+  flex: none;
   justify-content: center;
-  width: 2.15rem;
+  width: var(--size-button);
   min-height: 0;
-  height: 2.15rem;
+  height: var(--size-button);
   padding: 0;
   border-radius: 50%;
 }
-.composer-send svg { width: 17px; height: 17px; transition: transform .15s ease-out; }
+.composer-send svg { width: 20px; height: 20px; transition: transform .15s ease-out; }
 .composer-row:has(textarea:not(:placeholder-shown)) .composer-send svg { transform: rotate(-45deg); }
 @media (prefers-reduced-motion: reduce) {
   .composer-send svg { transition: none; }
 }
 .composer-error { margin: 0 0 .5rem; }
-.quick-messages { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .65rem; }
+.quick-messages { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+/* Each on one line where the screen allows, 14px and medium; on a screen too narrow for the
+   longest, it wraps within its pill rather than leave it. */
 .quick-message {
-  padding: .4rem .85rem;
-  border: 1px solid var(--menu-border);
-  border-radius: 999px;
-  background: var(--surface);
+  min-height: var(--size-chip);
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
   color: var(--text);
   font: inherit;
   font-size: var(--text-sm);
+  font-weight: var(--medium);
+  line-height: 20px;
+  text-align: left;
   cursor: pointer;
 }
-.quick-message:hover { background: var(--surface-muted); }
+.quick-message:hover { background: var(--surface-muted-hover); }
 .composer-closed { margin: .5rem 0 0; padding: .8rem 1rem; border-radius: 12px; background: var(--surface-muted); color: var(--muted); }
 .composer-closed p { margin: 0 0 .6rem; }
 .composer-closed form { margin: 0; }
+
+/* On a phone, as the canvas has it: no box; the way back nearer the top bar, who with and the
+   listing on a white band across the screen between hairlines, the messages within the page's
+   sides, and the box to write in at the screen's foot, across it on the page's colour with a
+   hairline over it; a new conversation's band and box to write in filling the screen between
+   them. */
+@media (max-width: 719px) {
+  .conversation-back { margin-top: 10px; }
+  .conversation-box { margin: 6px calc(-1 * var(--gutter)) 0; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+  .conversation-box.is-first { min-height: calc(100dvh - var(--size-header) - 36px); }
+  .conversation-head { border-top: 1px solid var(--border-soft); background: var(--surface); }
+  .conversation-with,
+  .conversation-listing { padding: 12px var(--gutter); }
+  .conversation-box .thread { padding-inline: var(--gutter); }
+  .composer {
+    margin: 0;
+    padding: 12px var(--gutter) calc(16px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    background: var(--bg);
+  }
+}
 
 /* Blocking, under it all: quiet, as a link. */
 .conversation-block { margin: 1.5rem 0 0; }
@@ -204,29 +248,30 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 }
 .link-button:hover { color: var(--danger); }
 
-/* A listing's message sheet (listing.html, message_sheet_controller.js). On a phone, the screen's
-   lower half, across it, sliding up from its bottom in a blink, on the page's own colour like the
-   conversation page, its top corners rounded and a shadow over the page above; the page under it
-   holds still while it is open, and while the keyboard is up, when the controller puts the sheet
-   onto the keyboard (top, height and bottom inline). From 720 px up, a popup card from the button instead, under it
-   (or over it, where the screen has more room there), as the menus open theirs (--top, --left,
-   --height). The conversation scrolls inside it, with "Mbyll" at its right edge and its box to
-   write in at its foot; its way back to the inbox stays on its own page. */
+/* A listing's message sheet (listing.html, message_sheet_controller.js), white, as the canvas has
+   it (on the page's own colour once). On a phone, across the screen's foot, 470px tall as the
+   canvas draws it (three quarters of a shorter screen at most; the screen's lower half once),
+   sliding up from its bottom in a blink, its top corners rounded and a shadow over the page,
+   which is dimmed under it (below) and holds still while it is open, and while the keyboard is
+   up, when the controller puts the sheet onto the keyboard (top, height and bottom inline). From
+   720 px up, a popup card from the button instead, under it (or over it, where the screen has
+   more room there), as the menus open theirs (--top, --left, --height). The conversation scrolls
+   inside it, with "Mbyll" at the end of who with's line and its box to write in at its foot; its
+   way back to the inbox stays on its own page. */
 .listing-page { display: contents; }
 .message-sheet {
   position: fixed;
-  inset: 50vh 0 0;
-  inset: 50dvh 0 0;
+  inset: max(25vh, calc(100vh - 470px)) 0 0;
+  inset: max(25dvh, calc(100dvh - 470px)) 0 0;
   z-index: 30;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--border);
   border-radius: 18px 18px 0 0;
-  background: var(--bg);
-  box-shadow: 0 -10px 30px rgb(0 0 0 / 14%);
+  background: var(--surface);
+  box-shadow: 0 -8px 32px rgb(0 0 0 / 18%);
   animation: sheet-in .12s ease-out;
-  /* Its corners clip what is in it: the box to write in, square and on the page's colour from
-     edge to edge, would otherwise stand over the rounded ones at the popup's foot. */
+  /* Its corners clip what is in it: the box to write in, square and from edge to edge, would
+     otherwise stand over the rounded ones at the popup's foot. */
   overflow: hidden;
 }
 .message-sheet[hidden] { display: none; }
@@ -238,17 +283,18 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 /* Raised onto the keyboard (message_sheet_controller.js, raise), it eases the rest of the way as
    the keyboard settles, and back down as the keyboard goes. */
 .message-sheet.is-raised { transition: transform .15s ease-out, top .2s ease-out, height .2s ease-out; }
-/* The bar at its top, as on an iPhone's sheets: a short rounded line, in a strip as wide as the
-   sheet and tall enough for a finger to take, which drags the sheet down to close it. */
+/* The bar at its top, as on an iPhone's sheets: a short rounded line, 40 by 5px in the strong
+   hairline's grey, in a strip as wide as the sheet and tall enough for a finger to take (8px over
+   the line, 10px under it), which drags the sheet down to close it. */
 .sheet-grabber {
   flex: none;
   display: flex;
   justify-content: center;
-  padding: .55rem 0 .35rem;
+  padding: 8px 0 10px;
   cursor: grab;
   touch-action: none;
 }
-.sheet-grabber::before { content: ""; width: 2.5rem; height: 5px; border-radius: 999px; background: var(--border-strong); }
+.sheet-grabber::before { content: ""; width: 40px; height: 5px; border-radius: var(--radius-pill); background: var(--border-strong); }
 .message-sheet.is-dragging .sheet-grabber { cursor: grabbing; }
 @media (prefers-reduced-motion: reduce) {
   .message-sheet, .message-sheet.is-raised { transition: none; }
@@ -257,46 +303,79 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 @media (prefers-reduced-motion: reduce) {
   .message-sheet { animation: none; }
 }
+/* The page dimmed under the sheet on a phone (--scrim), as the canvas has it, fading in as the
+   sheet slides up; a tap on it closes the sheet (message_sheet_controller.js: the shade is the
+   listing's box's own, .listing-page, which is no box itself, so that a tap on it reaches that). */
+@media (max-width: 719px) {
+  .listing-page:has(> .message-sheet:not([hidden]))::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 29;
+    background: var(--scrim);
+    animation: scrim-in .12s ease-out;
+  }
+}
+@keyframes scrim-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .listing-page::after { animation: none; }
+}
+/* "Mbyll", at the end of who with's line: a circle of 36px with a hairline, its cross 16px. */
 .sheet-close {
   position: absolute;
-  top: 1.3rem;
-  right: max(.75rem, calc((100% - 760px) / 2 + .25rem));
+  top: 23px;
+  right: 16px;
   z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 36px;
+  height: 36px;
   padding: 0;
-  border: 1px solid var(--menu-border);
+  border: 1px solid var(--border);
   border-radius: 50%;
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
 }
+.sheet-close svg { width: 16px; height: 16px; }
 .sheet-close:hover { background: var(--surface-muted); }
-.message-sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 1rem; }
+.message-sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px; }
 /* The conversation fills the sheet's height, its messages taking what is spare, so that the box to
-   write in stands at the sheet's foot even before there are any. */
+   write in stands at the sheet's foot even before there are any. The conversation's box is none
+   in the sheet, which is the box. */
 .message-sheet-body > turbo-frame { display: flex; flex-direction: column; min-height: 100%; }
-.message-sheet-body .conversation { display: flex; flex: 1; flex-direction: column; width: 100%; margin-inline: auto; }
-.message-sheet .thread { flex: 1; }
+.message-sheet-body .conversation,
+.message-sheet .conversation-box { display: flex; flex: 1; flex-direction: column; width: 100%; margin: 0; }
+.message-sheet .conversation-box { min-height: 0; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.message-sheet .thread { flex: 1; padding-inline: 0; }
 /* Neither the way back to the inbox nor "Blloko" at the conversation's end: the sheet is on the
    listing's page, where blocking the seller is the report's business (report.html), and the
    inbox's own conversation page keeps its "Blloko". */
 .message-sheet .conversation-block, .message-sheet .conversation-back { display: none; }
-/* In the sheet, "Mbyll" stands at the end of who with's line, which leaves it room; the hairline
-   runs under both. */
-.message-sheet .conversation-head { margin-top: .25rem; }
-.message-sheet .conversation-head > .conversation-with { min-height: 2.25rem; padding-right: 2.75rem; }
-/* On a phone the head drags the sheet down as its bar does; it scrolls nothing itself. */
+/* In the sheet, who with's line as the canvas has it there: their initial in a smaller ring (28px)
+   and their name muted and smaller (14px), "Mbyll" at the line's end, which leaves it room; the
+   hairline runs under both, 10px under them; the listing's row and its price, semibold, from edge
+   to edge of the sheet's 16px sides. */
+.message-sheet .conversation-head { border-top: 0; background: none; }
+/* As tall as "Mbyll" (36px) over the 10px and the hairline under it, so the two stand level. */
+.message-sheet .conversation-head > .conversation-with { min-height: 47px; padding: 0 44px 10px 0; color: var(--muted); font-size: var(--text-sm); }
+.message-sheet .conversation-with .avatar { width: 28px; height: 28px; font-size: .75rem; }
+.message-sheet .conversation-listing { padding: 12px 0; }
+.message-sheet .conversation-price { font-weight: var(--semibold); }
+/* Its box to write in at its foot, on its white, 16px in from its edges, with no hairline over it. */
+.message-sheet .composer { margin: 0 -16px; padding: 14px 16px 16px; border: 0; border-radius: 0; background: var(--surface); }
+/* On a phone the head drags the sheet down as its bar does; it scrolls nothing itself. The box to
+   write in stands above the phone's home bar. */
 @media (max-width: 719px) {
   .message-sheet .conversation-head { touch-action: none; }
+  .message-sheet .composer { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
 }
 .message-sheet-wait { margin: 1.25rem 0; color: var(--muted); }
 html.sheet-open { overflow: hidden; }
-/* From 720 px up: the popup card from the button, as wide as a phone, as tall as the screen allows
-   under or over it, with the menus' hairline and shadow, coming in as they do; no bar to drag. */
+/* From 720 px up: the popup card from the button, 400px wide, as tall as the screen allows under
+   or over it, with a hairline round it, its corners 22px and the shadow of what floats, as the
+   canvas has it, coming in as the menus do; no bar to drag. */
 @media (min-width: 720px) {
   .message-sheet {
     position: absolute;
@@ -305,18 +384,16 @@ html.sheet-open { overflow: hidden; }
     left: var(--left, 0);
     width: 25rem;
     height: var(--height, 32rem);
-    border: 1px solid var(--menu-border);
-    /* As round as the box to write in at its foot (.composer textarea). */
+    border: 1px solid var(--border);
     border-radius: 22px;
-    background: var(--bg);
-    box-shadow: var(--menu-shadow);
+    box-shadow: var(--shadow-float);
     transform-origin: top left;
     animation: menu-in .14s ease-out;
     transition: none;
   }
   .message-sheet.opens-up { transform-origin: bottom left; }
   .sheet-grabber { display: none; }
-  /* "Mbyll" a rem in from the card's corner, which is round, and who with's line level with it. */
-  .sheet-close { top: 1rem; right: 1rem; }
-  .message-sheet .conversation-head { margin-top: 1rem; }
+  /* "Mbyll" 16px in from the card's corner, which is round, and who with's line level with it. */
+  .sheet-close { top: 16px; right: 16px; }
+  .message-sheet .conversation-head { margin-top: 16px; }
 }

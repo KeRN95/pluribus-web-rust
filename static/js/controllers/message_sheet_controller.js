@@ -3,9 +3,9 @@ import { t } from "controllers/i18n.js";
 
 // A listing's message sheet (listing.html). A message button, signed in, loads the conversation
 // into the sheet's frame (data-turbo-frame) and opens it. On a phone it slides up from the screen's
-// bottom to its middle (messages.css), the page under it held still; its bar at the top, or its
-// head, dragged down past a quarter of its height or flicked down closes it, sliding the rest of
-// the way, and let go sooner it goes back up. From 720 px up it is a popup card from the button
+// bottom (messages.css), the page under it dimmed and held still, a tap on it closing the sheet;
+// its bar at the top, or its head, dragged down past a quarter of its height or flicked down
+// closes it, sliding the rest of the way, and let go sooner it goes back up. From 720 px up it is a popup card from the button
 // instead: under it, or over it where the screen has more room there, as tall as that room allows,
 // the page brought along to show it whole; a click outside it closes it, as a menu's would, and
 // so does the button that opened it, pressed again.
@@ -40,8 +40,11 @@ export default class extends Controller {
   static targets = ["sheet", "body", "frame"];
 
   connect() {
+    // On a phone, only the page's shade under the sheet: the shade is this element's own
+    // (messages.css, .listing-page::after), which is no box itself, so a tap on it is the one tap
+    // that reaches this element itself.
     this.outside = (event) => {
-      if (this.sheetTarget.hidden || this.phone) return;
+      if (this.sheetTarget.hidden || (this.phone && event.target !== this.element)) return;
       if (this.sheetTarget.contains(event.target) || event.target.closest?.("[data-action~='message-sheet#open']")) return;
       this.close(event);
     };
