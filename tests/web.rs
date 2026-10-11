@@ -828,7 +828,7 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     // screen readers as the rail's is; the rail has it from 720px up (base.css). The listings kept
     // and the conversations, round buttons after "Posto" once, went at the user's word (the menu
     // has them); the theme is the menu's too.
-    let nav = body.find(r#"<nav class="shortcuts" data-controller="drag-row" aria-label="Kategoritë">"#).unwrap();
+    let nav = body.find(r#"<nav class="shortcuts tiles" data-controller="drag-row" aria-label="Kategoritë">"#).unwrap();
     let start = body.find(r#"<div class="welcome-tools">"#).unwrap();
     let row = &body[start..nav];
     assert!(row.contains(r#"<form class="welcome-form""#) && !row.contains("/shto"), "{row}");
@@ -2563,7 +2563,7 @@ async fn filter_form_offers_the_category_properties(pool: PgPool) {
 
     // Kinds of electronics are subcategories now, not a filter.
     let electronics = get(pool.clone(), "/c/elektronike").await.body;
-    assert!(electronics.contains(r#"<a class="shortcut" href="/c/laptope"><svg class="shortcut-icon""#));
+    assert!(electronics.contains(r#"<a class="shortcut" href="/c/laptope"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#));
     assert!(!electronics.contains(r#"name="electronics_type""#));
     // A subcategory has its parent's properties: brand and storage for phones.
     let phones = get(pool.clone(), "/c/telefona").await.body;
@@ -5036,7 +5036,7 @@ async fn the_front_pages_categories_are_a_line_of_tiles(pool: PgPool) {
     // accent, on a wide screen and then on phones); from 720px up the search over them stands in
     // the middle, 720px at most; in use it has no edge or ring round it, Material's way.
     let home = html(pool.clone(), "/").await;
-    let nav = &home[home.find(r#"<nav class="shortcuts" data-controller="drag-row" aria-label="Kategoritë">"#).expect("the categories")..];
+    let nav = &home[home.find(r#"<nav class="shortcuts tiles" data-controller="drag-row" aria-label="Kategoritë">"#).expect("the categories")..];
     let nav = &nav[..nav.find("</nav>").unwrap()];
     assert!(nav.contains(r#"<a class="shortcut" href="/c/automjete">
       <span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#), "{nav}");
@@ -5046,17 +5046,21 @@ async fn the_front_pages_categories_are_a_line_of_tiles(pool: PgPool) {
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for rule in [
         "@media (min-width:720px){.welcome-tools{max-width:720px;margin-inline:auto;}",
-        ".welcome .shortcuts{flex-wrap:nowrap;gap:2px;margin-top:28px;padding-block:3px;overflow-x:auto;",
-        "@media (min-width:720px){.welcome .shortcuts{justify-content:space-between;}}",
+        ".tiles{display:flex;flex-wrap:nowrap;gap:2px;padding-block:3px;overflow-x:auto;",
+        ".welcome .tiles{margin-top:28px;}",
+        "@media (min-width:720px){.welcome .tiles{justify-content:space-between;}}",
         // On phones, as the canvas's phone board has them: the line from the screen's edge to its
         // edge, the first shape level with the page's side, the tiles 84px, the shapes 56px.
-        "@media (max-width:719px){.welcome .shortcuts{margin:20px calc(-1 * var(--gutter)) 0;padding-inline:calc(var(--gutter) - 14px);}.welcome .shortcut{width:84px;font-size:.8571rem;}.welcome .shortcut-shape{width:56px;height:56px;}.welcome .shortcut-shape::before{inset:-4px;transform:scale(.875);}.welcome .shortcut-icon{width:26px;height:26px;}}",
-        ".welcome .shortcut{flex:none;flex-direction:column;gap:8px;width:96px;",
-        ".welcome .shortcut-shape{position:relative;display:grid;flex:none;place-items:center;width:64px;height:64px;}",
-        ".welcome .shortcut:nth-child(6n + 1) .shortcut-shape::before{clip-path:path(",
-        ".welcome .shortcut:nth-child(6n + 6) .shortcut-shape::before{clip-path:path(",
-        ".welcome .shortcut-icon{position:relative;width:28px;height:28px;}",
-        ".welcome .shortcut:hover .shortcut-shape::before{background:var(--surface-muted-hover);}",
+        "@media (max-width:719px){.tiles{margin-inline:calc(-1 * var(--gutter));padding-inline:calc(var(--gutter) - 14px);}.welcome .tiles{margin-top:20px;}.tiles .shortcut{width:84px;font-size:.8571rem;}.tiles .shortcut-shape{width:56px;height:56px;}.tiles .shortcut-shape::before{inset:-4px;transform:scale(.875);}.tiles .shortcut-icon{width:26px;height:26px;}}",
+        ".tiles .shortcut{flex:none;flex-direction:column;gap:8px;width:96px;",
+        ".tiles .shortcut-shape{position:relative;display:grid;flex:none;place-items:center;width:64px;height:64px;}",
+        ".tiles .shortcut:nth-child(6n + 1) .shortcut-shape::before{clip-path:path(",
+        ".tiles .shortcut:nth-child(6n + 6) .shortcut-shape::before{clip-path:path(",
+        ".tiles .shortcut-icon{position:relative;width:28px;height:28px;}",
+        ".tiles .shortcut:hover .shortcut-shape::before{background:var(--surface-muted-hover);}",
+        // A category page's subcategories are a line of them too (the user's ask of 2026-10-11),
+        // from 720px up its first shape where the page's column starts.
+        "@media (min-width:720px){.subcategories{margin-inline:-16px;}}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
@@ -5426,7 +5430,7 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     let slugs = |part: &str| -> Vec<String> {
         part.match_indices(r#"href="/c/"#).map(|(at, _)| part[at + 9..].split('"').next().unwrap().to_string()).collect()
     };
-    let pills = &home[home.find(r#"<nav class="shortcuts" data-controller="drag-row" aria-label="Kategoritë">"#).unwrap()..];
+    let pills = &home[home.find(r#"<nav class="shortcuts tiles" data-controller="drag-row" aria-label="Kategoritë">"#).unwrap()..];
     let pills = &pills[..pills.find("</nav>").unwrap()];
     let menu = &home[home.find(r#"<h2 id="menu-categories">"#).unwrap()..];
     let menu = &menu[..menu.find("</ul>").unwrap()];
@@ -5608,33 +5612,36 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
         ("pjese-dhe-aksesore", "Pjesë / aksesorë"),
     ] {
         let pill = &vehicles[vehicles.find(&format!(r#"<a class="shortcut" href="/c/{slug}">"#)).expect(slug)..];
-        assert!(pill.starts_with(&format!(r#"<a class="shortcut" href="/c/{slug}"><svg class="shortcut-icon""#)), "{slug}");
-        assert!(pill[..pill.find("</a>").unwrap()].ends_with(&format!("</svg>{name}")), "{slug}");
+        assert!(pill.starts_with(&format!(r#"<a class="shortcut" href="/c/{slug}"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#)), "{slug}");
+        assert!(pill[..pill.find("</a>").unwrap()].ends_with(&format!(r#"</svg></span><span class="shortcut-name">{name}</span>"#)), "{slug}");
     }
     assert!(!vehicles.contains(r#"<a class="shortcut" href="/c/gps-dhe-navigatore">"#));
     // Every main category's subcategories have icons of their own too.
     for slug in ["prona", "elektronike", "shtepi-dhe-kopsht", "pune", "sherbime", "veshje-dhe-aksesore", "sport-dhe-hobi",
                  "kafshe-shtepiake", "makineri-dhe-biznes"] {
         let page = html(pool.clone(), &format!("/c/{slug}")).await;
-        // The subcategories' pills, under the small ones, which carry icons of their own.
-        let nav = &page[page.find(r#"<nav class="subcategories" aria-label="Nënkategoritë">"#).expect(slug)..];
+        // The subcategories' tiles, a line that slides sideways, each its icon on a shape over its
+        // name (the user's ask of 2026-10-11; pills until then).
+        let nav = &page[page.find(r#"<nav class="subcategories tiles" data-controller="drag-row" aria-label="Nënkategoritë">"#).expect(slug)..];
         let nav = &nav[..nav.find("</nav>").unwrap()];
         let pills = nav.matches(r#"<a class="shortcut""#).count();
         assert!(pills > 0 && nav.matches(r#"<svg class="shortcut-icon""#).count() == pills, "{slug}: {nav}");
+        assert_eq!(nav.matches(r#"<span class="shortcut-shape" aria-hidden="true">"#).count(), pills, "{slug}: {nav}");
+        assert_eq!(nav.matches(r#"<span class="shortcut-name">"#).count(), pills, "{slug}: {nav}");
     }
 
     // The parts page lists its kinds in order, the spare parts first, under its old address.
     let parts = html(pool.clone(), "/c/pjese-dhe-aksesore").await;
     let kinds = positions(&parts, &[
-        r#"<a class="shortcut" href="/c/pjese-kembimi"><svg class="shortcut-icon""#,
-        r#"<a class="shortcut" href="/c/goma-dhe-disqe"><svg class="shortcut-icon""#,
-        r#"<a class="shortcut" href="/c/audio-dhe-video"><svg class="shortcut-icon""#,
-        r#"<a class="shortcut" href="/c/gps-dhe-navigatore"><svg class="shortcut-icon""#,
-        r#"<a class="shortcut" href="/c/styling-dhe-pajisje-sportive"><svg class="shortcut-icon""#,
-        r#"<a class="shortcut" href="/c/tapete-makine"><svg class="shortcut-icon""#,
-        r#"<a class="shortcut" href="/c/rimorkio"><svg class="shortcut-icon""#,
-        r#"<a class="shortcut" href="/c/mbushes-per-makina-elektrike"><svg class="shortcut-icon""#,
-        r#"<a class="shortcut" href="/c/pjese-te-tjera"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/pjese-kembimi"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/goma-dhe-disqe"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/audio-dhe-video"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/gps-dhe-navigatore"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/styling-dhe-pajisje-sportive"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/tapete-makine"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/rimorkio"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/mbushes-per-makina-elektrike"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#,
+        r#"<a class="shortcut" href="/c/pjese-te-tjera"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#,
     ]);
     assert!(kinds.is_sorted(), "{kinds:?}");
 
@@ -5647,7 +5654,7 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
         r#"<h1 class="browse-title">GPS / navigatorë</h1>"#,
     ]);
     assert!(head.is_sorted(), "{head:?}");
-    assert!(!gps.contains(r#"<nav class="subcategories""#), "no subcategories, no pills under");
+    assert!(!gps.contains(r#"<nav class="subcategories"#), "no subcategories, no tiles under");
     // Every branch closes; the other two </details> are the order's and the view's (and the
     // typeface panel's, while TYPE_TRIAL is on).
     let others = 2 + gps.matches("<details class=\"type-menu\"").count();
@@ -5825,7 +5832,7 @@ async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
     // A kind of part narrows the page, so its pill keeps the filters; the way up, which widens it,
     // keeps only the words, the town and the map pin.
     let kept = "/c/gps-dhe-navigatore?vehicle_make=VOLKSWAGEN&fits_year=2015";
-    assert!(page.contains(&format!(r#"<a class="shortcut" href="{kept}"><svg class="shortcut-icon""#)));
+    assert!(page.contains(&format!(r#"<a class="shortcut" href="{kept}"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#)));
     assert!(page.contains(r#"<a class="breadcrumb-up" href="/c/automjete">Automjete</a>"#));
     let page = html(pool.clone(), "/c/gps-dhe-navigatore?vehicle_make=VOLKSWAGEN&fits_year=2015").await;
     assert_eq!(found(&page), [true, false, false, false]);
@@ -7647,8 +7654,8 @@ async fn a_category_page_says_where_it_is_over_its_name(pool: PgPool) {
     assert!(!vehicles.contains(r#"<nav class="breadcrumb""#) && !vehicles.contains("browse-up") && !vehicles.contains(r#"<a class="breadcrumb-up" href="/">Kreu</a>"#));
     let at = positions(&vehicles, &[
         r#"<h1 class="browse-title">Automjete</h1>"#,
-        r#"<nav class="subcategories" aria-label="Nënkategoritë">"#,
-        r#"<a class="shortcut" href="/c/makina"><svg class="shortcut-icon""#,
+        r#"<nav class="subcategories tiles" data-controller="drag-row" aria-label="Nënkategoritë">"#,
+        r#"<a class="shortcut" href="/c/makina"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#,
     ]);
     assert!(at.is_sorted(), "{at:?}");
     let search = html(pool, "/search?q=golf").await;

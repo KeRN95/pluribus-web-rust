@@ -28,12 +28,12 @@
 {% endblock %}
 
 
-{#- Category pills, as the welcome page's main categories: the icon, where there is one, then the
-    name. A category's subcategories. -#}
-{%- macro pills(items) -%}
+{#- A category's subcategories as tiles, as the welcome page has its main categories (home.html):
+    the icon, where there is one, on a shape, over the name (welcome.css, .tiles). -#}
+{%- macro tiles(items) -%}
 {% for item in items %}<a class="shortcut" href="{{ item.url }}">
-    {%- if let Some(icon) = item.icon %}<svg class="shortcut-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
-    {{ crate::t(item.name) }}</a>{% endfor %}
+    {%- if let Some(icon) = item.icon %}<span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg></span>{% endif -%}
+    <span class="shortcut-name">{{ crate::t(item.name) }}</span></a>{% endfor %}
 {%- endmacro %}
 
 {% block content %}
@@ -99,11 +99,13 @@
 <p class="search-corrections">{{ crate::t1("Shfaqen edhe rezultatet për {}.", corrections) }}</p>
 {%- endif %}
 {%- if !subcategories.is_empty() %}
-{#- Under the line, its subcategories, when it has any, as pills like the welcome page's main
-    categories; a search within a category has the category's under its heading alike. On a phone
-    they are one line that slides sideways (browse.css). -#}
-<nav class="subcategories" aria-label="{{ crate::t("Nënkategoritë") }}">
-  {% call pills(subcategories) %}
+{#- Under the line, its subcategories, when it has any, as the welcome page has its main
+    categories: one line of tiles that slides sideways on every screen, a finger or a trackpad
+    sliding it, a mouse dragging it (drag_row_controller.js; welcome.css, .tiles), as the user asked
+    on 2026-10-11 (pills until then); a search within a category has the category's under its
+    heading alike. -#}
+<nav class="subcategories tiles" data-controller="drag-row" aria-label="{{ crate::t("Nënkategoritë") }}">
+  {% call tiles(subcategories) %}
 </nav>
 {%- endif %}
 {%- if !found_in.is_empty() %}

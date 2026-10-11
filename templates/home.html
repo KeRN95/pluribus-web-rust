@@ -64,13 +64,12 @@
   </form>
   </div>
 
-  {#- Every main category at once, as pills like the listing page's details: its icon, then its
-      name, every one the category pages' pills' size, all side by side in one list that wraps
-      wherever the line ends: first the four most looked for, Automjete, Prona, Elektronikë and
-      Veshje / aksesorë (MAIN_ON_WELCOME in browse.rs), then every other main category, in its
-      order. From 720px up one line of tiles instead, which slides sideways where the page is
-      narrower than they are, a mouse dragging it (drag_row_controller.js; welcome.css). -#}
-  <nav class="shortcuts" data-controller="drag-row" aria-label="{{ crate::t("Kategoritë") }}">
+  {#- Every main category, as one line of tiles that slides sideways where the screen is narrower
+      than they are, a mouse dragging it (drag_row_controller.js; welcome.css, .tiles), as a
+      category page has its subcategories: first the four most looked for, Automjete, Prona,
+      Elektronikë and Veshje / aksesorë (MAIN_ON_WELCOME in browse.rs), then every other main
+      category, in its order. -#}
+  <nav class="shortcuts tiles" data-controller="drag-row" aria-label="{{ crate::t("Kategoritë") }}">
     {%- for shortcut in main %}{% call pill(shortcut) %}{% endfor %}
     {%- for shortcut in others %}{% call pill(shortcut) %}{% endfor %}
   </nav>

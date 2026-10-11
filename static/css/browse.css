@@ -5,13 +5,16 @@
 
 /* The words searched in place of misspelt ones take a line of their own, under the heading. */
 .search-corrections { margin: 0; color: var(--muted); }
-/* The subcategories, a line of the head under the heading: one group, 8px apart; a search within a
-   category has them under its heading alike. On a phone one line that slides sideways (below).
-   Their pills as the canvas draws them, 40px tall, the words medium, 15px (14px on phones), each
-   after its icon, 17px. */
-.subcategories { display: flex; flex-wrap: wrap; gap: var(--space-8); min-width: 0; }
-.subcategories .shortcut { min-height: var(--size-button-sm); gap: 7px; padding: 0 16px; font-size: .9375rem; line-height: 1.3; }
-.subcategories .shortcut-icon { width: 17px; height: 17px; }
+/* The subcategories, a line of the head under the heading: tiles as the welcome page has its main
+   categories, one line that slides sideways on every screen (welcome.css, .tiles), as the user
+   asked on 2026-10-11 (pills, 40px tall, until then); a search within a category has them under
+   its heading alike. From 720px up the line takes back the room the tiles leave round their
+   shapes at its ends (16px), so that the first shape stands where the page's column starts, as
+   the results and the row of buttons do (the heading's words come after its way back); on a phone
+   it runs from the screen's edge to its edge, the first shape level with the page's side (.tiles). */
+@media (min-width: 720px) {
+  .subcategories { margin-inline: -16px; }
+}
 /* A listing's step buttons (listing.css, .listing-steps): circles on the grey of secondary
    controls with no outline, their icons in the text's colour. (They were the back button and the
    way beyond a path's pills once, a category's and a listing's.) */
@@ -124,34 +127,14 @@
   .save-search-button > svg { width: 18px; height: 18px; }
   .save-search-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
-/* Phones: the path's pills (a listing's too) the welcome page's size there (welcome.css), as on
-   every screen, and the subcategories' alike, about 35 px tall; the back button as tall as they
-   are, and the row's buttons as big as the back button (--row, below), as everywhere. As on
-   the welcome page, a finger's target is bigger than the pill it sees: half the gaps round each
-   pill, and round the back button (::after, part of the link, from the border's outer edge), its
-   neighbours' meeting it halfway. The subcategories stand on one line that slides sideways, from
-   the screen's edge to its edge, rather than on three or four lines over the results: its margins
-   take back the page's sides and its padding gives them back, so that the first pill stands where
-   the path does and the last stops at the page's side once slid to the end; over and under the
-   pills, half their row gap, which their targets reach into (so the line scrolls sideways alone),
-   taken back the same way. */
+/* Phones: the row's buttons as big as the back button (--row, below), as everywhere, and a
+   finger's target bigger than the back button it sees: half the gaps round it (::after, part of
+   the link, from the border's outer edge), its neighbours' meeting it halfway. (The subcategories
+   were pills on one line that slid sideways here until 2026-10-11, when they became tiles on
+   every screen: welcome.css, .tiles.) */
 @media (max-width: 719px) {
-  .subcategories {
-    --row-gap: 8px;
-    --column-gap: 8px;
-    flex-wrap: nowrap;
-    gap: var(--row-gap) var(--column-gap);
-    margin: calc(var(--row-gap) / -2 - 1px) calc(-1 * var(--gutter));
-    padding: calc(var(--row-gap) / 2 + 1px) var(--gutter);
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-  }
-  .subcategories::-webkit-scrollbar { display: none; }
-  .subcategories .shortcut { position: relative; padding: 0 14px; font-size: 1rem; }
   .back-button { position: relative; }
   .back-button svg { width: 18px; height: 18px; }
-  .subcategories .shortcut::after,
   .back-button::after {
     content: "";
     position: absolute;
@@ -177,7 +160,8 @@
 .browse-head > :is(.subcategories, .categories, .browse-tools) { margin-top: 2px; }
 /* The categories a search found listings in, as the canvas has them: "Gjetur te", muted, then a
    grey chip for each, 36px tall, its icon, its name, medium, and how many, muted; wrapping on a
-   wide screen, a line that slides sideways on a phone, as the subcategories are. */
+   wide screen, a line that slides sideways on a phone, as the subcategories were until
+   2026-10-11. */
 .browse-head > .categories { flex-wrap: wrap; align-items: center; gap: var(--space-8); padding: 0; }
 .categories-lead { flex: none; color: var(--muted); font-size: .875rem; }
 .categories .chip { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; font-size: .875rem; }
