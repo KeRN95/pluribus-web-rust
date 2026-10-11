@@ -8975,8 +8975,13 @@ async fn a_buyer_writes_to_a_seller_who_answers(pool: PgPool) {
     let theirs = get_with_cookie(pool.clone(), listing, &buyer).await.body;
     let to_sheet = r#"<a class="button message-button" href="/listing/1001/mesazh" data-turbo-frame="conversation" data-turbo-prefetch="false" data-action="message-sheet#open">"#;
     assert_eq!(theirs.matches(to_sheet).count(), 1, "{theirs}");
-    // A wide pill that says its name, beside the phone's in the contact bar.
+    // A wide pill that says its name, beside the phone's in the contact bar: in the accent's light
+    // tint, as a filter that is on wears it, a little more of it under the pointer (the user's ask
+    // of 2026-10-12; filled in the accent until then).
     assert!(theirs.contains(r#"<span class="button-label">Shkruaji shitësit</span></a>"#));
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    assert!(css.contains(".contact-bar .message-button{background:var(--filter-on);color:var(--text);}"), "the tint");
+    assert!(css.contains(".contact-bar .message-button:hover{background:var(--filter-on-hover);}"), "under the pointer");
     assert!(theirs.contains(r#"<div class="message-sheet" id="message-sheet" role="dialog" aria-modal="true""#));
     assert!(theirs.contains(r#"<turbo-frame id="conversation" data-message-sheet-target="frame""#));
     let anyone = get(pool.clone(), listing).await.body;
