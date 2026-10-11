@@ -4750,13 +4750,20 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
         "html{-webkit-tap-highlight-color:transparent;}",
         "a:not([class]):active{text-decoration:underline 2px var(--highlight);text-underline-offset:.2em;}",
         "a.menu-row:active .menu-row-word{text-decoration:underline 2px var(--highlight);text-underline-offset:.2em;}",
+        // Under the pointer a card's title too, but not while the pointer is on its heart.
+        ".card:hover .card-link{text-decoration:underline 2px var(--highlight);text-underline-offset:.14em;}",
+        ".card:has(.heart:hover) .card-link{text-decoration:none;}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
     assert!(!css.contains(".card.pressed{") && !css.contains("outline-offset:4px"), "no box round a pressed card");
-    // (The script comes minified too: web::minified_js.)
+    // After a finger's tap the next page waits a moment before it is drawn, so that the mark shows
+    // (the page was fetched as the finger touched it). (The script comes minified too:
+    // web::minified_js.)
     let script = get(pool, &format!("/static/js/application.js?v={}", marketplace::web::asset_version())).await.body;
-    assert!(script.contains("closest(`a.shortcut`)?.classList.add(`pressed`)") && script.contains("`.card.pressed, .shortcut.pressed`"), "{script}");
+    for part in ["closest(`a.shortcut`)", "`.card.pressed, .shortcut.pressed`", "addEventListener(`turbo:before-render`", ".detail.resume()"] {
+        assert!(script.contains(part), "{part} in {script}");
+    }
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

@@ -65,7 +65,7 @@
   .card-row { scroll-snap-type: none; cursor: grab; user-select: none; }
   .card-row.is-dragging,
   .card-row.is-dragging * { cursor: grabbing; }
-  .card-row.is-dragging .card:active .card-link { text-decoration: none; }
+  .card-row.is-dragging .card .card-link { text-decoration: none; }
 }
 
 /* A listing card: no box of its own, just the photo with all four corners rounded and the price
@@ -164,12 +164,19 @@
 .card-link:focus-visible { outline: none; }
 .card:has(.card-link:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* A tapped or clicked card underlines its title in the accent and keeps it so until its listing
-   shows (application.js marks it .pressed): no box round the card in the main colour, black on the
-   light theme and white on the dark, which the user asked away on 2026-10-11, and no grey tap flash
-   on phones. Close under the words, as the title clips what goes below its line. */
+   shows (application.js marks it .pressed, and on a phone holds the next page a moment so that the
+   mark is seen): no box round the card in the main colour, black on the light theme and white on
+   the dark, which the user asked away on 2026-10-11, and no grey tap flash on phones. Under the
+   pointer the same, as the user asked the same day, but not while the pointer is on its heart,
+   which keeps the listing rather than opening it. Close under the words, as the title clips what
+   goes below its line. */
 .card-link { -webkit-tap-highlight-color: transparent; }
 .card:active .card-link,
 .card.pressed .card-link { text-decoration: underline 2px var(--highlight); text-underline-offset: .14em; }
+@media (hover: hover) {
+  .card:hover .card-link { text-decoration: underline 2px var(--highlight); text-underline-offset: .14em; }
+  .card:has(.heart:hover) .card-link { text-decoration: none; }
+}
 
 /* The heart over a listing's photo, at its top right corner (heart.html), as the canvas has it: a
    white outline 22px across with a soft shadow under it, so that it shows on any photo, bright or

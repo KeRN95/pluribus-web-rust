@@ -62,13 +62,30 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
 });
 
 // A tapped card keeps its title underlined in the accent (page.css, .card.pressed) while its
-// listing loads, and a tapped category's pill its icon filled with it (welcome.css,
-// .shortcut.pressed); the copy of the page Turbo keeps for going back loses them. Only a card's
-// links open it: a big card's arrows step through its photos. iOS only shows :active where a touch
-// listener is.
+// listing loads, and a tapped category's pill its icon filled with it and its name underlined
+// (welcome.css, .shortcut.pressed); the copy of the page Turbo keeps for going back loses them.
+// Only a card's links open it: a big card's arrows step through its photos. iOS only shows :active
+// where a touch listener is, as the one here is. On a phone the page was fetched as the finger
+// touched it (below), so it would show before the mark could be seen: after a tap the next page
+// waits until PRESS_SHOWN has gone by (turbo:before-render, paused), a mouse's click not, its
+// pointer having shown it.
+const PRESS_SHOWN = 200;
+let lastTouch = -Infinity;
+let pressedAt = null;
+document.addEventListener("touchstart", () => { lastTouch = performance.now(); }, { passive: true });
 document.addEventListener("click", (event) => {
-  event.target.closest(".card a")?.closest(".card").classList.add("pressed");
-  event.target.closest("a.shortcut")?.classList.add("pressed");
+  const card = event.target.closest(".card a")?.closest(".card");
+  const pill = event.target.closest("a.shortcut");
+  card?.classList.add("pressed");
+  pill?.classList.add("pressed");
+  if ((card || pill) && performance.now() - lastTouch < 1000) pressedAt = performance.now();
+});
+document.addEventListener("turbo:before-render", (event) => {
+  const wait = pressedAt === null ? 0 : pressedAt + PRESS_SHOWN - performance.now();
+  pressedAt = null;
+  if (wait <= 0) return;
+  event.preventDefault();
+  setTimeout(() => event.detail.resume(), wait);
 });
 document.addEventListener("turbo:before-cache", () => {
   for (const pressed of document.querySelectorAll(".card.pressed, .shortcut.pressed")) pressed.classList.remove("pressed");
@@ -85,7 +102,6 @@ document.addEventListener("turbo:before-cache", () => {
     img.decoding = "sync";
   }
 });
-document.addEventListener("touchstart", () => {}, { passive: true });
 
 // Under a mouse, Turbo fetches a link ahead as the pointer rests on it (prefetch on hover), so that
 // a click finds the page there; on a phone there is no hovering, and the page is fetched only as
