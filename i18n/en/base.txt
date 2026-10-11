@@ -80,26 +80,17 @@ Kategoritë
 Pamja dhe gjuha
 = Appearance and language
 
-Madhësia e shkrimit
-= Text size
+Madhësia
+= Size
 
-Shkrim më i vogël
-= Smaller text
+Kompakte
+= Compact
 
-Shkrim i vogël
-= Small text
+Normale
+= Normal
 
-Shkrim normal
-= Normal text
-
-Shkrim i madh
-= Large text
-
-Madhësia e faqes
-= Page size
-
-Faqja {}
-= Page {}
+E madhe
+= Large
 
 Ngjyra
 = Colour

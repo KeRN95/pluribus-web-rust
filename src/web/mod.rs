@@ -497,15 +497,16 @@ pub const TURBO: &str = "/static/vendor/turbo-8.0.23.js";
 pub const STIMULUS: &str = "/static/vendor/stimulus-3.2.2.js";
 
 /// The one script base.html runs in the page itself, before the first paint: the look the visitor
-/// picked, which their browser keeps (localStorage): the theme (theme_controller.js), the text's
-/// size, the page's (data-page-size, its zoom) and the accent (the menu's "Pamja dhe gjuha",
-/// look_controller.js; mint, the one there is
+/// picked, which their browser keeps (localStorage): the theme (theme_controller.js), the size,
+/// compact or large (data-size; a text's or a page's size picked before 2026-10-11, when those
+/// gave way to it, becomes once the size nearest it: a smaller page or text compact, a large text
+/// large), and the accent (the menu's "Pamja dhe gjuha", look_controller.js; mint, the one there is
 /// unless another is picked, since 2026-10-11, lime before it; one picked before the accents were
 /// made bright, the same day, becomes its bright one: dark red coral, terracotta orange, olive
 /// mint), so a page never shows another first. Here rather than in the template so that its hash
 /// in the Content-Security-Policy is
 /// that of the very text pages have.
-pub const THEME_SCRIPT: &str = r#"try { const root = document.documentElement; const theme = localStorage.getItem("theme"); if (theme === "light" || theme === "dark") root.dataset.theme = theme; const size = localStorage.getItem("textSize"); if (["smaller", "small", "large"].includes(size)) root.dataset.textSize = size; const page = localStorage.getItem("pageSize"); if (["90", "80", "70"].includes(page)) root.dataset.pageSize = page; const older = { darkred: "coral", terracotta: "orange", olive: "mint" }; let accent = localStorage.getItem("accent"); if (accent in older) { accent = older[accent]; localStorage.setItem("accent", accent); } if (["lime", "coral", "orange", "blue"].includes(accent)) root.dataset.accent = accent; } catch {}"#;
+pub const THEME_SCRIPT: &str = r#"try { const root = document.documentElement; const theme = localStorage.getItem("theme"); if (theme === "light" || theme === "dark") root.dataset.theme = theme; let size = localStorage.getItem("size"); const text = localStorage.getItem("textSize"), page = localStorage.getItem("pageSize"); if (text || page) { size = page || text === "smaller" || text === "small" ? "compact" : text === "large" ? "large" : size; if (size) localStorage.setItem("size", size); localStorage.removeItem("textSize"); localStorage.removeItem("pageSize"); } if (size === "compact" || size === "large") root.dataset.size = size; const older = { darkred: "coral", terracotta: "orange", olive: "mint" }; let accent = localStorage.getItem("accent"); if (accent in older) { accent = older[accent]; localStorage.setItem("accent", accent); } if (["lime", "coral", "orange", "blue"].includes(accent)) root.dataset.accent = accent; } catch {}"#;
 
 /// The import map base.html gives the browser: Turbo, Stimulus, and each of the site's modules at
 /// its address with the fingerprint, which browsers keep for a year (`cache_headers`), and

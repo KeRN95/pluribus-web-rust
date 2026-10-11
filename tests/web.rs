@@ -5383,18 +5383,16 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
         for href in ["/shto", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet-e-ruajtura", "/lajmerimet", "/mesazhet", "/llogaria/cilesimet", "/kontakt"] {
             assert!(menu.contains(&format!(r#"href="{href}""#)), "{href}");
         }
-        // The text's four sizes, the smallest added on 2026-10-11, and the five accents, mint first,
-        // the one there is unless another is picked (lime before it).
-        let sizes: Vec<String> = ["smaller", "small", "normal", "large"].iter().map(|size| format!(r#"data-look-size-param="{size}""#)).collect();
-        let order = positions(menu, &sizes.iter().map(String::as_str).collect::<Vec<_>>());
+        // The size, compact, normal or large, three words, normal pressed (the user's ask of
+        // 2026-10-11, "compact normal and large view", in place of the text's four sizes and the
+        // page's four); and the five accents, mint first, the one there is unless another is
+        // picked (lime before it).
+        let sizes: Vec<String> = ["compact", "normal", "large"].iter().map(|size| format!(r#"data-look-target="size" data-look-size-param="{size}" data-action="look#size">"#)).collect();
+        let order = positions(menu, &[r#"<span id="menu-size">Madhësia</span><div class="segmented sizes" role="group" aria-labelledby="menu-size">"#, sizes[0].as_str(), sizes[1].as_str(), sizes[2].as_str()]);
         assert!(order.is_sorted(), "{order:?}");
-        assert!(menu.contains(r#"<button type="button" class="text-size-smaller" aria-label="Shkrim më i vogël" aria-pressed="false""#));
-        // And the page's size, everything drawn smaller (2026-10-11): 70, 80, 90 and the whole page,
-        // each a frame's corners a size bigger, after the text's size.
-        let pages: Vec<String> = ["70", "80", "90", "100"].iter().map(|page| format!(r#"aria-label="Faqja {page}%" title="{page}%""#)).collect();
-        let order = positions(menu, &[sizes.last().unwrap().as_str(), r#"<span id="menu-page-size">Madhësia e faqes</span>"#, pages[0].as_str(), pages[1].as_str(), pages[2].as_str(), pages[3].as_str()]);
-        assert!(order.is_sorted(), "{order:?}");
-        assert!(menu.contains(r#"title="100%" aria-pressed="true" data-look-target="page" data-look-page-param="100" data-action="look#page">"#));
+        assert!(menu.contains(r#"<button type="button" aria-pressed="true" data-look-target="size" data-look-size-param="normal" data-action="look#size">Normale</button>"#));
+        assert!(menu.contains(">Kompakte</button>") && menu.contains(">E madhe</button>"));
+        assert!(!menu.contains("text-sizes") && !menu.contains("page-sizes") && !menu.contains("data-look-page-param"), "{menu}");
         let swatches: Vec<String> = ["mint", "lime", "coral", "orange", "blue"].iter().map(|accent| format!(r#"<input type="radio" class="swatch" name="accent" value="{accent}""#)).collect();
         let order = positions(menu, &swatches.iter().map(String::as_str).collect::<Vec<_>>());
         assert!(order.is_sorted(), "{order:?}");
@@ -5421,12 +5419,14 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     assert_eq!(slugs(menu).len(), 11);
     assert_eq!(slugs(menu), slugs(pills));
     // The look the visitor picked comes back before the first paint (web::THEME_SCRIPT): the
-    // theme, the text's size and the accent, from the browser's storage.
-    for part in ["root.dataset.theme = theme", "root.dataset.textSize = size", "root.dataset.accent = accent"] {
+    // theme, the size and the accent, from the browser's storage; a text's or a page's size picked
+    // before the sizes, once the size nearest it.
+    for part in ["root.dataset.theme = theme", "root.dataset.size = size", "root.dataset.accent = accent"] {
         assert!(home.contains(part), "{part}");
     }
-    assert!(home.contains(r#"if (["smaller", "small", "large"].includes(size)) root.dataset.textSize = size;"#));
-    assert!(home.contains(r#"if (["90", "80", "70"].includes(page)) root.dataset.pageSize = page;"#));
+    assert!(home.contains(r#"if (size === "compact" || size === "large") root.dataset.size = size;"#));
+    assert!(home.contains(r#"size = page || text === "smaller" || text === "small" ? "compact" : text === "large" ? "large" : size;"#));
+    assert!(home.contains(r#"localStorage.removeItem("textSize"); localStorage.removeItem("pageSize");"#));
     assert!(home.contains(r#"if (["lime", "coral", "orange", "blue"].includes(accent)) root.dataset.accent = accent;"#));
     // Drawn as the canvas has it: white over the page dimmed, its counts in the accent, a link's
     // icon filled with the accent under the pointer; the text's size scales every size in rem.
@@ -5434,11 +5434,12 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for rule in [
         ".menu::backdrop{background:var(--scrim);}",
-        r#":root[data-text-size="smaller"]{--text-scale:.8125;}"#,
-        r#":root[data-text-size="large"]{--text-scale:1.1875;}"#,
-        // The page's size: the whole page zoomed, the maps at their own scale, the frame's column
-        // as wide on the screen as before.
-        r#":root[data-page-size="70"]{--page-scale:.7;}"#,
+        // The sizes: large, the text bigger; compact, the whole page zoomed to 90%, or, with a
+        // mouse, to 80% with the text bigger in it; the maps at their own scale, the frame's
+        // column as wide on the screen as before.
+        r#":root[data-size="large"]{--text-scale:1.1875;}"#,
+        r#":root[data-size="compact"]{--page-scale:.9;}"#,
+        r#"@media (pointer:fine){:root[data-size="compact"]{--page-scale:.8;--text-scale:1.1875;}}"#,
         "html{zoom:var(--page-scale);}",
         ":is(.map-canvas,.map-pin-canvas){zoom:calc(1",
         "--content-width:calc(1068px",
@@ -5565,7 +5566,7 @@ async fn the_footer_is_drawn_as_the_canvas_has_it(pool: PgPool) {
     assert!(rule(".footer-links a").contains("min-height:var(--size-button-sm)"));
     assert!(rule(".language-switch button").contains("text-decoration:underline"));
     let body = rule("body");
-    // At least the screen's height, the page's own size divided out (data-page-size).
+    // At least the screen's height, the page's own zoom divided out (--page-scale).
     assert!(body.contains("flex-direction:column") && body.contains("min-height:calc(100svh"), "{body}");
 }
 

@@ -170,7 +170,7 @@ export default class extends Controller {
       track.style.scrollSnapType = "none";
       track.classList.add("is-dragging");
     }
-    // The pointer moves in the screen's pixels, the photos scroll in the page's (data-page-size).
+    // The pointer moves in the screen's pixels, the photos scroll in the page's (its zoom, --page-scale).
     track.scrollLeft = hold.scroll - moved / (track.currentCSSZoom || 1);
     hold.moves.push([event.timeStamp, event.clientX]);
     if (hold.moves.length > 5) hold.moves.shift();

@@ -96,7 +96,7 @@ export default class extends Controller {
   // width; as tall as the room allows, between SHORTEST and TALLEST, the page scrolled to show it
   // whole where it doesn't fit. In the page's coordinates, so that it scrolls with the button.
   // Worked out in the screen's pixels, as the button and the window are measured, and set in the
-  // page's, which its own size scales (data-page-size, look_controller.js).
+  // page's, which its own size scales (its zoom, --page-scale, look_controller.js).
   place() {
     const sheet = this.sheetTarget;
     const zoom = sheet.currentCSSZoom || 1;

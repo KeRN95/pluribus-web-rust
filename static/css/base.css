@@ -169,7 +169,7 @@
   --size-field: 48px;
   --size-header: 60px;
   --size-header-row: 60px;      /* the bar's first row; on phones with the search, the bar is two */
-  --content-width: calc(1068px / var(--page-scale)); /* the page's own size divided out (data-page-size, below) */
+  --content-width: calc(1068px / var(--page-scale)); /* the page's own zoom divided out (data-size, below) */
   /* The rail's width at the screen's left (.rail): none on phones, 88px from 720px up (below), so
      that what is measured against the screen's width leaves it out. */
   --rail-width: 0px;
@@ -960,42 +960,36 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .menu-unread { display: none; }
 }
 
-/* The four sizes in the toggle's track (.segmented, listing.css), each an A as big as the canvas
-   draws it, 13, 16 and 19px, and 11px for the smallest, which the user asked for on 2026-10-11:
-   28px wide, so that the four stand beside "Madhësia e shkrimit" in the menu's 380px as the
-   canvas's three did at 38px; where they no longer fit, the text made larger, they go under the
-   words, at the row's right end, rather than squeeze them onto two lines. */
-.segmented:is(.text-sizes, .page-sizes) > button { width: 28px; padding: 0; font-weight: var(--bold); line-height: 1; }
-.menu-row:has(> :is(.text-sizes, .page-sizes)) { flex-wrap: wrap; row-gap: var(--space-4); padding-block: 3px; }
-.segmented.page-sizes > button > svg { display: block; margin: auto; }
-.segmented.text-sizes > .text-size-smaller { font-size: 11px; }
-.segmented.text-sizes > .text-size-small { font-size: 13px; }
-.segmented.text-sizes > .text-size-normal { font-size: 16px; }
-.segmented.text-sizes > .text-size-large { font-size: 19px; }
+/* The size's three words in the toggle's track (.segmented, listing.css); where they no longer
+   fit beside "Madhësia" (a phone's menu, a large size), they go under it, at the row's right end,
+   rather than squeeze onto two lines. */
+.menu-row:has(> .sizes) { flex-wrap: wrap; row-gap: var(--space-4); padding-block: 3px; }
 
-/* The text's size the visitor picked there (look_controller.js, kept in their browser:
-   data-text-size on <html>): every size in rem follows the root's, three sixteenths or an eighth
-   smaller, or three sixteenths bigger (the phones' smaller root too, listing.css), the bar's and
-   the buttons' heights staying in px. */
-:root { --text-scale: 1; }
-:root[data-text-size="smaller"] { --text-scale: .8125; }
-:root[data-text-size="small"] { --text-scale: .875; }
-:root[data-text-size="large"] { --text-scale: 1.1875; }
+/* The size the visitor picked there (look_controller.js, kept in their browser: data-size on
+   <html>), compact, normal or large, as the user asked on 2026-10-11 ("compact normal and large
+   view"; the text's four sizes and the page's four until then, which web::THEME_SCRIPT turns into
+   the size nearest each). Large: the text three sixteenths bigger (--text-scale: every size in
+   rem follows the root's, the phones' smaller root too, listing.css), the bar's and the buttons'
+   heights staying in px. Compact: the whole page at 90% (--page-scale, below), the text with it,
+   a finger's targets 36px at least on a phone; with a mouse (pointer: fine), where targets can
+   be smaller, the page at 80% and the text three sixteenths bigger in it, so that the words are
+   about as big as at 90% and more of the page shows. */
+:root { --text-scale: 1; --page-scale: 1; }
+:root[data-size="large"] { --text-scale: 1.1875; }
+:root[data-size="compact"] { --page-scale: .9; }
+@media (pointer: fine) {
+  :root[data-size="compact"] { --page-scale: .8; --text-scale: 1.1875; }
+}
 html { font-size: calc(100% * var(--text-scale)); }
 
-/* The page's size the visitor picked there too (look_controller.js, kept in their browser:
-   data-page-size on <html>): the whole page drawn at 90, 80 or 70%, as a browser's own zoom draws
-   it (zoom), the text, the buttons, the fields, the gaps and the icons together, so that more fits
-   on a screen (the user's ask of 2026-10-11). What fills the screen's width keeps its size: the
+/* The page's zoom (--page-scale, the compact size's): the whole page drawn smaller, as a browser's
+   own zoom draws it (zoom), the text, the buttons, the fields, the gaps and the icons together, so
+   that more fits on a screen (the user's ask of 2026-10-11). What fills the screen's width keeps its size: the
    grid's photos, two still on a phone's line; the frame's column, widened as much as the page
    shrinks (--content-width); a listing's photos, their heights divided by it (listing.css); and
    the maps, drawn at their own scale, where Leaflet measures the pointer in the screen's pixels.
    A length measured on the screen (vh, svh, dvh, vw) is divided by --page-scale wherever it is
    set, as a script's measure of the screen is by the element's currentCSSZoom. */
-:root { --page-scale: 1; }
-:root[data-page-size="90"] { --page-scale: .9; }
-:root[data-page-size="80"] { --page-scale: .8; }
-:root[data-page-size="70"] { --page-scale: .7; }
 html { zoom: var(--page-scale); }
 :is(.map-canvas, .map-pin-canvas) { zoom: calc(1 / var(--page-scale)); }
 

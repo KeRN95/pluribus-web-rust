@@ -88,7 +88,7 @@ export default class extends Controller {
   // What opens floats under the row and takes at most what is left of the screen under it
   // (--top, browse.css), so that its foot shows; it scrolls inside if it needs more.
   fit() {
-    // Measured in the screen's pixels, set in the page's (data-page-size).
+    // Measured in the screen's pixels, set in the page's (its zoom, --page-scale).
     const zoom = this.element.currentCSSZoom || 1;
     this.element.style.setProperty("--top", `${Math.round(this.toolsTarget.getBoundingClientRect().bottom / zoom)}px`);
   }

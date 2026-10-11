@@ -44,7 +44,7 @@ export default class extends Controller {
     // What the map takes there: its heading and the room over it, and a square as wide as the column.
     const box = map.querySelector(".listing-map");
     // In the screen's pixels, as the feet are: the map's own scale is apart from the page's
-    // (data-page-size), so its box is measured as it shows.
+    // (its zoom, --page-scale), so its box is measured as it shows.
     const zoom = this.element.currentCSSZoom || 1;
     const shown = (part) => part.getBoundingClientRect().height;
     const needed = deal.getBoundingClientRect().width + (shown(map) - shown(box)) + 24 * zoom;

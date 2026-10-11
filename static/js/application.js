@@ -87,7 +87,7 @@ document.addEventListener("turbo:before-cache", () => {
 });
 
 // iPhones and iPads zoom into a field whose words are under 16px as it takes the focus, which the
-// page made smaller (data-page-size) makes of every field. There, and only there, the viewport's
+// page made smaller (the compact size, data-size) makes of every field. There, and only there, the viewport's
 // maximum-scale=1 stops it, while Safari still lets a person pinch to zoom (it has ignored the
 // limit for a finger since iOS 10; Android's Chrome would forbid pinching, so it isn't set there).
 // Turbo puts each page's own viewport tag back as it shows it, so it is set again after each.

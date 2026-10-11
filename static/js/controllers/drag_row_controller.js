@@ -44,7 +44,7 @@ export default class extends Controller {
       this.row.setPointerCapture(hold.id);
       this.row.classList.add("is-dragging");
     }
-    // The pointer moves in the screen's pixels, the row scrolls in the page's (data-page-size).
+    // The pointer moves in the screen's pixels, the row scrolls in the page's (its zoom, --page-scale).
     this.row.scrollLeft = hold.scroll - moved / (this.row.currentCSSZoom || 1);
     hold.moves.push([event.timeStamp, event.clientX]);
     if (hold.moves.length > 5) hold.moves.shift();
