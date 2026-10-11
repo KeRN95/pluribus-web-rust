@@ -47,20 +47,23 @@
   --post: var(--highlight);
   --on-post: var(--on-highlight);
   --post-hover: var(--highlight-hover);
-  /* The accent, mint by default (the user's pick of 2026-10-11; lime before), one of five the menu
-     offers (data-accent on <html>, below), every one as bright as lime (mint, lime, coral, orange
-     and blue, the same in both themes): the logo's dot on the dark theme and the inside of its b
-     on the light, what is new or unread, the dots and counts, and the buttons that do a page's
-     thing. Bright as they are, they are only ever a background on the light theme, behind dark
-     icons, words or numbers (--on-highlight on a count or a button, 6:1 at least), never a line
-     (--highlight-icon, below), and an unread dot has a dark edge inside it on the white
-     (--dot-edge). The names are the Pluribus design system's (its tokens.json), as
+  /* The accent, mint by default (the user's pick of 2026-10-11; lime before), one of six the menu
+     offers (data-accent on <html>, below): five as bright as lime (mint, lime, coral, orange and
+     blue) and a deep royal blue (#275BFF, the user's ask of 2026-10-12), each the same in both
+     themes: the logo's dot on the dark theme and the inside of its b on the light, what is new or
+     unread, the dots and counts, and the buttons that do a page's thing. They are only ever a
+     background on the light theme, behind dark icons, words or numbers (--on-highlight on a count
+     or a button, 6:1 at least; white on the royal blue, 5.2:1, where dark would be 3.3:1), never a
+     line (--highlight-icon, below; a line on the dark theme, the royal blue's a lighter blue there,
+     --highlight-line, its own being 2.7:1 on the dark grey), and an unread dot has a dark edge
+     inside it on the white (--dot-edge). The names are the Pluribus design system's (its tokens.json), as
      every token here. */
   --choice-mint: #2de38c;
   --choice-lime: #c8ff00;
   --choice-coral: #ff6b6b;
   --choice-orange: #ff9f1c;
   --choice-blue: #4dabff;
+  --choice-royal: #275bff;
   /* A button in the accent under the pointer: a shade darker (a shade lighter on the dark theme). */
   --highlight-hover: color-mix(in srgb, var(--highlight) 88%, #1b1b1b);
   /* An icon in the accent where the accent may be a line, the dark theme (below): the front page's
@@ -251,7 +254,7 @@
   --main-hover: #ffffff;
   --on-main: #1b1b1b;
   --highlight-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
-  --highlight-icon: var(--highlight);
+  --highlight-icon: var(--highlight-line);
   --filter-share: var(--filter-share-dark);
   --logo-dot: var(--highlight);
   --logo-counter: transparent;
@@ -314,7 +317,7 @@
     --main-hover: #ffffff;
     --on-main: #1b1b1b;
     --highlight-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
-    --highlight-icon: var(--highlight);
+    --highlight-icon: var(--highlight-line);
     --filter-share: var(--filter-share-dark);
     --logo-dot: var(--highlight);
     --logo-counter: transparent;
@@ -358,13 +361,17 @@
 
 /* The accent the visitor picked (data-accent on <html>; mint when there is none, the user's pick
    of 2026-10-11, lime before it): the colour itself, the same in both themes, what stands on it,
-   dark on every one of them, and how much of it a filter that is on takes, the light theme's and
-   the dark's (--filter-share-light, --filter-share-dark): the pale tint on the light theme and the
-   deep one on the dark as strong for each, more of a darker accent on the dark theme and less on
-   the light, lime, the lightest, the other way round. */
+   dark on every one of them but the royal blue, white on it (the user's ask of 2026-10-12), the
+   accent as a line on the dark theme (--highlight-line, for --highlight-icon: the royal blue's a
+   lighter blue, seven tenths of it in white, 4.5:1 on the dark grey), and how much of it a filter
+   that is on takes, the light theme's and the dark's (--filter-share-light, --filter-share-dark):
+   the pale tint on the light theme and the deep one on the dark as strong for each, more of a
+   darker accent on the dark theme and less on the light, lime, the lightest, the other way round,
+   the royal blue, the darkest, the least of all on the light. */
 :root {
   --highlight: var(--choice-mint);
   --on-highlight: #1b1b1b;
+  --highlight-line: var(--highlight);
   --filter-share-light: 38%;
   --filter-share-dark: 27%;
 }
@@ -372,6 +379,13 @@
 :root[data-accent="coral"] { --highlight: var(--choice-coral); --filter-share-light: 28%; --filter-share-dark: 38%; }
 :root[data-accent="orange"] { --highlight: var(--choice-orange); --filter-share-light: 35%; --filter-share-dark: 30%; }
 :root[data-accent="blue"] { --highlight: var(--choice-blue); --filter-share-light: 30%; --filter-share-dark: 34%; }
+:root[data-accent="royal"] {
+  --highlight: var(--choice-royal);
+  --on-highlight: #fff;
+  --highlight-line: color-mix(in srgb, var(--choice-royal) 70%, #fff);
+  --filter-share-light: 20%;
+  --filter-share-dark: 40%;
+}
 
 /* Less transparency where the reader has asked their system for it (prefers-reduced-transparency):
    the frosted bars and sheet whole in their own colours, nothing blurred under them. */
@@ -1010,10 +1024,11 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .menu-unread { display: none; }
 }
 
-/* The size's three words in the toggle's track (.segmented, listing.css); where they no longer
-   fit beside "Madhësia" (a phone's menu, a large size), they go under it, at the row's right end,
-   rather than squeeze onto two lines. */
-.menu-row:has(> .sizes) { flex-wrap: wrap; row-gap: var(--space-4); padding-block: 3px; }
+/* The size's three words in the toggle's track (.segmented, listing.css), and the six colours'
+   swatches; where they no longer fit beside "Madhësia" or "Ngjyra" (a phone's menu, a large
+   size), they go under it, at the row's right end, rather than squeeze onto two lines or run out
+   of the menu (the swatches ran past the edge of a 317 px phone's menu until 2026-10-12). */
+.menu-row:has(> :is(.sizes, .swatches)) { flex-wrap: wrap; row-gap: var(--space-4); padding-block: 3px; }
 
 /* The size the visitor picked there (look_controller.js, kept in their browser: data-size on
    <html>), compact, normal or large, as the user asked on 2026-10-11 ("compact normal and large
@@ -1100,7 +1115,7 @@ a.menu-row:active > svg { fill: var(--highlight); }
 .menu-about a { display: inline-flex; align-items: center; min-height: var(--size-button-sm); color: var(--muted); text-decoration: none; }
 .menu-about a:is(:hover, :active) { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
 /* The accents, round, 24px within a 40px tap: mint, the one there is unless another is picked,
-   then lime, coral, orange and blue (data-accent), a hairline round each (--swatch-edge: lime and
+   then lime, coral, orange, blue and the royal blue (data-accent), a hairline round each (--swatch-edge: lime and
    mint alone hardly show on white), the one picked ringed in the text's colour. Radios, so the
    arrow keys go from one to the next. */
 .swatches { display: flex; align-items: center; margin-right: -8px; }
@@ -1113,6 +1128,7 @@ input[type="radio"].swatch:checked::before { box-shadow: 0 0 0 2px var(--surface
 .swatch[value="coral"] { --swatch: var(--choice-coral); }
 .swatch[value="orange"] { --swatch: var(--choice-orange); }
 .swatch[value="blue"] { --swatch: var(--choice-blue); }
+.swatch[value="royal"] { --swatch: var(--choice-royal); }
 @media (max-width: 719px) {
   .menu { width: min(380px, 90%); }
   .menu-top { padding: 0 8px 0 var(--gutter); }

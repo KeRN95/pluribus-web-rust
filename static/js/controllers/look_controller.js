@@ -3,7 +3,7 @@ import { Controller } from "@hotwired/stimulus";
 // The look the visitor picks, kept in their browser (localStorage) as the theme is
 // (theme_controller.js): the size, "compact" or "large" (data-size on <html>, base.css; the normal
 // one none: the user's ask of 2026-10-11, in place of the text's four sizes and the page's four),
-// and the accent, "lime", "coral", "orange" or "blue" (data-accent; mint, the one there is unless
+// and the accent, "lime", "coral", "orange", "blue" or "royal" (data-accent; mint, the one there is unless
 // another is picked since 2026-10-11, none), which the inline script in base.html puts back
 // before each page's first paint (web::THEME_SCRIPT, which turns an older pick into its own: a
 // text's or a page's size into the size nearest it, "darkred", "terracotta" or "olive" into its

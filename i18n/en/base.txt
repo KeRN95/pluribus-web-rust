@@ -107,6 +107,9 @@ Portokalli
 Blu
 = Blue
 
+Blu mbretërore
+= Royal blue
+
 Nenexhik
 = Mint
 

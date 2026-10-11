@@ -5693,7 +5693,7 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     // left, before the logo and the account, opening a dialog that leads to posting, the account's
     // pages, every main category in the welcome page's order (its pills', from the database, which
     // browse::menu_categories keeps), the look (the text's three sizes, the dark theme's switch,
-    // the five accents), the language through /gjuha, and the pages about the site.
+    // the six accents), the language through /gjuha, and the pages about the site.
     let home = get(pool.clone(), "/").await.body;
     for page in [home.clone(), get(pool.clone(), "/c/automjete").await.body] {
         assert!(page.contains(r#"<body data-controller="menu">"#));
@@ -5708,18 +5708,19 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
         }
         // The size, compact, normal or large, three words, normal pressed (the user's ask of
         // 2026-10-11, "compact normal and large view", in place of the text's four sizes and the
-        // page's four); and the five accents, mint first, the one there is unless another is
-        // picked (lime before it).
+        // page's four); and the six accents, mint first, the one there is unless another is
+        // picked (lime before it), the royal blue last (the user's ask of 2026-10-12).
         let sizes: Vec<String> = ["compact", "normal", "large"].iter().map(|size| format!(r#"data-look-target="size" data-look-size-param="{size}" data-action="look#size">"#)).collect();
         let order = positions(menu, &[r#"<span id="menu-size">Madhësia</span><div class="segmented sizes" role="group" aria-labelledby="menu-size">"#, sizes[0].as_str(), sizes[1].as_str(), sizes[2].as_str()]);
         assert!(order.is_sorted(), "{order:?}");
         assert!(menu.contains(r#"<button type="button" aria-pressed="true" data-look-target="size" data-look-size-param="normal" data-action="look#size">Normale</button>"#));
         assert!(menu.contains(">Kompakte</button>") && menu.contains(">E madhe</button>"));
         assert!(!menu.contains("text-sizes") && !menu.contains("page-sizes") && !menu.contains("data-look-page-param"), "{menu}");
-        let swatches: Vec<String> = ["mint", "lime", "coral", "orange", "blue"].iter().map(|accent| format!(r#"<input type="radio" class="swatch" name="accent" value="{accent}""#)).collect();
+        let swatches: Vec<String> = ["mint", "lime", "coral", "orange", "blue", "royal"].iter().map(|accent| format!(r#"<input type="radio" class="swatch" name="accent" value="{accent}""#)).collect();
         let order = positions(menu, &swatches.iter().map(String::as_str).collect::<Vec<_>>());
         assert!(order.is_sorted(), "{order:?}");
         assert!(menu.contains(r#"value="mint" aria-label="Nenexhik" checked "#) && menu.matches(" checked ").count() == 1);
+        assert!(menu.contains(r#"value="royal" aria-label="Blu mbretërore" data-look-target="accent""#));
         assert!(menu.contains(r#"<input type="checkbox" class="switch" role="switch" data-controller="theme""#));
         assert!(menu.contains(r#"<form class="segmented" method="post" action="/gjuha""#));
         assert!(menu.contains(r#"<button type="submit" name="gjuha" value="sq" lang="sq" aria-pressed="true">Shqip</button>"#));
@@ -5750,7 +5751,7 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     assert!(home.contains(r#"if (size === "compact" || size === "large") root.dataset.size = size;"#));
     assert!(home.contains(r#"size = page || text === "smaller" || text === "small" ? "compact" : text === "large" ? "large" : size;"#));
     assert!(home.contains(r#"localStorage.removeItem("textSize"); localStorage.removeItem("pageSize");"#));
-    assert!(home.contains(r#"if (["lime", "coral", "orange", "blue"].includes(accent)) root.dataset.accent = accent;"#));
+    assert!(home.contains(r#"if (["lime", "coral", "orange", "blue", "royal"].includes(accent)) root.dataset.accent = accent;"#));
     // Drawn as the canvas has it: white over the page dimmed, its counts in the accent, a link's
     // icon filled with the accent under the pointer; the text's size scales every size in rem.
     // (The stylesheet comes minified: web::site_css.)
@@ -5776,16 +5777,24 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     }
     let count = &css[css.find("}.menu-count{").expect("the menu's counts") + 1..];
     assert!(count[..count.find('}').unwrap()].contains("background:var(--highlight)"));
-    // Every accent as bright as lime (2026-10-11), the same in both themes and dark words on each,
-    // mint when none is picked (the user's pick, the same day), a filter that is on taking as much
-    // of it as each needs; a pick from before, a darker one, comes back as its bright one.
+    // Every accent but one as bright as lime (2026-10-11), the same in both themes and dark words on
+    // each, mint when none is picked (the user's pick, the same day), a filter that is on taking as
+    // much of it as each needs; a pick from before, a darker one, comes back as its bright one. The
+    // royal blue deep (the user's ask of 2026-10-12): white words on it, and on the dark theme, where
+    // the accent is a line, a lighter blue for it.
     for rule in [
         "--choice-mint:#2de38c;",
         "--choice-lime:#c8ff00;",
         "--choice-coral:#ff6b6b;",
         "--choice-orange:#ff9f1c;",
         "--choice-blue:#4dabff;",
-        ":root{--highlight:var(--choice-mint);--on-highlight:#1b1b1b;--filter-share-light:38%;--filter-share-dark:27%;}",
+        "--choice-royal:#275bff;",
+        ":root{--highlight:var(--choice-mint);--on-highlight:#1b1b1b;--highlight-line:var(--highlight);--filter-share-light:38%;--filter-share-dark:27%;}",
+        r#":root[data-accent="royal"]{--highlight:var(--choice-royal);--on-highlight:#fff;--highlight-line:color-mix(in srgb,var(--choice-royal) 70%,#fff);--filter-share-light:20%;--filter-share-dark:40%;}"#,
+        "--highlight-icon:var(--highlight-line);",
+        r#".swatch[value="royal"]{--swatch:var(--choice-royal);}"#,
+        // Where the swatches no longer fit beside "Ngjyra", they go under it, as the size's words do.
+        ".menu-row:has(> :is(.sizes,.swatches)){flex-wrap:wrap;",
         r#":root[data-accent="lime"]{--highlight:var(--choice-lime);--filter-share-light:45%;--filter-share-dark:24%;}"#,
         r#":root[data-accent="coral"]{--highlight:var(--choice-coral);--filter-share-light:28%;--filter-share-dark:38%;}"#,
         "--filter-on:color-mix(in srgb,var(--highlight) var(--filter-share),var(--bg));",
@@ -5793,7 +5802,7 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
         assert!(css.contains(rule), "{rule}");
     }
     assert!(!css.contains(r#"[data-accent="mint"]"#) && !css.contains("--lime:"));
-    assert_eq!(css.matches("--on-highlight:").count(), 1);
+    assert_eq!(css.matches("--on-highlight:").count(), 2);
     // A listing's price on a band of it across the figure's foot, as Tradera marks its prices
     // (2026-10-11): a thick underline under the letters, in the tint a filter that is on takes, as
     // quiet as the user asked, and as thin, reaching an eighth of an em up the figure ("a bit
