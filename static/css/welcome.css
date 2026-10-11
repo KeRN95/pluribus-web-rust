@@ -9,54 +9,41 @@
 .lead { margin: 0 0 1.25rem; color: var(--muted); font-size: var(--text-lg); font-weight: var(--light); line-height: 1.45; }
 
 
-/* The search, drawn like the message box in Claude's app: a pill, the words in it, and at the end
-   a round button with a magnifier, like Claude's send button; the whole pill in the page's colour,
-   the buttons', its words in the buttons' white (the hint a little softer), and the magnifier's
-   circle a lighter shade of it. While it is being typed in, its edge darkens and its shadow
-   deepens a little, as Claude's does, rather than a ring round it. */
+/* The search, as the canvas draws it: a white pill (the surface, a hairline, the soft shadow of what
+   rests on the page), 50px tall, its words 17px, and at its end a round button of 38px with the
+   magnifier in the accent (--highlight-knob behind, --highlight-icon for the line: dark on lime on
+   the light theme, lime on the grey on the dark one, as the design system has it); in use, its
+   edge in the main colour and the search bar's ring round it (--focus-search). On phones 46px,
+   its words 16px and the button 36px. */
 .welcome-form {
   display: flex;
   align-items: center;
-  gap: .6rem;
-  padding: .35rem .35rem .35rem 1.4rem;
-  border: 1px solid var(--button);
-  border-radius: 999px;
-  background: var(--button);
-  box-shadow: 0 4px 20px rgb(0 0 0 / 5%);
-  transition: border-color .15s, box-shadow .15s;
+  gap: 6px;
+  height: var(--size-button-lg);
+  padding: 0 5px 0 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
-.welcome-form:focus-within {
-  border-color: var(--button-hover);
-  box-shadow: 0 4px 20px rgb(0 0 0 / 12%);
-}
+.welcome-form:focus-within { border-color: var(--main); box-shadow: var(--focus-search); }
 .welcome-form input {
   flex: 1;
   min-width: 0;
-  padding: .35rem 0; /* no taller than the button, which sits as far from every edge */
+  height: 100%;
+  padding: 0;
   border: 0;
   background: none;
-  color: var(--on-button);
-  caret-color: var(--on-button);
+  color: var(--text);
   font: inherit;
-  font-size: max(16px, var(--text-lg)); /* a little bigger than other fields; 16px at least, or phones zoom in */
+  font-size: max(16px, 1.0625rem); /* 17px; 16px at least, or phones zoom in */
   appearance: none;
   outline: none;
 }
-.welcome-form input::placeholder { color: color-mix(in srgb, var(--on-button) 85%, transparent); text-overflow: ellipsis; }
-/* No clearing cross: the pill keeps only its button, as Claude's box does. */
+.welcome-form input::placeholder { color: var(--placeholder); text-overflow: ellipsis; }
+/* No clearing cross: the pill keeps only its button. */
 .welcome-form input::-webkit-search-cancel-button { appearance: none; }
-.welcome-search {
-  width: 3rem;
-  height: 3rem;
-  background: color-mix(in srgb, var(--on-button) 16%, transparent);
-  color: var(--on-button);
-  transition: background-color .15s, transform .1s;
-}
-.welcome-search:hover { background: color-mix(in srgb, var(--on-button) 26%, transparent); }
-.welcome-search:active { transform: scale(.94); }
-@media (prefers-reduced-motion: reduce) {
-  .welcome-search:active { transform: none; }
-}
+.welcome-search { width: 38px; height: 38px; background: var(--highlight-knob); color: var(--highlight-icon); }
 
 /* Suggestions under a search box as its words are typed (suggest_controller.js): a list like the
    in-page dropdowns, as wide as the box, each row the words it searches and after them, quieter,
@@ -102,11 +89,18 @@
 .suggestion-recent svg { flex: none; color: var(--muted); }
 .suggestion-forget { width: 100%; border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--text-sm); text-align: left; cursor: pointer; }
 
-/* The welcome page's row of the listings seen lately (home.html): its heading with "Pastro" at
-   the line's end, quiet, as tall as a finger needs. */
+/* The welcome page's sections under the categories, as the canvas has them: "Shikuar së fundmi",
+   "Më të klikuarat" and the newest listings, 26px apart, each heading a browse page's section
+   title, 22px bold (19px on phones, a rem being 14px there), 12px over its cards. The listings
+   seen lately have "Pastro" at the heading's end, quiet, as tall as a finger needs, as a browse
+   page's "Të veçuara" has its note (.row-head, browse.html). */
 .row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin: 1.75rem 0 .75rem; }
 .row-head h2 { margin: 0; }
-.row-forget { flex: none; padding: .4rem .25rem; border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--text-sm); cursor: pointer; }
+.welcome ~ :is(.seen-lately, .most-viewed, .latest) { margin-top: 26px; }
+.welcome ~ .seen-lately .row-head { margin: 0; }
+.welcome ~ :is(.most-viewed, .latest) > h2,
+.welcome ~ .seen-lately .row-head h2 { margin: 0 0 12px; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
+.row-forget { flex: none; padding: .4rem .25rem; border: 0; background: none; color: var(--muted); font: inherit; font-size: .84375rem; cursor: pointer; }
 .row-forget:hover { color: var(--text); text-decoration: underline; text-underline-offset: .15em; }
 
 /* A select chosen from a list in the page (picker_controller.js) rather than the phone's own picker.
@@ -263,8 +257,8 @@
 /* The welcome page's categories, all of them at once, as pills as the canvas has them: on the grey
    of secondary controls with no outline, each as wide as its name, one after another and on to
    the next line; the icon before the name, in the name's colour (it was muted until 2026-10-10, a
-   shade apart from its label). Under the pointer or a finger a pill takes a darker grey, and a
-   press sinks it a little. */
+   shade apart from its label). Under the pointer or a finger a pill takes a darker grey; nothing
+   moves, as the design system has it. */
 .shortcuts { display: flex; flex-wrap: wrap; gap: .55rem; margin: 1.25rem 0 0; }
 /* A little bigger than the details' pills, being the way into the site. */
 .shortcut {
@@ -280,110 +274,99 @@
   font-weight: var(--medium);
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color .15s, transform .1s;
+  transition: background-color .15s;
   -webkit-tap-highlight-color: transparent;
 }
 .shortcut-icon { flex: none; }
-.shortcut:active { background: var(--surface-muted-hover); transform: scale(.97); }
+.shortcut:active { background: var(--surface-muted-hover); }
 @media (hover: hover) {
   .shortcut:hover { background: var(--surface-muted-hover); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .shortcut:active { transform: none; }
-}
-/* The welcome page's pills, their gaps and their size, which its search bar and round buttons
-   (below) take: a pill is its padding, its line and its border tall (--pill), worked out from the
-   same values as the pills, so that the bar and the buttons stay as tall as they are as they
-   change. Every pill is one size, the category pages' (browse.css, .category-path). */
-.welcome-start {
-  --row-gap: .55rem;
-  --column-gap: .55rem;
-  --pill-pad: .7rem;
-  --pill-font: var(--text-md);
-  --pill: calc(2 * var(--pill-pad) + var(--pill-font) * 1.55 + 2px);
-}
-/* The row over the categories (home.html): the search bar, which takes the width the buttons
-   leave it, then the round buttons, as tall as the pills under them and as far apart; the bar's
-   magnifier its whole height, a lighter circle at its end of the bar's own colour (above), as big
-   as the round buttons beside it. */
-.welcome-tools { display: flex; align-items: center; gap: var(--column-gap); margin-bottom: var(--row-gap); }
-.welcome-tools .welcome-form { flex: 1 1 auto; min-width: 0; height: var(--pill); padding: 0 0 0 1.2rem; box-shadow: none; }
-.welcome-tools .welcome-search { width: var(--pill); height: var(--pill); margin-right: -1px; }
-.welcome .shortcuts { gap: var(--row-gap) var(--column-gap); margin-top: 0; }
-.welcome .shortcut {
-  padding-top: var(--pill-pad);
-  padding-bottom: var(--pill-pad);
-  font-size: var(--pill-font);
-  line-height: 1.55;
-}
-/* Phones: the welcome page's categories smaller, so that three stand on a line where two did and
-   the listings come sooner: less room round the name, the name and its icon a touch smaller, the
-   gaps closer. Narrow phones, and phones with their text set larger, gain the most. A category
-   page's pills keep their size (browse.css), which its buttons follow. A finger's target is bigger
-   than the pill it sees: half the gaps round each pill (::after, which is part of the link), so
-   that its neighbours' targets meet it halfway, with no overlap and no gap between them. The
-   lines stand a little further apart than the pills on a line, so that a pill about 35 px tall is
-   about 43 to the touch (41 on the narrowest phones), and three still fit on a line. */
+/* The row over the categories (home.html), as the canvas draws it: the search bar, which takes the
+   width the buttons leave it, then "Posto" and the round buttons, 50px tall and 10px apart (46px
+   and 8px on phones); the categories' pills 10px under them, 44px tall, 8px apart, their names
+   15px beside an icon of 18px. */
+.welcome-tools { display: flex; align-items: center; gap: 10px; }
+.welcome-tools .welcome-form { flex: 1 1 auto; min-width: 0; }
+.welcome .shortcuts { gap: var(--space-8); margin-top: 10px; }
+.welcome .shortcut { min-height: 44px; padding: 0 16px; gap: var(--space-8); font-size: .9375rem; line-height: 1.3; }
+/* Phones: the bar, "Posto" (its plus alone, round, its word kept for screen readers) and the round
+   buttons 46px; the pills 36px, 7px apart, their names 14px (a rem there) beside an icon of 16px,
+   so that three stand on a line where two would and the listings come sooner. A finger's target
+   is bigger than the pill it sees: half the gaps round each pill (::after, which is part of the
+   link), so that its neighbours' targets meet it halfway, a pill of 36px 43 to the touch. */
 @media (max-width: 719px) {
-  .welcome-start { --column-gap: .45rem; --pill-pad: .45rem; --pill-font: .9375rem; }
-  .welcome .shortcut { position: relative; gap: .4rem; padding: var(--pill-pad) .85rem var(--pill-pad) .7rem; font-size: var(--pill-font); }
-  /* From the border's outer edge. */
-  .welcome .shortcut::after {
-    content: "";
-    position: absolute;
-    inset: calc(var(--row-gap) / -2 - 1px) calc(var(--column-gap) / -2 - 1px);
-  }
-  .welcome .shortcut-icon { width: 18px; height: 18px; }
+  .welcome-tools { gap: var(--space-8); }
+  .welcome-form { height: var(--size-round); padding: 0 4px 0 16px; }
+  .welcome-search { width: 36px; height: 36px; }
+  .welcome .shortcuts { gap: 7px; }
+  .welcome .shortcut { position: relative; min-height: 36px; padding: 0 12px; gap: 7px; font-size: 1rem; }
+  .welcome .shortcut::after { content: ""; position: absolute; inset: -3.5px; }
+  .welcome .shortcut-icon { width: 16px; height: 16px; }
+}
+
+/* "Posto", the site's main thing to do, after the search, as the canvas has it: a pill 50px tall,
+   a plus and the word, in the main colour with white words on the light theme and in the accent
+   with dark ones on the dark (--post, --on-post); on phones the plus alone, round, 46px. */
+.welcome-post {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  height: var(--size-button-lg);
+  padding: 0 20px 0 16px;
+  border-radius: var(--radius-pill);
+  background: var(--post);
+  color: var(--on-post);
+  font-size: .9375rem;
+  font-weight: var(--semibold);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.welcome-post svg { flex: none; }
+@media (hover: hover) {
+  .welcome-post:hover { background: var(--post-hover); }
+}
+@media (max-width: 719px) {
+  .welcome-post { width: var(--size-round); height: var(--size-round); padding: 0; }
+  .welcome-post svg { width: 19px; height: 19px; }
+  .welcome-post-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 
 
-/* The round buttons in the row with the search (home.html, .welcome-tools), as tall as the
-   categories' pills under them (--pill): the one for posting a listing, then the listings kept and
-   the conversations, which no top bar holds (it has the account and the theme, base.html): the
-   listings kept and the conversations plain (.plain-shortcut), on the grey of secondary controls
-   with no outline and their icon in the text's colour, and posting filled (.post-shortcut); a
-   circle's colour (--tone) and its fill (--tone-bg) say which. Their icons are the
-   pills' size beside them. On a phone a finger's target is bigger than the button, as a pill's
-   is (::after, from the gaps). */
+/* The round buttons in the row with the search (home.html, .welcome-tools), after "Posto": the
+   listings kept and the conversations, which no top bar holds here (it has the account and the
+   theme, base.html), as the canvas draws them: grey circles of 50px (46px on phones) with no
+   outline (.plain-shortcut), their icons 20px (19px) in the text's colour, a shade darker under
+   the pointer or a press. The ring round the conversations' count and the kept listings' dot is
+   that grey (--tone-bg). */
 .circle-shortcut {
   position: relative;
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: var(--pill);
-  height: var(--pill);
+  width: var(--size-button-lg);
+  height: var(--size-button-lg);
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--tone) 60%, transparent);
-  border-radius: 999px;
+  border: 0;
+  border-radius: var(--radius-pill);
   background: var(--tone-bg);
   color: var(--tone);
   font: inherit;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color .15s, border-color .15s, transform .1s;
+  transition: background-color .15s;
   -webkit-tap-highlight-color: transparent;
 }
 .circle-icon { flex: none; }
-.circle-shortcut:active { border-color: var(--tone); transform: scale(.94); }
+.plain-shortcut { --tone: var(--text); --tone-bg: var(--surface-muted); }
+.plain-shortcut:active { background: var(--surface-muted-hover); }
 @media (hover: hover) {
-  .circle-shortcut:hover { border-color: var(--tone); }
-}
-/* The plain ones: the grey of secondary controls, the icon in the text's colour, a shade darker
-   under the pointer or a press. The ring round the conversations' count and the kept listings' dot
-   is that grey then. */
-.plain-shortcut { --tone: var(--text); --tone-bg: var(--surface-muted); border-color: transparent; }
-.plain-shortcut:active { border-color: transparent; background: var(--surface-muted-hover); }
-@media (hover: hover) {
-  .plain-shortcut:hover { border-color: transparent; background: var(--surface-muted-hover); }
-}
-/* Posting a listing, the site's main thing to do ("Posto"): the one round button filled, in the
-   main colour with its plus white on the light theme, in the accent, lime, with its plus dark on
-   the dark one (--post, --on-post). */
-.post-shortcut { --tone: var(--on-post); --tone-bg: var(--post); border-color: transparent; }
-.post-shortcut:active { border-color: transparent; background: var(--post-hover); }
-@media (hover: hover) {
-  .post-shortcut:hover { border-color: transparent; background: var(--post-hover); }
+  .plain-shortcut:hover { background: var(--surface-muted-hover); }
 }
 /* The conversations' count of those unread (messages.css), on the circle's edge, ringed in the
    button's grey. */
@@ -403,14 +386,7 @@
   background: var(--highlight);
   box-shadow: 0 0 0 2px var(--tone-bg), var(--dot-edge);
 }
-@media (prefers-reduced-motion: reduce) {
-  .circle-shortcut:active { transform: none; }
-}
 @media (max-width: 719px) {
-  .circle-icon { width: 18px; height: 18px; }
-  .circle-shortcut::after {
-    content: "";
-    position: absolute;
-    inset: calc(var(--row-gap) / -2 - 1px) calc(var(--column-gap) / -2 - 1px);
-  }
+  .circle-shortcut { width: var(--size-round); height: var(--size-round); }
+  .circle-icon { width: 19px; height: 19px; }
 }

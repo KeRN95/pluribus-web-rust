@@ -154,10 +154,10 @@ impl Cards {
     }
 }
 
-/// How wide a card shows in a row of five or more that slides sideways (.card-row in page.css), as
-/// Cards::sizes says it for the grid: 2.25 cards across the page on a phone, 3.25 from 724px, 4.25
-/// from 960px, the gaps between them as the grid's.
-const ROW_SIZES: &str = "(min-width: 1100px) 236px, (min-width: 960px) calc((100vw - 96px) / 4.25), (min-width: 724px) calc((100vw - 80px) / 3.25), (min-width: 720px) calc((100vw - 64px) / 2.25), calc((100vw - 49px) / 2.25)";
+/// How wide a card shows in a row that slides sideways (.card-row in page.css), as Cards::sizes says
+/// it for the grid: 236px, and 180px on a phone, as the design system has its shelves, however
+/// wide the screen and however many cards.
+const ROW_SIZES: &str = "(min-width: 720px) 236px, 180px";
 
 /// How wide a big card's photo needs to be when it is wider than tall: the card's frame is 4:3
 /// (page.css, .cards-big), so it cuts a wide photo at its sides and scales it by its height, three
@@ -234,21 +234,20 @@ impl ListingPage {
         self
     }
 
-    /// How wide its cards' photos show (Cards::sizes): in a row of five cards or more (card_row.html),
-    /// a quarter of the next card showing at its edge, narrower than a column of the grid
-    /// (ROW_SIZES); a shorter row's are as wide as the grid's.
+    /// How wide its cards' photos show (Cards::sizes): in a row that slides sideways (card_row.html),
+    /// the row's cards' width (ROW_SIZES); in the grid, as wide as its layout has them.
     pub fn sizes(&self) -> &'static str {
-        if self.full_row() { ROW_SIZES } else { self.layout.sizes() }
+        if self.in_row() { ROW_SIZES } else { self.layout.sizes() }
     }
 
     /// How wide one of its cards' photos needs to be: as wide as it shows (`sizes`), or, in a big
     /// card, a photo wider than tall three quarters of that (BIG_LANDSCAPE_SIZES).
     pub fn sizes_of(&self, slide: &Slide) -> &'static str {
-        if self.layout == Cards::Big && slide.landscape && !self.full_row() { BIG_LANDSCAPE_SIZES } else { self.sizes() }
+        if self.layout == Cards::Big && slide.landscape && !self.in_row() { BIG_LANDSCAPE_SIZES } else { self.sizes() }
     }
 
-    fn full_row(&self) -> bool {
-        self.card_ids != LISTING_IDS && self.cards.len() >= 5
+    fn in_row(&self) -> bool {
+        self.card_ids != LISTING_IDS
     }
 
     /// The page's class for how its cards show: none for small ones.

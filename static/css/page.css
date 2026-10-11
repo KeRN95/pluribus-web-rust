@@ -27,24 +27,20 @@
    space between rows, clearly more than inside a card, is what keeps each one together. */
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem .75rem; }
 
-/* A row of the same cards that slides sideways (card_row.html): the welcome page's "Më të
-   klikuarat", a category's, a seller's other listings. Each
-   card as wide as a column of the grid under them, two on a phone, three on a tablet, four on a
-   wide screen (the container queries follow the grid's auto-fill), the row sliding sideways a
-   card at a time when there are more cards than columns; then the cards narrow a little, so that a
-   quarter of the next one shows at the edge. A row of flex items rather than a grid's columns.
-   The padding, which the margin takes back, keeps a card's hover panel and focus
-   ring clear of the sliding box's edges. No bar under it, on any screen: a finger slides it, the
-   next card showing at its edge, and a mouse drags it (drag_row_controller.js): a hand to grab it
-   by, closed while it drags, no text to select on the way, no snapping to pull it back to a card
-   where it stops, and the card it was grabbed by not looking pressed; the wheel scrolls the page. */
-:has(> .card-row) { container-type: inline-size; }
+/* A row of the same cards that slides sideways (card_row.html): the welcome page's "Shikuar së
+   fundmi" and "Më të klikuarat", a category's, a seller's other listings. As the design system
+   has shelves: cards 236px wide, 16px apart (180px and 12px on phones), so that on the page's
+   column four stand whole and the next one shows at the edge; on phones the row runs on to the
+   screen's edge, its last card stopping at the page's side once slid to the end. A row of flex
+   items rather than a grid's columns. The padding, which the margin takes back, keeps a card's
+   hover panel and focus ring clear of the sliding box's edges. No bar under it, on any screen: a
+   finger slides it, the next card showing at its edge, and a mouse drags it
+   (drag_row_controller.js): a hand to grab it by, closed while it drags, no text to select on the
+   way, no snapping to pull it back to a card where it stops, and the card it was grabbed by not
+   looking pressed; the wheel scrolls the page. */
 .card-row {
-  --across: 2;
-  --gaps: 1;
-  --gap: .75rem;
   display: flex;
-  gap: var(--gap);
+  gap: var(--space-16);
   margin: -.5rem;
   padding: .5rem;
   overflow-x: auto;
@@ -57,28 +53,18 @@
 .card-row::-webkit-scrollbar { display: none; }
 .card-row > .card {
   flex: none;
-  width: calc((100% - var(--gaps) * var(--gap)) / var(--across));
+  width: 236px;
   scroll-snap-align: start;
 }
-@media (min-width: 720px) {
-  .card-row { --gap: 1rem; }
+@media (max-width: 719px) {
+  .card-row { gap: var(--space-12); margin-right: calc(-1 * var(--gutter)); padding-right: var(--gutter); }
+  .card-row > .card { width: 180px; }
 }
 @media (hover: hover) and (pointer: fine) {
   .card-row { scroll-snap-type: none; cursor: grab; user-select: none; }
   .card-row.is-dragging,
   .card-row.is-dragging * { cursor: grabbing; }
   .card-row.is-dragging .card:active { outline: none; }
-}
-@container (width < 692px) {
-  .card-row:has(> .card:nth-child(3)) { --across: 2.25; --gaps: 2; }
-}
-@container (692px <= width < 928px) {
-  .card-row { --across: 3; --gaps: 2; }
-  .card-row:has(> .card:nth-child(4)) { --across: 3.25; --gaps: 3; }
-}
-@container (width >= 928px) {
-  .card-row { --across: 4; --gaps: 3; }
-  .card-row:has(> .card:nth-child(5)) { --across: 4.25; --gaps: 4; }
 }
 
 /* A listing card: no box of its own, just the photo with all four corners rounded and the price

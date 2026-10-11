@@ -800,23 +800,26 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(body.contains(r#"<form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest""#));
     assert!(body.contains(r#"<input id="welcome-q" type="search" name="q""#));
     assert!(body.contains(r#"<div class="suggestions" id="welcome-suggestions" role="listbox""#));
-    // The search button is a magnifier at the end of the field's pill, as in Claude's app.
+    // The search button is a magnifier at the end of the field's pill, in the accent; the field
+    // asks the page's question.
     assert!(body.contains(r#"<button type="submit" class="icon-button welcome-search" aria-label="Kërko""#));
-    // The search leads a row of its own over the categories, with the round buttons the other
-    // pages have in no top bar: the plus, filled ("Posto"), then the listings kept and the
-    // conversations, plain, in that row and nowhere else on the page; no button opens the search,
-    // which stands open.
+    assert!(body.contains(r#"placeholder="Çfarë po kërkon?""#));
+    // The search leads a row of its own over the categories, with "Posto", a pill with its word
+    // (the plus alone on phones), and the round buttons the other pages have in no top bar: the
+    // listings kept and the conversations, plain, in that row and nowhere else on the page; no
+    // button opens the search, which stands open.
     // The theme is in the top bar (below), not among them.
     let nav = body.find(r#"<nav class="shortcuts" aria-label="Kategoritë">"#).unwrap();
     let row = positions(&body, &[
         r#"<div class="welcome-tools">"#,
         r#"<form class="welcome-form""#,
-        r#"<a class="circle-shortcut post-shortcut" href="/shto" aria-label="Shto njoftim""#,
+        r#"<a class="welcome-post" href="/shto">"#,
         r#"<a class="circle-shortcut plain-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#,
         r#"<a class="circle-shortcut plain-shortcut inbox-shortcut" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">"#,
     ]);
     assert!(row.is_sorted() && row[4] < nav, "{row:?} before {nav}");
-    assert_eq!(body.matches("circle-shortcut").count(), 3, "{body}");
+    assert_eq!(body.matches("circle-shortcut").count(), 2, "{body}");
+    assert!(body.contains(r#"<span class="welcome-post-word">Posto</span>"#));
     assert!(!body.contains("theme-shortcut"));
     assert!(!body.contains("search-shortcut") && !body.contains("welcome-search-panel") && !body.contains("welcome-scrim"));
     // Then every category's pill straight in the list, no group round any of them, so that they
@@ -1355,12 +1358,12 @@ async fn prona_shows_big_cards_until_the_visitor_chooses_small_ones_there(pool: 
 }
 
 /// How wide the cards' photos show, for the browser to pick a copy (Cards::sizes in browse.rs): a
-/// column of the grid, a big card, the list's photo, and a card in a row of five or more
+/// column of the grid, a big card, the list's photo, and a card in a row that slides sideways
 /// (ROW_SIZES).
 const SMALL_SIZES: &str = "(min-width: 1100px) 255px, (min-width: 960px) calc((100vw - 80px) / 4), (min-width: 724px) calc((100vw - 64px) / 3), (min-width: 720px) calc((100vw - 48px) / 2), calc((100vw - 38px) / 2)";
 const BIG_SIZES: &str = "(min-width: 1100px) 522px, (min-width: 960px) calc((100vw - 56px) / 2), (min-width: 720px) 640px, (min-width: 588px) 560px, calc(100vw - 28px)";
 const LIST_SIZES: &str = "(min-width: 720px) 194px, 123px";
-const ROW_SIZES: &str = "(min-width: 1100px) 236px, (min-width: 960px) calc((100vw - 96px) / 4.25), (min-width: 724px) calc((100vw - 80px) / 3.25), (min-width: 720px) calc((100vw - 64px) / 2.25), calc((100vw - 49px) / 2.25)";
+const ROW_SIZES: &str = "(min-width: 720px) 236px, 180px";
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn big_cards_slide_through_every_photo(pool: PgPool) {
@@ -4594,7 +4597,7 @@ async fn buttons_are_pills_in_the_main_colour_or_the_grey(pool: PgPool) {
     assert!(rule(".button.secondary").contains("background:var(--surface-muted)"));
     assert!(rule(".button.danger").contains("color:var(--danger)"));
     assert!(rule(".button.small").contains("min-height:var(--size-button-sm)"));
-    assert!(rule(".post-shortcut").contains("--tone-bg:var(--post)"));
+    assert!(rule(".welcome-post").contains("background:var(--post)"));
     let dark = &css[css.find(r#":root[data-theme="dark"]{"#).expect("the dark theme")..];
     assert!(dark[..dark.find('}').unwrap()].contains("--post:var(--highlight);"));
 }
@@ -6877,9 +6880,9 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     // A row of cards (card_row.html), its cards' ids its own; the cards of the grid's, small,
     // those of the browse pages.
     assert!(row.contains(r#"<div class="card-row"><article class="card" id="most-viewed-1002">"#), "{row}");
-    // Two cards are as wide as a column of the grid, and their photos are fetched for it; the
-    // first one's before anything else on the page.
-    assert!(row.contains(&format!(r#"sizes="{SMALL_SIZES}""#)), "{row}");
+    // Two cards are as wide as every row's, 236px (180px on phones), and their photos are fetched
+    // for it; the first one's before anything else on the page.
+    assert!(row.contains(&format!(r#"sizes="{ROW_SIZES}""#)), "{row}");
     assert_eq!(home.matches(r#"fetchpriority="high""#).count(), 1);
     let first = &row[row.find(r#"<article class="card""#).unwrap()..];
     assert!(first[..first.find("</article>").unwrap()].contains(r#"fetchpriority="high""#), "{row}");
@@ -6939,8 +6942,8 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
     assert_eq!(row(&html(pool.clone(), "/c/makina").await), [1001, 1002]);
     assert_eq!(row(&html(pool.clone(), "/c/apartamente").await), [1003]);
     assert_eq!(row(&html(pool.clone(), "/c/vila-dhe-shtepi").await), [1004]);
-    // The welcome page's has all five, a row of five or more, a quarter of the next card showing
-    // at its edge: its photos are fetched narrower than a column of the grid (ROW_SIZES).
+    // The welcome page's has all five, the next card showing at the row's edge: its photos are
+    // fetched as wide as a row's cards, narrower than a column of the grid (ROW_SIZES).
     let home = html(pool.clone(), "/").await;
     let all = section(&home, "most-viewed-heading");
     assert_eq!(all.matches(r#"<article class="card""#).count(), 5, "{all}");

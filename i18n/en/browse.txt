@@ -21,6 +21,10 @@ Shto njoftim
 Kategoritë
 = Categories
 
+# The welcome page's button for posting, after its search (home.html).
+Posto
+= Post
+
 Shikuar së fundmi
 = Recently viewed
 
