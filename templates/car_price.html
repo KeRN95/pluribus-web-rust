@@ -1,15 +1,19 @@
-{#- A car's price against what cars of its model and year ask (car_prices.rs): a bubble like
-    "Llogarit kredinë" in the colour of the verdict, green for a good price, yellow about the
-    middle, red over it, which opens what it comes from in a card under it: the median and the
-    middle half's prices, from how many cars, and what moves a car's price besides. A tap outside
-    or Escape closes it (dropdown_controller.js). -#}
+{#- A car's price against what cars of its model and year ask (car_prices.rs): a round button
+    beside "Llogarit kredinë", at its end, its tag alone, on the colour of the verdict, green for a
+    good price, yellow about the middle, red over it (a light one with our black tag on the light
+    theme, a deeper one with our white tag on the dark, as the user asked on 2026-10-11; it was a
+    bubble with the verdict's words, under the price, until then), the verdict said to screen
+    readers and under the pointer. It opens what it comes from in a card under it: the verdict,
+    the median and the middle half's prices, from how many cars, and what moves a car's price
+    besides. A tap outside or Escape closes it (dropdown_controller.js). -#}
 <details class="bubble car-price {{ car.tone() }}" data-controller="dropdown">
-  <summary title="{{ crate::t("Si krahasohet") }}">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PRICE_TAG|safe }}</svg>
-    {{ car.words() }}
+  <summary title="{{ crate::t("Si krahasohet") }}: {{ car.words() }}">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">{{ crate::web::icons::PRICE_TAG|safe }}</svg>
+    <span class="visually-hidden">{{ car.words() }}</span>
   </summary>
   <div class="bubble-card car-price-card">
     <p class="bubble-title">{{ crate::t("Si krahasohet") }}</p>
+    <p class="car-price-verdict">{{ car.words() }}</p>
     <dl class="bubble-sum">
       <div><dt>{{ crate::t("Mesatarja") }}</dt><dd>{{ car.median }}</dd></div>
       <div><dt>{{ crate::t("Shumica kërkojnë") }}</dt><dd>{{ car.range }}</dd></div>

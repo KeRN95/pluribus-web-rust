@@ -3246,6 +3246,18 @@ async fn a_cars_price_is_compared_with_what_cars_of_its_model_and_year_ask(pool:
     let page = get(pool.clone(), golf).await.body;
     assert!(page.contains(r#"<details class="bubble car-price price-near" data-controller="dropdown">"#), "{page}");
     assert!(page.contains("Rreth mesatares"));
+    // A circle beside "Llogarit kredinë", after it, its tag alone, on the verdict's colour (a light
+    // one under our black on the light theme, a deeper one under our white on the dark), the
+    // verdict said to screen readers and under the pointer, and first in its card: the user's ask
+    // of 2026-10-11.
+    assert!(page.contains(r#"<div class="price-row with-car">"#), "{page}");
+    assert!(page.find(r#"<details class="bubble loan""#).unwrap() < page.find(r#"<details class="bubble car-price"#).unwrap());
+    assert!(page.contains(r#"<summary title="Si krahasohet: Rreth mesatares">"#), "{page}");
+    assert!(page.contains(r#"<span class="visually-hidden">Rreth mesatares</span>"#), "{page}");
+    assert!(page.contains(r#"<p class="car-price-verdict">Rreth mesatares</p>"#), "{page}");
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    assert!(css.contains(".car-price:is(.price-below,.price-near,.price-above) > summary{background:var(--tone-fill);color:var(--text);}"));
+    assert!(css.contains("--near-fill:#f8e3a0;") && css.contains("--near-fill:#85660a;"));
     assert!(page.contains("<div><dt>Mesatarja</dt><dd>10\u{a0}300\u{a0}€</dd></div>"), "{page}");
     assert!(page.contains("<div><dt>Shumica kërkojnë</dt><dd>9\u{a0}500–11\u{a0}400\u{a0}€</dd></div>"), "{page}");
     assert!(page.contains("Nga 10 Volkswagen Golf 2014–2018 në shitje, pa makinat për pjesë."), "{page}");

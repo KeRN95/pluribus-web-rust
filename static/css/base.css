@@ -95,6 +95,11 @@
   --near-bg: #fbefc6;
   --above: #b42318;
   --above-bg: #fbe5e1;
+  /* A button in the colour of a verdict (a car's price, car_price.html): light, under our black
+     icon; a deeper red, yellow or green on the dark theme, under our white one. */
+  --below-fill: #d3e6c0;
+  --near-fill: #f8e3a0;
+  --above-fill: #f7d0c9;
   /* A promoted card's panel: a warm yellow, the one colour the greys leave the cards. */
   --promo: #f9f2dc;
   --promo-edge: rgb(187 139 27 / 35%);
@@ -226,6 +231,9 @@
   --near-bg: #463b1f;
   --above: #fb8a80;
   --above-bg: #4b2c2a;
+  --below-fill: #4c6b33;
+  --near-fill: #85660a;
+  --above-fill: #a8352b;
   --promo: #2f2a17;
   --promo-edge: rgb(240 199 90 / 30%);
   --below-note: #bccf9f;
@@ -284,6 +292,9 @@
     --near-bg: #463b1f;
     --above: #fb8a80;
     --above-bg: #4b2c2a;
+    --below-fill: #4c6b33;
+    --near-fill: #85660a;
+    --above-fill: #a8352b;
     --promo: #2f2a17;
     --promo-edge: rgb(240 199 90 / 30%);
     --below-note: #bccf9f;

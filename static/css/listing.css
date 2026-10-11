@@ -693,34 +693,47 @@
 .area-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw / var(--page-scale) - 2rem)); }
 /* In a zone with an average, how the square metre compares with it, under the sum: a dot and the
    words in the bubble's colour. */
-.area-price-verdict { display: flex; align-items: center; gap: .45rem; margin: .5rem 0 0; color: var(--tone); font-weight: var(--semibold); }
-.area-price-verdict::before { content: ""; flex: none; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
+:is(.area-price-verdict, .car-price-verdict) { display: flex; align-items: center; gap: .45rem; margin: .5rem 0 0; color: var(--tone); font-weight: var(--semibold); }
+:is(.area-price-verdict, .car-price-verdict)::before { content: ""; flex: none; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
 /* In a zone with an average (zone_area_prices), the bubble takes the colour of how its square
    metre compares: green 200 € or more under it, red as much over it, yellow in between
    (ZONE_MARGIN_EUR, listings.rs); a car's, of how its price compares with what cars of its
    model and year ask: green 15 % or more under the median, red as much over (car_prices.rs). */
-:is(.area-price, .car-price).price-below { --tone: var(--below); --tone-bg: var(--below-bg); }
-:is(.area-price, .car-price).price-near { --tone: var(--near); --tone-bg: var(--near-bg); }
-:is(.area-price, .car-price).price-above { --tone: var(--above); --tone-bg: var(--above-bg); }
+:is(.area-price, .car-price).price-below { --tone: var(--below); --tone-bg: var(--below-bg); --tone-fill: var(--below-fill); }
+:is(.area-price, .car-price).price-near { --tone: var(--near); --tone-bg: var(--near-bg); --tone-fill: var(--near-fill); }
+:is(.area-price, .car-price).price-above { --tone: var(--above); --tone-bg: var(--above-bg); --tone-fill: var(--above-fill); }
 :is(.area-price, .car-price):is(.price-below, .price-near, .price-above) > summary {
   background: var(--tone-bg);
   color: var(--tone);
 }
 :is(.area-price, .car-price):is(.price-below, .price-near, .price-above) > summary:hover,
 :is(.area-price, .car-price):is(.price-below, .price-near, .price-above)[open] > summary { background: color-mix(in srgb, var(--tone) 12%, var(--tone-bg)); }
-/* A car's price against what cars of its model and year ask: its card under it, as wide as what
-   it says. */
+/* A car's price against what cars of its model and year ask: a circle as tall as "Llogarit
+   kredinë", at its end, the tag alone in it, 20px, on the verdict's colour (--tone-fill: a light
+   red, yellow or green under our black on the light theme, a deeper one under our white on the
+   dark: the user's ask of 2026-10-11), a shade of the words' colour mixed in under the pointer and
+   while open; its card under it from its right edge, as wide as what it says, the verdict first
+   in its colour. */
 .car-price { position: relative; width: fit-content; }
 .price-box > .car-price { margin-top: 10px; }
+.car-price > summary { justify-content: center; width: var(--size-button); height: var(--size-button); padding: 0; }
+.car-price > summary > svg { flex: none; width: 20px; height: 20px; }
+.car-price:is(.price-below, .price-near, .price-above) > summary { background: var(--tone-fill); color: var(--text); }
+.car-price:is(.price-below, .price-near, .price-above) > summary:hover,
+.car-price:is(.price-below, .price-near, .price-above)[open] > summary { background: color-mix(in srgb, var(--text) 10%, var(--tone-fill)); }
 .car-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw / var(--page-scale) - 2rem)); }
-/* The price's block, as the canvas has it: the price on a line of its own, a car's bubble under it,
-   10px down, and 12px under those "Llogarit kredinë", a grey pill 48px tall the line's whole width,
-   its calculator's icon muted before its words; or, beside what a square metre costs, a pill as
-   tall, each half the line. */
+.car-price .bubble-card { right: 0; left: auto; transform-origin: top right; }
+.car-price-verdict { margin: 0 0 .6rem; }
+/* The price's block, as the canvas has it: the price on a line of its own, and 12px under it
+   "Llogarit kredinë", a grey pill 48px tall the line's whole width, its calculator's icon muted
+   before its words; or, beside what a square metre costs, a pill as tall, each half the line; or
+   the line but a car's price's circle at its end, 8px off (which stays at the pill's side, on
+   top, while the calculator is open under the pill). */
 .price-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 8px; }
 .price-row > .listing-price { flex-basis: 100%; }
-.price-row > .car-price { flex-basis: 100%; margin-top: -2px; }
+.price-row > .car-price { flex: none; align-self: flex-start; }
 .loan { flex: 1 1 100%; min-width: 0; }
+.price-row.with-car > .loan { flex-basis: 0; }
 .loan > summary,
 .price-row.with-area > .area-price > summary {
   display: flex;
