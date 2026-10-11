@@ -99,6 +99,26 @@ function keepFieldsUnzoomed() {
 keepFieldsUnzoomed();
 document.addEventListener("turbo:load", keepFieldsUnzoomed);
 
+// On a phone the bar's search row tucks away as the page scrolls down and comes back as it scrolls
+// up, the bar's own row staying (the user's ask of 2026-10-11, "when i scroll down i want the search
+// bar to hide in mobile"; base.css, .search-tucked): a move of 8px or more says which way, and it
+// tucks only past the bar's own height down the page; never while the search has the focus, nor in
+// a bar whose search is folded (a listing's, which opens it by the magnifier). A page Turbo keeps
+// is kept with its search out.
+const BAR_PHONE = matchMedia("(max-width: 719px)");
+let barScroll = scrollY;
+addEventListener("scroll", () => {
+  const y = scrollY;
+  if (Math.abs(y - barScroll) < 8 && y > 0) return;
+  const down = y > barScroll;
+  barScroll = y;
+  const bar = document.querySelector("body > .site-header");
+  if (!bar || bar.classList.contains("search-folded")) return;
+  bar.classList.toggle("search-tucked", BAR_PHONE.matches && down && y > 120 && !bar.querySelector(".top-search:focus-within"));
+}, { passive: true });
+document.addEventListener("turbo:load", () => { barScroll = scrollY; });
+document.addEventListener("turbo:before-cache", () => document.querySelector("body > .site-header")?.classList.remove("search-tucked"));
+
 // The copy of the page Turbo keeps for going back has new <img>s. Lazy and decoded aside, as the
 // cards' photos are, Safari paints them empty and fills them in a moment later, which shows after
 // a swipe back (the button's cross-fade hides it). Photos the page has already loaded go into the
@@ -343,7 +363,7 @@ function standIn(link) {
   // magnifier (base.css, .search-folded), any other's with its search there, and none with the
   // front page's "Posto", its bar's alone (home.html, header_post).
   const bar = page.body.querySelector(".site-header");
-  bar?.classList.remove("search-open");
+  bar?.classList.remove("search-open", "search-tucked");
   bar?.classList.toggle("search-folded", Boolean(card));
   bar?.querySelector(".header-post")?.remove();
   const main = Object.assign(page.createElement("main"), { className: "container" });

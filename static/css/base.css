@@ -616,6 +616,27 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .header-inner:has(> .top-search) { grid-template-rows: var(--size-header-row) var(--size-button-sm); padding-bottom: 8px; }
   .header-inner > .top-search { grid-column: 1 / -1; grid-row: 2; max-width: none; margin: 0 8px; }
 }
+/* On a phone that row tucks away as the page scrolls down and comes back as it scrolls up, the
+   bar's own row staying where it is, as the user wants the bar (the user's ask of 2026-10-11,
+   "when i scroll down i want the search bar to hide in mobile"; application.js sets
+   .search-tucked): the bar clipped to its first row as the search fades, a hairline under the row
+   then, the page under the bar showing where the search was. Nothing moves: the bar keeps its
+   place and its height in the page. The clip is there at rest too, the whole bar, so that it
+   slides; none while the search has the focus, so that its suggestions show under it. */
+@media (max-width: 719px) {
+  .site-header:has(> .header-inner > .top-search) { clip-path: inset(0); transition: clip-path .2s ease; }
+  .site-header:has(.top-search:focus-within) { clip-path: none; }
+  .site-header.search-tucked:has(> .header-inner > .top-search) { clip-path: inset(0 0 calc(var(--size-button-sm) + 9px) 0); }
+  .header-inner > .top-search { transition: opacity .2s ease; }
+  .search-tucked .header-inner > .top-search { opacity: 0; }
+  .site-header::after { content: ""; position: absolute; top: calc(var(--size-header-row) - 1px); right: 0; left: 0; height: 1px; background: var(--border); opacity: 0; transition: opacity .2s ease; pointer-events: none; }
+  .site-header.search-tucked::after { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-header,
+  .header-inner > .top-search,
+  .site-header::after { transition: none; }
+}
 /* The bar's start (the logo, and the type trial's "Ff") and its end (the account). From 720px up the
    bar runs the screen's width, the menu's lines over the rail (below) and the logo where the page
    beside the rail starts; its start and end then grow alike, never narrower than what they hold,

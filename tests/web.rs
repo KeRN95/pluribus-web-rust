@@ -4906,6 +4906,31 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
     }
 }
 
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn a_phones_bar_tucks_its_search_away_on_the_way_down(pool: PgPool) {
+    // On a phone the bar's search row tucks away as the page scrolls down and comes back as it
+    // scrolls up, the bar's own row staying (the user's ask of 2026-10-11, "when i scroll down i
+    // want the search bar to hide in mobile"): the bar clipped to its first row, the search fading,
+    // a hairline under the row, nothing moving; not while the search has the focus, nor on a
+    // listing's page, whose search folds behind the magnifier. A stand-in's bar and a page Turbo
+    // keeps have it out. (The stylesheet and the scripts come minified.)
+    let version = marketplace::web::asset_version();
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={version}")).await.body;
+    for rule in [
+        ".site-header:has(> .header-inner > .top-search){clip-path:inset(0);transition:clip-path .2s ease;}",
+        ".site-header:has(.top-search:focus-within){clip-path:none;}",
+        ".site-header.search-tucked:has(> .header-inner > .top-search){clip-path:inset(0 0 calc(var(--size-button-sm) + 9px) 0);}",
+        ".search-tucked .header-inner > .top-search{opacity:0;}",
+        ".site-header.search-tucked::after{opacity:1;}",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    let application = get(pool, &format!("/static/js/application.js?v={version}")).await.body;
+    for part in ["`search-tucked`", "matchMedia(`(max-width: 719px)`)", "`.top-search:focus-within`", "`search-folded`", "`search-open`,`search-tucked`"] {
+        assert!(application.contains(part), "{part} in {application}");
+    }
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_listing_folds_the_bars_search_behind_a_magnifier(pool: PgPool) {
     // A listing's page has no search in its bar, but its magnifier just before the account, which
@@ -5183,10 +5208,11 @@ async fn the_way_back_is_a_chevron_level_with_its_words(pool: PgPool) {
     }
     assert!(!css.contains("--highlight-knob"));
     // On phones the bar's search has a row of the bar to itself, the whole of it, the bar's height
-    // (--size-header) growing with it; in use it has no edge or ring round it.
+    // (--size-header) growing with it; in use it has no edge or ring round it (the bar only drops
+    // its clip then, a_phones_bar_tucks_its_search_away_on_the_way_down).
     assert!(css.contains(".header-inner > .top-search{grid-column:1 / -1;grid-row:2;"));
     assert!(css.contains(":root:has(.header-inner > .top-search){--size-header:calc(var(--size-header-row) + var(--size-button-sm) + 8px);}"));
-    assert!(!css.contains(".top-search:focus-within"));
+    assert!(!css.contains(".top-search:focus-within{"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
