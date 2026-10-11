@@ -233,15 +233,23 @@
 .notice-setting { display: flex; align-items: flex-start; gap: 12px; font-weight: var(--semibold); cursor: pointer; }
 .notice-setting input { margin: 0; }
 .notice-setting .field-hint { display: block; margin-top: 3px; font-weight: var(--regular); }
-/* Each listing's buttons, 34px, 6px apart, at the row's end on lines that wrap; on a phone under
-   the photo and the rest, from the row's start. */
-.my-listing-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 330px; }
+/* Each listing's buttons, 34px, 6px apart, at the row's end: first, on one line, edit, take down
+   or put back up, and delete as circles, their icons alone, 17px (the user's ask of 2026-10-11);
+   under them the rest, in words, on lines that wrap. On a phone under the photo and the rest, from
+   the row's start. */
+.my-listing-actions { display: grid; justify-items: end; gap: 6px; max-width: 330px; }
+.my-listing-tools,
+.my-listing-more { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.my-listing-tools { flex-wrap: nowrap; }
 .my-listing-actions form { display: contents; }
 .my-listing-actions .button.small { min-height: 34px; padding: 0 14px; font-size: .84375rem; }
+.my-listing-tools .button.small { width: 34px; padding: 0; }
+.my-listing-tools svg { flex: none; }
 @media (max-width: 719px) {
   .account.my-listings-page { padding-top: 18px; }
   .my-listing { grid-template-columns: 64px minmax(0, 1fr); align-items: start; gap: 12px; }
-  .my-listing-actions { grid-column: 1 / -1; justify-content: flex-start; max-width: none; }
+  .my-listing-actions { grid-column: 1 / -1; justify-items: start; max-width: none; }
+  :is(.my-listing-tools, .my-listing-more) { justify-content: flex-start; }
   .my-stats { gap: 8px; }
   .my-stat { padding: 12px; }
   .my-stat dt { font-size: .8125rem; }

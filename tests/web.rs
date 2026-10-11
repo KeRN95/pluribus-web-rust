@@ -4661,6 +4661,14 @@ async fn sellers_edit_their_own_listings(pool: PgPool) {
     let mine = get_with_cookie(pool, "/njoftimet-e-mia", &ana).await.body;
     assert!(mine.contains("Samsung Galaxy S21, 256 GB"));
     assert!(mine.contains(&format!(r#"href="/listing/{no}/ndrysho""#)));
+    // Editing it, taking it down and deleting it are round buttons, their icons alone, their
+    // words said to screen readers and under the pointer, on one line; the rest under them, in
+    // words (the user's ask of 2026-10-11).
+    let tools = &mine[mine.find(r#"<div class="my-listing-tools">"#).expect("the row's tools")..];
+    let tools = &tools[..tools.find("</div>").unwrap()];
+    assert!(tools.contains(&format!(r#"href="/listing/{no}/ndrysho" aria-label="Ndrysho" title="Ndrysho"><svg"#)), "{tools}");
+    assert!(tools.contains(r#"aria-label="Çaktivizo""#) && tools.contains(r#"class="button secondary small danger" aria-label="Fshi""#), "{tools}");
+    assert!(!tools.contains("U shit") && mine.contains(r#"<div class="my-listing-more">"#), "{tools}");
     let out = mine.find(r#"<form class="sign-out" action="/dil" method="post">"#).expect("signing out");
     assert!(mine[out..].contains(r#"<button type="submit" class="button secondary"><svg"#) && mine[out..].contains("</svg>Dil nga llogaria</button>"));
     assert!(out > mine.find(r#"href="/shto""#).unwrap(), "last on the page");
