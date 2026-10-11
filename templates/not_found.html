@@ -3,12 +3,15 @@
 {% block title %}{{ crate::t("Faqja nuk u gjet") }} | Pluribus{% endblock %}
 
 {% block content %}
-{#- Nothing at this address, or nothing for this visitor (a listing taken down or off the site):
-    why that may be, and ways on rather than a dead end: a search in every category, the welcome
-    page, and posting. -#}
+{#- Nothing at this address, or nothing for this visitor (a listing taken down or off the site),
+    as the canvas has it: a magnifier in its circle, why that may be, and ways on rather than a dead
+    end: a search in every category, the welcome page, and posting. -#}
 <section class="not-found">
-  <h1>{{ crate::t("Faqja nuk u gjet") }}</h1>
-  <p class="lead">{{ crate::t("Njoftimi mund të jetë çaktivizuar ose hequr, ose lidhja është e gabuar.") }}</p>
+  <div class="not-found-head">
+    <span class="not-found-icon" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SEARCH|safe }}</svg></span>
+    <h1>{{ crate::t("Faqja nuk u gjet") }}</h1>
+    <p class="lead">{{ crate::t("Njoftimi mund të jetë çaktivizuar ose hequr, ose lidhja është e gabuar.") }}</p>
+  </div>
   <form class="search not-found-search" action="/search" method="get" role="search">
     <label class="visually-hidden" for="not-found-q">{{ crate::t("Kërko") }}</label>
     <input id="not-found-q" type="search" name="q" placeholder="{{ crate::t("Kërko p.sh. Golf 7, apartament 2+1") }}" autocomplete="off" enterkeyhint="search">
@@ -16,6 +19,6 @@
       <svg data-icon="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SEARCH|safe }}</svg>
     </button>
   </form>
-  <p class="not-found-links"><a class="button" href="/">{{ crate::t("Faqja kryesore") }}</a> <a class="button secondary" href="/shto">{{ crate::t("Shto një njoftim") }}</a></p>
+  <p class="not-found-links"><a class="button secondary" href="/">{{ crate::t("Faqja kryesore") }}</a> <a class="button" href="/shto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PLUS|safe }}</svg>{{ crate::t("Shto një njoftim") }}</a></p>
 </section>
 {% endblock %}

@@ -4,11 +4,14 @@
 
 {% block content %}
 {#- A request that failed (web::AppError, logged in full): the site's frame still, so that the
-    visitor keeps the header and the footer, with what to do. Nothing in it asks the database,
-    which may be what failed. -#}
+    visitor keeps the header and the footer, with what to do, as the canvas has it, an i in its
+    circle over it. Nothing in it asks the database, which may be what failed. -#}
 <section class="not-found">
-  <h1>{{ crate::t("Diçka shkoi keq") }}</h1>
-  <p class="lead">{{ crate::t("Nuk e hapëm dot këtë faqe. Provo përsëri pas pak; nëse vazhdon, na shkruaj te") }} <a href="/kontakt">{{ crate::t("Kontakt") }}</a>.</p>
-  <p class="not-found-links"><a class="button" href="/">{{ crate::t("Faqja kryesore") }}</a></p>
+  <div class="not-found-head">
+    <span class="not-found-icon" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::INFO|safe }}</svg></span>
+    <h1>{{ crate::t("Diçka shkoi keq") }}</h1>
+    <p class="lead">{{ crate::t("Nuk e hapëm dot këtë faqe. Provo përsëri pas pak; nëse vazhdon, na shkruaj te") }} <a href="/kontakt">{{ crate::t("Kontakt") }}</a>.</p>
+    <p class="not-found-links"><a class="button" href="/">{{ crate::t("Faqja kryesore") }}</a></p>
+  </div>
 </section>
 {% endblock %}

@@ -779,7 +779,9 @@ async fn pages_that_find_nothing_offer_ways_on(pool: PgPool) {
     assert_eq!(missing.status, StatusCode::NOT_FOUND);
     assert!(missing.body.contains("<h1>Faqja nuk u gjet</h1>"));
     assert!(missing.body.contains(r#"<form class="search not-found-search" action="/search" method="get" role="search">"#));
-    assert!(missing.body.contains(r#"<a class="button" href="/">Faqja kryesore</a>"#) && missing.body.contains(r#"<a class="button secondary" href="/shto">Shto një njoftim</a>"#));
+    // The way home grey, posting filled after its plus, as the canvas has them.
+    assert!(missing.body.contains(r#"<a class="button secondary" href="/">Faqja kryesore</a>"#), "{}", missing.body);
+    assert!(missing.body.contains(r#"<a class="button" href="/shto"><svg"#) && missing.body.contains("</svg>Shto një njoftim</a>"), "{}", missing.body);
     // A request that fails: the site's frame too, with what to do and the way home, never the error.
     use axum::response::IntoResponse;
     let response = marketplace::web::AppError::from(std::io::Error::other("the database went away")).into_response();
