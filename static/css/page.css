@@ -600,10 +600,12 @@
   line-clamp: var(--lines, 2);
 }
 .cards-list .results .card-description[data-no-room] { visibility: hidden; }
-.cards-list .results :is(.card-media .card-place, .card-when) { display: block; align-self: end; margin: 0; padding-bottom: 4px; overflow: hidden; color: var(--muted); font-size: .8125rem; text-overflow: ellipsis; white-space: nowrap; }
+.cards-list .results :is(.card-media .card-place, .card-when) { display: block; align-self: end; margin-block: 0; padding-bottom: 4px; overflow: hidden; color: var(--muted); font-size: .8125rem; text-overflow: ellipsis; white-space: nowrap; }
 .cards-list .results .card-media .card-place { grid-area: place; }
 .cards-list .results .card-place .pin-icon { display: none; }
-/* Its own column, after the place's, the columns' gap taken back so that the two read as one line. */
+/* Its own column, after the place's, the columns' gap taken back so that the two read as one line
+   (the rule over them sets only the block's margins: its :is() weighs as much as .card-media
+   .card-place, and its margin: 0 kept the gap open until 2026-10-11). */
 .cards-list .results .card-when { grid-area: when; margin-left: -18px; }
 .cards-list .results .card:has(.card-place) .card-when::before { content: "\00a0·\00a0"; }
 @media (max-width: 719px) {

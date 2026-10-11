@@ -7873,6 +7873,10 @@ async fn a_card_carries_the_start_of_its_description(pool: PgPool) {
     assert!(room.contains("align-self:stretch;") && room.contains("overflow:hidden;") && !room.contains("line-clamp"), "{room}");
     assert!(css.contains(".cards-list .results .card-description-text{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:var(--lines,2);line-clamp:var(--lines,2);}"));
     assert!(css.contains(".cards-list .results .card-description-text{-webkit-line-clamp:var(--lines,1);line-clamp:var(--lines,1);}"));
+    // The place and when it was posted read as one line, "Tiranë · para 2 ditësh": the rule over both
+    // sets only their block's margins, so that the one taking the columns' gap back holds.
+    assert!(css.contains(".cards-list .results :is(.card-media .card-place,.card-when){display:block;align-self:end;margin-block:0;"));
+    assert!(css.contains(".cards-list .results .card-when{grid-area:when;margin-left:-18px;}"));
     assert!(css.contains("grid-template-rows:auto auto minmax(0,1fr) auto;"));
 }
 
