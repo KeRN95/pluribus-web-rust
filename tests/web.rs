@@ -5226,18 +5226,19 @@ async fn a_listings_photos_glow_as_youtubes_ambient_light(pool: PgPool) {
     assert!(source.starts_with("https://images.unsplash.com/photo-1591230740238-e9a71182b67c?"), "{source}");
     assert!(page[glow..].starts_with(&format!(r#"{source}" alt=""></div><div class="gallery">"#)), "{page}");
     assert!(page.contains(&format!(r#"<img class="gallery-backdrop" src="{source}" alt="""#)));
-    // Blurred far past the photos' edges, its colours a little livelier, as faint as YouTube's
-    // ("waaaaay more subtle", the user asked of 45% and 60%; of 12%, "a bit more in white"), the
-    // same on both themes;
-    // under every word on the page, and under the photos' box, whose ground is the page's, so that
-    // it shows round them alone. A split page's photo stands still as its column scrolls, a layer
-    // of its own: there the photos' box goes under the listing's words, its glow under it, and
-    // the listings like it over both. (The stylesheet and the scripts come minified.)
+    // A little past the photos' box (24px over and under it, the page's margin at its sides) and
+    // blurred far past that, its colours livelier, as faint as YouTube's, the same on both themes
+    // ("waaaaay more subtle", the user asked of 45% and 60%; "a bit more in white" of 12%; spread
+    // wider and more colourful at 26%); under every word on the page, and under the photos' box,
+    // whose ground is the page's, so that it shows round them alone. A split page's photo stands
+    // still as its column scrolls, a layer of its own: there the photos' box goes under the
+    // listing's words, its glow under it, and the listings like it over both. (The stylesheet
+    // and the scripts come minified.)
     let version = marketplace::web::asset_version();
     let css = get(pool.clone(), &format!("/static/css/site.css?v={version}")).await.body;
     for rule in [
-        "--glow:blur(72px) saturate(120%);--glow-strength:22%;",
-        ".listing-media{border-radius:var(--radius);background:var(--bg);}.listing-glow{position:absolute;inset:0;z-index:-1;opacity:var(--glow-strength);filter:var(--glow);pointer-events:none;}",
+        "--glow:blur(110px) saturate(170%);--glow-strength:26%;",
+        ".listing-media{border-radius:var(--radius);background:var(--bg);}.listing-glow{position:absolute;inset:-24px calc(-1 * var(--gutter));z-index:-1;opacity:var(--glow-strength);filter:var(--glow);pointer-events:none;}",
         "@media (min-width:960px){.listing-split{isolation:isolate;}.listing-split > .listing-media{z-index:-1;}.listing-split ~ .related{position:relative;}}",
     ] {
         assert!(css.contains(rule), "{rule}");

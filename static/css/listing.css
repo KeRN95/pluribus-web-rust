@@ -329,20 +329,22 @@
 /* The photos' glow, as YouTube's ambient light takes the colours of what plays (the user's ask of
    2026-10-11, "a blur / shadow similar to how youtube hues its background based on whats its
    playing"): behind the photos the one that shows once more, its tiny copy (in the page, so at
-   once) stretched over their box, blurred far past its edges and its colours a little livelier
-   (--glow, base.css), as faint as YouTube's (--glow-strength: 22% on both themes; the user found
-   45% and 60% far too strong, and 12% on the light theme almost invisible), so that the page round them, the bar's frost too, takes
-   a hint of their colours. It follows the photos as they slide, the next one's
-   fading in over the last's (slides_controller.js, shine), and a stand-in's is its card's photo
-   (application.js, listingStandIn). It is under everything on the page, the words round the
-   photos among them (z-index: -1, in the page's own layer, none of the boxes round it being a
-   layer of its own), and under the photos' box, whose ground is the page's colour, so that it
-   shows round the photos alone, the mosaic's gaps staying the page's. The blur is ink, as a
-   shadow is, so a phone's page grows no wider for it. */
+   once) stretched a little past their box, 24px over and under it and as far as the page's
+   margin at its sides (so that a phone's page grows no wider), blurred far past that and its
+   colours livelier (--glow, base.css), as faint as YouTube's (--glow-strength: 26% on both
+   themes; the user found 45% and 60% far too strong, 12% on the light theme almost invisible,
+   and asked for it spread wider and more colourful than at 22%), so that the page round them,
+   the bar's frost too, takes a hint of their colours. It follows the photos as they slide, the
+   next one's fading in over the last's (slides_controller.js, shine), and a stand-in's is its
+   card's photo (application.js, listingStandIn). It is under everything on the page, the words
+   round the photos among them (z-index: -1, in the page's own layer, none of the boxes round it
+   being a layer of its own), and under the photos' box, whose ground is the page's colour, so
+   that it shows round the photos alone, the mosaic's gaps staying the page's. The blur is ink,
+   as a shadow is, so the page grows no wider for it either. */
 .listing-media { border-radius: var(--radius); background: var(--bg); }
 .listing-glow {
   position: absolute;
-  inset: 0;
+  inset: -24px calc(-1 * var(--gutter));
   z-index: -1;
   opacity: var(--glow-strength);
   filter: var(--glow);

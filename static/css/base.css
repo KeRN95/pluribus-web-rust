@@ -147,12 +147,12 @@
   --frost-sheet: color-mix(in srgb, var(--surface) 80%, transparent);
   /* The glow round a listing's photos, as YouTube's ambient light takes the colours of what plays
      (the user's ask of 2026-10-11): the photo that shows, blurred far past its edges and its
-     colours a little livelier (--glow), and as faint as YouTube's (--glow-strength), the same
-     on both themes: "waaaaay more subtle", the user asked once they had seen it at 45% and 60%
-     (the dark theme's), blurred 48px and 160% livelier, and then of 12% on the light theme, "a
-     bit more in white. its almost invisible". */
-  --glow: blur(72px) saturate(120%);
-  --glow-strength: 22%;
+     colours livelier (--glow), and as faint as YouTube's (--glow-strength), the same on both
+     themes. As the user asked the same day: "waaaaay more subtle" of 45% and 60% (the dark
+     theme's), blurred 48px and 160% livelier; "a bit more in white" of 12%; then 26%, "spreading
+     it a bit more ... while taking more of the colors" of 22%, blurred 72px and 120% livelier. */
+  --glow: blur(110px) saturate(170%);
+  --glow-strength: 26%;
   /* Glass: the welcome page's open search and its suggestions, over the pills (welcome.css): the
      text input's colour (white, and the dark theme's own dark) at 65%, blurred, with its edge and
      the words and their shading on it, those in the theme's colours below. */
