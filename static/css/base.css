@@ -682,8 +682,11 @@ html { font-size: calc(100% * var(--text-scale)); }
    menus, the page behind still. Its top as tall as the bar, the logo and the cross under a
    hairline; under it, scrolling on its own, "Posto njoftim" across, then its groups, each under
    a hairline with its name small and muted: rows 44px tall, an icon of 20px drawn a little
-   thinner (1.8) before the words, a grey ground with rounded corners under the pointer, at a
-   row's end a count in the accent or the look's controls. */
+   thinner (1.8) before the words, which a link's row underlines in the accent under the pointer
+   as the bar's button does (.menu-row-word; the canvas's grey ground under the row was set
+   aside with the button's pill, 2026-10-11, and a row with a control, the theme's switch too,
+   has no hover of its own), at a row's end a count in the accent or the look's controls; the
+   links about the site underline the same way. */
 .menu {
   position: fixed;
   inset: 0 auto 0 0;
@@ -716,14 +719,14 @@ html:has(.menu[open]) { overflow: hidden; }
 .menu-row > svg { flex: none; }
 :is(a, label).menu-row { cursor: pointer; }
 @media (hover: hover) {
-  :is(a, label).menu-row:hover { background: var(--surface-muted); }
+  a.menu-row:hover .menu-row-word { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
 }
 .menu-row > :is(.segmented, .switch, .swatches, .menu-count) { margin-left: auto; }
 .menu-count { min-width: 22px; height: 22px; padding: 0 7px; border-radius: var(--radius-pill); background: var(--highlight); color: var(--on-highlight); font-size: 12px; font-weight: var(--bold); line-height: 22px; text-align: center; }
 .menu-count[hidden] { display: none; }
 .menu-about { display: flex; flex-wrap: wrap; column-gap: 18px; padding: 0 10px; font-size: var(--text-sm); }
 .menu-about a { display: inline-flex; align-items: center; min-height: var(--size-button-sm); color: var(--muted); text-decoration: none; }
-.menu-about a:hover { text-decoration: underline; }
+.menu-about a:hover { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
 /* The accents, round, 24px within a 40px tap: lime, then the four darker ones (data-accent, each
    the theme's own shade), a hairline round each (--swatch-edge: lime alone hardly shows on
    white), the one picked ringed in the text's colour. Radios, so the arrow keys go from one to
