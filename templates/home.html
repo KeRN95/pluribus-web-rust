@@ -41,7 +41,14 @@
       conversations unread. -#}
   <div class="welcome-tools">
   <form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest"
-        data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
+        data-action="focusout->suggest#left turbo:before-cache@document->suggest#dismiss">
+    {#- On a phone the search opens over the whole screen as its words get the focus, as Google's
+        does (suggest_controller.js; welcome.css, .is-open), the way back first, which closes it
+        again; hidden while it is closed, and from 720px up, where the pill and its list are one
+        card instead. -#}
+    <button type="button" class="icon-button search-back" aria-label="{{ crate::t("Mbyll kërkimin") }}" title="{{ crate::t("Mbyll kërkimin") }}" data-suggest-target="back" data-action="suggest#dismiss">
+      <svg data-icon="chevron-left" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">{{ crate::web::icons::CHEVRON_LEFT|safe }}</svg>
+    </button>
     <label class="visually-hidden" for="welcome-q">{{ crate::t("Kërko") }}</label>
     <input id="welcome-q" type="search" name="q" placeholder="{{ crate::t("Çfarë po kërkon?") }}" autocomplete="off" enterkeyhint="search"
            data-suggest-target="input" data-action="input->suggest#typed focus->suggest#focused keydown->suggest#key">

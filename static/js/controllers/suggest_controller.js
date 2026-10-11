@@ -10,12 +10,21 @@ import { t } from "controllers/i18n.js";
 // last row that forgets them; the list is named for which it holds. While the box has words, a
 // cross empties it (the welcome page's, its clear target). Without this script the box is a plain
 // search.
+//
+// A box with a way back (its back target, the welcome page's) opens over the whole screen of a
+// phone as it gets the focus, as Google's search does (the user's ask of 2026-10-11, "when search
+// is clicked make it open like google search bar"; welcome.css, .is-open), its list staying while
+// it is open, the keyboard put away or not; the way back closes it, as Escape does, Android's back
+// (a CloseWatcher, where the browser has one) and the page left. While its list shows the box is
+// marked (has-list), from 720px up the pill and the list drawn as one card.
 
 let count = 0;
 // After the last key, so that words typed quickly aren't asked for letter by letter.
 const WAIT = 120;
 // Suggestions already fetched, by the words they are for: deleting a letter shows them at once.
 const KEPT = 40;
+// A phone's screen, as welcome.css has it.
+const PHONE = matchMedia("(max-width: 719px)");
 
 // A clock, Phosphor's as the site's icons are (icons.rs, CLOCK): before a last search's words.
 const CLOCK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><g transform="scale(.09375)" stroke="none"><path d="M224,128a96,96,0,1,1-96-96A96,96,0,0,1,224,128Z"/><path fill="currentColor" d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"/></g></svg>';
@@ -26,7 +35,7 @@ function clock() {
 }
 
 export default class extends Controller {
-  static targets = ["input", "list", "clear"];
+  static targets = ["input", "list", "clear", "back"];
 
   connect() {
     this.kept = new Map();
@@ -50,6 +59,7 @@ export default class extends Controller {
     document.removeEventListener("click", this.outside);
     clearTimeout(this.timer);
     this.request?.abort();
+    this.watcher?.destroy();
   }
 
   // The words changed: their suggestions, once typing pauses.
@@ -59,9 +69,38 @@ export default class extends Controller {
     this.timer = setTimeout(() => this.fetch(), WAIT);
   }
 
-  // Back in the box: the suggestions for its words again.
+  // Back in the box: the suggestions for its words again, over the whole screen on a phone.
   focused() {
+    this.open();
     if (this.listTarget.hidden) this.fetch();
+  }
+
+  get isOpen() {
+    return this.element.classList.contains("is-open");
+  }
+
+  // Over the whole screen: a phone's box with its way back.
+  open() {
+    if (!this.hasBackTarget || !PHONE.matches || this.isOpen) return;
+    this.element.classList.add("is-open");
+    if (!("CloseWatcher" in window)) return;
+    try {
+      this.watcher = new CloseWatcher();
+      this.watcher.addEventListener("close", () => this.dismiss());
+    } catch {
+      this.watcher = null;
+    }
+  }
+
+  // Closed again, the page as it was under it: the way back, Escape, Android's back, or the page
+  // about to be kept by Turbo as it is left.
+  dismiss() {
+    this.watcher?.destroy();
+    this.watcher = null;
+    this.close();
+    if (!this.isOpen) return;
+    this.element.classList.remove("is-open");
+    this.inputTarget.blur();
   }
 
   async fetch() {
@@ -147,14 +186,16 @@ export default class extends Controller {
       option.setAttribute("aria-selected", "false");
     });
     this.mark(-1);
-    const open = this.options().length > 0 && document.activeElement === this.inputTarget;
+    const open = this.options().length > 0 && (document.activeElement === this.inputTarget || this.isOpen);
     this.listTarget.hidden = !open;
+    this.element.classList.toggle("has-list", open);
     this.inputTarget.setAttribute("aria-expanded", String(open));
   }
 
   close() {
     this.mark(-1);
     this.listTarget.hidden = true;
+    this.element.classList.remove("has-list");
     this.inputTarget.setAttribute("aria-expanded", "false");
   }
 
@@ -176,6 +217,13 @@ export default class extends Controller {
   }
 
   key(event) {
+    // Escape closes a search open over the whole screen, its list and all.
+    if (event.key === "Escape" && this.isOpen) {
+      event.stopPropagation();
+      event.preventDefault();
+      this.dismiss();
+      return;
+    }
     const options = this.options();
     if (this.listTarget.hidden || !options.length) {
       if (event.key === "ArrowDown") this.fetch();
@@ -199,8 +247,14 @@ export default class extends Controller {
     event.preventDefault();
   }
 
-  // Focus gone elsewhere than a row: the list closes.
+  // Focus gone elsewhere than a row: the list closes; a search open over the whole screen closes
+  // only for somewhere else on the page (the keyboard put away leaves it as it is).
   left(event) {
-    if (!this.element.contains(event.relatedTarget)) this.close();
+    if (this.element.contains(event.relatedTarget)) return;
+    if (!this.isOpen) {
+      this.close();
+      return;
+    }
+    if (event.relatedTarget) this.dismiss();
   }
 }

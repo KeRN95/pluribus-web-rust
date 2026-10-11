@@ -5081,6 +5081,50 @@ async fn the_front_pages_search_is_materials_search_bar(pool: PgPool) {
     assert!(css.contains(":root{color-scheme:light;") && css.contains("--highlight-icon:#1b1b1b;") && !css.contains("--search-knob"), "the magnifier dark on the light theme, on no circle");
 }
 
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn the_front_pages_search_opens_as_googles_does(pool: PgPool) {
+    // The front page's search opens as Google's does, after the pluribus-tests canvas's Material
+    // boards (the user's ask of 2026-10-11, "when search is clicked make it open like google search
+    // bar"): on a phone over the whole screen as its words get the focus, the way back first (the
+    // site's chevron), which closes it, as Escape, Android's back (a CloseWatcher) and the page left
+    // do, the keyboard put away leaving it open; from 720px up the pill and its list one card, a
+    // hairline between them, one shadow round both. The bar's search on the other pages keeps its
+    // list under it.
+    let home = html(pool.clone(), "/").await;
+    let form = &home[home.find(r#"<form class="welcome-form""#).expect("the search")..];
+    let form = &form[..form.find("</form>").unwrap()];
+    assert!(form.contains(r#"data-action="focusout->suggest#left turbo:before-cache@document->suggest#dismiss""#), "{form}");
+    let order = positions(form, &[
+        r#"<button type="button" class="icon-button search-back" aria-label="Mbyll kërkimin" title="Mbyll kërkimin" data-suggest-target="back" data-action="suggest#dismiss">"#,
+        r#"<svg data-icon="chevron-left""#,
+        r#"<input id="welcome-q""#,
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
+    let english = get_with_cookie(pool.clone(), "/", "gjuha=en").await.body;
+    assert!(english.contains(r#"aria-label="Close search" title="Close search""#), "{english}");
+    let cars = html(pool.clone(), "/c/makina").await;
+    assert!(!cars.contains("search-back") && cars.contains("turbo:before-cache@document->suggest#close"), "{cars}");
+    // (The stylesheet and the scripts come minified: web::site_css, web::minified_js.)
+    let version = marketplace::web::asset_version();
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={version}")).await.body;
+    for rule in [
+        ".search-back{display:none;}",
+        ".welcome-form .suggestions{top:calc(100% + 1px);right:-1px;left:-1px;padding:var(--space-8) 0;border-top:1px solid var(--border);border-radius:0 0 28px 28px;background:var(--surface-muted);box-shadow:none;font-size:max(16px,1rem);}",
+        ".welcome-form .suggestion{min-height:56px;gap:var(--space-16);padding:0 16px 0 24px;border-radius:0;}",
+        ".welcome-form :is(.suggestion:hover,.suggestion[aria-selected=\"true\"]){background:var(--surface-muted-hover);}",
+        "@media (min-width:720px){.welcome-form.has-list{z-index:31;border-radius:28px 28px 0 0;filter:drop-shadow(",
+        "html:has(.welcome-form.is-open){overflow:hidden;}.welcome-form.is-open{position:fixed;inset:0;z-index:60;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;grid-template-rows:72px minmax(0,1fr);",
+        ".welcome-form.is-open .search-back{display:inline-grid;grid-column:1;width:var(--size-button);height:var(--size-button);color:var(--text);}",
+        ".welcome-form.is-open .suggestions{position:static;grid-row:2;grid-column:1 / -1;align-self:stretch;max-height:none;",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    let script = get(pool, &format!("/static/js/controllers/suggest_controller.js?v={version}")).await.body;
+    for part in ["matchMedia(`(max-width: 719px)`)", "classList.add(`is-open`)", "classList.remove(`is-open`)", "toggle(`has-list`", "new CloseWatcher"] {
+        assert!(script.contains(part), "{part} in {script}");
+    }
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_way_back_is_a_chevron_level_with_its_words(pool: PgPool) {
     // The breadcrumb's way back is Phosphor's chevron, its Regular weight's (the Duotone's caret is

@@ -21,6 +21,10 @@ Shto njoftim
 Kategoritë
 = Categories
 
+# The way back that closes the welcome page's search, open over a phone's whole screen (home.html).
+Mbyll kërkimin
+= Close search
+
 Shikuar së fundmi
 = Recently viewed
 

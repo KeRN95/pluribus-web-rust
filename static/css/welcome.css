@@ -62,6 +62,77 @@
 .search-clear:hover { color: var(--text); }
 .search-clear[hidden] { display: none; }
 
+/* The welcome page's search open, as Google's opens, after the pluribus-tests canvas's Material
+   boards (the user's ask of 2026-10-11, "when search is clicked make it open like google search
+   bar"). From 720px up the pill and its list are one card while the list shows (.has-list,
+   suggest_controller.js): the list under the pill in its grey, a hairline between them, the
+   card's corners 28px, its shadow round the two as one (drop-shadow). On a phone the search opens
+   over the whole screen as its words get the focus (.is-open): the screen the pill's grey, its row
+   72px at the top, the way back first (.search-back, the site's chevron, 48px to tap), then the
+   words, the cross while there are some and the magnifier; under a hairline the last searches or
+   the suggestions, the rest of the screen to scroll in; the page under it stays as it was, its
+   place in the row kept and the page's scroll held. The way back, Escape or Android's back closes
+   it; the keyboard put away leaves it open. Either way the rows are 56px tall, their words 16px,
+   their icons 20px, where a suggestion names its category 8px after its words, the marked one
+   the darker grey, and "Pastro kërkimet e fundit" a quiet button under them. */
+.search-back { display: none; }
+@media (hover: hover) {
+  .search-back:hover { background: var(--surface-muted-hover); }
+}
+.welcome-form .suggestions {
+  top: calc(100% + 1px);
+  right: -1px;
+  left: -1px;
+  padding: var(--space-8) 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 28px 28px;
+  background: var(--surface-muted);
+  box-shadow: none;
+  font-size: max(16px, 1rem);
+}
+.welcome-form .suggestion { min-height: 56px; gap: var(--space-16); padding: 0 16px 0 24px; border-radius: 0; }
+.welcome-form .suggestion > svg { width: 20px; height: 20px; }
+.welcome-form .suggestion-context { margin-left: calc(var(--space-8) - var(--space-16)); }
+.welcome-form :is(.suggestion:hover, .suggestion[aria-selected="true"]) { background: var(--surface-muted-hover); }
+.welcome-form .suggestion-forget { width: auto; min-height: var(--size-button-sm); margin: var(--space-8) 0 var(--space-4) 12px; padding: 0 12px; border-radius: var(--radius-pill); color: var(--text); font-size: .875rem; font-weight: var(--medium); }
+@media (min-width: 720px) {
+  .welcome-form.has-list { z-index: 31; border-radius: 28px 28px 0 0; filter: drop-shadow(0 4px 10px rgb(0 0 0 / 14%)) drop-shadow(0 1px 3px rgb(0 0 0 / 16%)); }
+}
+@media (max-width: 719px) {
+  .welcome-tools { min-height: 56px; }
+  html:has(.welcome-form.is-open) { overflow: hidden; }
+  .welcome-form.is-open {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: 72px minmax(0, 1fr);
+    align-items: center;
+    gap: 0 var(--space-4);
+    height: auto;
+    padding: 0 7px 0 3px;
+    border-radius: 0;
+  }
+  .welcome-form.is-open > * { grid-row: 1; }
+  .welcome-form.is-open .search-back { display: inline-grid; grid-column: 1; width: var(--size-button); height: var(--size-button); color: var(--text); }
+  .welcome-form.is-open input { grid-column: 2; }
+  .welcome-form.is-open .search-clear { grid-column: 3; }
+  .welcome-form.is-open .welcome-search { grid-column: 4; }
+  .welcome-form.is-open .suggestions {
+    position: static;
+    grid-row: 2;
+    grid-column: 1 / -1;
+    align-self: stretch;
+    max-height: none;
+    margin: 0 -7px 0 -3px;
+    overflow-y: auto;
+    border-radius: 0;
+  }
+  .welcome-form .suggestion { padding: 0 16px; }
+  .welcome-form .suggestion-forget { margin-left: 8px; }
+}
+
 /* Suggestions under a search box as its words are typed (suggest_controller.js), as the canvas has
    them: a white card 8px under the box and as wide, with what floats' shadow and no outline,
    appearing without sliding; each row 48px tall, a magnifier in the muted grey before the words
