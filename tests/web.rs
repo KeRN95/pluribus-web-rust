@@ -7487,7 +7487,10 @@ async fn a_phone_sees_the_listings_on_its_first_screen(pool: PgPool) {
         // A promoted card's price on the listing page's band, in the accent, the month and
         // "(i diskutueshëm)" off it (the user's ask of the same day, in place of a pill saying
         // "I promovuar" over its photo).
-        ".card.is-promoted .card-figure{text-decoration-line:underline;text-decoration-color:var(--highlight);text-decoration-thickness:.34em;text-decoration-skip-ink:none;text-underline-offset:-.2em;}",
+        // In the dark theme's band in both themes, as dark as the photo (the user's pick of the
+        // same day, the accent itself first).
+        ".card.is-promoted .card-figure{text-decoration-line:underline;text-decoration-color:var(--price-mark-photo);text-decoration-thickness:.34em;text-decoration-skip-ink:none;text-underline-offset:-.2em;}",
+        "--price-mark-photo:color-mix(in srgb,var(--highlight) var(--filter-share-dark),#1b1b1b);",
     ] {
         assert!(css.contains(rule), "{rule}");
     }

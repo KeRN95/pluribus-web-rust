@@ -287,14 +287,15 @@
 .card-media:has(.card-status.is-sold) .card-photo { filter: grayscale(.7); opacity: .75; }
 /* One a promotion features, at the results' top (browse.html): its price on a band of the accent
    across its foot, as the listing's page marks its own (listing.css, .price-amount), in place of
-   a pill saying "I promovuar" over the photo, as the user asked on 2026-10-11: the accent itself,
-   where the page's band is its pale tint, so that it shows on the photo's dark shade under the
-   white figure, which it covers to a fifth of an em over the baseline; the month and
-   "(i diskutueshëm)" stay off it, as they do there (.card-figure, the figure alone; screen
-   readers hear "I promovuar" before it, listing_card.html). */
+   a pill saying "I promovuar" over the photo, as the user asked on 2026-10-11: in the dark
+   theme's band, the deep green of mint, in both themes (--price-mark-photo, the user's pick; the
+   accent itself first), as dark as the photo's shade under the white figure, which it covers to a
+   fifth of an em over the baseline; the month and "(i diskutueshëm)" stay off it, as they do there
+   (.card-figure, the figure alone; screen readers hear "I promovuar" before it,
+   listing_card.html). */
 .card.is-promoted .card-figure {
   text-decoration-line: underline;
-  text-decoration-color: var(--highlight);
+  text-decoration-color: var(--price-mark-photo);
   text-decoration-thickness: .34em;
   text-decoration-skip-ink: none;
   text-underline-offset: -.2em;

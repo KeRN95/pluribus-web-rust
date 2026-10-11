@@ -80,6 +80,11 @@
      text's colour (30 points more of the accent at first, which the user found too loud on
      2026-10-11). */
   --price-mark: var(--filter-on);
+  /* The band across a promoted card's price, on the photo's dark shade (page.css, .card-figure):
+     the dark theme's band in both themes, the accent mixed into its page as much as a filter that
+     is on takes there, as dark as the photo under the white figure (the user's pick of 2026-10-11,
+     the accent itself before it). */
+  --price-mark-photo: color-mix(in srgb, var(--highlight) var(--filter-share-dark), #1b1b1b);
   --logo-edge: rgb(27 27 27 / 45%);      /* a line inside the logo's dot, on white */
   --dot-edge: inset 0 0 0 1.5px rgb(27 27 27 / 45%); /* a ring inside an unread dot, on white */
   /* States: a kept listing's heart, places on a map, what is wrong. */
