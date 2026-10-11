@@ -195,7 +195,8 @@
    they make one, the device setting. The two blocks hold the same values. Eerie black under light
    grey words, its surfaces a few steps up; the main colour the words' grey, with dark words on it;
    the accent a line on the grey there, light enough to show, and a button in it a shade lighter
-   under the pointer. */
+   under the pointer; a kept heart's red the light theme's, as the canvas has it (a lighter one,
+   #ff4f5e, once). */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #1b1b1b;
@@ -222,7 +223,7 @@
   --logo-edge: transparent;
   --dot-edge: 0 0 0 0 transparent;
   --location: #6a9bcc;
-  --red: #ff4f5e;
+  --red: #e0203a;
   --red-bg: #4a2428;
   --danger: #f97066;
   --danger-bg: #4b2c2a;
@@ -283,7 +284,7 @@
     --logo-edge: transparent;
     --dot-edge: 0 0 0 0 transparent;
     --location: #6a9bcc;
-    --red: #ff4f5e;
+    --red: #e0203a;
     --red-bg: #4a2428;
     --danger: #f97066;
     --danger-bg: #4b2c2a;

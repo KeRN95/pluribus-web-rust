@@ -520,6 +520,7 @@ a.pending-label:active { text-decoration: underline 2px var(--highlight); text-u
 .account.new-listing { max-width: 720px; margin-inline: auto; padding-top: 28px; }
 .new-listing h1 { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
 .new-listing .lead { margin: 8px 0 0; font-size: 1rem; line-height: 1.55; }
+.new-listing .lead a { color: var(--text); font-weight: var(--semibold); }
 .listing-form { gap: 14px; margin-top: 14px; }
 .form-box { display: flex; flex-direction: column; gap: 18px; min-width: 0; padding: 20px; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); }
 .form-box > .form-row { gap: 14px; }
