@@ -1,14 +1,17 @@
-{#- What a square metre of a property on sale costs (ListingDetail::area_price): a bubble like
-    "Llogarit kredinë", which opens how it was worked out in a card under it, the price, the area,
-    and the one over the other, rounded; a tap outside or Escape closes it (dropdown_controller.js).
-    In a zone with an average (zone_area_prices), the bubble takes the colour of how the two
-    compare, green under it, red over it and yellow about it, and the card says the average and by
-    how much. -#}
+{#- What a square metre of a property on sale costs (ListingDetail::area_price): a round button
+    beside "Llogarit kredinë", at its end, its icon alone, as a car's price has it (car_price.html;
+    a pill with the figure, half the line, until the user asked for the same on 2026-10-11), the
+    figure said to screen readers and under the pointer; it opens how it was worked out in a card
+    under it, the price, the area, and the one over the other, rounded; a tap outside or Escape
+    closes it (dropdown_controller.js). In a zone with an average (zone_area_prices), the circle
+    takes the colour of how the two compare, green under it, red over it and yellow about it (a
+    light one under our black icon on the light theme, a deeper one under our white on the dark),
+    and the card says the average and by how much; without one it is the grey of secondary
+    controls. -#}
 <details class="bubble area-price{% if let Some(zone) = area.zone %} {{ zone.tone }}{% endif %}" data-controller="dropdown">
-  <summary title="{{ crate::t("Si llogaritet") }}">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::AREA_PRICE|safe }}</svg>
-    {{ area.per_area }}
-    {%- if let Some(zone) = area.zone %}<span class="visually-hidden">, {{ zone.verdict|lower }}</span>{% endif %}
+  <summary title="{{ crate::t("Si llogaritet") }}: {{ area.per_area }}">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">{{ crate::web::icons::AREA_PRICE|safe }}</svg>
+    <span class="visually-hidden">{{ area.per_area }}{% if let Some(zone) = area.zone %}, {{ zone.verdict|lower }}{% endif %}</span>
   </summary>
   <div class="bubble-card area-price-card">
     <p class="bubble-title">{{ crate::t("Si llogaritet") }}</p>

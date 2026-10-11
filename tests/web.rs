@@ -2840,13 +2840,16 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     assert!(!rent.contains("Llogarit kredinë"));
     assert!(!rent.contains("price-per-area"));
     // A house on sale says under its price what a square metre costs, 185 000 € for 200 m², in a
-    // bubble before the loan calculator's, which opens how it was worked out.
+    // circle after the loan calculator's pill, its icon alone (the figure said to screen readers
+    // and under the pointer, as a car's price has it: the user's ask of 2026-10-11), which opens
+    // how it was worked out.
     let house = html(pool, "/listing/1004-shtepi-private-ne-shitje-ne-vlore").await;
     let row = &house[house.find(r#"<div class="price-row with-area">"#).expect("the price's row")..];
-    let row = &row[..row.find(r#"<details class="bubble loan""#).unwrap()];
     assert!(row.contains("<p class=\"listing-price\"><span class=\"price-amount\">185\u{a0}000\u{a0}€</span></p>"));
+    assert!(row.find(r#"<details class="bubble loan""#).unwrap() < row.find(r#"<details class="bubble area-price""#).unwrap());
     let bubble = &row[row.find(r#"<details class="bubble area-price" data-controller="dropdown">"#).expect("the bubble")..];
-    assert!(bubble[..bubble.find("</summary>").unwrap()].contains("925\u{a0}€/m²"));
+    let summary = &bubble[..bubble.find("</summary>").unwrap()];
+    assert!(summary.contains("<summary title=\"Si llogaritet: 925\u{a0}€/m²\">") && summary.contains("<span class=\"visually-hidden\">925\u{a0}€/m²</span>"), "{summary}");
     for line in ["<dd>185\u{a0}000\u{a0}€</dd>", "<dd>200\u{a0}m²</dd>", "<dd>925\u{a0}€/m²</dd>", "rrumbullakuar në euro."] {
         assert!(bubble.contains(line), "{line}");
     }
@@ -3259,7 +3262,7 @@ async fn a_cars_price_is_compared_with_what_cars_of_its_model_and_year_ask(pool:
     assert!(page.contains(r#"<span class="visually-hidden">Rreth mesatares</span>"#), "{page}");
     assert!(page.contains(r#"<p class="car-price-verdict">Rreth mesatares</p>"#), "{page}");
     let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    assert!(css.contains(".car-price:is(.price-below,.price-near,.price-above) > summary{background:var(--tone-fill);color:var(--text);}"));
+    assert!(css.contains(":is(.car-price,.area-price):is(.price-below,.price-near,.price-above) > summary{background:var(--tone-fill);color:var(--text);}"));
     assert!(css.contains("--near-fill:#f8e3a0;") && css.contains("--near-fill:#85660a;"));
     assert!(page.contains("<div><dt>Mesatarja</dt><dd>10\u{a0}300\u{a0}€</dd></div>"), "{page}");
     assert!(page.contains("<div><dt>Shumica kërkojnë</dt><dd>9\u{a0}500–11\u{a0}400\u{a0}€</dd></div>"), "{page}");
@@ -7089,6 +7092,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         r#"<aside class="contact-bar" aria-label="Kontakti" data-controller="sticky">"#,
         r#"<form id="phone-reveal" method="post""#,
         "</aside>",
+        r#"<div class="listing-share">"#,
         r#"<div class="actions">"#,
         r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
         "<h2>Përshkrimi</h2>",
@@ -7100,19 +7104,28 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     assert!(page.contains(r#"<div class="description-fold" data-controller="fold">"#));
     assert!(page.contains(r#"<button type="button" class="description-more" data-fold-target="button" data-action="fold#open" hidden>"#));
     assert!(page.contains("Shfaq të gjithë përshkrimin") && !page.contains("is-folded"));
-    // The bar is under the seller there, the page's one bar; on every other page it is under the
-    // price, the seller after the description without it, said the same way: the initial in a
-    // ring of 48 px, since when, and how many listings.
+    // The bar is under the seller, the page's one bar, and the share and the report in a section
+    // of their own after the seller's (the user's asks of 2026-10-11); on every other page too,
+    // the seller after the description, said the same way: the initial in a ring of 48 px, since
+    // when, and how many listings, the bar under them.
     let card = &page[page.find(r#"<section class="seller-section""#).unwrap()..];
     let card = &card[..card.find("</section>").unwrap()];
     assert!(card.contains(r#"<aside class="contact-bar""#) && page.matches(r#"<aside class="contact-bar""#).count() == 1, "{card}");
-    assert!(card.contains(r#"<div class="actions">"#) && page.matches(r#"<div class="actions">"#).count() == 1, "the share and the report in the card: {card}");
+    assert!(!card.contains(r#"<div class="actions">"#) && page.matches(r#"<div class="actions">"#).count() == 1, "the share and the report out of the card: {card}");
     let iphone = html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await;
     let card = &iphone[iphone.find(r#"<section class="seller-section""#).unwrap()..];
     let card = &card[..card.find("</section>").unwrap()];
-    assert!(card.contains(r#"<span class="avatar large" aria-hidden="true">A</span>"#) && !card.contains("contact-bar"), "{card}");
+    assert!(card.contains(r#"<span class="avatar large" aria-hidden="true">A</span>"#) && card.contains(r#"<aside class="contact-bar""#), "{card}");
     assert!(card.contains(r#"<span class="seller-summary"><span class="seller-since">Që nga "#) && card.contains(r#"<span class="seller-count">· 5 njoftime</span>"#), "{card}");
-    assert!(iphone.find(r#"<aside class="contact-bar""#).unwrap() < iphone.find(r#"<section class="seller-section""#).unwrap());
+    let order = positions(&iphone, &[
+        "<h2>Përshkrimi</h2>",
+        r#"<section class="seller-section""#,
+        r#"<aside class="contact-bar""#,
+        r#"<div class="listing-share">"#,
+        r#"aria-label="Shpërndaje" title="Shpërndaje">"#,
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
+    assert_eq!(iphone.matches(r#"<aside class="contact-bar""#).count(), 1);
 
     // Her profile says so too.
     let profile = get(pool.clone(), ana).await.body;

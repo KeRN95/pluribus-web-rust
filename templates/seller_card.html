@@ -6,19 +6,19 @@
     how quickly they answer and when they were last here, all leading to their profile
     (listing.css, .seller-head), under a heading of its own, "Shitësi", as the details and the
     description have theirs. Under the description, across the page or the column beside the
-    photo; the ways to reach them are the buttons under the price. On a car's or a property's page
-    it stands in the deal's column at the right (.listing-deal) with those under it (.seller-card, no box either):
-    16 px under the seller, the message's pill with the share and the report beside it, and under
-    them the phone's (contact_bar.html, listing_actions.html; on the seller's own page those stay
-    under the seller, with their own buttons); on a phone the bar is at the screen's foot as on
-    every page and the seller on their own (listing.css, .listing-car). -#}
+    photo; on a car's or a property's page in the deal's column at the right (.listing-deal). Under
+    the seller, on every page, the ways to reach them (.seller-card, no box either): the phone and
+    the message (contact_bar.html), on a phone the bar at the screen's foot, which settles under
+    the seller as the page scrolls to them; and under that, a section of its own after a hairline,
+    the share and the report (listing_actions.html, .listing-share), as the user asked on
+    2026-10-11 (the bar stood under the price on most pages, the share and the report beside it).
+    On the seller's own page, which has no bar, their own buttons are under the price (under the
+    seller on a car's or a property's page; listing.html). -#}
 <section class="seller-section" aria-labelledby="seller-heading">
   {#- On their own car's or property's page, where their own buttons follow (listing_actions.html),
       "Njoftimi yt", as the canvas has it. -#}
   <h2 id="seller-heading">{% if deal_page && own %}{{ crate::t("Njoftimi yt") }}{% else %}{{ crate::t("Shitësi") }}{% endif %}</h2>
-  {%- if deal_page %}
   <div class="seller-card">
-  {%- endif %}
   <div class="seller-head">
     <a class="seller" href="{{ listing.seller_url }}">
       {%- if let Some(logo) = listing.seller_logo %}
@@ -45,7 +45,11 @@
       <svg class="seller-chevron" data-icon="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_RIGHT|safe }}</svg>
     </a>
   </div>
-  {%- if deal_page %}{% include "contact_bar.html" %}{% if !own %}{% include "listing_actions.html" %}{% endif %}
+  {% include "contact_bar.html" %}
   </div>
-  {%- endif %}
 </section>
+{%- if !own %}
+<div class="listing-share">
+  {% include "listing_actions.html" %}
+</div>
+{%- endif %}

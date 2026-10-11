@@ -226,16 +226,15 @@
     {%- let loan = listing.loan_amount() %}
     {%- if let Some(amount) = loan %}
     {#- The price, as the canvas has it, on a line of its own; under it "Llogarit kredinë"
-        (loan_controller.js), a grey pill the line's whole width, or, for a property on sale, half
-        of it beside the pill that says what a square metre of it costs (area_price.html), or, for
-        a car whose model and year enough others ask a price for, the line's but the round button
-        at its end that says how its price compares (car_price.html): it opens the calculator
+        (loan_controller.js), a grey pill the line's whole width, or the line's but a round button
+        at its end: for a property on sale, what a square metre of it costs (area_price.html), for
+        a car whose model and year enough others ask a price for, how its price compares
+        (car_price.html). The pill opens the calculator
         (loan_calculator.html) in a white box under it, in the page, the pill filled with the main
         colour, its chevron up, while it is open; a tap outside or Escape closes it
         (dropdown_controller.js). -#}
     <div class="price-row{% if area_price.is_some() %} with-area{% endif %}{% if car_price.is_some() %} with-car{% endif %}">
       <p class="listing-price"><span class="price-amount">{{ listing.price_main() }}</span>{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if deal_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
-      {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
       <details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" data-loan-down-percent-value="{{ LOAN_DOWN_PERCENT }}">
         <summary>
           <svg data-icon="calculator" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CALCULATOR|safe }}</svg>
@@ -247,6 +246,7 @@
           {% include "loan_calculator.html" %}
         </div>
       </details>
+      {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
       {%- if let Some(car) = car_price %}{% include "car_price.html" %}{% endif %}
     </div>
     {%- else %}
@@ -261,15 +261,14 @@
       them under them (seller_card.html). -#}
   {%- if deal_page %}{% include "seller_card.html" %}{% endif %}
 
-  {#- How to reach the seller, under the price: the contact bar (contact_bar.html), the phone and
-      the message, wide pills, which on a phone is the bar at the foot of the screen; on a car's
-      page it is inside the seller's card (above). Then, beside the bar from 720 px up and under
-      the price alone on a phone, the share and the report, circles (listing_actions.html); on a
-      car's page those are in the seller's card too, beside the message, but on the seller's own
-      page, where their own buttons join them under the card. The seller themselves come after
-      the description (below). -#}
-  {%- if !deal_page %}{% include "contact_bar.html" %}{% endif %}
-  {%- if !deal_page || own %}{% include "listing_actions.html" %}{% endif %}
+  {#- How to reach the seller, the phone and the message (contact_bar.html), is under the seller on
+      every page (seller_card.html: under the price on a car's or a property's page, after the
+      description on the others), a bar at the foot of the screen on a phone wherever it settles;
+      the share and the report, a section of their own after a hairline under the seller's, as the
+      user asked on 2026-10-11 (they stood beside the bar, the bar under the price). On the
+      seller's own page their own buttons, with the share, are here, under the price (on a car's
+      or a property's page under the seller). -#}
+  {%- if own %}{% include "listing_actions.html" %}{% endif %}
   {%- if (own || moderator) && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}{% include "promotion_note.html" %}{% endif %}
   {%- if blocked %}
   {#- The visitor blocked its seller, from a report's thanks (report.html) or a conversation: said

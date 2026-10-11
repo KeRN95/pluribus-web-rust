@@ -36,15 +36,13 @@
 .listing-side > :is(.listing-details, .listing-description, .listing-options) { margin-top: 1.75rem; }
 .listing-side > :is(.listing-details, .listing-description, .listing-options, .seller-section) > h2,
 .listing-deal > .seller-section > h2 { margin-top: 0; }
-/* The deal's parts (the price, the contact bar, the share and the report; listing.html,
+/* The deal's parts (the price, and on the seller's own page their buttons; listing.html,
    .listing-deal) are the rest's grid items like the others, the deal itself no box (display:
    contents, in the car page's rules below). */
 @media (min-width: 720px) {
   .listing-side { grid-template-columns: auto minmax(0, 1fr); }
   .listing-side > *,
   .listing-deal > * { grid-column: 1 / -1; }
-  .listing-deal > .contact-bar { grid-column: 1; margin-right: .5rem; }
-  .listing-deal > .contact-bar + .actions { grid-column: 2; align-self: center; }
 }
 /* Listings like it, under it: the browse pages' grid, as wide as the page, set apart by space
    alone. */
@@ -70,17 +68,28 @@
    shade under the pointer reaching a little past it: their initial in a ring of 48 px, 12 px from
    their name (16px, semibold), and under it, 13px and muted, since when and how many listings,
    then how quickly they answer and when they were last here, each part kept whole where a line
-   wraps. The ways to reach them are the buttons under the price alone. On a phone the contact bar
-   settles between the description and the seller (who and the map come after it in the grid, by
-   order), a band from edge to edge (below), and the seller keeps the 2.5rem under it, so that they
-   stand clear of the band. On a car's page the seller has the contact bar under them too, in the
-   deal's column from 960 px up (.listing-car, below). */
+   wraps. Under them the ways to reach them, the contact bar (.seller-card), and under that the
+   share and the report after a hairline (.listing-share): the user's ask of 2026-10-11, the bar
+   having stood under the price on most pages. On a phone the section and its card are no boxes
+   (display: contents), so that the bar stays one of the listing's grid items and sticky at the
+   screen's bottom while the whole listing scrolls (a box round it would hold it to its own
+   height); the heading, the seller, the bar, the share's section and the map come after the
+   description (order 2), the bar settling as a band from edge to edge under the seller (below).
+   On a car's page all of it stands in the deal's column from 960 px up (.listing-car, below). */
 .seller-section { margin-top: 1.75rem; }
 @media (max-width: 719px) {
-  .seller-section { margin-top: 2.5rem; }
-  .listing-side > :is(.seller-section, .listing-map-section),
-  .listing-deal > .seller-section { order: 2; }
+  .seller-section,
+  .seller-card { display: contents; }
+  .listing-side .seller-section > h2 { margin-top: 2.5rem; }
+  .seller-section > h2,
+  .seller-card > :is(.seller-head, .contact-bar),
+  .listing-share,
+  .listing-side > .listing-map-section { order: 2; }
 }
+/* The share and the report (listing_actions.html) under the seller's section, a hairline over
+   them, the two circles at its start (the user's ask of 2026-10-11). */
+.listing-share { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+.listing-share > .actions { margin: 0; }
 .seller-head { display: flex; align-items: center; gap: .5rem 1.25rem; }
 .seller-head .seller { flex: 1 1 0; gap: 12px; min-width: 0; margin: 0 -10px; padding: 8px 10px; }
 .seller-head .seller-text { gap: 2px; }
@@ -171,29 +180,12 @@
   .listing-split .listing-side > :is(.listing-header, .listing-details, .listing-description),
   .listing-split .listing-deal > .price-box { max-width: none; }
   .listing-split .listing-header h1 { margin-top: 0; }
-  /* The bar's pills on a line each, the message's first, the phone's under it (by order; a
-     phone's bar keeps the phone first). The seller's own view, with the phone alone and their
-     own buttons after it: the bar in the first track, the buttons in the second, level with it
-     (the circles are .25rem shorter than the pills). */
-  .listing-split .listing-deal > .contact-bar { grid-column: 1; flex-direction: column; align-items: stretch; margin-right: .5rem; }
-  .listing-split .listing-deal > .contact-bar + .actions { grid-column: 2; align-self: end; margin-bottom: calc((var(--size-button) - var(--size-round)) / 2); }
+  /* The bar under the seller, in the column: its pills on a line each, the message's first, the
+     phone's under it (by order; a phone's bar keeps the phone first), the revealed number taking
+     the phone's room with its copy button. */
+  .listing-split .contact-bar { flex-direction: column; align-items: stretch; }
   .listing-split .contact-bar .button { flex: none; }
   .listing-split .contact-bar .message-button { order: -1; }
-  /* Anyone else's view, with the message pill: the bar across both tracks, the message as wide
-     as the phone and the two circles together; the phone, or the message where the seller has
-     no number to show, leaves the circles their room (two of 46px, .5rem apart and .5rem from
-     the pill), and the circles come up from the row under the bar to stand level with that
-     last line, the row left with no height of its own (the margins add up to none). The
-     revealed number takes the phone's room with its copy button. */
-  .listing-split .listing-deal > .contact-bar:has(.message-button) { grid-column: 1 / -1; margin-right: 0; }
-  .listing-split .contact-bar:has(.message-button) :is(.reveal-button, .contact-revealed),
-  .listing-split .contact-bar:has(.message-button):not(:has(.reveal-button, .contact-revealed)) .message-button { width: calc(100% - 2 * var(--size-round) - 1rem); }
-  .listing-split .listing-deal > .contact-bar:has(.message-button) + .actions { grid-column: 2; align-self: start; margin-top: calc((var(--size-button) - var(--size-round)) / 2 - var(--size-button)); margin-bottom: calc((var(--size-button) - var(--size-round)) / 2); }
-  /* A revealed number with its WhatsApp circle (phone_stream.html) is three things on that last
-     line, which leaves the two circles no room beside it: it takes the line's whole width, and
-     the share and the report stay in the row under the bar, at its right end. */
-  .listing-split .contact-bar:has(.message-button):has(.whatsapp-button) .contact-revealed { width: 100%; }
-  .listing-split .listing-deal > .contact-bar:has(.message-button):has(.whatsapp-button) + .actions { margin-top: .5rem; }
   .listing-split .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
 }
 
@@ -267,7 +259,8 @@
   .listing-car .listing-deal > .seller-section,
   .listing-car .listing-deal .seller-card { display: contents; }
   .listing-car .listing-deal > .seller-section > h2,
-  .listing-car .listing-deal .seller-card > .seller-head,
+  .listing-car .listing-deal .seller-card > :is(.seller-head, .contact-bar),
+  .listing-car .listing-deal > .listing-share,
   .listing-car .listing-side > .listing-map-section { order: 2; }
   .listing-car .listing-deal > .seller-section > h2,
   .listing-car .listing-deal .seller-card > .seller-head { min-width: 0; }
@@ -279,8 +272,7 @@
 @media (min-width: 720px) and (max-width: 959px) {
   .listing-car .listing-deal > .seller-section > h2,
   .listing-car .listing-deal .seller-card > .seller-head { grid-column: 1 / -1; }
-  .listing-car .listing-deal .seller-card > .contact-bar { grid-column: 1; margin-right: .5rem; }
-  .listing-car .listing-deal .seller-card > .actions,
+  .listing-car .listing-deal .seller-card > .contact-bar { grid-column: 1 / -1; }
   .listing-car .listing-deal > .seller-section + .actions { grid-column: 2; align-self: center; }
   .listing-car .loan { width: calc(50% - .5rem); }
 }
@@ -309,26 +301,16 @@
   /* Under "Shitësi", a heading as the column's "Lokacioni" and the page's others are, the seller
      and, 16px under them, the ways to reach them, with no box round them, as the canvas has it
      (seller_card.html, .seller-card: a card once, the bar under a hairline in it): the bar's
-     pills on a line each, 8px apart, the message's first, and the share and the report beside it
-     (below; on the seller's own page they stay under the seller). */
+     pills on a line each, 8px apart, the message's first, the column's width; the share and the
+     report under the section, after a hairline (.listing-share, above; they stood beside the
+     message's pill until 2026-10-11). On the seller's own page their own buttons stay under the
+     seller. */
   .listing-car .listing-deal > .seller-section { margin-top: 1.75rem; }
   .listing-car .listing-deal > .seller-section > h2 { margin-top: 0; }
   .listing-car .listing-deal .contact-bar { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 16px; }
   .listing-car .contact-bar .button { flex: none; }
   .listing-car .contact-bar .message-button { order: -1; }
   .listing-car .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
-  /* The share and the report (listing_actions.html), beside the message's pill: the bar and the
-     circles share a row of the section's grid, the circles at its right end, level with the pill
-     (the bar's 16px over it, and half of the pill's 48px over the circles' 46px), the pill
-     leaving them their room, two circles .5rem apart and .5rem from it, its sides a little
-     tighter so that its words fit whole. With no message to write (a listing off the site), they
-     come under the bar. On the seller's own page they stay under the seller, with their own
-     buttons. */
-  .listing-car .listing-deal .seller-card:has(.message-button) { display: grid; grid-template-columns: minmax(0, 1fr); }
-  .listing-car .listing-deal .seller-card:has(.message-button) > :is(.contact-bar, .actions) { grid-row: 2; grid-column: 1; }
-  .listing-car .listing-deal .seller-card:has(.message-button) > .actions { justify-self: end; align-self: start; margin-top: calc(16px + (var(--size-button) - var(--size-round)) / 2); }
-  .listing-car .listing-deal .contact-bar .message-button { width: calc(100% - 2 * var(--size-round) - 1rem); padding: 0 .9rem; }
-  .listing-car .listing-deal .seller-card > .actions,
   .listing-car .listing-deal > .actions { margin-top: .75rem; }
 }
 /* A car's photos 4:3 under 960 px, as the canvas has them on a phone; the mosaic's side only from
@@ -687,9 +669,8 @@
 @media (prefers-reduced-motion: reduce) {
   .bubble-card { animation: none; }
 }
-/* What a square metre costs: its card under it, as wide as what it says. */
-.area-price { position: relative; width: fit-content; }
-.price-box > .area-price { margin-top: .4rem; }
+/* What a square metre costs: its card under it, as wide as what it says (the circle with a car's,
+   below). */
 .area-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw / var(--page-scale) - 2rem)); }
 /* In a zone with an average, how the square metre compares with it, under the sum: a dot and the
    words in the bubble's colour. */
@@ -702,40 +683,34 @@
 :is(.area-price, .car-price).price-below { --tone: var(--below); --tone-bg: var(--below-bg); --tone-fill: var(--below-fill); }
 :is(.area-price, .car-price).price-near { --tone: var(--near); --tone-bg: var(--near-bg); --tone-fill: var(--near-fill); }
 :is(.area-price, .car-price).price-above { --tone: var(--above); --tone-bg: var(--above-bg); --tone-fill: var(--above-fill); }
-:is(.area-price, .car-price):is(.price-below, .price-near, .price-above) > summary {
-  background: var(--tone-bg);
-  color: var(--tone);
-}
-:is(.area-price, .car-price):is(.price-below, .price-near, .price-above) > summary:hover,
-:is(.area-price, .car-price):is(.price-below, .price-near, .price-above)[open] > summary { background: color-mix(in srgb, var(--tone) 12%, var(--tone-bg)); }
-/* A car's price against what cars of its model and year ask: a circle as tall as "Llogarit
-   kredinë", at its end, the tag alone in it, 20px, on the verdict's colour (--tone-fill: a light
-   red, yellow or green under our black on the light theme, a deeper one under our white on the
-   dark: the user's ask of 2026-10-11), a shade of the words' colour mixed in under the pointer and
-   while open; its card under it from its right edge, as wide as what it says, the verdict first
-   in its colour. */
-.car-price { position: relative; width: fit-content; }
-.price-box > .car-price { margin-top: 10px; }
-.car-price > summary { justify-content: center; width: var(--size-button); height: var(--size-button); padding: 0; }
-.car-price > summary > svg { flex: none; width: 20px; height: 20px; }
-.car-price:is(.price-below, .price-near, .price-above) > summary { background: var(--tone-fill); color: var(--text); }
-.car-price:is(.price-below, .price-near, .price-above) > summary:hover,
-.car-price:is(.price-below, .price-near, .price-above)[open] > summary { background: color-mix(in srgb, var(--text) 10%, var(--tone-fill)); }
+/* A car's price against what cars of its model and year ask, and what a square metre of a
+   property costs: a circle as tall as "Llogarit kredinë", at its end, its icon alone in it, 20px,
+   on the verdict's colour (--tone-fill: a light red, yellow or green under our black on the light
+   theme, a deeper one under our white on the dark: the user's asks of 2026-10-11; a property's
+   was a pill with the figure, half the line, until then), the grey of secondary controls for a
+   property whose zone has no average, a shade of the words' colour mixed in under the pointer and
+   while open; its card under it from its right edge, as wide as what it says, a car's verdict
+   first in its colour. */
+:is(.car-price, .area-price) { position: relative; width: fit-content; }
+.price-box > :is(.car-price, .area-price) { margin-top: 10px; }
+:is(.car-price, .area-price) > summary { justify-content: center; width: var(--size-button); height: var(--size-button); padding: 0; }
+:is(.car-price, .area-price) > summary > svg { flex: none; width: 20px; height: 20px; }
+:is(.car-price, .area-price):is(.price-below, .price-near, .price-above) > summary { background: var(--tone-fill); color: var(--text); }
+:is(.car-price, .area-price):is(.price-below, .price-near, .price-above) > summary:hover,
+:is(.car-price, .area-price):is(.price-below, .price-near, .price-above)[open] > summary { background: color-mix(in srgb, var(--text) 10%, var(--tone-fill)); }
 .car-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw / var(--page-scale) - 2rem)); }
-.car-price .bubble-card { right: 0; left: auto; transform-origin: top right; }
+:is(.car-price, .area-price) .bubble-card { right: 0; left: auto; transform-origin: top right; }
 .car-price-verdict { margin: 0 0 .6rem; }
 /* The price's block, as the canvas has it: the price on a line of its own, and 12px under it
    "Llogarit kredinë", a grey pill 48px tall the line's whole width, its calculator's icon muted
-   before its words; or, beside what a square metre costs, a pill as tall, each half the line; or
-   the line but a car's price's circle at its end, 8px off (which stays at the pill's side, on
-   top, while the calculator is open under the pill). */
+   before its words; or the line but a property's or a car's price's circle at its end, 8px off
+   (which stays at the pill's side, on top, while the calculator is open under the pill). */
 .price-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 8px; }
 .price-row > .listing-price { flex-basis: 100%; }
-.price-row > .car-price { flex: none; align-self: flex-start; }
+.price-row > :is(.car-price, .area-price) { flex: none; align-self: flex-start; }
 .loan { flex: 1 1 100%; min-width: 0; }
-.price-row.with-car > .loan { flex-basis: 0; }
-.loan > summary,
-.price-row.with-area > .area-price > summary {
+.price-row:is(.with-car, .with-area) > .loan { flex-basis: 0; }
+.loan > summary {
   display: flex;
   justify-content: center;
   gap: 8px;
@@ -747,14 +722,8 @@
   white-space: nowrap;
 }
 .loan > summary > svg:first-child { width: 19px; height: 19px; color: var(--muted); }
-/* Half the line each, as the canvas has a property's: 12px of room either side, their icons 17px,
-   so that "Llogarit kredinë" keeps one line in the deal's column. */
-.price-row.with-area > :is(.area-price, .loan) { flex: 1 1 0; width: auto; min-width: 0; }
-.price-row.with-area > :is(.area-price, .loan) > summary { gap: 6px; padding: 0 12px; }
-.price-row.with-area > :is(.area-price, .loan) > summary > svg:first-child { width: 17px; height: 17px; }
 /* Open, the calculator in a white box under the pill, in the page rather than over it, the pill in
-   the main colour with its chevron up, as the canvas has it; beside what a square metre costs, it
-   takes the line under it, the whole of it. */
+   the main colour with its chevron up, as the canvas has it. */
 .loan[open] > summary { background: var(--main); color: var(--on-main); }
 .loan[open] > summary > svg:first-child { color: inherit; }
 @media (hover: hover) {
@@ -763,7 +732,6 @@
 .loan-chevron { display: none; flex: none; transform: rotate(180deg); }
 .loan[open] .loan-chevron { display: block; }
 .loan .bubble-card { position: static; width: auto; margin-top: 10px; padding: 16px; box-shadow: var(--shadow); animation: none; }
-.price-row.with-area > .loan[open] { flex-basis: 100%; order: 1; }
 /* The calculator: the two fields side by side, the years and the yearly interest; then the down
    payment, a set share of the price, the loan, its interest and the two together, and last the
    monthly payment, 22px and a step bolder, as the canvas has it. */
@@ -796,9 +764,8 @@
 .badge.danger { background: var(--danger-bg); color: var(--danger); }
 .badge.ok { background: var(--below-bg); color: var(--below); }
 .badge.state { background: var(--main); color: var(--on-main); }
-/* The share and the report, and a seller's own buttons, under the price: from 720 px up on the
-   contact bar's line, after it (the grid above), on a phone under the price alone, the bar being
-   at the screen's foot there. */
+/* The share and the report under the seller's section (.listing-share), and a seller's own
+   buttons under the price. */
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .9rem 0 0; }
 
 /* Buttons as the redesign's canvas has them: pills with no outline, their words a weight up and a
@@ -884,9 +851,9 @@
    once, one tinted thing more beside the filled one). Once tapped, the number takes the phone's
    place, after the same icon, marked as the site marks what is picked (a category page's own
    pill): the coral's tint, a border of the coral and the number in it, the border whole under
-   the pointer or a press, with a button beside it that copies it (copy_controller.js). From
-   720 px up the two stand under the price on one line with the share and the report, before
-   them; on a phone they are a bar at the foot of the screen (below). */
+   the pointer or a press, with a button beside it that copies it (copy_controller.js). They stand
+   under the seller (seller_card.html), from 720 px up on one line (a line each in a narrow
+   column, above); on a phone they are a bar at the foot of the screen (below). */
 .contact-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .9rem; }
 .contact-bar form { display: contents; }
 .contact-bar .button { justify-content: center; gap: .5rem; height: var(--size-button); padding: 0 1.25rem; font-weight: var(--semibold); white-space: nowrap; }
@@ -926,7 +893,7 @@
     position: sticky;
     bottom: 0;
     z-index: 7;
-    order: 1;
+    order: 2;
     margin: 1.5rem calc(-1 * var(--gutter)) 0;
     padding: .6rem var(--gutter) calc(.6rem + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border);
