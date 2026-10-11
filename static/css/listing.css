@@ -328,26 +328,31 @@
 
 /* The photos' glow, as YouTube's ambient light takes the colours of what plays (the user's ask of
    2026-10-11, "a blur / shadow similar to how youtube hues its background based on whats its
-   playing"): behind the photos the one that shows once more, its tiny copy (in the page, so at
-   once) stretched a little past their box, 24px over and under it and as far as the page's
-   margin at its sides (so that a phone's page grows no wider), blurred far past that and its
-   colours livelier (--glow, base.css), as faint as YouTube's (--glow-strength: 26% on both
-   themes; the user found 45% and 60% far too strong, 12% on the light theme almost invisible,
-   and asked for it spread wider and more colourful than at 22%), so that the page round them,
-   the bar's frost too, takes a hint of their colours. It follows the photos as they slide, the
+   playing"; its values the PluribusGoogle canvas's, asked for the same day: "what values should i
+   use to recreate the background blur in html? ... implement ONLY THAT for each listing type"):
+   behind the photos the one that shows once more, its tiny copy (in the page, so at once), in a
+   box past the photos' own: a quarter larger, blurred 80px and its colours livelier (--glow,
+   base.css; on the copy, so that the blur's fringe stays inside the box, which clips it), and
+   fading to nothing at the box's edge (--glow-fade, a radial mask), at 40% on the light theme and
+   55% on the dark (--glow-strength). Each layout spreads it its own way: on a car's or a
+   property's page past the mosaic 64px over, 130px under and 24px at either side; on a split
+   page past the tall photo 64px over, 100px under, 24px at the left and 110px under the column
+   beside it; under 960px past the photos 72px over, 150px under and as far as the page's margin
+   at its sides, so that a phone's page grows no wider. It follows the photos as they slide, the
    next one's fading in over the last's (slides_controller.js, shine), and a stand-in's is its
    card's photo (application.js, listingStandIn). It is under everything on the page, the words
    round the photos among them (z-index: -1, in the page's own layer, none of the boxes round it
    being a layer of its own), and under the photos' box, whose ground is the page's colour, so
-   that it shows round the photos alone, the mosaic's gaps staying the page's. The blur is ink,
-   as a shadow is, so the page grows no wider for it either. */
-.listing-media { border-radius: var(--radius); background: var(--bg); }
+   that it shows round the photos alone, the mosaic's gaps staying the page's. */
+.listing-media { position: relative; border-radius: var(--radius); background: var(--bg); }
 .listing-glow {
   position: absolute;
-  inset: -24px calc(-1 * var(--gutter));
+  inset: -72px calc(-1 * var(--gutter)) -150px;
   z-index: -1;
+  overflow: hidden;
   opacity: var(--glow-strength);
-  filter: var(--glow);
+  -webkit-mask-image: var(--glow-fade);
+  mask-image: var(--glow-fade);
   pointer-events: none;
 }
 .listing-glow img {
@@ -356,6 +361,12 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  filter: var(--glow);
+  transform: scale(1.25);
+}
+@media (min-width: 960px) {
+  .listing-car .listing-glow { inset: -64px -24px -130px; }
+  .listing-split .listing-glow { inset: -64px -110px -100px -24px; }
 }
 /* A split page's photo stands still while the column beside it scrolls (position: sticky, above),
    and that makes its box a layer of its own, which would lay the glow over the column's words:

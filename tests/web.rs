@@ -5226,24 +5226,28 @@ async fn a_listings_photos_glow_as_youtubes_ambient_light(pool: PgPool) {
     assert!(source.starts_with("https://images.unsplash.com/photo-1591230740238-e9a71182b67c?"), "{source}");
     assert!(page[glow..].starts_with(&format!(r#"{source}" alt=""></div><div class="gallery">"#)), "{page}");
     assert!(page.contains(&format!(r#"<img class="gallery-backdrop" src="{source}" alt="""#)));
-    // A little past the photos' box (24px over and under it, the page's margin at its sides) and
-    // blurred far past that, its colours livelier, as faint as YouTube's, the same on both themes
-    // ("waaaaay more subtle", the user asked of 45% and 60%; "a bit more in white" of 12%; spread
-    // wider and more colourful at 26%); under every word on the page, and under the photos' box,
-    // whose ground is the page's, so that it shows round them alone. A split page's photo stands
-    // still as its column scrolls, a layer of its own: there the photos' box goes under the
-    // listing's words, its glow under it, and the listings like it over both. (The stylesheet
-    // and the scripts come minified.)
+    // In a box past the photos' own, enlarged a quarter, blurred 80px and its colours livelier,
+    // fading to nothing at the box's edge (a mask), at 40% on the light theme and 55% on the dark:
+    // the PluribusGoogle canvas's values, the user's ask of 2026-10-11. Each layout spreads it its
+    // own way (64px over, 130 under and 24 at the sides of a car's mosaic; 64, 100, 24 at the left
+    // and 110 under the column beside a split page's tall photo; 72, 150 and the page's margin on
+    // a phone). Under every word on the page, and under the photos' box, whose ground is the
+    // page's, so that it shows round them alone. A split page's photo stands still as its column
+    // scrolls, a layer of its own: there the photos' box goes under the listing's words, its glow
+    // under it, and the listings like it over both. (The stylesheet and the scripts come
+    // minified.)
     let version = marketplace::web::asset_version();
     let css = get(pool.clone(), &format!("/static/css/site.css?v={version}")).await.body;
     for rule in [
-        "--glow:blur(110px) saturate(170%);--glow-strength:26%;",
-        ".listing-media{border-radius:var(--radius);background:var(--bg);}.listing-glow{position:absolute;inset:-24px calc(-1 * var(--gutter));z-index:-1;opacity:var(--glow-strength);filter:var(--glow);pointer-events:none;}",
+        "--glow:blur(80px) saturate(140%);--glow-fade:radial-gradient(ellipse 50% 50% at 50% 50%,#000 28%,transparent 100%);--glow-strength:40%;",
+        ".listing-media{position:relative;border-radius:var(--radius);background:var(--bg);}.listing-glow{position:absolute;inset:-72px calc(-1 * var(--gutter)) -150px;z-index:-1;overflow:hidden;opacity:var(--glow-strength);-webkit-mask-image:var(--glow-fade);mask-image:var(--glow-fade);pointer-events:none;}.listing-glow img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:var(--glow);transform:scale(1.25);}",
+        "@media (min-width:960px){.listing-car .listing-glow{inset:-64px -24px -130px;}.listing-split .listing-glow{inset:-64px -110px -100px -24px;}}",
         "@media (min-width:960px){.listing-split{isolation:isolate;}.listing-split > .listing-media{z-index:-1;}.listing-split ~ .related{position:relative;}}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
-    assert_eq!(css.matches("--glow-strength:").count(), 1, "the same on both themes");
+    assert_eq!(css.matches("--glow-strength:40%").count(), 1, "the light theme's");
+    assert_eq!(css.matches("--glow-strength:55%").count(), 2, "the dark theme's, picked in the menu and the device's");
     // As the photos slide, the one that shows lends it its colours, fading in over the last's; a
     // stand-in's is its card's photo.
     let slides = get(pool.clone(), &format!("/static/js/controllers/slides_controller.js?v={version}")).await.body;
