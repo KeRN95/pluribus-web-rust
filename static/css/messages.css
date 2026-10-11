@@ -266,11 +266,15 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 .link-button:active { color: var(--danger); }
 
 /* A listing's message sheet (listing.html, message_sheet_controller.js), white, as the canvas has
-   it (on the page's own colour once). On a phone, across the screen's foot, 470px tall as the
+   it (on the page's own colour once). On a phone, a card at the screen's foot, 470px tall as the
    canvas draws it (three quarters of a shorter screen at most; the screen's lower half once),
-   sliding up from its bottom in a blink, its top corners rounded and a shadow over the page,
-   which is dimmed under it (below) and holds still while it is open, and while the keyboard is
-   up, when the controller puts the sheet onto the keyboard (top, height and bottom inline). From
+   floating 8px in from the screen's sides and over its bottom edge, its corners all round, as the
+   user asked on 2026-10-11 ("make lower chat box round"; it stood across the foot, square on the
+   bottom edge, only its top corners rounded, 18px): 40px, as round as the box to write in and its
+   button 16px inside them, as iOS's sheets are. It slides up from the bottom in a blink, with what
+   floats' shadow, over the page, which is dimmed under it (below) and holds still while it is
+   open, and while the keyboard is up, when the controller puts the sheet 8px over the keyboard
+   (top, height and bottom inline). From
    720 px up, a popup card from the button instead, under it (or over it, where the screen has
    more room there), as the menus open theirs (--top, --left, --height). The conversation scrolls
    inside it, with "Mbyll" at the end of who with's line and its box to write in at its foot; its
@@ -278,17 +282,17 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 .listing-page { display: contents; }
 .message-sheet {
   position: fixed;
-  inset: max(25vh / var(--page-scale), calc(100vh / var(--page-scale) - 470px)) 0 0;
-  inset: max(25dvh / var(--page-scale), calc(100dvh / var(--page-scale) - 470px)) 0 0;
+  inset: max(25vh / var(--page-scale), calc(100vh / var(--page-scale) - 478px)) 8px 8px;
+  inset: max(25dvh / var(--page-scale), calc(100dvh / var(--page-scale) - 478px)) 8px 8px;
   z-index: 30;
   display: flex;
   flex-direction: column;
-  border-radius: 18px 18px 0 0;
+  border-radius: 40px;
   background: var(--surface);
-  box-shadow: 0 -8px 32px rgb(0 0 0 / 18%);
+  box-shadow: var(--shadow-float);
   animation: sheet-in .12s ease-out;
   /* Its corners clip what is in it: the box to write in, square and from edge to edge, would
-     otherwise stand over the rounded ones at the popup's foot. */
+     otherwise stand over the rounded ones at its foot. */
   overflow: hidden;
 }
 .message-sheet[hidden] { display: none; }
@@ -316,7 +320,7 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 @media (prefers-reduced-motion: reduce) {
   .message-sheet, .message-sheet.is-raised { transition: none; }
 }
-@keyframes sheet-in { from { transform: translateY(100%); } }
+@keyframes sheet-in { from { transform: translateY(calc(100% + 8px)); } }
 @media (prefers-reduced-motion: reduce) {
   .message-sheet { animation: none; }
 }
@@ -383,10 +387,11 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 /* Its box to write in at its foot, on its white, 16px in from its edges, with no hairline over it. */
 .message-sheet .composer { margin: 0 -16px; padding: 14px 16px 16px; border: 0; border-radius: 0; background: var(--surface); }
 /* On a phone the head drags the sheet down as its bar does; it scrolls nothing itself. The box to
-   write in stands above the phone's home bar. */
+   write in stands above the phone's home bar, the 8px the sheet floats over the screen's edge
+   counted. */
 @media (max-width: 719px) {
   .message-sheet .conversation-head { touch-action: none; }
-  .message-sheet .composer { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .message-sheet .composer { padding-bottom: calc(16px + max(0px, env(safe-area-inset-bottom) - 8px)); }
 }
 /* On a phone the sheet is frosted as an iPhone's are, in the header's glass, as the user asked on
    2026-10-11: the white at 80% (92% at first), a little of the dimmed page showing through it,

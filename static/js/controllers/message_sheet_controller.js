@@ -3,7 +3,8 @@ import { t } from "controllers/i18n.js";
 
 // A listing's message sheet (listing.html). A message button, signed in, loads the conversation
 // into the sheet's frame (data-turbo-frame) and opens it. On a phone it slides up from the screen's
-// bottom (messages.css), the page under it dimmed and held still, a tap on it closing the sheet
+// bottom (messages.css), a card with its corners round floating GAP in from the screen's sides and
+// over its bottom edge, the page under it dimmed and held still, a tap on it closing the sheet
 // (not a tap that began in the sheet: rising under the finger as its box takes the focus, the
 // sheet leaves the shade where the finger lifts, and the browser gives the click to the page);
 // its bar at the top, or its head, dragged down past a quarter of its height or flicked down
@@ -14,11 +15,11 @@ import { t } from "controllers/i18n.js";
 // The box to write in takes the focus once the conversation is in, where there is a mouse; on a
 // phone the keyboard waits for a tap in it. The keyboard would push the whole screen up to show
 // the box, the page and all: instead the sheet rises in the same moment as the box takes the focus
-// (raise), before the keyboard comes, onto where the keyboard will be: as high as the keyboard was
-// the last time it was up on this screen (KEYBOARD), or a little higher than an iPhone's comes
-// until it has been; so the box stands clear of the keyboard and the browser has nothing to push.
-// Once the keyboard is up (visualViewport, follow) the sheet eases the rest of the way onto it,
-// its foot at the keyboard's top and as tall as it was, or as the room allows, the page under it
+// (raise), before the keyboard comes, to float GAP over where the keyboard will be: as high as the
+// keyboard was the last time it was up on this screen (KEYBOARD), or a little higher than an
+// iPhone's comes until it has been; so the box stands clear of the keyboard and the browser has
+// nothing to push. Once the keyboard is up (visualViewport, follow) the sheet eases the rest of
+// the way, its foot GAP over the keyboard's top and as tall as it was, or as the room allows, the page under it
 // unmoved; and it eases back to the lower half as the focus leaves the box (lower). "Mbyll",
 // Escape, or Turbo caching the page closes it, empties the frame (its conversation stops asking
 // for new messages) and gives the focus back to the button, for a keyboard; a tap or a click
@@ -124,8 +125,8 @@ export default class extends Controller {
     this.frameTarget.querySelector("textarea")?.focus({ preventScroll: true });
   }
 
-  // The box taking the focus, on a phone: the sheet up onto where the keyboard will be, as tall as
-  // it was, in the same moment, before the keyboard comes up (the focus comes first), so the box
+  // The box taking the focus, on a phone: the sheet up to float over where the keyboard will be, as
+  // tall as it was, in the same moment, before the keyboard comes up (the focus comes first), so the box
   // stands above the keyboard and the browser needn't push the screen up to show it. Laid out there
   // before it is told to ease (is-raised), so that this move is at once and only what follows
   // eases: onto the keyboard where it comes (follow), and down again (lower).
@@ -138,7 +139,7 @@ export default class extends Controller {
     clearTimeout(this.easing);
     visualViewport?.addEventListener("resize", this.fit);
     visualViewport?.addEventListener("scroll", this.fit);
-    this.put(Math.max(GAP, innerHeight - this.keyboard - this.height), this.height);
+    this.put(Math.max(GAP, innerHeight - this.keyboard - GAP - this.height), this.height);
     sheet.offsetHeight; // the layout, with the sheet there
     sheet.classList.add("is-raised");
   }
@@ -158,8 +159,8 @@ export default class extends Controller {
     } catch {}
   }
 
-  // The sheet onto the keyboard, once the screen's visible part has shrunk by it: its foot at the
-  // visible part's bottom, as tall as it was or as the room above allows, and the keyboard's
+  // The sheet over the keyboard, once the screen's visible part has shrunk by it: its foot GAP over
+  // the visible part's bottom, as tall as it was or as the room above allows, and the keyboard's
   // height remembered for the next rise. The visible part whole again while the box keeps the
   // focus is the keyboard put away by the phone (Android's back button): the sheet goes down and
   // the box lets the focus go, so that the next tap brings both up again. A change too small to
@@ -177,8 +178,8 @@ export default class extends Controller {
     }
     this.keyboardSeen = true;
     this.remember(keyboard);
-    const height = Math.min(this.height, view.height - GAP);
-    this.put(Math.max(view.offsetTop + GAP, view.offsetTop + view.height - height), height);
+    const height = Math.min(this.height, view.height - 2 * GAP);
+    this.put(Math.max(view.offsetTop + GAP, view.offsetTop + view.height - GAP - height), height);
   }
 
   // The sheet at `top`, `height` tall; its messages stay at their end where they were.
@@ -256,7 +257,7 @@ export default class extends Controller {
       sheet.style.transform = "";
       return;
     }
-    sheet.style.transform = "translateY(100%)";
+    sheet.style.transform = `translateY(calc(100% + ${GAP}px))`;
     const done = () => {
       sheet.removeEventListener("transitionend", done);
       clearTimeout(this.leaving);
