@@ -481,11 +481,16 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   margin: 0 auto;
   padding: 0 var(--gutter);
 }
-/* On phones the bar is 56px, and its last button comes nearer the screen's edge, its icon where the
-   page's gutter ends. */
+/* On phones the bar is 56px, its round buttons side by side with no room between them, as the
+   canvas has them, so that the menu, the logo and the six fit a screen 360px wide, and its last
+   button comes nearer the screen's edge, its icon where the page's gutter ends. The type trial's
+   button (below) has no room left under 400px. */
 @media (max-width: 719px) {
   :root { --size-header: 56px; }
-  .header-inner { padding: 0 8px 0 var(--gutter); }
+  .header-inner { gap: 0; padding: 0 8px 0 var(--gutter); }
+}
+@media (max-width: 399px) {
+  .type-menu { display: none; }
 }
 
 /* The logo: the name in lowercase in Clash Display Semibold (Indian Type Foundry's, from
@@ -599,14 +604,154 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   background: var(--highlight);
   box-shadow: 0 0 0 2px var(--header), var(--dot-edge);
 }
-/* Trying typefaces (TYPE_TRIAL=true; base.html, type_trial_controller.js): "Aa" after the logo, a
+/* The menu's button at the bar's left, before the logo, as the canvas has it: the three lines and
+   the word "Menyja", 40px tall, its lines where the page's column starts and the word 12px from
+   the logo; under the pointer the word is underlined, as a link's is, rather than the button
+   sitting on a grey pill as the bar's round buttons do (the canvas draws the pill; the underline
+   was asked for on 2026-10-11, then in the accent and 2px thick); on phones the lines alone, 24px, the word kept for screen
+   readers. */
+.menu-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  height: var(--size-button-sm);
+  margin: 0 2px 0 -10px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: var(--medium);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .menu-button:hover .menu-button-word { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
+}
+@media (max-width: 719px) {
+  .menu-button { justify-content: center; width: var(--size-button-sm); margin: 0 2px 0 -8px; padding: 0; }
+  .menu-button svg { width: 24px; height: 24px; }
+  .menu-button-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
+/* The text's size, "Aa" after the logo (base.html): a bare round button like the bar's others, its
+   letters 15px bold, in the main colour while its card shows, as an open menu's button is; the
+   card under it, white with what floats' shadow, its name small and muted over the three sizes,
+   the menu's own (.text-sizes, below). */
+.text-size-menu { position: relative; }
+.text-size-menu > summary { width: var(--size-button-sm); height: var(--size-button-sm); border: 0; list-style: none; cursor: pointer; font-size: 15px; font-weight: var(--bold); }
+.text-size-menu > summary::-webkit-details-marker { display: none; }
+@media (hover: hover) {
+  .text-size-menu > summary:hover { background: var(--surface-muted); }
+}
+.text-size-menu[open] > summary { background: var(--main); color: var(--on-main); }
+.text-size-panel {
+  position: absolute;
+  top: calc(100% + var(--space-8));
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: var(--space-8);
+  padding: 12px 14px 14px;
+  border-radius: var(--radius-box);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  white-space: nowrap;
+}
+.text-size-title { margin: 0; color: var(--muted); font-size: 13px; font-weight: var(--semibold); }
+/* The three sizes in the two-part toggle's track (.segmented, listing.css), each an A as big as the
+   canvas draws it, 13, 16 and 19px, 38px wide. */
+.segmented.text-sizes > button { width: 38px; padding: 0; font-weight: var(--bold); line-height: 1; }
+.segmented.text-sizes > .text-size-small { font-size: 13px; }
+.segmented.text-sizes > .text-size-normal { font-size: 16px; }
+.segmented.text-sizes > .text-size-large { font-size: 19px; }
+
+/* The text's size the visitor picked there (look_controller.js, kept in their browser:
+   data-text-size on <html>): every size in rem follows the root's, an eighth smaller or three
+   sixteenths bigger (the phones' smaller root too, listing.css), the bar's and the buttons'
+   heights staying in px. */
+:root { --text-scale: 1; }
+:root[data-text-size="small"] { --text-scale: .875; }
+:root[data-text-size="large"] { --text-scale: 1.1875; }
+html { font-size: calc(100% * var(--text-scale)); }
+
+/* The menu (base.html, menu_controller.js), as the canvas draws it: a modal dialog, a drawer 380px
+   wide at the screen's left from 720px up and the whole screen on phones, white, floating over
+   the page dimmed (--shadow-float, --scrim), appearing without sliding as the design system has
+   menus, the page behind still. Its top as tall as the bar, the logo and the cross under a
+   hairline; under it, scrolling on its own, "Posto njoftim" across, then its groups, each under
+   a hairline with its name small and muted: rows 44px tall, an icon of 20px drawn a little
+   thinner (1.8) before the words, a grey ground with rounded corners under the pointer, at a
+   row's end a count in the accent or the look's controls. */
+.menu {
+  position: fixed;
+  inset: 0 auto 0 0;
+  flex-direction: column;
+  width: min(380px, 100%);
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-float);
+}
+.menu[open] { display: flex; }
+.menu::backdrop { background: var(--scrim); }
+html:has(.menu[open]) { overflow: hidden; }
+.menu-top { display: flex; flex: none; align-items: center; justify-content: space-between; height: var(--size-header); padding: 0 16px 0 24px; border-bottom: 1px solid var(--border); }
+.menu-close { display: grid; flex: none; place-items: center; width: var(--size-button-sm); height: var(--size-button-sm); padding: 0; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text); cursor: pointer; }
+@media (hover: hover) {
+  .menu-close:hover { background: var(--surface-muted); }
+}
+.menu-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 20px 24px; }
+.menu-post { width: 100%; margin-bottom: 14px; }
+.menu-group { padding: 14px 0; border-top: 1px solid var(--border); }
+.menu-group h2 { margin: 0 0 6px; padding: 0 10px; color: var(--muted); font-size: 13px; font-weight: var(--semibold); line-height: 1.4; letter-spacing: 0; }
+.menu-rows { margin: 0; padding: 0; list-style: none; }
+.menu-row { display: flex; align-items: center; gap: var(--space-12); min-height: 44px; padding: 0 10px; border-radius: var(--radius-field); color: var(--text); font-size: .9375rem; font-weight: var(--medium); line-height: 1.3; text-decoration: none; }
+.menu-row > svg { flex: none; }
+:is(a, label).menu-row { cursor: pointer; }
+@media (hover: hover) {
+  :is(a, label).menu-row:hover { background: var(--surface-muted); }
+}
+.menu-row > :is(.segmented, .switch, .swatches, .menu-count) { margin-left: auto; }
+.menu-count { min-width: 22px; height: 22px; padding: 0 7px; border-radius: var(--radius-pill); background: var(--highlight); color: var(--on-highlight); font-size: 12px; font-weight: var(--bold); line-height: 22px; text-align: center; }
+.menu-count[hidden] { display: none; }
+.menu-about { display: flex; flex-wrap: wrap; column-gap: 18px; padding: 0 10px; font-size: var(--text-sm); }
+.menu-about a { display: inline-flex; align-items: center; min-height: var(--size-button-sm); color: var(--muted); text-decoration: none; }
+.menu-about a:hover { text-decoration: underline; }
+/* The accents, round, 24px within a 40px tap: lime, then the four darker ones (data-accent, each
+   the theme's own shade), a hairline round each (--swatch-edge: lime alone hardly shows on
+   white), the one picked ringed in the text's colour. Radios, so the arrow keys go from one to
+   the next. */
+.swatches { display: flex; align-items: center; margin-right: -8px; }
+input[type="radio"].swatch,
+input[type="radio"].swatch:checked { width: var(--size-button-sm); height: var(--size-button-sm); border: 0; border-radius: var(--radius-pill); background: transparent; box-shadow: none; }
+input[type="radio"].swatch::before { content: ""; width: 24px; height: 24px; border-radius: var(--radius-pill); background: var(--swatch); box-shadow: inset 0 0 0 1px var(--swatch-edge); }
+input[type="radio"].swatch:checked::before { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+.swatch[value="lime"] { --swatch: var(--lime); }
+.swatch[value="darkred"] { --swatch: var(--choice-darkred); }
+.swatch[value="terracotta"] { --swatch: var(--choice-terracotta); }
+.swatch[value="blue"] { --swatch: var(--choice-blue); }
+.swatch[value="olive"] { --swatch: var(--choice-olive); }
+@media (max-width: 719px) {
+  .menu { width: 100%; box-shadow: none; }
+  .menu-top { padding: 0 8px 0 var(--gutter); }
+  .menu-body { padding: 16px 14px 24px; }
+}
+
+/* Trying typefaces (TYPE_TRIAL=true; base.html, type_trial_controller.js): "Ff" after the logo, a
    bare round button like the bar's others, its letters 15px bold, in the main colour while its
    panel shows, as an open menu's button is; the panel under the bar's right end, a card like the
    menus', with the headings' and the text's lists and their weight sliders, each slider's number
    after it, and "Rikthe". The headings' weights come from it as --heading-weight and
    --subheading-weight (h1 and h2, above), the text's as --regular and --semibold. */
 .type-menu { position: relative; }
-.type-menu > summary { width: var(--size-button-sm); height: var(--size-button-sm); border: 0; list-style: none; cursor: pointer; font-size: .9375rem; font-weight: var(--bold); }
+.type-menu > summary { width: var(--size-button-sm); height: var(--size-button-sm); border: 0; list-style: none; cursor: pointer; font-size: 15px; font-weight: var(--bold); }
 .type-menu > summary::-webkit-details-marker { display: none; }
 @media (hover: hover) {
   .type-menu > summary:hover { background: var(--surface-muted); }

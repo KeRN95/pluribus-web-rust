@@ -43,7 +43,7 @@
   {{ crate::web::MODULES_HERE|safe }}
   <script type="module" src="/static/js/application.js?v={{ crate::web::asset_version() }}" data-turbo-track="reload"></script>
 </head>
-<body>
+<body data-controller="menu">
   {%- if crate::i18n::offer_english() %}
   {#- To a visitor who hasn't chosen a language and whose browser reads no Albanian, English
       offered in English, until they choose either (web/language.rs). -#}
@@ -55,6 +55,13 @@
   {%- endif %}
   <header class="site-header">
     <div class="header-inner">
+      {#- The menu (the dialog after the header, menu_controller.js): the three lines and the word
+          "Menyja" at the bar's left, before the logo, as the canvas has them; on phones the lines
+          alone, the word kept for screen readers (base.css, .menu-button). -#}
+      <button type="button" class="menu-button" aria-haspopup="dialog" aria-expanded="false" aria-controls="menu" data-menu-target="button" data-action="menu#open">
+        <svg data-icon="menu" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MENU|safe }}</svg>
+        <span class="menu-button-word">{{ crate::t("Menyja") }}</span>
+      </button>
       {#- The search is the welcome page's pill, and on the browse pages the round button before
           the filters. -#}
       {#- The logo: the name in lowercase in Clash Display Semibold, drawn as shapes (logo.svg),
@@ -63,12 +70,12 @@
           colours slide to the other theme's rather than changing at once (base.css, .logo). -#}
       <a class="logo" id="logo" href="/" data-turbo-permanent translate="no">{% include "logo.svg" %}<span class="visually-hidden">pluribus</span></a>
       {%- if crate::web::type_trial() %}
-      {#- Trying typefaces (TYPE_TRIAL=true, web::type_trial): "Aa" opens a panel that picks the
+      {#- Trying typefaces (TYPE_TRIAL=true, web::type_trial): "Ff" opens a panel that picks the
           headings' typeface and the text's, the site's own and Google Fonts', and their weights,
           for this browser alone (type_trial_controller.js, which fills the lists; base.css,
           .type-menu). A menu like the browse row's, folding on a tap outside or Escape. -#}
       <details class="type-menu" data-controller="dropdown type-trial" data-action="turbo:before-cache@document->dropdown#close">
-        <summary class="icon-button type-button" aria-label="Shkronjat" title="Shkronjat">Aa</summary>
+        <summary class="icon-button type-button" aria-label="Shkronjat" title="Shkronjat">Ff</summary>
         <form class="type-panel" data-action="submit->type-trial#reset">
           <fieldset class="type-group">
             <legend>Titujt</legend>
@@ -99,6 +106,16 @@
         </form>
       </details>
       {%- endif %}
+      {#- The text's size, "Aa", after the logo as the canvas has it: a card under it with the three
+          sizes, the menu's own (look_controller.js keeps the one picked in the browser; base.css,
+          .text-size-menu), folding on a tap outside or Escape as the browse row's menus do. -#}
+      <details class="text-size-menu" data-controller="dropdown look" data-action="turbo:before-cache@document->dropdown#close">
+        <summary class="icon-button text-size-button" aria-label="{{ crate::t("Madhësia e shkrimit") }}" title="{{ crate::t("Madhësia e shkrimit") }}">Aa</summary>
+        <div class="text-size-panel">
+          <p class="text-size-title" id="text-size-title">{{ crate::t("Madhësia e shkrimit") }}</p>
+          <div class="segmented text-sizes" role="group" aria-labelledby="text-size-title"><button type="button" class="text-size-small" aria-label="{{ crate::t("Shkrim i vogël") }}" aria-pressed="false" data-look-target="size" data-look-size-param="small" data-action="look#size">A</button><button type="button" class="text-size-normal" aria-label="{{ crate::t("Shkrim normal") }}" aria-pressed="true" data-look-target="size" data-look-size-param="normal" data-action="look#size">A</button><button type="button" class="text-size-large" aria-label="{{ crate::t("Shkrim i madh") }}" aria-pressed="false" data-look-target="size" data-look-size-param="large" data-action="look#size">A</button></div>
+        </div>
+      </details>
       {#- Before the account, the listings kept and the conversations, bare round buttons like
           it, so that every page reaches them in a tap: the heart, with a dot in the accent while
           kept listings dropped their price unseen (heart_controller.js), and the speech bubble,
@@ -132,6 +149,77 @@
       {%- endblock %}
     </div>
   </header>
+  {#- The menu, as the canvas has it: a drawer at the screen's left on wider screens and the whole
+      screen on phones (base.css, .menu), over the page dimmed, opened by the bar's "Menyja" and
+      closed by its cross, a tap on the dimmed page or Escape (menu_controller.js, a modal dialog,
+      so the page behind waits meanwhile). In it: posting; the account's pages, with how many
+      notifications are new and how many conversations have messages unread, asked for as it
+      opens; the main categories (browse::menu_categories); the look, kept in the browser (the
+      text's size, the dark theme, the accent: look_controller.js, theme_controller.js), and the
+      language, through /gjuha, so on the account too (language.rs); and the pages about the
+      site. -#}
+  <dialog class="menu" id="menu" aria-label="{{ crate::t("Menyja") }}" data-menu-target="dialog" data-action="click->menu#outside cancel->menu#closed close->menu#closed turbo:before-cache@document->menu#close">
+    <div class="menu-top">
+      <a class="logo" href="/" translate="no">{% include "logo.svg" %}<span class="visually-hidden">pluribus</span></a>
+      <button type="button" class="menu-close" aria-label="{{ crate::t("Mbyll menynë") }}" title="{{ crate::t("Mbyll menynë") }}" data-menu-target="close" data-action="menu#close">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CLOSE|safe }}</svg>
+      </button>
+    </div>
+    <div class="menu-body">
+      <a class="button menu-post" href="/shto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PLUS|safe }}</svg>{{ crate::t("Posto njoftim") }}</a>
+      <section class="menu-group" aria-labelledby="menu-account">
+        <h2 id="menu-account">{{ crate::t("Llogaria") }}</h2>
+        <ul class="menu-rows">
+          <li><a class="menu-row" href="/njoftimet-e-mia"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::LISTINGS|safe }}</svg>{{ crate::t("Njoftimet e mia") }}</a></li>
+          <li><a class="menu-row" href="/te-ruajturat"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg>{{ crate::t("Të ruajturat") }}</a></li>
+          <li><a class="menu-row" href="/kerkimet-e-ruajtura"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BOOKMARK|safe }}</svg>{{ crate::t("Kërkimet e ruajtura") }}</a></li>
+          <li><a class="menu-row" href="/lajmerimet"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BELL|safe }}</svg>{{ crate::t("Lajmërimet") }}<span class="menu-count" data-menu-target="notifications" hidden><span data-number></span><span class="visually-hidden"> {{ crate::t("të reja") }}</span></span></a></li>
+          <li><a class="menu-row" href="/mesazhet"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>{{ crate::t("Mesazhet") }}<span class="menu-count" data-menu-target="messages" hidden><span data-number></span><span class="visually-hidden"> {{ crate::t("të palexuara") }}</span></span></a></li>
+          <li><a class="menu-row" href="/llogaria/cilesimet"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SETTINGS|safe }}</svg>{{ crate::t("Cilësimet") }}</a></li>
+        </ul>
+      </section>
+      <section class="menu-group" aria-labelledby="menu-categories">
+        <h2 id="menu-categories">{{ crate::t("Kategoritë") }}</h2>
+        <ul class="menu-rows">
+          {%- for category in crate::web::browse::menu_categories() %}
+          <li><a class="menu-row" href="{{ category.url }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ category.icon|safe }}</svg>{{ crate::t(category.name) }}</a></li>
+          {%- endfor %}
+        </ul>
+      </section>
+      <section class="menu-group" aria-labelledby="menu-look" data-controller="look">
+        <h2 id="menu-look">{{ crate::t("Pamja dhe gjuha") }}</h2>
+        <ul class="menu-rows">
+          <li class="menu-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::TEXT_SIZE|safe }}</svg><span id="menu-text-size">{{ crate::t("Madhësia e shkrimit") }}</span><div class="segmented text-sizes" role="group" aria-labelledby="menu-text-size"><button type="button" class="text-size-small" aria-label="{{ crate::t("Shkrim i vogël") }}" aria-pressed="false" data-look-target="size" data-look-size-param="small" data-action="look#size">A</button><button type="button" class="text-size-normal" aria-label="{{ crate::t("Shkrim normal") }}" aria-pressed="true" data-look-target="size" data-look-size-param="normal" data-action="look#size">A</button><button type="button" class="text-size-large" aria-label="{{ crate::t("Shkrim i madh") }}" aria-pressed="false" data-look-target="size" data-look-size-param="large" data-action="look#size">A</button></div></li>
+          <li><label class="menu-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MOON|safe }}</svg><span>{{ crate::t("Tema e errët") }}</span><input type="checkbox" class="switch" role="switch" data-controller="theme" data-action="change->theme#toggle"></label></li>
+          <li class="menu-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PALETTE|safe }}</svg><span id="menu-colour">{{ crate::t("Ngjyra") }}</span>
+            <div class="swatches" role="radiogroup" aria-labelledby="menu-colour">
+              <input type="radio" class="swatch" name="accent" value="lime" aria-label="{{ crate::t("Lime") }}" checked data-look-target="accent" data-action="look#accent">
+              <input type="radio" class="swatch" name="accent" value="darkred" aria-label="{{ crate::t("E kuqe e errët") }}" data-look-target="accent" data-action="look#accent">
+              <input type="radio" class="swatch" name="accent" value="terracotta" aria-label="{{ crate::t("Terrakota") }}" data-look-target="accent" data-action="look#accent">
+              <input type="radio" class="swatch" name="accent" value="blue" aria-label="{{ crate::t("Blu") }}" data-look-target="accent" data-action="look#accent">
+              <input type="radio" class="swatch" name="accent" value="olive" aria-label="{{ crate::t("Ulliri") }}" data-look-target="accent" data-action="look#accent">
+            </div>
+          </li>
+          <li class="menu-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::GLOBE|safe }}</svg><span id="menu-language">{{ crate::t("Gjuha") }}</span>
+            <form class="segmented" method="post" action="/gjuha" role="group" aria-labelledby="menu-language">
+              <button type="submit" name="gjuha" value="sq" lang="sq" aria-pressed="{{ !crate::i18n::english() }}">Shqip</button>
+              <button type="submit" name="gjuha" value="en" lang="en" aria-pressed="{{ crate::i18n::english() }}">English</button>
+            </form>
+          </li>
+        </ul>
+      </section>
+      <section class="menu-group" aria-labelledby="menu-about">
+        <h2 id="menu-about">{{ crate::t("Rreth faqes") }}</h2>
+        <nav class="menu-about" aria-labelledby="menu-about">
+          <a href="/si-funksionon">{{ crate::t("Si funksionon") }}</a>
+          <a href="/siguria">{{ crate::t("Këshilla sigurie") }}</a>
+          <a href="/kushtet">{{ crate::t("Kushtet") }}</a>
+          <a href="/privatesia">{{ crate::t("Privatësia") }}</a>
+          <a href="/kontakt">{{ crate::t("Kontakt") }}</a>
+        </nav>
+      </section>
+    </div>
+  </dialog>
   <main class="container">
     {% block content %}{% endblock %}
   </main>

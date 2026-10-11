@@ -844,11 +844,12 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     let cars = get(pool.clone(), "/c/automjete").await.body;
     for (page, shortcuts) in [(&body, false), (&cars, true)] {
         assert!(!page.contains("post-button"));
-        // The typeface panel ("Aa") stands there only while TYPE_TRIAL is on (.env).
+        // The typeface panel ("Ff") stands there only while TYPE_TRIAL is on (.env); the text's size
+        // ("Aa") always.
         let trial = std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true");
         assert_eq!(page.contains(r#"<details class="type-menu" data-controller="dropdown type-trial""#), trial);
         let bar = &page[page.find(r#"<header class="site-header">"#).unwrap()..page.find("</header>").unwrap()];
-        assert_eq!(bar.matches("icon-button").count(), 2 + 2 * usize::from(shortcuts) + usize::from(trial), "{bar}");
+        assert_eq!(bar.matches("icon-button").count(), 3 + 2 * usize::from(shortcuts) + usize::from(trial), "{bar}");
         assert!(bar.contains(r#"<a class="icon-button account-button" href="/llogaria""#));
         let toggle = r#"<button type="button" class="icon-button theme-toggle" data-controller="theme" data-action="theme#toggle""#;
         assert!(bar.contains(toggle), "{bar}");
@@ -4544,7 +4545,7 @@ async fn every_part_of_the_site_has_the_one_main_colour(pool: PgPool) {
     // them.
     for page in ["/", "/c/elektronike", "/c/shtepi-dhe-kopsht", "/c/makina", "/harta?category=elektronike", "/listing/1005-iphone-13-128-gb-si-i-ri"] {
         let page_html = html(pool.clone(), page).await;
-        assert!(page_html.contains("<body>") && !page_html.contains("data-section"), "{page}");
+        assert!(page_html.contains(r#"<body data-controller="menu">"#) && !page_html.contains("data-section"), "{page}");
     }
     // (The stylesheet comes minified: web::site_css.)
     let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
@@ -4686,6 +4687,59 @@ async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
     assert!(count.contains("background:var(--highlight)") && count.contains("color:var(--on-highlight)"), "{count}");
 }
 
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_menu_leads_everywhere(pool: PgPool) {
+    // Every page has the menu (base.html): "Menyja" at the bar's left, before the logo, opening a
+    // dialog that leads to posting, the account's pages, every main category in the welcome
+    // page's order (its pills', from the database, which browse::menu_categories keeps), the look
+    // (the text's three sizes, the dark theme's switch, the five accents), the language through
+    // /gjuha, and the pages about the site; the bar's "Aa" has the text's sizes too.
+    let home = get(pool.clone(), "/").await.body;
+    for page in [home.clone(), get(pool.clone(), "/c/automjete").await.body] {
+        assert!(page.contains(r#"<body data-controller="menu">"#));
+        let bar = &page[page.find(r#"<header class="site-header">"#).unwrap()..page.find("</header>").unwrap()];
+        let order = positions(bar, &[r#"<button type="button" class="menu-button""#, r#"<a class="logo" id="logo""#, r#"<details class="text-size-menu""#]);
+        assert!(order.is_sorted(), "{order:?}");
+        let menu = &page[page.find(r#"<dialog class="menu" id="menu" aria-label="Menyja""#).expect("the menu")..];
+        let menu = &menu[..menu.find("</dialog>").unwrap()];
+        for href in ["/shto", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet-e-ruajtura", "/lajmerimet", "/mesazhet", "/llogaria/cilesimet", "/kontakt"] {
+            assert!(menu.contains(&format!(r#"href="{href}""#)), "{href}");
+        }
+        for size in ["small", "normal", "large"] {
+            assert!(menu.contains(&format!(r#"data-look-size-param="{size}""#)), "{size}");
+        }
+        for accent in ["lime", "darkred", "terracotta", "blue", "olive"] {
+            assert!(menu.contains(&format!(r#"<input type="radio" class="swatch" name="accent" value="{accent}""#)), "{accent}");
+        }
+        assert!(menu.contains(r#"<input type="checkbox" class="switch" role="switch" data-controller="theme""#));
+        assert!(menu.contains(r#"<form class="segmented" method="post" action="/gjuha""#));
+        assert!(menu.contains(r#"<button type="submit" name="gjuha" value="sq" lang="sq" aria-pressed="true">Shqip</button>"#));
+    }
+    // Its categories are the welcome page's pills, in their order.
+    let slugs = |part: &str| -> Vec<String> {
+        part.match_indices(r#"href="/c/"#).map(|(at, _)| part[at + 9..].split('"').next().unwrap().to_string()).collect()
+    };
+    let pills = &home[home.find(r#"<nav class="shortcuts" aria-label="Kategoritë">"#).unwrap()..];
+    let pills = &pills[..pills.find("</nav>").unwrap()];
+    let menu = &home[home.find(r#"<h2 id="menu-categories">"#).unwrap()..];
+    let menu = &menu[..menu.find("</ul>").unwrap()];
+    assert_eq!(slugs(menu).len(), 11);
+    assert_eq!(slugs(menu), slugs(pills));
+    // The look the visitor picked comes back before the first paint (web::THEME_SCRIPT): the
+    // theme, the text's size and the accent, from the browser's storage.
+    for part in ["root.dataset.theme = theme", "root.dataset.textSize = size", "root.dataset.accent = accent"] {
+        assert!(home.contains(part), "{part}");
+    }
+    // Drawn as the canvas has it: white over the page dimmed, its counts in the accent; the text's
+    // size scales every size in rem. (The stylesheet comes minified: web::site_css.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    for rule in [".menu::backdrop{background:var(--scrim);}", r#":root[data-text-size="large"]{--text-scale:1.1875;}"#, "html{font-size:calc(100% * var(--text-scale));}"] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    let count = &css[css.find("}.menu-count{").expect("the menu's counts") + 1..];
+    assert!(count[..count.find('}').unwrap()].contains("background:var(--highlight)"));
+}
+
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn the_footer_is_drawn_as_the_canvas_has_it(pool: PgPool) {
     // The footer: the links in the muted grey at the left and the copyright at the right, under a
@@ -4779,9 +4833,9 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     assert!(!level.contains(r#"href="/c/gps-dhe-navigatore""#), "not itself: {level}");
     assert!(!level.contains(r#"href="/c/automjete""#) && !level.contains("Të gjitha njoftimet"), "{level}");
     assert!(!gps.contains(r#"<nav class="subcategories""#), "no subcategories, no pills under");
-    // Every branch closes; the other three </details> are its pill's own, the order's and the view's
-    // (and the typeface panel's, while TYPE_TRIAL is on).
-    let others = 3 + gps.matches("<details class=\"type-menu\"").count();
+    // Every branch closes; the other four </details> are its pill's own, the order's, the view's and
+    // the bar's text size's (and the typeface panel's, while TYPE_TRIAL is on).
+    let others = 4 + gps.matches("<details class=\"type-menu\"").count();
     assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - others, "balanced");
 
     // The old address still works.

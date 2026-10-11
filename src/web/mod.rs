@@ -494,11 +494,12 @@ pub fn asset_version() -> &'static str {
 pub const TURBO: &str = "/static/vendor/turbo-8.0.23.js";
 pub const STIMULUS: &str = "/static/vendor/stimulus-3.2.2.js";
 
-/// The one script base.html runs in the page itself, before the first paint: the theme the
-/// visitor picked (theme_controller.js keeps it in localStorage), so a page never shows the other
-/// one first. Here rather than in the template so that its hash in the Content-Security-Policy is
+/// The one script base.html runs in the page itself, before the first paint: the look the visitor
+/// picked, which their browser keeps (localStorage): the theme (theme_controller.js), the text's
+/// size and the accent (the menu's "Pamja dhe gjuha", look_controller.js), so a page never shows
+/// another first. Here rather than in the template so that its hash in the Content-Security-Policy is
 /// that of the very text pages have.
-pub const THEME_SCRIPT: &str = r#"try { const theme = localStorage.getItem("theme"); if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme; } catch {}"#;
+pub const THEME_SCRIPT: &str = r#"try { const root = document.documentElement; const theme = localStorage.getItem("theme"); if (theme === "light" || theme === "dark") root.dataset.theme = theme; const size = localStorage.getItem("textSize"); if (size === "small" || size === "large") root.dataset.textSize = size; const accent = localStorage.getItem("accent"); if (["darkred", "terracotta", "blue", "olive"].includes(accent)) root.dataset.accent = accent; } catch {}"#;
 
 /// The import map base.html gives the browser: Turbo, Stimulus, and each of the site's modules at
 /// its address with the fingerprint, which browsers keep for a year (`cache_headers`), and

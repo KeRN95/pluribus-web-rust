@@ -283,6 +283,33 @@ pub fn frame(frame_id: String, page: &ListingPage) -> Result<Response> {
     render(ListingFrame { frame_id, page })
 }
 
+/// The main categories in the welcome page's order (MAIN_ON_WELCOME's first, then the others as
+/// the database sorts them), by their slugs and names, for the menu on every page (base.html),
+/// whose frame has no database to ask: the categories come with the migrations, and a test keeps
+/// these theirs (the_menu_leads_everywhere, tests/web.rs).
+const MENU_CATEGORIES: [(&str, &str); 11] = [
+    ("automjete", "Automjete"),
+    ("prona", "Prona"),
+    ("elektronike", "Elektronikë"),
+    ("veshje-dhe-aksesore", "Veshje / aksesorë"),
+    ("shtepi-dhe-kopsht", "Shtëpi / kopsht"),
+    ("pune", "Punë"),
+    ("sherbime", "Shërbime"),
+    ("sport-dhe-hobi", "Sport / hobi"),
+    ("kafshe-shtepiake", "Kafshë shtëpiake"),
+    ("makineri-dhe-biznes", "Makineri / biznes"),
+    ("te-tjera", "Të tjera"),
+];
+
+/// The menu's categories (MENU_CATEGORIES), each a shortcut as the welcome page's are: its name,
+/// its page and its icon.
+pub fn menu_categories() -> Vec<Shortcut> {
+    MENU_CATEGORIES
+        .iter()
+        .map(|(slug, name)| Shortcut { name: (*name).to_string(), url: format!("/c/{slug}"), icon: icons::main_category(slug) })
+        .collect()
+}
+
 /// A shortcut on the welcome page.
 pub struct Shortcut {
     pub name: String,

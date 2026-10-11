@@ -45,9 +45,74 @@ Përdorues
 Përdorues i fshirë
 = Deleted user
 
-# The language, in "Cilësimet" (settings.html).
+# The language, in "Cilësimet" (settings.html) and the menu.
 Gjuha
 = Language
+
+# The menu (base.html): its button and its cross, posting, the counts' words for screen readers,
+# the look ("Pamja dhe gjuha": the text's sizes, the accents) and the bar's "Aa".
+Menyja
+= Menu
+
+Mbyll menynë
+= Close the menu
+
+Posto njoftim
+= Post a listing
+
+të reja
+= new
+
+të palexuara
+= unread
+
+Kategoritë
+= Categories
+
+Pamja dhe gjuha
+= Appearance and language
+
+Madhësia e shkrimit
+= Text size
+
+Shkrim i vogël
+= Small text
+
+Shkrim normal
+= Normal text
+
+Shkrim i madh
+= Large text
+
+Ngjyra
+= Colour
+
+Lime
+= Lime
+
+E kuqe e errët
+= Dark red
+
+Terrakota
+= Terracotta
+
+Blu
+= Blue
+
+Ulliri
+= Olive
+
+Njoftimet e mia
+= My listings
+
+Kërkimet e ruajtura
+= Saved searches
+
+Lajmërimet
+= Notifications
+
+Cilësimet
+= Settings
 
 Faqet, dhe email-et që të dërgojmë.
 = The pages, and the emails we send you.

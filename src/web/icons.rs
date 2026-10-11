@@ -242,8 +242,9 @@ pub(super) const CAR_SIDE: &str = r#"<path d="M5 16.5H3.5V13a1 1 0 0 1 .62-.92L6
 /// A speedometer.
 pub(super) const SPEEDOMETER: &str = r#"<path d="M4.2 17.5a9 9 0 1 1 15.6 0"/><path d="m12 14 3.5-4"/><circle cx="12" cy="14.5" r="1.4"/>"#;
 
-/// A paint palette.
-pub(super) const PALETTE: &str = r#"<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2s-.5-.7-.5-1.2c0-1 .8-1.8 1.8-1.8h2.1a4.3 4.3 0 0 0 4.3-4.3C21 6.6 17 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/>"#;
+/// A paint palette: a colour among the details, and the accent the visitor picks (the menu's
+/// "Ngjyra", base.html).
+pub const PALETTE: &str = r#"<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2s-.5-.7-.5-1.2c0-1 .8-1.8 1.8-1.8h2.1a4.3 4.3 0 0 0 4.3-4.3C21 6.6 17 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/>"#;
 
 /// A map pin.
 pub(super) const PIN: &str = r#"<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z"/><circle cx="12" cy="10" r="2.3"/>"#;
@@ -694,22 +695,18 @@ pub const SEND: &str = r#"<path d="m21 3-6.5 18-4-7.5-7.5-4Z"/><path d="M21 3 10
 // each is expected to be unused until then, and the compiler says when that stops being so (an
 // unfulfilled expectation), for its mark to come off as its page takes it.
 
-/// Three lines: the menu (the header's "Menyja" button, which opens the drawer).
-#[expect(dead_code, reason = "the header's menu button takes it when it is redrawn")]
+/// Three lines: the menu (the header's "Menyja" button, which opens the drawer, base.html).
 pub const MENU: &str = r#"<path d="M4 6.5h16M4 12h16M4 17.5h16"/>"#;
 
 /// A bookmark: keeping a search ("Ruaj kërkimin", its mark in the accent), and the searches kept
-/// (the menu's "Kërkimet e ruajtura", saved_searches.html), where the bell is now; the bell stays
-/// for the notifications.
-#[expect(dead_code, reason = "Ruaj kërkimin and the menu take it when they are redrawn")]
+/// (the menu's "Kërkimet e ruajtura", base.html; saved_searches.html), where the bell is now; the
+/// bell stays for the notifications.
 pub const BOOKMARK: &str = r#"<path d="M6.5 3.5h11v17l-5.5-4-5.5 4z"/>"#;
 
-/// A globe: the language (the menu's "Gjuha", Shqip | English).
-#[expect(dead_code, reason = "the menu takes it when it is drawn")]
+/// A globe: the language (the menu's "Gjuha", Shqip | English, base.html).
 pub const GLOBE: &str = r#"<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13.5 13.5 0 0 1 0 18 13.5 13.5 0 0 1 0-18Z"/>"#;
 
-/// A big A and a small one: the text's size (the menu's "Madhësia e shkrimit").
-#[expect(dead_code, reason = "the menu takes it when it is drawn")]
+/// A big A and a small one: the text's size (the menu's "Madhësia e shkrimit", base.html).
 pub const TEXT_SIZE: &str = r#"<path d="M4 19 9 5l5 14M5.8 14h6.4"/><path d="M15 19l3-8 3 8M15.9 16.5h4.2"/>"#;
 
 /// A door's frame and an arrow out of it: signing out ("Dil nga llogaria", in "Njoftimet e
@@ -725,6 +722,19 @@ pub const INFO: &str = r#"<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 
 /// A crosshair: finding where the visitor is (the map's "Vendndodhja ime", where the pin is now).
 #[expect(dead_code, reason = "the map's panel takes it when it is redrawn")]
 pub const LOCATE: &str = r#"<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5"/>"#;
+
+/// Two squares, each with its lines of words: the user's own listings (the menu's "Njoftimet e
+/// mia", base.html), as the list view's icon has them.
+pub const LISTINGS: &str = r#"<rect x="3.5" y="4" width="6" height="6" rx="1.5"/><rect x="3.5" y="14" width="6" height="6" rx="1.5"/><path d="M13 5.5h7.5M13 8.5h4.5M13 15.5h7.5M13 18.5h4.5"/>"#;
+
+/// Three sliders: the settings (the menu's "Cilësimet", base.html), as the filters' button has them.
+pub const SETTINGS: &str = r#"<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/>"#;
+
+/// A cross: closing what floats over the page (the menu's "Mbyll menynë", base.html).
+pub const CLOSE: &str = r#"<path d="M6 6l12 12M18 6 6 18"/>"#;
+
+/// A plus: adding a listing (the menu's "Posto njoftim", base.html).
+pub const PLUS: &str = r#"<path d="M12 5v14M5 12h14"/>"#;
 
 /// An office block with a lower wing: a store without a logo of its own, in its round avatar (a
 /// listing's seller row, its page, an invitation into it: seller_card.html, profile.html,

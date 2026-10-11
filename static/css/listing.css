@@ -988,10 +988,10 @@
 }
 
 /* Phones: everything smaller, since nearly all of it is sized in rem: 14px instead of 16px, and
-   13.5px on the narrowest. Form fields keep 16px text, because iPhones zoom into a focused field
+   13.5px on the narrowest, each times the text's size the visitor picked (--text-scale, base.css). Form fields keep 16px text, because iPhones zoom into a focused field
    with smaller text; they get less padding instead, so they don't look heavier than the rest. */
 @media (max-width: 719px) {
-  html { font-size: 87.5%; }
+  html { font-size: calc(87.5% * var(--text-scale)); }
   .vehicle-fields { --pad: .75rem; }
 
   .search input,
@@ -1014,5 +1014,5 @@
 }
 
 @media (max-width: 360px) {
-  html { font-size: 84.375%; }
+  html { font-size: calc(84.375% * var(--text-scale)); }
 }
