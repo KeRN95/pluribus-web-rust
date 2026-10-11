@@ -283,7 +283,7 @@ document.addEventListener("turbo:click", (event) => {
   const link = event.target;
   if (!TOUCH.matches || !(link instanceof HTMLAnchorElement) || link.closest("[data-turbo-action]")) return;
   const url = new URL(event.detail.url);
-  if (!aheadable(link) || arrived(url.href) || session.view.snapshotCache.has(url)) return;
+  if (!standable(link) || arrived(url.href) || session.view.snapshotCache.has(url)) return;
   event.preventDefault();
   event.detail.originalEvent?.preventDefault();
   visit(url.href, { snapshotHTML: standIn(link) });
@@ -294,6 +294,19 @@ document.addEventListener("turbo:before-render", ({ detail: { newBody } }) => {
   photo?.closest("picture, .gallery-photo > img")?.before(Object.assign(document.createElement("img"), { className: "gallery-interim", src: interim, alt: "" }));
   interim = null;
 });
+
+// A link a stand-in is shown for: one that leads the whole page to another of the site's pages
+// by a plain GET (Turbo's own click, turbo:click, has left out the links it doesn't follow), not
+// one that only changes this page's address (a filter's chip, a next page). Those not fetched
+// ahead (data-turbo-prefetch="false", the report's link) have one too: they slid only once
+// their page had come.
+function standable(link) {
+  if (link.pathname === location.pathname) return false;
+  const method = link.getAttribute("data-turbo-method");
+  if ((method && method.toLowerCase() !== "get") || link.matches("[data-turbo-confirm], [data-turbo-stream]")) return false;
+  const frame = link.getAttribute("data-turbo-frame") ?? link.closest("turbo-frame")?.getAttribute("target");
+  return !((link.hasAttribute("data-turbo-frame") || link.closest("turbo-frame")) && frame !== "_top");
+}
 
 function standIn(link) {
   const page = document.implementation.createHTMLDocument("");
@@ -409,9 +422,16 @@ document.addEventListener("turbo:load", () => {
 // Where the browser has animated the change itself, as iOS does under a swipe
 // from the screen's edge, that would be a second change, from the page left to the page come back
 // to, and the page seems to jump: such a visit goes without it, as do those in browsers that can't
-// tell. The page shown brings the setting back with its head, as after a refresh (refresh.js).
+// tell (Safari's engine, which every iPhone browser runs on, Firefox). But a press of the page's
+// own way back (back_controller.js, which says so first: back:button), which no browser animates:
+// that one slides back everywhere, where it didn't on an iPhone. The page shown brings the setting
+// back with its head, as after a refresh (refresh.js).
+let backByButton = -Infinity;
+document.addEventListener("back:button", () => { backByButton = performance.now(); });
 addEventListener("popstate", (event) => {
-  if (event.state?.turbo && (event.hasUAVisualTransition ?? true)) {
+  const byButton = performance.now() - backByButton < 1000;
+  backByButton = -Infinity;
+  if (event.state?.turbo && !byButton && (event.hasUAVisualTransition ?? true)) {
     document.head.querySelector('meta[name="view-transition"]')?.remove();
   }
 });

@@ -4827,7 +4827,7 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
     // The mark comes only once the next page has taken a moment to come, and nothing waits for it:
     // a page fetched ahead shows at once (the user's ask of 2026-10-11; it was held 200 ms after a
     // tap so that the mark was seen). (The script comes minified too: web::minified_js.)
-    let script = get(pool, &format!("/static/js/application.js?v={}", marketplace::web::asset_version())).await.body;
+    let script = get(pool.clone(), &format!("/static/js/application.js?v={}", marketplace::web::asset_version())).await.body;
     for part in ["closest(`a.shortcut`)", "`.card.pressed, .shortcut.pressed`", "addEventListener(`turbo:click`", "addEventListener(`turbo:before-render`"] {
         assert!(script.contains(part), "{part} in {script}");
     }
@@ -4849,6 +4849,11 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
     }
     // The card's photo stands in for the listing's, softly blurred, until the page's own comes.
     assert!(script.contains("`gallery-interim`") && script.contains("`.card-description-text`"), "{script}");
+    // The page's own way back slides back in every browser, Safari's engine too, which can't say
+    // whether it animated a back itself: the back button says so first.
+    assert!(script.contains("`back:button`"), "{script}");
+    let back = get(pool.clone(), &format!("/static/js/controllers/back_controller.js?v={}", marketplace::web::asset_version())).await.body;
+    assert!(back.contains("`back:button`") && back.find("`back:button`").unwrap() < back.find("history.back()").unwrap(), "{back}");
     // iPhones and iPads alone are kept from zooming into a field as it takes the focus (the page's
     // size can make its words smaller than 16px), after every page Turbo shows.
     for part in ["iPhone|iPad|iPod", ", maximum-scale=1", "`turbo:load`"] {
