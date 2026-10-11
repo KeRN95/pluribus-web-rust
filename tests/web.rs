@@ -8807,9 +8807,19 @@ async fn a_listing_but_a_cars_or_a_propertys_stands_beside_its_photo(pool: PgPoo
         ".listing-car .listing-side > .price-box{grid-column:2;grid-row:1;padding-bottom:18px;border-bottom:1px solid var(--border);}",
         ".listing-car .listing-side > .price-box > .price-row{height:calc(var(--lp-title) * 1.25);min-height:0;}",
         ".listing-car .listing-side > .price-box > .price-under{margin-top:.35rem;line-height:1.55;}",
+        // From 720 px up the ways to reach the seller first, the seller under them after their
+        // hairline (the user's ask of 2026-10-12, "put seller below buttons in desktop"); the page
+        // keeps the seller first, for screen readers and a phone, where the bar settles under
+        // them: on a car's page under 960 px the bar is the grid item before the seller's; from
+        // 960 px up a seller with no bar stands right under the price's hairline.
+        "@media (min-width:720px){.seller-card{display:flex;flex-direction:column;}.seller-card > .contact-bar{order:-1;margin:0 0 1.5rem;}}",
+        ".listing-car .listing-deal .seller-card > .contact-bar{grid-column:1 / -1;order:1;margin:1.75rem 0 0;}",
+        ".listing-car .listing-deal > .seller-section > h2,.listing-car .listing-deal > .seller-section > .seller-card:first-child > .seller-head:only-child{padding-top:16px;border-top:0;}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
+    let card = &golf[golf.find(r#"<div class="seller-card">"#).unwrap()..];
+    assert!(card.find(r#"<div class="seller-head">"#).unwrap() < card.find(r#"<aside class="contact-bar""#).unwrap(), "the seller first in the page");
     // A property's is laid out as a car's, as the canvas has it (its photos ran across the page
     // once, its details as pills): the deal at the right, its amenities under their own name, its
     // map able to move into the column.

@@ -88,9 +88,10 @@
    shade under the pointer reaching a little past it: their initial in a ring of 48 px, 12 px from
    their name (16px, semibold), and under it, 13px and muted, since when and how many listings,
    then how quickly they answer and when they were last here, each part kept whole where a line
-   wraps. Under them the ways to reach them, the contact bar (.seller-card), and under that the
-   share and the report after a hairline (.listing-share): the user's ask of 2026-10-11, the bar
-   having stood under the price on most pages. On a phone the section and its card are no boxes
+   wraps. Under them the ways to reach them, the contact bar (.seller-card), over the seller from
+   720 px up (below), and under that the share and the report after a hairline
+   (.listing-share): the user's ask of 2026-10-11, the bar having stood under the price on most
+   pages. On a phone the section and its card are no boxes
    (display: contents), so that the bar stays one of the listing's grid items and sticky at the
    screen's bottom while the whole listing scrolls (a box round it would hold it to its own
    height); the heading, the seller, the bar, the share's section and the map come after the
@@ -108,6 +109,17 @@
   .seller-card > :is(.seller-head, .contact-bar),
   .listing-share,
   .listing-side > .listing-map-section { order: 2; }
+}
+/* From 720 px up the ways to reach the seller come first, the seller under them after the
+   seller's hairline: the user's ask of 2026-10-12, "put seller below buttons in desktop" (the
+   seller stood over them). The card a column, the bar first in it, 1.5rem over the seller's line
+   (no gap over it but the section's, or on a car's page the 16px under the price's hairline,
+   below). On a phone the seller stays over the bar, which settles under them at the screen's
+   foot; and the page keeps the seller first for screen readers, who sells it before how to
+   reach them. */
+@media (min-width: 720px) {
+  .seller-card { display: flex; flex-direction: column; }
+  .seller-card > .contact-bar { order: -1; margin: 0 0 1.5rem; }
 }
 /* The share and the report (listing_actions.html) under the seller's section, a hairline over
    them, the two circles at its start (the user's ask of 2026-10-11). */
@@ -282,8 +294,9 @@
    row (and on the seller's own page the heading over it) are the rest's grid items, after the
    description and the details as on every page (order 2, with the map), the first of them taking
    the room the section has over it, and its hairline (above), and the
-   contact bar inside it is the phone's foot bar, or from 720 px up on the line it shares with the
-   share and the report, as on every other page (above). The price, no card there, stands as far
+   contact bar inside it is the phone's foot bar, or from 720 px up the grid item before the
+   seller's, between the page's own and theirs (order 1), as the bar is over the seller on every
+   other page from there (above). The price, no card there, stands as far
    under the key facts' hairline as the facts stand over it (1.25rem), rather than on the line. */
 @media (max-width: 959px) {
   .listing-car .price-box { margin-top: 1.25rem; }
@@ -301,7 +314,7 @@
 @media (min-width: 720px) and (max-width: 959px) {
   .listing-car .listing-deal > .seller-section > h2,
   .listing-car .listing-deal .seller-card > .seller-head { grid-column: 1 / -1; }
-  .listing-car .listing-deal .seller-card > .contact-bar { grid-column: 1 / -1; }
+  .listing-car .listing-deal .seller-card > .contact-bar { grid-column: 1 / -1; order: 1; margin: 1.75rem 0 0; }
   .listing-car .listing-deal > .seller-section + .actions { grid-column: 2; align-self: center; }
 }
 @media (min-width: 960px) {
@@ -337,9 +350,12 @@
   .listing-car .listing-side > .price-box { grid-column: 2; grid-row: 1; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
   .listing-car .listing-side > .price-box > .price-row { height: calc(var(--lp-title) * 1.25); min-height: 0; }
   .listing-car .listing-side > .price-box > .price-under { margin-top: .35rem; line-height: 1.55; }
-  /* Under the price's hairline ("Shitësi" over the seller until 2026-10-11, a heading as the
-     column's "Lokacioni" and the page's others are), 16px under it as the key facts stand under
-     the title's, the seller and, 16px under them, the ways to reach them, with no box round them, as the canvas has it
+  /* Under the price's hairline, 16px under it as the key facts stand under the title's, the ways
+     to reach the seller, and under them, after the seller's hairline, the seller (the user's ask
+     of 2026-10-12, "put seller below buttons in desktop"; the seller stood over them, under
+     "Shitësi" until 2026-10-11, a heading as the column's "Lokacioni" and the page's others are;
+     a seller with no bar, their card the seller alone, right under the price's hairline), with no
+     box round them, as the canvas has it
      (seller_card.html, .seller-card: a card once, the bar under a hairline in it): the bar's
      pills on a line each, 8px apart, the message's first, the column's width; the share and the
      report under the section, after a hairline (.listing-share, above; they stood beside the
@@ -348,7 +364,7 @@
   .listing-car .listing-deal > .seller-section { margin-top: 0; }
   .listing-car .listing-deal > .seller-section > h2 { margin-top: 0; }
   .listing-car .listing-deal > .seller-section > h2,
-  .listing-car .listing-deal > .seller-section > .seller-card:first-child > .seller-head { padding-top: 16px; border-top: 0; }
+  .listing-car .listing-deal > .seller-section > .seller-card:first-child > .seller-head:only-child { padding-top: 16px; border-top: 0; }
   .listing-car .listing-deal .contact-bar { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 16px; }
   .listing-car .contact-bar .button { flex: none; }
   .listing-car .contact-bar .message-button { order: -1; }
