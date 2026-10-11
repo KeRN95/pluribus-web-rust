@@ -326,6 +326,47 @@
   border-radius: var(--radius);
 }
 
+/* The photos' glow, as YouTube's ambient light takes the colours of what plays (the user's ask of
+   2026-10-11, "a blur / shadow similar to how youtube hues its background based on whats its
+   playing"): behind the photos the one that shows once more, its tiny copy (in the page, so at
+   once) stretched over their box, blurred far past its edges and its colours livelier (--glow,
+   base.css), faint (--glow-strength: 45%, 60% on the dark theme), so that the page round them,
+   the bar's frost too, takes their colours. It follows the photos as they slide, the next one's
+   fading in over the last's (slides_controller.js, shine), and a stand-in's is its card's photo
+   (application.js, listingStandIn). It is under everything on the page, the words round the
+   photos among them (z-index: -1, in the page's own layer, none of the boxes round it being a
+   layer of its own), and under the photos' box, whose ground is the page's colour, so that it
+   shows round the photos alone, the mosaic's gaps staying the page's. The blur is ink, as a
+   shadow is, so a phone's page grows no wider for it. */
+.listing-media { border-radius: var(--radius); background: var(--bg); }
+.listing-glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: var(--glow-strength);
+  filter: var(--glow);
+  pointer-events: none;
+}
+.listing-glow img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* A split page's photo stands still while the column beside it scrolls (position: sticky, above),
+   and that makes its box a layer of its own, which would lay the glow over the column's words:
+   there the photos' box, its glow under it, goes under the listing's words (z-index: -1 in the
+   listing's own layer, isolation), and the listings like it, under the listing, over it. */
+@media (min-width: 960px) {
+  .listing-split { isolation: isolate; }
+  .listing-split > .listing-media { z-index: -1; }
+  .listing-split ~ .related { position: relative; }
+}
+@media print {
+  .listing-glow { display: none; }
+}
+
 /* A listing's photos. Several make a strip to slide through, one at a time (scroll snapping), as
    a big card's do (slides_controller.js), with dots at their foot, a counter in the corner, the
    view count's size on its soft dark (page.css, .listing-views), and arrows on screens with a

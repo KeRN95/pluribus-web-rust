@@ -386,10 +386,10 @@ function standIn(link) {
 // it lays out the page, so that the page fills it where it stands: its path's row with the steps'
 // circles (its words the card's, data-up and data-here, the category above the listing's and its
 // own, as the page says them); the photo the card shows, in the photo's frame (4:3 for a car or a property, data-deal,
-// 6:5 for the others on a phone); the title the page heads itself with (a car's as its seller wrote
-// it, data-heading); the line under it; a car's or a property's key facts; the price, with the
-// loan calculator's circle at its line's end where the page has it (data-loan), and the circle
-// that weighs the price after it, grey until the page gives it its verdict's colour
+// 6:5 for the others on a phone), its glow behind it; the title the page heads itself with (a car's
+// as its seller wrote it, data-heading); the line under it; a car's or a property's key facts; the
+// price, with the loan calculator's circle at its line's end where the page has it (data-loan), and
+// the circle that weighs the price after it, grey until the page gives it its verdict's colour
 // (data-compare); the details
 // as grey pills where the page has them under it (not a car's or a property's, whose seller comes
 // there); the description, its start as the card has it; the contact bar at a phone's foot. What
@@ -434,6 +434,9 @@ function listingStandIn(card, link) {
   const facts = deal ? Number(head.dataset.facts ?? 4) : 0;
   const fact = `<div class="key-fact"><span class="key-fact-icon"></span><div class="key-fact-text"><dt>${unseen("Kilometrazhi")}</dt><dd>${unseen("000 000 km")}</dd></div></div>`;
   const photo = shown ? `<img class="gallery-backdrop" src="${escape(shown)}" alt=""><img class="gallery-interim" src="${escape(shown)}" alt="">` : "";
+  // Behind the photo its glow, as the page has it (listing.css, .listing-glow): the card's photo,
+  // which the page's tiny copy then takes over from, as blurred.
+  const glow = shown ? `<div class="listing-glow" aria-hidden="true"><img src="${escape(shown)}" alt=""></div>` : "";
   // The path as the page has it: the way back (its chevron this page's own, where it has one), the
   // category above, the sign between, the listing's own.
   const chevron = document.querySelector(".breadcrumb-back svg")?.outerHTML ?? "";
@@ -457,7 +460,7 @@ function listingStandIn(card, link) {
   return `<div class="listing-page"><article class="listing ${deal ? "listing-car" : "listing-split"} stand-in-listing">`
     + `<div class="listing-tags"><nav class="breadcrumb listing-path">${path}</nav>`
     + '<nav class="listing-steps"><span class="back-button list-button"></span><span class="back-button step-button"></span><span class="back-button step-button"></span></nav></div>'
-    + `<div class="listing-media"><div class="gallery"><div class="listing-photos"><div class="gallery-photo">${photo}</div></div></div></div>`
+    + `<div class="listing-media">${glow}<div class="gallery"><div class="listing-photos"><div class="gallery-photo">${photo}</div></div></div></div>`
     + `<div class="listing-side"><header class="listing-header"><h1>${escape(head?.dataset.heading || named)}</h1><p class="card-meta listing-kind">${spoken}</p></header>`
     + (facts > 0 ? `<dl class="key-facts">${fact.repeat(facts)}</dl>` : "")
     + `<div class="listing-deal"><div class="price-box"><div class="price-row"><p class="listing-price"><span class="price-amount">${escape(price)}</span>${note}</p>`

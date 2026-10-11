@@ -87,6 +87,10 @@
   {% if photos.is_empty() %}
   <div class="listing-photo placeholder" aria-hidden="true"></div>
   {% else %}
+  {#- Behind the photos their glow, as YouTube's ambient light takes the colours of what plays
+      (listing.css, .listing-glow): the first photo's tiny copy, blurred far past their edges,
+      and as they slide, the one that shows (slides_controller.js, shine). -#}
+  <div class="listing-glow" aria-hidden="true"{% if photos.len() > 1 %} data-slides-target="glow"{% endif %}><img src="{{ photos[0].backdrop() }}" alt=""></div>
   {#- Each photo whole in its frame, over a blurred copy of itself where it doesn't fill it: its tiny
       copy, which is in the page and so shows at once, until the photo has loaded too (a photo kept
       before there were any has its card-sized copy blurred). A photo kept as WebP offers its four

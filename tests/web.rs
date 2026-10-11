@@ -5038,6 +5038,44 @@ async fn a_listings_photo_comes_in_whole(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_listings_photos_glow_as_youtubes_ambient_light(pool: PgPool) {
+    // Behind a listing's photos their glow, as YouTube's ambient light takes the colours of what
+    // plays (the user's ask of 2026-10-11, "a blur / shadow similar to how youtube hues its
+    // background based on whats its playing"): in the photos' own box, before them, a decoration,
+    // the photo once more, the copy its frame shows blurred round it (here, a photo kept before
+    // there were tiny copies, its card-sized one). One photo has nothing to follow; several
+    // follow the one that shows (listings_get_photos).
+    let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
+    let opening = r#"<div class="listing-glow" aria-hidden="true"><img src=""#;
+    let glow = page.find(opening).expect("the glow") + opening.len();
+    let source = &page[glow..glow + page[glow..].find('"').unwrap()];
+    assert!(source.starts_with("https://images.unsplash.com/photo-1591230740238-e9a71182b67c?"), "{source}");
+    assert!(page[glow..].starts_with(&format!(r#"{source}" alt=""></div><div class="gallery">"#)), "{page}");
+    assert!(page.contains(&format!(r#"<img class="gallery-backdrop" src="{source}" alt="""#)));
+    // Blurred far past the photos' edges, its colours livelier, faint, stronger on the dark theme;
+    // under every word on the page, and under the photos' box, whose ground is the page's, so that
+    // it shows round them alone. A split page's photo stands still as its column scrolls, a layer
+    // of its own: there the photos' box goes under the listing's words, its glow under it, and
+    // the listings like it over both. (The stylesheet and the scripts come minified.)
+    let version = marketplace::web::asset_version();
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={version}")).await.body;
+    for rule in [
+        "--glow:blur(48px) saturate(160%);--glow-strength:45%;",
+        ".listing-media{border-radius:var(--radius);background:var(--bg);}.listing-glow{position:absolute;inset:0;z-index:-1;opacity:var(--glow-strength);filter:var(--glow);pointer-events:none;}",
+        "@media (min-width:960px){.listing-split{isolation:isolate;}.listing-split > .listing-media{z-index:-1;}.listing-split ~ .related{position:relative;}}",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    assert_eq!(css.matches("--glow-strength:60%;").count(), 2, "the dark theme, picked and the device's");
+    // As the photos slide, the one that shows lends it its colours, fading in over the last's; a
+    // stand-in's is its card's photo.
+    let slides = get(pool.clone(), &format!("/static/js/controllers/slides_controller.js?v={version}")).await.body;
+    assert!(slides.contains("shine(") && slides.contains("hasGlowTarget") && slides.contains("`.gallery-backdrop`"), "{slides}");
+    let application = get(pool, &format!("/static/js/application.js?v={version}")).await.body;
+    assert!(application.contains(r#"<div class="listing-glow" aria-hidden="true"><img src="${"#), "{application}");
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_card_carries_its_pages_words_for_the_stand_in(pool: PgPool) {
     // The stand-in a tap shows while a listing's page comes says what the card knows of the page in
     // words (the user's asks of 2026-10-11): its description, its lines as they are, as much as the
@@ -6069,6 +6107,13 @@ async fn listings_get_photos(pool: PgPool) {
     // and the arrows, hidden until the controller comes.
     assert!(page.contains(r#"<div class="listing-media" data-controller="slides">"#));
     assert!(page.contains(r#"data-slides-target="track" data-action="scroll->slides#update" tabindex="0" role="region" aria-label="Fotot e njoftimit""#));
+    // Behind them their glow, the first's tiny copy, which the controller turns to the one that
+    // shows as they slide (a_listings_photos_glow_as_youtubes_ambient_light).
+    let opening = r#"<div class="listing-glow" aria-hidden="true" data-slides-target="glow"><img src=""#;
+    let glow = page.find(opening).expect("the glow") + opening.len();
+    let tiny = &page[glow..glow + page[glow..].find('"').unwrap()];
+    assert!(tiny.starts_with("data:image/webp;base64,"), "{tiny}");
+    assert_eq!(page.find(&format!(r#"<img class="gallery-backdrop" src="{tiny}""#)), page.find(r#"<img class="gallery-backdrop""#), "the first's");
     assert!(page.contains(r#"<div class="gallery-dots" data-slides-target="dots" aria-hidden="true"><span class="is-current"></span><span></span></div>"#));
     // The counter is a button, "Të gjitha fotot" to screen readers, that shows the filmstrip
     // over the photos' foot and hides it again: the strip starts hidden, right after the counter

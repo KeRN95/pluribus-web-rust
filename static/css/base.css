@@ -145,6 +145,12 @@
   --frost: blur(20px) saturate(180%);
   --frost-bar: color-mix(in srgb, var(--header) 80%, transparent);
   --frost-sheet: color-mix(in srgb, var(--surface) 80%, transparent);
+  /* The glow round a listing's photos, as YouTube's ambient light takes the colours of what plays
+     (the user's ask of 2026-10-11): the photo that shows, blurred far past its edges and its
+     colours livelier (--glow), faint (--glow-strength), and stronger on the dark theme, the one
+     YouTube shows its on. */
+  --glow: blur(48px) saturate(160%);
+  --glow-strength: 45%;
   /* Glass: the welcome page's open search and its suggestions, over the pills (welcome.css): the
      text input's colour (white, and the dark theme's own dark) at 65%, blurred, with its edge and
      the words and their shading on it, those in the theme's colours below. */
@@ -274,6 +280,7 @@
   --on-glass: #fff;
   --on-glass-muted: rgb(255 255 255 / 72%);
   --on-glass-hover: rgb(255 255 255 / 10%);
+  --glow-strength: 60%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -336,6 +343,7 @@
     --on-glass: #fff;
     --on-glass-muted: rgb(255 255 255 / 72%);
     --on-glass-hover: rgb(255 255 255 / 10%);
+    --glow-strength: 60%;
   }
 }
 

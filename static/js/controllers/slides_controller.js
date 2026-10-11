@@ -22,9 +22,13 @@ const DRAG_FROM = 5;
 const FLICK = 0.3;
 // How near an edge of the photo the mouse brings that edge's arrow: a share of its width.
 const EDGE = 0.25;
+// How long the glow behind a listing's photos takes to turn to the next one's colours, in
+// milliseconds; at once for visitors who ask for less motion.
+const GLOW_MS = 400;
+const STILL = matchMedia("(prefers-reduced-motion: reduce)");
 
 export default class extends Controller {
-  static targets = ["track", "dots", "count", "previous", "next", "filmstrip", "thumbs", "thumbsPrevious", "thumbsNext"];
+  static targets = ["track", "dots", "count", "previous", "next", "filmstrip", "thumbs", "thumbsPrevious", "thumbsNext", "glow"];
 
   connect() {
     const track = this.trackTarget;
@@ -237,6 +241,24 @@ export default class extends Controller {
     if (this.hasCountTarget) this.countTarget.textContent = `${index + 1} / ${this.count}`;
     this.previousTarget.hidden = false;
     this.nextTarget.hidden = false;
+    this.shine(index);
+  }
+
+  // The glow behind a listing's photos (listing.html, .listing-glow) takes the colours of the one
+  // that shows, as YouTube's ambient light takes those of what plays: once another photo is
+  // the nearer, its tiny copy (its blurred copy's, in the page) fades in over the one before,
+  // which then goes. By what the glow shows, not by a number kept, so that a page Turbo kept,
+  // its photos back at the first, glows with the first again.
+  shine(index) {
+    if (!this.hasGlowTarget) return;
+    const glow = this.glowTarget;
+    const source = this.trackTarget.children[index]?.querySelector(".gallery-backdrop")?.getAttribute("src");
+    if (!source || glow.lastElementChild?.getAttribute("src") === source) return;
+    const next = Object.assign(document.createElement("img"), { src: source, alt: "" });
+    glow.append(next);
+    next.animate([{ opacity: 0 }, { opacity: 1 }], { duration: STILL.matches ? 0 : GLOW_MS, easing: "ease-out" }).finished
+      .then(() => { while (next.isConnected && next.previousElementSibling) next.previousElementSibling.remove(); })
+      .catch(() => {});
   }
 
   // How many photos there are: the row's.
