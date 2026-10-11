@@ -26,6 +26,11 @@ pub struct ListingCard {
     pub currency: String,
     pub price_type: String,
     pub price_normalized: Option<Decimal>,
+    /// Whether its page is laid out as a car's or a property's (web/listings.rs, MAPPED), which
+    /// frames its photos 4:3 on a phone, where the others' are 6:5: the card says so (data-deal),
+    /// for the stand-in a tap shows while the page comes (application.js, standIn).
+    #[sqlx(default)]
+    pub deal: bool,
     pub location_name: Option<String>,
     /// The name of the municipality the listing is in.
     pub city: Option<String>,
@@ -668,7 +673,13 @@ pub enum AttributeFilter {
 /// What a card shows (ListingCard) of each listing a query reads as `l`, but for its distance_m,
 /// which the query says before FROM: the WITH clause and select list shared by a page of cards and
 /// a listing's related ones.
-pub(super) const CARD_COLUMNS: &str = concat!("WITH card_attributes AS MATERIALIZED (
+pub(super) const CARD_COLUMNS: &str = concat!("WITH RECURSIVE deal_categories AS (
+             -- A car's and a property's categories and those under them (web/listings.rs, MAPPED).
+             SELECT id FROM categories WHERE slug IN ('prona', 'makina')
+             UNION ALL
+             SELECT c.id FROM categories c JOIN deal_categories d ON c.parent_id = d.id
+         ),
+         card_attributes AS MATERIALIZED (
              SELECT category_id, attribute_id, sort_order
              FROM effective_category_attributes
              WHERE show_in_card
@@ -680,6 +691,7 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH card_attributes AS MATERIALI
          )
          SELECT l.id, l.created_by_user_id, l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.listing_type, l.price_amount,
                 l.currency::text AS currency, l.price_type, l.price_normalized,
+                l.category_id IN (SELECT id FROM deal_categories) AS deal,
                 loc.name AS location_name,
                 CASE WHEN loc.location_type = 'AREA' THEN loc.name END AS zone,
                 (SELECT t.name FROM locations t

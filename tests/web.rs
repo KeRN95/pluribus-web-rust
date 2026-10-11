@@ -4832,6 +4832,15 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
     for part in ["data-turbo-visit-direction=", "@keyframes drawer-in{", "@keyframes drawer-out{", "prefers-reduced-motion:no-preference"] {
         assert!(css.contains(part), "{part}");
     }
+    // It slides in at once as the finger lifts: a page that hasn't come yet is a stand-in, the
+    // page's bar over grey shapes (a listing's with its card's photo, title and price), which
+    // Turbo shows as a preview and keeps no copy of, until the page itself comes.
+    for part in ["snapshotHTML", "`turbo-cache-control`", "`stand-in-photo`", "`.card-amount`"] {
+        assert!(script.contains(part), "{part} in {script}");
+    }
+    for part in [".stand-in{", ".stand-in-photo img{", ".stand-in-price{"] {
+        assert!(css.contains(part), "{part}");
+    }
     // iPhones and iPads alone are kept from zooming into a field as it takes the focus (the page's
     // size can make its words smaller than 16px), after every page Turbo shows.
     for part in ["iPhone|iPad|iPod", ", maximum-scale=1", "`turbo:load`"] {
@@ -4979,6 +4988,21 @@ async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
     assert!(dot.contains("background:var(--highlight)") && dot.contains("box-shadow:0 0 0 2px var(--header),var(--dot-edge)"), "{dot}");
     let count = rule(".inbox-count");
     assert!(count.contains("background:var(--highlight)") && count.contains("color:var(--on-highlight)"), "{count}");
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_card_says_when_its_page_frames_photos_as_a_cars(pool: PgPool) {
+    // A car's card and a property's, whose pages frame the photos 4:3 on a phone, say so for the
+    // stand-in a tap shows while the page comes (application.js, standIn); the others' don't. The
+    // property's card is in a category under Prona.
+    let home = get(pool, "/").await.body;
+    for (number, deal) in [(1001, true), (1003, true), (1005, false)] {
+        let at = home.find(&format!(r#"-{number}">"#)).unwrap_or_else(|| panic!("no card {number}"));
+        let card = &home[at..];
+        let card = &card[..card.find("</article>").unwrap()];
+        let head = if deal { r#"<div class="card-head" data-deal>"# } else { r#"<div class="card-head">"# };
+        assert!(card.contains(head), "{number}: {card}");
+    }
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

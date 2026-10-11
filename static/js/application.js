@@ -1,5 +1,5 @@
 // Turbo turns links and forms into fetch requests; Stimulus attaches small controllers to HTML.
-import { FetchMethod, FetchRequest } from "@hotwired/turbo";
+import { FetchMethod, FetchRequest, session, visit } from "@hotwired/turbo";
 import { Application } from "@hotwired/stimulus";
 // What every page needs whatever controllers it names: the hearts' module asks with each page which
 // listings are kept, for the header's heart too; the town's, to forget it (below); refresh.js, the
@@ -156,7 +156,9 @@ document.addEventListener("touchstart", (event) => {
   request.fetchOptions.priority = "high";
   // Its own turbo:before-fetch-request goes by as it starts.
   touching = true;
-  request.perform().catch(() => {});
+  request.perform().then(() => {
+    if (touched?.request === request) touched.arrived = true;
+  }).catch(() => {});
   touching = false;
   const { clientX: x, clientY: y } = event.touches[0];
   touched = { url: url.href, request, at: Date.now(), x, y };
@@ -221,7 +223,10 @@ function fetchAhead() {
     touching = true;
     const done = request.perform();
     touching = false;
-    done.catch(() => {}).finally(() => {
+    done.then(() => {
+      const page = kept.get(url.href);
+      if (page?.request === request) page.arrived = true;
+    }).catch(() => {}).finally(() => {
       fetching--;
       fetchAhead();
     });
@@ -258,6 +263,80 @@ function watchLinksInView() {
 }
 document.addEventListener("turbo:load", watchLinksInView);
 document.addEventListener("turbo:before-visit", stopWatching);
+
+// On a touch screen a tapped link's page slides in at once (base.css), as the user asked on
+// 2026-10-11: "instant as soon as I click, fill the info as it comes". Where the page hasn't come
+// yet (fetched ahead as the finger touched it or while it was in view, above, and arrived; or kept
+// by Turbo from an earlier visit, which Turbo shows at once itself), Turbo is handed a stand-in to
+// show meanwhile, a visit's snapshotHTML: it shows that as it shows a page it kept, a preview,
+// sliding in, and the page itself takes its place as it comes, once the slide is over. The stand-in
+// is this page's bar, its controllers left out, over grey shapes where the page's parts will be
+// (base.css, .stand-in): for a listing, the photo, title and price of the card tapped. Turbo keeps
+// no copy of it (turbo-cache-control). A link that names its own kind of visit (data-turbo-action)
+// goes as Turbo takes it. As the listing comes, its first photo shows the card's copy, here
+// already and sharper than the blurred one the page puts behind it, until its own has loaded
+// (interim), so that the photo doesn't blur between the two.
+const TOUCH = matchMedia("(pointer: coarse)");
+let interim = null;
+const arrived = (href) => (fresh() && touched.url === href && touched.arrived) || (keptAhead(href) && kept.get(href).arrived);
+document.addEventListener("turbo:click", (event) => {
+  const link = event.target;
+  if (!TOUCH.matches || !(link instanceof HTMLAnchorElement) || link.closest("[data-turbo-action]")) return;
+  const url = new URL(event.detail.url);
+  if (!aheadable(link) || arrived(url.href) || session.view.snapshotCache.has(url)) return;
+  event.preventDefault();
+  event.detail.originalEvent?.preventDefault();
+  visit(url.href, { snapshotHTML: standIn(link) });
+});
+document.addEventListener("turbo:before-render", ({ detail: { newBody } }) => {
+  if (!interim || newBody.querySelector(".stand-in")) return;
+  const photo = newBody.querySelector(".gallery-photo img:not(.gallery-backdrop)");
+  if (photo) photo.style.background = `url("${interim}") center / contain no-repeat`;
+  interim = null;
+});
+
+function standIn(link) {
+  const page = document.implementation.createHTMLDocument("");
+  page.documentElement.lang = document.documentElement.lang;
+  page.head.replaceWith(page.importNode(document.head, true));
+  page.head.append(Object.assign(page.createElement("meta"), { name: "turbo-cache-control", content: "no-cache" }));
+  for (const part of document.querySelectorAll("body > .language-offer, body > .site-header, body > .rail")) {
+    const copy = page.importNode(part, true);
+    for (const element of [copy, ...copy.querySelectorAll("[data-controller]")]) element.removeAttribute("data-controller");
+    page.body.append(copy);
+  }
+  const shape = (className, tag = "span") => Object.assign(page.createElement(tag), { className });
+  const shapes = shape("stand-in", "div");
+  const card = link.closest(".card");
+  interim = null;
+  if (card) {
+    // As the listing's frame shows its photo: whole, over itself blurred where it doesn't fill it,
+    // 4:3 for a car or a property (data-deal) and 6:5 for the others on a phone.
+    const deal = card.querySelector(".card-head")?.hasAttribute("data-deal");
+    const photo = shape(deal ? "stand-in-photo is-deal" : "stand-in-photo", "div");
+    const shown = card.querySelector("img.card-photo")?.currentSrc;
+    if (shown) {
+      photo.append(Object.assign(page.createElement("img"), { src: shown, alt: "", className: "stand-in-backdrop" }));
+      photo.append(Object.assign(page.createElement("img"), { src: shown, alt: "" }));
+      interim = shown;
+    }
+    const title = Object.assign(shape("stand-in-title", "h1"), { textContent: card.querySelector(".card-link")?.textContent.trim() ?? "" });
+    const price = Object.assign(shape("stand-in-price", "p"), { textContent: card.querySelector(".card-amount")?.textContent.trim() ?? "" });
+    // Where the listing has them: its path, the photo, the title, the line under it, the key facts
+    // two to a line between hairlines, the price, the description.
+    const facts = shape("stand-in-facts", "div");
+    facts.append(shape(""), shape(""), shape(""), shape(""));
+    shapes.append(shape("stand-in-line is-crumbs"), photo, title, shape("stand-in-line is-short"), facts, price, shape("stand-in-line"), shape("stand-in-line"), shape("stand-in-line is-short"));
+    if (title.textContent) page.title = `${title.textContent} | Pluribus`;
+  } else {
+    shapes.append(shape("stand-in-line is-heading"), shape("stand-in-block"), shape("stand-in-line"), shape("stand-in-line is-short"), shape("stand-in-block"));
+  }
+  const main = shape("container", "main");
+  main.setAttribute("aria-busy", "true");
+  main.append(shapes);
+  page.body.append(main);
+  return `<!DOCTYPE html>${page.documentElement.outerHTML}`;
+}
 
 // A listing's page, once Turbo shows it, says it was seen (listings.rs, seen), for the welcome
 // page's "Më të klikuarat"; the kept listings' page, that the price drops it shows were seen
