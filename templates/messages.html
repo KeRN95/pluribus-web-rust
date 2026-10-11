@@ -3,10 +3,10 @@
 {% block title %}{{ crate::t("Mesazhet") }} | Pluribus{% endblock %}
 
 {% block content %}
-{#- The visitor's conversations, the latest written in first (messages.rs, inbox): each with the
-    listing's photo, who with (and for a store's people, the store), the listing, the start of the
-    latest message (who sent it, if it was the visitor or a colleague) and when it came; those
-    with messages unread in bold, with how many. A text of ours with an apostrophe in it ("t'u")
+{#- The visitor's conversations, the latest written in first (messages.rs, inbox), as the canvas
+    has them, in one white box: each with the listing's photo, who with (and for a store's people,
+    the store), the listing, the start of the latest message (who sent it, if it was the visitor or
+    a colleague) and when it came; those with messages unread in bold, with how many. A text of ours with an apostrophe in it ("t'u")
     goes out as it is (|safe), as it did before it went through crate::t: a text alone, no value. -#}
 <section class="inbox">
   <h1>{{ crate::t("Mesazhet") }}</h1>
