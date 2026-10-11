@@ -334,6 +334,9 @@ pub struct ListingFilter {
     pub seller: Option<Seller>,
     /// The accounts the visitor blocked, whose listings are left out (web/safety.rs).
     pub hidden_accounts: Vec<Uuid>,
+    /// Listings left out, by their ids: those the welcome page recommended, which the newest after
+    /// them don't show again (web/browse.rs, recommended_page).
+    pub exclude: Vec<Uuid>,
     pub category_ids: Option<Vec<Uuid>>,
     /// A municipality: listings placed in it or anywhere inside it.
     pub location_id: Option<Uuid>,
@@ -927,6 +930,17 @@ pub async fn cards_by_numbers(db: &PgPool, numbers: &[i64]) -> sqlx::Result<Vec<
     query.build_query_as().fetch_all(db).await
 }
 
+/// The active listings with these ids, in the order given: the welcome page's recommended ones,
+/// ranked by their ids alone (recommended_ids), a page of them at a time (web/browse.rs).
+pub async fn cards_by_ids(db: &PgPool, ids: &[Uuid]) -> sqlx::Result<Vec<ListingCard>> {
+    let mut query = QueryBuilder::<Postgres>::new(CARD_COLUMNS);
+    query.push("NULL::real AS rank, NULL::float8 AS distance_m FROM (SELECT l.* FROM listings l WHERE l.id = ANY(");
+    query.push_bind(ids.to_vec()).push(") AND l.status = 'ACTIVE') l");
+    query.push(" LEFT JOIN locations loc ON loc.id = l.location_id ORDER BY array_position(");
+    query.push_bind(ids.to_vec()).push("::uuid[], l.id)");
+    query.build_query_as().fetch_all(db).await
+}
+
 /// How many listings the row over a category's or a search's results shows at most, of those a
 /// promotion features (featured_cards).
 pub const FEATURED: i64 = 8;
@@ -1390,6 +1404,9 @@ fn push_conditions(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilte
     }
     if !filter.hidden_accounts.is_empty() {
         query.push(" AND l.created_by_user_id <> ALL(").push_bind(filter.hidden_accounts.clone()).push(")");
+    }
+    if !filter.exclude.is_empty() {
+        query.push(" AND l.id <> ALL(").push_bind(filter.exclude.clone()).push(")");
     }
     if let Some(since) = filter.since {
         query.push(" AND l.sort_at > ").push_bind(since);

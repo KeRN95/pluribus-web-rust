@@ -32,6 +32,7 @@ use crate::{
     db::{self, Cursor, ListingCard, ListingFilter, Sort},
     format,
     i18n::{t, t1, t2, t3},
+    recommended::{self, Seeds},
     views,
 };
 
@@ -223,6 +224,13 @@ impl ListingPage {
         Self { cards, next, layout: Cards::Small, eager: 0, card_ids: LISTING_IDS, lead: false }
     }
 
+    /// Those recommended for the visitor ("Të rekomanduara për ty", recommended.rs): a page of
+    /// them in the welcome page's grid, as the newest's pages are, the first row's photos loaded
+    /// straight away; `next` fetches the ones after them as the last come into view (home).
+    fn recommended(cards: Vec<ListingCard>, next: NextPage) -> Self {
+        Self { cards, next: Some(next), layout: Cards::Small, eager: 4, card_ids: LISTING_IDS, lead: false }
+    }
+
     /// A row of small cards that slides sideways (card_row.html), its cards' ids starting with
     /// `card_ids` (SEEN_IDS, FEATURED_IDS...): the first `eager` load their photo straight away.
     pub fn row(cards: Vec<ListingCard>, card_ids: &'static str, eager: usize) -> Self {
@@ -361,6 +369,9 @@ struct HomePage {
     /// Every other main category, in their order, after them.
     others: Vec<Shortcut>,
     page: ListingPage,
+    /// Whether `page` is those recommended for the visitor ("Të rekomanduara për ty",
+    /// recommended.rs), rather than the newest.
+    recommended: bool,
     /// The listings the visitor saw lately ("Shikuar së fundmi", SEEN_COOKIE), still on the site;
     /// none for one who saw none.
     seen: Option<ListingPage>,
@@ -370,8 +381,11 @@ struct HomePage {
 }
 
 /// The welcome page asks what the visitor is looking for, then shows the listings they saw lately
-/// in a row (SEEN_COOKIE) and the most seen this week in another (db::most_viewed), then all of
-/// them, newest first.
+/// in a row (SEEN_COOKIE) and the most seen this week in another (db::most_viewed), then those
+/// recommended for them, like those they looked at ("Të rekomanduara për ty", recommended.rs, as
+/// the user asked on 2026-10-11), and every other one after them, newest first; for a visitor
+/// who looked at none, or at too few with any like them (recommended::FEWEST), all of them,
+/// newest first.
 pub async fn home(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -379,17 +393,30 @@ pub async fn home(
 ) -> Result<Response> {
     let params = Params::parse(query.as_deref());
     let after = params.first("after").and_then(|value| Cursor::decode(Sort::Newest, value));
+    // The pages after the first of those recommended name their seeds (Seeds::param) and where
+    // they go on from.
+    let named = params.first("sipas").and_then(Seeds::parse);
+    let from = params.first("nga").and_then(|value| value.parse::<usize>().ok()).unwrap_or(0);
     let hidden = safety::hidden_accounts(&state, &headers).await?;
-    let filter = ListingFilter { after, hidden_accounts: hidden.clone(), ..Default::default() };
-    let next_url = |cursor: &str| format!("/?after={cursor}");
     if is_next_page_request(&headers) {
-        let rows = db::listing_page(&state.db, &filter).await?;
-        return frame_response(after, &ListingPage::new(rows, Sort::Newest, next_url));
+        let Some(seeds) = named else {
+            let filter = ListingFilter { after, hidden_accounts: hidden, ..Default::default() };
+            let rows = db::listing_page(&state.db, &filter).await?;
+            return frame_response(after, &ListingPage::new(rows, Sort::Newest, newest_after));
+        };
+        let viewer = current_user(&state, &headers).await?.map(|user| user.id);
+        let ranked = state.recommended.ranked(&state.db, &seeds, viewer, &hidden).await?;
+        let page = recommended_page(&state, &ranked, &seeds, from, after, &hidden).await?;
+        return match after {
+            Some(_) => frame_response(after, &page),
+            None => frame(format!("page-reco-{from}"), &page),
+        };
     }
 
     let seen = seen_numbers(&headers);
-    let (rows, categories, mut most_viewed, mut seen) = tokio::try_join!(
-        db::listing_page(&state.db, &filter),
+    let viewer = current_user(&state, &headers).await?.map(|user| user.id);
+    let ((page, recommended), categories, mut most_viewed, mut seen) = tokio::try_join!(
+        welcome_listings(&state, named, &seen, viewer, &hidden, from, after),
         db::categories(&state.db),
         state.views.most_viewed(&state.db, None),
         async {
@@ -411,7 +438,6 @@ pub async fn home(
     let main = MAIN_ON_WELCOME.iter().filter_map(|slug| categories.by_slug(slug)).map(shortcut).collect();
     let others =
         categories.top_level().filter(|category| !MAIN_ON_WELCOME.contains(&category.slug.as_str())).map(shortcut).collect();
-    let page = ListingPage::new(rows, Sort::Newest, next_url);
     // The first row loads its first two photos straight away: it is on the first screen, its first
     // photo before anything else (ListingPage::lead), the listings seen lately's where there are
     // some, else "Më të klikuarat"'s; without either, the listings' first does.
@@ -424,7 +450,68 @@ pub async fn home(
     let origin = seo::origin(&headers);
     // The title is the shared link's alone (Open Graph), which crawlers ask for in Albanian.
     let meta = PageMeta::new(&origin, "Pluribus: njoftime në gjithë Shqipërinë", t(seo::SITE_DESCRIPTION), format!("{origin}/"));
-    render(HomePage { main, others, page, seen, most_viewed, meta })
+    render(HomePage { main, others, page, recommended, seen, most_viewed, meta })
+}
+
+/// The address of the welcome page's newest listings after `cursor`.
+fn newest_after(cursor: &str) -> String {
+    format!("/?after={cursor}")
+}
+
+/// The welcome page's listings (home): those recommended for the visitor, from the `from`th (or
+/// the newest after them, after `after`), and true; or, with fewer than recommended::FEWEST, the
+/// newest after `after`, and false. The seeds are those its address names (`named`: the next
+/// pages', or a page opened from their link), or else the listings seen lately (`seen`) and,
+/// signed in, those the `viewer` keeps and wrote to a seller about (db::seed_listings).
+async fn welcome_listings(
+    state: &AppState,
+    named: Option<Seeds>,
+    seen: &[i64],
+    viewer: Option<Uuid>,
+    hidden: &[Uuid],
+    from: usize,
+    after: Option<Cursor>,
+) -> sqlx::Result<(ListingPage, bool)> {
+    let seeds = match (named, viewer) {
+        (Some(seeds), _) => seeds,
+        (None, Some(user)) => {
+            let (kept, written) = db::seed_listings(&state.db, user).await?;
+            Seeds::from_signals(seen, &kept, &written)
+        }
+        (None, None) => Seeds::from_signals(seen, &[], &[]),
+    };
+    let ranked = state.recommended.ranked(&state.db, &seeds, viewer, hidden).await?;
+    if ranked.len() < recommended::FEWEST {
+        let filter = ListingFilter { after, hidden_accounts: hidden.to_vec(), ..Default::default() };
+        let rows = db::listing_page(&state.db, &filter).await?;
+        return Ok((ListingPage::new(rows, Sort::Newest, newest_after), false));
+    }
+    Ok((recommended_page(state, &ranked, &seeds, from, after, hidden).await?, true))
+}
+
+/// A page of those recommended (home): PAGE_SIZE of `ranked` from the `from`th, with the frame
+/// for the next, whose address names the seeds and where they go on from, so that the scroll goes
+/// on in the same order whatever the visitor saw meanwhile; past the last of them, the newest,
+/// those recommended left out, after `after`, their frames naming the seeds too.
+async fn recommended_page(
+    state: &AppState,
+    ranked: &[Uuid],
+    seeds: &Seeds,
+    from: usize,
+    after: Option<Cursor>,
+    hidden: &[Uuid],
+) -> sqlx::Result<ListingPage> {
+    let sipas = seeds.param();
+    if after.is_none() && from < ranked.len() {
+        let to = ranked.len().min(from + db::PAGE_SIZE as usize);
+        let cards = db::cards_by_ids(&state.db, &ranked[from..to]).await?;
+        let next = NextPage { frame_id: format!("page-reco-{to}"), url: format!("/?sipas={sipas}&nga={to}") };
+        return Ok(ListingPage::recommended(cards, next));
+    }
+    let filter =
+        ListingFilter { after, hidden_accounts: hidden.to_vec(), exclude: ranked.to_vec(), ..Default::default() };
+    let rows = db::listing_page(&state.db, &filter).await?;
+    Ok(ListingPage::new(rows, Sort::Newest, |cursor| format!("/?sipas={sipas}&after={cursor}")))
 }
 
 /// A category's icon, as its pill has it (icons.rs): a main category's own, a subcategory's where

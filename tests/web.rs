@@ -946,7 +946,9 @@ async fn the_welcome_page_shows_the_listings_seen_lately(pool: PgPool) {
     let row = section(&page, "seen-heading");
     assert_eq!(card_numbers(row), [1005, 1001]);
     assert!(row.contains(r#"<h2 id="seen-heading">Shikuar së fundmi</h2>"#) && row.contains(r#"data-action="recent#forget">Pastro</button>"#), "{row}");
-    // Over the newest listings, its cards with ids of their own, the first photo the page's lead.
+    // Over the newest listings (fewer than four like those seen are on the site to recommend:
+    // the laptop alone, like the phone, and the Mercedes, like the Golf, paused), its cards with
+    // ids of their own, the first photo the page's lead.
     assert!(page.find(r#"id="seen-heading""#) < page.find(r#"id="latest-heading""#));
     assert!(row.contains(r#"id="seen-1005""#) && row.contains(r#"fetchpriority="high""#), "{row}");
     // A sold one stays, saying so over its photo.
@@ -3048,6 +3050,178 @@ async fn a_listing_shows_listings_like_it(pool: PgPool) {
     // A listing alone in its category has nothing under it.
     let dog = html(pool, "/listing/1009-kelysh-labrador-3-muajsh").await;
     assert!(!dog.contains("related-heading"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_welcome_page_recommends_listings_like_those_looked_at(pool: PgPool) {
+    // As under a listing (a_listing_shows_listings_like_it): three Golfs from Besnik at about the
+    // Golf's price, Ana's own second Golf, and two Audis from Dritan, all in Makina in Tirana; a
+    // second phone from Ana; and thirty more listings elsewhere, so that the newest take more than
+    // a page.
+    sqlx::query(
+        "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title, description,
+                               price_amount, price_normalized, currency, status, published_at,
+                               latitude, longitude)
+         SELECT v.seller::uuid, v.seller::uuid, (SELECT id FROM categories WHERE slug = 'makina'),
+                v.slug, v.title, '', v.price, v.price, 'EUR', 'ACTIVE', now() - interval '1 hour',
+                41.3275, 19.8187
+         FROM (VALUES
+             ('22222222-2222-4222-8222-222222222222', 'golf-a', 'Golf A', 9400),
+             ('22222222-2222-4222-8222-222222222222', 'golf-b', 'Golf B', 9700),
+             ('22222222-2222-4222-8222-222222222222', 'golf-c', 'Golf C', 9900),
+             ('11111111-1111-4111-8111-111111111111', 'golf-d', 'Golf D', 9500),
+             ('33333333-3333-4333-8333-333333333333', 'audi-a3', 'Audi A3', 9600),
+             ('33333333-3333-4333-8333-333333333333', 'audi-a4', 'Audi A4', 12000)
+         ) AS v(seller, slug, title, price)",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_option_id)
+         SELECT l.id, a.id, a.data_type, o.id
+         FROM listings l
+         CROSS JOIN (VALUES ('vehicle_make', 'VOLKSWAGEN'), ('vehicle_model', 'VOLKSWAGEN_GOLF')) AS v(code, value_code)
+         JOIN attributes a ON a.code = v.code
+         JOIN attribute_options o ON o.attribute_id = a.id AND o.value_code = v.value_code
+         WHERE l.slug LIKE 'golf-_'",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title, description,
+                               price_amount, price_normalized, currency, status, published_at,
+                               latitude, longitude)
+         SELECT seller_user_id, created_by_user_id, category_id, 'iphone-12', 'iPhone 12', '', 50000,
+                price_normalized * 50000 / 55000, 'ALL', 'ACTIVE', now() - interval '1 hour', latitude, longitude
+         FROM listings WHERE public_no = 1005",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title,
+                               description, price_amount, currency, status, published_at)
+         SELECT '11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111111',
+                '10000000-0000-0000-0000-000000000011', 'njoftim-' || g, 'Njoftim shtesë ' || g,
+                '', 100, 'ALL', 'ACTIVE', now() - g * interval '1 day'
+         FROM generate_series(1, 30) g",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let numbers: Vec<i64> = sqlx::query_scalar(
+        "SELECT public_no FROM listings WHERE slug = ANY('{audi-a3,audi-a4,golf-a,golf-b,golf-c,golf-d,iphone-12}')
+         ORDER BY slug",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    let [audi_a3, audi_a4, golf_a, golf_b, golf_c, golf_d, phone] = numbers[..] else { panic!("{numbers:?}") };
+    let home = |cookie: String| {
+        let pool = pool.clone();
+        async move { get_with_cookie(pool, "/", &cookie).await.body.replace("&#38;", "&") }
+    };
+    let frame = |frame_id: String, src: String, cookie: &'static str| {
+        let pool = pool.clone();
+        async move {
+            let request =
+                Request::get(&src).header("turbo-frame", &frame_id).header(header::COOKIE, cookie).body(Body::empty()).unwrap();
+            send(pool, request).await.body.replace("&#38;", "&")
+        }
+    };
+
+    // With nothing looked at, the newest, as before.
+    let page = html(pool.clone(), "/").await;
+    assert!(page.contains(r#"<h2 id="latest-heading">Njoftimet më të reja</h2>"#) && !page.contains("recommended-heading"), "{page}");
+
+    // The Golf seen, the cars like it in their place, the most alike first, as under the Golf
+    // (a_listing_shows_listings_like_it), but Ana's second Golf too, which is another seller's to
+    // the visitor; two of Besnik's three, the closest in price; not the Golf itself, which
+    // "Shikuar së fundmi" has over them.
+    let page = home("shikuar=1001".into()).await;
+    let recommended = section(&page, "recommended-heading");
+    assert!(recommended.contains(r#"<h2 id="recommended-heading">Të rekomanduara për ty</h2>"#), "{recommended}");
+    assert!(!page.contains("latest-heading"));
+    assert!(page.find(r#"id="seen-heading""#).expect("seen") < page.find(r#"id="recommended-heading""#).expect("recommended"));
+    assert_eq!(card_numbers(recommended), [golf_d, golf_a, golf_b, audi_a3, audi_a4, 1002]);
+    // Then every other listing, newest first, in the frames the page names: the first with the
+    // seeds in its address (the Golf, at 1.0) and where they go on from, the sixth, so that they
+    // go on as the page did whatever the visitor saw meanwhile; the next after the last listing
+    // the first showed, as the newest go on.
+    let mut shown = card_numbers(recommended);
+    let (frame_id, src) = next_frame(recommended).expect("a next-page frame");
+    assert_eq!((frame_id.as_str(), src.as_str()), ("page-reco-6", "/?sipas=1001x10&nga=6"));
+    let rest = frame(frame_id.clone(), src.clone(), "shikuar=1001").await;
+    assert!(rest.starts_with(r#"<turbo-frame id="page-reco-6" target="_top">"#), "{rest}");
+    assert_eq!(rest, frame(frame_id, src, "shikuar=1005.1003").await);
+    assert_eq!(card_numbers(&rest).len(), 24);
+    shown.extend(card_numbers(&rest));
+    let (frame_id, src) = next_frame(&rest).expect("a frame after it");
+    assert!(src.starts_with("/?sipas=1001x10&after="), "{src}");
+    let last = frame(frame_id.clone(), src, "shikuar=1001").await;
+    assert!(last.starts_with(&format!(r#"<turbo-frame id="{frame_id}" target="_top">"#)), "{last}");
+    assert!(next_frame(&last).is_none(), "{last}");
+    shown.extend(card_numbers(&last));
+    // Each listing on the site once, Besnik's third Golf and the Golf seen among the newest.
+    let mut active: Vec<i64> =
+        sqlx::query_scalar("SELECT public_no FROM listings WHERE status = 'ACTIVE'").fetch_all(&pool).await.unwrap();
+    assert_eq!(shown.len(), active.len(), "{shown:?}");
+    shown.sort_unstable();
+    active.sort_unstable();
+    assert_eq!(shown, active);
+    assert!(card_numbers(&rest).contains(&golf_c) && card_numbers(&rest).contains(&1001));
+
+    // The phone seen after the Golf: the listings like it among the cars, each category as often
+    // as its seeds weigh, its best first (the phone at 1.0, the Golf at .9): Ana's second phone
+    // second; not Besnik's laptop, two of his Golfs being there already.
+    let page = home("shikuar=1005.1001".into()).await;
+    let mixed = card_numbers(section(&page, "recommended-heading"));
+    assert_eq!(mixed, [golf_d, phone, golf_a, golf_b, audi_a3, audi_a4, 1002]);
+
+    // Signed in, Ana isn't recommended her own Golf; nor anyone the listings of an account they
+    // blocked (Besnik).
+    let ana = session_for(&pool, ANA_ID).await;
+    let page = home(format!("{ana}; shikuar=1001")).await;
+    assert_eq!(card_numbers(section(&page, "recommended-heading")), [golf_a, golf_b, audi_a3, audi_a4, 1002]);
+    let reader = new_seller(&pool, "+355692223344").await;
+    post_form(pool.clone(), &format!("/listing/{golf_a}/blloko"), &[("blloko", "1")], Some(&reader)).await;
+    let page = home(format!("{reader}; shikuar=1001")).await;
+    assert_eq!(card_numbers(section(&page, "recommended-heading")), [golf_d, audi_a3, audi_a4, 1002]);
+
+    // Signed in, the listings kept seed them too, with nothing seen (the Golf kept, at 1.5), and
+    // those written to a seller about (the Mercedes, at 2), which isn't among them.
+    let keeper = new_seller(&pool, "+355692223355").await;
+    assert_eq!(send(pool.clone(), tap_heart("1001", "1", Some(&keeper))).await.status, StatusCode::NO_CONTENT);
+    let page = home(keeper).await;
+    let recommended = section(&page, "recommended-heading");
+    assert!(!page.contains("seen-heading"));
+    assert_eq!(card_numbers(recommended), [golf_d, golf_a, golf_b, audi_a3, audi_a4, 1002]);
+    assert_eq!(next_frame(recommended).map(|(_, src)| src).as_deref(), Some("/?sipas=1001x15&nga=6"));
+    let writer = new_seller(&pool, "+355692223366").await;
+    sqlx::query(
+        "INSERT INTO conversations (listing_id, buyer_user_id, seller_business_id, last_message_at)
+         SELECT l.id, u.id, l.seller_business_id, now() FROM listings l, users u
+         WHERE l.public_no = 1002 AND u.phone_e164 = '+355692223366'",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let page = home(writer).await;
+    let recommended = section(&page, "recommended-heading");
+    let cars = card_numbers(recommended);
+    assert!(cars.len() >= 4 && !cars.contains(&1002), "{cars:?}");
+    assert_eq!(next_frame(recommended).map(|(_, src)| src), Some(format!("/?sipas=1002x20&nga={}", cars.len())));
+
+    // In English.
+    let page = home("gjuha=en; shikuar=1001".into()).await;
+    assert!(page.contains(r#"<h2 id="recommended-heading">Recommended for you</h2>"#), "{page}");
+
+    // A listing with too few like it on the site (the dog, alone in its category): the newest, as
+    // for one who looked at nothing.
+    let page = home("shikuar=1009".into()).await;
+    assert!(page.contains(r#"id="latest-heading""#) && !page.contains("recommended-heading"), "{page}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

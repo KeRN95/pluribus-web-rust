@@ -37,6 +37,9 @@ Më të klikuarat
 Njoftimet më të reja
 = Newest listings
 
+Të rekomanduara për ty
+= Recommended for you
+
 # templates/browse.html
 Kthehu
 = Back

@@ -100,8 +100,16 @@
 </section>
 {%- endif %}
 
-<section class="latest" aria-labelledby="latest-heading">
+{#- The listings recommended for the visitor, like those they looked at, the most alike first
+    (recommended.rs), then every other listing, newest first, as the user asked on 2026-10-11;
+    for a visitor who looked at none, or at too few with any like them, every listing, newest
+    first (browse.rs, home). -#}
+<section class="latest" aria-labelledby="{% if recommended %}recommended-heading{% else %}latest-heading{% endif %}">
+  {%- if recommended %}
+  <h2 id="recommended-heading">{{ crate::t("Të rekomanduara për ty") }}</h2>
+  {%- else %}
   <h2 id="latest-heading">{{ crate::t("Njoftimet më të reja") }}</h2>
+  {%- endif %}
   {% include "listing_grid.html" %}
 </section>
 {% endblock %}

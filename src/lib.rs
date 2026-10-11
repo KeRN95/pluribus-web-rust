@@ -10,6 +10,7 @@ pub mod media;
 pub mod notices;
 pub mod promotions;
 pub mod rates;
+pub mod recommended;
 pub mod sender;
 pub mod views;
 pub mod web;
@@ -20,7 +21,7 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
-use crate::{ai::Ai, db::SessionUser, format::Contact, media::Media, views::Views};
+use crate::{ai::Ai, db::SessionUser, format::Contact, media::Media, recommended::Recommended, views::Views};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -34,6 +35,8 @@ pub struct AppState {
     pub ai: Option<Ai>,
     /// The listings' pages seen, gathered for the day's statistics (views.rs).
     pub views: Views,
+    /// Each visitor's recommended listings, kept for a while (recommended.rs).
+    pub recommended: Recommended,
 }
 
 /// The people who may approve the makes, models and brands sellers type in when a list lacks
@@ -88,7 +91,8 @@ pub fn app(db: PgPool) -> axum::Router {
     expiry::start(db.clone(), media.clone());
     promotions::start(db.clone());
     rates::start(db.clone());
-    web::router(AppState { db, media, moderators: Moderators::from_env(), ai, views })
+    let recommended = Recommended::kept();
+    web::router(AppState { db, media, moderators: Moderators::from_env(), ai, views, recommended })
 }
 
 /// The router with photos kept in `media` and these moderators: the integration tests keep their
@@ -98,7 +102,8 @@ pub fn app_with(db: PgPool, media: Media, moderators: Moderators) -> axum::Route
 }
 
 /// The same with an AI to fill in the listing form: the tests' stands in for Anthropic's API.
-/// Views are written as they come.
+/// Views are written as they come, and no visitor's recommendations kept.
 pub fn app_with_ai(db: PgPool, media: Media, moderators: Moderators, ai: Option<Ai>) -> axum::Router {
-    web::router(AppState { db, media, moderators, ai, views: Views::immediate() })
+    let (views, recommended) = (Views::immediate(), Recommended::immediate());
+    web::router(AppState { db, media, moderators, ai, views, recommended })
 }

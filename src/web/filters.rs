@@ -506,6 +506,7 @@ impl<'a> Filters<'a> {
             seller: None,
             // The page adds the accounts the visitor blocked (safety.rs).
             hidden_accounts: Vec::new(),
+            exclude: Vec::new(),
             since: None,
             matches: Default::default(),
         }
