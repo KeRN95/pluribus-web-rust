@@ -2730,7 +2730,7 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     let sofa = html(pool.clone(), "/listing/1007-divan-qoshe-ngjyre-gri").await;
     assert!(sofa.contains(r#"<span class="price-note">i diskutueshëm</span>"#) && !sofa.contains(r#"class="price-note"> ("#), "{sofa}");
     let site_css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    assert!(site_css.contains(".price-note{display:block;margin-top:.3rem;color:var(--muted);font-size:var(--text-sm);font-weight:400;letter-spacing:normal;}"));
+    assert!(site_css.contains(".price-note{display:block;margin-top:.3rem;color:var(--muted);font-size:var(--lp-small);font-weight:400;letter-spacing:normal;}"));
     assert!(!site_css.contains(".listing-car .price-note"));
     assert!(!response.body.contains(r#"<dd class="attribute"#), "no pills on a car's page");
     assert!(response.body.contains("</svg>ABS</li>") && response.body.contains("</svg>Kondicioner</li>"));
