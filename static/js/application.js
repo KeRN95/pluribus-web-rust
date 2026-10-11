@@ -271,11 +271,11 @@ document.addEventListener("turbo:before-visit", stopWatching);
 // show meanwhile, a visit's snapshotHTML: it shows that as it shows a page it kept, a preview,
 // sliding in, and the page itself takes its place as it comes, once the slide is over. The stand-in
 // is this page's bar, its controllers left out, over grey shapes where the page's parts will be
-// (base.css, .stand-in): for a listing, the photo, title and price of the card tapped. Turbo keeps
-// no copy of it (turbo-cache-control). A link that names its own kind of visit (data-turbo-action)
+// (base.css, .stand-in), and for a listing the listing page's own frame filled with what its card
+// knows (listingStandIn, below). Turbo keeps no copy of it (turbo-cache-control). A link that names its own kind of visit (data-turbo-action)
 // goes as Turbo takes it. As the listing comes, its first photo shows the card's copy, here
-// already and sharper than the blurred one the page puts behind it, until its own has loaded
-// (interim), so that the photo doesn't blur between the two.
+// already, softly blurred as in the stand-in, until its own has loaded over it (interim, the
+// user's ask: "a lower resolution photo which you can use as blur on the next page").
 const TOUCH = matchMedia("(pointer: coarse)");
 let interim = null;
 const arrived = (href) => (fresh() && touched.url === href && touched.arrived) || (keptAhead(href) && kept.get(href).arrived);
@@ -289,9 +289,9 @@ document.addEventListener("turbo:click", (event) => {
   visit(url.href, { snapshotHTML: standIn(link) });
 });
 document.addEventListener("turbo:before-render", ({ detail: { newBody } }) => {
-  if (!interim || newBody.querySelector(".stand-in")) return;
+  if (!interim || newBody.querySelector("[data-stand-in]")) return;
   const photo = newBody.querySelector(".gallery-photo img:not(.gallery-backdrop)");
-  if (photo) photo.style.background = `url("${interim}") center / contain no-repeat`;
+  photo?.closest("picture, .gallery-photo > img")?.before(Object.assign(document.createElement("img"), { className: "gallery-interim", src: interim, alt: "" }));
   interim = null;
 });
 
@@ -305,37 +305,69 @@ function standIn(link) {
     for (const element of [copy, ...copy.querySelectorAll("[data-controller]")]) element.removeAttribute("data-controller");
     page.body.append(copy);
   }
-  const shape = (className, tag = "span") => Object.assign(page.createElement(tag), { className });
-  const shapes = shape("stand-in", "div");
+  const main = Object.assign(page.createElement("main"), { className: "container" });
+  main.setAttribute("aria-busy", "true");
+  main.setAttribute("data-stand-in", "");
   const card = link.closest(".card");
   interim = null;
   if (card) {
-    // As the listing's frame shows its photo: whole, over itself blurred where it doesn't fill it,
-    // 4:3 for a car or a property (data-deal) and 6:5 for the others on a phone.
-    const deal = card.querySelector(".card-head")?.hasAttribute("data-deal");
-    const photo = shape(deal ? "stand-in-photo is-deal" : "stand-in-photo", "div");
-    const shown = card.querySelector("img.card-photo")?.currentSrc;
-    if (shown) {
-      photo.append(Object.assign(page.createElement("img"), { src: shown, alt: "", className: "stand-in-backdrop" }));
-      photo.append(Object.assign(page.createElement("img"), { src: shown, alt: "" }));
-      interim = shown;
-    }
-    const title = Object.assign(shape("stand-in-title", "h1"), { textContent: card.querySelector(".card-link")?.textContent.trim() ?? "" });
-    const price = Object.assign(shape("stand-in-price", "p"), { textContent: card.querySelector(".card-amount")?.textContent.trim() ?? "" });
-    // Where the listing has them: its path, the photo, the title, the line under it, the key facts
-    // two to a line between hairlines, the price, the description.
-    const facts = shape("stand-in-facts", "div");
-    facts.append(shape(""), shape(""), shape(""), shape(""));
-    shapes.append(shape("stand-in-line is-crumbs"), photo, title, shape("stand-in-line is-short"), facts, price, shape("stand-in-line"), shape("stand-in-line"), shape("stand-in-line is-short"));
-    if (title.textContent) page.title = `${title.textContent} | Pluribus`;
+    main.innerHTML = listingStandIn(card, link);
+    interim = main.querySelector(".gallery-interim")?.getAttribute("src") ?? null;
+    const named = card.querySelector(".card-link")?.textContent.trim();
+    if (named) page.title = `${named} | Pluribus`;
   } else {
-    shapes.append(shape("stand-in-line is-heading"), shape("stand-in-block"), shape("stand-in-line"), shape("stand-in-line is-short"), shape("stand-in-block"));
+    main.innerHTML = '<div class="stand-in"><span class="stand-in-line is-heading"></span><span class="stand-in-block"></span><span class="stand-in-line"></span><span class="stand-in-line is-short"></span><span class="stand-in-block"></span></div>';
   }
-  const main = shape("container", "main");
-  main.setAttribute("aria-busy", "true");
-  main.append(shapes);
   page.body.append(main);
   return `<!DOCTYPE html>${page.documentElement.outerHTML}`;
+}
+
+// A listing's stand-in: the listing page's own frame (listing.html), which listing.css lays out as
+// it lays out the page, so that the page fills it where it stands: its path's row with the steps'
+// circles; the photo the card shows, in the photo's frame (4:3 for a car or a property, data-deal,
+// 6:5 for the others on a phone); the title the page heads itself with (a car's as its seller wrote
+// it, data-heading); the line under it; a car's or a property's key facts; the price; the details
+// as grey pills where the page has them under it (not a car's or a property's, whose seller comes
+// there); the description, its start as the card has it; the contact bar at a phone's foot. What
+// the card doesn't know are grey bars where the words will be (.stand-in-text, words about as
+// long, unseen), which wrap as the page's do. The photo is the card's, softly blurred until the
+// page's own comes (.gallery-interim).
+function listingStandIn(card, link) {
+  const escape = (text) => text.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const unseen = (text) => `<span class="stand-in-text">${escape(text)}</span>`;
+  const head = card.querySelector(".card-head");
+  const deal = Boolean(head?.hasAttribute("data-deal"));
+  const named = card.querySelector(".card-link")?.textContent.trim() ?? "";
+  const shown = card.querySelector("img.card-photo")?.currentSrc;
+  const amount = card.querySelector(".card-amount");
+  const price = amount?.firstChild?.textContent.trim() ?? "";
+  // After the price what qualifies it, as the page says it: on a car's or a property's page the
+  // month alone, as the card's narrow photo has it.
+  const notes = [...(amount?.querySelectorAll(deal ? ".card-note:not(.card-negotiable)" : ".card-note") ?? [])].map((note) => note.textContent.trim()).join(" ");
+  const number = link.pathname.match(/^\/listing\/(\d+)/)?.[1] ?? "";
+  const place = card.querySelector(".card-place")?.textContent.trim() || "Tiranë";
+  // The line under the title, about as long as the page's: the made title before it where the
+  // seller's heads the page, what kind and in what state, and on a car's or a property's page
+  // where and when, before the number.
+  const kind = "Në shitje · E përdorur";
+  const line = deal ? `${head.dataset.heading ? `${named} · ` : ""}${kind} · ${place} · 00.00.2026 · Nr. ${number}` : `${kind} · Numri i njoftimit: ${number}`;
+  const fact = `<div class="key-fact"><span class="key-fact-icon"></span><div class="key-fact-text"><dt>${unseen("Kilometrazhi")}</dt><dd>${unseen("000 000 km")}</dd></div></div>`;
+  const photo = shown ? `<img class="gallery-backdrop" src="${escape(shown)}" alt=""><img class="gallery-interim" src="${escape(shown)}" alt="">` : "";
+  const note = notes ? `<span class="price-note">${escape(notes)}</span>` : "";
+  const pills = ["Samsung", "Galaxy A15", "128 GB", "E re", "Garanci"].map((words) => `<dd class="attribute">${escape(words)}</dd>`).join("");
+  const details = deal ? "" : `<section class="listing-details"><h2>${unseen("Detajet")}</h2><dl class="attributes"><div class="attribute-group">${pills}</div></dl></section>`;
+  const excerpt = card.querySelector(".card-description-text")?.textContent.trim();
+  const description = excerpt ? `<section class="listing-description"><h2>${unseen("Përshkrimi")}</h2><div class="description-fold"><p class="description">${escape(excerpt)}</p></div></section>` : "";
+  return `<div class="listing-page"><article class="listing ${deal ? "listing-car" : "listing-split"} stand-in-listing">`
+    + `<div class="listing-tags"><nav class="breadcrumb listing-path">${unseen("Automjete › Makina")}</nav>`
+    + '<nav class="listing-steps"><span class="back-button list-button"></span><span class="back-button step-button"></span><span class="back-button step-button"></span></nav></div>'
+    + `<div class="listing-media"><div class="gallery"><div class="listing-photos"><div class="gallery-photo">${photo}</div></div></div></div>`
+    + `<div class="listing-side"><header class="listing-header"><h1>${escape(head?.dataset.heading || named)}</h1><p class="card-meta listing-kind">${unseen(line)}</p></header>`
+    + (deal ? `<dl class="key-facts">${fact.repeat(4)}</dl>` : "")
+    + `<div class="listing-deal"><div class="price-box"><p class="listing-price"><span class="price-amount">${escape(price)}</span>${note}</p></div></div>`
+    + `${details}${description}</div>`
+    + '<aside class="contact-bar"><span class="button secondary reveal-button"></span><span class="button message-button"></span></aside>'
+    + "</article></div>";
 }
 
 // A listing's page, once Turbo shows it, says it was seen (listings.rs, seen), for the welcome

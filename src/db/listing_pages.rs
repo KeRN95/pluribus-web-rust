@@ -31,6 +31,11 @@ pub struct ListingCard {
     /// for the stand-in a tap shows while the page comes (application.js, standIn).
     #[sqlx(default)]
     pub deal: bool,
+    /// A car's title as its seller wrote it, where the one the cards show was made from what the
+    /// car is (generated_title): what its page heads itself with (listing.html), which the
+    /// stand-in a tap shows heads itself with too (data-heading).
+    #[sqlx(default)]
+    pub heading: Option<String>,
     pub location_name: Option<String>,
     /// The name of the municipality the listing is in.
     pub city: Option<String>,
@@ -674,10 +679,11 @@ pub enum AttributeFilter {
 /// which the query says before FROM: the WITH clause and select list shared by a page of cards and
 /// a listing's related ones.
 pub(super) const CARD_COLUMNS: &str = concat!("WITH RECURSIVE deal_categories AS (
-             -- A car's and a property's categories and those under them (web/listings.rs, MAPPED).
-             SELECT id FROM categories WHERE slug IN ('prona', 'makina')
+             -- A car's and a property's categories and those under them (web/listings.rs, MAPPED),
+             -- the cars' marked.
+             SELECT id, slug = 'makina' AS car FROM categories WHERE slug IN ('prona', 'makina')
              UNION ALL
-             SELECT c.id FROM categories c JOIN deal_categories d ON c.parent_id = d.id
+             SELECT c.id, d.car FROM categories c JOIN deal_categories d ON c.parent_id = d.id
          ),
          card_attributes AS MATERIALIZED (
              SELECT category_id, attribute_id, sort_order
@@ -692,6 +698,8 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH RECURSIVE deal_categories AS
          SELECT l.id, l.created_by_user_id, l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.listing_type, l.price_amount,
                 l.currency::text AS currency, l.price_type, l.price_normalized,
                 l.category_id IN (SELECT id FROM deal_categories) AS deal,
+                CASE WHEN l.generated_title IS NOT NULL AND l.category_id IN (SELECT id FROM deal_categories WHERE car)
+                     THEN l.title END AS heading,
                 loc.name AS location_name,
                 CASE WHEN loc.location_type = 'AREA' THEN loc.name END AS zone,
                 (SELECT t.name FROM locations t

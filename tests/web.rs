@@ -4835,12 +4835,14 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
     // It slides in at once as the finger lifts: a page that hasn't come yet is a stand-in, the
     // page's bar over grey shapes (a listing's with its card's photo, title and price), which
     // Turbo shows as a preview and keeps no copy of, until the page itself comes.
-    for part in ["snapshotHTML", "`turbo-cache-control`", "`stand-in-photo`", "`.card-amount`"] {
+    for part in ["snapshotHTML", "`turbo-cache-control`", "stand-in-listing", "`.card-amount`", "listing-header"] {
         assert!(script.contains(part), "{part} in {script}");
     }
-    for part in [".stand-in{", ".stand-in-photo img{", ".stand-in-price{"] {
+    for part in [".stand-in{", ".stand-in-text{", ".stand-in-listing .key-fact-icon{", ".gallery-photo .gallery-interim{filter:blur(6px);}"] {
         assert!(css.contains(part), "{part}");
     }
+    // The card's photo stands in for the listing's, softly blurred, until the page's own comes.
+    assert!(script.contains("`gallery-interim`") && script.contains("`.card-description-text`"), "{script}");
     // iPhones and iPads alone are kept from zooming into a field as it takes the focus (the page's
     // size can make its words smaller than 16px), after every page Turbo shows.
     for part in ["iPhone|iPad|iPod", ", maximum-scale=1", "`turbo:load`"] {
@@ -4994,14 +4996,24 @@ async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
 async fn a_card_says_when_its_page_frames_photos_as_a_cars(pool: PgPool) {
     // A car's card and a property's, whose pages frame the photos 4:3 on a phone, say so for the
     // stand-in a tap shows while the page comes (application.js, standIn); the others' don't. The
-    // property's card is in a category under Prona.
-    let home = get(pool, "/").await.body;
+    // property's card is in a category under Prona. And the stand-in heads itself as the page
+    // does: a car's card whose title was made from what the car is carries the title its seller
+    // wrote, its page's heading (data-heading); every other card's title is its page's heading.
+    let home = get(pool.clone(), "/").await.body;
     for (number, deal) in [(1001, true), (1003, true), (1005, false)] {
         let at = home.find(&format!(r#"-{number}">"#)).unwrap_or_else(|| panic!("no card {number}"));
         let card = &home[at..];
         let card = &card[..card.find("</article>").unwrap()];
-        let head = if deal { r#"<div class="card-head" data-deal>"# } else { r#"<div class="card-head">"# };
-        assert!(card.contains(head), "{number}: {card}");
+        let head = &card[card.find(r#"<div class="card-head""#).unwrap_or_else(|| panic!("{number}: {card}"))..];
+        let head = &head[..head.find('>').unwrap()];
+        assert_eq!(head.contains(" data-deal"), deal, "{number}: {head}");
+        let link = r#"<a class="card-link" href=""#;
+        let (href, rest) = card[card.find(link).unwrap() + link.len()..].split_once(r#"">"#).unwrap();
+        let named = &rest[..rest.find("</a>").unwrap()];
+        let heading = head.split_once(r#"data-heading=""#).map_or(named, |(_, value)| &value[..value.find('"').unwrap()]);
+        let page = get(pool.clone(), href).await.body;
+        let h1 = &page[page.find("<h1>").unwrap() + "<h1>".len()..];
+        assert_eq!(&h1[..h1.find("</h1>").unwrap()], heading, "{number}");
     }
 }
 

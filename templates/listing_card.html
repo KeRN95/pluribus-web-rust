@@ -55,9 +55,11 @@
         leaves it out (page.css). -#}
     <p class="card-seller"><span class="avatar" aria-hidden="true">{{ card.seller_initial() }}</span><span class="card-seller-text"><span class="card-seller-name" translate="no">{{ card.seller_name }}</span><span>{{ card.seller_since_text() }}</span></span></p>
     {%- endif %}
-    {#- data-deal: its page is laid out as a car's or a property's, its photos 4:3 on a phone, which
-        the stand-in a tap shows while the page comes takes (application.js, standIn). -#}
-    <div class="card-head"{% if card.deal %} data-deal{% endif %}>
+    {#- For the stand-in a tap shows while the page comes (application.js, standIn): data-deal, its
+        page is laid out as a car's or a property's, its photos 4:3 on a phone; data-heading, a
+        car's title as its seller wrote it, which its page heads itself with where the card's was
+        made from what the car is. -#}
+    <div class="card-head"{% if card.deal %} data-deal{% endif %}{% if let Some(heading) = card.heading %} data-heading="{{ heading }}"{% endif %}>
       <h2 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h2>
     </div>
     {%- let description = card.description_excerpt() %}

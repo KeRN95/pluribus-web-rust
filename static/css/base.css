@@ -511,26 +511,23 @@ h2 { margin: 1.75rem 0 .75rem; font-size: var(--text-xl); font-weight: var(--sub
 @keyframes drawer-back { from { transform: translateX(-25%); filter: brightness(.9); } }
 /* What a tapped link's page shows on a touch screen until it comes (application.js, standIn), as
    the user asked on 2026-10-11 ("fill the info as it comes"), sliding in at once: under the page's
-   bar, grey shapes where its parts will be, in the photos' placeholder grey; for a listing, the
-   card's photo, title and price where the listing has them. */
+   bar, grey shapes where its parts will be, in the photos' placeholder grey. A listing's is the
+   listing page's own frame instead, laid out by listing.css as the page is (listingStandIn), so
+   that the page fills it where it stands, as the user asked next ("not a lot of page shifting"):
+   what its card doesn't know is grey bars where the words will be (.stand-in-text, words about as
+   long, unseen, on the grey line by line), and grey squares where its key facts' icons will be. */
 .stand-in { display: grid; gap: 12px; max-width: 40rem; margin-inline: auto; padding: 12px 0 32px; }
 .stand-in-line { display: block; height: 14px; border-radius: 7px; background: var(--placeholder-from); }
 .stand-in-line.is-short { width: 55%; }
-.stand-in-line.is-crumbs { width: 40%; height: 16px; margin-block: 12px 15px; }
 .stand-in-line.is-heading { width: 60%; height: 28px; margin-block: 12px 4px; border-radius: 10px; }
 .stand-in-block { display: block; height: 160px; border-radius: var(--radius-box); background: var(--placeholder-from); }
-/* The photo in the listing's own frame (listing.css, .gallery-photo): 6:5, the photo whole, over
-   itself blurred where it doesn't fill it. */
-.stand-in-photo { position: relative; aspect-ratio: 6 / 5; overflow: hidden; border-radius: var(--radius); background: var(--surface-muted); isolation: isolate; }
-.stand-in-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.stand-in-photo .stand-in-backdrop { object-fit: cover; filter: blur(24px) brightness(.9); transform: scale(1.15); }
-@media (max-width: 959px) {
-  .stand-in-photo.is-deal { aspect-ratio: 4 / 3; }
-}
-.stand-in-title { margin: 4px 0 0; font-size: var(--text-2xl); line-height: 1.15; }
-.stand-in-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 16px; padding-block: 16px; border-block: 1px solid var(--border-soft); }
-.stand-in-facts span { height: 34px; border-radius: 8px; background: var(--placeholder-from); }
-.stand-in-price { margin: 4px 0 8px; font-size: 1.875rem; font-weight: var(--bold); line-height: 1.1; }
+.stand-in-text { color: transparent; background: var(--placeholder-from); border-radius: 6px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.stand-in-listing .key-fact-icon { border-radius: 8px; background: var(--placeholder-from); }
+.stand-in-listing .attribute { color: transparent; }
+/* The card's copy of a listing's first photo, softly blurred, in the stand-in and on the page until
+   the page's own photo has loaded over it (application.js, interim): the listing's photo frame
+   lays it out as its photo (listing.css, .gallery-photo img). */
+.gallery-photo .gallery-interim { filter: blur(6px); }
 
 /* Frames only group content for Turbo; their cards stay items of the surrounding grid. */
 turbo-frame { display: contents; }
