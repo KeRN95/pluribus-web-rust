@@ -945,14 +945,14 @@
 /* How to reach the seller (contact_bar.html, .contact-bar): the phone, "Shfaq numrin" (an envelope,
    "Shfaq email-in", for a seller who signed in by e-mail), and a message, "Shkruaji shitësit", a
    speech bubble: wide pills that say their names, a little taller than the circles beside them,
-   the way to the seller being what the page is for. The message wears the accent's light tint,
-   as a filter that is on does (--filter-on, a little more of it under the pointer), its bubble
-   and words in the text's colour: the user's ask of 2026-10-12, "can you make the shkruaj
-   shitesit like this? the light green color?" (filled in the accent until then, as the site's
-   main buttons are, .button's own look). The phone is plain, on the grey of secondary controls
-   as the share and the report are, its icon in the muted colour and in the
-   text's under the pointer, as the browse row's buttons have theirs (it wore the coral's tint
-   once, one tinted thing more beside the filled one). Once tapped, the number takes the phone's
+   the way to the seller being what the page is for. The message is filled in the accent, as the
+   site's main buttons are (.button's own look); the phone wears the accent's light tint, as a
+   filter that is on does (--filter-on, a little more of it under the pointer), its handset and
+   words in the text's colour: the user's asks of 2026-10-12, "make the shfaq numrin the new
+   color and revert shkruaji shitesit back to the old color", the message having worn the tint
+   for a moment ("the light green color"). The phone was plain until then, on the grey of
+   secondary controls as the share and the report are, its icon in the muted colour (and it wore
+   the coral's tint once, one tinted thing more beside the filled one). Once tapped, the number takes the phone's
    place, after the same icon, marked as the site marks what is picked (a category page's own
    pill): the coral's tint, a border of the coral and the number in it, the border whole under
    the pointer or a press, with a button beside it that copies it (copy_controller.js). They stand
@@ -962,9 +962,8 @@
 .contact-bar form { display: contents; }
 .contact-bar .button { justify-content: center; gap: .5rem; height: var(--size-button); padding: 0 1.25rem; font-weight: var(--semibold); white-space: nowrap; }
 .contact-bar .button-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.contact-bar .reveal-button .contact-icon { color: var(--muted); transition: color .15s; }
-.contact-bar .message-button { background: var(--filter-on); color: var(--text); }
-.contact-bar .message-button:hover { background: var(--filter-on-hover); }
+.contact-bar .button.reveal-button { background: var(--filter-on); color: var(--text); }
+.contact-bar .button.reveal-button:hover { background: var(--filter-on-hover); }
 /* The number, once shown, as the canvas has it: in the phone's place, a grey pill, its handset
    before it, the number 17px bold, a tap calling it; the copy and WhatsApp circles after it. */
 .button.reveal-contact {
@@ -976,7 +975,6 @@
   letter-spacing: .01em;
 }
 @media (hover: hover) {
-  .contact-bar .reveal-button:hover .contact-icon { color: var(--text); }
   .button.reveal-contact:hover { background: var(--surface-muted-hover); }
 }
 .contact-icon { flex: none; }

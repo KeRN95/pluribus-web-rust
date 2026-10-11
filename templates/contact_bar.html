@@ -10,7 +10,7 @@
 {%- if !own && (reveal.is_some() || message) %}
 <aside class="contact-bar" aria-label="{{ crate::t("Kontakti") }}" data-controller="sticky">
   {% if let Some(reveal) = reveal %}
-  {#- The phone, "Shfaq numrin", in a plain pill; the number that takes its place is marked as
+  {#- The phone, "Shfaq numrin", in a pill in the accent's light tint; the number that takes its place is marked as
       what is picked is. Turbo submits the form and swaps in the number (or address) from the
       Turbo Stream response, in its place. -#}
   <form id="phone-reveal" method="post" action="/listing/{{ listing.public_no }}/phone">
@@ -20,7 +20,7 @@
   </form>
   {% endif %}
   {%- if message %}
-  {#- "Shkruaji shitësit", a speech bubble in a pill in the accent's light tint: a message to the
+  {#- "Shkruaji shitësit", a speech bubble in a pill filled in the accent: a message to the
       seller, which takes signing in first (messages.rs); signed in, the conversation opens in
       the sheet. -#}
   <a class="button message-button" href="/listing/{{ listing.public_no }}/mesazh"
