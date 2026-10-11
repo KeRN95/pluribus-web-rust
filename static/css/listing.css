@@ -48,11 +48,14 @@
    20px bold, a channel's name 16px medium, the body, the buttons and the lines of facts 14px,
    every secondary line 12px): the user's ask of 2026-10-11, "make texts in general a bit smaller?
    kind of similar to youtube ... every text is too big in the posts sometimes". The sizes in one
-   place, for the rules below: the title and the price 22px, the headings 17px and semibold, the
-   body 14px, the small lines 13px and 12px; on a phone, whose root is 14px (the end of this
-   file), 19, 15, 14, 12 and 11.5px, so that the body keeps YouTube's 14px there too. */
+   place, for the rules below: the title 22px, the headings 17px and semibold, the body 14px, the
+   small lines 13px and 12px; on a phone, whose root is 14px (the end of this file), 19, 15, 14,
+   12 and 11.5px, so that the body keeps YouTube's 14px there too. The price 24px on every screen
+   (--lp-price, in pixels times the text size picked, so that the narrowest phones, whose root
+   is 13.5px, keep it 24px too), the user's ask of the same day, later: "make price 24 and bold". */
 .listing-page {
   --lp-title: 1.375rem;
+  --lp-price: calc(24px * var(--text-scale));
   --lp-head: 1.0625rem;
   --lp-body: .875rem;
   --lp-small: .8125rem;
@@ -76,9 +79,10 @@
 .listing h2 { margin-bottom: 10px; font-size: var(--lp-head); font-weight: var(--semibold); letter-spacing: 0; }
 .listing-kind { font-size: var(--lp-small); }
 /* Who sells it, under the description, as far under it as the details and the description stand
-   under what is over them (1.75rem; it stood 2.5rem under once), under a heading of its own,
-   "Shitësi", as they have theirs (the heading keeps no margin over it, like theirs, above), on the
-   page itself, no box round it, as the canvas has it (it was a card like the posting form's, the
+   under what is over them (1.75rem; it stood 2.5rem under once), under a hairline, 20px over the
+   seller, with no heading: the user's ask of 2026-10-11, "remove shitesi label and separate
+   shitesi with a line on top" (it was under "Shitësi", a heading as theirs; the seller's own car
+   or property keeps its "Njoftimi yt", the line over that), on the page itself, no box round it, as the canvas has it (it was a card like the posting form's, the
    menus' hairline on the surface, until 2026-10-11), across the page, or the column beside the
    photo on a split page (below): the seller (posting.css, .seller), leading to their profile, a
    shade under the pointer reaching a little past it: their initial in a ring of 48 px, 12 px from
@@ -93,10 +97,13 @@
    description (order 2), the bar settling as a band from edge to edge under the seller (below).
    On a car's page all of it stands in the deal's column from 960 px up (.listing-car, below). */
 .seller-section { margin-top: 1.75rem; }
+.seller-section > h2,
+.seller-section > .seller-card:first-child > .seller-head { padding-top: 1.25rem; border-top: 1px solid var(--border); }
 @media (max-width: 719px) {
   .seller-section,
   .seller-card { display: contents; }
-  .listing-side .seller-section > h2 { margin-top: 2.5rem; }
+  .listing-side .seller-section > h2,
+  .listing-side .seller-section > .seller-card:first-child > .seller-head { margin-top: 1.75rem; }
   .seller-section > h2,
   .seller-card > :is(.seller-head, .contact-bar),
   .listing-share,
@@ -271,9 +278,10 @@
   .spec-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-/* Under 960 px a car's seller section is no box (its card is the column's, below): its heading and
-   the seller's row are the rest's grid items, after the description and the details as on every
-   page (order 2, with the map), the heading taking the room the section has over it, and the
+/* Under 960 px a car's seller section is no box (its card is the column's, below): the seller's
+   row (and on the seller's own page the heading over it) are the rest's grid items, after the
+   description and the details as on every page (order 2, with the map), the first of them taking
+   the room the section has over it, and its hairline (above), and the
    contact bar inside it is the phone's foot bar, or from 720 px up on the line it shares with the
    share and the report, as on every other page (above). The price, no card there, stands as far
    under the key facts' hairline as the facts stand over it (1.25rem), rather than on the line. */
@@ -287,10 +295,8 @@
   .listing-car .listing-side > .listing-map-section { order: 2; }
   .listing-car .listing-deal > .seller-section > h2,
   .listing-car .listing-deal .seller-card > .seller-head { min-width: 0; }
-  .listing-car .listing-deal > .seller-section > h2 { margin-top: 1.75rem; }
-}
-@media (max-width: 719px) {
-  .listing-car .listing-deal > .seller-section > h2 { margin-top: 2.5rem; }
+  .listing-car .listing-deal > .seller-section > h2,
+  .listing-car .listing-deal > .seller-section > .seller-card:first-child > .seller-head { margin-top: 1.75rem; }
 }
 @media (min-width: 720px) and (max-width: 959px) {
   .listing-car .listing-deal > .seller-section > h2,
@@ -320,8 +326,9 @@
   .listing-car .listing-side > .listing-deal { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; grid-row: 1 / span 40; align-self: start; }
   .listing-car .listing-deal > * { grid-column: 1; align-self: auto; max-width: none; margin-right: 0; }
   .listing-car .listing-header h1 { margin-top: 0; }
-  /* Under "Shitësi", a heading as the column's "Lokacioni" and the page's others are, the seller
-     and, 16px under them, the ways to reach them, with no box round them, as the canvas has it
+  /* Under a hairline (above; "Shitësi" over it until 2026-10-11, a heading as the column's
+     "Lokacioni" and the page's others are), the seller and, 16px under them, the ways to reach
+     them, with no box round them, as the canvas has it
      (seller_card.html, .seller-card: a card once, the bar under a hairline in it): the bar's
      pills on a line each, 8px apart, the message's first, the column's width; the share and the
      report under the section, after a hairline (.listing-share, above; they stood beside the
@@ -662,17 +669,23 @@
 .listing-steps .back-button { --size: var(--size-button-sm); }
 .listing-steps .back-button svg { width: 18px; height: 18px; }
 .listing-steps .is-off { opacity: .35; pointer-events: none; }
-/* The price as large and as bold as the title, as the user asked on 2026-10-11 (it was the
-   headline, as the canvas has it, 36px and a step bolder than the headings, 30px on a phone):
-   22px, 19px on a phone (--lp-title; 28px and 24px until later that day, when the user asked for
-   the page's text a step smaller, as YouTube's, whose title is 20px), in the headings' weight. */
+/* The title 22px, 19px on a phone (--lp-title), and the price 24px on every screen, bold
+   (--lp-price, --bold): the user's asks of 2026-10-11, the price "24 and bold" last (it was the
+   headline, as the canvas has it, 36px and a step bolder than the headings, then as large and as
+   bold as the title). Its figure alone on its line, in the middle of the line's 36px, as tall as
+   its buttons at the line's end (.price-row, below), so that the figure and the buttons stand in
+   one line whatever qualifies the price. */
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: var(--lp-title); letter-spacing: -.02em; line-height: 1.25; }
-.listing-price { margin: 0; font-size: var(--lp-title); line-height: 1.15; font-weight: var(--heading-weight, var(--bold)); letter-spacing: -.02em; }
-/* What qualifies the price ("/muaj", "i diskutueshëm": price_note_alone, listings.rs) on a line
-   of its own under it, quietly, on every listing's page and every screen, as the user asked on
-   2026-10-11 (a car's or a property's page alone had it so; the others had it after the figure,
-   half its size and in brackets, which a narrow phone broke over two lines). */
-.price-note { display: block; margin-top: .3rem; color: var(--muted); font-size: var(--lp-small); font-weight: 400; letter-spacing: normal; }
+.listing-price { margin: 0; font-size: var(--lp-price); line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
+/* What qualifies the price ("/muaj", "i diskutueshëm": price_note_alone, listings.rs), and a
+   drop (price_drop.html), on a line of their own right under the price's, quietly, out of its
+   line, so that the price stands level with its buttons: the user's ask of 2026-10-11, "separate
+   stuff like me qera, i diskutueshem from the price, and put it right below, very close to the
+   price" (the note was inside the price's line, under the figure, on a line of its own since
+   earlier that day; half the figure's size and in brackets after it before that, which a narrow
+   phone broke over two lines). */
+.price-under { margin: -2px 0 0; color: var(--muted); font-size: var(--lp-small); line-height: 1.4; }
+.price-note { margin-right: .5rem; }
 /* The figure itself on a band of the accent across its foot, as Tradera marks its prices (the
    user's ask of 2026-10-11, "a semi background on the price"): a thick underline, which a browser
    draws under the letters, a quarter of an em, from an eighth of an em over the baseline (a third
@@ -709,17 +722,10 @@
 .posted-share { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-top: .65rem; }
 .posted-share .button { gap: .35rem; }
 .posted-share .button.is-copied { border-color: var(--main); color: var(--main); }
-/* A price that dropped lately (price_drop.html): what it was, struck through, quietly, and by how
-   much in a green pill, as the zone's bubble says a square metre is cheap for it. */
-.price-was {
-  margin-left: .6rem;
-  color: var(--muted);
-  font-size: .45em;
-  font-weight: var(--medium);
-  letter-spacing: normal;
-  white-space: nowrap;
-  vertical-align: .3em;
-}
+/* A price that dropped lately (price_drop.html), on the line under the price (.price-under): what
+   it was, struck through, quietly, and by how much in a green pill, as the zone's bubble says a
+   square metre is cheap for it. */
+.price-was { font-weight: var(--medium); white-space: nowrap; }
 .price-drop { margin-left: .25rem; padding: .1rem .5rem; border-radius: 999px; background: var(--below-bg); color: var(--below); font-weight: var(--bold); }
 /* Bubbles at the price's line's end, which open a card under them as the menus open theirs; a tap outside
    or Escape closes it (dropdown_controller.js): what a square metre of a property on sale costs,
@@ -775,16 +781,17 @@
 :is(.area-price, .car-price).price-near { --tone: var(--near); --tone-bg: var(--near-bg); --tone-fill: var(--near-fill); }
 :is(.area-price, .car-price).price-above { --tone: var(--above); --tone-bg: var(--above-bg); --tone-fill: var(--above-fill); }
 /* A car's price against what cars of its model and year ask, and what a square metre of a
-   property costs: a circle as tall as a button, after the loan calculator's, its icon alone in it, 20px,
-   on the verdict's colour (--tone-fill: a light red, yellow or green under our black on the light
+   property costs: a circle as tall as the price's line, 36px (48px, a button's, until the user
+   asked on 2026-10-11 for them "a bit smaller, size of the row of the price"), after the loan
+   calculator's, its icon alone in it, 18px, on the verdict's colour (--tone-fill: a light red, yellow or green under our black on the light
    theme, a deeper one under our white on the dark: the user's asks of 2026-10-11; a property's
    was a pill with the figure, half the line, until then), the grey of secondary controls for a
    property whose zone has no average, a shade of the words' colour mixed in under the pointer and
    while open; its card under it from its right edge, as wide as what it says, a car's verdict
    first in its colour. */
 :is(.car-price, .area-price) { position: relative; width: fit-content; }
-:is(.car-price, .area-price) > summary { justify-content: center; width: var(--size-button); height: var(--size-button); padding: 0; }
-:is(.car-price, .area-price) > summary > svg { flex: none; width: 20px; height: 20px; }
+:is(.car-price, .area-price) > summary { justify-content: center; width: var(--size-chip); height: var(--size-chip); padding: 0; }
+:is(.car-price, .area-price) > summary > svg { flex: none; width: 18px; height: 18px; }
 :is(.car-price, .area-price):is(.price-below, .price-near, .price-above) > summary { background: var(--tone-fill); color: var(--text); }
 :is(.car-price, .area-price):is(.price-below, .price-near, .price-above) > summary:hover,
 :is(.car-price, .area-price):is(.price-below, .price-near, .price-above)[open] > summary { background: color-mix(in srgb, var(--text) 10%, var(--tone-fill)); }
@@ -792,16 +799,22 @@
 :is(.car-price, .area-price) .bubble-card { right: 0; left: auto; transform-origin: top right; }
 .car-price-verdict { margin: 0 0 .6rem; }
 /* The price's block, as the user asked on 2026-10-11: the price, and at its line's end its
-   buttons, circles 48px across, 8px apart: the loan calculator's, its icon alone on the grey of
-   secondary controls, in the main colour while its card is open, then a property's or a car's
-   price's circle. Each opens its card under the line, over the page, the calculator's as wide as
-   the line. ("Llogarit kredinë" was a grey pill the line's width under the price, its words after
-   its icon, its card in the page under it, until then.) */
-.price-row { position: relative; display: flex; align-items: center; gap: 8px; }
+   buttons, circles 36px across, as tall as the line, 8px apart, so that they stand level with
+   the figure (48px, a button's, until the user asked for them "a bit smaller, size of the row of
+   the price so they are more in line"; a finger has 40px of each, ::after): the loan
+   calculator's, its icon alone on the grey of secondary controls, in the main colour while its
+   card is open, then a property's or a car's price's circle. Each opens its card under the line,
+   over the page, the calculator's as wide as the line. ("Llogarit kredinë" was a grey pill the
+   line's width under the price, its words after its icon, its card in the page under it, until
+   then.) The line is 36px tall with or without them, what qualifies the price under it
+   (.price-under, above). */
+.price-row { position: relative; display: flex; align-items: center; gap: 8px; min-height: var(--size-chip); }
 .price-row > .listing-price { flex: 1 1 auto; min-width: 0; margin-right: 4px; }
 .price-row > .bubble { flex: none; }
-.loan > summary { justify-content: center; width: var(--size-button); height: var(--size-button); padding: 0; }
-.loan > summary > svg { flex: none; width: 20px; height: 20px; }
+.price-row > .bubble > summary { position: relative; }
+.price-row > .bubble > summary::after { content: ""; position: absolute; inset: -2px; }
+.loan > summary { justify-content: center; width: var(--size-chip); height: var(--size-chip); padding: 0; }
+.loan > summary > svg { flex: none; width: 18px; height: 18px; }
 .loan[open] > summary { background: var(--main); color: var(--on-main); }
 @media (hover: hover) {
   .loan[open] > summary:hover { background: var(--main-hover); }
@@ -959,10 +972,11 @@
    screen's bottom while the listing scrolls (sticky) and settles after the description, so that
    the way to the seller is at hand wherever the reader is, as the apps have it: from the screen's
    edge to its edge, a hairline over it on the page's colour, clear of the phone's home bar; over
-   the page but under the sticky header and the message sheet (z-index 7). Frosted in the
-   header's glass, as the user asked on 2026-10-11: the header's colour at 80% (the page's grey
-   at first), the listing showing through it as it scrolls under, blurred (--frost-bar, --frost).
-   Each pill takes half of
+   the page but under the sticky header and the message sheet (z-index 7). Frosted, the page's
+   own colour at 80%, the listing showing through it as it scrolls under, blurred (--frost-page,
+   --frost): the user's ask of 2026-10-11, "make background of number and message button in
+   phone same as the site background" (the header's white glass, --frost-bar, from earlier that
+   day, the page's grey before it). Each pill takes half of
    it; once the number shows, it takes the room and the message keeps its icon alone. While it
    floats over the page a slight shadow rises from it (.is-stuck, sticky_controller.js), gone once
    it settles in its place. */
@@ -975,7 +989,7 @@
     margin: 1.5rem calc(-1 * var(--gutter)) 0;
     padding: .6rem var(--gutter) calc(.6rem + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border);
-    background: var(--frost-bar);
+    background: var(--frost-page);
     -webkit-backdrop-filter: var(--frost);
     backdrop-filter: var(--frost);
     transition: box-shadow .15s;

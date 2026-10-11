@@ -232,19 +232,21 @@
   <div class="price-box">
     {%- let area_price = listing.area_price() %}
     {%- let loan = listing.loan_amount() %}
-    {#- The price, as the canvas has it, and under it, smaller, what qualifies it ("/muaj", "i
-        diskutueshëm"), on a line of its own and without its brackets on every screen, as the user
-        asked on 2026-10-11 (a car's or a property's page alone had it so); at its line's end, as the user asked on 2026-10-11, its buttons, circles
-        as tall as a button: the loan calculator's, for something on sale costly enough, its icon
-        alone ("Llogarit kredinë" said to screen readers and under the pointer; a pill the line's
-        width under the price until then), which opens the calculator (loan_calculator.html,
-        loan_controller.js) in a card under the line, the circle filled with the main colour while
-        it is open; after it, for a property on sale, what a square metre of it costs
-        (area_price.html), for a car whose model and year enough others ask a price for, how its
-        price compares (car_price.html). A tap outside or Escape closes a card
-        (dropdown_controller.js). -#}
+    {#- The price, its figure alone on its line, and at the line's end, as the user asked on
+        2026-10-11, its buttons, circles as tall as the line: the loan calculator's, for something
+        on sale costly enough, its icon alone ("Llogarit kredinë" said to screen readers and under
+        the pointer; a pill the line's width under the price until then), which opens the
+        calculator (loan_calculator.html, loan_controller.js) in a card under the line, the circle
+        filled with the main colour while it is open; after it, for a property on sale, what a
+        square metre of it costs (area_price.html), for a car whose model and year enough others
+        ask a price for, how its price compares (car_price.html). A tap outside or Escape closes a
+        card (dropdown_controller.js). Right under the line, smaller, what qualifies the price
+        ("/muaj", "i diskutueshëm", without its brackets) and a drop, out of the price's line so
+        that the figure stands level with its buttons (the user's ask of the same day, later: they
+        were in it, under the figure). -#}
+    {%- let note = listing.price_note() %}
     <div class="price-row">
-      <p class="listing-price"><span class="price-amount">{{ listing.price_main() }}</span>{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{{ listing.price_note_alone() }}</span>{% endif %}{% include "price_drop.html" %}</p>
+      <p class="listing-price"><span class="price-amount">{{ listing.price_main() }}</span></p>
       {%- if let Some(amount) = loan %}
       <details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" data-loan-down-percent-value="{{ LOAN_DOWN_PERCENT }}">
         <summary title="{{ crate::t("Llogarit kredinë") }}">
@@ -260,6 +262,9 @@
       {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
       {%- if let Some(car) = car_price %}{% include "car_price.html" %}{% endif %}
     </div>
+    {%- if !note.is_empty() || price_drop.is_some() %}
+    <p class="price-under">{% if !note.is_empty() %}<span class="price-note">{{ listing.price_note_alone() }}</span>{% endif %}{% include "price_drop.html" %}</p>
+    {%- endif %}
   </div>
   {#- On a car's or a property's page the seller comes under the price, with the ways to reach
       them under them (seller_card.html). -#}

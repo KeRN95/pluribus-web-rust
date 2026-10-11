@@ -4,8 +4,9 @@
     when they are on the site and after a dot how many listings ("Që nga tetor 2026 · 5
     njoftime", each part kept whole should the line wrap, which it then does before the dot), and
     how quickly they answer and when they were last here, all leading to their profile
-    (listing.css, .seller-head), under a heading of its own, "Shitësi", as the details and the
-    description have theirs. Under the description, across the page or the column beside the
+    (listing.css, .seller-head), under a hairline, with no heading ("Shitësi" its name for screen
+    readers): the user's ask of 2026-10-11, "remove shitesi label and separate shitesi with a line
+    on top" (it had a heading as the details and the description have theirs). Under the description, across the page or the column beside the
     photo; on a car's or a property's page in the deal's column at the right (.listing-deal). Under
     the seller, on every page, the ways to reach them (.seller-card, no box either): the phone and
     the message (contact_bar.html), on a phone the bar at the screen's foot, which settles under
@@ -14,10 +15,13 @@
     2026-10-11 (the bar stood under the price on most pages, the share and the report beside it).
     On the seller's own page, which has no bar, their own buttons are under the price (under the
     seller on a car's or a property's page; listing.html). -#}
-<section class="seller-section" aria-labelledby="seller-heading">
-  {#- On their own car's or property's page, where their own buttons follow (listing_actions.html),
-      "Njoftimi yt", as the canvas has it. -#}
-  <h2 id="seller-heading">{% if deal_page && own %}{{ crate::t("Njoftimi yt") }}{% else %}{{ crate::t("Shitësi") }}{% endif %}</h2>
+{#- On their own car's or property's page, where their own buttons follow (listing_actions.html),
+    a heading, "Njoftimi yt", as the canvas has it, the hairline over it. -#}
+{%- let headed = deal_page && own %}
+<section class="seller-section"{% if headed %} aria-labelledby="seller-heading"{% else %} aria-label="{{ crate::t("Shitësi") }}"{% endif %}>
+  {%- if headed %}
+  <h2 id="seller-heading">{{ crate::t("Njoftimi yt") }}</h2>
+  {%- endif %}
   <div class="seller-card">
   <div class="seller-head">
     <a class="seller" href="{{ listing.seller_url }}">

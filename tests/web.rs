@@ -2723,15 +2723,31 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     // The map under its own heading, "Lokacioni", on a car's page.
     let order = positions(&response.body, &[r#"<section class="listing-map-section""#, "<h2>Lokacioni</h2>", r#"<div class="listing-map""#]);
     assert!(order.is_sorted(), "{order:?}");
-    // What qualifies the price on a line of its own under it, without its brackets.
+    // What qualifies the price on a line of its own under it, without its brackets, out of the
+    // price's line, so that the figure stands level with its buttons (the user's ask of
+    // 2026-10-11: "separate stuff like me qera, i diskutueshem from the price, and put it right
+    // below, very close to the price").
     let mercedes = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
-    assert!(mercedes.contains(r#"<span class="price-note">i diskutueshëm</span>"#), "{mercedes}");
+    assert!(mercedes.contains(r#"<p class="price-under"><span class="price-note">i diskutueshëm</span></p>"#), "{mercedes}");
+    let line = &mercedes[mercedes.find(r#"<p class="listing-price">"#).expect("the price")..];
+    assert!(line[..line.find("</p>").unwrap()].ends_with("</span>") && !line[..line.find("</p>").unwrap()].contains("price-note"));
     // And on every other listing's page, on every screen (the user's ask of 2026-10-11): it was
     // after the figure there, half its size and in brackets.
     let sofa = html(pool.clone(), "/listing/1007-divan-qoshe-ngjyre-gri").await;
     assert!(sofa.contains(r#"<span class="price-note">i diskutueshëm</span>"#) && !sofa.contains(r#"class="price-note"> ("#), "{sofa}");
     let site_css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    assert!(site_css.contains(".price-note{display:block;margin-top:.3rem;color:var(--muted);font-size:var(--lp-small);font-weight:400;letter-spacing:normal;}"));
+    assert!(site_css.contains(".price-under{margin:-2px 0 0;color:var(--muted);font-size:var(--lp-small);line-height:1.4;}.price-note{margin-right:.5rem;}"));
+    // The price's buttons as tall as its line, 36px, level with the figure (the user's ask of the
+    // same day, "a bit smaller, size of the row of the price so they are more in line"; a finger
+    // has 40px of each), and the seller under a hairline, with no heading.
+    for rule in [
+        ".price-row{position:relative;display:flex;align-items:center;gap:8px;min-height:var(--size-chip);}",
+        ".price-row > .bubble > summary::after{content:\"\";position:absolute;inset:-2px;}",
+        ".loan > summary{justify-content:center;width:var(--size-chip);height:var(--size-chip);padding:0;}",
+        ".seller-section > h2,.seller-section > .seller-card:first-child > .seller-head{padding-top:1.25rem;border-top:1px solid var(--border);}",
+    ] {
+        assert!(site_css.contains(rule), "{rule}");
+    }
     assert!(!site_css.contains(".listing-car .price-note"));
     assert!(!response.body.contains(r#"<dd class="attribute"#), "no pills on a car's page");
     assert!(response.body.contains("</svg>ABS</li>") && response.body.contains("</svg>Kondicioner</li>"));
@@ -2888,9 +2904,12 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     }
     // A rent is paid monthly already.
     let rent = html(pool.clone(), "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
-    // The month follows the price, smaller, off the band of the accent across the figure's foot
-    // (as Tradera marks its prices, 2026-10-11); a rent says nothing of square metres.
-    assert!(rent.contains("<p class=\"listing-price\"><span class=\"price-amount\">450\u{a0}€</span><span class=\"price-note\">/muaj</span></p>"));
+    // The month under the price, smaller, off the band of the accent across the figure's foot
+    // (as Tradera marks its prices, 2026-10-11) and out of the price's line; a rent says nothing
+    // of square metres.
+    assert!(rent.contains("<p class=\"listing-price\"><span class=\"price-amount\">450\u{a0}€</span></p>"));
+    let under = rent.find("<p class=\"price-under\"><span class=\"price-note\">/muaj</span></p>").expect("the month under the price");
+    assert!(rent.find("<div class=\"price-row\">").unwrap() < under && !rent[rent.find("<div class=\"price-row\">").unwrap()..under].contains("price-note"));
     assert!(!rent.contains("Llogarit kredinë"));
     assert!(!rent.contains("price-per-area"));
     // A house on sale says what a square metre costs, 185 000 € for 200 m², in a circle at its
@@ -5554,9 +5573,13 @@ async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
     assert!(header.contains("border-bottom:1px solid var(--border)"), "{header}");
     assert!(css.contains("--frost-bar:color-mix(in srgb,var(--header) 80%,transparent)"));
     assert!(css.contains("@media (prefers-reduced-transparency:reduce){:root{--frost:none;--frost-bar:var(--header);"));
-    // The contact bar on a phone and the message sheet there are in the header's glass.
+    // The message sheet on a phone is in the glass too, in its own colour; the contact bar there
+    // in the page's (the user's ask of 2026-10-11, "make background of number and message button
+    // in phone same as the site background"; the header's white glass earlier that day).
     assert!(css.contains("--frost-sheet:color-mix(in srgb,var(--surface) 80%,transparent)"));
-    assert!(css.contains("background:var(--frost-bar);-webkit-backdrop-filter:var(--frost);backdrop-filter:var(--frost);transition:box-shadow .15s"));
+    assert!(css.contains("--frost-page:color-mix(in srgb,var(--bg) 80%,transparent)"));
+    assert!(css.contains("--frost-sheet:var(--surface);--frost-page:var(--bg);"), "whole where less transparency is asked for");
+    assert!(css.contains("background:var(--frost-page);-webkit-backdrop-filter:var(--frost);backdrop-filter:var(--frost);transition:box-shadow .15s"));
     assert!(rule(".header-inner").contains("height:var(--size-header)"));
     let account = rule(".account-button");
     assert!(account.contains("width:var(--size-button-sm)") && account.contains("margin-left:auto") && account.contains("border:0"), "{account}");
@@ -5780,8 +5803,8 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     for rule in [
         "--price-mark:var(--filter-on);",
         ".price-amount{text-decoration-line:underline;text-decoration-color:var(--price-mark);text-decoration-thickness:.26em;text-decoration-skip-ink:none;text-underline-offset:-.12em;}",
-        ".listing-page{--lp-title:1.375rem;--lp-head:1.0625rem;--lp-body:.875rem;--lp-small:.8125rem;--lp-tiny:.75rem;}@media (max-width:719px){.listing-page{--lp-title:1.357rem;--lp-head:1.0714rem;--lp-body:1rem;--lp-small:.857rem;--lp-tiny:.8214rem;}}",
-        ".listing-header h1{margin:.75rem 0 .35rem;font-size:var(--lp-title);letter-spacing:-.02em;line-height:1.25;}.listing-price{margin:0;font-size:var(--lp-title);line-height:1.15;font-weight:var(--heading-weight,var(--bold));letter-spacing:-.02em;}",
+        ".listing-page{--lp-title:1.375rem;--lp-price:calc(24px * var(--text-scale));--lp-head:1.0625rem;--lp-body:.875rem;--lp-small:.8125rem;--lp-tiny:.75rem;}@media (max-width:719px){.listing-page{--lp-title:1.357rem;--lp-head:1.0714rem;--lp-body:1rem;--lp-small:.857rem;--lp-tiny:.8214rem;}}",
+        ".listing-header h1{margin:.75rem 0 .35rem;font-size:var(--lp-title);letter-spacing:-.02em;line-height:1.25;}.listing-price{margin:0;font-size:var(--lp-price);line-height:1.15;font-weight:var(--bold);letter-spacing:-.02em;}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
@@ -7835,7 +7858,9 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     let page = get(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let ana = "/perdorues/11111111-1111-4111-8111-111111111111";
     // The category above the photo; the title under it; then the deal, the price in its box, on a
-    // car's page the seller's card, her initial, her name, since when she is on the site and after
+    // car's page the seller's card, under a hairline with no heading ("Shitësi" its name to screen
+    // readers; the user's ask of 2026-10-11, "remove shitesi label and separate shitesi with a
+    // line on top"), her initial, her name, since when she is on the site and after
     // a dot how many listings, leading to her profile, and in the card the contact bar, the phone
     // and the message, wide pills (contact_bar.html; under the price on every other page), and
     // the share, a link in a circle, and the report, beside the message (listing.css); then the
@@ -7849,8 +7874,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         r#"<div class="listing-deal""#,
         r#"<div class="price-box">"#,
         r#"<p class="listing-price">"#,
-        r#"<section class="seller-section" aria-labelledby="seller-heading">"#,
-        r#"<h2 id="seller-heading">Shitësi</h2>"#,
+        r#"<section class="seller-section" aria-label="Shitësi">"#,
         r#"<div class="seller-card">"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
         r#"<span class="avatar large" aria-hidden="true">A</span>"#,
@@ -8740,7 +8764,8 @@ async fn a_listing_but_a_cars_or_a_propertys_stands_beside_its_photo(pool: PgPoo
     assert!(phone.contains(r#"<article class="listing listing-split""#), "{phone}");
     let side = &phone[phone.find(r#"<div class="listing-side">"#).unwrap()..];
     let article_end = side.find("</article>").unwrap();
-    assert!(side.find(r#"<section class="seller-section" aria-labelledby="seller-heading">"#).unwrap() < article_end);
+    assert!(side.find(r#"<section class="seller-section" aria-label="Shitësi">"#).unwrap() < article_end);
+    assert!(!phone.contains("seller-heading"), "no heading over the seller but on their own car's or property's page");
     assert!(side[..article_end].contains(r#"<h2>Përshkrimi</h2>"#) && !phone.contains("listing-map-section"));
     // The deal (the price, the bar, the circles) is in the flow there, the seller's card after
     // the description, not in it.

@@ -141,10 +141,13 @@
      and the sheet at 92% first): the bars in the header's colour at 80% (--frost-bar), the sheet
      in its own at 80% (--frost-sheet), what passes under them showing through, blurred and its
      colours a little livelier (--frost). Whole where the reader asks for less transparency
-     (below). */
+     (below). A phone's contact bar went back to the page's colour, at 80% (--frost-page), the
+     user's ask of the same day, later: "make background of number and message button in phone
+     same as the site background". */
   --frost: blur(20px) saturate(180%);
   --frost-bar: color-mix(in srgb, var(--header) 80%, transparent);
   --frost-sheet: color-mix(in srgb, var(--surface) 80%, transparent);
+  --frost-page: color-mix(in srgb, var(--bg) 80%, transparent);
   /* The glow round a listing's photos, as YouTube's ambient light takes the colours of what plays
      (the user's ask of 2026-10-11): the photo that shows, enlarged, blurred and its colours
      livelier (--glow) in a box past the photos' edges, fading to nothing at that box's edge
@@ -377,6 +380,7 @@
     --frost: none;
     --frost-bar: var(--header);
     --frost-sheet: var(--surface);
+    --frost-page: var(--bg);
   }
 }
 
