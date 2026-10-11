@@ -58,8 +58,9 @@
     {#- For the stand-in a tap shows while the page comes (application.js, standIn): data-deal, its
         page is laid out as a car's or a property's, its photos 4:3 on a phone; data-heading, a
         car's title as its seller wrote it, which its page heads itself with where the card's was
-        made from what the car is. -#}
-    <div class="card-head"{% if card.deal %} data-deal{% endif %}{% if let Some(heading) = card.heading %} data-heading="{{ heading }}"{% endif %}>
+        made from what the car is; data-loan, its page offers the loan calculator, a button at the
+        price's line's end. -#}
+    <div class="card-head"{% if card.deal %} data-deal{% endif %}{% if let Some(heading) = card.heading %} data-heading="{{ heading }}"{% endif %}{% if card.loan() %} data-loan{% endif %}>
       <h2 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h2>
     </div>
     {%- let description = card.description_excerpt() %}

@@ -113,9 +113,27 @@ impl Photo {
     }
 }
 
+/// What a loan for it would be, where its page offers the loan calculator: something on sale at
+/// a set price, a negotiable one or one from which, of more than 500 €, or 50 000 Lekë.
+fn loan_amount(listing_type: &str, price_type: &str, currency: &str, price_amount: Option<Decimal>) -> Option<Decimal> {
+    let priced = matches!(price_type, "FIXED" | "NEGOTIABLE" | "FROM");
+    let enough = match currency {
+        "EUR" => Decimal::from(500),
+        "ALL" => Decimal::from(50_000),
+        _ => return None,
+    };
+    price_amount.filter(|amount| priced && listing_type == "SELL" && *amount > enough)
+}
+
 impl ListingCard {
     pub fn url(&self) -> String {
         format!("/listing/{}-{}", self.public_no, self.slug)
+    }
+
+    /// Whether its page offers the loan calculator, a button at the price's line's end, which the
+    /// stand-in a tap shows keeps a place for (data-loan, application.js).
+    pub fn loan(&self) -> bool {
+        loan_amount(&self.listing_type, &self.price_type, &self.currency, self.price_amount).is_some()
     }
 
     /// "1 234": how many times its page was seen this week, for "Më të klikuarat".
@@ -377,13 +395,7 @@ impl ListingDetail {
     /// (not rents, wanted ads or "price on request") that cost enough to borrow for, more than
     /// 500 € or, about the same, 50 000 Lekë.
     pub fn loan_amount(&self) -> Option<Decimal> {
-        let priced = matches!(self.price_type.as_str(), "FIXED" | "NEGOTIABLE" | "FROM");
-        let enough = match self.currency.as_str() {
-            "EUR" => Decimal::from(500),
-            "ALL" => Decimal::from(50_000),
-            _ => return None,
-        };
-        self.price_amount.filter(|amount| priced && self.listing_type == "SELL" && *amount > enough)
+        loan_amount(&self.listing_type, &self.price_type, &self.currency, self.price_amount)
     }
 
     pub fn currency_symbol(&self) -> &str {

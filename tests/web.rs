@@ -2808,14 +2808,18 @@ async fn a_listing_steps_to_its_neighbours_on_its_categorys_page(pool: PgPool) {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     let car = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
-    // A bubble beside the price, like the price per square metre's, which opens the calculator in a
-    // card under it the same way: the years and the interest, and what they come to, the down
-    // payment a set share of the price (what the banks ask, LOAN_DOWN_PERCENT), the monthly
-    // payment last. On a car's page too, in the price's card at the right.
+    // A circle at the price's line's end, its calculator's icon alone ("Llogarit kredinë" said to
+    // screen readers and under the pointer: the user's ask of 2026-10-11), before the price per
+    // square metre's, which opens the calculator in a card under the line the same way: the years
+    // and the interest, and what they come to, the down payment a set share of the price (what the
+    // banks ask, LOAN_DOWN_PERCENT), the monthly payment last. On a car's page too.
     let start = r#"<details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="21500.00" data-loan-currency-value="€" data-loan-down-percent-value="35">"#;
     let loan = &car[car.find(start).expect("the loan calculator's bubble")..];
     let loan = &loan[..loan.find("</details>").unwrap()];
-    assert!(loan[..loan.find("</summary>").unwrap()].contains("Llogarit kredinë"));
+    let summary = &loan[..loan.find("</summary>").unwrap()];
+    assert!(summary.contains(r#"<summary title="Llogarit kredinë">"#) && summary.contains(r#"<span class="visually-hidden">Llogarit kredinë</span>"#), "{summary}");
+    let row = &car[car.find(r#"<div class="price-row">"#).expect("the price's row")..];
+    assert!(row.find(r#"<p class="listing-price">"#).unwrap() < row.find(start).unwrap(), "the calculator after the price, on its line");
     assert!(!loan.contains("loan-down\""), "no field for the down payment");
     let card = positions(loan, &[
         r#"<div class="bubble-card loan-card">"#,
@@ -2848,12 +2852,12 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     assert!(rent.contains("<p class=\"listing-price\"><span class=\"price-amount\">450\u{a0}€</span><span class=\"price-note\">/muaj</span></p>"));
     assert!(!rent.contains("Llogarit kredinë"));
     assert!(!rent.contains("price-per-area"));
-    // A house on sale says under its price what a square metre costs, 185 000 € for 200 m², in a
-    // circle after the loan calculator's pill, its icon alone (the figure said to screen readers
-    // and under the pointer, as a car's price has it: the user's ask of 2026-10-11), which opens
-    // how it was worked out.
+    // A house on sale says what a square metre costs, 185 000 € for 200 m², in a circle at its
+    // price's line's end after the loan calculator's, its icon alone (the figure said to screen
+    // readers and under the pointer, as a car's price has it: the user's asks of 2026-10-11), which
+    // opens how it was worked out.
     let house = html(pool, "/listing/1004-shtepi-private-ne-shitje-ne-vlore").await;
-    let row = &house[house.find(r#"<div class="price-row with-area">"#).expect("the price's row")..];
+    let row = &house[house.find(r#"<div class="price-row">"#).expect("the price's row")..];
     assert!(row.contains("<p class=\"listing-price\"><span class=\"price-amount\">185\u{a0}000\u{a0}€</span></p>"));
     assert!(row.find(r#"<details class="bubble loan""#).unwrap() < row.find(r#"<details class="bubble area-price""#).unwrap());
     let bubble = &row[row.find(r#"<details class="bubble area-price" data-controller="dropdown">"#).expect("the bubble")..];
@@ -3261,11 +3265,11 @@ async fn a_cars_price_is_compared_with_what_cars_of_its_model_and_year_ask(pool:
     let page = get(pool.clone(), golf).await.body;
     assert!(page.contains(r#"<details class="bubble car-price price-near" data-controller="dropdown">"#), "{page}");
     assert!(page.contains("Rreth mesatares"));
-    // A circle beside "Llogarit kredinë", after it, its tag alone, on the verdict's colour (a light
+    // A circle at the price's line's end, after the loan calculator's, its tag alone, on the verdict's colour (a light
     // one under our black on the light theme, a deeper one under our white on the dark), the
     // verdict said to screen readers and under the pointer, and first in its card: the user's ask
     // of 2026-10-11.
-    assert!(page.contains(r#"<div class="price-row with-car">"#), "{page}");
+    assert!(page.contains(r#"<div class="price-row">"#), "{page}");
     assert!(page.find(r#"<details class="bubble loan""#).unwrap() < page.find(r#"<details class="bubble car-price"#).unwrap());
     assert!(page.contains(r#"<summary title="Si krahasohet: Rreth mesatares">"#), "{page}");
     assert!(page.contains(r#"<span class="visually-hidden">Rreth mesatares</span>"#), "{page}");
@@ -5050,12 +5054,18 @@ async fn a_card_says_when_its_page_frames_photos_as_a_cars(pool: PgPool) {
     // wrote, its page's heading (data-heading); every other card's title is its page's heading.
     let home = get(pool.clone(), "/").await.body;
     for (number, deal) in [(1001, true), (1003, true), (1005, false)] {
+        // A place for the loan calculator's circle at the price's line's end where the page has
+        // it: the Golf on sale at 9 500 € does, a rent doesn't.
+        let loan = number == 1001;
         let at = home.find(&format!(r#"-{number}">"#)).unwrap_or_else(|| panic!("no card {number}"));
         let card = &home[at..];
         let card = &card[..card.find("</article>").unwrap()];
         let head = &card[card.find(r#"<div class="card-head""#).unwrap_or_else(|| panic!("{number}: {card}"))..];
         let head = &head[..head.find('>').unwrap()];
         assert_eq!(head.contains(" data-deal"), deal, "{number}: {head}");
+        if number != 1005 {
+            assert_eq!(head.contains(" data-loan"), loan, "{number}: {head}");
+        }
         let link = r#"<a class="card-link" href=""#;
         let (href, rest) = card[card.find(link).unwrap() + link.len()..].split_once(r#"">"#).unwrap();
         let named = &rest[..rest.find("</a>").unwrap()];

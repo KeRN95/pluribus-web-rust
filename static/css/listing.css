@@ -269,7 +269,6 @@
   .listing-car .listing-deal .seller-card > .seller-head { grid-column: 1 / -1; }
   .listing-car .listing-deal .seller-card > .contact-bar { grid-column: 1 / -1; }
   .listing-car .listing-deal > .seller-section + .actions { grid-column: 2; align-self: center; }
-  .listing-car .loan { width: calc(50% - .5rem); }
 }
 @media (min-width: 960px) {
   .listing-page:has(> .listing-car) { display: block; max-width: 60rem; margin-inline: auto; }
@@ -627,7 +626,7 @@
   vertical-align: .3em;
 }
 .price-drop { margin-left: .25rem; padding: .1rem .5rem; border-radius: 999px; background: var(--below-bg); color: var(--below); font-weight: var(--bold); }
-/* Bubbles under the price, which open a card under them as the menus open theirs; a tap outside
+/* Bubbles at the price's line's end, which open a card under them as the menus open theirs; a tap outside
    or Escape closes it (dropdown_controller.js): what a square metre of a property on sale costs,
    whose card says how it was worked out (area_price.html), a car's price against its model's
    (car_price.html), and "Llogarit kredinë", whose card is the loan calculator. Pills as the
@@ -681,7 +680,7 @@
 :is(.area-price, .car-price).price-near { --tone: var(--near); --tone-bg: var(--near-bg); --tone-fill: var(--near-fill); }
 :is(.area-price, .car-price).price-above { --tone: var(--above); --tone-bg: var(--above-bg); --tone-fill: var(--above-fill); }
 /* A car's price against what cars of its model and year ask, and what a square metre of a
-   property costs: a circle as tall as "Llogarit kredinë", at its end, its icon alone in it, 20px,
+   property costs: a circle as tall as a button, after the loan calculator's, its icon alone in it, 20px,
    on the verdict's colour (--tone-fill: a light red, yellow or green under our black on the light
    theme, a deeper one under our white on the dark: the user's asks of 2026-10-11; a property's
    was a pill with the figure, half the line, until then), the grey of secondary controls for a
@@ -689,7 +688,6 @@
    while open; its card under it from its right edge, as wide as what it says, a car's verdict
    first in its colour. */
 :is(.car-price, .area-price) { position: relative; width: fit-content; }
-.price-box > :is(.car-price, .area-price) { margin-top: 10px; }
 :is(.car-price, .area-price) > summary { justify-content: center; width: var(--size-button); height: var(--size-button); padding: 0; }
 :is(.car-price, .area-price) > summary > svg { flex: none; width: 20px; height: 20px; }
 :is(.car-price, .area-price):is(.price-below, .price-near, .price-above) > summary { background: var(--tone-fill); color: var(--text); }
@@ -698,37 +696,22 @@
 .car-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw / var(--page-scale) - 2rem)); }
 :is(.car-price, .area-price) .bubble-card { right: 0; left: auto; transform-origin: top right; }
 .car-price-verdict { margin: 0 0 .6rem; }
-/* The price's block, as the canvas has it: the price on a line of its own, and 12px under it
-   "Llogarit kredinë", a grey pill 48px tall the line's whole width, its calculator's icon muted
-   before its words; or the line but a property's or a car's price's circle at its end, 8px off
-   (which stays at the pill's side, on top, while the calculator is open under the pill). */
-.price-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 8px; }
-.price-row > .listing-price { flex-basis: 100%; }
-.price-row > :is(.car-price, .area-price) { flex: none; align-self: flex-start; }
-.loan { flex: 1 1 100%; min-width: 0; }
-.price-row:is(.with-car, .with-area) > .loan { flex-basis: 0; }
-.loan > summary {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  height: var(--size-button);
-  padding: 0 1.25rem;
-  font: inherit;
-  font-size: .9375rem;
-  font-weight: var(--semibold);
-  white-space: nowrap;
-}
-.loan > summary > svg:first-child { width: 19px; height: 19px; color: var(--muted); }
-/* Open, the calculator in a white box under the pill, in the page rather than over it, the pill in
-   the main colour with its chevron up, as the canvas has it. */
+/* The price's block, as the user asked on 2026-10-11: the price, and at its line's end its
+   buttons, circles 48px across, 8px apart: the loan calculator's, its icon alone on the grey of
+   secondary controls, in the main colour while its card is open, then a property's or a car's
+   price's circle. Each opens its card under the line, over the page, the calculator's as wide as
+   the line. ("Llogarit kredinë" was a grey pill the line's width under the price, its words after
+   its icon, its card in the page under it, until then.) */
+.price-row { position: relative; display: flex; align-items: center; gap: 8px; }
+.price-row > .listing-price { flex: 1 1 auto; min-width: 0; margin-right: 4px; }
+.price-row > .bubble { flex: none; }
+.loan > summary { justify-content: center; width: var(--size-button); height: var(--size-button); padding: 0; }
+.loan > summary > svg { flex: none; width: 20px; height: 20px; }
 .loan[open] > summary { background: var(--main); color: var(--on-main); }
-.loan[open] > summary > svg:first-child { color: inherit; }
 @media (hover: hover) {
   .loan[open] > summary:hover { background: var(--main-hover); }
 }
-.loan-chevron { display: none; flex: none; transform: rotate(180deg); }
-.loan[open] .loan-chevron { display: block; }
-.loan .bubble-card { position: static; width: auto; margin-top: 10px; padding: 16px; box-shadow: var(--shadow); animation: none; }
+.loan .bubble-card { right: 0; padding: 16px; }
 /* The calculator: the two fields side by side, the years and the yearly interest; then the down
    payment, a set share of the price, the loan, its interest and the two together, and last the
    monthly payment, 22px and a step bolder, as the canvas has it. */

@@ -331,7 +331,8 @@ function standIn(link) {
 // it lays out the page, so that the page fills it where it stands: its path's row with the steps'
 // circles; the photo the card shows, in the photo's frame (4:3 for a car or a property, data-deal,
 // 6:5 for the others on a phone); the title the page heads itself with (a car's as its seller wrote
-// it, data-heading); the line under it; a car's or a property's key facts; the price; the details
+// it, data-heading); the line under it; a car's or a property's key facts; the price, with the
+// loan calculator's circle at its line's end where the page has it (data-loan); the details
 // as grey pills where the page has them under it (not a car's or a property's, whose seller comes
 // there); the description, its start as the card has it; the contact bar at a phone's foot. What
 // the card doesn't know are grey bars where the words will be (.stand-in-text, words about as
@@ -346,9 +347,10 @@ function listingStandIn(card, link) {
   const shown = card.querySelector("img.card-photo")?.currentSrc;
   const amount = card.querySelector(".card-amount");
   const price = amount?.firstChild?.textContent.trim() ?? "";
-  // After the price what qualifies it, as the page says it: on a car's or a property's page the
-  // month alone, as the card's narrow photo has it.
-  const notes = [...(amount?.querySelectorAll(deal ? ".card-note:not(.card-negotiable)" : ".card-note") ?? [])].map((note) => note.textContent.trim()).join(" ");
+  // After the price what qualifies it, as the page says it: on a car's or a property's page
+  // without its brackets, on a line of its own (price_note_alone, listings.rs).
+  const said = [...(amount?.querySelectorAll(".card-note") ?? [])].map((note) => note.textContent.trim()).join(" ");
+  const notes = deal ? said.replace(/[()]/g, "").trim() : said;
   const number = link.pathname.match(/^\/listing\/(\d+)/)?.[1] ?? "";
   const place = card.querySelector(".card-place")?.textContent.trim() || "Tiranë";
   // The line under the title, about as long as the page's: the made title before it where the
@@ -369,7 +371,8 @@ function listingStandIn(card, link) {
     + `<div class="listing-media"><div class="gallery"><div class="listing-photos"><div class="gallery-photo">${photo}</div></div></div></div>`
     + `<div class="listing-side"><header class="listing-header"><h1>${escape(head?.dataset.heading || named)}</h1><p class="card-meta listing-kind">${unseen(line)}</p></header>`
     + (deal ? `<dl class="key-facts">${fact.repeat(4)}</dl>` : "")
-    + `<div class="listing-deal"><div class="price-box"><p class="listing-price"><span class="price-amount">${escape(price)}</span>${note}</p></div></div>`
+    + `<div class="listing-deal"><div class="price-box"><div class="price-row"><p class="listing-price"><span class="price-amount">${escape(price)}</span>${note}</p>`
+    + `${head?.hasAttribute("data-loan") ? '<details class="bubble loan" inert><summary></summary></details>' : ""}</div></div></div>`
     + `${details}${description}</div>`
     + '<aside class="contact-bar"><span class="button secondary reveal-button"></span><span class="button message-button"></span></aside>'
     + "</article></div>";
