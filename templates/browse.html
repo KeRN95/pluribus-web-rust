@@ -5,6 +5,28 @@
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
+{#- The bar's search (base.html) searches this page's listings: its category, with its filters
+    kept, and says which ("Kërko në Makina"); on a search's page its words are in it. -#}
+{% block header_search %}
+<form class="top-search" action="{{ filters.action() }}" method="get" role="search" data-controller="suggest"
+      data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
+  {%- for (name, value) in filters.search_form_fields() %}
+  <input type="hidden" name="{{ name }}" value="{{ value }}">
+  {%- endfor %}
+  <button type="submit" class="top-search-go" aria-label="{{ crate::t("Kërko") }}" title="{{ crate::t("Kërko") }}">
+    <svg data-icon="search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+  </button>
+  <input type="search" name="q" value="{{ filters.q_value() }}"
+         {%- if category_page %} placeholder="{{ crate::t1("Kërko në {}", heading) }}" aria-label="{{ crate::t1("Kërko në {}", heading) }}"
+         {%- else %} placeholder="{{ crate::t("Kërko njoftime") }}" aria-label="{{ crate::t("Kërko njoftime") }}"{% endif %} autocomplete="off" enterkeyhint="search"
+         data-suggest-target="input" data-action="input->suggest#typed focus->suggest#focused keydown->suggest#key">
+  <button type="button" class="search-clear" aria-label="{{ crate::t("Pastro") }}" title="{{ crate::t("Pastro") }}" data-suggest-target="clear" data-action="suggest#clear"{% if filters.q_value().is_empty() %} hidden{% endif %}>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CLOSE|safe }}</svg>
+  </button>
+  <div class="suggestions" id="top-suggestions" role="listbox" aria-label="{{ crate::t("Sugjerime") }}" data-suggest-target="list" hidden></div>
+</form>
+{% endblock %}
+
 
 {#- Category pills, as the welcome page's main categories: the icon, where there is one, then the
     name. A category's subcategories. -#}
@@ -15,9 +37,9 @@
 {%- endmacro %}
 
 {% block content %}
-{#- Without JavaScript the search and the filters stay open, in the page, the filters with a button
-    to apply them, the row's buttons gone, and the map, which needs it, is not there. -#}
-<noscript><style>.search-panel, .filters { display: block; position: static; max-height: none; } .search-button, .filters-open, .map-card, .filter-locate, .filters-header, .filters-footer { display: none; }</style></noscript>
+{#- Without JavaScript the filters stay open, in the page, with a button to apply them, the row's
+    buttons gone, and the map, which needs it, is not there. -#}
+<noscript><style>.filters { display: block; position: static; max-height: none; } .filters-open, .map-card, .filter-locate, .filters-header, .filters-footer { display: none; }</style></noscript>
 {%- let summary = filters.summary() %}
 {%- let on = filters.filter_count() %}
 {#- The page's town is kept in a cookie for the next pages, as it shows and as a refresh in place
@@ -95,41 +117,17 @@
 </nav>
 {%- endif %}
 
-{#- The search, the filters and the map, side by side: the search a round button, the others pills
-    that say their names and what is on: "Filtrat" with how many filters (2), the map the town or
-    the point ("Tiranë · 10 km"). They open over the results, under the row and as wide as it, the
-    page dimmed under them; only one is open at a time, the order's menu (under the row) too:
-    opening one says so (section:open) and the others fold. Escape, or a tap on the dim or on the
-    row beside its buttons, folds it again (foldAll, foldFromRow), and the filters and the map take
-    at most what is left of the screen under the row (fit). The filters and the map apply as soon
-    as something changes, the filters also as they close: the page refreshes in place (refresh.js),
-    and what is open stays as it is while it morphs (keep). Without JavaScript the search
-    and the filters stay open, in the page (the noscript over the head). -#}
+{#- The filters and the map, side by side (the search is the top bar's, above): pills that say
+    their names and what is on, "Filtrat" with how many filters (2), the map the town or the point
+    ("Tiranë · 10 km"). They open over the results, under the row and as wide as it, the page
+    dimmed under them; only one is open at a time, the order's menu (under the row) too: opening
+    one says so (section:open) and the others fold. Escape, or a tap on the dim or on the row beside
+    its buttons, folds it again (foldAll, foldFromRow), and the filters and the map take at most
+    what is left of the screen under the row (fit). The filters and the map apply as soon as
+    something changes, the filters also as they close: the page refreshes in place (refresh.js),
+    and what is open stays as it is while it morphs (keep). Without JavaScript the filters stay
+    open, in the page (the noscript over the head). -#}
   <div class="browse-tools" data-filters-target="tools" data-action="click->filters#foldFromRow">
-    {#- Searching these listings: a round button that opens a search box under the row, as the
-        filters do (panel_controller.js), the words as they are typed suggesting searches
-        (suggest_controller.js). Its words search the page's category, its filters kept. -#}
-    <div class="search-card" data-controller="panel"
-         data-action="section:open@document->panel#foldFor turbo:before-cache@document->panel#close turbo:before-morph-attribute->panel#keep">
-      <button type="button" class="button secondary round-button search-button" aria-controls="search-panel" aria-expanded="false"
-              aria-label="{{ crate::t("Kërko") }}" title="{{ crate::t("Kërko") }}" data-panel-target="toggle" data-action="panel#toggle">
-        <svg data-icon="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      </button>
-      <div class="search-panel" id="search-panel" data-panel-target="panel">
-        <form class="search" action="{{ filters.action() }}" method="get" role="search" data-controller="suggest"
-              data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
-          {%- for (name, value) in filters.search_form_fields() %}
-          <input type="hidden" name="{{ name }}" value="{{ value }}">
-          {%- endfor %}
-          <input type="search" name="q" value="{{ filters.q_value() }}" placeholder="{{ crate::t("Kërko njoftime") }}" aria-label="{{ crate::t("Kërko njoftime") }}" autocomplete="off"
-                 data-suggest-target="input" data-panel-target="input" data-action="input->suggest#typed focus->suggest#focused keydown->suggest#key">
-          <button type="submit" class="icon-button" aria-label="{{ crate::t("Kërko") }}">
-            <svg data-icon="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          </button>
-          <div class="suggestions" id="search-suggestions" role="listbox" aria-label="{{ crate::t("Sugjerime") }}" data-suggest-target="list" hidden></div>
-        </form>
-      </div>
-    </div>
 
     {#- The filters: their name, and how many are on in a coral circle; which ones, to screen
         readers and as its tooltip, "Filtrat: Naftë" (the place is the pills' and the map's to

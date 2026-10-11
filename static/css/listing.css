@@ -173,7 +173,7 @@
      the room under the frame reaches the page's foot (its min-height, above, 2.5rem over the
      section) and on through the 2.5rem under it to the screen's. None where the frame takes
      all the room. */
-  .listing-split > .listing-banner { height: max(0px, calc((100svh - var(--size-header) - 7.7rem - 3px - min((min(60rem, 100vw - 2rem) - 2rem) * 7 / 9, 100vh - var(--size-header) - 8.5rem - 1px)) / 2)); }
+  .listing-split > .listing-banner { height: max(0px, calc((100svh - var(--size-header) - 7.7rem - 3px - min((min(60rem, 100vw - var(--rail-width) - 2rem) - 2rem) * 7 / 9, 100vh - var(--size-header) - 8.5rem - 1px)) / 2)); }
   /* The photo and its filmstrip stay put under the top bar (--size-header and its hairline, base.css,
      and 1rem under it) while the column beside them scrolls, and go with the page once the
      column has all gone by: sticky within their grid row, which the column's height sets. The

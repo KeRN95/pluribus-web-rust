@@ -11,24 +11,20 @@
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
-{#- The listings kept and the conversations are the round buttons in the row with the search
-    (below), so the top bar has the account and the theme alone here. #}
-{% block header_shortcuts %}{% endblock %}
+{#- The page's own search is its first thing (below), so the top bar has none here. #}
+{% block header_search %}{% endblock %}
 
 {% block content %}
 <section class="welcome">
   {#- The question, for screen readers: on the page the search and the categories ask it. -#}
   <h1 class="visually-hidden">{{ crate::t("Çfarë po kërkon?") }}</h1>
   <div class="welcome-start">
-  {#- One row over the categories (.welcome-tools, welcome.css), as the canvas draws it: the search,
-      then "Posto" and the round buttons that this page's top bar leaves out (every other page's
-      has the heart and the conversations before the account, base.html). The search takes the
-      width the buttons leave it: words only, searched in every category and town, the results'
-      filters narrowing them, a white pill that asks "Çfarë po kërkon?", its label kept for screen
-      readers, and at its end a round button with the magnifier in the accent. Then "Posto", the
-      site's main thing to do, a pill with a plus and the word (the plus alone on phones, the
-      word kept for screen readers); and the listings kept and the conversations, grey circles.
-      The theme is in the top bar, as on every page (base.html). -#}
+  {#- One row over the categories (.welcome-tools, welcome.css): the search, words only, searched in
+      every category and town, the results' filters narrowing them, a grey pill that asks "Çfarë po
+      kërkon?", its label kept for screen readers, and at its end a round button with the
+      magnifier in the accent. On phones, where there is no rail (base.html), "Posto" after it, its
+      plus alone, round (its word kept for screen readers), and the listings kept and the
+      conversations, grey circles; from 720px up the rail has them, and the search the row. -#}
   <div class="welcome-tools">
   <form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest"
         data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">

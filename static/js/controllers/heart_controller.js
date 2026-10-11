@@ -56,8 +56,8 @@ function answered(answer) {
   showNews(answer.price_drops, answer.searches ?? 0);
 }
 
-// The heart that leads to the listings kept, in the top bar (base.html) or, on the welcome page, in
-// the row with its search (home.html), has a dot while listings the visitor keeps dropped their
+// The heart that leads to the listings kept, in the rail (base.html) or, on phones, in the welcome
+// page's row with its search (home.html), has a dot while listings the visitor keeps dropped their
 // price since they last looked at /te-ruajturat, or saved searches have new listings they haven't
 // heard of (searches.rs), and says which to screen readers; not for what the page shows already
 // (the drops on saved.html, the searches on saved_searches.html), which it has seen. English says
@@ -70,7 +70,7 @@ function showNews(drops, searches) {
     news.push(one ? t("1 kërkim me njoftime të reja") : tf("{} kërkime me njoftime të reja", searches));
   }
   const label = news.length ? tf("Të ruajturat: {}", news.join(", ")) : t("Të ruajturat");
-  for (const button of document.querySelectorAll(".saved-shortcut, .saved-button")) {
+  for (const button of document.querySelectorAll(".saved-shortcut, .rail-saved")) {
     button.classList.toggle("has-drops", news.length > 0);
     button.setAttribute("aria-label", label);
     button.title = label;

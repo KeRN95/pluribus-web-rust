@@ -9,24 +9,23 @@
 .lead { margin: 0 0 1.25rem; color: var(--muted); font-size: var(--text-lg); font-weight: var(--light); line-height: 1.45; }
 
 
-/* The search, as the canvas draws it: a white pill (the surface, a hairline, the soft shadow of what
-   rests on the page), 50px tall, its words 17px, and at its end a round button of 38px with the
-   magnifier in the accent (--highlight-knob behind, --highlight-icon for the line: dark on lime on
-   the light theme, lime on the grey on the dark one, as the design system has it); in use, its
-   edge in the main colour and the search bar's ring round it (--focus-search). On phones 46px,
-   its words 16px and the button 36px. */
+/* The search, as the user drew it on 2026-10-11: a grey pill (--surface-muted) with no outline or
+   shadow, 50px tall, its words 17px, the question in the muted grey, and at its end a round button
+   of 38px with the magnifier (--search-knob behind, --highlight-icon for the line: dark on lime on
+   the light theme, lime on a grey a shade off the pill's on the dark one); in use, the fields'
+   white with the main colour's edge and the search bar's ring round it (--focus-search). On
+   phones 46px, its words 16px and the button 36px. */
 .welcome-form {
   display: flex;
   align-items: center;
   gap: 6px;
   height: var(--size-button-lg);
   padding: 0 5px 0 22px;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: var(--radius-pill);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  background: var(--surface-muted);
 }
-.welcome-form:focus-within { border-color: var(--main); box-shadow: var(--focus-search); }
+.welcome-form:focus-within { border-color: var(--main); background: var(--input); box-shadow: var(--focus-search); }
 .welcome-form input {
   flex: 1;
   min-width: 0;
@@ -40,10 +39,10 @@
   appearance: none;
   outline: none;
 }
-.welcome-form input::placeholder { color: var(--placeholder); text-overflow: ellipsis; }
+.welcome-form input::placeholder { color: var(--muted); text-overflow: ellipsis; }
 /* No clearing cross: the pill keeps only its button. */
 .welcome-form input::-webkit-search-cancel-button { appearance: none; }
-.welcome-search { width: 38px; height: 38px; background: var(--highlight-knob); color: var(--highlight-icon); }
+.welcome-search { width: 38px; height: 38px; background: var(--search-knob); color: var(--highlight-icon); }
 
 /* The cross that empties the welcome page's search while it has words (suggest_controller.js), as
    the canvas has it, in the muted grey before the magnifier, the words' colour under the
@@ -298,12 +297,16 @@
 @media (hover: hover) {
   .shortcut:hover { background: var(--surface-muted-hover); }
 }
-/* The row over the categories (home.html), as the canvas draws it: the search bar, which takes the
-   width the buttons leave it, then "Posto" and the round buttons, 50px tall and 10px apart (46px
-   and 8px on phones); the categories' pills 10px under them, 44px tall, 8px apart, their names
-   15px beside an icon of 18px. */
+/* The row over the categories (home.html): the search bar alone from 720px up, the rail having
+   posting, the listings kept and the conversations (base.css, .rail); on phones it takes the width
+   "Posto" and the round buttons leave it, 46px tall and 8px apart. The categories' pills 10px under
+   the row, 44px tall, 8px apart, their names 15px beside an icon of 18px. */
 .welcome-tools { display: flex; align-items: center; gap: 10px; }
 .welcome-tools .welcome-form { flex: 1 1 auto; min-width: 0; }
+@media (min-width: 720px) {
+  .welcome-tools > .welcome-post,
+  .welcome-tools > .circle-shortcut { display: none; }
+}
 .welcome .shortcuts { gap: var(--space-8); margin-top: 10px; }
 .welcome .shortcut { min-height: 44px; padding: 0 16px; gap: var(--space-8); font-size: .9375rem; line-height: 1.3; }
 /* Phones: the bar, "Posto" (its plus alone, round, its word kept for screen readers) and the round
@@ -321,9 +324,9 @@
   .welcome .shortcut-icon { width: 16px; height: 16px; }
 }
 
-/* "Posto", the site's main thing to do, after the search, as the canvas has it: a pill 50px tall,
-   a plus and the word, in the main colour with white words on the light theme and in the accent
-   with dark ones on the dark (--post, --on-post); on phones the plus alone, round, 46px. */
+/* "Posto", the site's main thing to do, after the search on phones (the rail has it from 720px up):
+   the plus alone, round, 46px, its word kept for screen readers, in the main colour with white
+   words on the light theme and in the accent with dark ones on the dark (--post, --on-post). */
 .welcome-post {
   display: inline-flex;
   flex: none;
@@ -353,9 +356,9 @@
 }
 
 
-/* The round buttons in the row with the search (home.html, .welcome-tools), after "Posto": the
-   listings kept and the conversations, which no top bar holds here (it has the account and the
-   theme, base.html), as the canvas draws them: grey circles of 50px (46px on phones) with no
+/* The round buttons in the row with the search on phones (home.html, .welcome-tools), after
+   "Posto": the listings kept and the conversations, which no top bar holds (it has the account
+   alone, base.html) and the rail does from 720px up, as the canvas draws them: grey circles of 50px (46px on phones) with no
    outline (.plain-shortcut), their icons 20px (19px) in the text's colour, a shade darker under
    the pointer or a press. The ring round the conversations' count and the kept listings' dot is
    that grey (--tone-bg). */

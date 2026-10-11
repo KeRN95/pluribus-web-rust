@@ -667,12 +667,8 @@ pub const CHAT: &str = r#"<path d="M20.5 11.5a8 8 0 0 1-11.6 7.2L4 20l1.3-4.4A8 
 /// (phone_stream.html).
 pub const WHATSAPP: &str = r#"<path d="M4.6 16.4A8.6 8.6 0 1 1 7.6 19.4L3.2 20.8Z"/><path fill="currentColor" stroke="none" d="M9.2 8.1c.4-.4 1-.3 1.3.1l.9 1.5c.2.4.1.8-.2 1.1l-.5.5c.5 1.1 1.4 2 2.5 2.5l.5-.5c.3-.3.7-.4 1.1-.2l1.5.9c.4.3.5.9.1 1.3l-.6.6c-.7.7-1.7.8-2.6.4a9 9 0 0 1-4.4-4.4c-.4-.9-.3-1.9.4-2.6z"/>"#;
 
-/// A crescent moon: the theme's button on the light theme, which switches to the dark one (the
-/// header's in base.html, the welcome page's at the end of its categories in home.html).
+/// A crescent moon: the dark theme (the menu's switch, "Tema e errët", base.html).
 pub const MOON: &str = r#"<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/>"#;
-
-/// A sun: the theme's button on the dark theme, which switches back to the light one.
-pub const SUN: &str = r#"<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>"#;
 
 /// A bell: keeping a search to hear of its new listings ("Ruaj kërkimin", browse.html), and the
 /// searches kept (saved.html, saved_searches.html).
@@ -733,8 +729,11 @@ pub const SETTINGS: &str = r#"<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M
 /// A cross: closing what floats over the page (the menu's "Mbyll menynë", base.html).
 pub const CLOSE: &str = r#"<path d="M6 6l12 12M18 6 6 18"/>"#;
 
-/// A plus: adding a listing (the menu's "Posto njoftim", base.html).
+/// A plus: adding a listing (the menu's "Posto njoftim" and the rail's square, base.html).
 pub const PLUS: &str = r#"<path d="M12 5v14M5 12h14"/>"#;
+
+/// A house, its door at its foot: the front page (the rail's "Kreu", base.html).
+pub const HOME: &str = r#"<path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15V15H9v5.5H5.5A1.5 1.5 0 0 1 4 19Z"/>"#;
 
 /// An office block with a lower wing: a store without a logo of its own, in its round avatar (a
 /// listing's seller row, its page, an invitation into it: seller_card.html, profile.html,

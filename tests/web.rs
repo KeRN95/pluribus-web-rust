@@ -806,11 +806,10 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     // asks the page's question.
     assert!(body.contains(r#"<button type="submit" class="icon-button welcome-search" aria-label="Kërko""#));
     assert!(body.contains(r#"placeholder="Çfarë po kërkon?""#));
-    // The search leads a row of its own over the categories, with "Posto", a pill with its word
-    // (the plus alone on phones), and the round buttons the other pages have in no top bar: the
-    // listings kept and the conversations, plain, in that row and nowhere else on the page; no
-    // button opens the search, which stands open.
-    // The theme is in the top bar (below), not among them.
+    // The search leads a row of its own over the categories, with, for phones (the rail has them
+    // from 720px up), "Posto", its plus with its word kept for screen readers, and the listings kept
+    // and the conversations, plain, in that row; no button opens the search, which stands open.
+    // The theme is the menu's, not among them.
     let nav = body.find(r#"<nav class="shortcuts" aria-label="Kategoritë">"#).unwrap();
     let row = positions(&body, &[
         r#"<div class="welcome-tools">"#,
@@ -842,30 +841,20 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     ]);
     assert!(order.is_sorted(), "{order:?}");
     assert!(!list.contains("circle-shortcut"), "{list}");
-    // Every page's top bar has the account at its right end, and after it the theme, the welcome
-    // page's too; before the account, the listings kept and the conversations, so that every page
-    // reaches them in a tap, but on the welcome page, whose row with the search has them. The plus
-    // is that row's alone.
+    // Every page's top bar has the account alone at its right end, as the user asked on 2026-10-11,
+    // the welcome page's too: the text's size and the theme are the menu's, posting, the listings
+    // kept and the conversations the rail's (the welcome page's row has them on phones).
     let cars = get(pool.clone(), "/c/automjete").await.body;
-    for (page, shortcuts) in [(&body, false), (&cars, true)] {
+    for page in [&body, &cars] {
         assert!(!page.contains("post-button"));
-        // The typeface panel ("Ff") stands there only while TYPE_TRIAL is on (.env); the text's size
-        // ("Aa") always.
+        // The typeface panel ("Ff") stands there only while TYPE_TRIAL is on (.env).
         let trial = std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true");
         assert_eq!(page.contains(r#"<details class="type-menu" data-controller="dropdown type-trial""#), trial);
         let bar = &page[page.find(r#"<header class="site-header">"#).unwrap()..page.find("</header>").unwrap()];
-        assert_eq!(bar.matches("icon-button").count(), 3 + 2 * usize::from(shortcuts) + usize::from(trial), "{bar}");
+        assert_eq!(bar.matches("icon-button").count(), 1 + usize::from(trial), "{bar}");
         assert!(bar.contains(r#"<a class="icon-button account-button" href="/llogaria""#));
-        let toggle = r#"<button type="button" class="icon-button theme-toggle" data-controller="theme" data-action="theme#toggle""#;
-        assert!(bar.contains(toggle), "{bar}");
-        assert!(bar.find("account-button").unwrap() < bar.find("theme-toggle").unwrap());
-        let saved = r#"<a class="icon-button saved-button" href="/te-ruajturat" aria-label="Të ruajturat" title="Të ruajturat">"#;
-        let inbox = r#"<a class="icon-button inbox-button" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">"#;
-        assert_eq!(bar.contains(saved) && bar.contains(inbox), shortcuts, "{bar}");
-        if shortcuts {
-            let order = positions(bar, &[saved, inbox, "account-button"]);
-            assert!(order.is_sorted(), "{order:?}");
-            assert!(bar.contains(r#"<span class="inbox-count" data-inbox-target="count" hidden></span>"#));
+        for gone in ["theme-toggle", "text-size-menu", "saved-button", "inbox-button"] {
+            assert!(!bar.contains(gone), "{gone} in {bar}");
         }
     }
     assert!(!body.contains("saved-button") && !body.contains("inbox-button"));
@@ -1004,13 +993,13 @@ fn tap_heart(number: &str, keep: &str, cookie: Option<&str>) -> Request<Body> {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn every_listing_has_a_heart_over_its_photo(pool: PgPool) {
     // On every card, the newest listings' row's too, and on the listing's page; the welcome page's
-    // round button in the row with its search leads to the listings kept, and every other page's
-    // top bar does.
+    // round button in the row with its search leads to the listings kept (on phones), and every
+    // page's rail does.
     let home = get(pool.clone(), "/").await.body;
     assert_eq!(home.matches(r#"<form class="heart""#).count(), home.matches(r#"<article class="card"#).count());
     assert!(home.contains(r#"<a class="circle-shortcut plain-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#));
     let cars = get(pool.clone(), "/c/automjete").await.body;
-    assert!(cars.contains(r#"<a class="icon-button saved-button" href="/te-ruajturat""#));
+    assert!(cars.contains(r#"<a class="rail-item rail-saved" href="/te-ruajturat">"#));
     assert!(cars.contains(&heart(1001)));
     assert_eq!(cars.matches(r#"<form class="heart""#).count(), cars.matches(r#"<article class="card"#).count());
     let listing = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
@@ -1253,10 +1242,10 @@ async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
-    // The search, Filtrat, Harta and Rendit stand in one row over the results, the orders opening
-    // in a menu; opening one says so (section:open) and the others fold, so only one is open at a
-    // time. The search is plain until its box is open, as the others are. What they open floats over the results, the page
-    // dimmed under it; Escape, or a tap on the dim or on the row beside its buttons, folds it again.
+    // Filtrat, Harta and Rendit stand in one row over the results (the search is the top bar's),
+    // the orders opening in a menu; opening one says so (section:open) and the others fold, so only
+    // one is open at a time. What they open floats over the results, the page dimmed under it;
+    // Escape, or a tap on the dim or on the row beside its buttons, folds it again.
     // The filters' card comes after the row and the places under it: a column beside the results
     // on a wide screen (browse.css).
     let cars = html(pool.clone(), "/c/makina").await;
@@ -1266,7 +1255,6 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         r#"<p class="result-count" id="result-count""#,
         r#"<form class="save-search" method="post" action="/kerkimet/ruaj">"#,
         r#"<div class="browse-tools" data-filters-target="tools" data-action="click->filters#foldFromRow">"#,
-        r#"<div class="search-card" data-controller="panel""#,
         r#"<button type="button" class="button secondary round-button labelled filters-open""#,
         r#"<section class="map-card map-hidden""#,
         // After the map, how the cards show, round, opening its menu; last, the order.
@@ -1281,7 +1269,7 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         r#"<h2 class="results-heading" id="results-heading">Njoftimet më të reja</h2>"#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
-    for listener in ["panel#foldFor", "filters#foldFor", "map#foldFor", "dropdown#foldFor", "filters#fit"] {
+    for listener in ["filters#foldFor", "map#foldFor", "dropdown#foldFor", "filters#fit"] {
         assert!(cars.contains(&format!("section:open@document->{listener}")), "{listener}");
     }
     assert!(cars.contains("keydown.esc@document->filters#foldAll"));
@@ -1293,7 +1281,6 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     for keep in [
         "turbo:before-morph-element->filters#keep",
         "turbo:before-morph-attribute->filters#keepAttribute",
-        "turbo:before-morph-attribute->panel#keep",
         "turbo:before-morph-element->map#keep",
         "turbo:before-morph-attribute->map#keepOpen",
         "turbo:morph@document->map#reloadPoints",
@@ -1307,7 +1294,7 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     assert!(cars.contains(r#"<span class="button-label">Harta</span>"#));
     assert!(cars.contains(r#"<button type="button" class="button secondary round-button labelled filters-open" aria-controls="filters" aria-expanded="false""#));
     assert!(cars.contains(r#"<span class="button-label">Filtrat</span>"#) && !cars.contains("button-count"));
-    assert!(cars.contains(r#"<button type="button" class="button secondary round-button search-button""#));
+    assert!(!cars.contains("round-button search-button"));
     // The order is the row's last button, its words and a chevron, the orders in a menu under it
     // (open with no JavaScript); the listings' heading says it: "Njoftimet më të reja" on a
     // category page.
@@ -1323,13 +1310,13 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     assert!(search.contains(r#"<summary class="sort-button" aria-label="Rendit: Më të përshtatshmet" title="Rendit: Më të përshtatshmet">Më të përshtatshmet<svg"#));
     assert!(search.contains(r#"<h2 class="results-heading" id="results-heading">Më të përshtatshmet</h2>"#));
 
-    // The top bar has no search: the row starts with a round button that opens one under it,
-    // which searches the page's category and keeps its filters.
+    // The search is the top bar's (base.html, browse.html), the row has none: it searches the
+    // page's category and keeps its filters.
     let header = &cars[..cars.find("</header>").unwrap()];
-    assert!(!header.contains(r#"name="q""#));
+    assert!(header.contains(r#"name="q""#) && !row.contains(r#"name="q""#));
     let fuel = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&sort=price_asc").await;
     assert!(fuel.contains(r#"<span class="button-label">Filtrat</span><span class="button-count" aria-hidden="true">1</span>"#));
-    let search = &fuel[fuel.find(r#"<form class="search" action="/c/makina""#).expect("the row's search")..];
+    let search = &fuel[fuel.find(r#"<form class="top-search" action="/c/makina""#).expect("the bar's search")..];
     let search = &search[..search.find("</form>").unwrap()];
     assert!(search.contains(r#"<input type="hidden" name="vehicle_fuel" value="DIESEL">"#));
     assert!(search.contains(r#"<input type="hidden" name="sort" value="price_asc">"#));
@@ -4668,10 +4655,10 @@ async fn cards_are_drawn_as_the_canvas_has_them(pool: PgPool) {
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
     // The bar over every page: white on the light theme and the page's colour on the dark one (the
-    // header token), a hairline under it, as tall as the design system has it; its round buttons
-    // bare, 40px; what is unread in the accent, a dot ringed in the bar's colour with its edge on
-    // the light theme, the conversations' count with its number on the accent. (The stylesheet
-    // comes minified: web::site_css.)
+    // header token), a hairline under it, as tall as the design system has it; the account alone
+    // at its right end, a bare round button of 40px; what is unread in the accent, a dot ringed in
+    // the bar's colour with its edge on the light theme, the conversations' count with its number
+    // on the accent. (The stylesheet comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     let rule = |selector: &str| {
         let at = css.find(&format!("}}{selector}{{")).unwrap_or_else(|| panic!("{selector}"));
@@ -4681,9 +4668,9 @@ async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
     let header = rule(".site-header");
     assert!(header.contains("background:var(--header)") && header.contains("border-bottom:1px solid var(--border)"), "{header}");
     assert!(rule(".header-inner").contains("height:var(--size-header)"));
-    let buttons = rule(".saved-button,.inbox-button,.account-button,.theme-toggle");
-    assert!(buttons.contains("width:var(--size-button-sm)") && buttons.contains("border:0"), "{buttons}");
-    let dot = rule(".saved-button.has-drops::before,.account-button.has-news::before");
+    let account = rule(".account-button");
+    assert!(account.contains("width:var(--size-button-sm)") && account.contains("margin-left:auto") && account.contains("border:0"), "{account}");
+    let dot = rule(".account-button.has-news::before");
     assert!(dot.contains("background:var(--highlight)") && dot.contains("box-shadow:0 0 0 2px var(--header),var(--dot-edge)"), "{dot}");
     let count = rule(".inbox-count");
     assert!(count.contains("background:var(--highlight)") && count.contains("color:var(--on-highlight)"), "{count}");
@@ -4691,17 +4678,18 @@ async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_menu_leads_everywhere(pool: PgPool) {
-    // Every page has the menu (base.html): "Menyja" at the bar's left, before the logo, opening a
-    // dialog that leads to posting, the account's pages, every main category in the welcome
-    // page's order (its pills', from the database, which browse::menu_categories keeps), the look
-    // (the text's three sizes, the dark theme's switch, the five accents), the language through
-    // /gjuha, and the pages about the site; the bar's "Aa" has the text's sizes too.
+    // Every page has the menu (base.html): its lines ("Menyja" for screen readers) at the bar's
+    // left, before the logo and the account, opening a dialog that leads to posting, the account's
+    // pages, every main category in the welcome page's order (its pills', from the database, which
+    // browse::menu_categories keeps), the look (the text's three sizes, the dark theme's switch,
+    // the five accents), the language through /gjuha, and the pages about the site.
     let home = get(pool.clone(), "/").await.body;
     for page in [home.clone(), get(pool.clone(), "/c/automjete").await.body] {
         assert!(page.contains(r#"<body data-controller="menu">"#));
         let bar = &page[page.find(r#"<header class="site-header">"#).unwrap()..page.find("</header>").unwrap()];
-        let order = positions(bar, &[r#"<button type="button" class="menu-button""#, r#"<a class="logo" id="logo""#, r#"<details class="text-size-menu""#]);
+        let order = positions(bar, &[r#"<button type="button" class="menu-button""#, r#"<a class="logo" id="logo""#, r#"<a class="icon-button account-button""#]);
         assert!(order.is_sorted(), "{order:?}");
+        assert!(bar.contains(r#"<span class="menu-button-word">Menyja</span>"#));
         let menu = &page[page.find(r#"<dialog class="menu" id="menu" aria-label="Menyja""#).expect("the menu")..];
         let menu = &menu[..menu.find("</dialog>").unwrap()];
         for href in ["/shto", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet-e-ruajtura", "/lajmerimet", "/mesazhet", "/llogaria/cilesimet", "/kontakt"] {
@@ -4753,6 +4741,64 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     }
     let count = &css[css.find("}.menu-count{").expect("the menu's counts") + 1..];
     assert!(count[..count.find('}').unwrap()].contains("background:var(--highlight)"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_rail_and_the_bars_search_lead_everywhere(pool: PgPool) {
+    // The rail, the menu folded (base.html, rail.rs), as the user drew it on 2026-10-11: posting,
+    // then the front page, the search, the listings kept and the conversations, in that order on
+    // every page, the one the page is marked as it (a category's listings are the search's).
+    for (path, current) in [
+        ("/", r#"<a class="rail-item" href="/" aria-current="page">"#),
+        ("/c/makina", r#"<a class="rail-item" href="/search" aria-current="page">"#),
+        ("/search", r#"<a class="rail-item" href="/search" aria-current="page">"#),
+        ("/te-ruajturat", r#"<a class="rail-item rail-saved" href="/te-ruajturat" aria-current="page">"#),
+        ("/mesazhet", r#"<a class="rail-item" href="/mesazhet" aria-current="page" data-controller="inbox">"#),
+        ("/listing/1001-volkswagen-golf-7-2016-nafte", ""),
+    ] {
+        let page = html(pool.clone(), path).await;
+        let rail = &page[page.find(r#"<nav class="rail" aria-label="Faqet kryesore">"#).unwrap_or_else(|| panic!("the rail on {path}"))..];
+        let rail = &rail[..rail.find("</nav>").unwrap()];
+        let order = positions(rail, &[
+            r#"<a class="rail-post" href="/shto" aria-label="Posto njoftim""#,
+            r#"<a class="rail-item" href="/""#,
+            r#"<a class="rail-item" href="/search""#,
+            r#"<a class="rail-item rail-saved" href="/te-ruajturat""#,
+            r#"<a class="rail-item" href="/mesazhet""#,
+        ]);
+        assert!(order.is_sorted(), "{path}: {order:?}");
+        assert_eq!(rail.matches(r#"aria-current="page""#).count(), usize::from(!current.is_empty()), "{path}: {rail}");
+        assert!(rail.contains(current), "{path}: {rail}");
+        assert!(rail.contains(r#"<span class="inbox-count" data-inbox-target="count" hidden></span>"#));
+    }
+    // The bar's search, on every page but the front page, whose own is its first thing: in every
+    // category and town ("Kërko njoftime"), but on a category's page, which it searches with its
+    // filters kept, saying which; the row's own search is gone.
+    let home = html(pool.clone(), "/").await;
+    assert!(!home.contains(r#"<form class="top-search""#));
+    let listing = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
+    assert!(listing.contains(r#"<form class="top-search" action="/search" method="get" role="search" data-controller="suggest""#));
+    assert!(listing.contains(r#"placeholder="Kërko njoftime" aria-label="Kërko njoftime""#));
+    let cars = html(pool.clone(), "/c/makina?sort=price_asc").await;
+    let bar = &cars[cars.find(r#"<header class="site-header">"#).unwrap()..cars.find("</header>").unwrap()];
+    assert!(bar.contains(r#"<form class="top-search" action="/c/makina" method="get" role="search" data-controller="suggest""#), "{bar}");
+    assert!(bar.contains(r#"placeholder="Kërko në Makina" aria-label="Kërko në Makina""#), "{bar}");
+    assert!(bar.contains(r#"<input type="hidden" name="sort" value="price_asc">"#), "{bar}");
+    assert!(!cars.contains("search-card") && !cars.contains("search-panel"));
+    // Drawn as the user drew them: posting's square in "Posto"'s colours, the current place on a
+    // grey pill; the searches grey pills, the front page's button the accent's. (The stylesheet
+    // comes minified: web::site_css.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let rule = |selector: &str| {
+        let at = css.find(&format!("}}{selector}{{")).unwrap_or_else(|| panic!("{selector}"));
+        let rule = &css[at + 1..];
+        rule[..rule.find('}').unwrap()].to_string()
+    };
+    assert!(rule(".rail-post").contains("background:var(--post)"));
+    assert!(rule(r#".rail-item[aria-current="page"] .rail-icon"#).contains("background:var(--surface-muted)"));
+    assert!(rule(".top-search").contains("background:var(--surface-muted)"));
+    assert!(rule(".welcome-form").contains("background:var(--surface-muted)"));
+    assert!(rule(".welcome-search").contains("background:var(--search-knob)"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
@@ -4841,9 +4887,9 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     ]);
     assert!(head.is_sorted(), "{head:?}");
     assert!(!gps.contains(r#"<nav class="subcategories""#), "no subcategories, no pills under");
-    // Every branch closes; the other three </details> are the order's, the view's and the bar's
-    // text size's (and the typeface panel's, while TYPE_TRIAL is on).
-    let others = 3 + gps.matches("<details class=\"type-menu\"").count();
+    // Every branch closes; the other two </details> are the order's and the view's (and the
+    // typeface panel's, while TYPE_TRIAL is on).
+    let others = 2 + gps.matches("<details class=\"type-menu\"").count();
     assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - others, "balanced");
 
     // The old address still works.
@@ -7135,7 +7181,7 @@ async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
     assert!(home.contains(r#"<h2 id="latest-heading">Newest listings</h2>"#), "{home}");
     let cars = en("/c/makina").await.body;
     assert!(cars.contains("<title>Cars | Pluribus</title>") && cars.contains(r#"<h1 class="browse-title">Cars</h1>"#), "{cars}");
-    assert!(cars.contains(r#"aria-label="Filters: No filters""#) && cars.contains(r#"placeholder="Search listings""#), "{cars}");
+    assert!(cars.contains(r#"aria-label="Filters: No filters""#) && cars.contains(r#"placeholder="Search in Cars""#), "{cars}");
     assert!(cars.contains(">All of Albania<") && cars.contains(r#"<a class="breadcrumb-up" href="/c/automjete">Vehicles</a>"#), "{cars}");
     let vehicles = en("/c/automjete").await.body;
     assert!(vehicles.contains(">Motorbikes<") && vehicles.contains(">Commercial vehicles<") && vehicles.contains(r#"<a class="breadcrumb-up" href="/">Home</a>"#), "{vehicles}");
@@ -7695,11 +7741,11 @@ async fn writing_to_a_seller_takes_signing_in_first(pool: PgPool) {
     let inbox = get(pool.clone(), "/mesazhet").await.body;
     assert!(inbox.contains("Hyr në llogari për t'u shkruar shitësve"));
     assert_eq!(get(pool.clone(), "/mesazhet/numri").await.body, r#"{"unread":0}"#);
-    // The welcome page has the button to the conversations in the row with its search; every other
-    // page has it in the top bar, the listing's page too, which a seller reads a buyer's message
-    // from.
-    for page in ["/c/automjete", "/listing/1001-volkswagen-golf-7-2016-nafte", "/mesazhet"] {
-        assert!(get(pool.clone(), page).await.body.contains(r#"<a class="icon-button inbox-button" href="/mesazhet""#), "{page}");
+    // Every page's rail leads to the conversations, the listing's page too, which a seller reads a
+    // buyer's message from; the welcome page also has the button in the row with its search, for
+    // phones, which have no rail.
+    for page in ["/c/automjete", "/listing/1001-volkswagen-golf-7-2016-nafte", "/mesazhet", "/"] {
+        assert!(get(pool.clone(), page).await.body.contains(r#"<a class="rail-item" href="/mesazhet""#), "{page}");
     }
     assert!(get(pool.clone(), "/").await.body.contains(r#"<a class="circle-shortcut plain-shortcut inbox-shortcut" href="/mesazhet""#));
 }

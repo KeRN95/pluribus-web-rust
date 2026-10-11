@@ -49,8 +49,16 @@ Përdorues i fshirë
 Gjuha
 = Language
 
+# The rail at the screen's left (base.html), the menu folded, as screen readers name it; and the
+# bar's search on a category's page (browse.html), which names the category.
+Faqet kryesore
+= Main pages
+
+Kërko në {}
+= Search in {}
+
 # The menu (base.html): its button and its cross, posting, the counts' words for screen readers,
-# the look ("Pamja dhe gjuha": the text's sizes, the accents) and the bar's "Aa".
+# and the look ("Pamja dhe gjuha": the text's sizes, the accents).
 Menyja
 = Menu
 

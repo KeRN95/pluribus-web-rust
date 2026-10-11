@@ -251,10 +251,9 @@
 .browse-tools > *,
 .browse-tools .round-button { position: relative; z-index: 9; }
 .map-card { display: contents; }
-/* What the row opens, the search's box and the map's card: under the head, the row being its last
-   line, a little apart from it (--drop), as wide as it, over the results. (The filters are a sheet
-   of their own, below.) */
-.search-panel,
+/* What the row opens, the map's card: under the head, the row being its last line, a little apart
+   from it (--drop), as wide as it, over the results. (The filters are a sheet of their own,
+   below; the search is the top bar's, base.css.) */
 .map-card-body {
   position: absolute;
   top: calc(100% + var(--drop));
@@ -353,7 +352,7 @@ html:has(.filters.is-open) { overflow: hidden; }
 .filters-footer .filters-show { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* The page under what the row opened, dimmed; the row and the header stay over it. */
 .browse-scrim { display: none; }
-.browse:has(.search-panel.is-open, .filters.is-open, .map-card:not(.map-hidden)) .browse-scrim {
+.browse:has(.filters.is-open, .map-card:not(.map-hidden)) .browse-scrim {
   display: block;
   position: fixed;
   inset: 0;
@@ -440,14 +439,6 @@ html:has(.filters.is-open) { overflow: hidden; }
 @media (max-width: 719px) {
   .sort-button { padding: 0; }
   .browse-tools > .sort-menu:not(.cards-menu) > .sort-options { right: auto; left: 0; transform-origin: top left; }
-}
-/* The search box the round search button opens over the results, under the row and as wide as it
-   (above): the welcome page's pill, its suggestions under it. */
-.search-card { display: contents; }
-.search-panel { display: none; }
-.search-panel.is-open { display: block; animation: menu-in .16s ease-out; }
-@media (prefers-reduced-motion: reduce) {
-  .search-panel.is-open { animation: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .browse-tools .button.round-button { transition: none; }

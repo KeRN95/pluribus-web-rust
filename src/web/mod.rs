@@ -17,6 +17,7 @@ mod photos;
 mod promotions;
 mod post;
 mod properties;
+mod rail;
 mod safety;
 mod saved;
 mod searches;
@@ -178,6 +179,7 @@ pub fn router(state: AppState) -> Router {
         .layer(middleware::from_fn(security_headers))
         .layer(middleware::from_fn(account::signed_in_cookie))
         .layer(middleware::from_fn(language::language))
+        .layer(middleware::from_fn(rail::keep_path))
         // WOFF2 fonts are Brotli-compressed already; compressing them again only costs time.
         .layer(CompressionLayer::new().compress_when(
             DefaultPredicate::new().and(NotForContentType::const_new("font/")),

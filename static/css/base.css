@@ -53,6 +53,9 @@
   --lime: #c8ff00;
   --lime-knob: var(--lime);
   --lime-icon: #1b1b1b;
+  /* The front page's search button, on its grey pill: lime with the dark magnifier; on the dark
+     theme, and with a darker accent, a grey a shade off the pill's, the magnifier in the accent. */
+  --search-knob: var(--lime);
   --logo-edge: rgb(27 27 27 / 45%);      /* a line inside the logo's lime dot, on white */
   --dot-edge: inset 0 0 0 1.5px rgb(27 27 27 / 45%); /* a ring inside an unread dot, on white */
   --choice-darkred: #9b1b1b;
@@ -126,6 +129,9 @@
   --size-field: 48px;
   --size-header: 60px;
   --content-width: 1068px;
+  /* The rail's width at the screen's left (.rail): none on phones, 88px from 720px up (below), so
+     that what is measured against the screen's width leaves it out. */
+  --rail-width: 0px;
   /* The canvas's spacing steps, named by their pixels. */
   --space-4: 4px;
   --space-8: 8px;
@@ -190,6 +196,7 @@
   --post-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
   --lime-knob: var(--surface-muted);
   --lime-icon: var(--lime);
+  --search-knob: var(--surface-muted-hover);
   --logo-edge: transparent;
   --dot-edge: 0 0 0 0 transparent;
   --choice-darkred: #e37170;
@@ -254,6 +261,7 @@
     --post-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
     --lime-knob: var(--surface-muted);
     --lime-icon: var(--lime);
+    --search-knob: var(--surface-muted-hover);
     --logo-edge: transparent;
     --dot-edge: 0 0 0 0 transparent;
     --choice-darkred: #e37170;
@@ -311,6 +319,7 @@
   --on-highlight: var(--on-choice);
   --highlight-knob: var(--surface-muted);
   --highlight-icon: var(--highlight);
+  --search-knob: var(--surface-muted-hover);
   --logo-edge: transparent;
   --dot-edge: 0 0 0 0 transparent;
 }
@@ -460,10 +469,12 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* Header */
 
-/* The bar over every page, as the canvas draws it: white on the light theme, the page's own
-   colour on the dark one (--header), a hairline under it, 60px tall (56px on phones,
-   --size-header), its row as wide as the page's column (--content-width, .container, page.css)
-   and its buttons 4px apart. It stays at the top as the page scrolls. */
+/* The bar over every page: white on the light theme, the page's own colour on the dark one
+   (--header), a hairline under it, 60px tall (56px on phones, --size-header). In it the menu's
+   lines, the logo, the search (every page's but the front page's, .top-search) and the account
+   alone at the right end, as the user asked on 2026-10-11 (the canvas had the text's size, the
+   listings kept, the conversations and the theme there too: the menu and the rail have them
+   now). It stays at the top as the page scrolls. */
 .site-header {
   position: sticky;
   top: 0;
@@ -476,18 +487,158 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  max-width: calc(var(--content-width) + 2 * var(--gutter));
   height: var(--size-header);
-  margin: 0 auto;
   padding: 0 var(--gutter);
 }
-/* On phones the bar is 56px, its round buttons side by side with no room between them, as the
-   canvas has them, so that the menu, the logo and the six fit a screen 360px wide, and its last
+/* On phones the bar is 56px, its buttons side by side with no room between them, and its last
    button comes nearer the screen's edge, its icon where the page's gutter ends. The type trial's
    button (below) has no room left under 400px. */
 @media (max-width: 719px) {
   :root { --size-header: 56px; }
   .header-inner { gap: 0; padding: 0 8px 0 var(--gutter); }
+}
+/* From 720px up the bar runs the screen's width, the menu's lines over the rail (below) and the
+   logo where the page beside the rail starts. */
+@media (min-width: 720px) {
+  :root { --rail-width: 88px; }
+  .header-inner { padding: 0 var(--gutter) 0 0; }
+}
+
+/* The page as a grid from 720px up: the English offer and the bar across the top, the rail down
+   the left beside the page and the footer, which still stands at the screen's foot under a short
+   page (the page's row takes the room). */
+@media (min-width: 720px) {
+  body {
+    display: grid;
+    grid-template-columns: var(--rail-width) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr auto;
+    grid-template-areas: "offer offer" "header header" "rail main" "rail footer";
+  }
+  body > .language-offer { grid-area: offer; }
+  body > .site-header { grid-area: header; }
+  body > .rail { grid-area: rail; }
+  body > main { grid-area: main; }
+  body > .site-footer { grid-area: footer; }
+}
+
+/* The rail, the menu folded (base.html), as the user drew it on 2026-10-11: from 720px up a column
+   88px wide down the screen's left under the bar, the bar's colour with a hairline at its right,
+   staying put as the page scrolls. At its top posting, a square of 56px with soft corners in
+   "Posto"'s colours (--post, --on-post: the main colour on the light theme, the accent on the
+   dark), the plus 24px; under it the front page, the search, the listings kept and the
+   conversations, 12px apart, each its icon over its name: the icon 22px, drawn a little thinner
+   (1.8), on a pill 56 by 32px, grey where the page is that place (aria-current), its name 12px
+   (a rem's .75), bolder there. Under the pointer the icon fills with the accent, as the menu's
+   rows' do. The conversations' count of those unread sits on the pill's corner, and the listings
+   kept have a dot there while some dropped their price unseen, both in the accent. Phones have
+   no rail: the menu and the front page's row hold its places. */
+.rail { display: none; }
+@media (min-width: 720px) {
+  .rail {
+    position: sticky;
+    top: var(--size-header);
+    z-index: 9;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-12);
+    height: calc(100vh - var(--size-header));
+    height: calc(100svh - var(--size-header));
+    padding: var(--space-12) 0 var(--space-16);
+    background: var(--header);
+    border-right: 1px solid var(--border);
+  }
+}
+.rail-post {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-8);
+  border-radius: var(--radius-box);
+  background: var(--post);
+  color: var(--on-post);
+  box-shadow: var(--shadow);
+  transition: background-color .15s;
+}
+.rail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: 0 4px;
+  color: var(--text);
+  font-size: .75rem;
+  font-weight: var(--medium);
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+}
+.rail-icon { position: relative; display: grid; flex: none; place-items: center; width: 56px; height: 32px; border-radius: var(--radius-pill); }
+.rail-item[aria-current="page"] .rail-icon { background: var(--surface-muted); }
+.rail-item[aria-current="page"] .rail-label { font-weight: var(--bold); }
+@media (hover: hover) {
+  .rail-post:hover { background: var(--post-hover); }
+  .rail-item:hover .rail-icon svg { fill: var(--highlight); }
+}
+.rail-icon .inbox-count { top: -3px; right: 6px; box-shadow: 0 0 0 2px var(--header); }
+.rail-saved.has-drops .rail-icon::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 14px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--highlight);
+  box-shadow: 0 0 0 2px var(--header), var(--dot-edge);
+}
+
+/* The bar's search (base.html; browse.html's for a category's listings): a grey pill 44px tall
+   (40px on phones) taking the width the logo and the account leave it, at most 720px, no outline,
+   as the user drew it on 2026-10-11, the magnifier at its start, muted, the words 16px (no
+   smaller, or phones zoom in), the question muted; in use the pill turns the fields' white with
+   the main colour's edge and the search bar's ring (--focus-search), and a cross empties it while
+   it has words. Its suggestions open under it (.suggestions, welcome.css). */
+.top-search {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 720px;
+  height: 44px;
+  margin: 0 var(--space-16);
+  padding: 0 4px 0 2px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+}
+.top-search:focus-within { border-color: var(--main); background: var(--input); box-shadow: var(--focus-search); }
+.top-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: max(16px, 1rem);
+  appearance: none;
+  outline: none;
+}
+.top-search input::placeholder { color: var(--muted); text-overflow: ellipsis; }
+.top-search input::-webkit-search-cancel-button { appearance: none; }
+.top-search-go { display: grid; flex: none; place-items: center; width: var(--size-button-sm); height: var(--size-button-sm); padding: 0; border: 0; border-radius: var(--radius-pill); background: none; color: var(--muted); cursor: pointer; }
+.top-search-go:hover { color: var(--text); }
+@media (max-width: 719px) {
+  .top-search { height: var(--size-button-sm); margin: 0 var(--space-8); padding: 0 2px 0 0; }
+  .top-search-go { width: 36px; }
 }
 @media (max-width: 399px) {
   .type-menu { display: none; }
@@ -570,29 +721,17 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .search .icon-button { background: var(--button); color: var(--on-button); }
 .search .icon-button:hover { background: var(--button-hover); }
 
-/* The listings kept, the conversations, the account and, after it, the theme: bare round buttons
-   at the bar's right end, as the canvas draws them, 40px (--size-button-sm) with their icons at
-   22px in the words' colour, a grey circle under the pointer; the logo's margin takes the room
-   before them. The welcome page's bar has the account and the theme alone: its listings kept and
-   conversations are the round buttons in the row with its search (home.html, welcome.css), as
-   posting is on no other page. */
-.logo { margin-right: auto; }
-.saved-button,
-.inbox-button,
-.account-button,
-.theme-toggle { position: relative; width: var(--size-button-sm); height: var(--size-button-sm); border: 0; }
+/* The account, alone at the bar's right end, its margin taking the room before it: a bare round
+   button, 40px (--size-button-sm) with its icon at 22px in the words' colour, a grey circle under
+   the pointer. */
+.account-button { position: relative; width: var(--size-button-sm); height: var(--size-button-sm); margin-left: auto; border: 0; }
 @media (hover: hover) {
-  .saved-button:hover,
-  .inbox-button:hover,
-  .account-button:hover,
-  .theme-toggle:hover { background: var(--surface-muted); }
+  .account-button:hover { background: var(--surface-muted); }
 }
-/* What is new, in the accent (--highlight), as everything unread is: the conversations' count
-   (messages.css), and a dot of 8px on the kept listings' heart while some dropped their price
-   unseen (heart_controller.js) and on the account while a listing of the user's is about to
-   expire or expired (account_controller.js), ringed in the bar's colour, with a dark edge inside
-   it on the light theme, where lime alone hardly shows on white (--dot-edge). */
-.saved-button.has-drops::before,
+/* What is new, in the accent (--highlight), as everything unread is: a dot of 8px on the account
+   while a listing of the user's is about to expire or expired (account_controller.js), ringed in
+   the bar's colour, with a dark edge inside it on the light theme, where lime alone hardly shows
+   on white (--dot-edge). */
 .account-button.has-news::before {
   content: "";
   position: absolute;
@@ -604,62 +743,36 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   background: var(--highlight);
   box-shadow: 0 0 0 2px var(--header), var(--dot-edge);
 }
-/* The menu's button at the bar's left, before the logo, as the canvas has it: the three lines and
-   the word "Menyja", 40px tall, its lines where the page's column starts and the word 12px from
-   the logo; under the pointer the word is underlined, as a link's is, rather than the button
-   sitting on a grey pill as the bar's round buttons do (the canvas draws the pill; the underline
-   was asked for on 2026-10-11, then in the accent and 2px thick); on phones the lines alone, 24px, the word kept for screen
-   readers. */
+/* The menu's button at the bar's left, before the logo: its three lines, 24px, on a bare round
+   button, a grey circle under the pointer, the word "Menyja" kept for screen readers; 40px on
+   phones, and from 720px up 48px over the rail's middle (the menu folded), the logo where the page
+   beside the rail starts. On phones the conversations' count of those unread sits at its corner
+   (.menu-unread, base.html), the rail's being out of sight there. */
 .menu-button {
-  display: inline-flex;
+  position: relative;
+  display: inline-grid;
   flex: none;
-  align-items: center;
-  gap: var(--space-8);
+  place-items: center;
+  width: var(--size-button-sm);
   height: var(--size-button-sm);
-  margin: 0 2px 0 -10px;
-  padding: 0 10px;
+  margin: 0 2px 0 -8px;
+  padding: 0;
   border: 0;
   border-radius: var(--radius-pill);
   background: transparent;
   color: var(--text);
-  font: inherit;
-  font-weight: var(--medium);
   cursor: pointer;
 }
 @media (hover: hover) {
-  .menu-button:hover .menu-button-word { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
+  .menu-button:hover { background: var(--surface-muted); }
 }
-@media (max-width: 719px) {
-  .menu-button { justify-content: center; width: var(--size-button-sm); margin: 0 2px 0 -8px; padding: 0; }
-  .menu-button svg { width: 24px; height: 24px; }
-  .menu-button-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.menu-button-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.menu-button .inbox-count { top: 0; right: -2px; box-shadow: 0 0 0 2px var(--header); }
+@media (min-width: 720px) {
+  .menu-button { width: 48px; height: 48px; margin: 0 calc((var(--rail-width) - 48px) / 2 + var(--gutter)) 0 calc((var(--rail-width) - 48px) / 2); }
+  .menu-unread { display: none; }
 }
 
-/* The text's size, "Aa" after the logo (base.html): a bare round button like the bar's others, its
-   letters 15px bold, in the main colour while its card shows, as an open menu's button is; the
-   card under it, white with what floats' shadow, its name small and muted over the three sizes,
-   the menu's own (.text-sizes, below). */
-.text-size-menu { position: relative; }
-.text-size-menu > summary { width: var(--size-button-sm); height: var(--size-button-sm); border: 0; list-style: none; cursor: pointer; font-size: 15px; font-weight: var(--bold); }
-.text-size-menu > summary::-webkit-details-marker { display: none; }
-@media (hover: hover) {
-  .text-size-menu > summary:hover { background: var(--surface-muted); }
-}
-.text-size-menu[open] > summary { background: var(--main); color: var(--on-main); }
-.text-size-panel {
-  position: absolute;
-  top: calc(100% + var(--space-8));
-  right: 0;
-  z-index: 20;
-  display: grid;
-  gap: var(--space-8);
-  padding: 12px 14px 14px;
-  border-radius: var(--radius-box);
-  background: var(--surface);
-  box-shadow: var(--shadow-float);
-  white-space: nowrap;
-}
-.text-size-title { margin: 0; color: var(--muted); font-size: 13px; font-weight: var(--semibold); }
 /* The three sizes in the two-part toggle's track (.segmented, listing.css), each an A as big as the
    canvas draws it, 13, 16 and 19px, 38px wide. */
 .segmented.text-sizes > button { width: 38px; padding: 0; font-weight: var(--bold); line-height: 1; }
@@ -784,14 +897,3 @@ input[type="radio"].swatch:checked::before { box-shadow: 0 0 0 2px var(--surface
 .type-range input { width: 100%; margin: 0; accent-color: var(--accent); }
 .type-range output { color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
 .type-reset { justify-self: start; }
-
-/* The theme buttons (the bar's and the welcome page's) show the theme they switch to: a moon in
-   light mode, a sun in dark mode. */
-.icon-sun { display: none; }
-:root[data-theme="dark"] .icon-sun { display: block; }
-:root[data-theme="dark"] .icon-moon { display: none; }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .icon-sun { display: block; }
-  :root:not([data-theme="light"]) .icon-moon { display: none; }
-}

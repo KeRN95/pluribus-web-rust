@@ -55,15 +55,16 @@
   {%- endif %}
   <header class="site-header">
     <div class="header-inner">
-      {#- The menu (the dialog after the header, menu_controller.js): the three lines and the word
-          "Menyja" at the bar's left, before the logo, as the canvas has them; on phones the lines
-          alone, the word kept for screen readers (base.css, .menu-button). -#}
+      {#- The menu (the dialog after the header, menu_controller.js): the three lines at the bar's
+          left, over the rail from 720px up, the word "Menyja" kept for screen readers (base.css,
+          .menu-button). On phones, where there is no rail, a count in the accent at its corner
+          while conversations have messages unread (inbox_controller.js), as the rail's
+          "Mesazhet" has it. -#}
       <button type="button" class="menu-button" aria-haspopup="dialog" aria-expanded="false" aria-controls="menu" data-menu-target="button" data-action="menu#open">
-        <svg data-icon="menu" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MENU|safe }}</svg>
+        <svg data-icon="menu" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MENU|safe }}</svg>
         <span class="menu-button-word">{{ crate::t("Menyja") }}</span>
+        <span class="menu-unread" data-controller="inbox" aria-hidden="true"><span class="inbox-count" data-inbox-target="count" hidden></span></span>
       </button>
-      {#- The search is the welcome page's pill, and on the browse pages the round button before
-          the filters. -#}
       {#- The logo: the name in lowercase in Clash Display Semibold, drawn as shapes (logo.svg),
           its i's dot apart in the accent, and the word for screen readers (the site's icon,
           above, is its p). Turbo keeps it from page to page (data-turbo-permanent), so that its
@@ -106,49 +107,65 @@
         </form>
       </details>
       {%- endif %}
-      {#- The text's size, "Aa", after the logo as the canvas has it: a card under it with the three
-          sizes, the menu's own (look_controller.js keeps the one picked in the browser; base.css,
-          .text-size-menu), folding on a tap outside or Escape as the browse row's menus do. -#}
-      <details class="text-size-menu" data-controller="dropdown look" data-action="turbo:before-cache@document->dropdown#close">
-        <summary class="icon-button text-size-button" aria-label="{{ crate::t("Madhësia e shkrimit") }}" title="{{ crate::t("Madhësia e shkrimit") }}">Aa</summary>
-        <div class="text-size-panel">
-          <p class="text-size-title" id="text-size-title">{{ crate::t("Madhësia e shkrimit") }}</p>
-          <div class="segmented text-sizes" role="group" aria-labelledby="text-size-title"><button type="button" class="text-size-small" aria-label="{{ crate::t("Shkrim i vogël") }}" aria-pressed="false" data-look-target="size" data-look-size-param="small" data-action="look#size">A</button><button type="button" class="text-size-normal" aria-label="{{ crate::t("Shkrim normal") }}" aria-pressed="true" data-look-target="size" data-look-size-param="normal" data-action="look#size">A</button><button type="button" class="text-size-large" aria-label="{{ crate::t("Shkrim i madh") }}" aria-pressed="false" data-look-target="size" data-look-size-param="large" data-action="look#size">A</button></div>
-        </div>
-      </details>
-      {#- Before the account, the listings kept and the conversations, bare round buttons like
-          it, so that every page reaches them in a tap: the heart, with a dot in the accent while
-          kept listings dropped their price unseen (heart_controller.js), and the speech bubble,
-          with how many conversations have messages unread, in the accent too
-          (inbox_controller.js). The welcome page has them in the row with its search instead
-          (home.html empties the block). -#}
-      {%- block header_shortcuts %}
-      <a class="icon-button saved-button" href="/te-ruajturat" aria-label="{{ crate::t("Të ruajturat") }}" title="{{ crate::t("Të ruajturat") }}">
-        <svg data-icon="heart" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg>
-      </a>
-      <a class="icon-button inbox-button" href="/mesazhet" aria-label="{{ crate::t("Mesazhet") }}" title="{{ crate::t("Mesazhet") }}" data-controller="inbox">
-        <svg data-icon="message-circle" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
-        <span class="inbox-count" data-inbox-target="count" hidden></span>
-      </a>
+      {#- The search, in the bar on every page but the front page, whose own is its first thing
+          (home.html empties the block): a grey pill as wide as the bar leaves it, the magnifier at
+          its start searching the words typed, as Enter does, in every category and town ("Kërko
+          njoftime"); a category's page searches its own listings with its filters kept, and says
+          so ("Kërko në Makina", browse.html). Suggestions open under it as words are typed
+          (suggest_controller.js), and a cross empties it while it has words. -#}
+      {%- block header_search %}
+      <form class="top-search" action="/search" method="get" role="search" data-controller="suggest"
+            data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
+        <button type="submit" class="top-search-go" aria-label="{{ crate::t("Kërko") }}" title="{{ crate::t("Kërko") }}">
+          <svg data-icon="search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </button>
+        <input type="search" name="q" placeholder="{{ crate::t("Kërko njoftime") }}" aria-label="{{ crate::t("Kërko njoftime") }}" autocomplete="off" enterkeyhint="search"
+               data-suggest-target="input" data-action="input->suggest#typed focus->suggest#focused keydown->suggest#key">
+        <button type="button" class="search-clear" aria-label="{{ crate::t("Pastro") }}" title="{{ crate::t("Pastro") }}" data-suggest-target="clear" data-action="suggest#clear" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CLOSE|safe }}</svg>
+        </button>
+        <div class="suggestions" id="top-suggestions" role="listbox" aria-label="{{ crate::t("Sugjerime") }}" data-suggest-target="list" hidden></div>
+      </form>
       {%- endblock %}
-      {#- The account at the bar's right end: creating one, or for a signed-in visitor, their
+      {#- The account alone at the bar's right end: creating one, or for a signed-in visitor, their
           listings (account.rs, account_page), with a dot while one of them is about to expire or
-          expired and they haven't seen it (account_controller.js, notifications.rs). Posting is
-          the welcome page's round plus, in the row with its search (home.html), and no top
-          bar's. -#}
+          expired and they haven't seen it (account_controller.js, notifications.rs). The text's
+          size and the theme are the menu's, posting, the listings kept and the conversations the
+          rail's (below; on phones the menu's, and the front page's row with its search). -#}
       <a class="icon-button account-button" href="/llogaria" aria-label="{{ crate::t("Llogaria") }}" title="{{ crate::t("Llogaria") }}" data-controller="account">
         <svg data-icon="user" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
       </a>
-      {#- After the account, the theme: a moon on the light one, a sun on the dark, the theme it
-          switches to (theme_controller.js), on every page, the welcome page's too. -#}
-      {%- block theme_toggle %}
-      <button type="button" class="icon-button theme-toggle" data-controller="theme" data-action="theme#toggle" aria-label="{{ crate::t("Tema e errët") }}" aria-pressed="false" title="{{ crate::t("Tema e errët") }}">
-        <svg class="icon-moon" data-icon="moon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MOON|safe }}</svg>
-        <svg class="icon-sun" data-icon="sun" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SUN|safe }}</svg>
-      </button>
-      {%- endblock %}
     </div>
   </header>
+  {#- The rail, the menu folded, at the screen's left from 720px up, under the menu's lines
+      (base.css, .rail): posting, a square in the "Posto" colours with the plus, then the front
+      page, the search (every category's listings, with the bar's search), the listings kept and
+      the conversations, each its icon over its name; the one the page is (rail::here) on a grey
+      pill, its name bolder. The listings kept have a dot in the accent while some dropped their
+      price unseen (heart_controller.js), the conversations how many have messages unread
+      (inbox_controller.js). Phones have the menu and the front page's row instead. -#}
+  {%- let here = crate::web::rail::here() %}
+  <nav class="rail" aria-label="{{ crate::t("Faqet kryesore") }}">
+    <a class="rail-post" href="/shto" aria-label="{{ crate::t("Posto njoftim") }}" title="{{ crate::t("Posto njoftim") }}">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">{{ crate::web::icons::PLUS|safe }}</svg>
+    </a>
+    <a class="rail-item" href="/"{% if here == "home" %} aria-current="page"{% endif %}>
+      <span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HOME|safe }}</svg></span>
+      <span class="rail-label">{{ crate::t("Kreu") }}</span>
+    </a>
+    <a class="rail-item" href="/search"{% if here == "search" %} aria-current="page"{% endif %}>
+      <span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+      <span class="rail-label">{{ crate::t("Kërko") }}</span>
+    </a>
+    <a class="rail-item rail-saved" href="/te-ruajturat"{% if here == "saved" %} aria-current="page"{% endif %}>
+      <span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg></span>
+      <span class="rail-label">{{ crate::t("Të ruajturat") }}</span>
+    </a>
+    <a class="rail-item" href="/mesazhet"{% if here == "messages" %} aria-current="page"{% endif %} data-controller="inbox">
+      <span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg><span class="inbox-count" data-inbox-target="count" hidden></span></span>
+      <span class="rail-label">{{ crate::t("Mesazhet") }}</span>
+    </a>
+  </nav>
   {#- The menu, as the canvas has it: a drawer at the screen's left on wider screens and the whole
       screen on phones (base.css, .menu), over the page dimmed, opened by the bar's "Menyja" and
       closed by its cross, a tap on the dimmed page or Escape (menu_controller.js, a modal dialog,
