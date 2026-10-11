@@ -5980,7 +5980,7 @@ async fn listings_expire_unless_their_sellers_renew_them(pool: PgPool) {
     assert!(!get(pool.clone(), "/search?q=Galaxy").await.body.contains(&url));
     // Besa, who keeps it, finds it among those no longer shown, saying why.
     let gone = get_with_cookie(pool.clone(), "/te-ruajturat", &besa).await.body;
-    assert!(section(&gone, "saved-gone-heading").contains(r#"<span class="badge">Skadoi</span>"#), "{gone}");
+    assert!(section(&gone, "saved-gone-heading").contains(r#"<span class="badge danger">Skadoi</span>"#), "{gone}");
     // Its seller still has its page, saying so, with "Rifresko" and none of the buttons for a
     // listing up or taken down for a while; and it on "Njoftimet e mia", likewise.
     let own = get_with_cookie(pool.clone(), &url, &ana).await;
@@ -7922,7 +7922,7 @@ async fn those_who_keep_a_listing_hear_when_its_price_drops(pool: PgPool) {
     let page = get_with_cookie(pool.clone(), "/te-ruajturat", &besnik).await.body;
     assert!(page.contains(r#"<div class="price-drops" data-seen-url="/te-ruajturat/pare?deri="#), "{page}");
     let drop = format!(
-        "<li><a href=\"/listing/{no}-samsung-galaxy-s21-128-gb\">Samsung Galaxy S21, 128 GB</a>: nga <del>32\u{a0}000\u{a0}Lekë</del> në 29\u{a0}000\u{a0}Lekë</li>"
+        "<li><a href=\"/listing/{no}-samsung-galaxy-s21-128-gb\">Samsung Galaxy S21, 128 GB</a>: nga <del>32\u{a0}000\u{a0}Lekë</del> në <strong>29\u{a0}000\u{a0}Lekë</strong></li>"
     );
     assert!(page.contains(&drop), "{page}");
     assert!(!get_with_cookie(pool.clone(), "/te-ruajturat", &dritan).await.body.contains("price-drops"));
@@ -7937,7 +7937,7 @@ async fn those_who_keep_a_listing_hear_when_its_price_drops(pool: PgPool) {
     edit(("price", "25 000")).await;
     assert_eq!(unseen(&besnik).await, 1);
     let page = get_with_cookie(pool.clone(), "/te-ruajturat", &besnik).await.body;
-    assert!(page.contains("nga <del>29\u{a0}000\u{a0}Lekë</del> në 25\u{a0}000\u{a0}Lekë</li>"), "{page}");
+    assert!(page.contains("nga <del>29\u{a0}000\u{a0}Lekë</del> në <strong>25\u{a0}000\u{a0}Lekë</strong></li>"), "{page}");
     // A drop after the page was made isn't seen with it, as when the browser shows its copy again.
     edit(("price", "24 000")).await;
     saw(&page, &besnik).await;

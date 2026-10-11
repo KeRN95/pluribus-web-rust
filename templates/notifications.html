@@ -30,7 +30,8 @@
       {%- else %}
       <div class="notification-line">
       {%- endif %}
-        <svg class="notification-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ row.icon|safe }}</svg>
+        {#- Its kind's icon in a grey circle, as the canvas has it. -#}
+        <span class="notification-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ row.icon|safe }}</svg></span>
         <span class="notification-text">
           <span class="notification-title">{% if row.unread %}<span class="visually-hidden">{{ crate::t("E re:") }} </span>{% endif %}{{ row.title }}</span>
           {%- if let Some(body) = row.body %}

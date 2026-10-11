@@ -28,7 +28,7 @@
     <ul>
       {%- for drop in drops %}
       {%- let (was, now) = drop.prices() %}
-      <li><a href="{{ drop.url() }}">{{ drop.title }}</a>: {% if crate::i18n::english() %}from <del>{{ was }}</del> to {{ now }}{% else %}nga <del>{{ was }}</del> në {{ now }}{% endif %}</li>
+      <li><a href="{{ drop.url() }}">{{ drop.title }}</a>: {% if crate::i18n::english() %}from <del>{{ was }}</del> to <strong>{{ now }}</strong>{% else %}nga <del>{{ was }}</del> në <strong>{{ now }}</strong>{% endif %}</li>
       {%- endfor %}
     </ul>
   </div>
@@ -38,19 +38,22 @@
   {%- endif %}
   {%- if !gone.is_empty() %}
   {#- Those kept that no one can open any more (db::saved_gone): their seller took them down, for a
-      while or for good, or the reports or the moderators did; each says which, and "Hiq" lets it
-      go (the heart's own form, back to this page). -#}
+      while or for good, or the reports or the moderators did; each says which, in red's tint when
+      it expired or was taken off, and "Hiq" lets it go (the heart's own form, back to this page). -#}
   <section class="saved-gone" aria-labelledby="saved-gone-heading">
     <h2 id="saved-gone-heading">{{ crate::t("Nuk shfaqen më") }}</h2>
     <ul class="saved-gone-list">
       {%- for listing in gone %}
       <li class="saved-gone-entry">
         <span class="saved-gone-title">{{ listing.title }}</span>
-        <span class="badge">{{ listing.label() }}</span>
-        <form method="post" action="/listing/{{ listing.public_no }}/ruaj">
-          <input type="hidden" name="ruaj" value="0">
-          <button type="submit" class="button secondary small">{{ crate::t("Hiq") }}</button>
-        </form>
+        {#- Why, and "Hiq", together: at the row's end, or under a long title. -#}
+        <span class="saved-gone-end">
+          <span class="badge{% if let Some(tone) = listing.status_tone() %} {{ tone }}{% endif %}">{{ listing.label() }}</span>
+          <form method="post" action="/listing/{{ listing.public_no }}/ruaj">
+            <input type="hidden" name="ruaj" value="0">
+            <button type="submit" class="button secondary small">{{ crate::t("Hiq") }}</button>
+          </form>
+        </span>
       </li>
       {%- endfor %}
     </ul>

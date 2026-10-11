@@ -114,6 +114,16 @@ impl db::GoneListing {
             _ => t("Jo në faqe"),
         }
     }
+
+    /// The tone its badge takes (.badge.danger in listing.css), as the canvas has them: one
+    /// expired or taken off in red's tint, as "Njoftimet e mia" has it; the rest grey (paused or
+    /// deleted by its seller).
+    pub fn status_tone(&self) -> Option<&'static str> {
+        match self.status.as_str() {
+            "EXPIRED" | "SUSPENDED" | "REJECTED" => Some("danger"),
+            _ => None,
+        }
+    }
 }
 
 impl SavedPage {
