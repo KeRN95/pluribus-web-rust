@@ -222,20 +222,25 @@
    number, white on a soft dark pill. There everything over the photos is this pill's size
    (--over-photo): the line about the listing in the other top corner, which leaves room for both,
    the heart, as tall as the pill is, and the photo counter at the bottom; each as far from the
-   photo's edges. (On a card, "Më të klikuarat" says its views in words, on the details line.) */
-.listing-media { --over-photo: 1.4rem; --over-edge: .7rem; }
+   photo's edges: 26px tall, 12px from them, their words 13px, as the canvas has them (24px, 10px
+   and 12.5px on a phone). (On a card, "Më të klikuarat" says its views in words, on the details
+   line.) */
+.listing-media { --over-photo: 26px; --over-edge: 12px; --over-text: .8125rem; }
+@media (max-width: 719px) {
+  .listing-media { --over-photo: 24px; --over-edge: 10px; --over-text: .8929rem; }
+}
 .listing-views { position: absolute; top: var(--over-edge); right: calc(var(--over-edge) + var(--over-photo) + .4rem); z-index: 2; height: var(--over-photo); margin: 0; }
 .listing-views {
   display: flex;
   align-items: center;
   gap: .3rem;
-  padding: .2rem .55rem .2rem .45rem;
+  padding: 0 10px;
   border-radius: 999px;
   background: rgb(27 27 27 / 45%);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   color: #fff;
-  font-size: var(--text-xs);
+  font-size: var(--over-text);
   font-weight: var(--semibold);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -263,7 +268,7 @@
 .card-media:has(.card-status.is-sold) .card-photo { filter: grayscale(.7); opacity: .75; }
 .listing-media .heart { position: absolute; top: calc(var(--over-edge) - .3rem); right: calc(var(--over-edge) - .3rem); z-index: 2; }
 .listing-media .heart-button { --circle: var(--over-photo); --reach: .3rem; }
-.listing-media .heart-button svg { width: 20px; height: 20px; }
+.listing-media .heart-button svg { width: 22px; height: 22px; }
 .listing-media:has(.heart) .listing-meta { max-width: calc(100% - 2 * var(--over-edge) - var(--over-photo) - .4rem); }
 .listing-media:has(.listing-views) .listing-meta { max-width: calc(100% - 9.5rem); }
 @media (prefers-reduced-motion: reduce) {
@@ -622,20 +627,21 @@
   max-width: calc(100% - 2 * var(--over-edge));
   height: var(--over-photo);
   margin: 0;
-  padding: 0 .65rem;
+  padding: 0 10px;
   border-radius: 999px;
   overflow: hidden;
   background: rgb(27 27 27 / 45%);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   color: #fff;
-  font-size: var(--text-xs);
+  font-size: var(--over-text);
+  font-weight: var(--medium);
   line-height: var(--over-photo);
   text-overflow: ellipsis;
   white-space: nowrap;
   pointer-events: none;
 }
-.listing-meta strong { font-weight: var(--semibold); }
+.listing-meta strong { font-weight: var(--bold); }
 .more { display: inline-block; padding: 1rem; color: var(--muted); }
 .empty { color: var(--muted); }
 /* "Shfaq më shumë", the next page's link while it loads or without scripts (next_page.html): a grey
