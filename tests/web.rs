@@ -6851,8 +6851,9 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     assert!(page.contains(r#"<div class="description-fold" data-controller="fold">"#));
     assert!(page.contains(r#"<button type="button" class="description-more" data-fold-target="button" data-action="fold#open" hidden>"#));
     assert!(page.contains("Shfaq të gjithë përshkrimin") && !page.contains("is-folded"));
-    // The bar is inside the card there, the page's one bar; on every other page it is under the
-    // price, the seller's card after the description without it, the summary on one line.
+    // The bar is under the seller there, the page's one bar; on every other page it is under the
+    // price, the seller after the description without it, said the same way: the initial in a
+    // ring of 48 px, since when, and how many listings.
     let card = &page[page.find(r#"<section class="seller-section""#).unwrap()..];
     let card = &card[..card.find("</section>").unwrap()];
     assert!(card.contains(r#"<aside class="contact-bar""#) && page.matches(r#"<aside class="contact-bar""#).count() == 1, "{card}");
@@ -6860,8 +6861,8 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     let iphone = html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await;
     let card = &iphone[iphone.find(r#"<section class="seller-section""#).unwrap()..];
     let card = &card[..card.find("</section>").unwrap()];
-    assert!(card.contains(r#"<span class="avatar" aria-hidden="true">A</span>"#) && !card.contains("contact-bar"), "{card}");
-    assert!(card.contains(r#"<span class="seller-summary">Në Pluribus që nga "#) && card.contains(" · 5 njoftime</span>"), "{card}");
+    assert!(card.contains(r#"<span class="avatar large" aria-hidden="true">A</span>"#) && !card.contains("contact-bar"), "{card}");
+    assert!(card.contains(r#"<span class="seller-summary"><span class="seller-since">Që nga "#) && card.contains(r#"<span class="seller-count">· 5 njoftime</span>"#), "{card}");
     assert!(iphone.find(r#"<aside class="contact-bar""#).unwrap() < iphone.find(r#"<section class="seller-section""#).unwrap());
 
     // Her profile says so too.

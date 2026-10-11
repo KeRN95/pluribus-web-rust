@@ -341,9 +341,6 @@ Publikuar
 Përdorues që nga {}
 = Member since {}
 
-Në Pluribus që nga {} · {}
-= On Pluribus since {} · {}
-
 Biznes · që nga {}
 = Business · since {}
 

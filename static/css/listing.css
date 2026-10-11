@@ -63,31 +63,30 @@
 .section-head a { font-size: var(--text-sm); font-weight: var(--semibold); text-underline-offset: .2em; }
 /* Who sells it, under the description, as far under it as the details and the description stand
    under what is over them (1.75rem; it stood 2.5rem under once), under a heading of its own,
-   "Shitësi", as they have theirs (the heading keeps no margin over it, like theirs, above), in a
-   card like the posting form's (the menus' hairline on the surface), across the page, or the
-   column beside the photo on a split page (below): the seller (posting.css, .seller), leading to
-   their profile, their name and summary cut short where the line is too short. The ways to reach them are the buttons under
-   the price alone. On a phone the contact bar settles between the description and the card (the
-   card and the map come after it in the grid, by order), a band from edge to edge (below), and
-   the card keeps the 2.5rem under it, so that it stands clear of the band. On a car's page the
-   card holds the contact bar too, in the deal's column from 960 px up (.listing-car, below). */
+   "Shitësi", as they have theirs (the heading keeps no margin over it, like theirs, above), on the
+   page itself, no box round it, as the canvas has it (it was a card like the posting form's, the
+   menus' hairline on the surface, until 2026-10-11), across the page, or the column beside the
+   photo on a split page (below): the seller (posting.css, .seller), leading to their profile, a
+   shade under the pointer reaching a little past it: their initial in a ring of 48 px, 12 px from
+   their name (16px, semibold), and under it, 13px and muted, since when and how many listings,
+   then how quickly they answer and when they were last here, each part kept whole where a line
+   wraps. The ways to reach them are the buttons under the price alone. On a phone the contact bar
+   settles between the description and the seller (who and the map come after it in the grid, by
+   order), a band from edge to edge (below), and the seller keeps the 2.5rem under it, so that they
+   stand clear of the band. On a car's page the seller has the contact bar under them too, in the
+   deal's column from 960 px up (.listing-car, below). */
 .seller-section { margin-top: 1.75rem; }
 @media (max-width: 719px) {
   .seller-section { margin-top: 2.5rem; }
   .listing-side > :is(.seller-section, .listing-map-section),
   .listing-deal > .seller-section { order: 2; }
 }
-.seller-head {
-  display: flex;
-  align-items: center;
-  gap: .5rem 1.25rem;
-  padding: .5rem .75rem .5rem .5rem;
-  border: 1px solid var(--menu-border);
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
-}
-.seller-head .seller { flex: 1 1 0; min-width: 0; margin: 0; }
+.seller-head { display: flex; align-items: center; gap: .5rem 1.25rem; }
+.seller-head .seller { flex: 1 1 0; gap: 12px; min-width: 0; margin: 0 -10px; padding: 8px 10px; }
+.seller-head .seller-text { gap: 2px; }
+.seller-head .seller-name { font-size: 1rem; }
+.seller-head :is(.seller-summary, .seller-activity) { font-size: .8125rem; white-space: normal; }
+.seller-head :is(.seller-since, .seller-count) { white-space: nowrap; }
 /* The verified check, beside the name on its line (page.css, .verified). */
 .seller-head .verified { margin-left: .15rem; vertical-align: -.15em; }
 /* Where a property or a car is, under the seller (listing_map_controller.js): a map half as tall as
@@ -177,19 +176,19 @@
      own buttons after it: the bar in the first track, the buttons in the second, level with it
      (the circles are .25rem shorter than the pills). */
   .listing-split .listing-deal > .contact-bar { grid-column: 1; flex-direction: column; align-items: stretch; margin-right: .5rem; }
-  .listing-split .listing-deal > .contact-bar + .actions { grid-column: 2; align-self: end; margin-bottom: .125rem; }
+  .listing-split .listing-deal > .contact-bar + .actions { grid-column: 2; align-self: end; margin-bottom: calc((var(--size-button) - var(--size-round)) / 2); }
   .listing-split .contact-bar .button { flex: none; }
   .listing-split .contact-bar .message-button { order: -1; }
   /* Anyone else's view, with the message pill: the bar across both tracks, the message as wide
      as the phone and the two circles together; the phone, or the message where the seller has
-     no number to show, leaves the circles their room (two of 2.85rem, .5rem apart and .5rem
-     from the pill), and the circles come up from the row under the bar to stand level with that
+     no number to show, leaves the circles their room (two of 46px, .5rem apart and .5rem from
+     the pill), and the circles come up from the row under the bar to stand level with that
      last line, the row left with no height of its own (the margins add up to none). The
      revealed number takes the phone's room with its copy button. */
   .listing-split .listing-deal > .contact-bar:has(.message-button) { grid-column: 1 / -1; margin-right: 0; }
   .listing-split .contact-bar:has(.message-button) :is(.reveal-button, .contact-revealed),
-  .listing-split .contact-bar:has(.message-button):not(:has(.reveal-button, .contact-revealed)) .message-button { width: calc(100% - 6.7rem); }
-  .listing-split .listing-deal > .contact-bar:has(.message-button) + .actions { grid-column: 2; align-self: start; margin-top: -2.975rem; margin-bottom: .125rem; }
+  .listing-split .contact-bar:has(.message-button):not(:has(.reveal-button, .contact-revealed)) .message-button { width: calc(100% - 2 * var(--size-round) - 1rem); }
+  .listing-split .listing-deal > .contact-bar:has(.message-button) + .actions { grid-column: 2; align-self: start; margin-top: calc((var(--size-button) - var(--size-round)) / 2 - var(--size-button)); margin-bottom: calc((var(--size-button) - var(--size-round)) / 2); }
   /* A revealed number with its WhatsApp circle (phone_stream.html) is three things on that last
      line, which leaves the two circles no room beside it: it takes the line's whole width, and
      the share and the report stay in the row under the bar, at its right end. */
@@ -201,9 +200,9 @@
      own buttons, Ndrysho, Çaktivizo and Fshi, each with its icon, on a line of their own, as wide
      as their words. */
   .listing-split .listing-deal > .contact-bar:has(+ .actions .danger) { grid-column: 1 / -1; margin-right: 0; }
-  .listing-split .contact-bar:has(+ .actions .danger) :is(.reveal-button, .contact-revealed) { width: calc(100% - 3.35rem); }
+  .listing-split .contact-bar:has(+ .actions .danger) :is(.reveal-button, .contact-revealed) { width: calc(100% - var(--size-round) - .5rem); }
   .listing-split .listing-deal > .contact-bar + .actions:has(.danger) { grid-column: 1 / -1; position: relative; align-self: auto; margin-top: .6rem; margin-bottom: 0; }
-  .listing-split .actions:has(.danger) .share-button { position: absolute; top: -3.575rem; right: 0; }
+  .listing-split .actions:has(.danger) .share-button { position: absolute; top: calc((var(--size-button) - var(--size-round)) / 2 - var(--size-button) - .6rem); right: 0; }
   .listing-split .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
 }
 
@@ -301,37 +300,28 @@
   .listing-car .listing-side > .listing-deal { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; grid-row: 1 / span 40; align-self: start; }
   .listing-car .listing-deal > * { grid-column: 1; align-self: auto; max-width: none; margin-right: 0; }
   .listing-car .listing-header h1 { margin-top: 0; }
-  /* The seller's card (seller_card.html, .seller-card) under "Shitësi", a heading as the
-     column's "Lokacioni" and the page's others are, holds the ways to reach them: the price card's
-     chrome, the seller's row losing its own; the initial 3rem; the verified check beside the name,
-     as on every page; since when and after a dot how many listings, wrapping rather than cut short,
-     each part kept whole; and under a hairline the bar's pills on a line each, the message's first,
-     and the share and the report beside it (below; on the seller's own page they stay under the
-     card). */
-  .listing-car .listing-deal > .seller-section { margin-top: 1.5rem; }
+  /* Under "Shitësi", a heading as the column's "Lokacioni" and the page's others are, the seller
+     and, 16px under them, the ways to reach them, with no box round them, as the canvas has it
+     (seller_card.html, .seller-card: a card once, the bar under a hairline in it): the bar's
+     pills on a line each, 8px apart, the message's first, and the share and the report beside it
+     (below; on the seller's own page they stay under the seller). */
+  .listing-car .listing-deal > .seller-section { margin-top: 1.75rem; }
   .listing-car .listing-deal > .seller-section > h2 { margin-top: 0; }
-  .listing-car .listing-deal .seller-card { padding: 1rem 1.15rem 1.1rem; border: 1px solid var(--menu-border); border-radius: 16px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%); }
-  .listing-car .listing-deal .seller-head { padding: 0; border: 0; border-radius: 0; box-shadow: none; }
-  .listing-car .listing-deal .seller-head .seller { margin: 0 -.6rem; }
-  .listing-car .listing-deal .seller-text { gap: .125rem; }
-  .listing-car .listing-deal .seller-name { font-size: var(--text-md); }
-  .listing-car .listing-deal .seller-summary { font-size: var(--text-sm); white-space: normal; }
-  .listing-car .listing-deal .contact-bar { flex-direction: column; align-items: stretch; margin-top: .8rem; padding-top: .9rem; border-top: 1px solid var(--border); }
+  .listing-car .listing-deal .contact-bar { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 16px; }
   .listing-car .contact-bar .button { flex: none; }
   .listing-car .contact-bar .message-button { order: -1; }
   .listing-car .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
-  .listing-car .listing-deal :is(.seller-since, .seller-count) { white-space: nowrap; }
-  /* The share and the report in the card (listing_actions.html), beside the message's pill: the
-     bar and the circles share a row of the card's grid, the circles at its right end, level with
-     the pill (the bar's room over its hairline, the hairline and its room under it, and half of
-     the pill's 3.1rem over the circles' 2.85rem), the pill leaving them their room, two circles
-     .5rem apart and .5rem from it, its sides a little tighter so that its words fit whole. With
-     no message to write (a listing off the site), they come under the bar. On the seller's own
-     page they stay under the card, with their own buttons. */
+  /* The share and the report (listing_actions.html), beside the message's pill: the bar and the
+     circles share a row of the section's grid, the circles at its right end, level with the pill
+     (the bar's 16px over it, and half of the pill's 48px over the circles' 46px), the pill
+     leaving them their room, two circles .5rem apart and .5rem from it, its sides a little
+     tighter so that its words fit whole. With no message to write (a listing off the site), they
+     come under the bar. On the seller's own page they stay under the seller, with their own
+     buttons. */
   .listing-car .listing-deal .seller-card:has(.message-button) { display: grid; grid-template-columns: minmax(0, 1fr); }
   .listing-car .listing-deal .seller-card:has(.message-button) > :is(.contact-bar, .actions) { grid-row: 2; grid-column: 1; }
-  .listing-car .listing-deal .seller-card:has(.message-button) > .actions { justify-self: end; align-self: start; margin-top: calc(.8rem + 1px + .9rem + .125rem); }
-  .listing-car .listing-deal .contact-bar .message-button { width: calc(100% - 6.7rem); padding: 0 .9rem; }
+  .listing-car .listing-deal .seller-card:has(.message-button) > .actions { justify-self: end; align-self: start; margin-top: calc(16px + (var(--size-button) - var(--size-round)) / 2); }
+  .listing-car .listing-deal .contact-bar .message-button { width: calc(100% - 2 * var(--size-round) - 1rem); padding: 0 .9rem; }
   .listing-car .listing-deal .seller-card > .actions,
   .listing-car .listing-deal > .actions { margin-top: .75rem; }
 }
@@ -840,24 +830,28 @@
    them; on a phone they are a bar at the foot of the screen (below). */
 .contact-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .9rem; }
 .contact-bar form { display: contents; }
-.contact-bar .button { justify-content: center; gap: .5rem; height: 3.1rem; padding: 0 1.3rem 0 1.1rem; font-weight: var(--semibold); white-space: nowrap; }
+.contact-bar .button { justify-content: center; gap: .5rem; height: var(--size-button); padding: 0 1.25rem; font-weight: var(--semibold); white-space: nowrap; }
 .contact-bar .button-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .contact-bar .reveal-button .contact-icon { color: var(--muted); transition: color .15s; }
+/* The number, once shown, as the canvas has it: in the phone's place, a grey pill, its handset
+   before it, the number 17px bold, a tap calling it; the copy and WhatsApp circles after it. */
 .button.reveal-contact {
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  background: var(--badge);
-  color: var(--accent);
+  border: 0;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 1.0625rem;
+  font-weight: var(--bold);
+  letter-spacing: .01em;
 }
-.button.reveal-contact:active { border-color: var(--accent); }
 @media (hover: hover) {
   .contact-bar .reveal-button:hover .contact-icon { color: var(--text); }
-  .button.reveal-contact:hover { border-color: var(--accent); background: var(--badge); }
+  .button.reveal-contact:hover { background: var(--surface-muted-hover); }
 }
 .contact-icon { flex: none; }
 .contact-revealed { display: flex; align-items: center; gap: .5rem; min-width: 0; }
 /* The round icon buttons (the copy, the share, the report, WhatsApp): an icon in a grey circle,
-   46px across (2.875rem), a little shorter than the pills beside them; a check for a moment once
-   they copy (copy_controller.js, share_controller.js). */
+   46px across (--size-round), a little shorter than the pills beside them (48px); a check for a
+   moment once they copy (copy_controller.js, share_controller.js). */
 .actions .button.icon-circle,
 .contact-bar .button.icon-circle { flex: none; width: var(--size-round); min-height: 0; height: var(--size-round); padding: 0; }
 /* Phones: the bar at the foot of the page (last in the grid, by order), which stays at the
@@ -884,7 +878,7 @@
   .contact-bar .button { flex: 1 1 0; padding: 0 .9rem; }
   .contact-bar .contact-revealed { flex: 1 1 auto; }
   .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
-  .contact-bar:has(.contact-revealed) .message-button { flex: none; width: 3.1rem; padding: 0; }
+  .contact-bar:has(.contact-revealed) .message-button { flex: none; width: var(--size-button); padding: 0; }
   .contact-bar:has(.contact-revealed) .message-button .button-label { display: none; }
   .contact-bar .button.icon-circle { flex: none; }
 }

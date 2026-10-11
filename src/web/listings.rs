@@ -384,17 +384,9 @@ impl ListingDetail {
         self.seller_url.starts_with("/biznes/")
     }
 
-    /// "Në Pluribus që nga tetor 2026 · 12 njoftime".
-    pub fn seller_summary(&self) -> String {
-        t2(
-            "Në Pluribus që nga {} · {}",
-            format::month_year(self.seller_since),
-            format::listing_count(self.seller_listings, i64::MAX),
-        )
-    }
-
-    /// On a car's page, where the seller's card is narrow, since when they are on the site, the
-    /// summary's words shorter: "Që nga tetor 2026", or for a business "Biznes · që nga mars 2026".
+    /// Under the seller's name (seller_card.html), since when they are on the site, as the canvas
+    /// words it: "Që nga tetor 2026", or for a business "Biznes · që nga mars 2026". (Every page
+    /// but a car's said "Në Pluribus që nga tetor 2026 · 12 njoftime" once.)
     pub fn seller_since_line(&self) -> String {
         let since = format::month_year(self.seller_since);
         if self.seller_is_business() { t1("Biznes · që nga {}", since) } else { t1("Që nga {}", since) }
