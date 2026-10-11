@@ -1,0 +1,36 @@
+{#- The price (filters.html, and the row's dropdown, filter_drop.html): typed, from and to, the
+    currency beside them; or on one track with two ends, the lowest and the highest, on a scale
+    that grows to the right (price_range_controller.js), either end at its edge no limit; or one of
+    the quick choices under it, each about a quarter of the category's listings. Each moves the
+    others; the label beside the name says the prices. -#}
+<fieldset class="filter-group price-filter" data-controller="price-range">
+  <legend class="filter-label">{{ crate::t("Çmimi") }} <output data-price-range-target="label">{{ filters.price_label() }}</output></legend>
+  <div class="price-typed">
+    <input type="text" inputmode="numeric" name="price_min" value="{{ filters.price_min_value() }}" placeholder="{{ crate::t("nga") }}" aria-label="{{ crate::t("Çmimi nga") }}" autocomplete="off"
+           data-price-range-target="min" data-action="change->price-range#typed">
+    <span aria-hidden="true">–</span>
+    <input type="text" inputmode="numeric" name="price_max" value="{{ filters.price_max_value() }}" placeholder="{{ crate::t("deri") }}" aria-label="{{ crate::t("Çmimi deri") }}" autocomplete="off"
+           data-price-range-target="max" data-action="change->price-range#typed">
+    {#- The currency, a two-part toggle as the canvas has it: € or Lekë, the one picked raised. -#}
+    <div class="segmented currency-choice" role="radiogroup" aria-label="{{ crate::t("Monedha") }}">
+      {%- for choice in filters.currency_choices() %}
+      <label><input type="radio" name="currency" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %} data-price-range-target="currency" data-action="price-range#slide">{{ choice.label }}</label>
+      {%- endfor %}
+    </div>
+  </div>
+  <div class="price-track">
+    <span class="price-fill" data-price-range-target="fill"></span>
+    <input type="range" min="0" max="1000" step="1" value="{{ filters.price_from_position() }}" aria-label="{{ crate::t("Çmimi nga, në shkallë") }}"
+           aria-valuetext="{{ filters.price_min_text() }}" data-price-range-target="from" data-action="price-range#slide">
+    <input type="range" min="0" max="1000" step="1" value="{{ filters.price_to_position() }}" aria-label="{{ crate::t("Çmimi deri, në shkallë") }}"
+           aria-valuetext="{{ filters.price_max_text() }}" data-price-range-target="to" data-action="price-range#slide">
+  </div>
+  {%- if !price_choices.is_empty() %}
+  <div class="price-choices">
+    {%- for choice in price_choices %}
+    <button type="button" class="price-choice" aria-pressed="{{ choice.selected }}" data-price-range-target="choice"
+            data-action="price-range#pick" data-price-range-min-param="{{ choice.min }}" data-price-range-max-param="{{ choice.max }}" data-price-range-currency-param="{{ choice.currency }}">{{ choice.label }}</button>
+    {%- endfor %}
+  </div>
+  {%- endif %}
+</fieldset>

@@ -11,12 +11,17 @@ import { Controller } from "@hotwired/stimulus";
 // from the start (towns under their county, models under their make). The posting form's groups,
 // "Automjete › Pjesë / aksesorë", nest by their path; the other category lists by the leading
 // spaces of category_choices (filters.rs), which give each category's level.
+//
+// In a card of its own, the row's filter dropdowns (filter_drop.html, data-picker-inline-value),
+// the list is the picker: always shown, with no button, named as the select is, reached with Tab
+// (its first option, or the choice, taking the focus); choosing sets the select and says so, and
+// Escape is the card's, which closes.
 
 let count = 0;
 const CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 
 export default class extends Controller {
-  static values = { tree: Boolean, placeholder: { type: Boolean, default: true } };
+  static values = { tree: Boolean, placeholder: { type: Boolean, default: true }, inline: Boolean };
 
   connect() {
     this.select = this.element.querySelector("select");
@@ -46,11 +51,26 @@ export default class extends Controller {
     this.list.setAttribute("role", this.tree ? "tree" : "listbox");
     if (name) this.list.setAttribute("aria-labelledby", name);
     for (const part of [this.button, this.list]) part.dataset.pickerUi = "";
-    this.select.after(this.button, this.list);
+    if (this.inlineValue) {
+      this.list.hidden = false;
+      this.list.tabIndex = 0;
+      this.list.classList.add("picker-inline");
+      this.list.removeAttribute("aria-labelledby");
+      this.list.setAttribute("aria-label", this.select.getAttribute("aria-label") ?? "");
+      this.select.after(this.list);
+      this.list.addEventListener("focus", (event) => {
+        if (this.list.contains(event.relatedTarget)) return;
+        const items = this.items();
+        (items.find((item) => item.getAttribute("aria-selected") === "true") ?? items[0])?.focus();
+      });
+    } else {
+      this.select.after(this.button, this.list);
+    }
     this.select.classList.add("picker-native");
     this.select.tabIndex = -1;
     this.follow();
-    this.show();
+    if (this.inlineValue) this.fill();
+    else this.show();
 
     this.button.addEventListener("click", () => (this.list.hidden ? this.open() : this.close()));
     this.button.addEventListener("keydown", (event) => {
@@ -165,7 +185,7 @@ export default class extends Controller {
   }
 
   close(refocus = false) {
-    if (this.list.hidden) return;
+    if (this.list.hidden || this.inlineValue) return;
     this.list.hidden = true;
     this.button.setAttribute("aria-expanded", "false");
     if (refocus) this.button.focus();
@@ -345,6 +365,8 @@ export default class extends Controller {
         else if (branch) this.fold(item);
         break;
       case "Escape":
+        // Inline, the card it is in closes (dropdown_controller.js).
+        if (this.inlineValue) return;
         // The list closes, not what holds it too (the filter sheet closes on Escape as well).
         event.stopPropagation();
         this.close(true);

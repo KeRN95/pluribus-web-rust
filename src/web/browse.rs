@@ -21,7 +21,7 @@ use super::{
     Result,
     account::current_user,
     cookie,
-    filters::{Chip, Field, FieldKind, Filters, Params, PriceChoice, TOWN_COOKIE},
+    filters::{Chip, Drop, DropKind, Field, FieldKind, Filters, Params, PriceChoice, TOWN_COOKIE},
     icons, is_next_page_request,
     listings::Slide,
     named, not_found, render, safety,
@@ -422,6 +422,8 @@ pub struct FoundIn {
     pub name: String,
     pub url: String,
     pub count: String,
+    /// Its icon, where it has one (category_icon).
+    pub icon: Option<&'static str>,
 }
 
 #[derive(Template)]
@@ -434,6 +436,8 @@ struct BrowsePage<'a> {
     filters: &'a Filters<'a>,
     fields: Vec<Field>,
     chips: Vec<Chip>,
+    /// The row's filter dropdowns, after the chips (Filters::drops).
+    drops: Vec<Drop>,
     clear_url: String,
     /// On a category page, the category above it, its breadcrumb's way up (the welcome page over a
     /// main category).
@@ -894,6 +898,7 @@ async fn browse(
                 name: category.name.clone(),
                 url: filters.category_url(category),
                 count: if counted { listings.to_string() } else { String::new() },
+                icon: category_icon(category),
             })
         })
         .collect();
@@ -972,6 +977,8 @@ async fn browse(
         })));
     }
     let fields = filters.fields();
+    let chips = filters.chips();
+    let drops = filters.drops(&fields, chips.len());
     let has_more = fields.iter().any(|field| !field.primary);
     let type_waits = !filters.type_first() && filters.type_chosen();
     let more_open = fields.iter().any(|field| !field.primary && field.active) || (has_more && type_waits);
@@ -996,7 +1003,8 @@ async fn browse(
         has_more,
         more_open,
         fields,
-        chips: filters.chips(),
+        chips,
+        drops,
         clear_url: filters.clear_url(),
         filters: &filters,
         parent,

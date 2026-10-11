@@ -85,6 +85,10 @@ pub const TOWN_COOKIE: &str = "qyteti";
 /// Properties the filters show at once wherever a category has them, besides those it requires or
 /// shows on its cards (Field::primary): what buyers mostly narrow by. The rest wait under "Më shumë
 /// filtra".
+/// How many filters the row has after Filtrat at most, the chips of those on and the dropdowns of
+/// those not on yet together (Filters::drops), as the canvas has five.
+const ROW_FILTERS: usize = 5;
+
 const PRIMARY: [&str; 10] = [
     "vehicle_body_type",
     "vehicle_transmission",
@@ -163,6 +167,7 @@ impl Params {
 }
 
 /// An option of a dropdown, checkbox group or radio group.
+#[derive(Clone)]
 pub struct Choice {
     pub value: String,
     pub label: String,
@@ -181,6 +186,7 @@ pub struct TownGroup<'a> {
 }
 
 /// A dependent property's options under the parent option they belong to: a make's models.
+#[derive(Clone)]
 pub struct OptionGroup {
     pub label: String,
     /// The parent option's code, "BMW".
@@ -196,6 +202,46 @@ pub struct Chip {
     pub url: String,
     /// The town's chip: removing it forgets the town too (TOWN_COOKIE, application.js).
     pub forgets_town: bool,
+}
+
+/// One of the row's filter dropdowns (Filters::drops, filter_drop.html), as the canvas has them
+/// after Filtrat: a filter buyers narrow by most that is not on yet (one that is on is a chip), a
+/// pill with its name and a chevron that opens it in a card under itself, a form of its own that
+/// carries the rest of the page along hidden (filter_drop_controller.js).
+pub struct Drop {
+    /// Its name on the pill: "Marka", "Çmimi".
+    pub label: String,
+    pub kind: DropKind,
+    /// The page's other filters, its words and its order, which its form carries along.
+    pub kept: Vec<(String, String)>,
+}
+
+/// What one of the row's filter dropdowns holds.
+pub enum DropKind {
+    /// The town, by county: on a search across every category.
+    City,
+    /// The kind of listing, one of those the category takes.
+    Type,
+    /// A property's filter: its dropdown's options as a list, its boxes, its range or its year.
+    Field(Box<Field>),
+    /// The condition's boxes.
+    Condition,
+    /// The price, as the filters' sheet has it.
+    Price,
+}
+
+impl Drop {
+    /// A single choice, which applies as it is picked (an option of a list, a kind of listing):
+    /// no button at its card's foot.
+    pub fn single(&self) -> bool {
+        match &self.kind {
+            DropKind::City | DropKind::Type => true,
+            DropKind::Field(field) => {
+                field.kind == FieldKind::Select || (field.kind == FieldKind::Year && !field.min_choices.is_empty())
+            }
+            DropKind::Condition | DropKind::Price => false,
+        }
+    }
 }
 
 /// A county's towns in the map card's menu (Filters::town_menu).
@@ -221,6 +267,7 @@ pub struct PriceChoice {
 }
 
 /// A property's filter in the form.
+#[derive(Clone)]
 pub struct Field {
     pub name: String,
     pub label: String,
@@ -262,7 +309,7 @@ impl Field {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FieldKind {
     Select,
     Checkboxes,
@@ -1122,6 +1169,61 @@ impl<'a> Filters<'a> {
             }
         }
         fields
+    }
+
+    /// The row's filter dropdowns (Drop), as many as the row has room for beside the chips of the
+    /// filters on (ROW_FILTERS in all), of those buyers narrow by most that aren't on yet: on a
+    /// search across every category the town, where none is set; in Prona the kind of listing;
+    /// then the category's own filters in the form's order (`fields`, Filters::fields), its
+    /// dropdowns, its boxes and its years, not a car's body types (their icons want the sheet's
+    /// room), nor a range in a unit (kilometres, square metres), nor a box to tick; then the
+    /// condition, and elsewhere the kind of listing, where the category offers them. The price
+    /// stands fourth, or before the last of fewer (after a lone one), as the canvas has them:
+    /// "Marka, Modeli, Viti, Çmimi, Karburanti"; "Gjendja, Çmimi, Lloji i njoftimit"; "Qyteti,
+    /// Çmimi, Gjendja".
+    pub fn drops(&self, fields: &[Field], chips: usize) -> Vec<Drop> {
+        let kept = |names: &[&str]| -> Vec<(String, String)> {
+            self.pairs().into_iter().filter(|(name, _)| !names.contains(&name.as_str())).collect()
+        };
+        let mut offered = Vec::new();
+        if self.category.is_none() && self.city.is_none() && self.near.is_none() {
+            let kept = kept(&["city", "zone", "lat", "lng", "radius"]);
+            offered.push(Drop { label: t("Qyteti").to_string(), kind: DropKind::City, kept });
+        }
+        let type_open = self.listing_type.is_none() && !self.type_choices().is_empty();
+        let type_drop = || Drop { label: t("Lloji i njoftimit").to_string(), kind: DropKind::Type, kept: kept(&["type"]) };
+        if type_open && self.type_first() {
+            offered.push(type_drop());
+        }
+        for field in fields {
+            let fits = match field.kind {
+                FieldKind::Select => !field.choices.is_empty() || !field.groups.is_empty(),
+                FieldKind::Checkboxes => !field.icons && !field.choices.is_empty(),
+                FieldKind::Range => field.unit.is_empty(),
+                FieldKind::Year => true,
+                FieldKind::Toggle => false,
+            };
+            if fits && !field.active {
+                let (min, max) = (format!("{}_min", field.name), format!("{}_max", field.name));
+                let kept = kept(&[field.name.as_str(), min.as_str(), max.as_str()]);
+                offered.push(Drop { label: field.label.clone(), kind: DropKind::Field(Box::new(field.clone())), kept });
+            }
+        }
+        if self.conditions.is_empty() && !self.condition_choices().is_empty() {
+            offered.push(Drop { label: t("Gjendja").to_string(), kind: DropKind::Condition, kept: kept(&["condition"]) });
+        }
+        if type_open && !self.type_first() {
+            offered.push(type_drop());
+        }
+        let room = ROW_FILTERS.saturating_sub(chips);
+        let price = self.price_min.is_none() && self.price_max.is_none() && room > 0;
+        offered.truncate(if price { room - 1 } else { room });
+        if price {
+            let kept = kept(&["price_min", "price_max", "currency"]);
+            let at = if offered.len() < 2 { offered.len() } else { (offered.len() - 1).min(3) };
+            offered.insert(at, Drop { label: t("Çmimi").to_string(), kind: DropKind::Price, kept });
+        }
+        offered
     }
 }
 

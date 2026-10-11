@@ -1999,15 +1999,87 @@ async fn filler_words_needn_t_be_in_a_listing(pool: PgPool) {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_search_across_categories_names_the_categories_it_found(pool: PgPool) {
     // Each chip narrows the search to its category, where that category's filters are.
+    // After "Gjetur te", as the canvas has them, each with its category's icon.
     let found = html(pool.clone(), "/search?q=golf").await;
-    assert!(found.contains(r#"<a class="chip" href="/c/makina?q=golf">Makina <span class="chip-count">1</span></a>"#));
+    assert!(found.contains(r#"<span class="categories-lead" aria-hidden="true">Gjetur te</span>"#));
+    assert!(found.contains(r#"<a class="chip" href="/c/makina?q=golf"><svg class="chip-icon""#));
+    assert!(found.contains(r#"</svg>Makina <span class="chip-count">1</span></a>"#));
     // A kind of listing, with no category to take it, stays words: the listings for sale are in
     // nine categories, of which the six with the most, the two cars' first.
     let selling = html(pool.clone(), "/search?q=shitje").await;
-    assert!(selling.contains(r#"<a class="chip" href="/c/makina?q=shitje">Makina <span class="chip-count">2</span></a>"#), "{selling}");
+    assert!(selling.contains(r#"<a class="chip" href="/c/makina?q=shitje"><svg class="chip-icon""#), "{selling}");
+    assert!(selling.contains(r#"</svg>Makina <span class="chip-count">2</span></a>"#), "{selling}");
     assert_eq!(selling.matches(r#"<span class="chip-count">"#).count(), 6);
     // A category's page has its subcategories instead.
     assert!(!html(pool, "/c/makina?q=golf").await.contains("chip-count"));
+}
+
+/// The names on the row's filter dropdowns, in their order (filter_drop.html).
+fn dropdown_names(page: &str) -> Vec<&str> {
+    let pill = r#"<summary class="button secondary round-button labelled filter-pill">"#;
+    page.match_indices(pill)
+        .map(|(at, _)| {
+            let name = &page[at + pill.len()..];
+            &name[..name.find("<svg").unwrap()]
+        })
+        .collect()
+}
+
+/// One of the row's filter dropdowns, from its pill to its end.
+fn dropdown<'a>(page: &'a str, name: &str) -> &'a str {
+    let start = page.find(&format!(r#"labelled filter-pill">{name}<svg"#)).unwrap_or_else(|| panic!("no {name}"));
+    &page[start..start + page[start..].find("</details>").unwrap()]
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_row_offers_the_filters_buyers_use_most_as_dropdowns(pool: PgPool) {
+    // After Filtrat, as the canvas has them: a car's make, model and year, the price fourth, and
+    // its fuel; its body types (with icons) and kilometres (a range in a unit) are the sheet's.
+    let cars = html(pool.clone(), "/c/makina").await;
+    assert_eq!(dropdown_names(&cars), ["Marka", "Modeli", "Viti", "Çmimi", "Karburanti"]);
+    // A main category has the condition, the price and the kind of listing; a search across every
+    // category starts with the town.
+    assert_eq!(dropdown_names(&html(pool.clone(), "/c/automjete").await), ["Gjendja", "Çmimi", "Lloji i njoftimit"]);
+    assert_eq!(dropdown_names(&html(pool.clone(), "/search?q=golf").await), ["Qyteti", "Çmimi", "Gjendja"]);
+    // A filter that is on is a chip in place of its dropdown, and the row has five at most, chips
+    // and dropdowns together: with the fuel on, four dropdowns; with a price, none for the price;
+    // with five filters on, none.
+    let diesel = html(pool.clone(), "/c/makina?vehicle_fuel=DIESEL&sort=price_asc").await;
+    assert_eq!(dropdown_names(&diesel), ["Marka", "Modeli", "Çmimi", "Viti"]);
+    assert_eq!(dropdown_names(&html(pool.clone(), "/c/makina?price_max=9000").await), ["Marka", "Modeli", "Viti", "Karburanti"]);
+    let five = "/c/makina?city=tirane&vehicle_fuel=DIESEL&vehicle_transmission=AUTOMATIC&condition=USED&price_max=9000";
+    assert!(dropdown_names(&html(pool.clone(), five).await).is_empty());
+    // With room for two, the price comes after the lone other.
+    let three = "/c/makina?vehicle_make=AUDI&vehicle_fuel=PETROL&vehicle_fuel=HYBRID";
+    assert_eq!(dropdown_names(&html(pool.clone(), three).await), ["Modeli", "Çmimi"]);
+
+    // Each opens a card under it, a form of its own that carries the rest of the page along, its
+    // order too: a make picked from its list (the picker, inline, "Të gjitha" there for a page
+    // without scripts) applies at once, with no button.
+    let make = dropdown(&diesel, "Marka");
+    assert!(make.contains(r#"<form class="drop-card filter-form" action="/c/makina" method="get""#));
+    assert!(make.contains(r#"<input type="hidden" name="vehicle_fuel" value="DIESEL">"#));
+    assert!(make.contains(r#"<input type="hidden" name="sort" value="price_asc">"#));
+    assert!(make.contains(r#"<div class="picker drop-list" data-picker-inline-value="true" data-controller="picker">"#));
+    assert!(make.contains(r#"<select name="vehicle_make" aria-label="Marka" data-action="change->filter-drop#picked">"#));
+    assert!(!make.contains("drop-apply") && !make.contains(r#"type="hidden" name="vehicle_make""#));
+    // The models come under their makes.
+    assert!(dropdown(&diesel, "Modeli").contains(r#"<optgroup label="Volkswagen" data-parent="VOLKSWAGEN">"#));
+    // The price's card is the sheet's price, with a button at its foot; it carries the fuel, and
+    // no price but its own.
+    let price = dropdown(&diesel, "Çmimi");
+    assert!(price.contains(r#"<fieldset class="filter-group price-filter" data-controller="price-range">"#));
+    assert!(price.contains(r#"<button type="submit" class="button small drop-apply">Shfaq rezultatet</button>"#));
+    assert!(price.contains(r#"name="vehicle_fuel" value="DIESEL""#) && !price.contains(r#"type="hidden" name="price_max""#));
+    // The year's two lists, from and to, and its button.
+    let year = dropdown(&diesel, "Viti");
+    assert_eq!(year.matches("<select").count(), 2);
+    assert!(year.contains("drop-apply"));
+    // Opening one folds the row's others, and each applies through its own controller.
+    assert!(diesel.contains(r#"<details class="filter-drop" data-controller="dropdown filter-drop""#));
+    assert!(diesel.contains("toggle->filter-drop#toggled section:open@document->dropdown#foldFor"));
+    // Without JavaScript they are gone, the sheet's form in the page.
+    assert!(cars.contains(".filters-open, .filter-drop, .map-card,"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -4890,6 +4962,8 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     // Every branch closes; the other two </details> are the order's and the view's (and the
     // typeface panel's, while TYPE_TRIAL is on).
     let others = 2 + gps.matches("<details class=\"type-menu\"").count();
+    // ...and the row's filter dropdowns' (filter_drop.html).
+    let others = others + gps.matches("<details class=\"filter-drop\"").count();
     assert_eq!(gps.matches("<details class=\"menu-branch\"").count(), gps.matches("</details>").count() - others, "balanced");
 
     // The old address still works.
@@ -6237,8 +6311,8 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     let pages = [
         ("/shto", 7),
         ("/shto/fushat?category=makina", 11),
-        ("/search?q=golf", 3),
-        ("/c/makina", 12),
+        ("/search?q=golf", 4),
+        ("/c/makina", 16),
         ("/harta", 2),
     ];
     // (The price's currency is a two-part toggle of radios, no list.)

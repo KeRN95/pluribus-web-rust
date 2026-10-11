@@ -82,8 +82,9 @@
    baseline, how many it found, quieter (15px; 14px on phones); "Ruaj kërkimin" at the line's end,
    a grey pill 40px tall with the bookmark in the accent (--highlight-knob behind its line,
    --highlight-icon for it: lime with a dark line on the light theme, a lime line on the dark),
-   its words medium; kept, filled with the main colour as what is picked is. On phones the
-   bookmark alone, round, its words kept for screen readers. */
+   its words medium; kept, the same grey pill with a tick in the words' colour in place of the
+   bookmark, as the canvas has it. On phones the icon alone, round, its words kept for screen
+   readers. */
 .browse-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); }
 .browse-heading-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-12); min-width: 0; }
 .browse-heading .result-count { margin: 0; color: var(--muted); font-size: .9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -108,10 +109,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 .save-search-button > svg { flex: none; fill: var(--highlight-knob); stroke: var(--highlight-icon); }
-.save-search-button.is-saved { background: var(--main); color: var(--on-main); }
+.save-search-button.is-saved > svg { fill: none; stroke: currentColor; }
 @media (hover: hover) {
   .save-search-button:hover { background: var(--surface-muted-hover); }
-  .save-search-button.is-saved:hover { background: var(--main-hover); }
 }
 @media (max-width: 719px) {
   .browse-heading .result-count { font-size: 1rem; }
@@ -188,7 +188,17 @@
    page.css) are a line of the head too. */
 .browse-head { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); row-gap: var(--space-12); margin: 0; }
 .browse-head > :is(.subcategories, .categories, .browse-tools) { margin-top: 2px; }
-.browse-head > .categories { padding: 0 0 .25rem; }
+/* The categories a search found listings in, as the canvas has them: "Gjetur te", muted, then a
+   grey chip for each, 36px tall, its icon, its name, medium, and how many, muted; wrapping on a
+   wide screen, a line that slides sideways on a phone, as the subcategories are. */
+.browse-head > .categories { flex-wrap: wrap; align-items: center; gap: var(--space-8); padding: 0; }
+.categories-lead { flex: none; color: var(--muted); font-size: .875rem; }
+.categories .chip { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; font-size: .875rem; }
+.categories .chip-icon { flex: none; }
+.categories .chip-count { margin-left: 0; }
+@media (max-width: 719px) {
+  .browse-head > .categories { flex-wrap: nowrap; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter); }
+}
 @media (max-width: 719px) {
   .browse-head { row-gap: 10px; }
 }
@@ -240,15 +250,34 @@
   gap: var(--space-8);
 }
 .browse-tools .map-button { margin-left: auto; }
+/* The row's first part, the search, Filtrat, the filters picked and the dropdowns: in the row on a
+   wide screen, no box of its own; on a phone, as the canvas has it, a line of its own that slides
+   sideways from one edge of the screen to the other (the page's sides its padding, and a little
+   over and under it for the focus rings), its scrollbar unseen. */
+.browse-filters-line { display: contents; }
 @media (max-width: 719px) {
-  .browse-tools::after { content: ""; order: 1; flex-basis: 100%; height: 0; }
+  .browse-filters-line {
+    display: flex;
+    flex: 0 0 calc(100% + 2 * var(--gutter));
+    gap: var(--space-8);
+    margin: -3px calc(-1 * var(--gutter));
+    padding: 3px var(--gutter);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .browse-filters-line::-webkit-scrollbar { display: none; }
+  .browse-filters-line > * { flex: none; }
+  .browse-filters-line .active-filters { flex-wrap: nowrap; }
   .browse-tools > .sort-menu:not(.cards-menu) { order: 2; margin-right: auto; }
   .browse-tools :is(.map-button, .cards-menu, .most-viewed-button) { order: 3; }
   .browse-tools .map-button { margin-left: 0; }
 }
 /* The row's buttons stand over the dim (z-index 9; the sticky header is 10), each of its own: the
-   row itself is no box that is placed, so that what its buttons open is placed by the head. */
-.browse-tools > *,
+   row itself is no box that is placed, nor its first part, so that what its buttons open is placed
+   by the head (and isn't cut by that part's sliding on a phone). */
+.browse-tools > :not(.browse-filters-line),
+.browse-filters-line > :not(.filter-drop),
 .browse-tools .round-button { position: relative; z-index: 9; }
 .map-card { display: contents; }
 /* What the row opens, the map's card: under the head, the row being its last line, a little apart
@@ -694,6 +723,53 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .more-fields { grid-template-columns: minmax(0, 1fr); }
 :is(.filter-form, .more-fields) > * { grid-column: 1 / -1; }
 .filter-form noscript .filter-actions { padding: 18px 0; }
+
+/* The row's filter dropdowns, after the filters picked, as the canvas has them: grey pills with the
+   filter's name and a chevron (a labelled round button's look, 6px between them), filled with the
+   main colour while open. Each opens a white card 8px under it, the menus' (the surface, rounder
+   corners, what floats' shadow), at least 280px and at most 360px wide, 16px of room inside and
+   14px between its parts: a list of choices (the picker inline, scrolling past 320px, its rows
+   the lists' own, "Të gjitha" left out, as nothing is picked yet), boxes as the sheet's chips, a
+   range's two lists or two fields, the price as the sheet has it, and where it isn't a single
+   choice a button across its foot. On a phone, where the row slides sideways, the card opens
+   under the head, as wide as it, as the search's box does. */
+.filter-drop { position: relative; flex: none; }
+.browse-tools .button.round-button.filter-pill { gap: 6px; }
+.browse-tools .filter-pill::-webkit-details-marker { display: none; }
+.browse-tools .labelled.filter-pill svg { width: 14px; height: 14px; }
+.filter-drop[open] > .button.filter-pill { background: var(--main); color: var(--on-main); }
+@media (hover: hover) {
+  .filter-drop[open] > .button.filter-pill:hover { background: var(--main-hover); }
+}
+.drop-card {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  gap: 14px;
+  width: max-content;
+  min-width: 280px;
+  max-width: min(360px, calc(100vw - var(--rail-width, 0px) - 2 * var(--gutter)));
+}
+.drop-card.filter-form { padding: 16px; overflow: visible; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow-float); }
+.drop-card > .filter-group { padding: 0; border-top: 0; }
+.drop-list .picker-list.picker-inline {
+  position: static;
+  width: auto;
+  max-height: min(320px, 50vh);
+  margin: -6px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  animation: none;
+}
+.drop-list .picker-option[data-value=""] { display: none; }
+.drop-card .drop-apply { width: 100%; }
+@media (max-width: 719px) {
+  .browse-filters-line > .filter-drop { position: static; }
+  .drop-card { top: calc(100% + var(--drop)); right: 0; width: auto; max-width: none; }
+}
 
 /* Nothing found, as the canvas has it: a white box, 56px under the head (28px on phones), its
    words in the middle: a magnifier in a grey circle of 64px, that nothing was found, semibold and

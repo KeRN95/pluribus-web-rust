@@ -740,6 +740,12 @@ pub const HOME: &str = r#"<path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H1
 /// store_invitation.html), as a person has the initial of their name.
 pub const BUSINESS: &str = r#"<rect x="4" y="3.5" width="11" height="17" rx="1.5"/><path d="M15 9.5h4a1 1 0 0 1 1 1v10H4"/><path d="M7.5 7.5h1M10.5 7.5h1M7.5 11h1M10.5 11h1M7.5 14.5h1M10.5 14.5h1"/>"#;
 
+/// A tick: a search kept ("Kërkimi u ruajt", browse.html).
+pub const CHECK: &str = r#"<path d="m5 12.5 4.5 4.5L19 7.5"/>"#;
+
+/// A chevron, down: what opens under itself (the row's filter dropdowns, filter_drop.html).
+pub const CHEVRON_DOWN: &str = r#"<path d="m6 9 6 6 6-6"/>"#;
+
 /// Other things, and a category without an icon of its own yet: a box.
 const BOX: &str = r#"<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5"/><path d="M12 12v9"/>"#;
 

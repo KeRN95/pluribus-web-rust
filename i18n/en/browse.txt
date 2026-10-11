@@ -97,6 +97,9 @@ Filtrat e zgjedhur
 Hiq filtrin {}
 = Remove filter: {}
 
+Gjetur te
+= Found in
+
 Pastro filtrat
 = Clear filters
 

@@ -1,0 +1,113 @@
+{#- One of the row's filter dropdowns (browse.html, `drop`: Filters::drops), as the canvas has them
+    after Filtrat: a grey pill with the filter's name and a chevron, which opens a white card under
+    it (under the head on a phone, where the row slides sideways), filled with the main colour while
+    open; one open at a time with the row's others (section:open, dropdown_controller.js). The card
+    is a form of its own, the page's other filters, its words and its order carried along hidden:
+    a single choice (an option of its list, a kind of listing, a town, a price's quick choice)
+    applies at once and folds it; boxes, a range or a typed price apply as it folds, a tap
+    outside, Escape or its button, if they changed (filter_drop_controller.js), the page refreshing
+    in place as for the sheet's filters; the filter is then on, a chip in place of the pill. A
+    dropdown's options are a list in the card (the picker, inline: picker_controller.js), a make's
+    models under their make. Without JavaScript the dropdowns are gone, the sheet's form in the
+    page (browse.html's noscript). -#}
+<details class="filter-drop" data-controller="dropdown filter-drop"
+         data-action="toggle->dropdown#announce toggle->filter-drop#toggled section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
+  <summary class="button secondary round-button labelled filter-pill">{{ drop.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_DOWN|safe }}</svg></summary>
+  <form class="drop-card filter-form" action="{{ filters.action() }}" method="get" data-filter-drop-target="form"
+        data-action="submit->filter-drop#submit click->filter-drop#chose">
+    {%- for (name, value) in drop.kept %}
+    <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {%- endfor %}
+    {%- match drop.kind %}
+    {%- when DropKind::City %}
+    <div class="picker drop-list" data-picker-inline-value="true" data-controller="picker">
+    <select name="city" aria-label="{{ drop.label }}" data-action="change->filter-drop#picked">
+      <option value="">{{ crate::t("Gjithë Shqipëria") }}</option>
+      {%- for group in filters.city_groups() %}
+      <optgroup label="{{ group.label }}">
+        {%- for choice in group.choices %}<option value="{{ choice.value }}">{{ choice.label }}</option>{% endfor %}
+      </optgroup>
+      {%- endfor %}
+    </select>
+    </div>
+    {%- when DropKind::Type %}
+    <fieldset class="filter-group filter-options">
+      <legend class="visually-hidden">{{ drop.label }}</legend>
+      {%- for choice in filters.type_choices() %}
+      <label class="check"><input type="radio" name="type" value="{{ choice.value }}" data-action="change->filter-drop#picked"> {{ choice.label }}</label>
+      {%- endfor %}
+    </fieldset>
+    {%- when DropKind::Field(field) %}
+    {%- match field.kind %}
+    {%- when FieldKind::Select %}
+    <div class="picker drop-list" data-picker-inline-value="true" data-controller="picker">
+    <select name="{{ field.name }}" aria-label="{{ field.label }}" data-action="change->filter-drop#picked">
+      <option value="">{{ crate::t("Të gjitha") }}</option>
+      {%- for choice in field.choices %}<option value="{{ choice.value }}">{{ choice.label }}</option>{% endfor %}
+      {%- for group in field.groups %}
+      <optgroup label="{{ group.label }}" data-parent="{{ group.parent }}"{% if group.hidden %} hidden{% endif %}>
+        {%- for choice in group.choices %}<option value="{{ choice.value }}">{{ choice.label }}</option>{% endfor %}
+      </optgroup>
+      {%- endfor %}
+    </select>
+    </div>
+    {%- when FieldKind::Checkboxes %}
+    <fieldset class="filter-group filter-options">
+      <legend class="visually-hidden">{{ field.label }}</legend>
+      {%- for choice in field.choices %}
+      <label class="check"><input type="checkbox" name="{{ field.name }}" value="{{ choice.value }}"> {{ choice.label }}</label>
+      {%- endfor %}
+    </fieldset>
+    {%- when FieldKind::Range %}
+    <fieldset class="filter-group">
+      <legend class="visually-hidden">{{ field.label }}</legend>
+      <div class="range">
+        {%- if field.min_choices.is_empty() %}
+        <input type="text" inputmode="numeric" name="{{ field.name }}_min" placeholder="{{ crate::t("nga") }}" aria-label="{{ crate::t1("{} nga", field.label) }}">
+        <span aria-hidden="true">–</span>
+        <input type="text" inputmode="numeric" name="{{ field.name }}_max" placeholder="{{ crate::t("deri") }}" aria-label="{{ crate::t1("{} deri", field.label) }}">
+        {%- else %}
+        <div class="picker" data-controller="picker">
+        <select name="{{ field.name }}_min" aria-label="{{ crate::t1("{} nga", field.label) }}">
+          <option value="">{{ crate::t("nga") }}</option>
+          {%- for choice in field.min_choices %}<option value="{{ choice.value }}">{{ choice.label }}</option>{% endfor %}
+        </select>
+        </div>
+        <span aria-hidden="true">–</span>
+        <div class="picker" data-controller="picker">
+        <select name="{{ field.name }}_max" aria-label="{{ crate::t1("{} deri", field.label) }}">
+          <option value="">{{ crate::t("deri") }}</option>
+          {%- for choice in field.max_choices %}<option value="{{ choice.value }}">{{ choice.label }}</option>{% endfor %}
+        </select>
+        </div>
+        {%- endif %}
+      </div>
+    </fieldset>
+    {%- when FieldKind::Year %}
+    {%- if field.min_choices.is_empty() %}
+    <input type="text" inputmode="numeric" name="{{ field.name }}" maxlength="4" placeholder="{{ crate::t("p.sh. 2006") }}" aria-label="{{ field.label }}">
+    {%- else %}
+    <div class="picker drop-list" data-picker-inline-value="true" data-controller="picker">
+    <select name="{{ field.name }}" aria-label="{{ field.label }}" data-action="change->filter-drop#picked">
+      <option value="">{{ crate::t("Çdo vit") }}</option>
+      {%- for choice in field.min_choices %}<option value="{{ choice.value }}">{{ choice.label }}</option>{% endfor %}
+    </select>
+    </div>
+    {%- endif %}
+    {%- when FieldKind::Toggle %}
+    {%- endmatch %}
+    {%- when DropKind::Condition %}
+    <fieldset class="filter-group filter-options">
+      <legend class="visually-hidden">{{ drop.label }}</legend>
+      {%- for choice in filters.condition_choices() %}
+      <label class="check"><input type="checkbox" name="condition" value="{{ choice.value }}"> {{ choice.label }}</label>
+      {%- endfor %}
+    </fieldset>
+    {%- when DropKind::Price %}
+    {% include "filter_price.html" %}
+    {%- endmatch %}
+    {%- if !drop.single() %}
+    <button type="submit" class="button small drop-apply">{{ crate::t("Shfaq rezultatet") }}</button>
+    {%- endif %}
+  </form>
+</details>
