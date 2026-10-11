@@ -18,7 +18,7 @@ import { Controller } from "@hotwired/stimulus";
 // Escape is the card's, which closes.
 
 let count = 0;
-const CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+const CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><g transform="scale(.09375)" stroke="none"><path d="M176,128,96,208V48Z"/><path fill="currentColor" d="M181.66,122.34l-80-80A8,8,0,0,0,88,48V208a8,8,0,0,0,13.66,5.66l80-80A8,8,0,0,0,181.66,122.34ZM104,188.69V67.31L164.69,128Z"/></g></svg>';
 
 export default class extends Controller {
   static values = { tree: Boolean, placeholder: { type: Boolean, default: true }, inline: Boolean };

@@ -113,7 +113,7 @@
         <div data-photos-target="removed" hidden></div>
         <label class="photo-drop" data-photos-target="zone">
           <input type="file" name="photos" accept="image/*" multiple aria-labelledby="photos-label" data-photos-target="input" data-action="change->photos#chosen">
-          <span class="photo-drop-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+          <span class="photo-drop-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CAMERA|safe }}</svg></span>
           <span class="photo-drop-text">
             <span class="photo-drop-button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PLUS|safe }}</svg>{{ crate::t("Shto foto") }}</span>
             <span class="photo-drop-hint">{{ crate::t1("Deri në {} foto.", crate::media::MAX_PHOTOS) }} {{ crate::t("E para, kopertina, del në karta dhe në krye të njoftimit; i rendit me shigjetat ose duke i tërhequr.") }}</span>
@@ -134,7 +134,7 @@
         button with what it does beside it (under it on a phone). -#}
     <div class="ai-fill">
       <button type="button" class="button secondary ai-fill-button" data-ai-fill-target="button" data-action="ai-fill#fill">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.9 5 5.1 1.9-5.1 1.9-1.9 5-1.9-5L5 10.4l5.1-1.9z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SPARKLES|safe }}</svg>
         {{ crate::t("Plotëso pjesën tjetër me AI") }}
       </button>
       {%- if editing.is_some() %}

@@ -72,7 +72,7 @@
     {% if !chips.is_empty() %}
     <ul class="active-filters" aria-label="{{ crate::t("Filtrat e zgjedhur") }}">
       {% for chip in chips %}
-      <li><a class="filter-chip" href="{{ chip.url }}" aria-label="{{ crate::t1("Hiq filtrin {}", chip.label) }}">{{ chip.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></li>
+      <li><a class="filter-chip" href="{{ chip.url }}" aria-label="{{ crate::t1("Hiq filtrin {}", chip.label) }}">{{ chip.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">{{ crate::web::icons::CLOSE|safe }}</svg></a></li>
       {% endfor %}
     </ul>
     {% endif %}

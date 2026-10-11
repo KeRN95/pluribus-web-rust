@@ -86,8 +86,8 @@
   transition: background-color .15s;
   -webkit-tap-highlight-color: transparent;
 }
-.save-search-button > svg { flex: none; fill: var(--highlight-knob); stroke: var(--highlight-icon); }
-.save-search-button.is-saved > svg { fill: none; stroke: currentColor; }
+.save-search-button > svg { flex: none; fill: var(--highlight-knob); color: var(--highlight-icon); }
+.save-search-button.is-saved > svg { fill: none; color: inherit; }
 @media (hover: hover) {
   .save-search-button:hover { background: var(--surface-muted-hover); }
 }

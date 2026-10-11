@@ -6,7 +6,7 @@
     how much. -#}
 <details class="bubble area-price{% if let Some(zone) = area.zone %} {{ zone.tone }}{% endif %}" data-controller="dropdown">
   <summary title="{{ crate::t("Si llogaritet") }}">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M8.5 15.5 15.5 8.5M11 8.5h4.5V13"/></svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::AREA_PRICE|safe }}</svg>
     {{ area.per_area }}
     {%- if let Some(zone) = area.zone %}<span class="visually-hidden">, {{ zone.verdict|lower }}</span>{% endif %}
   </summary>

@@ -60,8 +60,8 @@
         </a>
         {%- endif %}
         <button type="button" class="button secondary icon-circle copy-button" data-controller="copy" data-copy-text-value="{{ self.link(invitation) }}" data-action="copy#copy" aria-label="{{ crate::t("Kopjo lidhjen e ftesës") }}" title="{{ crate::t("Kopjo lidhjen e ftesës") }}">
-          <svg class="icon-copy" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 8.5V6A2.5 2.5 0 0 0 13 3.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/></svg>
-          <svg class="icon-copied" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+          <svg class="icon-copy" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::COPY|safe }}</svg>
+          <svg class="icon-copied" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHECK|safe }}</svg>
         </button>
         <form method="post" action="/dyqani/{{ store.slug }}/ftesat/{{ invitation.id }}/anulo">
           <button type="submit" class="button secondary small">{{ crate::t("Anulo") }}</button>

@@ -21,10 +21,12 @@ const QUALITY = 0.85;
 // The photos of a form on its way to the server, by its address, for the page that comes back.
 const waiting = new Map();
 
-const CHEVRON = (path) =>
-  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
+// Phosphor's carets and cross, as icons.rs draws the site's icons.
+const CARETS = { left: '<g transform="scale(.09375)" stroke="none"><path d="M160,48V208L80,128Z"/><path fill="currentColor" d="M163.06,40.61a8,8,0,0,0-8.72,1.73l-80,80a8,8,0,0,0,0,11.32l80,80A8,8,0,0,0,168,208V48A8,8,0,0,0,163.06,40.61ZM152,188.69,91.31,128,152,67.31Z"/></g>', right: '<g transform="scale(.09375)" stroke="none"><path d="M176,128,96,208V48Z"/><path fill="currentColor" d="M181.66,122.34l-80-80A8,8,0,0,0,88,48V208a8,8,0,0,0,13.66,5.66l80-80A8,8,0,0,0,181.66,122.34ZM104,188.69V67.31L164.69,128Z"/></g>' };
+const CHEVRON = (side) =>
+  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">${CARETS[side]}</svg>`;
 const CROSS =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><g transform="scale(.09375)" stroke="none"><path d="M216,56V200a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V56A16,16,0,0,1,56,40H200A16,16,0,0,1,216,56Z"/><path fill="currentColor" d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></g></svg>';
 
 export default class extends Controller {
   static targets = ["input", "previews", "status", "zone", "saved", "order", "kept", "removed"];
@@ -223,8 +225,8 @@ export default class extends Controller {
     const tools = document.createElement("div");
     tools.className = "photo-tools";
     tools.append(
-      this.button(CHEVRON("m15 6-6 6 6 6"), t("Më përpara"), "earlier", index, index === 0),
-      this.button(CHEVRON("m9 6 6 6-6 6"), t("Më pas"), "later", index, index === this.items.length - 1),
+      this.button(CHEVRON("left"), t("Më përpara"), "earlier", index, index === 0),
+      this.button(CHEVRON("right"), t("Më pas"), "later", index, index === this.items.length - 1),
     );
     element.append(frame, tools);
     return element;

@@ -1114,11 +1114,13 @@ async fn card_details_start_with_the_city(pool: PgPool) {
     // Under the price, for the list, where it is: the pin and the town, in every card, in a
     // search in that town too.
     assert!(phones.contains(r#"<p class="card-place" translate="no"><svg class="pin-icon" width="14" height="14""#));
-    assert!(phones.contains(r#"aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>Tiranë</p>"#));
+    // Phosphor's map pin (icons.rs, PIN), as every icon of the site is since 2026-10-11.
+    assert!(phones.contains(r#"aria-hidden="true"><g transform="scale(.09375)" stroke="none"><path d="M128,24a80,80,0,0,0-80,80"#));
+    assert!(phones.contains("</g></svg>Tiranë</p>"));
     // Searching in Tirana, the Tirana cards leave the city out and show the brand instead...
     let in_tirana = get(pool.clone(), "/c/elektronike?city=tirane").await.body;
     assert!(in_tirana.contains(r#"<p class="card-summary">Apple · 128 GB</p>"#));
-    assert!(in_tirana.contains(r#"<circle cx="12" cy="10" r="3"/></svg>Tiranë</p>"#));
+    assert!(in_tirana.contains("</g></svg>Tiranë</p>"));
     // ...and a car the first property its title doesn't name: not the make, nor the model.
     let cars = get(pool, "/c/automjete?city=tirane").await.body;
     assert!(cars.contains("<p class=\"card-summary\">Hatchback · 2016 · 148\u{a0}000\u{a0}km · Naftë</p>"));
@@ -1258,8 +1260,9 @@ async fn the_map_page_sets_its_map_from_a_box_beside_it(pool: PgPool) {
     // The town moves the map, and says so until one is picked.
     assert!(page.contains(r#"<select id="map-town" aria-label="Qyteti" data-map-target="town" data-action="map#goToTown">"#));
     assert!(page.contains(r#"<option value="">Zgjidh qytetin</option>"#));
-    // "Vendndodhja ime" has the crosshair, here and in a category's map card.
-    let crosshair = r#"<circle cx="12" cy="12" r="2.5"/>"#;
+    // "Vendndodhja ime" has the crosshair (Phosphor's, its ring the tone), here and in a category's
+    // map card.
+    let crosshair = r#"<path d="M160,128a32,32,0,1,1-32-32A32,32,0,0,1,160,128Z"/>"#;
     assert!(page[page.find("map-locate").unwrap()..].contains(crosshair));
     let cars = html(pool, "/c/makina").await;
     assert!(cars[cars.find(r#"class="map-pill map-locate""#).unwrap()..].contains(crosshair));
@@ -2615,7 +2618,7 @@ async fn every_detail_has_its_icon_its_categorys_where_that_says_more(pool: PgPo
     let phone = html(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await;
     assert!(phone.contains(concat!(
         r#"<dd class="attribute" title="Marka"><svg class="attribute-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">"#,
-        r#"<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/>"#,
+        r#"<g transform="scale(.09375)" stroke="none"><path d="M192,56V200H64V56Z"/>"#,
     )));
     // A flat's page is laid out as a car's, as the canvas has it: its rooms, area, floor and
     // furnishing are its key facts in a row under its title, each with its icon, its name over its
@@ -4717,7 +4720,7 @@ async fn every_part_of_the_site_has_the_one_main_colour(pool: PgPool) {
     assert!(!css.contains("circle-shortcut") && !css.contains("saved-shortcut") && !css.contains("inbox-shortcut"));
     let kept = &css[css.find(r#".heart-button[aria-pressed="true"] svg{"#).expect("the kept heart")..];
     let kept = &kept[..kept.find('}').unwrap()];
-    assert!(kept.contains("fill:var(--red)") && kept.contains("stroke:var(--on-photo)"), "{kept}");
+    assert!(kept.contains("fill:var(--red)") && kept.contains("color:var(--on-photo)"), "{kept}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

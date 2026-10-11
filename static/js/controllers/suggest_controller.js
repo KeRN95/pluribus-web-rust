@@ -17,20 +17,12 @@ const WAIT = 120;
 // Suggestions already fetched, by the words they are for: deleting a letter shows them at once.
 const KEPT = 40;
 
-// A clock, the line icons' way (icons.rs, CLOCK): before a last search's words.
+// A clock, Phosphor's as the site's icons are (icons.rs, CLOCK): before a last search's words.
+const CLOCK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><g transform="scale(.09375)" stroke="none"><path d="M224,128a96,96,0,1,1-96-96A96,96,0,0,1,224,128Z"/><path fill="currentColor" d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"/></g></svg>';
 function clock() {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  for (const [name, value] of Object.entries({ width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" })) {
-    svg.setAttribute(name, value);
-  }
-  const face = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  face.setAttribute("cx", 12);
-  face.setAttribute("cy", 12);
-  face.setAttribute("r", 9);
-  const hands = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  hands.setAttribute("d", "M12 7v5l3 2");
-  svg.append(face, hands);
-  return svg;
+  const holder = document.createElement("template");
+  holder.innerHTML = CLOCK;
+  return holder.content.firstElementChild;
 }
 
 export default class extends Controller {

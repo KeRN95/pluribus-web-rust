@@ -126,12 +126,12 @@ impl Cards {
         }
     }
 
-    /// Its icon's shapes, in a 24×24 box, stroked.
+    /// Its icon (icons.rs, Phosphor's).
     pub fn icon(self) -> &'static str {
         match self {
-            Cards::Small => r#"<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>"#,
-            Cards::Big => r#"<rect x="4" y="3.5" width="16" height="11.5" rx="2.5"/><path d="M4.5 18.5h15M4.5 21h9"/>"#,
-            Cards::List => r#"<rect x="3.5" y="4" width="6" height="6" rx="1.5"/><rect x="3.5" y="14" width="6" height="6" rx="1.5"/><path d="M13 5.5h7.5M13 8.5h4.5M13 15.5h7.5M13 18.5h4.5"/>"#,
+            Cards::Small => icons::VIEW_GRID,
+            Cards::Big => icons::VIEW_BIG,
+            Cards::List => icons::VIEW_LIST,
         }
     }
 

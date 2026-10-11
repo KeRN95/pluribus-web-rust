@@ -217,13 +217,11 @@
   width: 22px;
   height: 22px;
   fill: transparent;
-  stroke: var(--on-photo);
-  stroke-width: 2;
-  stroke-linejoin: round;
+  color: var(--on-photo);
   filter: drop-shadow(0 1px 3px var(--photo-shade));
-  transition: fill .15s, stroke .15s;
+  transition: fill .15s, color .15s;
 }
-.heart-button[aria-pressed="true"] svg { fill: var(--red); stroke: var(--on-photo); stroke-width: 2; }
+.heart-button[aria-pressed="true"] svg { fill: var(--red); color: var(--on-photo); }
 .heart-button.is-beating svg { animation: heart-beat .35s ease-out; }
 @keyframes heart-beat { 45% { transform: scale(1.3); } }
 .heart-button:active { transform: scale(.9); }

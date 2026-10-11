@@ -122,7 +122,7 @@
       <form class="top-search" action="/search" method="get" role="search" data-controller="suggest"
             data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
         <button type="submit" class="top-search-go" aria-label="{{ crate::t("Kërko") }}" title="{{ crate::t("Kërko") }}">
-          <svg data-icon="search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <svg data-icon="search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SEARCH|safe }}</svg>
         </button>
         <input type="search" name="q" placeholder="{{ crate::t("Kërko njoftime") }}" aria-label="{{ crate::t("Kërko njoftime") }}" autocomplete="off" enterkeyhint="search"
                data-suggest-target="input" data-action="input->suggest#typed focus->suggest#focused keydown->suggest#key">
@@ -139,7 +139,7 @@
           rail's (below; on phones the menu's, and the front page's row with its search). -#}
       <div class="header-end">
       <a class="icon-button account-button" href="/llogaria" aria-label="{{ crate::t("Llogaria") }}" title="{{ crate::t("Llogaria") }}" data-controller="account">
-        <svg data-icon="user" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+        <svg data-icon="user" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::USER|safe }}</svg>
       </a>
       </div>
     </div>
@@ -161,7 +161,7 @@
       <span class="rail-label">{{ crate::t("Kreu") }}</span>
     </a>
     <a class="rail-item" href="/search"{% if here == "search" %} aria-current="page"{% endif %}>
-      <span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+      <span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SEARCH|safe }}</svg></span>
       <span class="rail-label">{{ crate::t("Kërko") }}</span>
     </a>
     <a class="rail-item rail-saved" href="/te-ruajturat"{% if here == "saved" %} aria-current="page"{% endif %}>

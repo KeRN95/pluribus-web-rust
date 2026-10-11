@@ -45,7 +45,7 @@
       colour, each a link to its page. Then its status, if it isn't simply up. -#}
   <div class="listing-tags">
     <nav class="breadcrumb listing-path" aria-label="{{ crate::t("Kategoria e njoftimit") }}">
-      <a class="breadcrumb-back" href="{{ category.url }}" aria-label="{{ crate::t("Kthehu") }}" title="{{ crate::t("Kthehu") }}" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
+      <a class="breadcrumb-back" href="{{ category.url }}" aria-label="{{ crate::t("Kthehu") }}" title="{{ crate::t("Kthehu") }}" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_LEFT|safe }}</svg></a>
       {%- if let Some(parent) = parent %}
       <a class="breadcrumb-up" href="{{ parent.url }}">{{ crate::t(parent.name) }}</a>
       {%- else %}
@@ -65,14 +65,14 @@
     <nav class="listing-steps" aria-label="{{ crate::t("Njoftimet e tjera") }}">
       <a class="back-button list-button" href="{{ category.url }}" aria-label="{{ crate::t("Lista e njoftimeve") }}" title="{{ crate::t("Lista e njoftimeve") }}"><svg data-icon="list" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::browse::Cards::List.icon()|safe }}</svg></a>
       {%- if let Some(previous) = previous %}
-      <a class="back-button step-button" href="/listing/{{ previous.public_no }}-{{ previous.slug }}" aria-label="{{ crate::t("Njoftimi i mëparshëm") }}" title="{{ crate::t("Njoftimi i mëparshëm") }}"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
+      <a class="back-button step-button" href="/listing/{{ previous.public_no }}-{{ previous.slug }}" aria-label="{{ crate::t("Njoftimi i mëparshëm") }}" title="{{ crate::t("Njoftimi i mëparshëm") }}"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_LEFT|safe }}</svg></a>
       {%- else %}
-      <span class="back-button step-button is-off" aria-hidden="true"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></span>
+      <span class="back-button step-button is-off" aria-hidden="true"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_LEFT|safe }}</svg></span>
       {%- endif %}
       {%- if let Some(next) = next %}
-      <a class="back-button step-button" href="/listing/{{ next.public_no }}-{{ next.slug }}" aria-label="{{ crate::t("Njoftimi tjetër") }}" title="{{ crate::t("Njoftimi tjetër") }}"><svg data-icon="chevron-right" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+      <a class="back-button step-button" href="/listing/{{ next.public_no }}-{{ next.slug }}" aria-label="{{ crate::t("Njoftimi tjetër") }}" title="{{ crate::t("Njoftimi tjetër") }}"><svg data-icon="chevron-right" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_RIGHT|safe }}</svg></a>
       {%- else %}
-      <span class="back-button step-button is-off" aria-hidden="true"><svg data-icon="chevron-right" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>
+      <span class="back-button step-button is-off" aria-hidden="true"><svg data-icon="chevron-right" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_RIGHT|safe }}</svg></span>
       {%- endif %}
     </nav>
   </div>
@@ -117,10 +117,10 @@
       {%- for _ in photos.iter() %}<span{% if loop.first %} class="is-current"{% endif %}></span>{% endfor -%}
     </div>
     <button type="button" class="gallery-arrow gallery-previous" data-slides-target="previous" data-action="slides#previous" aria-label="{{ crate::t("Foto e mëparshme") }}" hidden>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_LEFT|safe }}</svg>
     </button>
     <button type="button" class="gallery-arrow gallery-next" data-slides-target="next" data-action="slides#next" aria-label="{{ crate::t("Foto tjetër") }}" hidden>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_RIGHT|safe }}</svg>
     </button>
     {#- The counter is a button too: it shows the filmstrip over the photos' foot, which starts
         hidden, and hides it again (slides_controller.js, toggleThumbs). -#}
@@ -138,10 +138,10 @@
         {%- endfor %}
       </div>
       <button type="button" class="thumb-step thumb-previous" data-slides-target="thumbsPrevious" data-action="slides#thumbsBack" aria-label="{{ crate::t("Fotot e mëparshme") }}" hidden>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_LEFT|safe }}</svg>
       </button>
       <button type="button" class="thumb-step thumb-next" data-slides-target="thumbsNext" data-action="slides#thumbsOn" aria-label="{{ crate::t("Fotot e tjera") }}" hidden>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_RIGHT|safe }}</svg>
       </button>
     </div>
     {%- endif %}
@@ -238,7 +238,7 @@
       {%- if let Some(car) = car_price %}{% include "car_price.html" %}{% endif %}
       <details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" data-loan-down-percent-value="{{ LOAN_DOWN_PERCENT }}">
         <summary>
-          <svg data-icon="calculator" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01"/></svg>
+          <svg data-icon="calculator" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CALCULATOR|safe }}</svg>
           {{ crate::t("Llogarit kredinë") }}
           <svg class="loan-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_DOWN|safe }}</svg>
         </summary>
@@ -301,7 +301,7 @@
     <h2>{{ crate::t(detail.label) }}</h2>
     <ul class="options">
       {%- for value in detail.values %}
-      <li><svg class="option-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>{{ detail.shown(value) }}</li>
+      <li><svg class="option-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHECK|safe }}</svg>{{ detail.shown(value) }}</li>
       {%- endfor %}
     </ul>
   </section>
@@ -322,7 +322,7 @@
         <dt class="visually-hidden">{{ crate::t(detail.label) }}</dt>
         {%- for value in detail.values %}
         <dd class="attribute{% if detail.key %} is-key{% endif %}" title="{{ crate::t(detail.label) }}">
-          {%- if detail.multi %}<svg class="attribute-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+          {%- if detail.multi %}<svg class="attribute-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHECK|safe }}</svg>
           {%- else %}{% if let Some(icon) = detail.icon %}<svg class="attribute-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}
           {%- if detail.named_before(value) %}<span class="attribute-label" aria-hidden="true">{{ crate::t(detail.label) }}</span>{% endif %}{% endif -%}
           {{ detail.shown(value) }}</dd>
@@ -386,7 +386,7 @@
       back up. From 720 px up the sheet is a popup from the button, without it. -#}
   <div class="sheet-grabber" aria-hidden="true"></div>
   <button type="button" class="sheet-close" aria-label="{{ crate::t("Mbyll") }}" title="{{ crate::t("Mbyll") }}" data-action="message-sheet#close">
-    <svg data-icon="x" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    <svg data-icon="x" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">{{ crate::web::icons::CLOSE|safe }}</svg>
   </button>
   <div class="message-sheet-body" data-scroll-root data-message-sheet-target="body">
     <turbo-frame id="conversation" data-message-sheet-target="frame"

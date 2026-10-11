@@ -18,7 +18,7 @@
     <span class="placeholder" aria-hidden="true"></span>
     {%- endif %}
     <span class="report-listing-text"><span class="report-listing-title">{{ title }}</span><span class="report-listing-meta">{{ price }}{% if let Some(town) = town %} · <span translate="no">{{ town }}</span>{% endif %}</span></span>
-    <svg class="report-listing-chevron" data-icon="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    <svg class="report-listing-chevron" data-icon="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_RIGHT|safe }}</svg>
   </a>
   {%- match state %}
   {%- when ReportState::SignIn %}
