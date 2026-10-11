@@ -845,7 +845,7 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(!body.contains("theme-shortcut"));
     assert!(!body.contains("search-shortcut") && !body.contains("welcome-search-panel") && !body.contains("welcome-scrim"));
     // Then every category's pill straight in the list, no group round any of them, so that they
-    // wrap wherever the line ends: Automjete, Prona, Elektronikë and Veshje / aksesorë first, then
+    // wrap wherever the line ends: Automjete, Prona, Elektronikë and Veshje first, then
     // every other category in its order.
     let list = &body[nav..];
     let list = &list[..list.find("</nav>").unwrap()];
@@ -886,20 +886,20 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(!cars.contains("circle-shortcut"));
     assert!(!body.contains("data-panel-target") && !body.contains("<noscript>"));
     assert!(!body.contains(r#"name="city""#) && !body.contains(r#"name="category""#));
-    // A shortcut to every main category: Automjete, Prona, Elektronikë and Veshje / aksesorë
+    // A shortcut to every main category: Automjete, Prona, Elektronikë and Veshje
     // first, then the others in their order, each its icon before its name; no more listing-like
     // cards.
     let main = [
         ("automjete", "Automjete"),
         ("prona", "Prona"),
         ("elektronike", "Elektronikë"),
-        ("veshje-dhe-aksesore", "Veshje / aksesorë"),
-        ("shtepi-dhe-kopsht", "Shtëpi / kopsht"),
+        ("veshje-dhe-aksesore", "Veshje"),
+        ("shtepi-dhe-kopsht", "Shtëpi"),
         ("pune", "Punë"),
         ("sherbime", "Shërbime"),
-        ("sport-dhe-hobi", "Sport / hobi"),
-        ("kafshe-shtepiake", "Kafshë shtëpiake"),
-        ("makineri-dhe-biznes", "Makineri / biznes"),
+        ("sport-dhe-hobi", "Sport"),
+        ("kafshe-shtepiake", "Kafshë"),
+        ("makineri-dhe-biznes", "Makineri"),
         ("te-tjera", "Të tjera"),
     ];
     let links: Vec<String> =
@@ -1965,13 +1965,17 @@ async fn words_that_name_a_category_a_kind_and_a_town_put_those_filters_on(pool:
     // A category's own page reads the town and the kind, the category being its own.
     assert_eq!(goes("/c/makina?q=me+qira+ne+tirane").await.as_deref(), Some("/c/makina?city=tirane&type=RENT"));
     // The thing sought comes first: headphones for a phone are headphones. A category's name is
-    // about its first word: a car is in Makina, not in Tapete makine (mats); and the verb an ad
+    // about its first word: a car is in Makina, not in Tapete (mats, once "Tapete makine"); and the verb an ad
     // starts with comes before it.
     assert_eq!(goes("/search?q=kufje+per+telefon").await.as_deref(), Some("/search?q=per+telefon&category=audio-dhe-kufje"));
     assert_eq!(goes("/search?q=makine+me+nafte").await.as_deref(), Some("/search?q=me+nafte&category=makina"));
     assert_eq!(goes("/search?q=kerkoj+apartament+me+qira").await.as_deref(), Some("/search?category=apartamente&type=RENT"));
     // "shtëpi" is a house and the home alike, until the kind says which.
     assert_eq!(goes("/search?q=shtepi+me+qira").await.as_deref(), Some("/search?category=vila-dhe-shtepi&type=RENT"));
+    // A category whose name became one word on 2026-10-11 is named by its old name's words too,
+    // and by its new one's: "goma" is Rrota, once "Goma / disqe"; "kufje" Audio (above).
+    assert_eq!(goes("/search?q=goma").await.as_deref(), Some("/search?category=goma-dhe-disqe"));
+    assert_eq!(goes("/search?q=rrota").await.as_deref(), Some("/search?category=goma-dhe-disqe"));
     // Words that name nothing, a kind with no category to take it, a category two names share, or
     // two towns, are searched as they are.
     for uri in ["/search?q=golf", "/search?q=golf+ne+shitje", "/search?q=karikues+telefoni", "/search?q=shtepi",
@@ -2749,8 +2753,8 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     let gps = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let path = positions(&gps, &[
         r#"<a class="breadcrumb-back" href="/c/gps-dhe-navigatore" aria-label="Kthehu""#,
-        r#"<a class="breadcrumb-up" href="/c/pjese-dhe-aksesore">Pjesë / aksesorë</a>"#,
-        r#"<a class="breadcrumb-here" href="/c/gps-dhe-navigatore">GPS / navigatorë</a>"#,
+        r#"<a class="breadcrumb-up" href="/c/pjese-dhe-aksesore">Pjesë</a>"#,
+        r#"<a class="breadcrumb-here" href="/c/gps-dhe-navigatore">GPS</a>"#,
     ]);
     assert!(path.is_sorted(), "{path:?}");
     assert!(!gps.contains("Faqja kryesore"));
@@ -5608,8 +5612,8 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     for (slug, name) in [
         ("makina", "Makina"),
         ("motocikleta", "Motoçikleta"),
-        ("automjete-tregtare", "Automjete tregtare"),
-        ("pjese-dhe-aksesore", "Pjesë / aksesorë"),
+        ("automjete-tregtare", "Tregtare"),
+        ("pjese-dhe-aksesore", "Pjesë"),
     ] {
         let pill = &vehicles[vehicles.find(&format!(r#"<a class="shortcut" href="/c/{slug}">"#)).expect(slug)..];
         assert!(pill.starts_with(&format!(r#"<a class="shortcut" href="/c/{slug}"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#)), "{slug}");
@@ -5650,7 +5654,7 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
     let head = positions(&gps, &[
         r#"<a class="breadcrumb-back title-back" href="/c/pjese-dhe-aksesore" aria-label="Kthehu""#,
-        r#"<h1 class="browse-title">GPS / navigatorë</h1>"#,
+        r#"<h1 class="browse-title">GPS</h1>"#,
     ]);
     assert!(head.is_sorted(), "{head:?}");
     assert!(!gps.contains(r#"<nav class="subcategories"#), "no subcategories, no tiles under");
@@ -5665,7 +5669,7 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     assert_eq!(get(pool.clone(), "/c/pjese-kembimi").await.status, StatusCode::OK);
     // Every dropdown of categories shows the kinds, a level further in: the search's filter too.
     let search = get(pool, "/search").await.body;
-    assert!(search.contains("<option value=\"gps-dhe-navigatore\">\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}GPS / navigatorë</option>"));
+    assert!(search.contains("<option value=\"gps-dhe-navigatore\">\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}GPS</option>"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -5674,7 +5678,7 @@ async fn the_listing_form_offers_categories_at_every_depth(pool: PgPool) {
     let form = get_with_cookie(pool.clone(), "/shto", &ana).await.body;
     // Vehicles: cars and the like in one group, the kinds of parts in the next, under their path.
     let vehicles = form.find(r#"<optgroup label="Automjete">"#).expect("the vehicles group");
-    let parts = form.find(r#"<optgroup label="Automjete › Pjesë / aksesorë">"#).expect("the parts group");
+    let parts = form.find(r#"<optgroup label="Automjete › Pjesë">"#).expect("the parts group");
     assert!(vehicles < parts);
     let vehicles_group = &form[vehicles..parts];
     assert!(vehicles_group.contains(r#"<option value="makina""#));
@@ -8090,7 +8094,7 @@ async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
     assert!(cars.contains(r#"aria-label="Filters: No filters""#) && cars.contains(r#"placeholder="Search in Cars""#), "{cars}");
     assert!(cars.contains(">All of Albania<") && cars.contains(r#"<a class="breadcrumb-back title-back" href="/c/automjete" aria-label="Back" title="Back""#), "{cars}");
     let vehicles = en("/c/automjete").await.body;
-    assert!(vehicles.contains(">Motorbikes<") && vehicles.contains(">Commercial vehicles<") && vehicles.contains(r#"<a class="breadcrumb-back title-back" href="/" aria-label="Back""#), "{vehicles}");
+    assert!(vehicles.contains(">Motorbikes<") && vehicles.contains(">Commercial<") && vehicles.contains(r#"<a class="breadcrumb-back title-back" href="/" aria-label="Back""#), "{vehicles}");
     assert!(cars.contains(r#"<summary class="sort-button" aria-label="Sort: Newest" title="Sort: Newest">Newest<svg"#), "{cars}");
     assert!(cars.contains(r#"<h2 class="results-heading" id="results-heading">Newest listings</h2>"#), "{cars}");
     assert!(cars.contains(r#"<p class="result-count" id="result-count" data-show="Show 2 listings">2 listings</p>"#), "{cars}");

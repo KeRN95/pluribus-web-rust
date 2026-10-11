@@ -4,7 +4,9 @@
 # products' names. Brand, model and place names, which no language changes, aren't here, nor
 # labels whose English is the same ("IT", "RAM", "Euro 6", "1+1", "4x4", "Wi-Fi").
 
-# Categories: the main ones
+# Categories: the main ones, each one word since 2026-10-11 (migration 0042). "Shtëpi" and
+# "Veshje" are choices of service_work and winter_type too ("Home", "Clothing", below), and "Sport"
+# is the same in English.
 
 Automjete
 = Vehicles
@@ -15,28 +17,19 @@ Prona
 Elektronikë
 = Electronics
 
-Shtëpi / kopsht
-= Home / garden
-
 Punë
 = Jobs
 
 Shërbime
 = Services
 
-Veshje / aksesorë
-= Clothes / accessories
-
-Sport / hobi
-= Sport / hobbies
-
-Kafshë shtëpiake
+Kafshë
 = Pets
 
-Makineri / biznes
-= Machinery / business
+Makineri
+= Machinery
 
-# Also "Të tjera" under Pjesë / aksesorë and Sport / hobi, and a choice of pet_for and sport_type
+# Also "Të tjera" under Pjesë and Sport, and a choice of pet_for and sport_type
 Të tjera
 = Other
 
@@ -48,34 +41,28 @@ Makina
 Motoçikleta
 = Motorbikes
 
-Automjete tregtare
-= Commercial vehicles
+Tregtare
+= Commercial
 
-Pjesë / aksesorë
-= Parts / accessories
+Pjesë
+= Parts
 
-# Categories: under Pjesë / aksesorë ("Audio / video" is the same in English)
+# Categories: under Pjesë ("Multimedia", "GPS" and "Tuning" are the same in English)
 
-Pjesë këmbimi
-= Spare parts
+Rezervë
+= Spares
 
-Goma / disqe
-= Tyres / rims
+Rrota
+= Wheels
 
-GPS / navigatorë
-= GPS / sat navs
-
-Styling / pajisje sportive
-= Styling / tuning
-
-Tapete makine
-= Car mats
+Tapete
+= Mats
 
 Rimorkio
 = Trailers
 
-Mbushës për makina elektrike
-= EV chargers
+Mbushës
+= Chargers
 
 # Categories: under Prona. "Truall" is a choice of property_type too, and the category has
 # agricultural land as well (land_type "Bujqësor"): "Land", with "Building plot" for "Për ndërtim".
@@ -86,8 +73,8 @@ Apartamente
 Garsoniera
 = Studios
 
-Vila / shtëpi
-= Villas / houses
+Vila
+= Houses
 
 Dyqane
 = Shops
@@ -101,7 +88,8 @@ Truall
 Garazhe
 = Garages
 
-# Categories: under Elektronikë
+# Categories: under Elektronikë. "Konsola" is the consoles' property's name too ("Console",
+# below), and "Audio" is the same in English.
 
 Telefona
 = Phones
@@ -118,16 +106,10 @@ Tableta
 Televizorë
 = TVs
 
-Konsola lojërash
-= Games consoles
-
-Aparate fotografike
+Fotoaparate
 = Cameras
 
-Audio / kufje
-= Audio / headphones
-
-# Categories: under Shtëpi / kopsht (each a choice of home_type too)
+# Categories: under Shtëpi (each a choice of home_type too)
 
 Mobilje
 = Furniture
@@ -143,8 +125,8 @@ Dekor
 
 # Categories: under Punë ("IT" and "Transport" are the same in English)
 
-Turizëm / gastronomi
-= Tourism / hospitality
+Turizëm
+= Hospitality
 
 Ndërtim
 = Construction
@@ -155,16 +137,17 @@ Shëndetësi
 Shitje
 = Sales
 
+Operatorë
+= Operators
+
+# The category's name until 2026-10-11, still a choice of job_field
 Call center
 = Call centre
 
-# Categories: under Shërbime
+# Categories: under Shërbime ("Transport" is the same in English)
 
 Riparime
 = Repairs
-
-Transport / transferime
-= Transport / transfers
 
 Pastrim
 = Cleaning
@@ -172,17 +155,17 @@ Pastrim
 Mësime
 = Lessons
 
-Foto / video
-= Photo / video
+Fotografi
+= Photography
 
-Ndërtim / lyerje
-= Building / painting
+Rikonstruksion
+= Renovation
 
-# Categories: under Veshje / aksesorë (most are choices of fashion_type too). "Këpucë" is also ski
+# Categories: under Veshje (most are choices of fashion_type too). "Këpucë" is also ski
 # and snowboard boots (winter_type): "Footwear" says both.
 
-Xhaketa / pallto
-= Jackets / coats
+Xhaketa
+= Jackets
 
 Këpucë
 = Footwear
@@ -199,7 +182,9 @@ Ora
 Aksesorë
 = Accessories
 
-# Categories: under Sport / hobi (most are choices of sport_type too)
+# Categories: under Sport (most are choices of sport_type too, which still calls Muzikë and Ski
+# "Instrumente muzikore" and "Sporte dimërore", their names until 2026-10-11; "Muzikë" is
+# lesson_subject's too, below, and "Ski" is the same in English)
 
 Biçikleta
 = Bicycles
@@ -210,13 +195,14 @@ Fitnes
 Instrumente muzikore
 = Musical instruments
 
-Kamping / peshkim
-= Camping / fishing
+Kamping
+= Camping
 
 Sporte dimërore
 = Winter sports
 
-# Categories: under Kafshë shtëpiake (the animals are choices of pet_type and pet_for too)
+# Categories: under Kafshë (the animals are choices of pet_type and pet_for too; its Aksesorë
+# are Veshje's word, "Accessories", above)
 
 Qen
 = Dogs
@@ -230,22 +216,8 @@ Zogj
 Peshq
 = Fish
 
-Aksesorë për kafshë
-= Pet accessories
-
-# Categories: under Makineri / biznes
-
-Makineri ndërtimi
-= Construction machinery
-
-Makineri bujqësore
-= Farm machinery
-
-Energji / gjeneratorë
-= Energy / generators
-
-Makineri industriale
-= Industrial machinery
+# Categories: under Makineri: Ndërtim, Bujqësi, Energji and Industri, choices of job_field and
+# machine_type too (below)
 
 # Properties' names ("RAM" and "Smart TV" are the same in English). A yes/no property's name is its
 # value too, when it is ticked ("Under warranty"), and its box's label in the form. "Marka" names
@@ -1783,8 +1755,9 @@ Kondicionerë
 Hidraulikë
 = Plumbing
 
+# Also the main category Shtëpi
 Shtëpi
-= Homes
+= Home
 
 Pas ndërtimit
 = After building work
@@ -2007,6 +1980,7 @@ Me kurdisje
 Kask
 = Helmet
 
+# Also the main category Veshje
 Veshje
 = Clothing
 

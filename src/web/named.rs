@@ -21,12 +21,14 @@
 //!   others, as the thing sought comes first ("kufje për telefon" is headphones). The word names
 //!   the categories whose names are about it, in any of its forms: a name is about its first word
 //!   and those a "/" (or "dhe") joins to it ("Vila / shtëpi"), not the words that say of what
-//!   ("Tapete makine" are mats). Of several, the one that takes the kind named, then the one whose
-//!   name has most of the search's words, the most of them as typed, then the shortest name. Two
-//!   still alike name neither ("shtëpi" is Vila / shtëpi and Shtëpi / kopsht alike, but "shtëpi
-//!   me qira" only the first).
+//!   ("Tapete makine" are mats); a category whose name became one word on 2026-10-11 is about its
+//!   old name's words as well as its new one's (FORMER_NAMES: "goma" is Rrota, once "Goma /
+//!   disqe"). Of several, the one that takes the kind named, then the one whose name has most of
+//!   the search's words, the most of them as typed, then the shortest name. Two still alike name
+//!   neither ("shtëpi" is Vila and Shtëpi alike, once "Vila / shtëpi" and "Shtëpi / kopsht", but
+//!   "shtëpi me qira" only the first).
 //! - On an English page (i18n.rs), English's words as well: a category by its English name, about
-//!   the last word of each part ("Flats", "Villas / houses", "Commercial vehicles"), in the singular
+//!   the last word of each part ("Flats"; a renamed one's old name, "Villas / houses"), in the singular
 //!   or the plural; the kinds (rent, sale, buy); its joining words ("in", "for") skipped. "Flat for
 //!   rent in Tirana" is the flats to rent in Tiranë; the words left stay searched, in the titles'
 //!   Albanian.
@@ -55,6 +57,46 @@ const ENGLISH_FILLERS: [&str; 12] = ["a", "an", "the", "in", "for", "to", "with"
 fn filler(word: &str) -> bool {
     FILLERS.contains(&word) || (crate::i18n::english() && ENGLISH_FILLERS.contains(&word))
 }
+
+/// The names some categories had until 2026-10-11, when each became one word (migration 0042), in
+/// Albanian and in English, by their slugs: a search names a category by what its old name was
+/// about as well, as searches named it then ("goma" is Rrota, as "Goma / disqe" was; "shtëpi me
+/// qira" the houses, Vila, as "Vila / shtëpi" was; on an English page "tyres" Rrota too), and the
+/// old name's words count as its name's. A category added since has none.
+const FORMER_NAMES: [(&str, &str, &str); 32] = [
+    ("shtepi-dhe-kopsht", "Shtëpi / kopsht", "Home / garden"),
+    ("veshje-dhe-aksesore", "Veshje / aksesorë", "Clothes / accessories"),
+    ("sport-dhe-hobi", "Sport / hobi", "Sport / hobbies"),
+    ("kafshe-shtepiake", "Kafshë shtëpiake", "Pets"),
+    ("makineri-dhe-biznes", "Makineri / biznes", "Machinery / business"),
+    ("automjete-tregtare", "Automjete tregtare", "Commercial vehicles"),
+    ("pjese-dhe-aksesore", "Pjesë / aksesorë", "Parts / accessories"),
+    ("pjese-kembimi", "Pjesë këmbimi", "Spare parts"),
+    ("goma-dhe-disqe", "Goma / disqe", "Tyres / rims"),
+    ("audio-dhe-video", "Audio / video", "Audio / video"),
+    ("gps-dhe-navigatore", "GPS / navigatorë", "GPS / sat navs"),
+    ("styling-dhe-pajisje-sportive", "Styling / pajisje sportive", "Styling / tuning"),
+    ("tapete-makine", "Tapete makine", "Car mats"),
+    ("mbushes-per-makina-elektrike", "Mbushës për makina elektrike", "EV chargers"),
+    ("vila-dhe-shtepi", "Vila / shtëpi", "Villas / houses"),
+    ("konsola-lojerash", "Konsola lojërash", "Games consoles"),
+    ("aparate-fotografike", "Aparate fotografike", "Cameras"),
+    ("audio-dhe-kufje", "Audio / kufje", "Audio / headphones"),
+    ("pune-turizem", "Turizëm / gastronomi", "Tourism / hospitality"),
+    ("pune-call-center", "Call center", "Call centre"),
+    ("transport-dhe-transferime", "Transport / transferime", "Transport / transfers"),
+    ("foto-dhe-video", "Foto / video", "Photo / video"),
+    ("ndertim-dhe-lyerje", "Ndërtim / lyerje", "Building / painting"),
+    ("xhaketa-dhe-pallto", "Xhaketa / pallto", "Jackets / coats"),
+    ("instrumente-muzikore", "Instrumente muzikore", "Musical instruments"),
+    ("kamping-dhe-peshkim", "Kamping / peshkim", "Camping / fishing"),
+    ("sporte-dimerore", "Sporte dimërore", "Winter sports"),
+    ("aksesore-per-kafshe", "Aksesorë për kafshë", "Pet accessories"),
+    ("makineri-ndertimi", "Makineri ndërtimi", "Construction machinery"),
+    ("makineri-bujqesore", "Makineri bujqësore", "Farm machinery"),
+    ("energji-dhe-gjeneratore", "Energji / gjeneratorë", "Energy / generators"),
+    ("makineri-industriale", "Makineri industriale", "Industrial machinery"),
+];
 
 /// Endings sq_stem takes off a word (migration 0016), the longest first.
 const ENDINGS: [&str; 16] = ["ave", "eve", "ash", "ve", "at", "et", "it", "ut", "in", "en", "es", "ja", "a", "e", "i", "u"];
@@ -381,16 +423,28 @@ fn read_category<'a>(words: &mut [Word], categories: &'a Categories, kind: Optio
     // On an English page, a category's English name says what it is about too.
     let english = |category: &Category| crate::i18n::english().then(|| crate::i18n::in_english(&category.name)).flatten();
     let alike = |a: &str, b: &str| same_word(a, b) || (crate::i18n::english() && same_english(a, b));
+    // And a category renamed on 2026-10-11 by its old name too, in either language (FORMER_NAMES).
+    let former = |category: &Category| FORMER_NAMES.iter().find(|(slug, ..)| *slug == category.slug).map(|(_, old, english)| (*old, *english));
     let name_of = |category: &Category| {
         let mut name = name_words(&category.name);
         name.extend(english(category).map(english_words).unwrap_or_default());
+        if let Some((old, old_english)) = former(category) {
+            name.extend(name_words(old));
+            if crate::i18n::english() {
+                name.extend(english_words(old_english));
+            }
+        }
         name
     };
     let mut candidates: Vec<(&Category, Fit)> = categories
         .iter()
         .filter_map(|category| {
             let about_it = about(&category.name).iter().any(|word| same_word(first, word))
-                || english(category).is_some_and(|name| english_about(name).iter().any(|word| same_english(first, word)));
+                || english(category).is_some_and(|name| english_about(name).iter().any(|word| same_english(first, word)))
+                || former(category).is_some_and(|(old, old_english)| {
+                    about(old).iter().any(|word| same_word(first, word))
+                        || (crate::i18n::english() && english_about(old_english).iter().any(|word| same_english(first, word)))
+                });
             if !about_it {
                 return None;
             }

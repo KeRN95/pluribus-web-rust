@@ -322,13 +322,13 @@ const MENU_CATEGORIES: [(&str, &str); 11] = [
     ("automjete", "Automjete"),
     ("prona", "Prona"),
     ("elektronike", "Elektronikë"),
-    ("veshje-dhe-aksesore", "Veshje / aksesorë"),
-    ("shtepi-dhe-kopsht", "Shtëpi / kopsht"),
+    ("veshje-dhe-aksesore", "Veshje"),
+    ("shtepi-dhe-kopsht", "Shtëpi"),
     ("pune", "Punë"),
     ("sherbime", "Shërbime"),
-    ("sport-dhe-hobi", "Sport / hobi"),
-    ("kafshe-shtepiake", "Kafshë shtëpiake"),
-    ("makineri-dhe-biznes", "Makineri / biznes"),
+    ("sport-dhe-hobi", "Sport"),
+    ("kafshe-shtepiake", "Kafshë"),
+    ("makineri-dhe-biznes", "Makineri"),
     ("te-tjera", "Të tjera"),
 ];
 
@@ -401,7 +401,7 @@ pub async fn home(
     )?;
     safety::without_hidden(&mut most_viewed, &hidden);
     safety::without_hidden(&mut seen, &hidden);
-    // Every main category with its icon: Automjete, Prona, Elektronikë and Veshje / aksesorë
+    // Every main category with its icon: Automjete, Prona, Elektronikë and Veshje
     // first, on a line of their own after the search's button, then the others in their order.
     let shortcut = |category: &db::Category| Shortcut {
         name: category.name.clone(),

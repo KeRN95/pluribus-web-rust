@@ -67,7 +67,7 @@
   {#- Every main category, as one line of tiles that slides sideways where the screen is narrower
       than they are, a mouse dragging it (drag_row_controller.js; welcome.css, .tiles), as a
       category page has its subcategories: first the four most looked for, Automjete, Prona,
-      Elektronikë and Veshje / aksesorë (MAIN_ON_WELCOME in browse.rs), then every other main
+      Elektronikë and Veshje (MAIN_ON_WELCOME in browse.rs), then every other main
       category, in its order. -#}
   <nav class="shortcuts tiles" data-controller="drag-row" aria-label="{{ crate::t("Kategoritë") }}">
     {%- for shortcut in main %}{% call pill(shortcut) %}{% endfor %}
