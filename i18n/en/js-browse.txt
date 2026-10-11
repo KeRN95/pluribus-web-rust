@@ -38,6 +38,12 @@ Pa kufi
 Pastro kërkimet e fundit
 = Clear recent searches
 
+Kërkimet e fundit
+= Recent searches
+
+Sugjerime
+= Suggestions
+
 # static/js/controllers/heart_controller.js: the heart's news, to screen readers and as its
 # tooltip ("Saved: 2 with a lower price, 1 search with new listings").
 {} me çmim më të ulët

@@ -49,7 +49,61 @@ pub struct Suggestion {
 #[template(path = "suggestions.html")]
 struct Suggestions {
     suggestions: Vec<Suggestion>,
+    /// The words as typed, for each row to show bold where it meets them.
+    typed: String,
 }
+
+/// A part of a row's words, bold where it meets one of the words typed, as the canvas has the rows
+/// ("Volkswagen **Golf** Sportsvan"): lower case and accents aside, as search compares them
+/// (format::fold: "shtepi" meets "Shtëpi"); a word of one letter meets nothing.
+pub struct Part<'a> {
+    pub text: &'a str,
+    pub bold: bool,
+}
+
+impl Suggestions {
+    fn marked<'a>(&self, label: &'a str) -> Vec<Part<'a>> {
+        marked(label, &self.typed)
+    }
+}
+
+fn marked<'a>(label: &'a str, typed: &str) -> Vec<Part<'a>> {
+    let letters: Vec<(usize, char)> = label.char_indices().collect();
+    // Each letter as search compares it; one that folds to more than one letter meets nothing.
+    let folded: Vec<Option<char>> = letters
+        .iter()
+        .map(|(_, letter)| {
+            let mut folded = crate::format::fold(&letter.to_string()).chars().collect::<Vec<_>>().into_iter();
+            match (folded.next(), folded.next()) {
+                (Some(one), None) => Some(one),
+                _ => None,
+            }
+        })
+        .collect();
+    let mut bold = vec![false; letters.len()];
+    for word in typed.split_whitespace() {
+        let wanted: Vec<char> = crate::format::fold(word).chars().collect();
+        if wanted.len() < 2 || wanted.len() > letters.len() {
+            continue;
+        }
+        for start in 0..=letters.len() - wanted.len() {
+            if wanted.iter().enumerate().all(|(at, letter)| folded[start + at] == Some(*letter)) {
+                bold[start..start + wanted.len()].fill(true);
+            }
+        }
+    }
+    let mut parts = Vec::new();
+    let mut from = 0;
+    for at in 1..=letters.len() {
+        if at == letters.len() || bold[at] != bold[from] {
+            let end = letters.get(at).map_or(label.len(), |(index, _)| *index);
+            parts.push(Part { text: &label[letters[from].0..end], bold: bold[from] });
+            from = at;
+        }
+    }
+    parts
+}
+
 
 /// /sugjerime?q=…: the suggestions for words being typed, as rows of links.
 pub async fn suggestions(State(state): State<AppState>, RawQuery(query): RawQuery) -> Result<Response> {
@@ -58,7 +112,8 @@ pub async fn suggestions(State(state): State<AppState>, RawQuery(query): RawQuer
         .find(|(name, _)| name == "q")
         .map(|(_, words)| words.trim_start().chars().take(SEARCH_CHARS).collect())
         .unwrap_or_default();
-    render(Suggestions { suggestions: suggest(&state.db, &typed).await? })
+    let suggestions = suggest(&state.db, &typed).await?;
+    render(Suggestions { suggestions, typed })
 }
 
 async fn suggest(db: &PgPool, typed: &str) -> Result<Vec<Suggestion>> {
@@ -205,4 +260,23 @@ fn without_place_word(before: &str) -> &str {
 /// A search for the words, in every category.
 fn words_url(words: &str) -> String {
     url("/search", [("q".to_string(), words.to_string())])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::marked;
+
+    #[test]
+    fn a_row_is_bold_where_it_meets_the_words_typed() {
+        let shown = |label: &str, typed: &str| {
+            marked(label, typed).iter().map(|part| if part.bold { format!("*{}*", part.text) } else { part.text.to_string() }).collect::<String>()
+        };
+        assert_eq!(shown("Volkswagen Golf Sportsvan", "golf"), "Volkswagen *Golf* Sportsvan");
+        assert_eq!(shown("Volkswagen Golf", "gol"), "Volkswagen *Gol*f");
+        assert_eq!(shown("golf", "golf ne durr"), "*golf*");
+        assert_eq!(shown("Njoftimet në Durrës", "durr"), "Njoftimet në *Durr*ës");
+        assert_eq!(shown("Shtëpi në Tiranë", "shtepi"), "*Shtëpi* në Tiranë");
+        assert_eq!(shown("apartament", "a"), "apartament");
+        assert_eq!(shown("", "golf"), "");
+    }
 }

@@ -800,6 +800,8 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(body.contains(r#"<form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest""#));
     assert!(body.contains(r#"<input id="welcome-q" type="search" name="q""#));
     assert!(body.contains(r#"<div class="suggestions" id="welcome-suggestions" role="listbox""#));
+    // While the box has words, a cross empties it (suggest_controller.js shows it).
+    assert!(body.contains(r#"<button type="button" class="search-clear" aria-label="Pastro" title="Pastro" data-suggest-target="clear" data-action="suggest#clear" hidden>"#));
     // The search button is a magnifier at the end of the field's pill, in the accent; the field
     // asks the page's question.
     assert!(body.contains(r#"<button type="submit" class="icon-button welcome-search" aria-label="Kërko""#));
@@ -2035,10 +2037,10 @@ async fn suggestions_finish_the_words_and_say_where_they_lead(pool: PgPool) {
         r#"href="/c/makina?vehicle_make=VOLKSWAGEN&vehicle_model=VOLKSWAGEN_GOLF""#,
     ]);
     assert!(at.windows(2).all(|pair| pair[0] < pair[1]), "{rows}");
-    assert!(rows.contains(r#"<span class="suggestion-label">Volkswagen Golf</span>"#));
+    assert!(rows.contains(r#"<span class="suggestion-label">Volkswagen <strong>Gol</strong>f</span>"#), "{rows}");
     // A town the last word starts: on its own, all its listings; after other words, those there.
     let town = html(pool.clone(), "/sugjerime?q=durr").await;
-    assert!(town.contains(r#"href="/search?city=durres""#) && town.contains("Njoftimet në Durrës"), "{town}");
+    assert!(town.contains(r#"href="/search?city=durres""#) && town.contains("Njoftimet në <strong>Durr</strong>ës"), "{town}");
     let there = html(pool.clone(), "/sugjerime?q=golf%20durr").await;
     assert!(there.contains(r#"href="/search?q=golf&city=durres""#) && there.contains("në Durrës"), "{there}");
     // The word that joins the words to the town, "në" with its ë or without, is the town's to say:
@@ -2046,10 +2048,10 @@ async fn suggestions_finish_the_words_and_say_where_they_lead(pool: PgPool) {
     for typed in ["golf%20ne%20durr", "golf%20n%C3%AB%20durr", "golf%20te%20durr"] {
         let there = html(pool.clone(), &format!("/sugjerime?q={typed}")).await;
         assert!(there.contains(r#"href="/search?q=golf&city=durres""#), "{typed}: {there}");
-        assert!(there.contains(r#"<span class="suggestion-label">golf</span>"#), "{typed}: {there}");
+        assert!(there.contains(r#"<span class="suggestion-label"><strong>golf</strong></span>"#), "{typed}: {there}");
     }
     let town_alone = html(pool.clone(), "/sugjerime?q=ne%20durr").await;
-    assert!(town_alone.contains(r#"href="/search?city=durres""#) && town_alone.contains("Njoftimet në Durrës"), "{town_alone}");
+    assert!(town_alone.contains(r#"href="/search?city=durres""#) && town_alone.contains("Njoftimet <strong>në</strong> <strong>Durr</strong>ës"), "{town_alone}");
     // Words, then "në" (or "ne", or with a space after): the towns they are found in, a car in
     // Tirana and one in Durrës, rather than words starting "ne".
     for typed in ["makina%20ne", "makina%20n%C3%AB%20"] {

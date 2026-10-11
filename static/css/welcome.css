@@ -45,49 +45,65 @@
 .welcome-form input::-webkit-search-cancel-button { appearance: none; }
 .welcome-search { width: 38px; height: 38px; background: var(--highlight-knob); color: var(--highlight-icon); }
 
-/* Suggestions under a search box as its words are typed (suggest_controller.js): a list like the
-   in-page dropdowns, as wide as the box, each row the words it searches and after them, quieter,
-   where; the row the arrow keys mark is shaded as one under the pointer is. */
+/* The cross that empties the welcome page's search while it has words (suggest_controller.js), as
+   the canvas has it, in the muted grey before the magnifier, the words' colour under the
+   pointer; 40px to tap. */
+.search-clear { display: grid; flex: none; place-items: center; width: var(--size-button-sm); height: var(--size-button-sm); padding: 0; border: 0; border-radius: var(--radius-pill); background: none; color: var(--muted); cursor: pointer; }
+.search-clear:hover { color: var(--text); }
+.search-clear[hidden] { display: none; }
+
+/* Suggestions under a search box as its words are typed (suggest_controller.js), as the canvas has
+   them: a white card 8px under the box and as wide (on phones the whole row's width, under the
+   welcome page's buttons too), with what floats' shadow and no outline, appearing without
+   sliding; each row 48px tall, a magnifier in the muted grey before the words it searches, the
+   part that meets the words typed bold (suggestions.html), then, quieter, where; the row the
+   arrow keys mark is grey as one under the pointer is, its words all in the text's colour there,
+   as the design system has words on the grey. */
 .search,
 .welcome-form { position: relative; }
 .suggestions {
   position: absolute;
-  top: calc(100% + .4rem);
+  top: calc(100% + var(--space-8));
   right: 0;
   left: 0;
   z-index: 30;
   max-height: min(60vh, 26rem);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: .375rem;
-  border: 1px solid var(--menu-border);
-  border-radius: var(--radius);
+  padding: 6px;
+  border-radius: var(--radius-box);
   background: var(--surface);
-  box-shadow: var(--menu-shadow);
-  font-size: var(--text-md);
-  transform-origin: top;
-  animation: menu-in .14s ease-out;
+  box-shadow: var(--shadow-float);
+  font-size: .9375rem;
 }
 .suggestions[hidden] { display: none; }
 .suggestion {
   display: flex;
-  align-items: baseline;
-  gap: .4rem;
-  padding: .55rem .85rem;
-  border-radius: 10px;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: var(--radius-field);
   color: var(--text);
   text-decoration: none;
 }
+.suggestion > svg { flex: none; color: var(--muted); }
 .suggestion:hover,
 .suggestion[aria-selected="true"] { background: var(--surface-muted); }
 .suggestion-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.suggestion-context { flex: none; color: var(--muted); font-size: var(--text-sm); }
-/* An empty box's last searches (suggest_controller.js, showRecent): a clock in the muted colour
-   before each one's words, and last "Pastro kërkimet e fundit", quieter, a button drawn as a
-   row. */
-.suggestion-recent { align-items: center; }
-.suggestion-recent svg { flex: none; color: var(--muted); }
-.suggestion-forget { width: 100%; border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--text-sm); text-align: left; cursor: pointer; }
+.suggestion-context { flex: none; color: var(--muted); }
+:is(.suggestion:hover, .suggestion[aria-selected="true"]) .suggestion-context { color: var(--text); }
+/* An empty box's last searches (suggest_controller.js, showRecent): rows 46px tall, a clock in the
+   muted grey before each one's words, and last "Pastro kërkimet e fundit", quieter, a button drawn
+   as a row, 40px to tap. */
+.suggestion-recent { min-height: 46px; }
+.suggestion-forget { width: 100%; min-height: var(--size-button-sm); border: 0; background: none; color: var(--muted); font: inherit; font-size: .84375rem; text-align: left; cursor: pointer; }
+.suggestion-forget:is(:hover, [aria-selected="true"]) { color: var(--text); }
+@media (max-width: 719px) {
+  .suggestion { padding: 0 12px; }
+  .welcome-tools { position: relative; }
+  .welcome-tools .welcome-form { position: static; }
+}
 
 /* The welcome page's sections under the categories, as the canvas has them: "Shikuar së fundmi",
    "Më të klikuarat" and the newest listings, 26px apart, each heading a browse page's section

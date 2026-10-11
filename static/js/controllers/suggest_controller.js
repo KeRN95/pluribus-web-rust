@@ -7,7 +7,9 @@ import { t } from "controllers/i18n.js";
 // towns. The box keeps the focus: the arrow keys mark a row, Enter follows it (or, with none
 // marked, searches the words as typed), Escape closes the list; a click or a tap follows a row as
 // any link. Empty, the box offers the visitor's last searches instead (recent_searches.js), and a
-// last row that forgets them. Without this script the box is a plain search.
+// last row that forgets them; the list is named for which it holds. While the box has words, a
+// cross empties it (the welcome page's, its clear target). Without this script the box is a plain
+// search.
 
 let count = 0;
 // After the last key, so that words typed quickly aren't asked for letter by letter.
@@ -32,7 +34,7 @@ function clock() {
 }
 
 export default class extends Controller {
-  static targets = ["input", "list"];
+  static targets = ["input", "list", "clear"];
 
   connect() {
     this.kept = new Map();
@@ -45,6 +47,7 @@ export default class extends Controller {
     input.setAttribute("aria-expanded", "false");
     input.autocomplete = "off";
     this.close();
+    this.cleared();
     this.outside = (event) => {
       if (!this.element.contains(event.target)) this.close();
     };
@@ -59,6 +62,7 @@ export default class extends Controller {
 
   // The words changed: their suggestions, once typing pauses.
   typed() {
+    this.cleared();
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this.fetch(), WAIT);
   }
@@ -92,7 +96,21 @@ export default class extends Controller {
 
   show(rows) {
     this.listTarget.innerHTML = rows;
+    this.listTarget.setAttribute("aria-label", t("Sugjerime"));
     this.opened();
+  }
+
+  // The cross shows while the box has words.
+  cleared() {
+    if (this.hasClearTarget) this.clearTarget.hidden = !this.inputTarget.value;
+  }
+
+  // The cross: the box empty again, its last searches under it.
+  clear() {
+    this.inputTarget.value = "";
+    this.cleared();
+    this.inputTarget.focus();
+    this.showRecent();
   }
 
   // The last searches, each a row like a suggestion with a clock before its words, leading back
@@ -125,6 +143,7 @@ export default class extends Controller {
       this.inputTarget.focus();
     });
     this.listTarget.replaceChildren(...rows, forget);
+    this.listTarget.setAttribute("aria-label", t("Kërkimet e fundit"));
     this.opened();
   }
 
