@@ -726,9 +726,9 @@ pub const INFO: &str = r#"<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 
 #[expect(dead_code, reason = "the map's panel takes it when it is redrawn")]
 pub const LOCATE: &str = r#"<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5"/>"#;
 
-/// An office block with a lower wing: a business without a logo of its own, in its round avatar
-/// (a seller's row, a store's page), as a person has the initial of their name.
-#[expect(dead_code, reason = "the avatars take it when they are redrawn")]
+/// An office block with a lower wing: a store without a logo of its own, in its round avatar (a
+/// listing's seller row, its page, an invitation into it: seller_card.html, profile.html,
+/// store_invitation.html), as a person has the initial of their name.
 pub const BUSINESS: &str = r#"<rect x="4" y="3.5" width="11" height="17" rx="1.5"/><path d="M15 9.5h4a1 1 0 0 1 1 1v10H4"/><path d="M7.5 7.5h1M10.5 7.5h1M7.5 11h1M10.5 11h1M7.5 14.5h1M10.5 14.5h1"/>"#;
 
 /// Other things, and a category without an icon of its own yet: a box.

@@ -11,7 +11,7 @@
     {%- if let Some(logo) = invitation.store_logo %}
     <img class="avatar large avatar-logo" src="{{ logo }}" alt="" width="64" height="64">
     {%- else %}
-    <span class="avatar large" aria-hidden="true">{{ crate::format::initial(invitation.store_name) }}</span>
+    <span class="avatar large" aria-hidden="true"><svg class="avatar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ crate::web::icons::BUSINESS|safe }}</svg></span>
     {%- endif %}
     <div>
       <h1>{{ crate::i18n::t1("{} të fton", invitation.store_name) }}</h1>

@@ -21,6 +21,8 @@
     <a class="seller" href="{{ listing.seller_url }}">
       {%- if let Some(logo) = listing.seller_logo %}
       <img class="avatar avatar-logo{% if car_page %} large{% endif %}" src="{{ logo }}" alt="" width="48" height="48" loading="lazy">
+      {%- else if listing.seller_business_id.is_some() %}
+      <span class="avatar{% if car_page %} large{% endif %}" aria-hidden="true"><svg class="avatar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ crate::web::icons::BUSINESS|safe }}</svg></span>
       {%- else %}
       <span class="avatar{% if car_page %} large{% endif %}" aria-hidden="true">{{ listing.seller_initial() }}</span>
       {%- endif %}

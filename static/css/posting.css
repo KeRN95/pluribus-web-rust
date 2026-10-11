@@ -408,19 +408,25 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 @media (hover: hover) {
   .seller:hover { background: var(--surface-muted); }
 }
+/* A person's or a business's initial, every one alike as the canvas draws them: the main colour's
+   letter in a ring of it, no fill, the ring 1.5px and 2px on a large one; a store without a logo
+   shows its office block in the ring (icons::BUSINESS, .avatar-icon), one with a logo the logo,
+   round, with no ring (.avatar-logo). */
 .avatar {
   display: grid;
   flex: none;
   place-items: center;
   width: 2.1rem;
   height: 2.1rem;
-  border-radius: 999px;
-  background: var(--badge);
-  color: var(--accent);
+  border: 1.5px solid var(--main);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--main);
   font-size: var(--text-sm);
-  font-weight: var(--heavy);
+  font-weight: var(--bold);
 }
-.avatar.large { width: 3rem; height: 3rem; font-size: var(--text-xl); }
+.avatar.large { width: 3rem; height: 3rem; border-width: 2px; font-size: var(--text-xl); }
+.avatar-icon { width: 45%; height: 45%; }
 /* The seller's details, in a card like the site's others: the soft surface, a hairline border. */
 .profile-header {
   display: flex;
@@ -440,7 +446,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
    for its people; under it what it says, its address and hours as a short list, and its ways to
    reach it as buttons on a line that wraps. */
 .store-cover { display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; margin: 1rem 0 0; border-radius: var(--radius); object-fit: cover; background: var(--surface-muted); }
-.avatar-logo { object-fit: cover; background: #fff; }
+.avatar-logo { border: 0; object-fit: cover; background: var(--surface); }
 .store-edit { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; margin-left: auto; }
 .store-info { max-width: 42rem; margin: 0 0 1.25rem; }
 .store-about { margin: 0 0 .6rem; white-space: pre-line; }

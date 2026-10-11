@@ -102,7 +102,7 @@
 .conversation-with { display: flex; align-items: center; gap: .45rem; margin: 0; color: var(--muted); font-size: var(--text-sm); font-weight: var(--medium); }
 .conversation-with .avatar { width: 1.6rem; height: 1.6rem; font-size: .75rem; }
 h1.conversation-with { color: var(--text); font-size: var(--text-xl); }
-h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--text-md); }
+h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px; font-size: var(--text-md); }
 
 /* The messages: the other side's on the left on the surface, the visitor's on the right in the
    coral's tint, each rounded but for its corner on its own side, with when under it. Line breaks
