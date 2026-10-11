@@ -586,12 +586,27 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   height: var(--size-header);
   padding: 0 var(--gutter);
 }
-/* On phones the bar is 56px, its buttons side by side with no room between them, and its last
-   button comes nearer the screen's edge, its icon where the page's gutter ends. The type trial's
-   button (below) has no room left under 400px. */
+/* On phones the bar is 56px, its buttons side by side with no room between them, and its first
+   and last buttons come nearer the screen's edges, their icons where the page's gutters end. The
+   logo stands in the bar's middle, the menu's lines at its left and the account at its right, as
+   the user asked on 2026-10-11 (it stood after the lines): the bar is a grid of three columns,
+   the outer two as wide as each other whatever they hold (the account alone, or a listing's
+   magnifier before it), the logo's between them, and the bar as far from either edge of the
+   screen. The type trial's button (below) has no room left under 400px; above, it hangs after the
+   logo, which stays in the middle. */
 @media (max-width: 719px) {
   :root { --size-header: 56px; --size-header-row: 56px; }
-  .header-inner { gap: 0; padding: 0 8px 0 var(--gutter); }
+  .header-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-rows: var(--size-header-row);
+    align-items: center;
+    gap: 0;
+    padding: 0 calc(var(--gutter) - 8px);
+  }
+  .header-inner > .menu-button { margin: 0; }
+  .header-start { position: relative; }
+  .header-start > .type-menu { position: absolute; left: 100%; }
 }
 /* On phones the bar's search (every page's but the front page's) has a second row of the bar to
    itself, the whole of it between the page's gutters, 40px tall with 8px under it, as the user
@@ -599,14 +614,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    short): the bar grows to 104px, and --size-header, which the pages under it reckon with, with it. */
 @media (max-width: 719px) {
   :root:has(.header-inner > .top-search) { --size-header: calc(var(--size-header-row) + var(--size-button-sm) + 8px); }
-  .header-inner:has(> .top-search) {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-rows: var(--size-header-row) var(--size-button-sm);
-    align-items: center;
-    padding-bottom: 8px;
-  }
-  .header-inner > .top-search { grid-column: 1 / -1; grid-row: 2; max-width: none; margin: 0 calc(var(--gutter) - 8px) 0 0; }
+  .header-inner:has(> .top-search) { grid-template-rows: var(--size-header-row) var(--size-button-sm); padding-bottom: 8px; }
+  .header-inner > .top-search { grid-column: 1 / -1; grid-row: 2; max-width: none; margin: 0 8px; }
 }
 /* The bar's start (the logo, and the type trial's "Ff") and its end (the account). From 720px up the
    bar runs the screen's width, the menu's lines over the rail (below) and the logo where the page
@@ -888,8 +897,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 @media (max-width: 719px) {
   :root:has(.site-header.search-folded) { --size-header: var(--size-header-row); }
   :root:has(.site-header.search-folded.search-open) { --size-header: calc(var(--size-header-row) + var(--size-button-sm) + 8px); }
-  .search-folded .header-inner { display: flex; padding-bottom: 0; }
-  .search-folded.search-open .header-inner { display: grid; padding-bottom: 8px; }
+  .search-folded .header-inner { grid-template-rows: var(--size-header-row); padding-bottom: 0; }
+  .search-folded.search-open .header-inner { grid-template-rows: var(--size-header-row) var(--size-button-sm); padding-bottom: 8px; }
 }
 /* The menu's button at the bar's left, before the logo: its three lines, 24px, on a bare round
    button, a grey circle under the pointer, the word "Menyja" kept for screen readers; 40px on

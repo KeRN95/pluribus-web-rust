@@ -73,7 +73,8 @@
           colours slide to the other theme's rather than changing at once (base.css, .logo). The
           bar's start (the logo) and its end (the account) are as wide as each other from 720px
           up, so that the search between them stands in the middle of the page beside the rail
-          (.header-start, .header-end). -#}
+          (.header-start, .header-end). On phones the logo stands in the bar's middle, between the
+          menu's lines and the account (base.css). -#}
       <div class="header-start">
       <a class="logo" id="logo" href="/" data-turbo-permanent translate="no">{% include "logo.svg" %}<span class="visually-hidden">pluribus</span></a>
       {%- if crate::web::type_trial() %}

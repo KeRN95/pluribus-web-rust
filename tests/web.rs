@@ -4898,7 +4898,7 @@ async fn a_listing_folds_the_bars_search_behind_a_magnifier(pool: PgPool) {
         ".search-folded .top-search{display:none;}",
         ".search-folded.search-open .top-search{display:flex;}",
         // On a phone the bar is one row while the search is folded, two while it is open.
-        "@media (max-width:719px){:root:has(.site-header.search-folded){--size-header:var(--size-header-row);}:root:has(.site-header.search-folded.search-open){--size-header:calc(var(--size-header-row) + var(--size-button-sm) + 8px);}.search-folded .header-inner{display:flex;padding-bottom:0;}.search-folded.search-open .header-inner{display:grid;padding-bottom:8px;}}",
+        "@media (max-width:719px){:root:has(.site-header.search-folded){--size-header:var(--size-header-row);}:root:has(.site-header.search-folded.search-open){--size-header:calc(var(--size-header-row) + var(--size-button-sm) + 8px);}.search-folded .header-inner{grid-template-rows:var(--size-header-row);padding-bottom:0;}.search-folded.search-open .header-inner{grid-template-rows:var(--size-header-row) var(--size-button-sm);padding-bottom:8px;}}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
@@ -5403,6 +5403,11 @@ async fn the_rail_and_the_bars_search_lead_everywhere(pool: PgPool) {
     // grow alike around it. A filter that is on is in the accent, toned down (2026-10-11).
     assert!(bar.contains(r#"<div class="header-start">"#) && bar.contains(r#"<div class="header-end">"#), "{bar}");
     assert!(css.contains(".header-start,.header-end{flex:1 1 0;min-width:max-content;}"));
+    // On phones the logo stands in the bar's middle, the menu's lines at its left and the account
+    // at its right: three columns, the outer two as wide as each other, the bar as far from both
+    // edges of the screen (the user's ask of 2026-10-11).
+    assert!(css.contains(".header-inner{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-rows:var(--size-header-row);align-items:center;gap:0;padding:0 calc(var(--gutter) - 8px);}"), "{css}");
+    assert!(css.contains(".header-inner > .menu-button{margin:0;}") && css.contains(".header-inner > .top-search{grid-column:1 / -1;grid-row:2;max-width:none;margin:0 8px;}"));
     assert!(rule(".filter-chip").contains("background:var(--filter-on)"));
 }
 
