@@ -361,9 +361,11 @@ html:has(.filters.is-open) { overflow: hidden; }
 }
 .filters-footer .button { justify-content: center; white-space: nowrap; }
 .filters-footer .filters-show { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-/* The page under what the row opened, dimmed; the row and the header stay over it. */
+/* The page under what the row opened, dimmed; the row and the header stay over it. The map's
+   card open is its map-open, which the map controller sets as it unfolds, not a :not(.map-hidden)
+   in the :has() (Conventions, in the README). */
 .browse-scrim { display: none; }
-.browse:has(.filters.is-open, .map-card:not(.map-hidden)) .browse-scrim {
+.browse:has(.filters.is-open, .map-card.map-open) .browse-scrim {
   display: block;
   position: fixed;
   inset: 0;

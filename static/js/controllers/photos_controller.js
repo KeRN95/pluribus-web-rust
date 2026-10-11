@@ -199,6 +199,9 @@ export default class extends Controller {
     this.urls = [];
     this.previewsTarget.replaceChildren(...this.items.map((item, index) => this.photo(item, index)));
     this.previewsTarget.hidden = this.items.length === 0;
+    // The field's look with photos (posting.css), by a class: a :has() on the list's hidden
+    // restyled whole pages.
+    this.element.classList.toggle("has-photos", this.items.length > 0);
   }
 
   // One photo of the list: the picture, "Kopertinë" over the first, the cross that takes it out

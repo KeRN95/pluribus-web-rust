@@ -168,6 +168,8 @@ export default class extends Controller {
 
   fold(fold) {
     this.element.classList.toggle("map-hidden", fold);
+    // Open, for the page dimmed under a category page's card (browse.css, .map-card.map-open).
+    this.element.classList.toggle("map-open", !fold);
     if (!this.hasToggleTarget) return;
     this.toggleTarget.setAttribute("aria-expanded", String(!fold));
     const label = fold ? this.toggleTarget.dataset.showLabel : this.toggleTarget.dataset.hideLabel;

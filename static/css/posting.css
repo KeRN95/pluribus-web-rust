@@ -491,11 +491,14 @@ a.pending-label:active { text-decoration: underline 2px var(--highlight); text-u
   .photo-drop:hover { border-color: var(--main); }
 }
 /* With photos the field is a row that wraps: its name, then the photos and the zone 10px apart,
-   then what it takes, each of those on a line of its own. */
-.photos-field:has(> [data-photos-target="previews"]:not([hidden])) { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; }
-.photos-field:has(> [data-photos-target="previews"]:not([hidden])) > * { flex: 1 0 100%; margin: 0; }
-.photos-field:has(> [data-photos-target="previews"]:not([hidden])) > [data-photos-target="previews"] { display: contents; }
-.photos-field:has(> [data-photos-target="previews"]:not([hidden])) > .photo-drop {
+   then what it takes, each of those on a line of its own. With photos is a class the controller
+   sets as it shows them (photos_controller.js, has-photos), not a :has() on the list's hidden,
+   which had Chrome restyle every page's whole box under each :has() at each hidden toggled
+   anywhere (Conventions, in the README). */
+.photos-field.has-photos { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; }
+.photos-field.has-photos > * { flex: 1 0 100%; margin: 0; }
+.photos-field.has-photos > [data-photos-target="previews"] { display: contents; }
+.photos-field.has-photos > .photo-drop {
   flex: none;
   flex-direction: column;
   justify-content: center;
@@ -505,11 +508,11 @@ a.pending-label:active { text-decoration: underline 2px var(--highlight); text-u
   border-radius: 12px;
   color: var(--text);
 }
-.photos-field:has(> [data-photos-target="previews"]:not([hidden])) :is(.photo-drop-icon, .photo-drop-hint) { display: none; }
-.photos-field:has(> [data-photos-target="previews"]:not([hidden])) .photo-drop-text { align-items: center; }
-.photos-field:has(> [data-photos-target="previews"]:not([hidden])) .photo-drop-button { flex-direction: column; gap: 4px; min-height: 0; padding: 0; background: none; font-size: .8125rem; }
-.photos-field:has(> [data-photos-target="previews"]:not([hidden])) .photo-drop-button svg { width: 20px; height: 20px; }
-.photos-field:has(> [data-photos-target="previews"]:not([hidden])) > .photo-hint { display: block; }
+.photos-field.has-photos :is(.photo-drop-icon, .photo-drop-hint) { display: none; }
+.photos-field.has-photos .photo-drop-text { align-items: center; }
+.photos-field.has-photos .photo-drop-button { flex-direction: column; gap: 4px; min-height: 0; padding: 0; background: none; font-size: .8125rem; }
+.photos-field.has-photos .photo-drop-button svg { width: 20px; height: 20px; }
+.photos-field.has-photos > .photo-hint { display: block; }
 /* The listing form (listing_form.html), as the canvas has it: a column of 720px in the middle of
    the page; the heading, 30px (26px on a phone), and the lead under it; then white boxes 14px
    apart (.form-box: the surface, 16px corners, the soft shadow, 20px in, their fields 18px apart,

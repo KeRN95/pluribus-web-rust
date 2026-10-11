@@ -75,6 +75,7 @@ export default class extends Controller {
     this.go(index);
     if (!more || !this.hasFilmstripTarget || !this.filmstripTarget.hidden) return;
     this.filmstripTarget.hidden = false;
+    this.filmstripTarget.parentElement.classList.add("thumbs-open");
     this.element.querySelector(".gallery-count")?.setAttribute("aria-expanded", "true");
     this.update();
   }
@@ -84,6 +85,8 @@ export default class extends Controller {
   toggleThumbs(event) {
     const filmstrip = this.filmstripTarget;
     filmstrip.hidden = !filmstrip.hidden;
+    // The gallery's dots give way to it (listing.css, .gallery.thumbs-open).
+    filmstrip.parentElement.classList.toggle("thumbs-open", !filmstrip.hidden);
     event.currentTarget.setAttribute("aria-expanded", String(!filmstrip.hidden));
     if (!filmstrip.hidden) this.update();
   }

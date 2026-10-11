@@ -4972,6 +4972,36 @@ async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
     assert!(count.contains("background:var(--highlight)") && count.contains("color:var(--on-highlight)"), "{count}");
 }
 
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn no_has_rule_watches_hidden_or_a_not(pool: PgPool) {
+    // A :has() whose parentheses hold [hidden] or a :not() has Chrome restyle the whole box under
+    // every element a :has() rule marks, each time any element's hidden changes: a category page
+    // restyled all its results 33 times over as its cards' photo sliders started (Conventions, in
+    // the README). A script sets a class instead.
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let mut seen = 0;
+    for (at, _) in css.match_indices(":has(") {
+        let rest = &css[at + ":has(".len()..];
+        let mut depth = 1;
+        let end = rest
+            .char_indices()
+            .find(|&(_, c)| {
+                match c {
+                    '(' => depth += 1,
+                    ')' => depth -= 1,
+                    _ => {}
+                }
+                depth == 0
+            })
+            .map(|(i, _)| i)
+            .expect("a :has() closes");
+        let inside = &rest[..end];
+        assert!(!inside.contains("[hidden]") && !inside.contains(":not("), ":has({inside})");
+        seen += 1;
+    }
+    assert!(seen > 10, "{seen}");
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_menu_leads_everywhere(pool: PgPool) {
     // Every page has the menu (base.html): its lines ("Menyja" for screen readers) at the bar's

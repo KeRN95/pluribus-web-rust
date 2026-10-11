@@ -490,7 +490,9 @@
   translate: -50% 0;
 }
 .gallery-thumbs[hidden] { display: none; }
-.gallery:has(> .gallery-thumbs:not([hidden])) .gallery-dots { display: none; }
+/* While the filmstrip shows, the dots give it their place: a class the slides controller sets
+   with it (thumbs-open), not a :has() on its hidden (Conventions, in the README). */
+.gallery.thumbs-open .gallery-dots { display: none; }
 .thumb-strip {
   position: relative;
   display: flex;

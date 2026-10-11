@@ -196,8 +196,10 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
   padding: 0;
   border-radius: 50%;
 }
-.composer-send svg { width: 20px; height: 20px; transition: transform .15s ease-out; }
-.composer-row:has(textarea:not(:placeholder-shown)) .composer-send svg { transform: rotate(-45deg); }
+/* Pointing up but while the box is empty, said without a :not() in the :has() (Conventions, in
+   the README). */
+.composer-send svg { width: 20px; height: 20px; transform: rotate(-45deg); transition: transform .15s ease-out; }
+.composer-row:has(textarea:placeholder-shown) .composer-send svg { transform: none; }
 @media (prefers-reduced-motion: reduce) {
   .composer-send svg { transition: none; }
 }
@@ -326,9 +328,11 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 }
 /* The page dimmed under the sheet on a phone (--scrim), as the canvas has it, fading in as the
    sheet slides up; a tap on it closes the sheet (message_sheet_controller.js: the shade is the
-   listing's box's own, .listing-page, which is no box itself, so that a tap on it reaches that). */
+   listing's box's own, .listing-page, which is no box itself, so that a tap on it reaches that).
+   Open is the class the controller puts on <html> with it on a phone (sheet-open), not a :has()
+   on the sheet's hidden (Conventions, in the README). */
 @media (max-width: 719px) {
-  .listing-page:has(> .message-sheet:not([hidden]))::after {
+  html.sheet-open .listing-page::after {
     content: "";
     position: fixed;
     inset: 0;
