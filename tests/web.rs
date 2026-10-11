@@ -4687,6 +4687,27 @@ async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
+async fn the_footer_is_drawn_as_the_canvas_has_it(pool: PgPool) {
+    // The footer: the links in the muted grey at the left and the copyright at the right, under a
+    // hairline; the other language underlined; the page a column at least a screen tall, so that
+    // the footer stands at its foot under a short page too. (The stylesheet comes minified.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let rule = |selector: &str| {
+        let at = css.find(&format!("}}{selector}{{")).unwrap_or_else(|| panic!("{selector}"));
+        let rule = &css[at + 1..];
+        rule[..rule.find('}').unwrap()].to_string()
+    };
+    let footer = rule(".site-footer");
+    for part in ["justify-content:space-between", "border-top:1px solid var(--border)", "color:var(--muted)"] {
+        assert!(footer.contains(part), "{part} in {footer}");
+    }
+    assert!(rule(".footer-links a").contains("min-height:var(--size-button-sm)"));
+    assert!(rule(".language-switch button").contains("text-decoration:underline"));
+    let body = rule("body");
+    assert!(body.contains("flex-direction:column") && body.contains("min-height:100svh"), "{body}");
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn a_short_descriptions_fold_button_stays_hidden(pool: PgPool) {
     // The button that unfolds a long description waits with the hidden attribute until the
     // controller finds the description long (fold_controller.js). Its own display rule would

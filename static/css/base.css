@@ -329,7 +329,14 @@
 
 * { box-sizing: border-box; }
 
+/* The page a column at least a screen tall, the header, the page and the footer down it, so that
+   the footer stands at the screen's foot under a short page too, as the canvas has it (the page
+   takes the room, .container, page.css). */
 body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
   margin: 0;
   background: var(--bg);
   color: var(--text);
