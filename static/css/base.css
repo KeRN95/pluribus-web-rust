@@ -540,7 +540,7 @@ h2 { margin: 1.75rem 0 .75rem; font-size: var(--text-xl); font-weight: var(--sub
 .stand-in-line.is-heading { width: 60%; height: 28px; margin-block: 12px 4px; border-radius: 10px; }
 .stand-in-block { display: block; height: 160px; border-radius: var(--radius-box); background: var(--placeholder-from); }
 .stand-in-text { color: transparent; background: var(--placeholder-from); border-radius: 6px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-.stand-in-listing .key-fact-icon { border-radius: 8px; background: var(--placeholder-from); }
+.stand-in-listing .key-fact-icon { border-radius: 50%; background: var(--placeholder-from); }
 .stand-in-listing .attribute { color: transparent; }
 /* So that nothing moves as the page fills it, whatever the page's size and the text's (the user's
    report of 2026-10-11, "on some settings site jumps"). On a phone its contact bar stands at the

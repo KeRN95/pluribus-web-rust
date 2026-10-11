@@ -5773,12 +5773,14 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     // (2026-10-11): a thick underline under the letters, in the tint a filter that is on takes, as
     // quiet as the user asked, and as thin, reaching an eighth of an em up the figure ("a bit
     // smaller, going less into the top"). The price as large and as bold as the title (the user's
-    // ask of the same day; the headline before, 36px and a step bolder).
+    // ask of the same day; the headline before, 36px and a step bolder): the page's title size,
+    // 22px and 19px on a phone since the user asked that evening for the page's text a step
+    // smaller, as YouTube's (--lp-title, with the page's other sizes, on .listing-page).
     for rule in [
         "--price-mark:var(--filter-on);",
         ".price-amount{text-decoration-line:underline;text-decoration-color:var(--price-mark);text-decoration-thickness:.26em;text-decoration-skip-ink:none;text-underline-offset:-.12em;}",
-        ".listing-header h1{margin:.75rem 0 .35rem;font-size:1.714rem;letter-spacing:-.02em;line-height:1.25;}.listing-price{margin:0;font-size:1.714rem;line-height:1.15;font-weight:var(--heading-weight,var(--bold));letter-spacing:-.02em;}",
-        ".listing-header h1,.listing-price{font-size:1.75rem;}",
+        ".listing-page{--lp-title:1.375rem;--lp-head:1.0625rem;--lp-body:.875rem;--lp-small:.8125rem;--lp-tiny:.75rem;}@media (max-width:719px){.listing-page{--lp-title:1.357rem;--lp-head:1.0714rem;--lp-body:1rem;--lp-small:.857rem;--lp-tiny:.8214rem;}}",
+        ".listing-header h1{margin:.75rem 0 .35rem;font-size:var(--lp-title);letter-spacing:-.02em;line-height:1.25;}.listing-price{margin:0;font-size:var(--lp-title);line-height:1.15;font-weight:var(--heading-weight,var(--bold));letter-spacing:-.02em;}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }

@@ -44,16 +44,37 @@
   .listing-side > *,
   .listing-deal > * { grid-column: 1 / -1; }
 }
+/* The page's text a step smaller than the other pages', as YouTube's watch page has it (its title
+   20px bold, a channel's name 16px medium, the body, the buttons and the lines of facts 14px,
+   every secondary line 12px): the user's ask of 2026-10-11, "make texts in general a bit smaller?
+   kind of similar to youtube ... every text is too big in the posts sometimes". The sizes in one
+   place, for the rules below: the title and the price 22px, the headings 17px and semibold, the
+   body 14px, the small lines 13px and 12px; on a phone, whose root is 14px (the end of this
+   file), 19, 15, 14, 12 and 11.5px, so that the body keeps YouTube's 14px there too. */
+.listing-page {
+  --lp-title: 1.375rem;
+  --lp-head: 1.0625rem;
+  --lp-body: .875rem;
+  --lp-small: .8125rem;
+  --lp-tiny: .75rem;
+}
+@media (max-width: 719px) {
+  .listing-page {
+    --lp-title: 1.357rem;
+    --lp-head: 1.0714rem;
+    --lp-body: 1rem;
+    --lp-small: .857rem;
+    --lp-tiny: .8214rem;
+  }
+}
 /* Listings like it, under it: the browse pages' grid, as wide as the page, set apart by space
    alone. */
 .related { margin-top: 48px; }
-.related > h2 { font-size: 1.375rem; letter-spacing: -.01em; }
-/* The page's own headings, as the canvas has them: 20px bold (19px on a phone), 10px over what they
-   head. */
-.listing h2 { margin-bottom: 10px; font-size: 1.25rem; letter-spacing: -.01em; }
-@media (max-width: 719px) {
-  .listing h2 { font-size: 1.357rem; }
-}
+.related > h2 { font-size: var(--lp-head); font-weight: var(--semibold); letter-spacing: 0; }
+/* The page's own headings: 17px semibold (15px on a phone; 20px bold until 2026-10-11, as the
+   canvas has them), 10px over what they head. */
+.listing h2 { margin-bottom: 10px; font-size: var(--lp-head); font-weight: var(--semibold); letter-spacing: 0; }
+.listing-kind { font-size: var(--lp-small); }
 /* Who sells it, under the description, as far under it as the details and the description stand
    under what is over them (1.75rem; it stood 2.5rem under once), under a heading of its own,
    "Shitësi", as they have theirs (the heading keeps no margin over it, like theirs, above), on the
@@ -88,8 +109,8 @@
 .seller-head { display: flex; align-items: center; gap: .5rem 1.25rem; }
 .seller-head .seller { flex: 1 1 0; gap: 12px; min-width: 0; margin: 0 -10px; padding: 8px 10px; }
 .seller-head .seller-text { gap: 2px; }
-.seller-head .seller-name { font-size: 1rem; }
-.seller-head :is(.seller-summary, .seller-activity) { font-size: .8125rem; white-space: normal; }
+.seller-head .seller-name { font-size: var(--lp-body); }
+.seller-head :is(.seller-summary, .seller-activity) { font-size: var(--lp-tiny); white-space: normal; }
 .seller-head :is(.seller-since, .seller-count) { white-space: nowrap; }
 /* The verified check, beside the name on its line (page.css, .verified). */
 .seller-head .verified { margin-left: .15rem; vertical-align: -.15em; }
@@ -205,22 +226,23 @@
    two hairlines, the car's key facts in a row, each with its icon, its name quiet over its
    value. */
 .listing-car .listing-header h1 { margin-top: 0; }
-/* As the canvas has them: four to a line from 720 px up, two on a phone, each with its icon, 36px
-   (32px on a phone) in a box of its own, so that every name starts at the same distance from its
-   column's edge, its lines 2px whatever its size (the stroke set here, over the drawing's 1.6 at
-   30px), its name 12px and muted over its value, semibold, 8px from the icon's box (its drawing
-   keeps 2px or 3px inside it); the four 8px apart from 720px up (12px before, as on a phone), so
-   that a value as wide as "446 000 km" or "I pamobiluar", 93px and 95px, keeps to one line in the
-   592px column at 1280px; between two hairlines, 16px inside them (14px on a phone). The icon
-   bigger and the name smaller since
-   2026-10-11, the user's ask: "make it more uniform. Make logo bigger, name smaller and the value
-   to be left as is". */
+/* Four to a line from 720 px up, two on a phone, each with its icon on a round grey ground, the
+   grey of the secondary controls, 40px across (36px on a phone), the icon 24px in it (22px) with
+   2px lines (the stroke set here, over the drawing's 1.6 at 30px): the icons are of every shape, a
+   square of arrows, a flight of stairs, a sofa, and equal grounds give them one weight and one
+   edge for the words to start from, 12px on, the name 12px and muted (11.5px on a phone) over its
+   value, 14px semibold; the four 8px apart from 720px up (12px on a phone), so that a value as
+   wide as "446 000 km" or "I pamobiluar", 81px and 83px at 14px, keeps to one line in the 592px
+   column at 1280px; between two hairlines, 16px inside them (14px on a phone). The user's asks of
+   2026-10-11: "make it more uniform. Make logo bigger, name smaller and the value to be left as
+   is", and, of the icons grown to 36px bare, "it isnt doing it for me ... balance it yourself based
+   on best practices". A stand-in's icon is the same circle, grey (base.css, .stand-in-listing). */
 .key-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; margin: 0; padding: 14px 0; border-bottom: 1px solid var(--border); }
-.key-fact { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.key-fact-icon { flex: none; width: 32px; height: 32px; stroke-width: 1.5; color: var(--text); }
+.key-fact { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.key-fact-icon { flex: none; width: 36px; height: 36px; padding: 7px; box-sizing: border-box; border-radius: 50%; background: var(--surface-muted); stroke-width: 2.2; color: var(--text); }
 .key-fact-text { display: grid; min-width: 0; }
-.key-fact dt { color: var(--muted); font-size: .75rem; }
-.key-fact dd { margin: 0; font-weight: var(--semibold); overflow-wrap: anywhere; }
+.key-fact dt { color: var(--muted); font-size: var(--lp-tiny); }
+.key-fact dd { margin: 0; font-size: var(--lp-body); font-weight: var(--semibold); overflow-wrap: anywhere; }
 /* Room between the photos and the title, and a hairline under the kind's line, the page's one;
    "Lokacioni" over the map, as the description and the details have their headings. The price a
    phone's size on every screen (1.75rem; other pages' grow from 720 px up); what qualifies it is
@@ -229,22 +251,23 @@
 .listing-car .listing-header { padding-bottom: 14px; border-bottom: 1px solid var(--border); }
 .listing-car .listing-side > .listing-map-section { margin-top: 1.75rem; }
 .listing-car .listing-map-section > h2 { margin-top: 0; }
-/* As the canvas has them: a detail's name over its value, 13px and muted after its icon, the
-   value semibold; three to a line from 720 px up, two on a phone, 12px and 20px apart. The
-   options a line each in the same columns, row after row, a muted check before each. */
+/* As the canvas has them: a detail's name over its value, 12px and muted after its icon (13px
+   until 2026-10-11), the value 14px semibold; three to a line from 720 px up, two on a phone,
+   12px and 20px apart. The options a line each in the same columns, row after row, a muted check
+   before each. */
 .spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 0; }
 .spec { min-width: 0; }
-.spec dt { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .8125rem; }
+.spec dt { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: var(--lp-tiny); }
 .spec-icon { flex: none; }
-.spec dd { margin: 2px 0 0; font-weight: var(--semibold); overflow-wrap: anywhere; }
-.options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; margin: 0; padding: 0; list-style: none; }
+.spec dd { margin: 2px 0 0; font-size: var(--lp-body); font-weight: var(--semibold); overflow-wrap: anywhere; }
+.options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; margin: 0; padding: 0; list-style: none; font-size: var(--lp-body); }
 .options li { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .option-check { flex: none; color: var(--muted); }
 @media (min-width: 720px) {
   .listing-car > .listing-side { margin-top: 22px; }
   .listing-car .listing-header { padding-bottom: 18px; }
   .key-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 16px 0; }
-  .key-fact-icon { width: 36px; height: 36px; stroke-width: 1.35; }
+  .key-fact-icon { width: 40px; height: 40px; padding: 8px; stroke-width: 2; }
   .spec-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -641,14 +664,15 @@
 .listing-steps .is-off { opacity: .35; pointer-events: none; }
 /* The price as large and as bold as the title, as the user asked on 2026-10-11 (it was the
    headline, as the canvas has it, 36px and a step bolder than the headings, 30px on a phone):
-   24px on a phone, 28px from 720px up (below), in the headings' weight. */
-.listing-header h1 { margin: .75rem 0 .35rem; font-size: 1.714rem; letter-spacing: -.02em; line-height: 1.25; }
-.listing-price { margin: 0; font-size: 1.714rem; line-height: 1.15; font-weight: var(--heading-weight, var(--bold)); letter-spacing: -.02em; }
+   22px, 19px on a phone (--lp-title; 28px and 24px until later that day, when the user asked for
+   the page's text a step smaller, as YouTube's, whose title is 20px), in the headings' weight. */
+.listing-header h1 { margin: .75rem 0 .35rem; font-size: var(--lp-title); letter-spacing: -.02em; line-height: 1.25; }
+.listing-price { margin: 0; font-size: var(--lp-title); line-height: 1.15; font-weight: var(--heading-weight, var(--bold)); letter-spacing: -.02em; }
 /* What qualifies the price ("/muaj", "i diskutueshëm": price_note_alone, listings.rs) on a line
    of its own under it, quietly, on every listing's page and every screen, as the user asked on
    2026-10-11 (a car's or a property's page alone had it so; the others had it after the figure,
    half its size and in brackets, which a narrow phone broke over two lines). */
-.price-note { display: block; margin-top: .3rem; color: var(--muted); font-size: var(--text-sm); font-weight: 400; letter-spacing: normal; }
+.price-note { display: block; margin-top: .3rem; color: var(--muted); font-size: var(--lp-small); font-weight: 400; letter-spacing: normal; }
 /* The figure itself on a band of the accent across its foot, as Tradera marks its prices (the
    user's ask of 2026-10-11, "a semi background on the price"): a thick underline, which a browser
    draws under the letters, a quarter of an em, from an eighth of an em over the baseline (a third
@@ -1004,7 +1028,7 @@
 /* The listing's number, quietly, under the description. */
 /* The listing's number ends the line under the title, whole on one line. */
 .listing-number { white-space: nowrap; }
-.description { margin: 0; font-size: var(--text-md); line-height: 1.7; white-space: pre-line; }
+.description { margin: 0; font-size: var(--lp-body); line-height: 1.6; white-space: pre-line; }
 /* Folded (fold_controller.js, on one longer than a dozen lines): a dozen lines, the last three
    fading out, and under them "Shfaq të gjithë përshkrimin" in the page's colour with a plus, in
    the middle, which unfolds it. */
@@ -1037,13 +1061,11 @@
   .description-more:hover { background: var(--surface-muted); }
 }
 /* A car's title as its seller wrote it, over the description. */
-.description-heading { margin: 0 0 .35rem; font-size: var(--text-lg); font-weight: var(--semibold); line-height: 1.35; }
+.description-heading { margin: 0 0 .35rem; font-size: var(--lp-body); font-weight: var(--semibold); line-height: 1.35; }
 
 @media (min-width: 720px) {
   .grid { grid-template-columns: repeat(auto-fill, minmax(calc(220px / var(--page-scale)), 1fr)); gap: 1.5rem 1rem; }
   h1 { font-size: var(--text-3xl); }
-  .listing-header h1,
-  .listing-price { font-size: 1.75rem; }
 }
 
 /* Phones: everything smaller, since nearly all of it is sized in rem: 14px instead of 16px, and
