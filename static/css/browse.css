@@ -286,10 +286,11 @@
 }
 .map-card-body { overflow-y: auto; scrollbar-width: thin; }
 /* The filters, as the canvas draws them: a sheet 460px wide at the screen's right, its whole height
-   (the whole screen on phones), white with what floats' shadow over the page dimmed, the header
-   too (--scrim; z-index over the sticky header's 10), appearing without sliding as the design
-   system has sheets, the page behind still: a column of its head, its form, which scrolls, and
-   its foot. */
+   (on a phone nine tenths of the screen at its left, where the menu opens, the page dimmed beside
+   it, as the user asked on 2026-10-11: the whole screen until then), white with what floats'
+   shadow over the page dimmed, the header too (--scrim; z-index over the sticky header's 10), a
+   tap on the dimmed page folding it, appearing without sliding as the design system has sheets,
+   the page behind still: a column of its head, its form, which scrolls, and its foot. */
 .filters {
   position: fixed;
   top: 0;
@@ -356,7 +357,7 @@ html:has(.filters.is-open) { overflow: hidden; }
   background: var(--surface);
 }
 @media (max-width: 719px) {
-  .filters { width: 100%; box-shadow: none; }
+  .filters { right: auto; left: 0; width: min(460px, 90%); }
   .filters-header { padding: 8px 8px 8px var(--gutter); }
   .filters-footer { padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom)); }
 }

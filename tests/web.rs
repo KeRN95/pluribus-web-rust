@@ -1346,6 +1346,11 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
         assert!(cars.contains(&format!("section:open@document->{listener}")), "{listener}");
     }
     assert!(cars.contains("keydown.esc@document->filters#foldAll"));
+    // On a phone the sheet is nine tenths of the screen, at its left as the menu is, the page
+    // dimmed beside it, a tap there folding it (the user's ask of 2026-10-11; the whole screen
+    // until then).
+    let site_css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    assert!(site_css.contains("@media (max-width:719px){.filters{right:auto;left:0;width:min(460px,90%);}"), "{site_css}");
     // The filters and the map apply as soon as something changes, the filters also as they close,
     // the page refreshing in place, which keeps what is open as it is and each listing's card;
     // only without JavaScript do the filters have a button.
@@ -5508,9 +5513,9 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for rule in [
         ".menu::backdrop{background:var(--scrim);}",
-        // On a phone four fifths of the screen, the page dimmed beside it, floating as it does
-        // from 720px up (the user's ask of 2026-10-11; the whole screen until then).
-        "@media (max-width:719px){.menu{width:min(380px,80%);}",
+        // On a phone nine tenths of the screen, the page dimmed beside it, floating as it does
+        // from 720px up (the user's asks of 2026-10-11; the whole screen until then).
+        "@media (max-width:719px){.menu{width:min(380px,90%);}",
         // The sizes: large, the text bigger; compact, the whole page zoomed to 90%, or, with a
         // mouse, to 80% with the text bigger in it; the maps at their own scale, the frame's
         // column as wide on the screen as before.

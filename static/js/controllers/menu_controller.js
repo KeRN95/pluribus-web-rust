@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 import { signedIn } from "controllers/signed_in.js";
 
 // The menu (base.html): the bar's "Menyja" opens it, a modal dialog over the page dimmed (a drawer
-// at the screen's left, four fifths of a phone's: base.css, .menu), and its cross, a tap on the
+// at the screen's left, nine tenths of a phone's: base.css, .menu), and its cross, a tap on the
 // dimmed page or Escape closes it, focus going back to the button; Turbo finds it closed when it
 // keeps the page for the back button. As it opens it asks how many notifications are new and how
 // many conversations have messages unread, for the counts at those rows' ends (GET
