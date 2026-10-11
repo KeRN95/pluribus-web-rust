@@ -4854,6 +4854,10 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
     assert!(script.contains("`back:button`"), "{script}");
     let back = get(pool.clone(), &format!("/static/js/controllers/back_controller.js?v={}", marketplace::web::asset_version())).await.body;
     assert!(back.contains("`back:button`") && back.find("`back:button`").unwrap() < back.find("history.back()").unwrap(), "{back}");
+    // Where the browser animated a way back itself (Android's Chrome under a swipe), Turbo's view
+    // transition for it is skipped as it starts, the setting left in the page: taken out, it was
+    // missing from Turbo's copy of the page left, which, opened again, came without its slide.
+    assert!(script.contains(".skipTransition()") && !script.contains(r#"meta[name="view-transition"]"#), "{script}");
     // iPhones and iPads alone are kept from zooming into a field as it takes the focus (the page's
     // size can make its words smaller than 16px), after every page Turbo shows.
     for part in ["iPhone|iPad|iPod", ", maximum-scale=1", "`turbo:load`"] {

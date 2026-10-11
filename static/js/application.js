@@ -448,19 +448,37 @@ document.addEventListener("turbo:load", () => {
 
 // Going back or forward, Turbo shows its copy of the page with the change base.html asks for
 // (view transitions: a cross-fade, on a touch screen the page sliding away as a drawer, base.css).
-// Where the browser has animated the change itself, as iOS does under a swipe
+// Where the browser has animated the change itself, as Android's Chrome and iOS do under a swipe
 // from the screen's edge, that would be a second change, from the page left to the page come back
 // to, and the page seems to jump: such a visit goes without it, as do those in browsers that can't
 // tell (Safari's engine, which every iPhone browser runs on, Firefox). But a press of the page's
 // own way back (back_controller.js, which says so first: back:button), which no browser animates:
-// that one slides back everywhere, where it didn't on an iPhone. The page shown brings the setting
-// back with its head, as after a refresh (refresh.js).
+// that one slides back everywhere, where it didn't on an iPhone. The visit's view transition is
+// skipped as it starts (unanimated), the setting itself left in the page. Until 2026-10-11 the
+// setting was taken out until the page come back to brought it back with its head, which left it
+// out of the copy Turbo keeps of the page left, and that page, opened again, came at once, without
+// its slide (on Android, where the user found it: "sliding still doesn't work").
 let backByButton = -Infinity;
+let unanimated = false;
 document.addEventListener("back:button", () => { backByButton = performance.now(); });
 addEventListener("popstate", (event) => {
   const byButton = performance.now() - backByButton < 1000;
   backByButton = -Infinity;
-  if (event.state?.turbo && !byButton && (event.hasUAVisualTransition ?? true)) {
-    document.head.querySelector('meta[name="view-transition"]')?.remove();
-  }
+  unanimated = Boolean(event.state?.turbo) && !byButton && (event.hasUAVisualTransition ?? true);
 });
+// Turbo's visit back has begun as the popstate comes here; any other visit slides as ever.
+document.addEventListener("turbo:visit", ({ detail: { action } }) => {
+  if (action !== "restore") unanimated = false;
+});
+const startViewTransition = document.startViewTransition?.bind(document);
+if (startViewTransition) {
+  document.startViewTransition = (update) => {
+    const transition = startViewTransition(update);
+    if (unanimated) {
+      unanimated = false;
+      transition.ready.catch(() => {});
+      transition.skipTransition();
+    }
+    return transition;
+  };
+}
