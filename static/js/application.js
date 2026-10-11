@@ -393,10 +393,10 @@ function listingStandIn(card, link) {
   const shown = card.querySelector("img.card-photo")?.currentSrc;
   const amount = card.querySelector(".card-amount");
   const price = amount?.firstChild?.textContent.trim() ?? "";
-  // After the price what qualifies it, as the page says it: on a car's or a property's page
-  // without its brackets, on a line of its own (price_note_alone, listings.rs).
+  // Under the price what qualifies it, as the page says it: without its brackets, on a line of its
+  // own (price_note_alone, listings.rs).
   const said = [...(amount?.querySelectorAll(".card-note") ?? [])].map((note) => note.textContent.trim()).join(" ");
-  const notes = deal ? said.replace(/[()]/g, "").trim() : said;
+  const notes = said.replace(/[()]/g, "").trim();
   const number = link.pathname.match(/^\/listing\/(\d+)/)?.[1] ?? "";
   const place = card.querySelector(".card-place")?.textContent.trim() || "Tiranë";
   // The line under the title, the page's own words as the card has them (data-line), or about as

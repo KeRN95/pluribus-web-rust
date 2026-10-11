@@ -395,7 +395,7 @@ impl ListingDetail {
     }
 
     /// "/muaj", " (i diskutueshëm)", or empty.
-    /// The note on a line of its own under the price, as a car's page has it: without its
+    /// The note on a line of its own under the price, as every listing's page has it: without its
     /// brackets, "i diskutueshëm", "/muaj i diskutueshëm".
     pub fn price_note_alone(&self) -> String {
         self.price_note().replace(['(', ')'], "").trim().to_string()
