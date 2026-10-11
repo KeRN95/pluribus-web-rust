@@ -3,7 +3,9 @@
 {% block title %}Për miratim | Pluribus{% endblock %}
 
 {% block content %}
-<section class="account">
+{#- As the canvas has it: a column of 880px, each part under its heading, its items rows of one white
+    box (posting.css, .moderation). -#}
+<section class="account moderation">
   <h1>Për miratim</h1>
 
   {#- The listings that wait before they go up (db::review): why, the other sellers' listings with
@@ -104,7 +106,7 @@
   {% if rows.is_empty() %}
   <p class="empty">Nuk ka asgjë për miratim.</p>
   {% else %}
-  <ul class="pending-options">
+  <ul class="pending-options pending-names">
     {% for row in rows %}
     <li class="pending-option">
       <div class="pending-head">
@@ -148,7 +150,7 @@
   {% if suspended.is_empty() %}
   <p class="empty">Asnjë llogari e pezulluar.</p>
   {% else %}
-  <ul class="pending-options">
+  <ul class="pending-options pending-rows">
     {% for account in suspended %}
     <li class="pending-option">
       <div class="pending-head">
@@ -192,7 +194,7 @@
   {% if promotions.is_empty() %}
   <p class="empty">Asnjë promovim tani.</p>
   {% else %}
-  <ul class="pending-options">
+  <ul class="pending-options pending-rows">
     {% for promotion in promotions %}
     <li class="pending-option">
       <div class="pending-head">

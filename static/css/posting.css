@@ -329,28 +329,72 @@
 .blocked-seller .avatar { width: 32px; height: 32px; font-size: .8125rem; }
 .blocked-seller-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .blocked-seller form { display: contents; }
-/* The moderators' page (/moderim): its two parts, the reported listings and the typed names; a
-   reported listing's reasons as pills, and what its reporters wrote, quoted. */
-.moderation-heading { margin: 1.75rem 0 .3rem; font-size: var(--text-xl); }
-.report-summary { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
-.report-summary li { padding: .15rem .6rem; border-radius: 999px; background: var(--badge); font-size: var(--text-sm); }
-.report-note { margin: 0; padding: .35rem .75rem; border-left: 3px solid var(--border-strong); color: var(--muted); font-size: var(--text-sm); white-space: pre-line; }
-/* The moderators' page (/moderim): each name sellers typed in, in a box like a listing on
-   "Njoftimet e mia", with its two forms side by side, under each other on phones. */
+/* The moderators' page (/moderim, moderation.html), as the canvas has it: a column of 880px in the
+   middle of the page, 28px under the top bar (18px on a phone), the heading 30px; each part under
+   its heading, 22px, 34px apart (the first 26px under the page's), what it is for under it, 16px
+   and muted; its listings, names, accounts or promotions rows of one white box between hairlines,
+   16px in: why or what, 13px and muted (a hidden listing's pill beside it), the title semibold (a
+   typed name bold), whose, 14px and muted, links in the text's colour; a reported listing's
+   reasons as grey pills and what its reporters wrote, quoted; then its buttons 10px down, 34px,
+   approving and keeping filled, refusing, taking down and suspending grey with red words, each
+   reason's menu 36px beside its button; a typed name's two forms side by side, each half, their
+   field, menu and buttons 48px (one under another on a phone); an account's or a promotion's
+   button at its row's end; the promotion's form in a white box of its own. (Bordered boxes on the
+   page's grey once, everything in the page's column at the left.) */
+.account.moderation { max-width: 880px; margin-inline: auto; padding-top: 28px; }
+.moderation h1 { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
+.moderation-heading { margin: 34px 0 0; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
+.moderation h1 + .moderation-heading { margin-top: 26px; }
+.moderation .lead { margin: 8px 0 0; font-size: 1rem; line-height: 1.55; }
+.moderation .empty { margin: 14px 0 0; }
+.report-summary { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; padding: 0; list-style: none; }
+.report-summary li { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: var(--radius-pill); background: var(--surface-muted); color: var(--muted); font-size: .78125rem; font-weight: var(--semibold); white-space: nowrap; }
+.report-note { margin: 8px 0 0; padding: 0 0 0 10px; border-left: 3px solid var(--border); color: var(--muted); font-size: .84375rem; white-space: pre-line; }
 .moderation-link { margin: -.5rem 0 1.25rem; }
-.pending-options { display: grid; gap: .6rem; margin: 0 0 1.25rem; padding: 0; list-style: none; }
-.pending-option { display: grid; gap: .6rem; padding: .75rem .9rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
-.pending-head { display: grid; gap: .1rem; }
-.pending-attribute { color: var(--muted); font-size: var(--text-sm); }
-.pending-label { font-size: var(--text-md); font-weight: var(--semibold); }
-.pending-actions { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
-.pending-form { display: flex; flex: 1 1 14rem; gap: .4rem; }
+.pending-options { margin: 14px 0 0; padding: 0; overflow: hidden; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); list-style: none; }
+.pending-option { padding: 16px; }
+.pending-option + .pending-option { border-top: 1px solid var(--border-soft); }
+.pending-head { display: grid; gap: 2px; min-width: 0; }
+.pending-attribute { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--muted); font-size: .8125rem; }
+.pending-attribute .badge { margin: 0; }
+.pending-label { font-size: 1rem; font-weight: var(--semibold); overflow-wrap: anywhere; }
+strong.pending-label { font-weight: var(--bold); }
+a.pending-label { color: var(--text); text-decoration: none; }
+@media (hover: hover) {
+  a.pending-label:hover { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
+}
+a.pending-label:active { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
+.pending-head .my-listing-meta { color: var(--muted); font-size: var(--text-sm); }
+.pending-option a:not(.pending-label, .button) { color: var(--text); }
+.pending-option > .field-hint,
+.pending-option > .field-error { margin: 6px 0 0; }
+.pending-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 10px; }
+.pending-form { display: flex; flex: 0 1 auto; align-items: center; gap: 6px; min-width: 0; }
+.pending-form .picker { flex: 1 1 auto; min-width: 0; max-width: 300px; }
 .pending-form input, .pending-form select { flex: 1; min-width: 0; }
-.pending-option .field-hint, .pending-option .field-error { margin: 0; }
-/* /moderim's promotion form: the number, the promotion, "Jepe" on a line, wrapping on a phone. */
-.promotion-grant { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem 1rem; margin-bottom: 1rem; }
-.promotion-grant .field { flex: 1 1 12rem; }
+.moderation .pending-actions .button.small { min-height: 34px; }
+.moderation .pending-actions :is(select, .picker-button) { min-height: 36px; }
+.pending-names .pending-actions { flex-wrap: nowrap; gap: 8px; }
+.pending-names .pending-form { flex: 1 1 0; }
+.pending-names .pending-form .picker { max-width: none; }
+.moderation .pending-names .pending-actions :is(input, select, .picker-button) { min-height: var(--size-field); }
+.moderation .pending-names .pending-actions .button.small { min-height: var(--size-button); padding: 0 20px; font-size: var(--text-sm); }
+.pending-rows .pending-option { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.pending-rows .pending-head { flex: 1 1 auto; }
+.pending-rows .pending-actions { margin-top: 0; }
+/* /moderim's promotion form, in a white box of its own: the number, the promotion, "Jepe", 48px, on
+   a line that wraps; those on now 12px under it. */
+.promotion-grant { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 14px 0 0; padding: 16px; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); }
+.promotion-grant .field { flex: 1 1 160px; }
+.promotion-grant .field + .field { flex: 2 1 240px; }
+.promotion-grant > .button.small { min-height: var(--size-button); padding: 0 20px; font-size: var(--text-sm); }
 .promotion-grant .field-error { flex-basis: 100%; margin: 0; }
+.promotion-grant + :is(.pending-options, .empty) { margin-top: 12px; }
+@media (max-width: 719px) {
+  .account.moderation { padding-top: 18px; }
+  .pending-names .pending-actions { flex-wrap: wrap; }
+  .pending-names .pending-form { flex-basis: 100%; }
+}
 /* Photos in the listing form, as the canvas has them. Before any, the zone across the box: dashed,
    on the page's grey, the camera in a grey circle of 52px beside "Shto foto", a grey pill, and
    under it what the zone takes, 13px and muted; its file input over it all, out of sight, so that
