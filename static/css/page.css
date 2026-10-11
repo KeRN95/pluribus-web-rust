@@ -134,7 +134,10 @@
 /* The photo as it is, but for a shade along its bottom edge behind the price, as the canvas has
    it: clear down to 4.5rem from the bottom, then darkening to black at 55%, with the price on it in
    white, 15px and bold, what follows it (/muaj, i diskutueshëm) a size down. The same in both
-   themes. */
+   themes. Every touch on the price goes through to the photo and the card's link under it, as on
+   the photo's other words (.card-status, .card-seller): it caught them, and a tap on a card's
+   photo where the price stood opened nothing, in the list the whole photo, which its box covers
+   (the user's report of 2026-10-11). */
 .card-media::after {
   content: "";
   grid-area: 1 / 1;
@@ -146,6 +149,7 @@
   grid-area: 1 / 1;
   align-self: end;
   z-index: 1;
+  pointer-events: none;
   padding: 0 .75rem .625rem;
   color: var(--on-photo);
   font-size: .9375rem;
@@ -553,17 +557,21 @@
    lines as the room left under them holds (lines_controller.js: the user's ask of 2026-10-11; two
    at most before, one on phones), and at the foot where it is and when it was posted, muted,
    "Blloku, Tiranë · Dje" (.card-place and .card-when, which the cards leave out), each cut with
-   "…" where its room ends. The photo's box (.card-media) gives its parts to the
-   card's own grid, the seller over the photo left out. */
+   "…" where its room ends. Roomier than it was, its words the size they were, as the user asked
+   on 2026-10-11 ("rather the spaces"): on phones 5px between its lines of words (3px before), 14px
+   between the photo and the words (12px) and 14px between one listing and the next (10px); from
+   720px up 20px between the photo and the words (18px) and 16px between the listings (12px). The
+   photo's box (.card-media) gives its parts to the card's own grid, the seller over the photo left
+   out. */
 .card-when,
 .card-place { display: none; }
-.cards-list .results .grid { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-12); }
+.cards-list .results .grid { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-16); }
 .cards-list .results .card {
   display: grid;
   grid-template-columns: calc(240px / var(--page-scale)) auto minmax(0, 1fr);
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   grid-template-areas: "photo title title" "photo summary summary" "photo description description" "photo place when";
-  column-gap: 18px;
+  column-gap: 20px;
   row-gap: 6px;
   /* As tall as the photo, which sets it, the description's row taking what the title, the details
      and the foot leave (its least 0: spanning a flexible row at its least auto, the photo would
@@ -633,16 +641,16 @@
 /* Its own column, after the place's, the columns' gap taken back so that the two read as one line
    (the rule over them sets only the block's margins: its :is() weighs as much as .card-media
    .card-place, and its margin: 0 kept the gap open until 2026-10-11). */
-.cards-list .results .card-when { grid-area: when; margin-left: -18px; }
+.cards-list .results .card-when { grid-area: when; margin-left: -20px; }
 .cards-list .results .card:has(.card-place) .card-when::before { content: "\00a0·\00a0"; }
 @media (max-width: 719px) {
-  .cards-list .results .grid { row-gap: 10px; }
+  .cards-list .results .grid { row-gap: 14px; }
   .cards-list .results .card {
     grid-template-columns: calc(116px / var(--page-scale)) auto minmax(0, 1fr);
     grid-template-rows: auto auto minmax(0, 1fr) auto;
     grid-template-areas: "photo title title" "photo summary summary" "photo description description" "photo place when";
-    column-gap: var(--space-12);
-    row-gap: 3px;
+    column-gap: 14px;
+    row-gap: 5px;
     height: calc(116px / var(--page-scale) + 20px);
     margin-inline: -10px;
     padding: 10px;
@@ -656,7 +664,7 @@
   .cards-list .results .card-description { margin: 0; padding-right: 0; font-size: .8571rem; line-height: 1.45; }
   .cards-list .results .card-description-text { -webkit-line-clamp: var(--lines, 1); line-clamp: var(--lines, 1); }
   .cards-list .results :is(.card-media .card-place, .card-when) { padding-bottom: 2px; font-size: .9286rem; }
-  .cards-list .results .card-when { margin-left: calc(-1 * var(--space-12)); }
+  .cards-list .results .card-when { margin-left: -14px; }
 }
 
 /* The location pin (templates/pin.svg), on a listing's map and beside "Afër meje" and

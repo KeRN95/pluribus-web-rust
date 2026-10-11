@@ -8125,8 +8125,22 @@ async fn a_card_carries_the_start_of_its_description(pool: PgPool) {
     // The place and when it was posted read as one line, "Tiranë · para 2 ditësh": the rule over both
     // sets only their block's margins, so that the one taking the columns' gap back holds.
     assert!(css.contains(".cards-list .results :is(.card-media .card-place,.card-when){display:block;align-self:end;margin-block:0;"));
-    assert!(css.contains(".cards-list .results .card-when{grid-area:when;margin-left:-18px;}"));
+    assert!(css.contains(".cards-list .results .card-when{grid-area:when;margin-left:-20px;}"));
+    assert!(css.contains(".cards-list .results .card-when{margin-left:-14px;}"));
     assert!(css.contains("grid-template-rows:auto auto minmax(0,1fr) auto;"));
+    // Roomier, its words the size they were (the user's ask of the same day, "rather the spaces"):
+    // on a phone 5px between its lines, 14px between the photo and the words and between the
+    // listings; from 720px up 20px and 16px.
+    assert!(css.contains(".cards-list .results .grid{grid-template-columns:minmax(0,1fr);row-gap:var(--space-16);}"));
+    assert!(css.contains("column-gap:20px;row-gap:6px;") && css.contains("column-gap:14px;row-gap:5px;"));
+    assert!(css.contains(".cards-list .results .grid{row-gap:14px;}"));
+    assert!(css.contains(".cards-list .results .card-title{font-size:1.0714rem;}") && css.contains(".cards-list .results .card-summary{font-size:.9286rem;}"));
+    // A tap anywhere on a card opens its listing but on its heart: the price over the photo lets
+    // it through to the photo and the card's link under it, as the photo's other words do (it
+    // caught it, and in the list, where its box covers the whole photo, a tap on the photo opened
+    // nothing; the user's report of the same day).
+    let price = &css[css.find(".card-media .card-price{").expect("the price on the photo")..];
+    assert!(price[..price.find('}').unwrap()].contains("pointer-events:none;"), "{price}");
 }
 
 /// Sets a listing's price, as its seller's edit does, which listing_price_history records.
