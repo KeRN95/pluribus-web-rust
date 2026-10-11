@@ -3621,12 +3621,15 @@ async fn electronics_subcategories_have_properties_of_their_own(pool: PgPool) {
     assert!(phones.contains(r#"<optgroup label="Apple" data-parent="APPLE">"#));
     assert!(phones.contains(r#"<option value="APPLE_IPHONE_13">iPhone 13</option>"#));
     assert!(phones.contains(r#"<option value="GB32">32 GB</option>"#) && !phones.contains(r#"value="TB2""#));
-    assert!(phones.contains(r#"placeholder="Bateria (%)""#));
+    // A number's unit inside its field at its end, and in its name for screen readers.
+    assert!(phones.contains(r#"Bateria<span class="visually-hidden"> (%)</span></label>"#), "{phones}");
+    assert!(phones.contains(r#"<span class="unit" aria-hidden="true">%</span>"#), "{phones}");
 
     // A TV's: its size as "Diagonalja", in inches, resolution, panel and Smart TV, TV brands, and
     // its remote among what comes with it; no storage, no pen.
     let tvs = get(pool.clone(), "/shto/fushat?category=televizore").await.body;
-    assert!(tvs.contains(r#"placeholder="Diagonalja (inç)""#));
+    assert!(tvs.contains(r#"Diagonalja<span class="visually-hidden"> (inç)</span></label>"#), "{tvs}");
+    assert!(tvs.contains(r#"<span class="unit" aria-hidden="true">inç</span>"#), "{tvs}");
     for name in ["tv_resolution", "tv_panel", "tv_smart"] {
         assert!(tvs.contains(&format!(r#"name="prop_{name}""#)), "{name}");
     }
@@ -3760,10 +3763,10 @@ async fn each_kind_of_thing_asks_for_what_fits_it(pool: PgPool) {
     let order = positions(&motorcycle, &[r#"for="prop_moto_make""#, r#"for="prop_moto_type""#, r#"for="prop_model_name""#,
                                          r#"for="prop_vehicle_year""#]);
     assert!(order.is_sorted(), "{order:?}");
-    // A car's: its main fields' tiles, then its papers, engine and history, its options last; its
-    // other lists and numbers the main ones' size, without an icon.
+    // A car's: its main fields first, then its papers, engine and history, its options last; no
+    // tiles with icons any more, each field its name over it as the rest of the form's.
     let car = form_fields(&pool, "makina").await;
-    assert_eq!(car.matches(r#"<div class="tile tile-plain">"#).count(), 9);
+    assert!(!car.contains("tile"), "{car}");
     let order = positions(&car, &[r#"for="prop_vehicle_color""#, r#"for="prop_vehicle_customs""#, r#"for="prop_vehicle_engine""#,
                                   r#"name="prop_vehicle_no_accident""#, r#"<span class="field-label">Opsionet</span>"#]);
     assert!(order.is_sorted(), "{order:?}");
@@ -5176,15 +5179,15 @@ async fn post_part(pool: &PgPool, seller: &str, title: &str, fits: &[(&str, &str
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
-    // The fields, under the parts' own names for them; none required.
+    // The fields, under the parts' own names for them, each its name over it; none required.
     let fields = get(pool.clone(), "/shto/fushat?category=gps-dhe-navigatore").await.body;
     let labels = positions(&fields, &[
-        r#"<label class="visually-hidden" for="prop_vehicle_make">Marka e automjetit</label>"#,
-        r#"<option value="">Marka e automjetit</option>"#,
-        r#"<label class="visually-hidden" for="prop_vehicle_model">Modeli i automjetit</label>"#,
-        r#"<label class="visually-hidden" for="prop_fits_from_year">Nga viti</label>"#,
-        r#"placeholder="Nga viti">"#,
-        r#"<label class="visually-hidden" for="prop_fits_to_year">Deri në vitin</label>"#,
+        r#"<label class="field-label" for="prop_vehicle_make">Marka e automjetit</label>"#,
+        r#"<option value="">Zgjidh</option>"#,
+        r#"<label class="field-label" for="prop_vehicle_model">Modeli i automjetit</label>"#,
+        r#"<label class="field-label" for="prop_fits_from_year">Nga viti</label>"#,
+        r#"<input id="prop_fits_from_year" name="prop_fits_from_year" value="" inputmode="decimal">"#,
+        r#"<label class="field-label" for="prop_fits_to_year">Deri në vitin</label>"#,
     ]);
     assert!(labels.is_sorted(), "{labels:?}");
     assert!(!fields.contains(" required"));
@@ -5195,8 +5198,9 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
     assert!(fields.contains(r#"<option value="__other__">Tjetër…</option>"#));
     // Cars keep their own names for the same properties.
     let car_fields = get(pool.clone(), "/shto/fushat?category=makina").await.body;
-    assert!(car_fields.contains(r#"<label class="visually-hidden" for="prop_vehicle_make">Marka</label>"#));
-    assert!(car_fields.contains(r#"<option value="">Marka *</option>"#));
+    assert!(car_fields.contains(r#"<label class="field-label" for="prop_vehicle_make">Marka <span class="required" aria-hidden="true">*</span></label>"#), "{car_fields}");
+    assert!(car_fields.contains(r#"<select id="prop_vehicle_make" name="prop_vehicle_make" required>"#), "{car_fields}");
+    assert!(car_fields.contains(r#"<option value="">Zgjidh</option>"#) && !car_fields.contains("Marka *"), "{car_fields}");
     assert!(car_fields.contains("e detyrueshme"));
     // A category that only groups has no fields to offer.
     assert!(!get(pool.clone(), "/shto/fushat?category=pjese-dhe-aksesore").await.body.contains("prop_"));
@@ -6076,14 +6080,13 @@ async fn a_car_is_posted_with_its_make_model_and_year(pool: PgPool) {
     // The fields come with the category: the frame the form reloads when it changes.
     let frame = get(pool.clone(), "/shto/fushat?category=makina").await.body;
     assert!(frame.starts_with(r#"<turbo-frame id="listing-properties">"#));
-    assert!(frame.contains(r#"<input id="prop_vehicle_year" name="prop_vehicle_year" value="" inputmode="decimal" placeholder="Viti *" required>"#));
-    // Its main fields with their icons, two to a line: make, model, year, fuel, gearbox, body,
-    // mileage and colour; then the rest, and its options last.
-    assert!(frame.contains(r#"<fieldset class="property-fields vehicle-fields">"#));
-    // The box is named inside it, not in its border: for screen readers by its legend, out of
-    // sight, for the eye by a header.
-    assert!(frame.contains(r#"<legend class="visually-hidden">Detajet</legend>"#));
-    assert!(frame.contains(r#"<div class="property-heading" aria-hidden="true">Detajet</div>"#));
+    assert!(frame.contains(r#"<input id="prop_vehicle_year" name="prop_vehicle_year" value="" inputmode="decimal" required>"#));
+    // Its main fields two to a line, each its name over it, as the canvas has them: make, model,
+    // year, fuel, gearbox, body, colour and mileage; then the rest, and its options last. (Tiles
+    // with icons, named inside them, in a card of their own with its name as a header, once.)
+    assert!(frame.contains(r#"<fieldset class="property-fields">"#));
+    // The fields' name for screen readers, out of sight: the box they are in is the category's.
+    assert!(frame.contains(r#"<legend class="visually-hidden">Detajet</legend>"#) && !frame.contains("property-heading"));
     let order = positions(&frame, &[
         r#"for="prop_vehicle_make""#,
         r#"for="prop_vehicle_model""#,
@@ -6091,13 +6094,16 @@ async fn a_car_is_posted_with_its_make_model_and_year(pool: PgPool) {
         r#"for="prop_vehicle_fuel""#,
         r#"for="prop_vehicle_transmission""#,
         r#"for="prop_vehicle_body_type""#,
-        r#"for="prop_vehicle_mileage""#,
         r#"for="prop_vehicle_color""#,
+        r#"for="prop_vehicle_mileage""#,
         r#"<span class="field-label">Opsionet</span>"#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
-    assert_eq!(frame.matches(r#"<svg class="tile-icon""#).count(), 8);
-    assert!(frame.contains(r#"name="prop_vehicle_mileage" value="" inputmode="decimal" placeholder="Kilometrazhi (km)">"#));
+    assert!(!frame.contains("tile-icon"));
+    // The mileage's unit inside its field, at its end; in its name for screen readers.
+    assert!(frame.contains(r#"<label class="field-label" for="prop_vehicle_mileage">Kilometrazhi<span class="visually-hidden"> (km)</span></label>"#), "{frame}");
+    assert!(frame.contains(r#"<input id="prop_vehicle_mileage" name="prop_vehicle_mileage" value="" inputmode="decimal">"#), "{frame}");
+    assert!(frame.contains(r#"<span class="unit" aria-hidden="true">km</span>"#), "{frame}");
     // A part's make and model are fields like the rest.
     assert!(!get(pool.clone(), "/shto/fushat?category=gps-dhe-navigatore").await.body.contains("tile"));
     assert!(frame.contains(r#"<select id="prop_vehicle_model" name="prop_vehicle_model" required data-depends-on="prop_vehicle_make">"#));

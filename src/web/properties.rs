@@ -15,7 +15,7 @@ use time::OffsetDateTime;
 use super::{
     Result,
     filters::{Choice, Params, parse_number},
-    icons, render,
+    render,
 };
 use crate::{
     AppState,
@@ -52,30 +52,20 @@ pub struct PropertyField {
     pub other_name: String,
     pub other_value: String,
     pub error: Option<String>,
-    /// One of a car's fields, shown as a tile: its main ones under an icon (TILES), the others
-    /// beside them in the same size, without one.
-    pub tile: Option<Tile>,
 }
 
-/// A car's field as a tile: the icon before its name, an SVG's inside, where it is one of the
-/// main ones.
-#[derive(Clone, Copy)]
-pub struct Tile {
-    pub icon: Option<&'static str>,
-}
-
-/// A car's main fields, in their order, two to a line, each its icon before its name: the car's
-/// front, a name tag, a calendar, a fuel pump, a gear lever's H, the car's side, a speedometer and
-/// a paint palette (icons.rs, where the listing page takes them too).
-const TILES: [(&str, &str); 8] = [
-    ("vehicle_make", icons::CAR_FRONT),
-    ("vehicle_model", icons::NAME_TAG),
-    ("vehicle_year", icons::CALENDAR),
-    ("vehicle_fuel", icons::FUEL_PUMP),
-    ("vehicle_transmission", icons::GEAR_LEVER),
-    ("vehicle_body_type", icons::CAR_SIDE),
-    ("vehicle_mileage", icons::SPEEDOMETER),
-    ("vehicle_color", icons::PALETTE),
+/// A car's main fields, first and in this order, two to a line as the canvas has them: the make
+/// and the model, the year and the fuel, the gearbox and the body, the colour and the mileage.
+/// (Tiles with an icon before the name once, the mileage before the colour.)
+const CAR_ORDER: [&str; 8] = [
+    "vehicle_make",
+    "vehicle_model",
+    "vehicle_year",
+    "vehicle_fuel",
+    "vehicle_transmission",
+    "vehicle_body_type",
+    "vehicle_color",
+    "vehicle_mileage",
 ];
 
 /// What a car's title says as the details would (listing_generated_title, migration 0027: "Volkswagen
@@ -102,26 +92,6 @@ pub fn option_icon(code: &str, option: &str) -> Option<&'static str> {
     match code {
         "vehicle_body_type" => BODY_TYPES.iter().find(|(of, _)| *of == option).map(|(_, icon)| *icon),
         _ => None,
-    }
-}
-
-/// Whether the fields are a car's, with its main ones under icons.
-pub fn tiled(fields: &[PropertyField]) -> bool {
-    fields.iter().any(|field| field.tile.is_some())
-}
-
-impl PropertyField {
-    /// What the field says inside it, as its placeholder or a list's empty choice: the label, with
-    /// the unit, and an asterisk when it is required ("Kilometrazhi (km)", "Marka *").
-    pub fn placeholder(&self) -> String {
-        let mut text = self.label.clone();
-        if let Some(unit) = &self.unit {
-            text.push_str(&format!(" ({unit})"));
-        }
-        if self.required {
-            text.push_str(" *");
-        }
-        text
     }
 }
 
@@ -218,26 +188,16 @@ pub fn fields(
                     .unwrap_or_default(),
                 error: errors.get(&name).cloned(),
                 name,
-                tile: None,
             }
         })
         .collect();
     // A car's (a part's make and model aren't, nor a motorcycle's year and mileage, which come
-    // after its own make): its main fields under icons, in their order, then the rest, then its
-    // options, a long list.
+    // after its own make): its main fields first, in their order (CAR_ORDER), then the rest, then
+    // its options, a long list.
     let has = |code: &str| attributes.iter().any(|attribute| attribute.code == code);
     if has("vehicle_make") && has("vehicle_year") {
-        let rank = |field: &PropertyField| TILES.iter().position(|(code, _)| field.name == field_name(code));
-        // Its other lists and numbers are tiles too, without an icon, so that they line up with
-        // the main ones and are the same size.
-        for field in &mut fields {
-            let plain = matches!(field.kind, "select" | "number");
-            field.tile = match rank(field) {
-                Some(at) => Some(Tile { icon: Some(TILES[at].1) }),
-                None => plain.then_some(Tile { icon: None }),
-            };
-        }
-        fields.sort_by_key(|field| rank(field).unwrap_or(TILES.len() + usize::from(field.kind == "multi")));
+        let rank = |field: &PropertyField| CAR_ORDER.iter().position(|code| field.name == field_name(code));
+        fields.sort_by_key(|field| rank(field).unwrap_or(CAR_ORDER.len() + usize::from(field.kind == "multi")));
     }
     fields
 }

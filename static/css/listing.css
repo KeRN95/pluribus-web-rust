@@ -1012,13 +1012,14 @@
 
 /* Phones: everything smaller, since nearly all of it is sized in rem: 14px instead of 16px, and
    13.5px on the narrowest, each times the text's size the visitor picked (--text-scale, base.css). Form fields keep 16px text, because iPhones zoom into a focused field
-   with smaller text; they get less padding instead, so they don't look heavier than the rest. */
+   with smaller text; they get less padding instead, so they don't look heavier than the rest. A
+   typed field's rule names it as page.css's does, or that one's 15px won over it (the canvas's
+   phone fields are 16px). */
 @media (max-width: 719px) {
   html { font-size: calc(87.5% * var(--text-scale)); }
-  .vehicle-fields { --pad: .75rem; }
 
   .search input,
-  .field input,
+  .field input:not([type="checkbox"], [type="radio"]),
   .field select,
   .field textarea,
   .filter-form input[type="text"],

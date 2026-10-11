@@ -412,69 +412,18 @@
   background-color: color-mix(in srgb, var(--accent) 7%, var(--input));
 }
 .ai-filled .checks .check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
-/* A category's own fields in the listing form: a car's make, model, year... In the category's
-   white box, no card of their own: the box is theirs (the card's name stays for screen readers). */
-.form-box .property-fields { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
-.form-box .property-heading { display: none; }
-/* A category's own fields, in a card drawn like Claude's: the menus' hairline border on the
-   surface, rounder corners, a shadow you barely see, and its name as a header inside it over a
-   hairline across the card. */
-.property-fields {
-  --pad: 1rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 1rem;
-  margin: 0;
-  padding: var(--pad);
-  border: 1px solid var(--menu-border);
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%);
-}
-.property-heading {
-  grid-column: 1 / -1;
-  margin: -.15rem calc(-1 * var(--pad)) 0;
-  padding: 0 var(--pad) .8rem;
-  border-bottom: 1px solid var(--menu-border);
-  font-weight: var(--semibold);
-}
+/* A category's own fields in the listing form (listing_properties.html), as the canvas has them,
+   in the category's white box with no card of their own: two to a line, 18px apart (14px side by
+   side), each its name over it and no wider than its column, however long its name (the field
+   cuts it short instead); the boxes to tick and the options across; a number's unit inside its
+   field at its end, muted ("km"). (A card of their own once, named inside it over a hairline, a
+   car's main ones tiles with an icon, named inside them, their text 14px.) */
+.property-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.property-fields > .field { grid-template-columns: minmax(0, 1fr); }
 .property-fields .field-wide { grid-column: 1 / -1; }
-/* A car's fields, two to a line: its main ones with their icon before their name or value, the
-   others without, then its options across. The text is a size smaller (14px) than the rest of the form's, so that
-   "Mercedes-Benz" fits beside its icon on a 375px phone (with the card's padding a little
-   smaller there). */
-.vehicle-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem .5rem; }
-/* Each field no wider than its column, however long its name: the field cuts it short instead. */
-.vehicle-fields > .field { grid-template-columns: minmax(0, 1fr); }
-.vehicle-fields > .field-wide { grid-column: 1 / -1; }
-.tile { position: relative; height: 2.75rem; }
-.tile-icon { position: absolute; top: 50%; left: .45rem; z-index: 1; color: var(--muted); pointer-events: none; transform: translateY(-50%); }
-.tile .picker { height: 100%; }
-.vehicle-fields .tile .picker-button { min-height: 0; height: 100%; padding: 0 1.6rem 0 calc(.45rem + 23px); font-size: 14px; line-height: calc(2.75rem - 2px); }
-.vehicle-fields .tile .picker-button::after { right: .45rem; }
-/* Those without an icon start their text where the form's other fields do. */
-.vehicle-fields .tile-plain .picker-button { padding-left: .7rem; }
-/* Without scripts the tile's own select shows in the picker's place: the tile's height, its text past
-   the icon, as the picker's is. */
-.vehicle-fields .tile select { min-height: 0; height: 100%; padding-left: calc(.45rem + 23px); font-size: 14px; }
-.vehicle-fields .tile-plain select { padding-left: .7rem; }
-/* A typed one keeps 16px text, or iPhones zoom into it, and is drawn at 14/16 of its size to
-   match the lists beside it: everything about it 16/14 larger, then scaled down. */
-.vehicle-fields .tile input {
-  --s: .875;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: calc(100% / var(--s));
-  height: calc(100% / var(--s));
-  padding: 0 calc(.6rem / var(--s)) 0 calc((.45rem + 23px) / var(--s));
-  border-width: calc(1px / var(--s));
-  border-radius: calc(.75rem / var(--s));
-  font-size: 16px;
-  transform: scale(var(--s));
-  transform-origin: 0 0;
-}
-.vehicle-fields .tile-plain input { padding-left: calc(.7rem / var(--s)); }
+.unit-input { position: relative; }
+.property-fields .unit-input input { padding-right: 48px; }
+.unit-input .unit { position: absolute; top: 0; right: 14px; bottom: 0; display: flex; align-items: center; color: var(--muted); pointer-events: none; }
 /* Options as the canvas's chips: round-ended, 36px tall, on the grey of secondary controls;
    chosen, filled with the main colour, its words semibold in its own after a check. The checkbox
    stays, out of sight but in reach of the keyboard; the chip shows its focus. */

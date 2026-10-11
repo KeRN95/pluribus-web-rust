@@ -1,11 +1,12 @@
 {#- A category's properties in the listing form (web/properties.rs). Included in the form, and
-    sent alone, in its frame, when the category changes. -#}
+    sent alone, in its frame, when the category changes. As the canvas has them, in the category's
+    white box (listing_form.html): two to a line, each its name over it, an asterisk after it when
+    it is required, a number's unit inside it at its end ("km"); the boxes to tick and the options'
+    chips across. (A car's main ones were tiles with an icon, named inside them, once.) -#}
 {%- if !fields.is_empty() %}
-<fieldset class="property-fields{% if crate::web::properties::tiled(fields) %} vehicle-fields{% endif %}">
-  {#- The box's name: for screen readers the legend, out of sight so that it leaves the border
-      whole; for the eye a header inside the box, over a hairline. -#}
+<fieldset class="property-fields">
+  {#- The fields' name, for screen readers: the box is the category's. -#}
   <legend class="visually-hidden">{{ crate::t("Detajet") }}</legend>
-  <div class="property-heading" aria-hidden="true">{{ crate::t("Detajet") }}</div>
   {%- for field in fields %}
   <div class="field{% if field.kind == "multi" || field.kind == "check" %} field-wide{% endif %}">
     {%- if field.kind == "check" %}
@@ -18,21 +19,13 @@
       {%- endfor %}
     </div>
     {%- else %}
-    {#- Named inside the field, as in the rest of the form; the label is for screen readers. A
-        car's fields are tiles of one size, its main ones with an icon before the name (posting.css). -#}
-    <label class="visually-hidden" for="{{ field.name }}">{{ field.label }}{% if let Some(unit) = field.unit %} ({{ unit }}){% endif %}</label>
-    {%- if let Some(tile) = field.tile %}
-    {%- if let Some(icon) = tile.icon %}
-    <div class="tile">
-    <svg class="tile-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>
-    {%- else %}
-    <div class="tile tile-plain">
-    {%- endif %}
-    {%- endif %}
+    {#- Its name over it; its unit, said inside the field for the eye, in the name for screen
+        readers. -#}
+    <label class="field-label" for="{{ field.name }}">{{ field.label }}{% if let Some(unit) = field.unit %}<span class="visually-hidden"> ({{ unit }})</span>{% endif %}{% if field.required %} <span class="required" aria-hidden="true">*</span>{% endif %}</label>
     {%- if field.kind == "select" %}
     <div class="picker" data-controller="picker">
     <select id="{{ field.name }}" name="{{ field.name }}"{% if field.required %} required{% endif %}{% if let Some(parent) = field.depends_on %} data-depends-on="{{ parent }}"{% endif %}>
-      <option value="">{{ field.placeholder() }}</option>
+      <option value="">{{ crate::t("Zgjidh") }}</option>
       {%- for choice in field.choices %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
       {%- for group in field.groups %}
       <optgroup label="{{ group.label }}" data-parent="{{ group.parent }}">
@@ -42,21 +35,22 @@
       {%- if field.allow_other %}<option value="__other__"{% if field.other_selected %} selected{% endif %}>{{ crate::t("Tjetër…") }}</option>{% endif %}
     </select>
     </div>
-    {%- if field.tile.is_some() %}
-    </div>
-    {%- endif %}
     {%- if field.allow_other %}
     {#- Shown while "Tjetër" is chosen (listing_form_controller.js); always, without JavaScript. -#}
     <input class="other-input" name="{{ field.other_name }}" value="{{ field.other_value }}" maxlength="40"
            placeholder="{{ crate::t("Shkruaje këtu") }}" aria-label="{{ crate::t1("{}: tjetër", field.label) }}" data-other-for="{{ field.name }}">
     {%- endif %}
     {%- else if field.kind == "number" %}
-    <input id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value }}" inputmode="decimal" placeholder="{{ field.placeholder() }}"{% if field.required %} required{% endif %}>
-    {%- if field.tile.is_some() %}
+    {%- if let Some(unit) = field.unit %}
+    <div class="unit-input">
+      <input id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value }}" inputmode="decimal"{% if field.required %} required{% endif %}>
+      <span class="unit" aria-hidden="true">{{ unit }}</span>
     </div>
+    {%- else %}
+    <input id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value }}" inputmode="decimal"{% if field.required %} required{% endif %}>
     {%- endif %}
     {%- else %}
-    <input id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value }}" maxlength="200" placeholder="{{ field.placeholder() }}"{% if field.required %} required{% endif %}>
+    <input id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value }}" maxlength="200"{% if field.required %} required{% endif %}>
     {%- endif %}
     {%- endif %}
     {%- if let Some(error) = field.error %}<p class="field-error">{{ error }}</p>{% endif %}
