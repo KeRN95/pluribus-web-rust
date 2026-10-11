@@ -21,7 +21,7 @@
   transition: background-color .15s, border-color .15s;
 }
 /* How many listings a search found in a category, after its name, quieter. */
-.chip-count { margin-left: .2rem; color: var(--muted); font-weight: var(--regular); }
+.chip-count { margin-left: .2rem; color: var(--muted-on-grey); font-weight: var(--regular); }
 
 /* Two columns on every phone; as many as fit on wider screens, four on the page's column. The cards
    have no box, so the space between rows, clearly more than between columns, is what keeps each

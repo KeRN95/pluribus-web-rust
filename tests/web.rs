@@ -4886,8 +4886,9 @@ async fn pills_chips_and_badges_are_grey_or_the_main_colour(pool: PgPool) {
     assert!(rule(".shortcut").contains("background:var(--surface-muted)"));
     assert!(rule(".breadcrumb-here").contains("color:var(--text)"));
     assert!(rule(".filter-chip").contains("background:var(--filter-on)"));
+    // A grey badge's words a shade darker than the muted grey, 5:1 on its grey (4.2:1 once).
     let badge = rule(".badge");
-    for part in ["height:1.5rem", "background:var(--surface-muted)", "color:var(--muted)"] {
+    for part in ["height:1.5rem", "background:var(--surface-muted)", "color:var(--muted-on-grey)"] {
         assert!(badge.contains(part), "{part} in {badge}");
     }
     assert!(rule(".badge.danger").contains("background:var(--danger-bg)"));

@@ -348,7 +348,7 @@
 .moderation .lead { margin: 8px 0 0; font-size: 1rem; line-height: 1.55; }
 .moderation .empty { margin: 14px 0 0; }
 .report-summary { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; padding: 0; list-style: none; }
-.report-summary li { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: var(--radius-pill); background: var(--surface-muted); color: var(--muted); font-size: .78125rem; font-weight: var(--semibold); white-space: nowrap; }
+.report-summary li { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: var(--radius-pill); background: var(--surface-muted); color: var(--muted-on-grey); font-size: .78125rem; font-weight: var(--semibold); white-space: nowrap; }
 .report-note { margin: 8px 0 0; padding: 0 0 0 10px; border-left: 3px solid var(--border); color: var(--muted); font-size: .84375rem; white-space: pre-line; }
 .moderation-link { margin: -.5rem 0 1.25rem; }
 .pending-options { margin: 14px 0 0; padding: 0; overflow: hidden; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); list-style: none; }

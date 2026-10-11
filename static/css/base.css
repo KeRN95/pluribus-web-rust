@@ -29,7 +29,9 @@
   --input: #ffffff;
   --text: #1b1b1b;              /* eerie black */
   --muted: #707070;             /* secondary text, 4.6:1 on the page */
-  --placeholder: #949494;
+  --placeholder: #767676;       /* a field's example words, 4.5:1 on its white (#949494 once) */
+  --muted-on-grey: #666666;     /* words on the grey of secondary controls, 5:1 (a badge, a count) */
+  --control-edge: #858585;      /* an unticked box's or radio's edge, a switch's track: 3:1 */
   --focus-field: 0 0 0 3px rgb(27 27 27 / 14%); /* round a focused field, its hairline in the main colour */
   --focus-search: 0 0 0 4px rgb(27 27 27 / 14%); /* round the search bar in use */
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 8 256 256' fill='%23707070'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E"); /* a native select's, in the muted colour: Phosphor's caret */
@@ -206,7 +208,9 @@
   --input: #242424;
   --text: #e8e8e8;
   --muted: #a3a3a3;
-  --placeholder: #7d7d7d;
+  --placeholder: #8c8c8c;
+  --muted-on-grey: var(--muted);
+  --control-edge: #757575;
   --focus-field: 0 0 0 3px rgb(232 232 232 / 18%);
   --focus-search: 0 0 0 4px rgb(232 232 232 / 18%);
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 8 256 256' fill='%23a3a3a3'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");
@@ -225,7 +229,7 @@
   --location: #6a9bcc;
   --red: #e0203a;
   --red-bg: #4a2428;
-  --danger: #f97066;
+  --danger: #fa7a70;
   --danger-bg: #4b2c2a;
   --below: #a3b887;
   --below-bg: #2b3322;
@@ -267,7 +271,9 @@
     --input: #242424;
     --text: #e8e8e8;
     --muted: #a3a3a3;
-    --placeholder: #7d7d7d;
+    --placeholder: #8c8c8c;
+    --muted-on-grey: var(--muted);
+    --control-edge: #757575;
     --focus-field: 0 0 0 3px rgb(232 232 232 / 18%);
     --focus-search: 0 0 0 4px rgb(232 232 232 / 18%);
     --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 8 256 256' fill='%23a3a3a3'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");
@@ -286,7 +292,7 @@
     --location: #6a9bcc;
     --red: #e0203a;
     --red-bg: #4a2428;
-    --danger: #f97066;
+    --danger: #fa7a70;
     --danger-bg: #4b2c2a;
     --below: #a3b887;
     --below-bg: #2b3322;
@@ -368,11 +374,11 @@ a:not([class]):active { text-decoration: underline 2px var(--highlight); text-un
 /* Form controls take the page's typeface too; browsers give them their own by default. */
 button, input, select, textarea { font-family: inherit; }
 
-/* Checkboxes and radios as the canvas draws them: 22px, a 2px edge in the strong border's grey on
-   the surface, a checkbox's corners 7px, a radio round; checked, a checkbox filled with the main
+/* Checkboxes and radios as the canvas draws them: 22px, a 2px edge on the surface, its grey dark
+   enough to find the box by, 3:1 (the strong border's lighter grey once, --control-edge), a checkbox's corners 7px, a radio round; checked, a checkbox filled with the main
    colour behind its own check (--check, welcome.css), a radio's edge in the main colour round a
    dot of it. A switch (.switch), for what is on or off at once (the menu's dark theme): a track
-   46 by 28px, its knob 22px, white at the left on the strong border's grey, at the right in the
+   46 by 28px, its knob 22px, white at the left on the edge's grey, at the right in the
    main colour's own on the main colour. */
 input[type="checkbox"],
 input[type="radio"] {
@@ -382,7 +388,7 @@ input[type="radio"] {
   width: 1.375rem;
   height: 1.375rem;
   margin: 0;
-  border: 2px solid var(--border-strong);
+  border: 2px solid var(--control-edge);
   border-radius: var(--radius-check);
   background: var(--surface);
   -webkit-appearance: none;
@@ -407,7 +413,7 @@ input[type="checkbox"].switch {
   height: 1.75rem;
   border: 0;
   border-radius: 999px;
-  background: var(--border-strong);
+  background: var(--control-edge);
 }
 input[type="checkbox"].switch::before {
   content: "";

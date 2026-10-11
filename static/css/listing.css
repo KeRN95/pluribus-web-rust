@@ -747,7 +747,7 @@
   padding: 0 .5625rem;
   border-radius: var(--radius-pill);
   background: var(--surface-muted);
-  color: var(--muted);
+  color: var(--muted-on-grey);
   font-size: .78125rem;
   font-weight: var(--semibold);
   line-height: 1;

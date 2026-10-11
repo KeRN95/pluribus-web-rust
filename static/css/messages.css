@@ -220,7 +220,7 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
   cursor: pointer;
 }
 .quick-message:hover { background: var(--surface-muted-hover); }
-.composer-closed { margin: .5rem 0 0; padding: .8rem 1rem; border-radius: 12px; background: var(--surface-muted); color: var(--muted); }
+.composer-closed { margin: .5rem 0 0; padding: .8rem 1rem; border-radius: 12px; background: var(--surface-muted); color: var(--muted-on-grey); }
 .composer-closed p { margin: 0 0 .6rem; }
 .composer-closed form { margin: 0; }
 
