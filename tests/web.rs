@@ -2766,6 +2766,11 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
         r#"<a class="breadcrumb-here" href="/c/makina">Makina</a>"#,
     ]);
     assert!(path.is_sorted(), "{path:?}");
+    // Its own underlined in the accent, as the site marks where the reader is (the user's ask of
+    // 2026-10-12; under the pointer only until then).
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let underlined = ".listing-path .breadcrumb-here{text-decoration:underline 2px var(--highlight);text-underline-offset:.2em;}";
+    assert!(css.contains(underlined), "the listing's own category underlined");
     assert!(!response.body.contains("Faqja kryesore"));
     assert!(!response.body.contains("breadcrumbs"));
     let html = response.body.replace("&#38;", "&");

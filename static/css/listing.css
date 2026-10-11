@@ -681,14 +681,15 @@
   .gallery-thumb { transition: none; }
 }
 /* Above the photo, where it is, as a category page's breadcrumb says it (browse.css,
-   .breadcrumb), its own category a link in the text's colour; the status after it, and at the
+   .breadcrumb), its own category a link in the text's colour, underlined in the accent, as the
+   site marks where the reader is (the user's ask of 2026-10-12, "underline the current category
+   in the breadcrumb"; under the pointer only until then); the status after it, and at the
    line's end the step buttons, all on one line, the breadcrumb giving up room first (its names end
    in "…"); 12px over the photo. */
 .listing-tags { display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-12); }
 .listing-tags .badge { flex: none; margin-left: 0; }
 .listing-path { flex: 0 1 auto; }
-.listing-path .breadcrumb-here { text-decoration: none; }
-.listing-path .breadcrumb-here:is(:hover, :active) { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
+.listing-path .breadcrumb-here { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
 /* At the line's right end, three round buttons, grey, 40px, 8px apart, as the canvas draws them
    (browse.css, .back-button): to the category's list, and to the listing before this one on it
    and the one after it. One with nowhere to go stays, greyed, so the three keep their places. On
