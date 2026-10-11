@@ -48,25 +48,23 @@
    a half off it, the chevron left low beside them: the user, 2026-10-11). The page's heading under
    it, its name 30px bold (26px on phones), as the canvas has a page's title. */
 .breadcrumb { display: flex; align-items: center; gap: var(--space-8); min-width: 0; height: var(--size-button-sm); font-size: .9375rem; line-height: normal; white-space: nowrap; }
-.breadcrumb-back { display: flex; flex: none; align-items: center; justify-content: center; width: var(--size-button-sm); height: var(--size-button-sm); margin: 0 -4px 0 -12px; border-radius: var(--radius-pill); color: var(--text); }
+/* The way back, a listing's at its path's start and a category's before its name (.title-back):
+   the chevron, 18px, dark, on a circle in the accent, as the user asked on 2026-10-11 ("make the
+   back button accent colored"; the bare chevron in the words' colour until then, a grey circle
+   under the pointer), a shade darker under the pointer or a finger, as the buttons in the accent
+   are (--highlight, --on-highlight, --highlight-hover); here 40px, as the listing's step buttons
+   beside it (listing.css), its edge where the page's column starts. */
+.breadcrumb-back { display: flex; flex: none; align-items: center; justify-content: center; width: var(--size-button-sm); height: var(--size-button-sm); margin: 0; border-radius: var(--radius-pill); background: var(--highlight); color: var(--on-highlight); transition: background-color .15s; }
+.breadcrumb-back svg { flex: none; width: 18px; height: 18px; }
+.breadcrumb-back:active { background-color: var(--highlight-hover); }
 @media (hover: hover) {
-  .breadcrumb-back:hover { background: var(--surface-muted); }
+  .breadcrumb-back:hover { background-color: var(--highlight-hover); }
 }
 .breadcrumb-up { min-width: 0; overflow: hidden; color: var(--muted); text-decoration: none; text-overflow: ellipsis; }
 .breadcrumb-up:is(:hover, :active) { color: var(--text); text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
 .breadcrumb-sep { flex: none; color: var(--muted); }
 .breadcrumb-here { min-width: 0; overflow: hidden; color: var(--text); font-weight: var(--semibold); text-overflow: ellipsis; }
 .browse-title { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
-/* A subcategory's way up, over its name (browse.html, .browse-up): the category above, small and
-   muted, a link (underlined in the accent under the pointer, .breadcrumb-up), level with the name's
-   first letter after the chevron (its 40px less the 12px it reaches into the gutter and the 8px
-   it gives back, and the line's 12px gap), 4px over it, room under its words for the underline,
-   which a name too long for the line would otherwise cut: the user's ask of 2026-10-11 in place of
-   the breadcrumb's line. */
-.browse-up { min-width: 0; margin: 0 0 -11px 32px; padding-bottom: 3px; overflow: hidden; font-size: .875rem; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 719px) {
-  .browse-up { margin-bottom: -9px; font-size: .9286rem; }
-}
 @media (max-width: 719px) {
   .breadcrumb { font-size: 1rem; }
   .browse-title { font-size: 1.857rem; }
@@ -82,13 +80,13 @@
 .browse-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); }
 .browse-heading-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-12); min-width: 0; }
 .browse-heading .result-count { margin: 0; color: var(--muted); font-size: .9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-/* A main category's way back, before its name, where the breadcrumb's was (the user's ask of
-   2026-10-11): the chevron, 22px, in a target as tall as the name's line (1.2em at its size) at
-   the line's top, .03em higher, as the browser rounds the name's baseline up a little, so that it
-   stands within a pixel of the middle of the name's capitals at every text size; pulled 12px into
-   the gutter, as the breadcrumb's, and 4px from the name. */
-.title-back { align-self: flex-start; height: 1.2em; margin: -.03em -8px 0 -12px; font-size: 1.875rem; }
-.title-back svg { flex: none; width: 22px; height: 22px; }
+/* A category's way back, before its name, where the breadcrumb's was (the user's ask of
+   2026-10-11): its circle in the accent as tall as the name (1em at its size, 30px, 26px on
+   phones), centred in a target as tall as the name's line (1.2em) at the line's top, .03em
+   higher, as the browser rounds the name's baseline up a little, so that it stands within a pixel
+   of the middle of the name's capitals at every text size; its edge where the page's column
+   starts, 9px from the name. */
+.title-back { align-self: flex-start; width: 1.2em; height: 1.2em; margin: -.03em -6px 0 -.1em; padding: .1em; background-clip: content-box; font-size: 1.875rem; }
 @media (max-width: 719px) {
   .title-back { font-size: 1.857rem; }
 }

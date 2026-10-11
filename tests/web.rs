@@ -1562,7 +1562,7 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     let map_form = &pinned[pinned.find(r#"<form class="map-form""#).unwrap()..];
     let map_form = &map_form[..map_form.find("</form>").unwrap()];
     assert!(map_form.contains(r#"<input type="hidden" name="sort" value="price_asc">"#));
-    assert!(pinned.contains(r#"<a class="breadcrumb-up" href="/c/automjete?lat=41.32833&lng=19.81806&radius=5">Automjete</a>"#), "{pinned}");
+    assert!(pinned.contains(r#"<a class="breadcrumb-back title-back" href="/c/automjete?lat=41.32833&lng=19.81806&radius=5" aria-label="Kthehu""#), "{pinned}");
     // The point's chip searches everywhere again, keeping the rest.
     assert!(pinned.contains(r#"<a class="filter-chip" href="/c/makina?sort=price_asc" aria-label="Hiq filtrin Brenda 5 km nga pika">"#));
 }
@@ -5645,11 +5645,10 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     ]);
     assert!(kinds.is_sorted(), "{kinds:?}");
 
-    // A kind's page: the way up to its parent over its name, then its heading, the way back before
-    // it; no pills under, as it has no subcategories.
+    // A kind's page: its heading, the way back before it, to its parent; no pills under, as it has
+    // no subcategories.
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
     let head = positions(&gps, &[
-        r#"<nav class="browse-up" aria-label="Rruga"><a class="breadcrumb-up" href="/c/pjese-dhe-aksesore">Pjesë / aksesorë</a></nav>"#,
         r#"<a class="breadcrumb-back title-back" href="/c/pjese-dhe-aksesore" aria-label="Kthehu""#,
         r#"<h1 class="browse-title">GPS / navigatorë</h1>"#,
     ]);
@@ -5833,7 +5832,7 @@ async fn parts_filter_by_the_buyers_vehicle(pool: PgPool) {
     // keeps only the words, the town and the map pin.
     let kept = "/c/gps-dhe-navigatore?vehicle_make=VOLKSWAGEN&fits_year=2015";
     assert!(page.contains(&format!(r#"<a class="shortcut" href="{kept}"><span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#)));
-    assert!(page.contains(r#"<a class="breadcrumb-up" href="/c/automjete">Automjete</a>"#));
+    assert!(page.contains(r#"<a class="breadcrumb-back title-back" href="/c/automjete" aria-label="Kthehu""#));
     let page = html(pool.clone(), "/c/gps-dhe-navigatore?vehicle_make=VOLKSWAGEN&fits_year=2015").await;
     assert_eq!(found(&page), [true, false, false, false]);
     // A page that doesn't take a filter leaves it out of its links too: Automjete has no make.
@@ -7613,7 +7612,6 @@ async fn a_category_pages_way_up_keeps_the_words_and_the_town(pool: PgPool) {
     assert!(page.contains(r#"<a class="breadcrumb-back title-back" href="/""#) && !page.contains(r#"<nav class="breadcrumb""#));
     assert!(page.contains(r#"<a class="shortcut" href="/c/apartamente?q=shtepi&city=durres">"#));
     let flats = html(pool.clone(), "/c/apartamente?city=durres&q=shtepi").await;
-    assert!(flats.contains(r#"<a class="breadcrumb-up" href="/c/prona?q=shtepi&city=durres">Prona</a>"#), "{flats}");
     assert!(flats.contains(r#"<a class="breadcrumb-back title-back" href="/c/prona?q=shtepi&city=durres" aria-label="Kthehu""#), "{flats}");
     // A search page's heading is just a heading.
     assert!(!get(pool, "/search?q=golf").await.body.contains(r#"<nav class="breadcrumb""#));
@@ -7621,13 +7619,14 @@ async fn a_category_pages_way_up_keeps_the_words_and_the_town(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_category_page_says_where_it_is_over_its_name(pool: PgPool) {
-    // Makina: the way up to Automjete over its name, small and quieter; its way back before its
-    // name (leading a level up without scripts); no pills under, as it has no subcategories; and
-    // the trail for search engines (schema.org's BreadcrumbList). A line of words over its name,
-    // "‹ Automjete › Makina", said it until the user's ask of 2026-10-11.
+    // Makina: its way back before its name (leading a level up without scripts), on a circle in
+    // the accent; no pills under, as it has no subcategories; and the trail for search engines
+    // (schema.org's BreadcrumbList). A line of words over its name, "‹ Automjete › Makina", said
+    // it until the user's ask of 2026-10-11, and then the category above alone, small, until the
+    // user asked it away the same day.
     let cars = html(pool.clone(), "/c/makina").await;
+    assert!(!cars.contains("browse-up") && !cars.contains("breadcrumb-up"), "{cars}");
     let order = positions(&cars, &[
-        r#"<nav class="browse-up" aria-label="Rruga"><a class="breadcrumb-up" href="/c/automjete">Automjete</a></nav>"#,
         r#"<a class="breadcrumb-back title-back" href="/c/automjete" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#,
         r#"<h1 class="browse-title">Makina</h1>"#,
         r#"<p class="result-count" id="result-count""#,
@@ -7637,14 +7636,25 @@ async fn a_category_page_says_where_it_is_over_its_name(pool: PgPool) {
     assert!(order.is_sorted(), "{order:?}");
     assert!(!cars.contains(r#"<nav class="breadcrumb""#) && !cars.contains("breadcrumb-here"), "{cars}");
     assert!(!cars.contains("category-switch") && !cars.contains("category-level") && !cars.contains("Faqja kryesore"));
-    let head = &cars[cars.find(r#"<nav class="browse-up""#).unwrap()..cars.find(r#"<div class="browse-tools""#).unwrap()];
+    let head = &cars[cars.find(r#"<div class="browse-head">"#).unwrap()..cars.find(r#"<div class="browse-tools""#).unwrap()];
     assert!(!head.contains(r#"<a class="shortcut""#), "no subcategories, no pills: {head}");
     assert!(cars.contains(r#""@type":"BreadcrumbList""#));
     assert!(cars.contains(r#"{"@type":"ListItem","item":"http://127.0.0.1:3000/c/makina","name":"Makina","position":3}"#), "{cars}");
     // Three levels down, the way up is the category above alone.
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
     assert!(gps.contains(r#"<a class="breadcrumb-back title-back" href="/c/pjese-dhe-aksesore" aria-label="Kthehu""#));
-    assert!(gps.contains(r#"<a class="breadcrumb-up" href="/c/pjese-dhe-aksesore">Pjesë / aksesorë</a>"#));
+    assert!(!gps.contains("breadcrumb-up"), "{gps}");
+    // The way back on a circle in the accent, the chevron dark on it, a shade darker under the
+    // pointer. (The stylesheet comes minified: web::site_css.)
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    for rule in [
+        "margin:0;border-radius:var(--radius-pill);background:var(--highlight);color:var(--on-highlight);",
+        ".breadcrumb-back:active{background-color:var(--highlight-hover);}",
+        ".title-back{align-self:flex-start;width:1.2em;height:1.2em;margin:-.03em -6px 0 -.1em;padding:.1em;background-clip:content-box;font-size:1.875rem;}",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    assert!(!css.contains(".browse-up"));
     // A main category's page has no breadcrumb since the user's ask of 2026-10-11 (it said "Kreu"
     // over the page's name): its way back, to the welcome page without scripts, stands before its
     // name; its subcategories stand under its heading. A search's heading stays a heading, without
@@ -7697,8 +7707,6 @@ async fn a_phone_sees_the_listings_on_its_first_screen(pool: PgPool) {
         // Closer gaps over the results and "Më të klikuarat".
         "@media (max-width:719px){.results-head{margin:20px 0 10px;}}",
         "@media (max-width:719px){.browse > .most-viewed{margin-top:20px;}.most-viewed > h2{margin-bottom:10px;}}",
-        // A subcategory's way up over its name, level with its first letter after the chevron.
-        ".browse-up{min-width:0;margin:0 0 -11px 32px;padding-bottom:3px;overflow:hidden;",
         // A promoted card's price on the listing page's band, in the accent, the month and
         // "(i diskutueshëm)" off it (the user's ask of the same day, in place of a pill saying
         // "I promovuar" over its photo).
@@ -8080,7 +8088,7 @@ async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
     let cars = en("/c/makina").await.body;
     assert!(cars.contains("<title>Cars | Pluribus</title>") && cars.contains(r#"<h1 class="browse-title">Cars</h1>"#), "{cars}");
     assert!(cars.contains(r#"aria-label="Filters: No filters""#) && cars.contains(r#"placeholder="Search in Cars""#), "{cars}");
-    assert!(cars.contains(">All of Albania<") && cars.contains(r#"<a class="breadcrumb-up" href="/c/automjete">Vehicles</a>"#), "{cars}");
+    assert!(cars.contains(">All of Albania<") && cars.contains(r#"<a class="breadcrumb-back title-back" href="/c/automjete" aria-label="Back" title="Back""#), "{cars}");
     let vehicles = en("/c/automjete").await.body;
     assert!(vehicles.contains(">Motorbikes<") && vehicles.contains(">Commercial vehicles<") && vehicles.contains(r#"<a class="breadcrumb-back title-back" href="/" aria-label="Back""#), "{vehicles}");
     assert!(cars.contains(r#"<summary class="sort-button" aria-label="Sort: Newest" title="Sort: Newest">Newest<svg"#), "{cars}");
