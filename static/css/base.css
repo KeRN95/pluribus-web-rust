@@ -29,6 +29,8 @@
   --text: #1b1b1b;              /* eerie black */
   --muted: #707070;             /* secondary text, 4.6:1 on the page */
   --placeholder: #949494;
+  --ring: rgb(27 27 27 / 14%);  /* round a focused field, its hairline in the main colour */
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23707070' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); /* a native select's, in the muted colour */
   --border: #dedede;
   --border-soft: #e8e8e8;       /* lines inside a card or a list */
   --border-strong: #c6c6c6;
@@ -130,6 +132,8 @@
   --text: #e8e8e8;
   --muted: #a3a3a3;
   --placeholder: #7d7d7d;
+  --ring: rgb(232 232 232 / 18%);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   --border: #333333;
   --border-soft: #2a2a2a;
   --border-strong: #4f4f4f;
@@ -183,6 +187,8 @@
     --text: #e8e8e8;
     --muted: #a3a3a3;
     --placeholder: #7d7d7d;
+    --ring: rgb(232 232 232 / 18%);
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     --border: #333333;
     --border-soft: #2a2a2a;
     --border-strong: #4f4f4f;
@@ -277,6 +283,72 @@ body {
 a { color: inherit; }
 /* Form controls take the page's typeface too; browsers give them their own by default. */
 button, input, select, textarea { font-family: inherit; }
+
+/* Checkboxes and radios as the canvas draws them: 22px, a 2px edge in the strong border's grey on
+   the surface, a checkbox's corners 7px, a radio round; checked, a checkbox filled with the main
+   colour behind its own check (--check, welcome.css), a radio's edge in the main colour round a
+   dot of it. A switch (.switch), for what is on or off at once (the menu's dark theme): a track
+   46 by 28px, its knob 22px, white at the left on the strong border's grey, at the right in the
+   main colour's own on the main colour. */
+input[type="checkbox"],
+input[type="radio"] {
+  flex: none;
+  display: inline-grid;
+  place-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin: 0;
+  border: 2px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+input[type="radio"] { border-radius: 50%; }
+input[type="checkbox"]:checked { border-color: var(--main); background: var(--main); }
+input[type="checkbox"]:checked::before {
+  content: "";
+  width: .9375rem;
+  height: .9375rem;
+  background: var(--on-main);
+  -webkit-mask: var(--check) center / contain no-repeat;
+  mask: var(--check) center / contain no-repeat;
+}
+input[type="radio"]:checked { border-color: var(--main); background: var(--main); box-shadow: inset 0 0 0 4px var(--surface); }
+input[type="checkbox"].switch {
+  position: relative;
+  width: 2.875rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+input[type="checkbox"].switch::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+  transition: transform .15s;
+}
+input[type="checkbox"].switch:checked { background: var(--main); }
+input[type="checkbox"].switch:checked::before {
+  background: var(--on-main);
+  -webkit-mask: none;
+  mask: none;
+  transform: translateX(calc(2.875rem - 1.375rem - 6px));
+}
+@media (prefers-reduced-motion: reduce) {
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="checkbox"].switch::before { transition: none; }
+}
 b, strong { font-weight: var(--bold); }
 
 h1,

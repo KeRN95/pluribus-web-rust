@@ -127,7 +127,7 @@
   position: relative;
   display: block;
   overflow: hidden;
-  padding-right: 2.2rem;
+  padding-right: 2.5rem;
   appearance: none;
   text-align: left;
   text-overflow: ellipsis;
@@ -138,7 +138,7 @@
   content: "";
   position: absolute;
   top: 50%;
-  right: .75rem;
+  right: .875rem;
   width: 1rem;
   height: 1rem;
   background: var(--muted);
@@ -162,10 +162,9 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: .375rem;
-  border: 1px solid var(--menu-border);
-  border-radius: var(--radius);
+  border-radius: 1rem;
   background: var(--surface);
-  box-shadow: var(--menu-shadow);
+  box-shadow: var(--shadow-float);
   transform-origin: top;
   animation: menu-in .14s ease-out;
 }
@@ -179,8 +178,9 @@
 }
 .picker-list.picker-start { right: auto; left: 0; }
 .picker-heading { padding: .6rem .85rem .2rem; color: var(--muted); font-size: var(--text-xs); font-weight: var(--semibold); }
-/* Rows a finger finds easily, close enough to read as one list. */
-.picker-option { padding: .55rem .85rem; border-radius: 10px; cursor: pointer; }
+/* Rows a finger finds easily, close enough to read as one list: as the canvas's dropdowns have
+   them, about 48px tall, rounded inside the list's rounder corners, grey under the pointer. */
+.picker-option { padding: .75rem .875rem; border-radius: .75rem; cursor: pointer; }
 .picker-option:hover,
 .picker-option:focus { outline: none; background: var(--surface-muted); }
 .picker-option[data-value=""] { color: var(--muted); font-weight: var(--regular); }
@@ -255,8 +255,9 @@
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* One column, as wide as the field however long what it holds: a picker's value, which doesn't
    wrap, ends in "…" (.picker-button) rather than pushing the form wider than a phone. */
-.field { display: grid; grid-template-columns: minmax(0, 1fr); gap: .3rem; min-width: 0; }
-.field-label { color: var(--muted); font-size: var(--text-sm); font-weight: var(--semibold); letter-spacing: .01em; }
+.field { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4375rem; min-width: 0; }
+/* A field's name over it, in the text's colour, semibold and a size down, as the canvas has it. */
+.field-label { color: var(--text); font-size: var(--text-sm); font-weight: var(--semibold); }
 
 /* The welcome page's categories, all of them at once, as pills as the canvas has them: on the grey
    of secondary controls with no outline, each as wide as its name, one after another and on to

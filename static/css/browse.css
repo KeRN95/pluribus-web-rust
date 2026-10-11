@@ -512,7 +512,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
    rather than at its rounded edge, which makes the name look set off to the side. */
 .filter-form .filter-label { padding-left: calc(.7rem + 1px); }
 .check { display: flex; align-items: center; gap: .55rem; padding: .1rem 0; cursor: pointer; }
-.check input { flex: none; width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--button); }
+.check input { flex: none; margin: 0; }
 /* The filters' options, a chip each rather than a tick, drawn as the listing form's options are
    and as the canvas has them: round-ended, on the grey of secondary controls; picked, filled with
    the main colour, its words semibold in its own after a check, as the chip it makes above the

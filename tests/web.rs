@@ -4620,6 +4620,28 @@ async fn pills_chips_and_badges_are_grey_or_the_main_colour(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
+async fn fields_checkboxes_and_radios_are_drawn_as_the_canvas_has_them(pool: PgPool) {
+    // Form fields 48px tall with the hairline and 12px corners, focused with a soft ring rather
+    // than the outline; checkboxes and radios 22px, checked in the main colour; a field's name in
+    // the text's colour. (The stylesheet comes minified: web::site_css.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let rule = |selector: &str| {
+        let at = css.find(&format!("}}{selector}{{")).unwrap_or_else(|| panic!("{selector}"));
+        let rule = &css[at + 1..];
+        rule[..rule.find('}').unwrap()].to_string()
+    };
+    let fields = &css[css.find(".picker-button{width:100%").expect("the fields' rule")..];
+    let fields = &fields[..fields.find('}').unwrap()];
+    for part in ["min-height:3rem", "border:1px solid var(--border)", "border-radius:.75rem", "background-color:var(--surface)"] {
+        assert!(fields.contains(part), "{part} in {fields}");
+    }
+    assert!(css.contains("box-shadow:0 0 0 3px var(--ring)") && css.contains("--ring:rgb(27 27 27 / 14%)"));
+    assert!(rule(r#"input[type="checkbox"]:checked"#).contains("background:var(--main)"));
+    assert!(rule(r#"input[type="radio"]:checked"#).contains("box-shadow:inset 0 0 0 4px var(--surface)"));
+    assert!(rule(".field-label").contains("color:var(--text)"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn a_short_descriptions_fold_button_stays_hidden(pool: PgPool) {
     // The button that unfolds a long description waits with the hidden attribute until the
     // controller finds the description long (fold_controller.js). Its own display rule would

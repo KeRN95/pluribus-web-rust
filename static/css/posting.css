@@ -32,9 +32,9 @@
 /* News for the visitor, in the same box: "Njoftimi yt u publikua." */
 .notice { margin: 1rem 0; padding: .7rem .9rem; border-radius: 10px; background: var(--badge); }
 .field-error { margin: .15rem 0 0; color: var(--danger); font-size: var(--text-sm); }
-.field-hint { margin: .15rem 0 0; color: var(--muted); font-size: var(--text-sm); }
+.field-hint { margin: .15rem 0 0; color: var(--muted); font-size: .8125rem; line-height: 1.5; }
 .optional { color: var(--muted); font-weight: var(--regular); }
-.field textarea { resize: vertical; line-height: 1.5; }
+.field textarea { padding: .75rem .875rem; resize: vertical; line-height: 1.55; }
 .amount { display: flex; gap: .5rem; }
 .amount select { flex: none; width: auto; }
 .code-input { max-width: 12rem; font-size: var(--text-2xl) !important; letter-spacing: .3em; text-align: center; }
@@ -82,7 +82,7 @@
    under them. */
 .notice-settings { display: grid; justify-items: start; gap: .9rem; margin: 1rem 0 1.5rem; }
 .notice-setting { display: flex; align-items: flex-start; gap: .6rem; font-weight: var(--semibold); cursor: pointer; }
-.notice-setting input { flex: none; width: 1.1rem; height: 1.1rem; margin: .15rem 0 0; accent-color: var(--button); }
+.notice-setting input { margin: .1rem 0 0; }
 .notice-setting .field-hint { display: block; margin-top: .15rem; font-weight: var(--regular); }
 /* Each listing's buttons; on phones, and wherever they leave the title too little room, they go
    under it. */
@@ -106,7 +106,7 @@
   cursor: pointer;
 }
 .report-reason:has(input:checked) { border-color: var(--accent); }
-.report-reason input { flex: none; margin: .2rem 0 0; accent-color: var(--accent); }
+.report-reason input { margin: .1rem 0 0; }
 .report-reason-text { display: grid; gap: .1rem; }
 .report-reason-label { font-weight: var(--semibold); }
 .report-reason .field-hint { margin: 0; }
@@ -185,7 +185,7 @@
 .photo-remove { display: flex; align-items: center; gap: .3rem; color: var(--muted); font-size: var(--text-xs); cursor: pointer; }
 /* A saved photo's "Hiq" is a checkbox, sized like the form's others (.check) rather than as wide
    as a field; a new one's is a button, which takes it out at once. */
-.photo-remove input { flex: none; width: 1.05rem; height: 1.05rem; margin: 0; padding: 0; accent-color: var(--button); }
+.photo-remove input { padding: 0; }
 button.photo-remove { justify-self: start; padding: 0; border: 0; background: none; text-decoration: underline; }
 /* The zone that takes the photos: a dashed box, the camera over the words; its file input over
    it all, out of sight, so that a tap or a click anywhere on it picks, and the keyboard reaches
@@ -312,10 +312,14 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .tile { position: relative; height: 2.75rem; }
 .tile-icon { position: absolute; top: 50%; left: .45rem; z-index: 1; color: var(--muted); pointer-events: none; transform: translateY(-50%); }
 .tile .picker { height: 100%; }
-.vehicle-fields .tile .picker-button { height: 100%; padding: 0 1.6rem 0 calc(.45rem + 23px); font-size: 14px; line-height: calc(2.75rem - 2px); }
+.vehicle-fields .tile .picker-button { min-height: 0; height: 100%; padding: 0 1.6rem 0 calc(.45rem + 23px); font-size: 14px; line-height: calc(2.75rem - 2px); }
 .vehicle-fields .tile .picker-button::after { right: .45rem; }
 /* Those without an icon start their text where the form's other fields do. */
 .vehicle-fields .tile-plain .picker-button { padding-left: .7rem; }
+/* Without scripts the tile's own select shows in the picker's place: the tile's height, its text past
+   the icon, as the picker's is. */
+.vehicle-fields .tile select { min-height: 0; height: 100%; padding-left: calc(.45rem + 23px); font-size: 14px; }
+.vehicle-fields .tile-plain select { padding-left: .7rem; }
 /* A typed one keeps 16px text, or iPhones zoom into it, and is drawn at 14/16 of its size to
    match the lists beside it: everything about it 16/14 larger, then scaled down. */
 .vehicle-fields .tile input {
@@ -327,7 +331,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   height: calc(100% / var(--s));
   padding: 0 calc(.6rem / var(--s)) 0 calc((.45rem + 23px) / var(--s));
   border-width: calc(1px / var(--s));
-  border-radius: calc(10px / var(--s));
+  border-radius: calc(.75rem / var(--s));
   font-size: 16px;
   transform: scale(var(--s));
   transform-origin: 0 0;
