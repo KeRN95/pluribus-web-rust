@@ -65,7 +65,7 @@
   .card-row { scroll-snap-type: none; cursor: grab; user-select: none; }
   .card-row.is-dragging,
   .card-row.is-dragging * { cursor: grabbing; }
-  .card-row.is-dragging .card:active { outline: none; }
+  .card-row.is-dragging .card:active .card-link { text-decoration: none; }
 }
 
 /* A listing card: no box of its own, just the photo with all four corners rounded and the price
@@ -163,11 +163,13 @@
 .card-link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
 .card-link:focus-visible { outline: none; }
 .card:has(.card-link:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* A tapped or clicked card gets a border in the accent colour, around the photo and the text, and
-   keeps it until its listing shows (application.js marks it .pressed); no grey tap flash on phones. */
+/* A tapped or clicked card underlines its title in the accent and keeps it so until its listing
+   shows (application.js marks it .pressed): no box round the card in the main colour, black on the
+   light theme and white on the dark, which the user asked away on 2026-10-11, and no grey tap flash
+   on phones. Close under the words, as the title clips what goes below its line. */
 .card-link { -webkit-tap-highlight-color: transparent; }
-.card:active,
-.card.pressed { outline: 2px solid var(--accent); outline-offset: 4px; }
+.card:active .card-link,
+.card.pressed .card-link { text-decoration: underline 2px var(--highlight); text-underline-offset: .14em; }
 
 /* The heart over a listing's photo, at its top right corner (heart.html), as the canvas has it: a
    white outline 22px across with a soft shadow under it, so that it shows on any photo, bright or
@@ -179,7 +181,7 @@
    count (--over-photo), the line about the listing at the left making room for them. */
 .heart { margin: 0; }
 .card-media .heart { grid-area: 1 / 1; align-self: start; justify-self: end; z-index: 6; padding: .1rem; }
-.card:has(.heart:active) { outline: none; }
+.card:has(.heart:active) .card-link { text-decoration: none; }
 .heart-button {
   --circle: 2.05rem;
   --reach: .35rem;
@@ -400,7 +402,7 @@
 .cards-big .results .card-slide + .card-slide { display: block; }
 .cards-big .results .card-slides.is-dragging,
 .cards-big .results .card-slides.is-dragging * { cursor: grabbing; }
-.cards-big .results .card:has(.card-slides.is-dragging) { outline: none; }
+.cards-big .results .card:has(.card-slides.is-dragging) .card-link { text-decoration: none; }
 .cards-big .results .card-media::after {
   z-index: 3;
   background:

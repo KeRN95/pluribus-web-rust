@@ -61,12 +61,17 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
   url.search = filledIn(url.searchParams).toString();
 });
 
-// A tapped card keeps its border (page.css, .card.pressed) while its listing loads; the copy of the
-// page Turbo keeps for going back loses it. Only its links open it: a big card's arrows step through
-// its photos. iOS only shows :active where a touch listener is.
-document.addEventListener("click", (event) => event.target.closest(".card a")?.closest(".card").classList.add("pressed"));
+// A tapped card keeps its title underlined in the accent (page.css, .card.pressed) while its
+// listing loads, and a tapped category's pill its icon filled with it (welcome.css,
+// .shortcut.pressed); the copy of the page Turbo keeps for going back loses them. Only a card's
+// links open it: a big card's arrows step through its photos. iOS only shows :active where a touch
+// listener is.
+document.addEventListener("click", (event) => {
+  event.target.closest(".card a")?.closest(".card").classList.add("pressed");
+  event.target.closest("a.shortcut")?.classList.add("pressed");
+});
 document.addEventListener("turbo:before-cache", () => {
-  for (const card of document.querySelectorAll(".card.pressed")) card.classList.remove("pressed");
+  for (const pressed of document.querySelectorAll(".card.pressed, .shortcut.pressed")) pressed.classList.remove("pressed");
 });
 
 // The copy of the page Turbo keeps for going back has new <img>s. Lazy and decoded aside, as the

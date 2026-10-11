@@ -83,6 +83,9 @@ Pamja dhe gjuha
 Madhësia e shkrimit
 = Text size
 
+Shkrim më i vogël
+= Smaller text
+
 Shkrim i vogël
 = Small text
 

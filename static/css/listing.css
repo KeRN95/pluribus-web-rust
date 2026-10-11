@@ -602,6 +602,18 @@
 }
 /* What follows the price ("/muaj", "(i diskutueshëm)"), half its size. */
 .price-note { font-size: .5em; letter-spacing: normal; }
+/* The figure itself on a band of the accent across its foot, as Tradera marks its prices (the
+   user's ask of 2026-10-11, "a semi background on the price"): a thick underline, which a browser
+   draws under the letters, a third of an em, from a fifth of an em over the baseline, on every
+   line if the words wrap ("Çmimi me marrëveshje" on a narrow phone), in the accent toned down
+   (--price-mark, base.css); what follows it ("/muaj") and a drop stay off it. */
+.price-amount {
+  text-decoration-line: underline;
+  text-decoration-color: var(--price-mark);
+  text-decoration-thickness: .34em;
+  text-decoration-skip-ink: none;
+  text-underline-offset: -.2em;
+}
 /* Under the buttons, quietly: that the visitor blocked the seller (from a report's thanks,
    report.html), with where to let them be again. Reporting is a button among the others. */
 .blocked-note,
@@ -778,12 +790,15 @@
 
 /* Buttons as the redesign's canvas has them: pills with no outline, their words a weight up and a
    little smaller than the text, 48px tall (3rem) unless their place says otherwise, an icon .5rem
-   before the words; a press sinks them a little. The main colour filled, its words in its own
-   (white on the light theme, eerie black on the light grey of the dark one), a shade off under the
-   pointer; a secondary one on the grey of secondary controls, a shade darker under it; a danger
-   one (deleting) that grey with red words, on red's tint under the pointer; a small one, for a
-   list's rows, 40px tall with its words a size down (the heights are the design system's,
-   --size-button and --size-button-sm, in pixels, so that a finger has 40px on a phone too). */
+   before the words; a press sinks them a little. The one that does a page's thing (a message to
+   the seller, "Shfaq N njoftime", a form's sending) is filled with the accent, mint unless the
+   visitor picked another, its words dark on it in both themes (--on-highlight), a shade off under
+   the pointer (--highlight-hover): the user's ask of 2026-10-11, "the call to action buttons like
+   the contact seller one", in place of the main colour. A secondary one on the grey of secondary
+   controls, a shade darker under it; a danger one (deleting) that grey with red words, on red's
+   tint under the pointer; a small one, for a list's rows, 40px tall with its words a size down
+   (the heights are the design system's, --size-button and --size-button-sm, in pixels, so that a
+   finger has 40px on a phone too). */
 .button {
   display: inline-flex;
   align-items: center;
@@ -793,8 +808,8 @@
   padding: 0 1.25rem;
   border: 1px solid transparent;
   border-radius: var(--radius-pill);
-  background: var(--main);
-  color: var(--on-main);
+  background: var(--highlight);
+  color: var(--on-highlight);
   font: inherit;
   font-size: .9375rem;
   font-weight: var(--semibold);
@@ -806,7 +821,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.button:hover { background: var(--main-hover); }
+.button:hover { background: var(--highlight-hover); }
 .button:active { transform: scale(.98); }
 .button.secondary { background: var(--surface-muted); color: var(--text); }
 .button.secondary:hover { background: var(--surface-muted-hover); }

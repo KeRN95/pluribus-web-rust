@@ -23,8 +23,10 @@
       every category and town, the results' filters narrowing them, a grey pill that asks "Çfarë po
       kërkon?", its label kept for screen readers, and at its end a round button with the
       magnifier in the accent. On phones, where there is no rail (base.html), "Posto" after it, its
-      plus alone, round (its word kept for screen readers), and the listings kept and the
-      conversations, grey circles; from 720px up the rail has them, and the search the row. -#}
+      plus alone, round (its word kept for screen readers); from 720px up the rail has it, and the
+      search the row. The listings kept and the conversations, grey circles after "Posto" once,
+      went on 2026-10-11 at the user's word: the menu leads to both, its button with the count of
+      conversations unread. -#}
   <div class="welcome-tools">
   <form class="welcome-form" action="/search" method="get" role="search" data-controller="suggest"
         data-action="focusout->suggest#left turbo:before-cache@document->suggest#close">
@@ -45,17 +47,6 @@
       <a class="welcome-post" href="/shto">
         <svg data-icon="plus" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">{{ crate::web::icons::PLUS|safe }}</svg>
         <span class="welcome-post-word">{{ crate::t("Posto") }}</span>
-      </a>
-      {#- The listings the visitor keeps (saved.rs), with a dot while some dropped their price unseen
-          (heart_controller.js). -#}
-      <a class="circle-shortcut plain-shortcut saved-shortcut" href="/te-ruajturat" aria-label="{{ crate::t("Të ruajturat") }}" title="{{ crate::t("Të ruajturat") }}">
-        <svg class="circle-icon" data-icon="heart" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg>
-      </a>
-      {#- The visitor's conversations (messages.rs), with how many have messages unread in the
-          accent at its top right (inbox_controller.js). -#}
-      <a class="circle-shortcut plain-shortcut inbox-shortcut" href="/mesazhet" aria-label="{{ crate::t("Mesazhet") }}" title="{{ crate::t("Mesazhet") }}" data-controller="inbox">
-        <svg class="circle-icon" data-icon="message-circle" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
-        <span class="inbox-count" data-inbox-target="count" hidden></span>
       </a>
   </div>
 

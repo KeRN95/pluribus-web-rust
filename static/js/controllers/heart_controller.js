@@ -9,8 +9,8 @@ import { t, tf } from "controllers/i18n.js";
 // known before. A tap keeps the listing or lets it go at once, every heart for it on the page with
 // it, and tells the server (POST /listing/N/ruaj), one tap after the other; should that fail, the
 // hearts go back. Someone not signed in goes to sign in, and comes back with the listing kept.
-// The same answer says how many kept listings dropped their price unseen, for the top bar's heart
-// (the welcome page's, in the row with its search).
+// The same answer says how many kept listings dropped their price unseen, for the rail's heart (the
+// welcome page's round one, on phones, went on 2026-10-11).
 // Someone not signed in keeps nothing, and the page doesn't ask (signed_in.js).
 // What is known is kept in the browser too (localStorage, STORE), so that a page opened afresh, not
 // only one Turbo shows, has its hearts as they were with its photos, before the answer comes; it
@@ -70,7 +70,7 @@ function showNews(drops, searches) {
     news.push(one ? t("1 kërkim me njoftime të reja") : tf("{} kërkime me njoftime të reja", searches));
   }
   const label = news.length ? tf("Të ruajturat: {}", news.join(", ")) : t("Të ruajturat");
-  for (const button of document.querySelectorAll(".saved-shortcut, .rail-saved")) {
+  for (const button of document.querySelectorAll(".rail-saved")) {
     button.classList.toggle("has-drops", news.length > 0);
     button.setAttribute("aria-label", label);
     button.title = label;

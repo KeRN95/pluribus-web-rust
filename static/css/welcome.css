@@ -11,10 +11,10 @@
 
 /* The search, as the user drew it on 2026-10-11: a grey pill (--surface-muted) with no outline or
    shadow, 50px tall, its words 17px, the question in the muted grey, and at its end a round button
-   of 38px with the magnifier (--search-knob behind, --highlight-icon for the line: dark on lime on
-   the light theme, lime on a grey a shade off the pill's on the dark one); in use, the fields'
-   white with the main colour's edge and the search bar's ring round it (--focus-search). On
-   phones 46px, its words 16px and the button 36px. */
+   of 38px with the magnifier (--search-knob behind, --highlight-icon for the line: dark on the
+   accent on the light theme, in the accent on a grey a shade off the pill's on the dark one); in
+   use, the fields' white with the main colour's edge and the search bar's ring round it
+   (--focus-search). On phones 46px, its words 16px and the button 36px. */
 .welcome-form {
   display: flex;
   align-items: center;
@@ -272,7 +272,9 @@
 /* The welcome page's categories, all of them at once, as pills as the canvas has them: on the grey
    of secondary controls with no outline, each as wide as its name, one after another and on to
    the next line; the icon before the name, in the name's colour (it was muted until 2026-10-10, a
-   shade apart from its label). Under the pointer or a finger a pill takes a darker grey; nothing
+   shade apart from its label). Under the pointer or a finger a pill takes a darker grey and its
+   icon fills with the accent, as the menu's and the rail's icons do, and a tapped one keeps it so
+   until its page shows (application.js marks it .pressed; the user's ask of 2026-10-11); nothing
    moves, as the design system has it. */
 .shortcuts { display: flex; flex-wrap: wrap; gap: .55rem; margin: 1.25rem 0 0; }
 /* A little bigger than the details' pills, being the way into the site. */
@@ -294,23 +296,26 @@
 }
 .shortcut-icon { flex: none; }
 .shortcut:active { background: var(--surface-muted-hover); }
+.shortcut:active .shortcut-icon,
+.shortcut.pressed .shortcut-icon { fill: var(--highlight); }
 @media (hover: hover) {
   .shortcut:hover { background: var(--surface-muted-hover); }
+  .shortcut:hover .shortcut-icon { fill: var(--highlight); }
 }
 /* The row over the categories (home.html): the search bar alone from 720px up, the rail having
-   posting, the listings kept and the conversations (base.css, .rail); on phones it takes the width
-   "Posto" and the round buttons leave it, 46px tall and 8px apart. The categories' pills 10px under
-   the row, 44px tall, 8px apart, their names 15px beside an icon of 18px. */
+   posting (base.css, .rail); on phones it takes the width "Posto" leaves it, 46px tall, 8px from
+   it (the listings kept and the conversations, grey circles after it, went on 2026-10-11: the
+   menu has them). The categories' pills 10px under the row, 44px tall, 8px apart, their names
+   15px beside an icon of 18px. */
 .welcome-tools { display: flex; align-items: center; gap: 10px; }
 .welcome-tools .welcome-form { flex: 1 1 auto; min-width: 0; }
 @media (min-width: 720px) {
-  .welcome-tools > .welcome-post,
-  .welcome-tools > .circle-shortcut { display: none; }
+  .welcome-tools > .welcome-post { display: none; }
 }
 .welcome .shortcuts { gap: var(--space-8); margin-top: 10px; }
 .welcome .shortcut { min-height: 44px; padding: 0 16px; gap: var(--space-8); font-size: .9375rem; line-height: 1.3; }
-/* Phones: the bar, "Posto" (its plus alone, round, its word kept for screen readers) and the round
-   buttons 46px; the pills 36px, 7px apart, their names 14px (a rem there) beside an icon of 16px,
+/* Phones: the bar and "Posto" (its plus alone, round, its word kept for screen readers) 46px; the
+   pills 36px, 7px apart, their names 14px (a rem there) beside an icon of 16px,
    so that three stand on a line where two would and the listings come sooner. A finger's target
    is bigger than the pill it sees: half the gaps round each pill (::after, which is part of the
    link), so that its neighbours' targets meet it halfway, a pill of 36px 43 to the touch. */
@@ -325,8 +330,8 @@
 }
 
 /* "Posto", the site's main thing to do, after the search on phones (the rail has it from 720px up):
-   the plus alone, round, 46px, its word kept for screen readers, in the main colour with white
-   words on the light theme and in the accent with dark ones on the dark (--post, --on-post). */
+   the plus alone, round, 46px, its word kept for screen readers, in the accent with dark words on
+   both themes (--post, --on-post), as every button that does a page's thing. */
 .welcome-post {
   display: inline-flex;
   flex: none;
@@ -353,59 +358,4 @@
   .welcome-post { width: var(--size-round); height: var(--size-round); padding: 0; }
   .welcome-post svg { width: 19px; height: 19px; }
   .welcome-post-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
-
-
-/* The round buttons in the row with the search on phones (home.html, .welcome-tools), after
-   "Posto": the listings kept and the conversations, which no top bar holds (it has the account
-   alone, base.html) and the rail does from 720px up, as the canvas draws them: grey circles of 50px (46px on phones) with no
-   outline (.plain-shortcut), their icons 20px (19px) in the text's colour, a shade darker under
-   the pointer or a press. The ring round the conversations' count and the kept listings' dot is
-   that grey (--tone-bg). */
-.circle-shortcut {
-  position: relative;
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: var(--size-button-lg);
-  height: var(--size-button-lg);
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--tone-bg);
-  color: var(--tone);
-  font: inherit;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background-color .15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.circle-icon { flex: none; }
-.plain-shortcut { --tone: var(--text); --tone-bg: var(--surface-muted); }
-.plain-shortcut:active { background: var(--surface-muted-hover); }
-@media (hover: hover) {
-  .plain-shortcut:hover { background: var(--surface-muted-hover); }
-}
-/* The conversations' count of those unread (messages.css), on the circle's edge, ringed in the
-   button's grey. */
-.inbox-shortcut .inbox-count { top: -2px; right: -2px; box-shadow: 0 0 0 2px var(--tone-bg); }
-/* The listings kept: a dot of 8px in the accent at the heart's top right while some dropped their
-   price unseen, as the bar's heart has it (base.css; heart_controller.js; ::before, as a phone's
-   target is ::after), ringed in the button's grey, with the dark edge inside it on the light
-   theme (--dot-edge). */
-.saved-shortcut.has-drops::before {
-  content: "";
-  position: absolute;
-  top: 15%;
-  right: 15%;
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-pill);
-  background: var(--highlight);
-  box-shadow: 0 0 0 2px var(--tone-bg), var(--dot-edge);
-}
-@media (max-width: 719px) {
-  .circle-shortcut { width: var(--size-round); height: var(--size-round); }
-  .circle-icon { width: 19px; height: 19px; }
 }

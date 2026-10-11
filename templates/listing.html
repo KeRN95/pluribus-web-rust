@@ -233,7 +233,7 @@
         colour, its chevron up, while it is open; a tap outside or Escape closes it
         (dropdown_controller.js). -#}
     <div class="price-row{% if area_price.is_some() %} with-area{% endif %}">
-      <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if deal_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
+      <p class="listing-price"><span class="price-amount">{{ listing.price_main() }}</span>{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if deal_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
       {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
       {%- if let Some(car) = car_price %}{% include "car_price.html" %}{% endif %}
       <details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" data-loan-down-percent-value="{{ LOAN_DOWN_PERCENT }}">
@@ -251,7 +251,7 @@
     {%- else %}
     {#- The price, and smaller after it what qualifies it: "/muaj", "(i diskutueshëm)"; a property
         on sale says under it what a square metre of it costs (area_price.html). -#}
-    <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if deal_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
+    <p class="listing-price"><span class="price-amount">{{ listing.price_main() }}</span>{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if deal_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
     {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
     {%- if let Some(car) = car_price %}{% include "car_price.html" %}{% endif %}
     {%- endif %}

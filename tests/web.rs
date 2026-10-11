@@ -806,20 +806,19 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     // asks the page's question.
     assert!(body.contains(r#"<button type="submit" class="icon-button welcome-search" aria-label="Kërko""#));
     assert!(body.contains(r#"placeholder="Çfarë po kërkon?""#));
-    // The search leads a row of its own over the categories, with, for phones (the rail has them
-    // from 720px up), "Posto", its plus with its word kept for screen readers, and the listings kept
-    // and the conversations, plain, in that row; no button opens the search, which stands open.
-    // The theme is the menu's, not among them.
+    // The search leads a row of its own over the categories, with, for phones (the rail has it
+    // from 720px up), "Posto", its plus with its word kept for screen readers; no button opens the
+    // search, which stands open. The listings kept and the conversations, round buttons after
+    // "Posto" until 2026-10-11, went at the user's word (the menu has them); the theme is the
+    // menu's too.
     let nav = body.find(r#"<nav class="shortcuts" aria-label="Kategoritë">"#).unwrap();
     let row = positions(&body, &[
         r#"<div class="welcome-tools">"#,
         r#"<form class="welcome-form""#,
         r#"<a class="welcome-post" href="/shto">"#,
-        r#"<a class="circle-shortcut plain-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#,
-        r#"<a class="circle-shortcut plain-shortcut inbox-shortcut" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">"#,
     ]);
-    assert!(row.is_sorted() && row[4] < nav, "{row:?} before {nav}");
-    assert_eq!(body.matches("circle-shortcut").count(), 2, "{body}");
+    assert!(row.is_sorted() && row[2] < nav, "{row:?} before {nav}");
+    assert!(!body.contains("circle-shortcut") && !body.contains("saved-shortcut") && !body.contains("inbox-shortcut"), "{body}");
     assert!(body.contains(r#"<span class="welcome-post-word">Posto</span>"#));
     assert!(!body.contains("theme-shortcut"));
     assert!(!body.contains("search-shortcut") && !body.contains("welcome-search-panel") && !body.contains("welcome-scrim"));
@@ -843,7 +842,8 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(!list.contains("circle-shortcut"), "{list}");
     // Every page's top bar has the account alone at its right end, as the user asked on 2026-10-11,
     // the welcome page's too: the text's size and the theme are the menu's, posting, the listings
-    // kept and the conversations the rail's (the welcome page's row has them on phones).
+    // kept and the conversations the rail's (on phones the welcome page's row has posting, and the
+    // menu the others).
     let cars = get(pool.clone(), "/c/automjete").await.body;
     for page in [&body, &cars] {
         assert!(!page.contains("post-button"));
@@ -992,12 +992,12 @@ fn tap_heart(number: &str, keep: &str, cookie: Option<&str>) -> Request<Body> {
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn every_listing_has_a_heart_over_its_photo(pool: PgPool) {
-    // On every card, the newest listings' row's too, and on the listing's page; the welcome page's
-    // round button in the row with its search leads to the listings kept (on phones), and every
-    // page's rail does.
+    // On every card, the newest listings' row's too, and on the listing's page; every page's rail
+    // leads to the listings kept, and the menu does (the welcome page's round button in the row
+    // with its search, on phones, went on 2026-10-11).
     let home = get(pool.clone(), "/").await.body;
     assert_eq!(home.matches(r#"<form class="heart""#).count(), home.matches(r#"<article class="card"#).count());
-    assert!(home.contains(r#"<a class="circle-shortcut plain-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#));
+    assert!(home.contains(r#"<a class="menu-row" href="/te-ruajturat">"#) && !home.contains("saved-shortcut"));
     let cars = get(pool.clone(), "/c/automjete").await.body;
     assert!(cars.contains(r#"<a class="rail-item rail-saved" href="/te-ruajturat">"#));
     assert!(cars.contains(&heart(1001)));
@@ -2821,8 +2821,9 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     }
     // A rent is paid monthly already.
     let rent = html(pool.clone(), "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
-    // The month follows the price, smaller; a rent says nothing of square metres.
-    assert!(rent.contains("<p class=\"listing-price\">450\u{a0}€<span class=\"price-note\">/muaj</span></p>"));
+    // The month follows the price, smaller, off the band of the accent across the figure's foot
+    // (as Tradera marks its prices, 2026-10-11); a rent says nothing of square metres.
+    assert!(rent.contains("<p class=\"listing-price\"><span class=\"price-amount\">450\u{a0}€</span><span class=\"price-note\">/muaj</span></p>"));
     assert!(!rent.contains("Llogarit kredinë"));
     assert!(!rent.contains("price-per-area"));
     // A house on sale says under its price what a square metre costs, 185 000 € for 200 m², in a
@@ -2830,7 +2831,7 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     let house = html(pool, "/listing/1004-shtepi-private-ne-shitje-ne-vlore").await;
     let row = &house[house.find(r#"<div class="price-row with-area">"#).expect("the price's row")..];
     let row = &row[..row.find(r#"<details class="bubble loan""#).unwrap()];
-    assert!(row.contains("<p class=\"listing-price\">185\u{a0}000\u{a0}€</p>"));
+    assert!(row.contains("<p class=\"listing-price\"><span class=\"price-amount\">185\u{a0}000\u{a0}€</span></p>"));
     let bubble = &row[row.find(r#"<details class="bubble area-price" data-controller="dropdown">"#).expect("the bubble")..];
     assert!(bubble[..bubble.find("</summary>").unwrap()].contains("925\u{a0}€/m²"));
     for line in ["<dd>185\u{a0}000\u{a0}€</dd>", "<dd>200\u{a0}m²</dd>", "<dd>925\u{a0}€/m²</dd>", "rrumbullakuar në euro."] {
@@ -4134,11 +4135,13 @@ async fn the_site_has_its_icon(pool: PgPool) {
     for icon in ["/static/img/icon.svg", "/static/img/apple-touch-icon.png"] {
         assert_eq!(get(pool.clone(), icon).await.status, StatusCode::OK, "{icon}");
     }
-    // The icon is the logo's p, light on an eerie black tile, with the i's lime square.
+    // The icon is the logo's p, light on an eerie black tile, with the i's square in the accent
+    // there is unless another is picked, mint (lime until 2026-10-11).
     let svg = get(pool.clone(), "/static/img/icon.svg").await.body;
     assert!(svg.contains(r##"rx="264" fill="#1b1b1b"/>"##), "{svg}");
     assert!(svg.contains(r##"<path fill="#f7f7f7" d="M190 1060L40 1060"##), "{svg}");
-    assert!(svg.contains(r##"<rect x="479" y="220" width="150" height="118" fill="#c8ff00"/>"##), "{svg}");
+    assert!(svg.contains(r##"<rect x="479" y="220" width="150" height="118" fill="#2de38c"/>"##), "{svg}");
+    assert!(!svg.contains("#c8ff00"), "{svg}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -4674,7 +4677,7 @@ async fn every_part_of_the_site_has_the_one_main_colour(pool: PgPool) {
     // until the pages have all moved over.
     let light = &css[css.find(":root{color-scheme:light;").expect("the light theme")..];
     let light = &light[..light.find('}').unwrap()];
-    for token in ["--bg:#f7f7f7;", "--surface:#fff", "--surface-muted:#ececec;", "--border:#dedede;", "--text:#1b1b1b;", "--muted:#707070;", "--main:#1b1b1b;", "--lime:#c8ff00;"] {
+    for token in ["--bg:#f7f7f7;", "--surface:#fff", "--surface-muted:#ececec;", "--border:#dedede;", "--text:#1b1b1b;", "--muted:#707070;", "--main:#1b1b1b;", "--choice-mint:#2de38c;", "--choice-lime:#c8ff00;"] {
         assert!(light.contains(token), "{token} in {light}");
     }
     let dark = &css[css.find(r#":root[data-theme="dark"]{"#).expect("the dark theme")..];
@@ -4686,20 +4689,21 @@ async fn every_part_of_the_site_has_the_one_main_colour(pool: PgPool) {
         assert!(css.contains(token), "{token}");
     }
     // A kept listing's heart is filled with the site's one red, in every part of the site, lined
-    // thinly in white over a photo; the welcome page's heart and conversations buttons are plain,
-    // no colour's.
-    assert!(!css.contains(".saved-shortcut{--tone") && !css.contains(".inbox-shortcut{--tone"));
+    // thinly in white over a photo; the welcome page's round heart and conversations buttons went
+    // on 2026-10-11, and their rules with them.
+    assert!(!css.contains("circle-shortcut") && !css.contains("saved-shortcut") && !css.contains("inbox-shortcut"));
     let kept = &css[css.find(r#".heart-button[aria-pressed="true"] svg{"#).expect("the kept heart")..];
     let kept = &kept[..kept.find('}').unwrap()];
     assert!(kept.contains("fill:var(--red)") && kept.contains("stroke:var(--on-photo)"), "{kept}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
-async fn buttons_are_pills_in_the_main_colour_or_the_grey(pool: PgPool) {
+async fn buttons_are_pills_in_the_accent_or_the_grey(pool: PgPool) {
     // The redesign's buttons (listing.css): pills with no outline, 48px tall, their words
-    // semibold; the main colour with its own words, a secondary one on the grey of secondary
-    // controls, a danger one that grey with red words, a small one 34px tall. "Posto", the welcome
-    // page's plus, is the main colour on the light theme and the accent on the dark one.
+    // semibold; the one that does a page's thing in the accent with dark words, a shade off under
+    // the pointer (the user's ask of 2026-10-11: the main colour before), a secondary one on the
+    // grey of secondary controls, a danger one that grey with red words, a small one 40px tall.
+    // "Posto", the rail's and the welcome page's, is the accent in both themes, as they are.
     // (The stylesheet comes minified: web::site_css, a rule right after the one before it.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     let rule = |selector: &str| {
@@ -4708,15 +4712,44 @@ async fn buttons_are_pills_in_the_main_colour_or_the_grey(pool: PgPool) {
         rule[..rule.find('}').unwrap()].to_string()
     };
     let button = rule(".button");
-    for part in ["min-height:var(--size-button)", "border-radius:var(--radius-pill)", "background:var(--main)", "color:var(--on-main)", "font-weight:var(--semibold)"] {
+    for part in ["min-height:var(--size-button)", "border-radius:var(--radius-pill)", "background:var(--highlight)", "color:var(--on-highlight)", "font-weight:var(--semibold)"] {
         assert!(button.contains(part), "{part} in {button}");
     }
+    assert!(rule(".button:hover").contains("background:var(--highlight-hover)"));
     assert!(rule(".button.secondary").contains("background:var(--surface-muted)"));
     assert!(rule(".button.danger").contains("color:var(--danger)"));
     assert!(rule(".button.small").contains("min-height:var(--size-button-sm)"));
     assert!(rule(".welcome-post").contains("background:var(--post)"));
+    let light = &css[css.find(":root{color-scheme:light;").expect("the light theme")..];
+    let light = &light[..light.find('}').unwrap()];
+    for token in ["--post:var(--highlight);", "--on-post:var(--on-highlight);", "--post-hover:var(--highlight-hover);", "--highlight-hover:color-mix(in srgb,var(--highlight) 88%,#1b1b1b);"] {
+        assert!(light.contains(token), "{token} in {light}");
+    }
+    // A shade darker under the pointer on the light theme, lighter on the dark one.
     let dark = &css[css.find(r#":root[data-theme="dark"]{"#).expect("the dark theme")..];
-    assert!(dark[..dark.find('}').unwrap()].contains("--post:var(--highlight);"));
+    let dark = &dark[..dark.find('}').unwrap()];
+    assert!(dark.contains("--highlight-hover:color-mix(in srgb,var(--highlight) 85%,#fff") && !dark.contains("--post:"), "{dark}");
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
+    // A card tapped or clicked underlines its title in the accent until its listing shows, with no
+    // box round it in the main colour, and a category's pill fills its icon with the accent, under
+    // the pointer too: the user's asks of 2026-10-11 (application.js marks either .pressed).
+    // (The stylesheet comes minified: web::site_css.)
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    for rule in [
+        ".card:active .card-link,.card.pressed .card-link{text-decoration:underline 2px var(--highlight);text-underline-offset:.14em;}",
+        ".card:has(.heart:active) .card-link{text-decoration:none;}",
+        ".shortcut:active .shortcut-icon,.shortcut.pressed .shortcut-icon{fill:var(--highlight);}",
+        ".shortcut:hover .shortcut-icon{fill:var(--highlight);}",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    assert!(!css.contains(".card.pressed{") && !css.contains("outline-offset:4px"), "no box round a pressed card");
+    // (The script comes minified too: web::minified_js.)
+    let script = get(pool, &format!("/static/js/application.js?v={}", marketplace::web::asset_version())).await.body;
+    assert!(script.contains("closest(`a.shortcut`)?.classList.add(`pressed`)") && script.contains("`.card.pressed, .shortcut.pressed`"), "{script}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
@@ -4827,12 +4860,16 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
         for href in ["/shto", "/njoftimet-e-mia", "/te-ruajturat", "/kerkimet-e-ruajtura", "/lajmerimet", "/mesazhet", "/llogaria/cilesimet", "/kontakt"] {
             assert!(menu.contains(&format!(r#"href="{href}""#)), "{href}");
         }
-        for size in ["small", "normal", "large"] {
-            assert!(menu.contains(&format!(r#"data-look-size-param="{size}""#)), "{size}");
-        }
-        for accent in ["lime", "coral", "orange", "blue", "mint"] {
-            assert!(menu.contains(&format!(r#"<input type="radio" class="swatch" name="accent" value="{accent}""#)), "{accent}");
-        }
+        // The text's four sizes, the smallest added on 2026-10-11, and the five accents, mint first,
+        // the one there is unless another is picked (lime before it).
+        let sizes: Vec<String> = ["smaller", "small", "normal", "large"].iter().map(|size| format!(r#"data-look-size-param="{size}""#)).collect();
+        let order = positions(menu, &sizes.iter().map(String::as_str).collect::<Vec<_>>());
+        assert!(order.is_sorted(), "{order:?}");
+        assert!(menu.contains(r#"<button type="button" class="text-size-smaller" aria-label="Shkrim më i vogël" aria-pressed="false""#));
+        let swatches: Vec<String> = ["mint", "lime", "coral", "orange", "blue"].iter().map(|accent| format!(r#"<input type="radio" class="swatch" name="accent" value="{accent}""#)).collect();
+        let order = positions(menu, &swatches.iter().map(String::as_str).collect::<Vec<_>>());
+        assert!(order.is_sorted(), "{order:?}");
+        assert!(menu.contains(r#"value="mint" aria-label="Nenexhik" checked "#) && menu.matches(" checked ").count() == 1);
         assert!(menu.contains(r#"<input type="checkbox" class="switch" role="switch" data-controller="theme""#));
         assert!(menu.contains(r#"<form class="segmented" method="post" action="/gjuha""#));
         assert!(menu.contains(r#"<button type="submit" name="gjuha" value="sq" lang="sq" aria-pressed="true">Shqip</button>"#));
@@ -4859,12 +4896,15 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     for part in ["root.dataset.theme = theme", "root.dataset.textSize = size", "root.dataset.accent = accent"] {
         assert!(home.contains(part), "{part}");
     }
+    assert!(home.contains(r#"if (["smaller", "small", "large"].includes(size)) root.dataset.textSize = size;"#));
+    assert!(home.contains(r#"if (["lime", "coral", "orange", "blue"].includes(accent)) root.dataset.accent = accent;"#));
     // Drawn as the canvas has it: white over the page dimmed, its counts in the accent, a link's
     // icon filled with the accent under the pointer; the text's size scales every size in rem.
     // (The stylesheet comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for rule in [
         ".menu::backdrop{background:var(--scrim);}",
+        r#":root[data-text-size="smaller"]{--text-scale:.8125;}"#,
         r#":root[data-text-size="large"]{--text-scale:1.1875;}"#,
         "html{font-size:calc(100% * var(--text-scale));}",
         "a.menu-row:hover > svg{fill:var(--highlight);}",
@@ -4874,19 +4914,32 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     let count = &css[css.find("}.menu-count{").expect("the menu's counts") + 1..];
     assert!(count[..count.find('}').unwrap()].contains("background:var(--highlight)"));
     // Every accent as bright as lime (2026-10-11), the same in both themes and dark words on each,
-    // a filter that is on taking as much of it as each needs; a pick from before, a darker one,
-    // comes back as its bright one.
+    // mint when none is picked (the user's pick, the same day), a filter that is on taking as much
+    // of it as each needs; a pick from before, a darker one, comes back as its bright one.
     for rule in [
+        "--choice-mint:#2de38c;",
+        "--choice-lime:#c8ff00;",
         "--choice-coral:#ff6b6b;",
         "--choice-orange:#ff9f1c;",
         "--choice-blue:#4dabff;",
-        "--choice-mint:#2de38c;",
+        ":root{--highlight:var(--choice-mint);--on-highlight:#1b1b1b;--filter-share-light:38%;--filter-share-dark:27%;}",
+        r#":root[data-accent="lime"]{--highlight:var(--choice-lime);--filter-share-light:45%;--filter-share-dark:24%;}"#,
         r#":root[data-accent="coral"]{--highlight:var(--choice-coral);--filter-share-light:28%;--filter-share-dark:38%;}"#,
         "--filter-on:color-mix(in srgb,var(--highlight) var(--filter-share),var(--bg));",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
+    assert!(!css.contains(r#"[data-accent="mint"]"#) && !css.contains("--lime:"));
     assert_eq!(css.matches("--on-highlight:").count(), 1);
+    // A listing's price on a band of it across the figure's foot, as Tradera marks its prices
+    // (2026-10-11): a thick underline under the letters, in the accent toned down a step less than
+    // a filter that is on.
+    for rule in [
+        "--price-mark:color-mix(in srgb,var(--highlight) calc(var(--filter-share) + 30%),var(--bg));",
+        ".price-amount{text-decoration-line:underline;text-decoration-color:var(--price-mark);text-decoration-thickness:.34em;text-decoration-skip-ink:none;text-underline-offset:-.2em;}",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
     assert!(home.contains(r#"const older = { darkred: "coral", terracotta: "orange", olive: "mint" };"#));
 }
 
@@ -7920,12 +7973,15 @@ async fn writing_to_a_seller_takes_signing_in_first(pool: PgPool) {
     assert!(inbox.contains("Hyr në llogari për t'u shkruar shitësve"));
     assert_eq!(get(pool.clone(), "/mesazhet/numri").await.body, r#"{"unread":0}"#);
     // Every page's rail leads to the conversations, the listing's page too, which a seller reads a
-    // buyer's message from; the welcome page also has the button in the row with its search, for
-    // phones, which have no rail.
+    // buyer's message from; on phones, which have no rail, the menu does, its button with the count
+    // of those unread (the welcome page's round button in the row with its search went on
+    // 2026-10-11).
     for page in ["/c/automjete", "/listing/1001-volkswagen-golf-7-2016-nafte", "/mesazhet", "/"] {
-        assert!(get(pool.clone(), page).await.body.contains(r#"<a class="rail-item" href="/mesazhet""#), "{page}");
+        let body = get(pool.clone(), page).await.body;
+        assert!(body.contains(r#"<a class="rail-item" href="/mesazhet""#), "{page}");
+        assert!(body.contains(r#"<a class="menu-row" href="/mesazhet">"#), "{page}");
     }
-    assert!(get(pool.clone(), "/").await.body.contains(r#"<a class="circle-shortcut plain-shortcut inbox-shortcut" href="/mesazhet""#));
+    assert!(!get(pool.clone(), "/").await.body.contains("inbox-shortcut"));
 }
 
 /// The notices of unread messages sent so far (notifications, NEW_MESSAGE), oldest first: to whom,

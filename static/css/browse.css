@@ -59,9 +59,9 @@
 /* The heading's line, as the canvas has it (browse.html): the page's name, and after it, on its
    baseline, how many it found, quieter (15px; 14px on phones); "Ruaj kërkimin" at the line's end,
    a grey pill 40px tall with the bookmark in the accent (--highlight-knob behind its line,
-   --highlight-icon for it: lime with a dark line on the light theme, a lime line on the dark),
-   its words medium; kept, the same grey pill with a tick in the words' colour in place of the
-   bookmark, as the canvas has it. On phones the icon alone, round, its words kept for screen
+   --highlight-icon for it: the accent with a dark line on the light theme, a line of it on the
+   dark), its words medium; kept, the same grey pill with a tick in the words' colour in place of
+   the bookmark, as the canvas has it. On phones the icon alone, round, its words kept for screen
    readers. */
 .browse-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); }
 .browse-heading-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-12); min-width: 0; }

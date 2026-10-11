@@ -1,12 +1,12 @@
 import { Controller } from "@hotwired/stimulus";
 
 // The look the visitor picks, kept in their browser (localStorage) as the theme is
-// (theme_controller.js): the text's size, "small" or "large" (data-text-size on <html>; the normal
-// one none), and the accent, "coral", "orange", "blue" or "mint" (data-accent; lime none), which
-// the inline script in base.html puts back before each page's first paint (web::THEME_SCRIPT,
-// which turns an older pick, "darkred", "terracotta" or "olive", into its bright one). In the
-// menu's "Pamja dhe gjuha": each control shows which is picked, and the others follow when one
-// changes (look:changed).
+// (theme_controller.js): the text's size, "smaller", "small" or "large" (data-text-size on <html>;
+// the normal one none), and the accent, "lime", "coral", "orange" or "blue" (data-accent; mint, the
+// one there is unless another is picked since 2026-10-11, none), which the inline script in
+// base.html puts back before each page's first paint (web::THEME_SCRIPT, which turns an older
+// pick, "darkred", "terracotta" or "olive", into its bright one). In the menu's "Pamja dhe gjuha":
+// each control shows which is picked, and the others follow when one changes (look:changed).
 export default class extends Controller {
   static targets = ["size", "accent"];
 
@@ -25,7 +25,7 @@ export default class extends Controller {
   }
 
   accent(event) {
-    this.keep("accent", event.target.value === "lime" ? null : event.target.value);
+    this.keep("accent", event.target.value === "mint" ? null : event.target.value);
   }
 
   keep(key, value) {
@@ -42,7 +42,7 @@ export default class extends Controller {
   }
 
   update() {
-    const { textSize = "normal", accent = "lime" } = document.documentElement.dataset;
+    const { textSize = "normal", accent = "mint" } = document.documentElement.dataset;
     for (const button of this.sizeTargets) button.setAttribute("aria-pressed", String(button.dataset.lookSizeParam === textSize));
     for (const swatch of this.accentTargets) swatch.checked = swatch.value === accent;
   }
