@@ -54,6 +54,16 @@
 .breadcrumb-sep { flex: none; color: var(--muted); }
 .breadcrumb-here { min-width: 0; overflow: hidden; color: var(--text); font-weight: var(--semibold); text-overflow: ellipsis; }
 .browse-title { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
+/* A subcategory's way up, over its name (browse.html, .browse-up): the category above, small and
+   muted, a link (underlined in the accent under the pointer, .breadcrumb-up), level with the name's
+   first letter after the chevron (its 40px less the 12px it reaches into the gutter and the 8px
+   it gives back, and the line's 12px gap), 4px over it, room under its words for the underline,
+   which a name too long for the line would otherwise cut: the user's ask of 2026-10-11 in place of
+   the breadcrumb's line. */
+.browse-up { min-width: 0; margin: 0 0 -11px 32px; padding-bottom: 3px; overflow: hidden; font-size: .875rem; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 719px) {
+  .browse-up { margin-bottom: -9px; font-size: .9286rem; }
+}
 @media (max-width: 719px) {
   .breadcrumb { font-size: 1rem; }
   .browse-title { font-size: 1.857rem; }
@@ -210,8 +220,8 @@
 /* The browse row, as the canvas draws it: buttons side by side, 8px apart, the search first, round,
    then "Filtrat" and the filters picked, and at the line's end the map, the cards' view, round,
    with the icon of the view now, opening its menu under it, and the order, its words and a
-   chevron; on phones the map, the view and the order on a line of their own under the others,
-   the order first. Too many for a line, they wrap. Only one opens at a time
+   chevron; on phones all of them one line that slides sideways (below). Too many for a line, they
+   wrap. Only one opens at a time
    (section:open). The search, the filters and the map open
    over the results rather than pushing them down: a little under the row (--drop), as wide as it,
    fading in as the menus do, the page dimmed under them (.browse-scrim); Escape or a tap on the
@@ -229,10 +239,15 @@
   gap: var(--space-8);
 }
 .browse-tools .map-button { margin-left: auto; }
-/* The row's first part, the search, Filtrat, the filters picked and the dropdowns: in the row on a
-   wide screen, no box of its own; on a phone, as the canvas has it, a line of its own that slides
-   sideways from one edge of the screen to the other (the page's sides its padding, and a little
-   over and under it for the focus rings), its scrollbar unseen. */
+/* The row's buttons, Filtrat, the filters picked, the dropdowns, the map, the view and the order:
+   in the row on a wide screen, no box of their own; on a phone one line that slides sideways from
+   one edge of the screen to the other (the page's sides its padding, and a little over and under
+   it for the focus rings), its scrollbar unseen, Filtrat, the filters picked, the map, the order
+   and the view first, the dropdowns of the other filters after them: the user's ask of 2026-10-11
+   (the map, the view and the order stood on a line of their own under it, which put the results a
+   line lower). The order is a grey pill there, as the others are, and what the order and the view
+   open is placed by the head, as the dropdowns' cards are, so that the line's sliding doesn't cut
+   it. */
 .browse-filters-line { display: contents; }
 @media (max-width: 719px) {
   .browse-filters-line {
@@ -248,14 +263,17 @@
   .browse-filters-line::-webkit-scrollbar { display: none; }
   .browse-filters-line > * { flex: none; }
   .browse-filters-line .active-filters { flex-wrap: nowrap; }
-  .browse-tools > .sort-menu:not(.cards-menu) { order: 2; margin-right: auto; }
-  .browse-tools :is(.map-button, .cards-menu, .most-viewed-button) { order: 3; }
-  .browse-tools .map-button { margin-left: 0; }
+  .browse-filters-line > .active-filters { order: 1; }
+  .browse-filters-line .map-button { order: 2; margin-left: 0; }
+  .browse-filters-line > .sort-menu { order: 3; }
+  .browse-filters-line > .cards-menu { order: 4; }
+  .browse-filters-line > .most-viewed-button { order: 5; }
+  .browse-filters-line > .filter-drop { order: 6; }
+  .browse-filters-line > .clear-filters { order: 7; }
 }
 /* The row's buttons stand over the dim (z-index 9; the sticky header is 10), each of its own: the
-   row itself is no box that is placed, nor its first part, so that what its buttons open is placed
-   by the head (and isn't cut by that part's sliding on a phone). */
-.browse-tools > :not(.browse-filters-line),
+   row itself is no box that is placed, nor its line, so that what its buttons open is placed by
+   the head (and isn't cut by the line's sliding on a phone). */
 .browse-filters-line > :not(.filter-drop),
 .browse-tools .round-button { position: relative; z-index: 9; }
 .map-card { display: contents; }
@@ -311,22 +329,17 @@ html:has(.filters.is-open) { overflow: hidden; }
   border-bottom: 1px solid var(--border);
 }
 .filters-header h2 { margin: 0; font-size: 1.25rem; font-weight: var(--bold); letter-spacing: -.01em; }
-/* A row's head with a note at its end: "Të veçuara" and that they are promoted, which leads to
-   how one is. */
-.row-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
-.row-head h2 { min-width: 0; }
-.row-note { flex: none; color: var(--muted); font-size: var(--text-sm); text-decoration: none; }
-.row-note-how { text-decoration: underline; text-underline-offset: 2px; }
-/* The rows over the results, "Të veçuara" and "Më të klikuarat", as the canvas has a browse page's
-   sections: 26px under the head and apart, each under a section title, 22px bold (19px on
-   phones, a rem being 14px there), 12px over its cards. (One rule for both titles, in an :is(),
-   took the row head's weight and kept "Më të klikuarat"'s title down on its cards, here and on the
-   welcome page, until the user saw it on 2026-10-11.) */
-.browse > :is(.featured-row, .most-viewed) { margin-top: 26px; }
-.featured-row > .row-head { margin: 0 0 12px; }
-.featured-row > .row-head > h2,
-.most-viewed > h2 { margin: 0; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
-.most-viewed > h2 { margin-bottom: 12px; }
+/* "Më të klikuarat" over the results, as the canvas has a browse page's sections: 26px under the
+   head, under a section title, 22px bold (19px on phones, a rem being 14px there), 12px over its
+   cards; on a phone 20px and 10px, as the results' heading has them. (One rule for its title and
+   "Të veçuara"'s, in an :is(), took the other's weight and kept the title down on its cards until
+   the user saw it on 2026-10-11; "Të veçuara" is the results' first cards since.) */
+.browse > .most-viewed { margin-top: 26px; }
+.most-viewed > h2 { margin: 0 0 12px; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
+@media (max-width: 719px) {
+  .browse > .most-viewed { margin-top: 20px; }
+  .most-viewed > h2 { margin-bottom: 10px; }
+}
 .filters-close {
   display: grid;
   flex: none;
@@ -400,8 +413,8 @@ html:has(.filters.is-open) { overflow: hidden; }
 /* The filters' and the map's buttons say their names and what is on, as the canvas has them: pills
    as wide as their words rather than circles, 14px of room either side, their icons 17px in the
    words' colour; "Filtrat" semibold, with how many filters are on after it in bold ("Filtrat · 2");
-   the map has its place ("Tiranë · 10 km") and is the one to give up width on a narrow phone, its
-   words ending in "…". */
+   the map "Harta", or once a place is picked its pin alone (below), and where the row wraps, on a
+   wide screen, the one to give up width, its words ending in "…" (a phone's line slides instead). */
 .browse-tools .button.round-button.labelled {
   width: auto;
   min-width: 0;
@@ -418,6 +431,14 @@ html:has(.filters.is-open) { overflow: hidden; }
   .browse-tools .button.round-button.labelled { font-size: 1rem; }
 }
 .browse-tools .button.map-button { flex: 0 1 auto; }
+@media (max-width: 719px) {
+  .browse-filters-line .button.map-button { flex: none; }
+}
+/* With a place picked, the map's button is its pin alone, round: the place's chip in the row says
+   which ("Tiranë" twice, the chip and the button, until the user asked otherwise on 2026-10-11);
+   its name and the place stay its tooltip and what screen readers hear. */
+.browse-tools .button.round-button.labelled.map-button.is-set { width: var(--row); padding: 0; }
+.browse-tools .map-button.is-set .button-label { display: none; }
 .button-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .button-count { flex: none; font-weight: var(--bold); }
 .button-count::before { content: "· "; }
@@ -431,9 +452,9 @@ html:has(.filters.is-open) { overflow: hidden; }
   .browse-tools .filter-chip,
   .browse-tools .clear-filters { font-size: 1rem; }
 }
-/* The order, last in the row: its words, medium, and a chevron, no pill of its own; its menu under
-   it, from its right end (on phones, where it starts the second line, from its left), as the
-   view's is from the row's end. */
+/* The order, last in the row: its words, medium, and a chevron, no pill of its own (a grey pill
+   in a phone's line, as the others there are); its menu under it, from its right end (on phones,
+   placed by the head, from its left), as the view's is from the row's end. */
 .sort-button {
   display: inline-flex;
   align-items: center;
@@ -448,20 +469,30 @@ html:has(.filters.is-open) { overflow: hidden; }
 }
 .sort-button::-webkit-details-marker { display: none; }
 .sort-button > svg { flex: none; }
-.browse-tools > .sort-menu > .sort-options,
-.browse-tools .cards-menu > .sort-options { right: 0; left: auto; transform-origin: top right; }
+.browse-tools .sort-menu > .sort-options { right: 0; left: auto; transform-origin: top right; }
 @media (max-width: 719px) {
-  .sort-button { padding: 0; }
-  .browse-tools > .sort-menu:not(.cards-menu) > .sort-options { right: auto; left: 0; transform-origin: top left; }
+  .browse-filters-line > .sort-menu { position: static; }
+  .browse-filters-line .sort-button { height: var(--row); gap: 6px; padding: 0 14px; border-radius: var(--radius-pill); background: var(--surface-muted); font-size: 1rem; font-weight: var(--regular); }
+  .browse-filters-line .sort-menu[open] > .sort-button { background: var(--main); color: var(--on-main); }
+  .browse-filters-line > .sort-menu:not(.cards-menu) > .sort-options { top: calc(100% + var(--drop)); right: auto; left: 0; transform-origin: top left; }
+  .browse-filters-line > .cards-menu > .sort-options { top: calc(100% + var(--drop)); }
+}
+@media (max-width: 719px) and (hover: hover) {
+  .browse-filters-line .sort-button:hover { background: var(--surface-muted-hover); }
+  .browse-filters-line .sort-menu[open] > .sort-button:hover { background: var(--main-hover); }
 }
 @media (prefers-reduced-motion: reduce) {
   .browse-tools .button.round-button { transition: none; }
   .browse-tools .round-button:active { transform: none; }
 }
 /* The results' heading, as the canvas has a section's title: 22px bold (19px on phones, a rem
-   being 14px there), 26px under the rows over it and 12px over the cards. */
+   being 14px there), 26px under the rows over it and 12px over the cards; on a phone 20px and
+   10px, so that the first cards come on the first screen (the user, 2026-10-11). */
 .results-head { margin: 26px 0 12px; }
 .results-head > .results-heading { margin: 0; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
+@media (max-width: 719px) {
+  .results-head { margin: 20px 0 10px; }
+}
 /* The cards' view, the row's last button (browse-tools): round, as the search's is, with the icon
    of the view now (Cards::icon), which the page's class says; its menu under it, growing
    rightward from its left edge as the order's does, the views as rows, each with its icon. A

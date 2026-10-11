@@ -4,8 +4,9 @@
     number, lets a page that refreshes in place (refresh.js) keep each listing's card as it is,
     its photo where it was slid to; in a row of cards beside the results (card_row.html), after
     the row's own word ("most-viewed-1001"). One a promotion highlights stands out
-    (is-highlighted, page.css). -#}
-<article class="card{% if card.highlighted %} is-highlighted{% endif %}" id="{{ page.card_ids }}-{{ card.public_no }}">
+    (is-highlighted, page.css); one a promotion features, at the results' top, says so
+    (is-promoted, .card-promoted). -#}
+<article class="card{% if card.highlighted %} is-highlighted{% endif %}{% if page.promoted() %} is-promoted{% endif %}" id="{{ page.card_ids }}-{{ card.public_no }}">
   {#- The photo, darkening toward its bottom edge, with the price on it there; the title under it
       (.card-media in page.css); in the list, the photo at the left, the rest beside it. A big card (the view menu, cards_controller.js) has every photo
       in a row to slide through, dots over them saying which shows and, under a pointer, arrows
@@ -69,9 +70,10 @@
     {#- The price, what follows it (/muaj, i diskutueshëm) a size down; one that dropped lately is
         followed, as on the listing's page, by what it was, struck through, and by how much, in a
         green pill (page.css); a car well under what cars of its model and year ask, by "Çmim i
-        mirë" in one (car_prices.rs). -#}
-    {%- let note = card.price_note() %}
-    <p class="card-price"><span class="card-amount">{{ card.price_main() }}{% if !note.is_empty() %}<span class="card-note">{{ note }}</span>{% endif %}</span>
+        mirë" in one (car_prices.rs). A narrow photo keeps the price, its month and the pill, and
+        leaves out "(i diskutueshëm)" and what a dropped price was (page.css). -#}
+    {%- let (period, negotiable) = card.price_note_parts() %}
+    <p class="card-price"><span class="card-amount">{{ card.price_main() }}{% if !period.is_empty() %}<span class="card-note">{{ period }}</span>{% endif %}{% if !negotiable.is_empty() %}<span class="card-note card-negotiable"> {{ negotiable }}</span>{% endif %}</span>
       {%- if let Some((percent, was)) = card.price_drop() %}<del class="card-was"><span class="visually-hidden">{{ crate::t("Çmimi ishte") }} </span>{{ was }}</del><span class="card-drop">−{{ percent }}%</span>{% endif %}
       {%- if card.bargain() %}<span class="card-bargain">{{ crate::t("Çmim i mirë") }}</span>{% endif %}</p>
     {%- if let Some(place) = card.place_text() %}
@@ -86,6 +88,11 @@
     {#- On /te-ruajturat, a kept listing reserved or sold since says so where the views would be,
         on the same dark pill; a sold one's photo dims (page.css). -#}
     <p class="card-status{% if card.status == "SOLD" %} is-sold{% endif %}">{{ status }}</p>
+    {%- endif %}
+    {%- if page.promoted() %}
+    {#- One a promotion features, at the results' top: so said over its photo's top left, as a kept
+        listing's status is (page.css, .card-promoted). -#}
+    <p class="card-promoted">{{ crate::t("I promovuar") }}</p>
     {%- endif %}
   </div>
   {#- The details line, which starts with the city, with no pin before it, then the distance from

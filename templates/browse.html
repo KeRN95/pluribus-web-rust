@@ -54,22 +54,14 @@
       at its right end (browse.css, .browse-head). What the row opens floats under the head, or
       under its first line where the row shares it. -#}
   <div class="browse-head">
-{%- if category_page && parent.is_some() %}
-{#- A subcategory's page says where it is as the canvas has it: a line of words, the way back first
-    (a chevron: to the page before, or, opened from elsewhere, a level up, back_controller.js), then
-    the category above it, quieter, a link, and after a › the page's own, in the text's colour
-    (browse.css, .breadcrumb); under it the page's heading, its name big. A main category's page
-    has none, its way back before its name (below): the user's ask of 2026-10-11 (its breadcrumb
-    said "Kreu" over it). -#}
-<nav class="breadcrumb" aria-label="{{ crate::t("Rruga") }}">
-  <a class="breadcrumb-back" href="{% if let Some(parent) = parent %}{{ parent.url }}{% else %}/{% endif %}" aria-label="{{ crate::t("Kthehu") }}" title="{{ crate::t("Kthehu") }}" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_LEFT|safe }}</svg></a>
-  {%- if let Some(parent) = parent %}
-  <a class="breadcrumb-up" href="{{ parent.url }}">{{ crate::t(parent.name) }}</a>
-  {%- endif %}
-  <span class="breadcrumb-sep" aria-hidden="true">›</span>
-  <span class="breadcrumb-here" aria-current="page">{{ heading }}</span>
-</nav>
-{%- endif %}
+{%- if category_page %}{% if let Some(parent) = parent %}
+{#- A subcategory's page says where it is over its name, small and muted: the category above it, a
+    link (keeping the words, the town and the map pin, Filters::category_url), level with the
+    name's first letter, its way back before its name as a main category's is (below): the user's
+    ask of 2026-10-11 (a line "‹ Automjete › Makina" stood over the name until then, which said
+    the name twice). -#}
+<nav class="browse-up" aria-label="{{ crate::t("Rruga") }}"><a class="breadcrumb-up" href="{{ parent.url }}">{{ crate::t(parent.name) }}</a></nav>
+{%- endif %}{% endif %}
 {#- The heading's line, as the canvas has it: the page's name big (a category's; a search's,
     "Rezultatet për „golf“"; a town's), and after it, quieter, how many it found ("3k njoftime",
     format::short_listing_count: counted up to 1 000 with the page, and once it shows further, up to
@@ -83,10 +75,10 @@
     Someone not signed in signs in first and comes back here. -#}
 <div class="browse-heading">
   <div class="browse-heading-text">
-    {%- if category_page && parent.is_none() %}
-    {#- A main category's way back, with no breadcrumb over it: the chevron before its name, to the
-        page before, or, opened from elsewhere, the welcome page (back_controller.js). -#}
-    <a class="breadcrumb-back title-back" href="/" aria-label="{{ crate::t("Kthehu") }}" title="{{ crate::t("Kthehu") }}" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">{{ crate::web::icons::CHEVRON_LEFT|safe }}</svg></a>
+    {%- if category_page %}
+    {#- A category's way back: the chevron before its name, to the page before, or, opened from
+        elsewhere, the category above it or the welcome page (back_controller.js). -#}
+    <a class="breadcrumb-back title-back" href="{% if let Some(parent) = parent %}{{ parent.url }}{% else %}/{% endif %}" aria-label="{{ crate::t("Kthehu") }}" title="{{ crate::t("Kthehu") }}" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">{{ crate::web::icons::CHEVRON_LEFT|safe }}</svg></a>
     {%- endif %}
     <h1 class="browse-title">{{ heading }}</h1>
     <p class="result-count" id="result-count" data-show="{{ show_label }}"{% if capped %} data-capped{% endif %}>{{ count }}</p>
@@ -137,9 +129,11 @@
     and what is open stays as it is while it morphs (keep). Without JavaScript the filters stay
     open, in the page (the noscript over the head). -#}
   <div class="browse-tools" data-filters-target="tools" data-action="click->filters#foldFromRow">
-    {#- The row's first part, as the canvas has it: Filtrat, the filters picked and the dropdowns
-        of the others; on a phone a line of its own that slides sideways (browse.css,
-        .browse-filters-line). -#}
+    {#- The row, as the canvas has it: Filtrat, the filters picked and the dropdowns of the
+        others, then the map, the view and the order; on a phone all of it one line that slides
+        sideways, Filtrat, the filters picked, the map, the order and the view first (browse.css,
+        .browse-filters-line; the map, the view and the order had a line of their own under it
+        until the user asked for one on 2026-10-11). -#}
     <div class="browse-filters-line">
 
     {#- The filters: their name, and how many are on in a coral circle; which ones, to screen
@@ -169,10 +163,11 @@
     {%- if on > 0 %}
     <a class="clear-filters" href="{{ clear_url }}">{{ crate::t("Pastro filtrat") }}</a>
     {%- endif %}
-    </div>
 
-    {#- The map: its pin and what it is set to, the town ("Durrës"), the point as its nearest town
-        and the distance ("Tiranë · 10 km"), or "Harta". It opens the map under the row, and folds
+    {#- The map: its pin and "Harta", or, once a town or a point is picked, its pin alone, the
+        place's chip in the row saying which (browse.css, .map-button.is-set); what it is set to,
+        the town ("Durrës"), the point as its nearest town and the distance ("Tiranë · 10 km"), its
+        tooltip and what screen readers hear. It opens the map under the row, and folds
         it again; the map loads only then, its dots after (map_controller.js). It starts on the
         point, or on the town, or on Tirana, its circle round the pin from the first, the same
         size whatever the zoom, which sets the distance it covers. As soon as it stops
@@ -297,6 +292,7 @@
         {%- endfor %}
       </fieldset>
     </details>
+    </div>
   </div>
 
   {#- The filters, as the canvas has them: a sheet at the screen's right, the whole screen on
@@ -319,21 +315,6 @@
   </div>
   {#- Under what the row opened, the page dimmed (browse.css); a tap on it folds that again. -#}
   <div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>
-
-  {%- if let Some(page) = featured %}
-  {#- The listings a promotion features among the page's matches, its filters' and its words'
-      (db::featured_cards, promotions.rs), in another order each time: a row of cards that
-      slides sideways (card_row.html), first of the rows over the results, and small whatever
-      size the page's own cards are; its note says that they are promoted, and leads to how
-      one is (/promovo). -#}
-  <section class="featured-row" data-controller="drag-row" aria-labelledby="featured-heading">
-    <div class="row-head">
-      <h2 id="featured-heading">{{ crate::t("Të veçuara") }}</h2>
-      <a class="row-note" href="/promovo">{{ crate::t("Të promovuara") }} · <span class="row-note-how">{{ crate::t("Si?") }}</span></a>
-    </div>
-    {% call rows::card_row(page) %}
-  </section>
-  {%- endif %}
 
   {%- if let Some(page) = most_viewed %}
   {#- In every main category and a few big subcategories, with no filter on, their listings seen the
@@ -364,7 +345,7 @@
     {%- endif %}
     </div>
 
-    {%- if page.cards.is_empty() %}
+    {%- if page.cards.is_empty() && featured.is_none() %}
     {#- Nothing found, in a white box as the canvas has it: a magnifier in a grey circle, that
         nothing was found, then what would find more, a tap away: the chips above, each a filter
         less; words searched found nothing: how to search for more; and as buttons, a wider circle
@@ -395,7 +376,17 @@
       </div>
     </div>
     {%- else %}
-    {% include "listing_grid.html" %}
+    {#- The listings, and first of all, at their top, two of those a promotion features among the
+        page's matches, its filters' and its words' (db::featured_cards, promotions.rs, in another
+        order each time, so that each has its turn), in the results' own look, each saying "I
+        promovuar" over its photo (listing_card.html), and not again among the first page's
+        (browse.rs): the user's ask of 2026-10-11 ("Të veçuara", a row of small cards that slid
+        sideways over the results, before). -#}
+    <div class="grid">
+      {%- if let Some(page) = featured %}{% for card in page.cards %}{% include "listing_card.html" %}{% endfor %}{% endif %}
+      {%- for card in page.cards %}{% include "listing_card.html" %}{% endfor %}
+      {%- if let Some(next) = page.next %}{% include "next_page.html" %}{% endif %}
+    </div>
     {%- endif %}
   </section>
 </div>

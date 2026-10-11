@@ -34,8 +34,8 @@ Si i shkruan Pluribus: për llogarinë, për një njoftim, për një ide.
 Promovo një njoftim
 = Promote a listing
 
-Që ta shohin më shumë: në rreshtin „Të veçuara“ mbi njoftimet e tjera, në krye të më të rejave, ose me një kartë që dallohet.
-= So that more people see it: in the “Featured” row above the other listings, at the top of the newest, or with a card that stands out.
+Që ta shohin më shumë: mbi njoftimet e tjera me shenjën „I promovuar“, në krye të më të rejave, ose me një kartë që dallohet.
+= So that more people see it: above the other listings, marked “Promoted”, at the top of the newest, or with a card that stands out.
 
 Tani për tani nuk ka promovime.
 = There are no promotions for now.
@@ -66,8 +66,8 @@ Numri i njoftimit është në adresën e faqes së tij, pas /listing/: te /listi
 # src/web/promotions.rs: what each kind of promotion does, the page's description, and the
 # subject of the e-mail it offers to write
 
-Del te „Të veçuara“, rreshti mbi njoftimet e kategorisë së tij dhe të kërkimeve ku përputhet, me radhë me të tjerët.
-= Shows in “Featured”, the row above the listings of its category and of the searches it matches, taking turns with the others.
+Del mbi njoftimet e kategorisë së tij dhe të kërkimeve ku përputhet, me shenjën „I promovuar“, me radhë me të tjerët.
+= Shows above the listings of its category and of the searches it matches, marked “Promoted”, taking turns with the others.
 
 Karta e tij dallohet me një sfond të verdhë të lehtë, kudo që shfaqet.
 = Its card stands out with a pale yellow background, wherever it appears.
@@ -78,8 +78,8 @@ Ngjitet menjëherë në krye të njoftimeve më të reja, një herë.
 Ngjitet në krye të njoftimeve më të reja çdo ditë, sa zgjat.
 = Goes to the top of the newest listings every day, while it lasts.
 
-Si shihet më shumë një njoftim në Pluribus: në rreshtin „Të veçuara“, në krye të më të rejave, ose me një kartë që dallohet.
-= How a listing gets seen more on Pluribus: in the “Featured” row, at the top of the newest, or with a card that stands out.
+Si shihet më shumë një njoftim në Pluribus: mbi njoftimet e tjera me shenjën „I promovuar“, në krye të më të rejave, ose me një kartë që dallohet.
+= How a listing gets seen more on Pluribus: above the other listings, marked “Promoted”, at the top of the newest, or with a card that stands out.
 
 Promovim për njoftimin {}
 = Promotion for listing {}

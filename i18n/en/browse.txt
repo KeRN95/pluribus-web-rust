@@ -41,8 +41,8 @@ Njoftimet më të reja
 Kthehu
 = Back
 
-# A category page's breadcrumb (browse.html): its name for screen readers, and the welcome page
-# over a main category.
+# A subcategory's way up over its name (browse.html): its name for screen readers; and the
+# welcome page (the rail's, a listing's breadcrumb's).
 Rruga
 = Breadcrumb
 
@@ -114,19 +114,6 @@ Ruaje dhe merr lajmërim kur dalin njoftime të reja
 
 Ruaj kërkimin
 = Save search
-
-Të veçuara
-= Featured
-
-Të promovuara · Si?
-= Promoted · How?
-
-# "Të veçuara"'s note (browse.html): the two parts, the second underlined.
-Të promovuara
-= Promoted
-
-Si?
-= How?
 
 Rendit
 = Sort
@@ -269,6 +256,10 @@ Fotoja tjetër
 
 Shikime këtë javë
 = Views this week
+
+# Over the photo of one a promotion features, at the top of the results.
+I promovuar
+= Promoted
 
 # src/web/browse.rs
 Kartela të vogla

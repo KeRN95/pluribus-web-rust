@@ -1514,8 +1514,9 @@ async fn category_pages_keep_their_map_folded(pool: PgPool) {
     assert!(pinned.contains(r#"<h1 class="browse-title">Makina</h1>"#));
     assert!(pinned.contains(r#"<section class="map-card map-hidden""#));
     assert!(pinned.contains(r#"data-map-latitude-value="41.32833""#));
-    // The map's button says where, the point's nearest town and how far, and is marked as set;
-    // the filters' summary leaves the point to it, and to its chip. Its circle shows from the
+    // The map's button says where, the point's nearest town and how far (in its tooltip and to
+    // screen readers; set, it shows its pin alone, the point's chip saying it), and is marked as
+    // set; the filters' summary leaves the point to it, and to its chip. Its circle shows from the
     // start.
     assert!(pinned.contains(r#"aria-label="Harta: Tiranë · 5 km" title="Harta: Tiranë · 5 km""#));
     assert!(pinned.contains(r#"<span class="button-label">Tiranë · 5 km</span>"#));
@@ -4850,13 +4851,14 @@ async fn the_way_back_is_a_chevron_level_with_its_words(pool: PgPool) {
     assert!(back.contains(r#"<g transform="translate(.75 0) scale(.09375)" stroke="none"><path fill="currentColor" d="M165.66,202.34"#), "{back}");
     assert!(!page.contains("M160,48V208L80,128Z") && !page.contains("M176,128,96,208V48Z"), "no caret drawn as a triangle");
     // A main category's page has no breadcrumb: its way back stands before its name (the user's
-    // ask of the same day); a subcategory's keeps its breadcrumb.
+    // ask of the same day); nor has a subcategory's since, the category above it over its name.
     let cars = html(pool.clone(), "/c/automjete").await;
     assert!(!cars.contains(r#"<nav class="breadcrumb""#), "{cars}");
     let title = &cars[cars.find(r#"<div class="browse-heading-text">"#).expect("the heading's line")..];
     let back = title.find(r#"<a class="breadcrumb-back title-back" href="/" aria-label="Kthehu""#).expect("the way back");
     assert!(back < title.find(r#"<h1 class="browse-title">Automjete</h1>"#).unwrap(), "{title}");
-    assert!(html(pool.clone(), "/c/makina").await.contains(r#"<nav class="breadcrumb" aria-label="Rruga">"#));
+    let makina = html(pool.clone(), "/c/makina").await;
+    assert!(!makina.contains(r#"<nav class="breadcrumb""#) && makina.contains(r#"<a class="breadcrumb-back title-back" href="/c/automjete" aria-label="Kthehu""#), "{makina}");
     // (The stylesheet comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     let crumb = &css[css.find(".breadcrumb{").expect("the breadcrumb")..];
@@ -5263,13 +5265,12 @@ async fn parts_have_their_kinds_a_level_down(pool: PgPool) {
     ]);
     assert!(kinds.is_sorted(), "{kinds:?}");
 
-    // A kind's page: its breadcrumb, the way up to its parent, then itself, and its heading under
+    // A kind's page: the way up to its parent over its name, then its heading, the way back before
     // it; no pills under, as it has no subcategories.
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
     let head = positions(&gps, &[
-        r#"<nav class="breadcrumb" aria-label="Rruga">"#,
-        r#"<a class="breadcrumb-up" href="/c/pjese-dhe-aksesore">Pjesë / aksesorë</a>"#,
-        r#"<span class="breadcrumb-here" aria-current="page">GPS / navigatorë</span>"#,
+        r#"<nav class="browse-up" aria-label="Rruga"><a class="breadcrumb-up" href="/c/pjese-dhe-aksesore">Pjesë / aksesorë</a></nav>"#,
+        r#"<a class="breadcrumb-back title-back" href="/c/pjese-dhe-aksesore" aria-label="Kthehu""#,
         r#"<h1 class="browse-title">GPS / navigatorë</h1>"#,
     ]);
     assert!(head.is_sorted(), "{head:?}");
@@ -6835,20 +6836,24 @@ async fn promote(pool: &PgPool, moderator: &str, number: &str, product: &str) ->
     post_form(pool.clone(), "/moderim/promovime", &[("njoftimi", number), ("produkti", product)], Some(moderator)).await
 }
 
-/// The listings in a page's "Të veçuara", by their numbers, in the row's order.
+/// The listings a promotion features at the top of a page's results, by their numbers, in their
+/// order (browse.html, ListingPage::featured).
 fn featured_numbers(html: &str) -> Vec<i64> {
-    match html.find(r#"<section class="featured-row""#) {
-        Some(start) => {
-            let row = &html[start..];
-            card_numbers(&row[..row.find("</section>").unwrap()])
-        }
-        None => Vec::new(),
-    }
+    html.match_indices(r#"" id="featured-"#)
+        .map(|(start, matched)| {
+            let rest = &html[start + matched.len()..];
+            rest[..rest.find('"').unwrap()].parse().unwrap()
+        })
+        .collect()
 }
 
-/// The listings in a page's results, by their numbers, past the rows over them.
+/// The listings in a page's results, by their numbers, past the rows over them and the promoted
+/// ones at their top.
 fn result_numbers(html: &str) -> Vec<i64> {
-    card_numbers(&html[html.find(r#"<section class="results""#).unwrap()..])
+    let results = &html[html.find(r#"<section class="results""#).unwrap()..];
+    let mut numbers = card_numbers(results);
+    numbers.drain(..featured_numbers(results).len());
+    numbers
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -6881,17 +6886,24 @@ async fn moderators_promote_listings_which_show_more_until_their_time(pool: PgPo
     assert!(get_with_cookie(pool.clone(), golf, &moderator).await.body.contains(r#"<a href="/moderim?njoftimi=1001#promovime">Jep një promovim</a>"#));
     assert!(!get(pool.clone(), golf).await.body.contains("promotion-note"));
     let cars = get(pool.clone(), "/c/makina").await.body;
-    assert!(featured_numbers(&cars).is_empty() && !cars.contains("featured-row"));
+    assert!(featured_numbers(&cars).is_empty() && !cars.contains("is-promoted") && !cars.contains("I promovuar"));
 
-    // Featured: in the row over the results of its category and of the searches it matches, and
-    // nowhere else; on /moderim with until when; its seller hears of it and sees it.
+    // Featured: first of the results of its category and of the searches it matches, in their own
+    // look, "I promovuar" over its photo, and not again among them (the user's ask of 2026-10-11:
+    // a row of its own over the results until then, "Të veçuara"); nowhere else; on /moderim with
+    // until when; its seller hears of it and sees it.
     let given = promote(&pool, &moderator, "1001", "FEATURED_7D").await;
     assert_eq!(given.location.as_deref(), Some("/moderim#promovime"));
     let cars = get(pool.clone(), "/c/makina").await.body;
     assert_eq!(featured_numbers(&cars), vec![1001]);
-    assert!(cars.contains(r#"<article class="card" id="featured-1001">"#), "{cars}");
-    assert!(cars.contains(r#"<a class="row-note" href="/promovo">Të promovuara · <span class="row-note-how">Si?</span></a>"#));
-    assert_eq!(result_numbers(&cars), vec![1001, 1002]);
+    let open = r#"<article class="card is-promoted" id="featured-1001">"#;
+    let at = positions(&cars, &[r#"<section class="results""#, r#"<h2 class="results-heading" id="results-heading">"#, r#"<div class="grid">"#, open, r#"<article class="card" id="listing-1002">"#]);
+    assert!(at.is_sorted(), "{at:?}");
+    let promoted = &cars[cars.find(open).unwrap()..];
+    let promoted = &promoted[..promoted.find("</article>").unwrap()];
+    assert!(promoted.contains(r#"<p class="card-promoted">I promovuar</p>"#), "{promoted}");
+    assert!(!cars.contains("featured-row") && !cars.contains("Të veçuara") && !cars.contains("row-note"));
+    assert_eq!(result_numbers(&cars), vec![1002]);
     assert_eq!(featured_numbers(&get(pool.clone(), "/search?q=golf").await.body), vec![1001]);
     assert!(featured_numbers(&get(pool.clone(), "/search?q=mercedes").await.body).is_empty());
     assert!(featured_numbers(&get(pool.clone(), "/c/elektronike").await.body).is_empty());
@@ -6909,28 +6921,6 @@ async fn moderators_promote_listings_which_show_more_until_their_time(pool: PgPo
         .await
         .unwrap();
     assert!((13.99..=14.0).contains(&days), "{days}");
-
-    // Highlighted: its card stands out wherever it shows.
-    promote(&pool, &moderator, "1002", "HIGHLIGHT_7D").await;
-    let cars = get(pool.clone(), "/c/makina").await.body;
-    assert!(cars.contains(r#"<article class="card is-highlighted" id="listing-1002">"#), "{cars}");
-    assert!(cars.contains(r#"<article class="card" id="listing-1001">"#));
-
-    // A bump takes it to the top of "newest first" at once, spent there and then.
-    promote(&pool, &moderator, "1002", "BUMP_ONCE").await;
-    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1002, 1001]);
-    // At the top of its category for a week: there now, and back once a day has gone by.
-    promote(&pool, &moderator, "1001", "CATEGORY_TOP_7D").await;
-    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1001, 1002]);
-    // Giving them moved no listing's updated_at, which the sitemaps give search engines.
-    assert_eq!(updated(pool.clone()).await, golf_updated);
-    sqlx::query("UPDATE listings SET published_at = now() - interval '3 days', bumped_at = now() - interval '25 hours' WHERE public_no = 1001").execute(&pool).await.unwrap();
-    let golf_updated = updated(pool.clone()).await;
-    sqlx::query("UPDATE listings SET bumped_at = now() - interval '1 hour' WHERE public_no = 1002").execute(&pool).await.unwrap();
-    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1002, 1001]);
-    assert_eq!(marketplace::db::tick_promotions(&pool).await.unwrap(), (0, 1));
-    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1001, 1002]);
-    assert_eq!(marketplace::db::tick_promotions(&pool).await.unwrap(), (0, 0));
 
     // Ended by a moderator, it gives no more; the other of its kind on it still does, until it is
     // ended too.
@@ -6951,6 +6941,29 @@ async fn moderators_promote_listings_which_show_more_until_their_time(pool: PgPo
     assert!(featured_numbers(&get(pool.clone(), "/c/makina").await.body).is_empty());
     let left: Option<time::OffsetDateTime> = sqlx::query_scalar("SELECT featured_until FROM listings WHERE public_no = 1001").fetch_one(&pool).await.unwrap();
     assert_eq!(left, None);
+
+    // Highlighted: its card stands out wherever it shows.
+    promote(&pool, &moderator, "1002", "HIGHLIGHT_7D").await;
+    let cars = get(pool.clone(), "/c/makina").await.body;
+    assert!(cars.contains(r#"<article class="card is-highlighted" id="listing-1002">"#), "{cars}");
+    assert!(cars.contains(r#"<article class="card" id="listing-1001">"#));
+
+    // A bump takes it to the top of "newest first" at once, spent there and then.
+    promote(&pool, &moderator, "1002", "BUMP_ONCE").await;
+    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1002, 1001]);
+    // At the top of its category for a week: there now, and back once a day has gone by.
+    promote(&pool, &moderator, "1001", "CATEGORY_TOP_7D").await;
+    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1001, 1002]);
+    // Giving and ending them moved no listing's updated_at, which the sitemaps give search
+    // engines.
+    assert_eq!(updated(pool.clone()).await, golf_updated);
+    sqlx::query("UPDATE listings SET published_at = now() - interval '3 days', bumped_at = now() - interval '25 hours' WHERE public_no = 1001").execute(&pool).await.unwrap();
+    let golf_updated = updated(pool.clone()).await;
+    sqlx::query("UPDATE listings SET bumped_at = now() - interval '1 hour' WHERE public_no = 1002").execute(&pool).await.unwrap();
+    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1002, 1001]);
+    assert_eq!(marketplace::db::tick_promotions(&pool).await.unwrap(), (0, 1));
+    assert_eq!(result_numbers(&get(pool.clone(), "/c/makina").await.body), vec![1001, 1002]);
+    assert_eq!(marketplace::db::tick_promotions(&pool).await.unwrap(), (0, 0));
 
     // Its time up, it ends.
     sqlx::query(
@@ -6985,6 +6998,8 @@ async fn moderators_promote_listings_which_show_more_until_their_time(pool: PgPo
     // /promovo says what each does and costs, and how to get one.
     let about = get(pool.clone(), "/promovo?njoftimi=1001").await.body;
     assert!(about.contains("<strong>I veçuar për 7 ditë</strong>") && about.contains("8,99\u{a0}€"), "{about}");
+    assert!(about.contains("Që ta shohin më shumë: mbi njoftimet e tjera me shenjën „I promovuar“, ") && !about.contains("Të veçuara"), "{about}");
+    assert!(about.contains("<span>Del mbi njoftimet e kategorisë së tij dhe të kërkimeve ku përputhet, me shenjën „I promovuar“, me radhë me të tjerët.</span>"), "{about}");
     assert!(about.contains(r#"<a href="/kontakt">Kontakt</a> me numrin e njoftimit (<strong>1001</strong>)"#), "{about}");
 }
 
@@ -7216,36 +7231,36 @@ async fn a_category_pages_way_up_keeps_the_words_and_the_town(pool: PgPool) {
     assert!(page.contains(r#"<a class="shortcut" href="/c/apartamente?q=shtepi&city=durres">"#));
     let flats = html(pool.clone(), "/c/apartamente?city=durres&q=shtepi").await;
     assert!(flats.contains(r#"<a class="breadcrumb-up" href="/c/prona?q=shtepi&city=durres">Prona</a>"#), "{flats}");
+    assert!(flats.contains(r#"<a class="breadcrumb-back title-back" href="/c/prona?q=shtepi&city=durres" aria-label="Kthehu""#), "{flats}");
     // A search page's heading is just a heading.
     assert!(!get(pool, "/search?q=golf").await.body.contains(r#"<nav class="breadcrumb""#));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
-async fn a_category_page_says_where_it_is_in_a_breadcrumb(pool: PgPool) {
-    // Makina: a line of words, back first (leading a level up without scripts), then the way up to
-    // Automjete, quieter, then Makina, the page's own; its heading under it; no pills under, as it
-    // has no subcategories; and the trail for search engines too (schema.org's BreadcrumbList).
+async fn a_category_page_says_where_it_is_over_its_name(pool: PgPool) {
+    // Makina: the way up to Automjete over its name, small and quieter; its way back before its
+    // name (leading a level up without scripts); no pills under, as it has no subcategories; and
+    // the trail for search engines (schema.org's BreadcrumbList). A line of words over its name,
+    // "‹ Automjete › Makina", said it until the user's ask of 2026-10-11.
     let cars = html(pool.clone(), "/c/makina").await;
     let order = positions(&cars, &[
-        r#"<nav class="breadcrumb" aria-label="Rruga">"#,
-        r#"<a class="breadcrumb-back" href="/c/automjete" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#,
-        r#"<a class="breadcrumb-up" href="/c/automjete">Automjete</a>"#,
-        r#"<span class="breadcrumb-sep" aria-hidden="true">›</span>"#,
-        r#"<span class="breadcrumb-here" aria-current="page">Makina</span>"#,
+        r#"<nav class="browse-up" aria-label="Rruga"><a class="breadcrumb-up" href="/c/automjete">Automjete</a></nav>"#,
+        r#"<a class="breadcrumb-back title-back" href="/c/automjete" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#,
         r#"<h1 class="browse-title">Makina</h1>"#,
         r#"<p class="result-count" id="result-count""#,
         r#"<div class="browse-tools""#,
         r#"<details class="sort-menu cards-menu""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
+    assert!(!cars.contains(r#"<nav class="breadcrumb""#) && !cars.contains("breadcrumb-here"), "{cars}");
     assert!(!cars.contains("category-switch") && !cars.contains("category-level") && !cars.contains("Faqja kryesore"));
-    let head = &cars[cars.find(r#"<nav class="breadcrumb""#).unwrap()..cars.find(r#"<div class="browse-tools""#).unwrap()];
+    let head = &cars[cars.find(r#"<nav class="browse-up""#).unwrap()..cars.find(r#"<div class="browse-tools""#).unwrap()];
     assert!(!head.contains(r#"<a class="shortcut""#), "no subcategories, no pills: {head}");
     assert!(cars.contains(r#""@type":"BreadcrumbList""#));
     assert!(cars.contains(r#"{"@type":"ListItem","item":"http://127.0.0.1:3000/c/makina","name":"Makina","position":3}"#), "{cars}");
     // Three levels down, the way up is the category above alone.
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
-    assert!(gps.contains(r#"<a class="breadcrumb-back" href="/c/pjese-dhe-aksesore" aria-label="Kthehu""#));
+    assert!(gps.contains(r#"<a class="breadcrumb-back title-back" href="/c/pjese-dhe-aksesore" aria-label="Kthehu""#));
     assert!(gps.contains(r#"<a class="breadcrumb-up" href="/c/pjese-dhe-aksesore">Pjesë / aksesorë</a>"#));
     // A main category's page has no breadcrumb since the user's ask of 2026-10-11 (it said "Kreu"
     // over the page's name): its way back, to the welcome page without scripts, stands before its
@@ -7253,7 +7268,7 @@ async fn a_category_page_says_where_it_is_in_a_breadcrumb(pool: PgPool) {
     // either.
     let vehicles = html(pool.clone(), "/c/automjete").await;
     assert!(vehicles.contains(r#"<a class="breadcrumb-back title-back" href="/" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#), "back to the welcome page without scripts");
-    assert!(!vehicles.contains(r#"<nav class="breadcrumb""#) && !vehicles.contains(r#"<a class="breadcrumb-up" href="/">Kreu</a>"#));
+    assert!(!vehicles.contains(r#"<nav class="breadcrumb""#) && !vehicles.contains("browse-up") && !vehicles.contains(r#"<a class="breadcrumb-up" href="/">Kreu</a>"#));
     let at = positions(&vehicles, &[
         r#"<h1 class="browse-title">Automjete</h1>"#,
         r#"<nav class="subcategories" aria-label="Nënkategoritë">"#,
@@ -7262,6 +7277,54 @@ async fn a_category_page_says_where_it_is_in_a_breadcrumb(pool: PgPool) {
     assert!(at.is_sorted(), "{at:?}");
     let search = html(pool, "/search?q=golf").await;
     assert!(search.contains(r#"<h1 class="browse-title">Rezultatet për „golf“</h1>"#) && !search.contains(r#"<nav class="breadcrumb""#) && !search.contains("BreadcrumbList"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_phone_sees_the_listings_on_its_first_screen(pool: PgPool) {
+    // The user's ask of 2026-10-11, Makina on a phone: the map, the view and the order join the
+    // filters' line, which slides sideways, rather than standing on a line of their own under it,
+    // Filtrat, the filters picked, the map, the order and the view first, the dropdowns after; the
+    // order a grey pill there, and what it and the view open placed by the head, so that the
+    // line's sliding doesn't cut it. On a wide screen the line is no box, the row as it was.
+    let cars = html(pool.clone(), "/c/makina?city=tirane").await;
+    let open = r#"<div class="browse-tools" data-filters-target="tools" data-action="click->filters#foldFromRow">"#;
+    let row = &cars[cars.find(open).unwrap() + open.len()..cars.find(r#"<aside class="filters""#).unwrap()];
+    assert!(row.trim_start().starts_with(r#"<div class="browse-filters-line">"#), "{row}");
+    let order = positions(row, &[
+        r#"<button type="button" class="button secondary round-button labelled filters-open""#,
+        r#"<ul class="active-filters""#,
+        r#"<section class="map-card map-hidden""#,
+        r#"<details class="sort-menu cards-menu""#,
+        r#"<details class="sort-menu" data-controller="dropdown""#,
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
+    let after_order = &row[row.rfind("</details>").unwrap()..];
+    assert_eq!(after_order.matches("</div>").count(), 2, "the line ends after the order, then the row: {after_order}");
+    // With a town, the map's button is its pin alone (the town's chip says it, "Tiranë" twice
+    // until then), the town its tooltip and what screen readers hear.
+    assert!(row.contains(r#"class="button secondary round-button labelled map-button is-set""#) && row.contains(r#"aria-label="Harta: Tiranë" title="Harta: Tiranë""#), "{row}");
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    for rule in [
+        ".browse-filters-line > .active-filters{order:1;}.browse-filters-line .map-button{order:2;margin-left:0;}.browse-filters-line > .sort-menu{order:3;}.browse-filters-line > .cards-menu{order:4;}.browse-filters-line > .most-viewed-button{order:5;}.browse-filters-line > .filter-drop{order:6;}.browse-filters-line > .clear-filters{order:7;}",
+        "@media (max-width:719px){.browse-filters-line > .sort-menu{position:static;}",
+        ".browse-filters-line > .sort-menu:not(.cards-menu) > .sort-options{top:calc(100% + var(--drop));right:auto;left:0;",
+        ".browse-tools .button.round-button.labelled.map-button.is-set{width:var(--row);padding:0;}",
+        ".browse-tools .map-button.is-set .button-label{display:none;}",
+        "@media (max-width:719px){.browse-filters-line .button.map-button{flex:none;}}",
+        // Closer gaps over the results and "Më të klikuarat".
+        "@media (max-width:719px){.results-head{margin:20px 0 10px;}}",
+        "@media (max-width:719px){.browse > .most-viewed{margin-top:20px;}.most-viewed > h2{margin-bottom:10px;}}",
+        // A subcategory's way up over its name, level with its first letter after the chevron.
+        ".browse-up{min-width:0;margin:0 0 -11px 32px;padding-bottom:3px;overflow:hidden;",
+        // A promoted card says so over its photo, in the list over its photo there; a big one in
+        // place of its seller.
+        ".card-promoted{grid-area:1 / 1;",
+        ".cards-list .results .card-media .card-promoted{grid-area:photo;",
+        ".card.is-promoted .card-seller{display:none;}",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    assert!(!css.contains("featured-row") && !css.contains(".row-note"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -7985,7 +8048,12 @@ async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
     set_price(&pool, 1002, "25000").await;
     assert!(!card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("card-drop"));
     set_price(&pool, 1002, "20000").await;
-    assert!(card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("20\u{a0}000\u{a0}€<span class=\"card-note\"> (i diskutueshëm)</span></span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>21\u{a0}500\u{a0}€</del><span class=\"card-drop\">−7%</span>"));
+    assert!(card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("20\u{a0}000\u{a0}€<span class=\"card-note card-negotiable\"> (i diskutueshëm)</span></span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>21\u{a0}500\u{a0}€</del><span class=\"card-drop\">−7%</span>"));
+    // A narrow photo, a small card's or the list's on a phone, keeps the price, its month and the
+    // pill: "(i diskutueshëm)" and what it was cut the price short there (the user, 2026-10-11).
+    // A big card has room for them.
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    assert!(css.contains("@media (max-width:719px){:is(.card-negotiable,.card-was){display:none;}:is(.cards-big .results,.big-cards) :is(.card-negotiable,.card-was){display:revert;}}"));
 
     // Less than 1% is no drop: the iPhone, from 55 000 to 54 700 Lekë. Nor is a price in another
     // currency: the bike, from 25 000 Lekë to 200 €.

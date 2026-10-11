@@ -147,6 +147,18 @@ impl ListingCard {
         format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).1
     }
 
+    /// What follows the price, in two: its month ("/muaj", a rent's or a salary's), which every card
+    /// keeps, and "(i diskutueshëm)", which a narrow card's photo leaves out (page.css); each empty
+    /// when there is none.
+    pub fn price_note_parts(&self) -> (String, String) {
+        let note = self.price_note();
+        let negotiable = crate::t("(i diskutueshëm)");
+        match note.strip_suffix(negotiable) {
+            Some(period) => (period.trim_end().to_string(), negotiable.to_string()),
+            None => (note, String::new()),
+        }
+    }
+
     /// What the list's card shows of its description: all of it, or, when it is longer than
     /// db::DESCRIPTION_EXCERPT, that much, cut at a word and ending in "…".
     pub fn description_excerpt(&self) -> String {

@@ -107,10 +107,9 @@
 /* The welcome page's sections under the categories, as the canvas has them: "Shikuar së fundmi",
    "Më të klikuarat" and the newest listings, 26px apart, each heading a browse page's section
    title, 22px bold (19px on phones, a rem being 14px there), 12px over its cards. The listings
-   seen lately have "Pastro" at the heading's end, quiet, as tall as a finger needs, as a browse
-   page's "Të veçuara" has its note (.row-head, browse.html). */
-.row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin: 1.75rem 0 .75rem; }
-.row-head h2 { margin: 0; }
+   seen lately have "Pastro" at the heading's end, quiet, as tall as a finger needs (.row-head). */
+.row-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; margin: 1.75rem 0 .75rem; }
+.row-head h2 { min-width: 0; margin: 0; }
 .welcome ~ :is(.seen-lately, .most-viewed, .latest) { margin-top: 26px; }
 .welcome ~ .seen-lately .row-head { margin: 0; }
 .welcome ~ :is(.most-viewed, .latest) > h2,

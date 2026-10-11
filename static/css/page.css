@@ -29,7 +29,7 @@
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px var(--space-12); }
 
 /* A row of the same cards that slides sideways (card_row.html): the welcome page's "Shikuar së
-   fundmi", a category's "Të veçuara", a seller's other listings. As the design system
+   fundmi", a seller's other listings. As the design system
    has shelves: cards 236px wide, 16px apart (180px and 12px on phones), so that on the page's
    column four stand whole and the next one shows at the edge; on phones the row runs on to the
    screen's edge, its last card stopping at the page's side once slid to the end. A row of flex
@@ -153,6 +153,13 @@
   text-shadow: 0 1px 2px rgb(0 0 0 / 40%);
 }
 .card-note { font-size: .83em; font-weight: var(--medium); }
+/* A narrow photo, a small card's or a row's on a phone and the list's there, keeps the price, its
+   month and its pill: "(i diskutueshëm)" and what a dropped price was are left out, which cut the
+   price short there ("9 800 € (i diskut…"; the user, 2026-10-11). A big card has room for them. */
+@media (max-width: 719px) {
+  :is(.card-negotiable, .card-was) { display: none; }
+  :is(.cards-big .results, .big-cards) :is(.card-negotiable, .card-was) { display: revert; }
+}
 
 /* The title, under the photo. */
 .card-head { grid-area: 2 / 1; padding: .55rem .15rem 0; }
@@ -274,6 +281,24 @@
   pointer-events: none;
 }
 .card-media:has(.card-status.is-sold) .card-photo { filter: grayscale(.7); opacity: .75; }
+/* One a promotion features, at the results' top (browse.html): "I promovuar" in a pill over its
+   photo's top left, as a kept listing's status is, smaller; in the list, over its photo there. */
+.card-promoted {
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: start;
+  z-index: 6;
+  margin: .625rem;
+  padding: .1875rem .5rem;
+  border-radius: 999px;
+  background: var(--photo-label);
+  color: var(--on-photo);
+  font-size: .6875rem;
+  font-weight: var(--semibold);
+  line-height: 1.2;
+  pointer-events: none;
+}
+.cards-list .results .card-media .card-promoted { grid-area: photo; margin: .5rem; }
 .listing-media .heart { position: absolute; top: calc(var(--over-edge) - .3rem); right: calc(var(--over-edge) - .3rem); z-index: 2; }
 .listing-media .heart-button { --circle: var(--over-photo); --reach: .3rem; }
 .listing-media .heart-button svg { width: 22px; height: 22px; }
@@ -442,6 +467,8 @@
 .card-seller .avatar { width: 1.5rem; height: 1.5rem; border-color: var(--on-photo); color: var(--on-photo); font-size: .75rem; filter: drop-shadow(0 1px 2px var(--photo-shade)); }
 .card-seller-text { display: grid; min-width: 0; }
 .card-seller-name { font-size: var(--text-xs); font-weight: var(--semibold); }
+/* A big promoted card says so where its seller would be. */
+.card.is-promoted .card-seller { display: none; }
 :is(.cards-big .results, .big-cards) .card-head { padding-top: .7rem; }
 :is(.cards-big .results, .big-cards) .card-title { font-size: var(--text-md); }
 :is(.cards-big .results, .big-cards) .card-summary { font-size: var(--text-sm); }
