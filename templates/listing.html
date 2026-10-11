@@ -5,6 +5,10 @@
 
 {% block meta %}{% include "meta.html" %}{% endblock %}
 
+{#- The bar's search folded away behind its magnifier, beside the account (base.html, base.css): the
+    user's ask of 2026-10-11, the page's own things first, on a phone the bar one row. -#}
+{% block header_class %} search-folded{% endblock %}
+
 
 {% block content %}
 {%- let sheet = signed_in && !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}

@@ -851,6 +851,29 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   background: var(--highlight);
   box-shadow: 0 0 0 2px var(--header), var(--dot-edge);
 }
+/* A bar that folds its search away, a listing's (.search-folded, listing.html), as the user asked
+   on 2026-10-11: no search in it, but its magnifier just before the account, drawn as the account
+   is, a bare round button of 40px, a grey circle under the pointer and while the search is open;
+   a tap opens the search where the other pages have it, its field ready for typing, and another,
+   or Escape, folds it again (search_fold_controller.js). On a phone the bar is then one row,
+   56px, and two with the search open, as on the other pages. The magnifier is on no other page,
+   whose bar has the search. (The account's margin gives the room before the pair to the
+   magnifier's, so that the two stand together at the bar's end.) */
+.search-button { display: none; }
+.search-folded .search-button { display: inline-grid; width: var(--size-button-sm); height: var(--size-button-sm); margin-left: auto; border: 0; }
+.search-folded .account-button { margin-left: 0; }
+.search-folded.search-open .search-button { background: var(--surface-muted); }
+@media (hover: hover) {
+  .search-folded .search-button:hover { background: var(--surface-muted); }
+}
+.search-folded .top-search { display: none; }
+.search-folded.search-open .top-search { display: flex; }
+@media (max-width: 719px) {
+  :root:has(.site-header.search-folded) { --size-header: var(--size-header-row); }
+  :root:has(.site-header.search-folded.search-open) { --size-header: calc(var(--size-header-row) + var(--size-button-sm) + 8px); }
+  .search-folded .header-inner { display: flex; padding-bottom: 0; }
+  .search-folded.search-open .header-inner { display: grid; padding-bottom: 8px; }
+}
 /* The menu's button at the bar's left, before the logo: its three lines, 24px, on a bare round
    button, a grey circle under the pointer, the word "Menyja" kept for screen readers; 40px on
    phones, and from 720px up 48px over the rail's middle (the menu folded), the logo where the page

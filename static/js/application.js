@@ -305,10 +305,15 @@ function standIn(link) {
     for (const element of [copy, ...copy.querySelectorAll("[data-controller]")]) element.removeAttribute("data-controller");
     page.body.append(copy);
   }
+  const card = link.closest(".card");
+  // The bar as the page coming has it: a listing's with its search folded away behind the
+  // magnifier (base.css, .search-folded), any other's with its search there.
+  const bar = page.body.querySelector(".site-header");
+  bar?.classList.remove("search-open");
+  bar?.classList.toggle("search-folded", Boolean(card));
   const main = Object.assign(page.createElement("main"), { className: "container" });
   main.setAttribute("aria-busy", "true");
   main.setAttribute("data-stand-in", "");
-  const card = link.closest(".card");
   interim = null;
   if (card) {
     main.innerHTML = listingStandIn(card, link);

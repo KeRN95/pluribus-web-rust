@@ -53,7 +53,9 @@
     <button type="submit" class="language-stay" name="gjuha" value="sq" lang="sq">Vazhdo në shqip</button>
   </form>
   {%- endif %}
-  <header class="site-header">
+  {#- The bar. A page whose bar folds its search away, a listing's (listing.html), says so on it
+      (search-folded): the magnifier beside the account stands in for it (below). -#}
+  <header class="site-header{% block header_class %}{% endblock %}">
     <div class="header-inner">
       {#- The menu (the dialog after the header, menu_controller.js): the three lines at the bar's
           left, over the rail from 720px up, the word "Menyja" kept for screen readers (base.css,
@@ -113,7 +115,8 @@
       {%- endif %}
       </div>
       {#- The search, in the bar on every page but the front page, whose own is its first thing
-          (home.html empties the block): a grey pill in the bar's middle, at most 720px wide, the magnifier at
+          (home.html empties the block), and folded away behind a magnifier beside the account on a
+          listing's (search-folded, above): a grey pill in the bar's middle, at most 720px wide, the magnifier at
           its start searching the words typed, as Enter does, in every category and town ("Kërko
           njoftime"); a category's page searches its own listings with its filters kept, and says
           so ("Kërko në Makina", browse.html). Suggestions open under it as words are typed
@@ -138,6 +141,15 @@
           size and the theme are the menu's, posting, the listings kept and the conversations the
           rail's (below; on phones the menu's, and the front page's row with its search). -#}
       <div class="header-end">
+      {#- A listing's page folds the bar's search away (search-folded, base.css), as the user asked on
+          2026-10-11: its magnifier stands here, before the account, and opens it where the other
+          pages have it, ready for typing; another tap, or Escape, folds it again
+          (search_fold_controller.js). Hidden on every other page, whose bar has the search; here
+          on each all the same, so that a listing's stand-in (application.js) is its bar. -#}
+      <button type="button" class="icon-button search-button" aria-label="{{ crate::t("Kërko") }}" title="{{ crate::t("Kërko") }}" aria-expanded="false"
+              data-controller="search-fold" data-action="search-fold#toggle turbo:before-cache@document->search-fold#fold">
+        <svg data-icon="search" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SEARCH|safe }}</svg>
+      </button>
       <a class="icon-button account-button" href="/llogaria" aria-label="{{ crate::t("Llogaria") }}" title="{{ crate::t("Llogaria") }}" data-controller="account">
         <svg data-icon="user" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::USER|safe }}</svg>
       </a>

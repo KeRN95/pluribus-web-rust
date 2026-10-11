@@ -859,7 +859,8 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     // Every page's top bar has the account alone at its right end, as the user asked on 2026-10-11,
     // the welcome page's too: the text's size and the theme are the menu's, posting, the listings
     // kept and the conversations the rail's (on phones the welcome page's row has posting, and the
-    // menu the others).
+    // menu the others). (The search's magnifier before it is a listing's alone, hidden elsewhere:
+    // a_listing_folds_the_bars_search_behind_a_magnifier.)
     let cars = get(pool.clone(), "/c/automjete").await.body;
     for page in [&body, &cars] {
         assert!(!page.contains("post-button"));
@@ -867,7 +868,8 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
         let trial = std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true");
         assert_eq!(page.contains(r#"<details class="type-menu" data-controller="dropdown type-trial""#), trial);
         let bar = &page[page.find(r#"<header class="site-header">"#).unwrap()..page.find("</header>").unwrap()];
-        assert_eq!(bar.matches("icon-button").count(), 1 + usize::from(trial), "{bar}");
+        assert_eq!(bar.matches("icon-button").count(), 2 + usize::from(trial), "{bar}");
+        assert!(bar.contains(r#"<button type="button" class="icon-button search-button""#), "{bar}");
         assert!(bar.contains(r#"<a class="icon-button account-button" href="/llogaria""#));
         for gone in ["theme-toggle", "text-size-menu", "saved-button", "inbox-button"] {
             assert!(!bar.contains(gone), "{gone} in {bar}");
@@ -4848,6 +4850,53 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
     for part in ["iPhone|iPad|iPod", ", maximum-scale=1", "`turbo:load`"] {
         assert!(script.contains(part), "{part} in {script}");
     }
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_listing_folds_the_bars_search_behind_a_magnifier(pool: PgPool) {
+    // A listing's page has no search in its bar, but its magnifier just before the account, which
+    // opens it there, ready for typing (search_fold_controller.js): the user's ask of 2026-10-11.
+    // The search is still in the page, folded (search-folded), so that it opens where the other
+    // pages have it.
+    let golf = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
+    let bar = &golf[golf.find(r#"<header class="site-header search-folded">"#).expect("a folded bar")..golf.find("</header>").unwrap()];
+    let order = positions(bar, &[
+        r#"<form class="top-search" action="/search" method="get" role="search" data-controller="suggest""#,
+        r#"<div class="header-end">"#,
+        r#"<button type="button" class="icon-button search-button" aria-label="Kërko" title="Kërko" aria-expanded="false""#,
+        r#"data-controller="search-fold" data-action="search-fold#toggle turbo:before-cache@document->search-fold#fold">"#,
+        r#"<a class="icon-button account-button" href="/llogaria""#,
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
+    // Every other page's bar has its search open (the front page none), the magnifier there but
+    // hidden, so that a listing's stand-in, which is the page's bar (application.js), has it.
+    for page in ["/", "/c/makina", "/search?q=golf", "/promovo"] {
+        let other = html(pool.clone(), page).await;
+        assert!(other.contains(r#"<header class="site-header">"#) && !other.contains("search-folded"), "{page}");
+        assert!(other.contains(r#"<button type="button" class="icon-button search-button""#), "{page}");
+    }
+    // (The stylesheet and the scripts come minified: web::site_css, web::minified_js.)
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    for rule in [
+        ".search-button{display:none;}",
+        ".search-folded .search-button{display:inline-grid;width:var(--size-button-sm);height:var(--size-button-sm);margin-left:auto;border:0;}",
+        ".search-folded .account-button{margin-left:0;}",
+        ".search-folded.search-open .search-button{background:var(--surface-muted);}",
+        ".search-folded .top-search{display:none;}",
+        ".search-folded.search-open .top-search{display:flex;}",
+        // On a phone the bar is one row while the search is folded, two while it is open.
+        "@media (max-width:719px){:root:has(.site-header.search-folded){--size-header:var(--size-header-row);}:root:has(.site-header.search-folded.search-open){--size-header:calc(var(--size-header-row) + var(--size-button-sm) + 8px);}.search-folded .header-inner{display:flex;padding-bottom:0;}.search-folded.search-open .header-inner{display:grid;padding-bottom:8px;}}",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    let version = marketplace::web::asset_version();
+    let script = get(pool.clone(), &format!("/static/js/controllers/search_fold_controller.js?v={version}")).await.body;
+    for part in ["`search-open`", "`search-folded`", "`Escape`", "new FocusEvent(`focus`)"] {
+        assert!(script.contains(part), "{part} in {script}");
+    }
+    // A listing's stand-in has its bar folded, any other page's open.
+    let application = get(pool, &format!("/static/js/application.js?v={version}")).await.body;
+    assert!(application.contains("`search-folded`") && application.contains("`search-open`"), "{application}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
