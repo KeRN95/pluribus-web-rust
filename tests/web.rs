@@ -1261,22 +1261,24 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     // on a wide screen (browse.css).
     let cars = html(pool.clone(), "/c/makina").await;
     let order = positions(&cars, &[
+        // The heading's line first: the page's name, how many, and "Ruaj kërkimin".
+        r#"<h1 class="browse-title">Makina</h1>"#,
+        r#"<p class="result-count" id="result-count""#,
+        r#"<form class="save-search" method="post" action="/kerkimet/ruaj">"#,
         r#"<div class="browse-tools" data-filters-target="tools" data-action="click->filters#foldFromRow">"#,
         r#"<div class="search-card" data-controller="panel""#,
         r#"<button type="button" class="button secondary round-button labelled filters-open""#,
         r#"<section class="map-card map-hidden""#,
-        // The row's last button, after the map: how the cards show, round, opening its menu.
+        // After the map, how the cards show, round, opening its menu; last, the order.
         r#"<details class="sort-menu cards-menu" data-controller="dropdown" data-cards-target="menu""#,
         r#"<summary class="button secondary round-button cards-button" aria-label="Pamja: Kartela të vogla""#,
+        r#"<summary class="sort-button" aria-label="Rendit: Më të rejat" title="Rendit: Më të rejat">Më të rejat<svg"#,
         r#"<aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">"#,
         r#"<div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>"#,
-        // Under the row, the count, before the chips; then the listings' heading, its order's
-        // words opening the orders.
-        r#"<div class="results-meta">"#,
-        r#"<p class="result-count" id="result-count""#,
+        // Then the listings, under their heading, their order.
         r#"<section class="results""#,
         r#"<div class="results-head">"#,
-        r#"<div class="results-heading" id="results-heading" role="heading" aria-level="2">Njoftimet <details class="sort-menu heading-sort" data-controller="dropdown""#,
+        r#"<h2 class="results-heading" id="results-heading">Njoftimet më të reja</h2>"#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
     for listener in ["panel#foldFor", "filters#foldFor", "map#foldFor", "dropdown#foldFor", "filters#fit"] {
@@ -1300,32 +1302,26 @@ async fn filters_map_and_order_stand_side_by_side(pool: PgPool) {
     }
     assert!(cars.contains(r#"<article class="card" id="listing-1001">"#));
     // The filters' and the map's buttons say their names and what is on: "Filtrat", with how many
-    // (none yet), and the map's place, "Harta" with none; the cards' view, last in the row, has
-    // its icon alone. On a search the order's pill, a smaller one under the row, says the one
-    // now, "Rendit" with it for screen readers and in its tooltip (the orders' menu opens with no
-    // JavaScript); the results' heading, the order again, is for screen readers.
+    // (none yet), and the map's place, "Harta" with none; the cards' view has its icon alone.
     assert!(cars.contains(r#"<button type="button" class="button secondary round-button labelled map-button" data-map-target="toggle""#));
     assert!(cars.contains(r#"<span class="button-label">Harta</span>"#));
     assert!(cars.contains(r#"<button type="button" class="button secondary round-button labelled filters-open" aria-controls="filters" aria-expanded="false""#));
     assert!(cars.contains(r#"<span class="button-label">Filtrat</span>"#) && !cars.contains("button-count"));
     assert!(cars.contains(r#"<button type="button" class="button secondary round-button search-button""#));
-    // A category page's heading says the order, its words opening the orders; no pill for it.
-    assert!(cars.contains(r#"<summary class="heading-sort-button" title="Rendit">më të reja</summary>"#));
-    assert!(cars.contains(r#"</details> <span class="heading-place">në Makina</span></div>"#));
-    assert!(!cars.contains("small-pill sort-button"));
+    // The order is the row's last button, its words and a chevron, the orders in a menu under it
+    // (open with no JavaScript); the listings' heading says it: "Njoftimet më të reja" on a
+    // category page.
     let row = &cars[cars.find(r#"<div class="browse-tools""#).unwrap()..cars.find(r#"<aside class="filters""#).unwrap()];
     assert_eq!(row.matches("cards-button").count(), 1);
-    assert!(!cars[cars.find(r#"<div class="results-head">"#).unwrap()..].contains("cards-menu"));
+    assert!(row.contains(r#"<fieldset class="sort-options">"#));
+    assert!(!cars[cars.find(r#"<div class="results-head">"#).unwrap()..].contains("sort-menu"));
     let cheap = html(pool.clone(), "/c/makina?sort=price_asc").await;
-    assert!(cheap.contains(r#"title="Rendit">më të lira</summary>"#) && cheap.contains(r#"</details> <span class="heading-place">në Makina</span></div>"#));
+    assert!(cheap.contains(r#"<h2 class="results-heading" id="results-heading">Njoftimet më të lira</h2>"#), "{cheap}");
     assert!(cars.contains("toggle->dropdown#announce"));
-    let menu = &cars[cars.find(r#"<details class="sort-menu heading-sort""#).unwrap()..];
-    assert!(menu[..menu.find("</details>").unwrap()].contains(r#"<fieldset class="sort-options">"#));
-    // A search's heading is for screen readers alone: the order's pill says it to the eye, the
-    // best match first for words.
+    // A search's listings are headed by the order alone, the best match first for words.
     let search = html(pool.clone(), "/search?q=golf").await;
-    assert!(search.contains(r#"<summary class="small-pill sort-button" aria-label="Rendit: Më të përshtatshmet" title="Rendit: Më të përshtatshmet"><svg"#));
-    assert!(search.contains("</svg>Më të përshtatshmet</summary>") && !search.contains("heading-sort"));
+    assert!(search.contains(r#"<summary class="sort-button" aria-label="Rendit: Më të përshtatshmet" title="Rendit: Më të përshtatshmet">Më të përshtatshmet<svg"#));
+    assert!(search.contains(r#"<h2 class="results-heading" id="results-heading">Më të përshtatshmet</h2>"#));
 
     // The top bar has no search: the row starts with a round button that opens one under it,
     // which searches the page's category and keeps its filters.
@@ -2075,7 +2071,7 @@ async fn suggestions_finish_the_words_and_say_where_they_lead(pool: PgPool) {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn city_filter_keeps_to_that_city(pool: PgPool) {
     let body = get(pool, "/search?city=durres").await.body;
-    assert!(body.contains("<h1>Njoftimet në Durrës</h1>"));
+    assert!(body.contains(r#"<h1 class="browse-title">Njoftimet në Durrës</h1>"#));
     assert!(body.contains("Mercedes-Benz C 220, 2018, automatike"));
     assert!(body.contains("Kërkohet kamarier/e me eksperiencë"));
     assert!(!body.contains("Volkswagen Golf 7, 2016, naftë"));
@@ -2085,7 +2081,7 @@ async fn city_filter_keeps_to_that_city(pool: PgPool) {
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn welcome_form_narrows_to_a_category_and_city(pool: PgPool) {
     let body = html(pool, "/search?category=automjete&city=tirane").await;
-    assert!(body.contains("<h1>Automjete</h1>"));
+    assert!(body.contains(r#"<h1 class="browse-title">Automjete</h1>"#));
     assert!(body.contains("Volkswagen Golf 7, 2016, naftë"));
     assert!(!body.contains("Mercedes-Benz C 220, 2018, automatike"), "the Mercedes is in Durrës");
     assert!(!body.contains("iPhone 13"), "the iPhone is in another category");
@@ -3987,7 +3983,7 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
     // The fingerprint only changes the URL; the file is served as before.
     let css = get(pool, &format!("/static/css/browse.css?v={version}")).await;
     assert_eq!(css.status, StatusCode::OK);
-    assert!(css.body.contains(".results-meta"));
+    assert!(css.body.contains(".browse-heading"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
@@ -5481,7 +5477,7 @@ async fn a_saved_search_counts_and_tells_of_its_new_listings(pool: PgPool) {
     let id: String = sqlx::query_scalar("SELECT id::text FROM saved_searches").fetch_one(&pool).await.unwrap();
     let page = get_with_cookie(pool.clone(), search, &besa).await.body;
     assert!(page.contains(&format!(r#"<form class="save-search" method="post" action="/kerkimet/{id}/fshi">"#)), "{page}");
-    assert!(page.contains("</svg>Kërkimi u ruajt</button>"));
+    assert!(page.contains(r#"</svg><span class="save-search-label">Kërkimi u ruajt</span></button>"#));
     // Its page names it by its category and filters, with nothing new yet.
     let list = get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body;
     assert!(list.contains(&format!(r#"<a class="saved-search-name" href="/kerkimet/{id}">Telefona · Tiranë</a>"#)), "{list}");
@@ -5541,7 +5537,7 @@ async fn a_saved_search_counts_and_tells_of_its_new_listings(pool: PgPool) {
     let gone = post_form(pool.clone(), &format!("/kerkimet/{id}/fshi"), &[], Some(&besa)).await;
     assert_eq!(gone.location.as_deref(), Some("/kerkimet-e-ruajtura"));
     assert!(get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body.contains("Ende s'ke ruajtur asnjë kërkim."));
-    assert!(get_with_cookie(pool.clone(), search, &besa).await.body.contains("</svg>Ruaj kërkimin</button>"));
+    assert!(get_with_cookie(pool.clone(), search, &besa).await.body.contains(r#"</svg><span class="save-search-label">Ruaj kërkimin</span></button>"#));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -6755,9 +6751,9 @@ async fn a_category_page_says_where_it_is_in_a_breadcrumb(pool: PgPool) {
         r#"<span class="breadcrumb-sep" aria-hidden="true">›</span>"#,
         r#"<span class="breadcrumb-here" aria-current="page">Makina</span>"#,
         r#"<h1 class="browse-title">Makina</h1>"#,
-        r#"<details class="sort-menu cards-menu""#,
-        r#"<div class="results-meta">"#,
         r#"<p class="result-count" id="result-count""#,
+        r#"<div class="browse-tools""#,
+        r#"<details class="sort-menu cards-menu""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
     assert!(!cars.contains("category-switch") && !cars.contains("category-level") && !cars.contains("Faqja kryesore"));
@@ -6781,7 +6777,7 @@ async fn a_category_page_says_where_it_is_in_a_breadcrumb(pool: PgPool) {
     ]);
     assert!(at.is_sorted(), "{at:?}");
     let search = html(pool, "/search?q=golf").await;
-    assert!(search.contains("<h1>Rezultatet për „golf“</h1>") && !search.contains(r#"<nav class="breadcrumb""#) && !search.contains("BreadcrumbList"));
+    assert!(search.contains(r#"<h1 class="browse-title">Rezultatet për „golf“</h1>"#) && !search.contains(r#"<nav class="breadcrumb""#) && !search.contains("BreadcrumbList"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -6903,15 +6899,13 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
     assert_eq!(card_numbers(section(&vehicles, "most-viewed-heading")), [1002, 1001]);
     let (buttons, seen, results) = (vehicles.find(r#"class="browse-tools""#), vehicles.find("Më të klikuarat"), vehicles.find(r#"class="results""#));
     assert!(buttons < seen && seen < results, "under the buttons, over the results");
-    // The listings under it, headed by what they are: their order, the category and, when one is
-    // chosen, their kind; a search across the categories keeps the order alone, for screen readers.
-    assert!(vehicles.contains(r#"title="Rendit">më të reja</summary>"#) && vehicles.contains(r#"</details> <span class="heading-place">në Automjete</span></div>"#));
+    // The listings under it, headed by their order; a search across the categories by the order
+    // alone.
+    assert!(vehicles.contains(r#"<h2 class="results-heading" id="results-heading">Njoftimet më të reja</h2>"#));
     let cheapest = html(pool.clone(), "/c/automjete?sort=price_asc").await;
-    assert!(cheapest.contains(r#"title="Rendit">më të lira</summary>"#) && cheapest.contains(r#"</details> <span class="heading-place">në Automjete</span></div>"#));
-    let rented = html(pool.clone(), "/c/prona?type=RENT").await;
-    assert!(rented.contains(r#"title="Rendit">më të reja</summary>"#) && rented.contains(r#"</details> <span class="heading-place">në Prona me qira</span></div>"#));
+    assert!(cheapest.contains(r#"<h2 class="results-heading" id="results-heading">Njoftimet më të lira</h2>"#));
     let search = html(pool.clone(), "/search?q=golf").await;
-    assert!(search.contains(r#"<h2 class="results-heading visually-hidden" id="results-heading">Më të përshtatshmet</h2>"#));
+    assert!(search.contains(r#"<h2 class="results-heading" id="results-heading">Më të përshtatshmet</h2>"#));
     assert_eq!(row(&html(pool.clone(), "/c/prona").await), [1003, 1004]);
     assert_eq!(row(&html(pool.clone(), "/c/elektronike").await), [1005]);
     assert_eq!(row(&html(pool.clone(), "/c/makina").await), [1001, 1002]);
@@ -7137,7 +7131,8 @@ async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
     assert!(cars.contains(">All of Albania<") && cars.contains(r#"<a class="breadcrumb-up" href="/c/automjete">Vehicles</a>"#), "{cars}");
     let vehicles = en("/c/automjete").await.body;
     assert!(vehicles.contains(">Motorbikes<") && vehicles.contains(">Commercial vehicles<") && vehicles.contains(r#"<a class="breadcrumb-up" href="/">Home</a>"#), "{vehicles}");
-    assert!(cars.contains(r#"<summary class="heading-sort-button" title="Sort">Newest</summary>"#), "{cars}");
+    assert!(cars.contains(r#"<summary class="sort-button" aria-label="Sort: Newest" title="Sort: Newest">Newest<svg"#), "{cars}");
+    assert!(cars.contains(r#"<h2 class="results-heading" id="results-heading">Newest listings</h2>"#), "{cars}");
     assert!(cars.contains(r#"<p class="result-count" id="result-count" data-show="Show 2 listings">2 listings</p>"#), "{cars}");
     assert_eq!(en("/c/makina?numri=1").await.body, r#"{"count":2,"show":"Show 2 listings","text":"2 listings"}"#);
     let vehicles = en("/c/automjete").await.body;
@@ -7146,7 +7141,7 @@ async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
     assert!(nothing.contains(r#"<p class="empty">No listings found.</p>"#), "{nothing}");
     // A pin's filter, its chip and its note; the order's name.
     let near = en("/c/makina?lat=41.32833&lng=19.81806&radius=5&sort=price_asc").await.body;
-    assert!(near.contains(r#"aria-label="Remove filter: Within 5 km of the pin">"#) && near.contains(r#"title="Sort">Lowest-priced</summary>"#), "{near}");
+    assert!(near.contains(r#"aria-label="Remove filter: Within 5 km of the pin">"#) && near.contains(r#"<h2 class="results-heading" id="results-heading">Lowest-priced listings</h2>"#), "{near}");
 
     // A listing: its properties, names and values from the database in English, its sections and
     // its buttons.

@@ -3,29 +3,30 @@
 
 /* Map page, and the ways to it */
 
-/* The order (Rendit): a small pill under the browse row, saying the order now (browse.css); its
-   orders in a menu under it. */
+/* The order (Rendit), the browse row's last button, saying the order now (browse.css), and the
+   cards' view; their orders and views in a menu under them. */
 .sort-menu { position: relative; }
-/* Its menu, as the in-page dropdowns' are, under it and growing rightward from its left edge: the
-   orders as rows, the one now in the site's colour, ticked; a tap on another reloads the page in
-   it. The radio itself is there for keyboards and screen readers only, its ring round the row. */
+/* Its menu, as the design system has what floats: a white card with what floats' shadow, no
+   outline, appearing without sliding, under it, from its left edge (the row's end ones from their
+   right, browse.css): the orders as rows, the one now in the main colour, ticked; a tap on another
+   reloads the page in it. The radio itself is there for keyboards and screen readers only, its
+   ring round the row. */
 .sort-options {
   position: absolute;
-  top: calc(100% + .4rem);
+  top: calc(100% + var(--space-8));
   left: 0;
   z-index: 30;
   display: grid;
-  gap: .15rem;
+  gap: 2px;
   width: max-content;
   min-width: 12rem;
   margin: 0;
-  padding: .375rem;
-  border: 1px solid var(--menu-border);
-  border-radius: var(--radius);
+  padding: 6px;
+  border: 0;
+  border-radius: var(--radius-box);
   background: var(--surface);
-  box-shadow: var(--menu-shadow);
+  box-shadow: var(--shadow-float);
   transform-origin: top left;
-  animation: menu-in .14s ease-out;
 }
 .sort-option:has(input:checked) { display: flex; align-items: center; gap: .5rem; background: var(--button); color: var(--on-button); font-weight: var(--medium); }
 .sort-option:has(input:checked):hover { background: var(--button-hover); }

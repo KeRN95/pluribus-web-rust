@@ -48,20 +48,36 @@
   <span class="breadcrumb-sep" aria-hidden="true">›</span>
   <span class="breadcrumb-here" aria-current="page">{{ heading }}</span>
 </nav>
-<h1 class="browse-title">{{ heading }}</h1>
-{%- if !corrections.is_empty() %}
-<p class="search-corrections">{{ crate::t1("Shfaqen edhe rezultatet për {}.", corrections) }}</p>
 {%- endif %}
-{%- else %}
-<header class="results-header">
-  {#- A search's heading ("Rezultatet për „golf“"), or a town's; a search within a category has
-      the category's name, with its subcategories under it as on the category's page. -#}
-  <h1>{{ heading }}</h1>
-  {%- if !corrections.is_empty() %}
-  {#- Under the heading, the words searched in place of misspelt ones ("golff" finds the Golfs). -#}
-  <p class="search-corrections">{{ crate::t1("Shfaqen edhe rezultatet për {}.", corrections) }}</p>
+{#- The heading's line, as the canvas has it: the page's name big (a category's; a search's,
+    "Rezultatet për „golf“"; a town's), and after it, quieter, how many it found ("3k njoftime",
+    format::short_listing_count: counted up to 1 000 with the page, and once it shows further, up to
+    10 000, when it stopped there: data-capped, filters_controller.js; data-show is what the button
+    at the foot of the filters says); at the line's end "Ruaj kërkimin" (searches.rs), a grey pill
+    with the bookmark in the accent, the bookmark alone on phones, its words kept for screen
+    readers: it keeps the page as it is, its words and its filters, to open again from
+    /kerkimet-e-ruajtura, which says how many listings came since, and to hear of new ones; kept,
+    "Kërkimi u ruajt", filled with the main colour as what is picked is, a tap letting it go.
+    Someone not signed in signs in first and comes back here. -#}
+<div class="browse-heading">
+  <div class="browse-heading-text">
+    <h1 class="browse-title">{{ heading }}</h1>
+    <p class="result-count" id="result-count" data-show="{{ show_label }}"{% if capped %} data-capped{% endif %}>{{ count }}</p>
+  </div>
+  {%- if let Some(id) = saved_search %}
+  <form class="save-search" method="post" action="/kerkimet/{{ id }}/fshi">
+    <button type="submit" class="save-search-button is-saved" aria-pressed="true" title="{{ crate::t("Mos e ruaj më") }}"><svg width="17" height="17" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BOOKMARK|safe }}</svg><span class="save-search-label">{{ crate::t("Kërkimi u ruajt") }}</span></button>
+  </form>
+  {%- else %}
+  <form class="save-search" method="post" action="/kerkimet/ruaj">
+    <input type="hidden" name="adresa" value="{{ save_address }}">
+    <button type="submit" class="save-search-button" aria-pressed="false" title="{{ crate::t("Ruaje dhe merr lajmërim kur dalin njoftime të reja") }}"><svg width="17" height="17" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BOOKMARK|safe }}</svg><span class="save-search-label">{{ crate::t("Ruaj kërkimin") }}</span></button>
+  </form>
   {%- endif %}
-</header>
+</div>
+{%- if !corrections.is_empty() %}
+{#- Under the heading, the words searched in place of misspelt ones ("golff" finds the Golfs). -#}
+<p class="search-corrections">{{ crate::t1("Shfaqen edhe rezultatet për {}.", corrections) }}</p>
 {%- endif %}
 {%- if !subcategories.is_empty() %}
 {#- Under the line, its subcategories, when it has any, as pills like the welcome page's main
@@ -125,6 +141,19 @@
       <span class="button-label">{{ crate::t("Filtrat") }}</span>
       {%- if on > 0 %}<span class="button-count" aria-hidden="true">{{ on }}</span>{% endif %}
     </button>
+
+    {#- The filters picked, each a chip in the main colour whose cross drops it, as the canvas has
+        them after Filtrat; then "Pastro filtrat", quieter. -#}
+    {% if !chips.is_empty() %}
+    <ul class="active-filters" aria-label="{{ crate::t("Filtrat e zgjedhur") }}">
+      {% for chip in chips %}
+      <li><a class="filter-chip" href="{{ chip.url }}" aria-label="{{ crate::t1("Hiq filtrin {}", chip.label) }}"{% if chip.forgets_town %} data-forget-town data-turbo-prefetch="false"{% endif %}>{{ chip.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></li>
+      {% endfor %}
+      {%- if on > 0 %}
+      <li><a class="clear-filters" href="{{ clear_url }}">{{ crate::t("Pastro filtrat") }}</a></li>
+      {%- endif %}
+    </ul>
+    {% endif %}
 
     {#- The map: its pin and what it is set to, the town ("Durrës"), the point as its nearest town
         and the distance ("Tiranë · 10 km"), or "Harta". It opens the map under the row, and folds
@@ -235,6 +264,23 @@
       <svg data-icon="trending-up" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
     </button>
     {%- endif %}
+
+    {#- The order, last in the row as the canvas has it: its words and a chevron ("Më të rejat", no
+        pill of its own; "Rendit" with them to screen readers and in its tooltip), opening the
+        orders in a menu under it, the one now ticked; a tap outside or Escape closes it
+        (dropdown_controller.js), and it is one of the row's open one at a time (section:open).
+        Picking one sends the filter form (form="filter-form"), so the filters stay. -#}
+    {%- let sorts = filters.sort_choices() %}
+    <details class="sort-menu" data-controller="dropdown"
+             data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
+      <summary class="sort-button" aria-label="{{ crate::t("Rendit") }}: {{ filters.sort_label() }}" title="{{ crate::t("Rendit") }}: {{ filters.sort_label() }}">{{ filters.sort_label() }}<svg data-icon="chevron-down" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <fieldset class="sort-options">
+        <legend class="visually-hidden">{{ crate::t("Rendit") }}</legend>
+        {%- for choice in sorts.iter() %}
+        <label class="picker-option sort-option"><input class="visually-hidden" type="radio" name="sort" value="{{ choice.value }}" form="filter-form" data-action="filters#submit"{% if choice.selected %} checked{% endif %}>{{ choice.label }}</label>
+        {%- endfor %}
+      </fieldset>
+    </details>
   </div>
 
   {#- The filters' card: over the results under the row on a phone, its name and "Mbyll" at the
@@ -256,39 +302,6 @@
   </div>
   {#- Under what the row opened, the page dimmed (browse.css); a tap on it folds that again. -#}
   <div class="browse-scrim" aria-hidden="true" data-filters-target="scrim" data-action="click->filters#foldAll"></div>
-
-  {#- Under the row, how many, as a pill, then the filters picked, each a chip whose cross drops
-      it, all marked as the page's own category pill is, smaller (browse.css). The count says
-      thousands as "k" ("3k njoftime", format::short_listing_count): counted up to 1 000 with the
-      page, and once it shows further, up to 10 000, when it stopped there (data-capped,
-      filters_controller.js); data-show is what the button at the foot of the filters says. -#}
-  <div class="results-meta">
-    <p class="result-count" id="result-count" data-show="{{ show_label }}"{% if capped %} data-capped{% endif %}>{{ count }}</p>
-    {% if !chips.is_empty() %}
-    <ul class="active-filters" aria-label="{{ crate::t("Filtrat e zgjedhur") }}">
-      {% for chip in chips %}
-      <li><a class="filter-chip" href="{{ chip.url }}" aria-label="{{ crate::t1("Hiq filtrin {}", chip.label) }}"{% if chip.forgets_town %} data-forget-town data-turbo-prefetch="false"{% endif %}>{{ chip.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></li>
-      {% endfor %}
-      {%- if on > 0 %}
-      <li><a class="clear-filters" href="{{ clear_url }}">{{ crate::t("Pastro filtrat") }}</a></li>
-      {%- endif %}
-    </ul>
-    {% endif %}
-    {#- "Ruaj kërkimin" (searches.rs), at the line's end: keeps the page as it is, its words and its
-        filters, to open again from /kerkimet-e-ruajtura, which says how many listings came since,
-        and to hear of new ones; kept, "Kërkimi u ruajt", marked as what is picked is, a tap
-        letting it go. Someone not signed in signs in first and comes back here. -#}
-    {%- if let Some(id) = saved_search %}
-    <form class="save-search" method="post" action="/kerkimet/{{ id }}/fshi">
-      <button type="submit" class="small-pill save-search-button is-saved" aria-pressed="true" title="{{ crate::t("Mos e ruaj më") }}"><svg data-icon="bell" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BELL|safe }}</svg>{{ crate::t("Kërkimi u ruajt") }}</button>
-    </form>
-    {%- else %}
-    <form class="save-search" method="post" action="/kerkimet/ruaj">
-      <input type="hidden" name="adresa" value="{{ save_address }}">
-      <button type="submit" class="small-pill save-search-button" aria-pressed="false" title="{{ crate::t("Ruaje dhe merr lajmërim kur dalin njoftime të reja") }}"><svg data-icon="bell" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BELL|safe }}</svg>{{ crate::t("Ruaj kërkimin") }}</button>
-    </form>
-    {%- endif %}
-  </div>
 
   {%- if let Some(page) = featured %}
   {#- The listings a promotion features among the page's matches, its filters' and its words'
@@ -322,47 +335,14 @@
       for the visitor's last searches, which a search box offers while empty (application.js,
       recent_searches.js). -#}
   <section class="results" aria-labelledby="results-heading"{% if let Some(q) = filters.q.as_deref() %} data-search-words="{{ q }}" data-search-address="{{ save_address }}"{% endif %}>
-    {#- The listings' heading (the count and the chips are under the row, above). On a category
-        page, to the eye, under "Më të klikuarat" where it is: the order, the category and the
-        kind of listing when one is chosen ("Njoftimet më të reja në Makina në shitje",
-        browse.rs), the order's words highlighted, which open the orders in a menu under them, as
-        the order's pill does on a search (a heading by its role, as a heading can't hold a
-        menu). Elsewhere the order alone, for screen readers ("Më të rejat"): the order's pill
-        says it to the eye, leading the heading's line. In English the order's word comes first,
-        before "listings" ("Newest listings in Cars"). -#}
-    {%- let sorts = filters.sort_choices() %}
+    {#- The listings' heading, as the canvas has it, a section's title: on a category page their
+        order ("Njoftimet më të reja"; in English the order's word first, "Newest listings"),
+        elsewhere the order alone ("Më të përshtatshmet"), which the row's last button opens. -#}
     <div class="results-head">
-    {%- if let Some(place) = listings_place %}
-    <div class="results-heading" id="results-heading" role="heading" aria-level="2">{% if !crate::i18n::english() %}Njoftimet {% endif %}<details class="sort-menu heading-sort" data-controller="dropdown"
-        data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
-        <summary class="heading-sort-button" title="{{ crate::t("Rendit") }}">{{ filters.sort_adjective() }}</summary>
-        <fieldset class="sort-options">
-          <legend class="visually-hidden">{{ crate::t("Rendit") }}</legend>
-          {%- for choice in sorts.iter() %}
-          <label class="picker-option sort-option"><input class="visually-hidden" type="radio" name="sort" value="{{ choice.value }}" form="filter-form" data-action="filters#submit"{% if choice.selected %} checked{% endif %}>{{ choice.label }}</label>
-          {%- endfor %}
-        </fieldset>
-      </details> {% if crate::i18n::english() %}listings {% endif %}<span class="heading-place">{{ place }}</span></div>
+    {%- if category_page %}
+    <h2 class="results-heading" id="results-heading">{% if crate::i18n::english() %}{{ filters.sort_adjective() }} listings{% else %}Njoftimet {{ filters.sort_adjective() }}{% endif %}</h2>
     {%- else %}
-    <h2 class="results-heading visually-hidden" id="results-heading">{{ filters.sort_label() }}</h2>
-    {%- endif %}
-    {#- On the heading's line: on a search, whose heading is for screen readers, the order's pill
-        ("Më të rejat", "Rendit" with it to screen readers and in its tooltip), which opens the
-        orders in a menu under it, like the in-page dropdowns', the one now ticked; a tap outside
-        or Escape closes it (dropdown_controller.js), and it is one of those open one at a time
-        (section:open). Picking one sends the filter form (form="filter-form"), so the filters
-        stay. (How the cards show is the row's last button, above.) -#}
-    {%- if listings_place.is_none() %}
-    <details class="sort-menu" data-controller="dropdown"
-             data-action="toggle->dropdown#announce section:open@document->dropdown#foldFor turbo:before-cache@document->dropdown#close">
-      <summary class="small-pill sort-button" aria-label="{{ crate::t("Rendit") }}: {{ filters.sort_label() }}" title="{{ crate::t("Rendit") }}: {{ filters.sort_label() }}"><svg data-icon="arrow-up-down" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5"/><path d="M17 20V4M13.5 7.5 17 4l3.5 3.5"/></svg>{{ filters.sort_label() }}</summary>
-      <fieldset class="sort-options">
-        <legend class="visually-hidden">{{ crate::t("Rendit") }}</legend>
-        {%- for choice in sorts.iter() %}
-        <label class="picker-option sort-option"><input class="visually-hidden" type="radio" name="sort" value="{{ choice.value }}" form="filter-form" data-action="filters#submit"{% if choice.selected %} checked{% endif %}>{{ choice.label }}</label>
-        {%- endfor %}
-      </fieldset>
-    </details>
+    <h2 class="results-heading" id="results-heading">{{ filters.sort_label() }}</h2>
     {%- endif %}
     </div>
 

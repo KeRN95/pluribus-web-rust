@@ -428,11 +428,6 @@ pub struct FoundIn {
 #[template(path = "browse.html")]
 struct BrowsePage<'a> {
     heading: String,
-    /// On a category page, where the listings' own heading over them says they are, after their
-    /// order: the category and the kind of listing when one is chosen ("në Makina në shitje", in
-    /// "Njoftimet më të reja në Makina në shitje"). Elsewhere the order alone heads them, for
-    /// screen readers.
-    listings_place: Option<String>,
     count: String,
     /// The words searched in place of misspelt ones, quoted ("„golf“"), or empty.
     corrections: String,
@@ -935,20 +930,6 @@ async fn browse(
             .map(|above| Subcategory { name: above.name.clone(), url: filters.category_url(above), icon: category_icon(above) }),
         _ => None,
     };
-    // Where the listings' own heading on a category page says they are, after their order (the
-    // template's, which opens the orders): the category and, when one is chosen, the kind of
-    // listing, in small letters ("në Makina në shitje", "në Prona me qira").
-    let listings_place = match (&page_slug, category) {
-        (Some(_), Some(current)) => {
-            let mut place = t1("në {}", t(&current.name));
-            if let Some(kind) = &filters.listing_type {
-                place.push(' ');
-                place.push_str(&format::listing_type(kind).to_lowercase());
-            }
-            Some(place)
-        }
-        _ => None,
-    };
     // The subcategories narrow the page, so their links keep its filters as well.
     let subcategories: Vec<Subcategory> = category
         .map(|category| {
@@ -1008,7 +989,6 @@ async fn browse(
         meta,
         show_label: show_label(count_number, &count),
         heading,
-        listings_place,
         count,
         capped,
         corrections,

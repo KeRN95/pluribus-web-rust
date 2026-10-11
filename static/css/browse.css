@@ -3,13 +3,8 @@
 
 /* Browse pages: filters beside the results */
 
-/* A search's heading, a town's too, two sizes smaller than the page headings elsewhere and of
-   medium weight, so that it doesn't weigh on the results; the first line of the browse page's
-   head (.browse-head, below). */
-.results-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .45rem; margin: 0; }
-.results-header h1 { margin: 0; font-size: var(--text-xl); font-weight: var(--medium); }
 /* The words searched in place of misspelt ones take a line of their own, under the heading. */
-.search-corrections { flex-basis: 100%; margin: 0; color: var(--muted); }
+.search-corrections { margin: 0; color: var(--muted); }
 /* A category page's head: on a line of their own, pills the welcome page's size on every screen
    (welcome.css, .shortcut; on a phone as there, below), after the back button and the way beyond
    them: the category above it, quieter, a way up, and the page's own, filled as the row's buttons
@@ -20,14 +15,13 @@
    (.browse-head, below), which the row of buttons shares on a wide screen. */
 .category-pills { min-width: 0; }
 .category-path { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
-/* The subcategories, a line of the head under the pills, as close under them as the head's lines
-   are to each other: one group; a search within a category has them under its heading alike. On
-   a phone one line that slides sideways (below). */
-.subcategories { display: flex; flex-wrap: wrap; gap: .5rem; min-width: 0; }
-/* The subcategories' pills a touch smaller than the welcome page's main categories and the path's
-   over them, and than the row's buttons under them. */
-.subcategories .shortcut { gap: .5rem; padding: .6rem .95rem .6rem .85rem; font-size: calc(var(--text-md) * .94); }
-.subcategories .shortcut-icon { width: 18px; height: 18px; }
+/* The subcategories, a line of the head under the heading: one group, 8px apart; a search within a
+   category has them under its heading alike. On a phone one line that slides sideways (below).
+   Their pills as the canvas draws them, 40px tall, the words medium, 15px (14px on phones), each
+   after its icon, 17px. */
+.subcategories { display: flex; flex-wrap: wrap; gap: var(--space-8); min-width: 0; }
+.subcategories .shortcut { min-height: var(--size-button-sm); gap: 7px; padding: 0 16px; font-size: .9375rem; line-height: 1.3; }
+.subcategories .shortcut-icon { width: 17px; height: 17px; }
 .category-up { color: var(--muted); }
 /* Back, and three levels down the way beyond the pills, before them: circles as tall as they are,
    their icons the welcome page's size (20px; 18 on a phone), both plain, on the grey of secondary
@@ -79,10 +73,51 @@
 .breadcrumb-up:hover { color: var(--text); text-decoration: underline; text-underline-offset: .2em; }
 .breadcrumb-sep { flex: none; color: var(--muted); }
 .breadcrumb-here { min-width: 0; overflow: hidden; color: var(--text); font-weight: var(--semibold); text-overflow: ellipsis; }
-.browse-title { margin: 4px 0 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
+.browse-title { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
 @media (max-width: 719px) {
   .breadcrumb { font-size: 1rem; }
-  .browse-title { margin-top: 2px; font-size: 1.857rem; }
+  .browse-title { font-size: 1.857rem; }
+}
+/* The heading's line, as the canvas has it (browse.html): the page's name, and after it, on its
+   baseline, how many it found, quieter (15px; 14px on phones); "Ruaj kërkimin" at the line's end,
+   a grey pill 40px tall with the bookmark in the accent (--highlight-knob behind its line,
+   --highlight-icon for it: lime with a dark line on the light theme, a lime line on the dark),
+   its words medium; kept, filled with the main colour as what is picked is. On phones the
+   bookmark alone, round, its words kept for screen readers. */
+.browse-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); }
+.browse-heading-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-12); min-width: 0; }
+.browse-heading .result-count { margin: 0; color: var(--muted); font-size: .9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.save-search { flex: none; margin: 0; }
+.save-search-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: var(--size-button-sm);
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  color: var(--text);
+  font: inherit;
+  font-size: .9375rem;
+  font-weight: var(--medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.save-search-button > svg { flex: none; fill: var(--highlight-knob); stroke: var(--highlight-icon); }
+.save-search-button.is-saved { background: var(--main); color: var(--on-main); }
+@media (hover: hover) {
+  .save-search-button:hover { background: var(--surface-muted-hover); }
+  .save-search-button.is-saved:hover { background: var(--main-hover); }
+}
+@media (max-width: 719px) {
+  .browse-heading .result-count { font-size: 1rem; }
+  .save-search-button { width: var(--size-button-sm); padding: 0; }
+  .save-search-button > svg { width: 18px; height: 18px; }
+  .save-search-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 /* Phones: the path's pills (a listing's too) the welcome page's size there (welcome.css), as on
    every screen, and the subcategories' alike, about 35 px tall; the back button as tall as they
@@ -97,8 +132,8 @@
    taken back the same way. */
 @media (max-width: 719px) {
   .subcategories {
-    --row-gap: .55rem;
-    --column-gap: .45rem;
+    --row-gap: 8px;
+    --column-gap: 8px;
     flex-wrap: nowrap;
     gap: var(--row-gap) var(--column-gap);
     margin: calc(var(--row-gap) / -2 - 1px) calc(-1 * var(--gutter));
@@ -109,7 +144,7 @@
   }
   .subcategories::-webkit-scrollbar { display: none; }
   .category-path { --row-gap: .4rem; --column-gap: .4rem; }
-  .subcategories .shortcut,
+  .subcategories .shortcut { position: relative; padding: 0 14px; font-size: 1rem; }
   .shortcut.small { position: relative; gap: .4rem; padding: .45rem .85rem .45rem .7rem; font-size: .9375rem; }
   .back-button { --size: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px); position: relative; }
   .category-path .shortcut-icon,
@@ -143,30 +178,19 @@
    --drop the room between the row and what opens under it; both measure where the search's box,
    the map's card and the filters' go, under the head (below). As far below the header as the
    page's sides are from the screen's (--gutter). */
-/* --row is the path's round buttons' size (.back-button: the welcome page's pills, a line of their
-   text, .7rem over and under it, the hairline), so the row's buttons are as big as the back button
-   beside them, their icons the same size (20px; 18 on a phone). */
-.browse { --row: calc(1.55 * var(--text-md) + 1.4rem + 2px); --drop: .75rem; position: relative; margin-top: var(--gutter); }
-/* Phones: as the path's buttons there (above, the welcome page's size), a line of their text and
-   .45rem over and under it. */
-@media (max-width: 719px) {
-  .browse { --row: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px); }
-}
-/* The head: the page's pills, or a search's heading, then its subcategories, then the row of
-   buttons, one under another and as close as the pills are to each other (.5rem, not the 1rem a
-   heading leaves), the count and the chips a little further under the last (twice as far). From
-   960 px up the row of buttons stands at the right end of the first line, beside the pills or the
-   heading, rather than on a line of its own, and the subcategories keep the whole width under
-   them: a grid of two columns, the first for the pills, which wrap within it, the second as wide
-   as the row. What the row opens is placed by the head (position: relative; below). The chips of
-   the categories a search found listings in (.categories, page.css) are a line of the head too. */
-.browse-head { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); row-gap: .5rem; margin: 0 0 1rem; }
+/* --row is the row's round buttons' size, 40px as the canvas has them (--size-button-sm), on
+   every screen. */
+.browse { --row: var(--size-button-sm); --drop: .75rem; position: relative; margin-top: var(--gutter); }
+/* The head, as the canvas has it: a category's breadcrumb, the heading's line, the subcategories,
+   then the row of buttons, one under another, 12px apart and 14px over the subcategories and the
+   row (10px and 12px on phones). What the row opens is placed by the head (position: relative;
+   below), under it. The chips of the categories a search found listings in (.categories,
+   page.css) are a line of the head too. */
+.browse-head { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); row-gap: var(--space-12); margin: 0 0 1rem; }
+.browse-head > :is(.subcategories, .categories, .browse-tools) { margin-top: 2px; }
 .browse-head > .categories { padding: 0 0 .25rem; }
-@media (min-width: 960px) {
-  .browse-head { grid-template-columns: minmax(0, 1fr) auto; column-gap: 1rem; align-items: center; }
-  .browse-head > :is(.breadcrumb, .results-header) { grid-area: 1 / 1; }
-  .browse-head > .browse-tools { grid-area: 1 / 2; justify-self: end; }
-  .browse-head > :is(.browse-title, .subcategories, .categories, .search-corrections) { grid-column: 1 / -1; }
+@media (max-width: 719px) {
+  .browse-head { row-gap: 10px; }
 }
 
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
@@ -194,9 +218,11 @@
 }
 .clear-filters { padding: .3rem .4rem; color: var(--muted); font-size: var(--text-sm); }
 
-/* The browse row: buttons side by side, the search first, round and in the site's colour, then the
-   filters and the map, which say their names and what is on (below), and last the cards' view,
-   round, with the icon of the view now, opening its menu under it. Only one opens at a time
+/* The browse row, as the canvas draws it: buttons side by side, 8px apart, the search first, round,
+   then "Filtrat" and the filters picked, and at the line's end the map, the cards' view, round,
+   with the icon of the view now, opening its menu under it, and the order, its words and a
+   chevron; on phones the map, the view and the order on a line of their own under the others,
+   the order first. Too many for a line, they wrap. Only one opens at a time
    (section:open). The search, the filters and the map open
    over the results rather than pushing them down: a little under the row (--drop), as wide as it,
    fading in as the menus do, the page dimmed under them (.browse-scrim); Escape or a tap on the
@@ -209,8 +235,16 @@
    their buttons are the row's, and the head places what they open. */
 .browse-tools {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: .55rem;
+  gap: var(--space-8);
+}
+.browse-tools .map-button { margin-left: auto; }
+@media (max-width: 719px) {
+  .browse-tools::after { content: ""; order: 1; flex-basis: 100%; height: 0; }
+  .browse-tools > .sort-menu:not(.cards-menu) { order: 2; margin-right: auto; }
+  .browse-tools :is(.map-button, .cards-menu, .most-viewed-button) { order: 3; }
+  .browse-tools .map-button { margin-left: 0; }
 }
 /* The row's buttons stand over the dim (z-index 9; the sticky header is 10), each of its own: the
    row itself is no box that is placed, so that what its buttons open is placed by the head. */
@@ -218,9 +252,8 @@
 .browse-tools .round-button { position: relative; z-index: 9; }
 .map-card { display: contents; }
 /* What the row opens, the search's box, the map's card and the filters' (which is the page's own,
-   outside the row): under the head, a little apart from it (--drop), as wide as it, over the
-   results; from 960 px up, where the row shares the head's first line, under that line, over the
-   subcategories. */
+   outside the row): under the head, the row being its last line, a little apart from it (--drop),
+   as wide as it, over the results. */
 .search-panel,
 .map-card-body,
 .filters {
@@ -229,11 +262,6 @@
   right: 0;
   left: 0;
   z-index: 9;
-}
-@media (min-width: 960px) {
-  .search-panel,
-  .map-card-body,
-  .filters { top: calc(var(--row) + var(--drop)); }
 }
 .filters,
 .map-card-body {
@@ -334,53 +362,63 @@
 .browse-tools .round-button:active { transform: scale(.97); }
 .browse-tools .button.round-button[aria-expanded="true"],
 .browse-tools .button.round-button[aria-pressed="true"] { background: var(--main); color: var(--on-main); }
-.browse-tools .round-button svg { width: 20px; height: 20px; }
+.browse-tools .round-button svg { width: 18px; height: 18px; }
 .round-button .pin-icon { margin: 0; color: inherit; }
-/* The filters' and the map's buttons say their names and what is on: pills as wide as their
-   words rather than circles, the path's pills' size (their room and text). "Filtrat" has how many
-   filters are on in a coral circle after it; the map has its place ("Tiranë · 10 km") and is the
-   one to give up width on a narrow phone, its words ending in "…". */
+/* The filters' and the map's buttons say their names and what is on, as the canvas has them: pills
+   as wide as their words rather than circles, 14px of room either side, their icons 17px in the
+   words' colour; "Filtrat" semibold, with how many filters are on after it in bold ("Filtrat · 2");
+   the map has its place ("Tiranë · 10 km") and is the one to give up width on a narrow phone, its
+   words ending in "…". */
 .browse-tools .button.round-button.labelled {
   width: auto;
   min-width: 0;
-  gap: .55rem;
-  padding: 0 1.1rem 0 1rem;
-  border-radius: 999px;
-  font-size: var(--text-md);
-  font-weight: var(--medium);
+  gap: 7px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  font-size: .9375rem;
+  font-weight: var(--regular);
   white-space: nowrap;
 }
-.browse-tools .labelled svg { flex: none; width: 20px; height: 20px; }
-/* Phones: the path's size there, its icons 18px, the pills' room and text the path's pills'. */
+.browse-tools .button.round-button.filters-open { font-weight: var(--semibold); }
+.browse-tools .labelled svg { flex: none; width: 17px; height: 17px; }
 @media (max-width: 719px) {
-  .browse-tools .round-button svg,
-  .browse-tools .labelled svg { width: 18px; height: 18px; }
-  .browse-tools .button.round-button.labelled { gap: .4rem; padding: 0 .85rem 0 .7rem; font-size: .9375rem; }
+  .browse-tools .button.round-button.labelled { font-size: 1rem; }
 }
 .browse-tools .button.map-button { flex: 0 1 auto; }
-/* Their icons: outlines in the muted colour, the text's under the pointer (as the category pills'
-   were, before those took their names' colour), the coral with their words while what they open
-   is open; the map's pin the same whether a place is set or not. */
-.browse-tools .labelled svg { color: var(--muted); transition: color .15s; }
-.browse-tools .labelled[aria-expanded="true"] svg,
-.browse-tools .labelled[aria-expanded="true"]:hover svg { color: inherit; }
-@media (hover: hover) {
-  .browse-tools .labelled:hover svg { color: var(--text); }
-}
 .button-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.button-count {
-  flex: none;
-  min-width: 1.3rem;
-  height: 1.3rem;
-  margin-right: -.3rem;
-  padding: 0 .3rem;
-  border-radius: 999px;
-  background: var(--button);
-  color: var(--on-button);
-  font-size: var(--text-xs);
-  font-weight: var(--bold);
-  line-height: 1.3rem;
-  text-align: center;
+.button-count { flex: none; font-weight: var(--bold); }
+.button-count::before { content: "· "; }
+/* The filters picked, in the row after "Filtrat": chips 40px tall in the main colour, semibold,
+   their cross after their words; "Pastro filtrat" after them, quieter, as tall to tap. */
+.browse-tools .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); margin: 0; }
+.browse-tools .filter-chip { height: var(--size-button-sm); gap: 7px; padding: 0 12px 0 14px; font-size: .9375rem; }
+.browse-tools .clear-filters { display: inline-flex; align-items: center; min-height: var(--size-button-sm); padding: 0 4px; font-size: .9375rem; }
+@media (max-width: 719px) {
+  .browse-tools .filter-chip,
+  .browse-tools .clear-filters { font-size: 1rem; }
+}
+/* The order, last in the row: its words, medium, and a chevron, no pill of its own; its menu under
+   it, from its right end (on phones, where it starts the second line, from its left), as the
+   view's is from the row's end. */
+.sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: var(--size-button-sm);
+  padding: 0 4px 0 8px;
+  color: var(--text);
+  font-weight: var(--medium);
+  list-style: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sort-button::-webkit-details-marker { display: none; }
+.sort-button > svg { flex: none; }
+.browse-tools > .sort-menu > .sort-options,
+.browse-tools .cards-menu > .sort-options { right: 0; left: auto; transform-origin: top right; }
+@media (max-width: 719px) {
+  .sort-button { padding: 0; }
+  .browse-tools > .sort-menu:not(.cards-menu) > .sort-options { right: auto; left: 0; transform-origin: top left; }
 }
 /* The search box the round search button opens over the results, under the row and as wide as it
    (above): the welcome page's pill, its suggestions under it. */
@@ -394,86 +432,10 @@
   .browse-tools .button.round-button { transition: none; }
   .browse-tools .round-button:active { transform: none; }
 }
-/* The results' head: their heading; on a search, whose heading is for screen readers, the order's
-   pill, a smaller one, opening its menu, on the accent's tint and in the coral while it is open,
-   as a picked filter is. */
-.results-head { display: flex; align-items: center; gap: .5rem .75rem; margin: 1.75rem 0 1.25rem; }
-.results-head > .results-heading { min-width: 0; margin: 0; }
-.results-head > .sort-menu { flex: none; }
-.results-head:has(> .results-heading.visually-hidden) { margin: 0 0 1.25rem; }
-/* The heading, a heading by its role (it holds the order's menu): an h2's face, size and weight.
-   Its order's words quietly marked, in the site's colour with a soft underline, a faint tint
-   under a pointer, opening the orders in a menu under them as the order's pill does; the menu in
-   the page's own text, not the heading's. */
-.results-head > div.results-heading { font-family: var(--font-heading, inherit); font-size: var(--text-xl); font-weight: var(--semibold); letter-spacing: -0.015em; line-height: 1.25; }
-.results-heading .heading-sort { display: inline-block; }
-/* On one line, always: the heading doesn't wrap, and what is left of the line after "Njoftimet"
-   and the order's words goes to the category's name (.heading-place), which is cut with "…" where
-   it doesn't fit. The heading can't clip itself, its order's menu hangs from it. */
-.results-head > div.results-heading { display: flex; align-items: baseline; gap: .3em; flex: 1 1 auto; white-space: nowrap; }
-.results-heading > .heading-sort { flex: none; }
-.heading-place { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.heading-sort-button {
-  display: inline-flex;
-  align-items: center;
-  gap: .2em;
-  padding: 0 .1em;
-  border-radius: .35em;
-  color: var(--accent);
-  text-decoration: underline 1.5px color-mix(in srgb, var(--accent) 40%, transparent);
-  text-underline-offset: .2em;
-  list-style: none;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.heading-sort-button::-webkit-details-marker { display: none; }
-@media (hover: hover) {
-  .heading-sort-button:hover { background: var(--badge); }
-}
-.results-heading .sort-options { font-family: var(--font); font-size: var(--text-md); font-weight: var(--regular); letter-spacing: normal; line-height: 1.55; }
-/* Under the head, a little apart from it, how many the page found ("3k njoftime"), in plain words
-   in the muted colour, small, no pill (a fourth line of pills was one too many over the
-   results), then the filters picked, their chips (above) flowing on the same lines; over "Më të
-   klikuarat" and the listings' heading. */
-.results-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; margin: 0 0 1rem; }
-.results-meta > .active-filters { display: contents; }
-.results-meta > .result-count {
-  color: var(--muted);
-  font-size: var(--text-sm);
-  font-weight: var(--medium);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.small-pill {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: .3rem;
-  padding: .4rem .85rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: var(--surface-muted);
-  color: var(--text);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--medium);
-  line-height: 1.3;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color .15s, border-color .15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.small-pill > svg { flex: none; }
-/* "Ruaj kërkimin" (searches.rs), at the end of the count's and chips' line, pushed to its right
-   end: a small pill with a bell in the muted colour; kept, "Kërkimi u ruajt", the same grey pill,
-   its words saying so and its bell in the text's colour. */
-.save-search { display: contents; }
-.save-search-button { margin-left: auto; }
-.save-search-button > svg { color: var(--muted); }
-.save-search-button.is-saved > svg { color: var(--text); }
-.sort-button { list-style: none; }
-.sort-button::-webkit-details-marker { display: none; }
+/* The results' heading, as the canvas has a section's title: 22px bold (19px on phones, a rem
+   being 14px there), 26px under the rows over it and 12px over the cards. */
+.results-head { margin: 26px 0 12px; }
+.results-head > .results-heading { margin: 0; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
 /* The cards' view, the row's last button (browse-tools): round, as the search's is, with the icon
    of the view now (Cards::icon), which the page's class says; its menu under it, growing
    rightward from its left edge as the order's does, the views as rows, each with its icon. A
@@ -487,11 +449,8 @@
 .cards-list .cards-icon-list { display: block; }
 .cards-options .sort-option { display: flex; align-items: center; gap: .55rem; }
 .cards-options .sort-option > svg { flex: none; }
-.sort-menu[open] > .sort-button,
 .cards-menu[open] > .button.cards-button { background: var(--main); color: var(--on-main); }
 @media (hover: hover) {
-  .small-pill:hover { background: var(--surface-muted-hover); }
-  .sort-menu[open] > .sort-button:hover,
   .cards-menu[open] > .button.cards-button:hover { background: var(--main-hover); }
 }
 
