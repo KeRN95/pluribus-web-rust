@@ -815,6 +815,14 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .menu-button:hover { background: var(--surface-muted); }
 }
 .menu-button-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The lines stand level with the middle of the logo's letters beside them, the round target left
+   in the bar's middle: the logo's drawing runs from its ascenders to its descender, so the body of
+   its letters sits .0675em of it under the bar's middle (1.75px at 26px, 1.6px at a phone's 24px),
+   where the lines, centred on the bar, read as too high (the user, 2026-10-11). */
+.menu-button > svg { translate: 0 1.75px; }
+@media (max-width: 719px) {
+  .menu-button > svg { translate: 0 1.6px; }
+}
 /* The count's holder is no box of its own, so that the lines alone stand in the button's middle
    (it took a row of the button's grid once, which lifted them); the count sits at the corner. */
 .menu-unread { display: contents; }
