@@ -958,16 +958,17 @@ async fn the_welcome_page_shows_the_listings_seen_lately(pool: PgPool) {
     assert_eq!(card_numbers(row), [1005, 1001]);
     assert!(row.contains(r#"<p class="card-status is-sold">Shitur</p>"#), "{row}");
     // Smaller than the other rows' cards (the user's ask of 2026-10-11): about six to the screen,
-    // six and a quarter on the page's column and four and a quarter on a phone (five and a quarter
-    // until the user asked them a bit bigger there, later that day), the title alone under the
-    // photo on two lines at most, no heart; on a phone no price over the photo either.
+    // six and a quarter on the page's column and three and a half on a phone (five and a quarter
+    // until the user asked them a bit bigger there, later that day, then four and a quarter until
+    // they asked once more), the title alone under the photo on two lines at most, no heart; on a
+    // phone no price over the photo either.
     // (The stylesheet comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for rule in [
         ".welcome ~ .seen-lately .card-row > .card{width:calc((100% - 6 * var(--space-12)) / 6.25);}",
         ".welcome ~ .seen-lately .card :is(.card-summary,.heart){display:none;}",
         "-webkit-line-clamp:2;line-clamp:2;}",
-        ".welcome ~ .seen-lately .card-row > .card{width:calc((100% + var(--gutter) - 4 * var(--space-8)) / 4.25);}",
+        ".welcome ~ .seen-lately .card-row > .card{width:calc((100% + var(--gutter) - 3 * var(--space-8)) / 3.5);}",
         ".welcome ~ .seen-lately .card-media::after,.welcome ~ .seen-lately .card-media .card-price{display:none;}",
     ] {
         assert!(css.contains(rule), "{rule}");
