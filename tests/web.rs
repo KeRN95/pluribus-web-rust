@@ -9000,14 +9000,13 @@ async fn a_buyer_writes_to_a_seller_who_answers(pool: PgPool) {
     let to_sheet = r#"<a class="button message-button" href="/listing/1001/mesazh" data-turbo-frame="conversation" data-turbo-prefetch="false" data-action="message-sheet#open">"#;
     assert_eq!(theirs.matches(to_sheet).count(), 1, "{theirs}");
     // A wide pill that says its name, beside the phone's in the contact bar, filled in the accent as
-    // the site's main buttons are; the phone's in the accent's light tint, as a filter that is on
-    // wears it, a little more of it under the pointer (the user's asks of 2026-10-12: the message
-    // wore the tint for a moment, the phone the grey of secondary controls until then).
+    // the site's main buttons are; the phone's plain, on the grey of secondary controls, its icon
+    // muted (each wore the accent's light tint for a moment on 2026-10-12, until the user asked
+    // both back).
     assert!(theirs.contains(r#"<span class="button-label">Shkruaji shitësit</span></a>"#));
     let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    assert!(css.contains(".contact-bar .button.reveal-button{background:var(--filter-on);color:var(--text);}"), "the tint");
-    assert!(css.contains(".contact-bar .button.reveal-button:hover{background:var(--filter-on-hover);}"), "under the pointer");
-    assert!(!css.contains(".contact-bar .message-button{background"), "the message filled");
+    assert!(css.contains(".contact-bar .reveal-button .contact-icon{color:var(--muted);"), "the phone's icon muted");
+    assert!(!css.contains(".contact-bar .button.reveal-button{background") && !css.contains(".contact-bar .message-button{background"), "no tint");
     assert!(theirs.contains(r#"<div class="message-sheet" id="message-sheet" role="dialog" aria-modal="true""#));
     assert!(theirs.contains(r#"<turbo-frame id="conversation" data-message-sheet-target="frame""#));
     let anyone = get(pool.clone(), listing).await.body;
