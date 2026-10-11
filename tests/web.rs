@@ -1103,7 +1103,7 @@ async fn card_details_start_with_the_city(pool: PgPool) {
     let property = get(pool.clone(), "/c/prona").await.body;
     assert!(property.contains("<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Tiranë · </span>2+1 · 85\u{a0}m²</p>"));
     // Rents are per month.
-    assert!(property.contains("450\u{a0}€/muaj"));
+    assert!(property.contains("450\u{a0}€<span class=\"card-note\">/muaj</span>"));
     // Without properties, the line is just the city.
     let other = get(pool.clone(), "/c/te-tjera").await.body;
     assert!(other.contains("<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Berat</span></p>"));
@@ -4642,6 +4642,27 @@ async fn fields_checkboxes_and_radios_are_drawn_as_the_canvas_has_them(pool: PgP
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
+async fn cards_are_drawn_as_the_canvas_has_them(pool: PgPool) {
+    // A card's heart a white outline 22px with a soft shadow and no circle behind it; its price
+    // white and bold over a shade along the photo's bottom edge; a kept listing's status in a dark
+    // pill over the photo. (The stylesheet comes minified: web::site_css.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let rule = |selector: &str| {
+        let at = css.find(&format!("}}{selector}{{")).unwrap_or_else(|| panic!("{selector}"));
+        let rule = &css[at + 1..];
+        rule[..rule.find('}').unwrap()].to_string()
+    };
+    let heart = rule(".heart-button svg");
+    assert!(heart.contains("width:22px") && heart.contains("drop-shadow(0 1px 3px rgb(0 0 0 / 55%))"), "{heart}");
+    assert!(!rule(".heart-button::before").contains("background:"));
+    let shade = rule(".card-media::after");
+    assert!(shade.contains("linear-gradient(") && shade.contains("rgb(0 0 0 / 55%)"), "{shade}");
+    let price = rule(".card-media .card-price");
+    assert!(price.contains("color:#fff") && price.contains("font-weight:var(--bold)"), "{price}");
+    assert!(rule(".card-status").contains("background:rgb(27 27 27 / 60%)"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn a_short_descriptions_fold_button_stays_hidden(pool: PgPool) {
     // The button that unfolds a long description waits with the hidden attribute until the
     // controller finds the description long (fold_controller.js). Its own display rule would
@@ -6764,7 +6785,8 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     let first = &row[row.find(r#"<article class="card""#).unwrap()..];
     assert!(first[..first.find("</article>").unwrap()].contains(r#"fetchpriority="high""#), "{row}");
     assert!(row.contains(r#"<h2 class="card-title">"#) && row.contains(r#"<p class="card-when">"#), "{row}");
-    assert!(row.contains(r#"title="3 shikime këtë javë""#) && row.contains(r#"title="2 shikime këtë javë""#), "{row}");
+    assert!(row.contains(r#"<span class="card-views">3 shikime këtë javë</span><span class="card-views-short">3 shikime</span>"#), "{row}");
+    assert!(row.contains(r#"<span class="card-views">2 shikime këtë javë</span>"#), "{row}");
     assert!(!home[home.find(r#"id="latest-heading""#).unwrap()..].contains("card-views"));
 
     // The listing's own page says how many times it was seen in all, under the heart; one nobody
@@ -7379,7 +7401,7 @@ async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
     set_price(&pool, 1002, "25000").await;
     assert!(!card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("card-drop"));
     set_price(&pool, 1002, "20000").await;
-    assert!(card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("20\u{a0}000\u{a0}€ (i diskutueshëm)</span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>21\u{a0}500\u{a0}€</del><span class=\"card-drop\">−7%</span>"));
+    assert!(card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("20\u{a0}000\u{a0}€<span class=\"card-note\"> (i diskutueshëm)</span></span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>21\u{a0}500\u{a0}€</del><span class=\"card-drop\">−7%</span>"));
 
     // Less than 1% is no drop: the iPhone, from 55 000 to 54 700 Lekë. Nor is a price in another
     // currency: the bike, from 25 000 Lekë to 200 €.

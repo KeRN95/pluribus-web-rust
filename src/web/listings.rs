@@ -134,6 +134,16 @@ impl ListingCard {
         format::price(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
     }
 
+    /// The price itself; what follows it, a size down on the card, is price_note.
+    pub fn price_main(&self) -> String {
+        format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).0
+    }
+
+    /// "/muaj", " (i diskutueshëm)", or empty.
+    pub fn price_note(&self) -> String {
+        format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).1
+    }
+
     /// What the list's card shows of its description: all of it, or, when it is longer than
     /// db::DESCRIPTION_EXCERPT, that much, cut at a word and ending in "…".
     pub fn description_excerpt(&self) -> String {

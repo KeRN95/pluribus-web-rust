@@ -64,10 +64,12 @@
         (page.css). -#}
     <p class="card-description">{{ description }}</p>
     {%- endif %}
-    {#- The price; one that dropped lately is followed, as on the listing's page, by what it was,
-        struck through, and by how much, in a green pill (page.css); a car well under what cars
-        of its model and year ask, by "Çmim i mirë" in one (car_prices.rs). -#}
-    <p class="card-price"><span class="card-amount">{{ card.price_display() }}</span>
+    {#- The price, what follows it (/muaj, i diskutueshëm) a size down; one that dropped lately is
+        followed, as on the listing's page, by what it was, struck through, and by how much, in a
+        green pill (page.css); a car well under what cars of its model and year ask, by "Çmim i
+        mirë" in one (car_prices.rs). -#}
+    {%- let note = card.price_note() %}
+    <p class="card-price"><span class="card-amount">{{ card.price_main() }}{% if !note.is_empty() %}<span class="card-note">{{ note }}</span>{% endif %}</span>
       {%- if let Some((percent, was)) = card.price_drop() %}<del class="card-was"><span class="visually-hidden">{{ crate::t("Çmimi ishte") }} </span>{{ was }}</del><span class="card-drop">−{{ percent }}%</span>{% endif %}
       {%- if card.bargain() %}<span class="card-bargain">{{ crate::t("Çmim i mirë") }}</span>{% endif %}</p>
     {%- if let Some(place) = card.place_text() %}
@@ -78,11 +80,6 @@
     {%- endif %}
     {%- let heart_number = card.public_no %}
     {% include "heart.html" %}
-    {%- if let Some(views) = card.views_display() %}
-    {#- On "Më të klikuarat", how many times its page was seen this week: an eye and the number on
-        a dark pill like the heart's circle, at the photo's top left. -#}
-    <p class="card-views" title="{{ crate::t1("{} shikime këtë javë", views) }}"><svg data-icon="eye" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::EYE|safe }}</svg><span class="visually-hidden">{{ crate::t("Shikime këtë javë") }}: </span>{{ views }}</p>
-    {%- endif %}
     {%- if let Some(status) = card.status_label() %}
     {#- On /te-ruajturat, a kept listing reserved or sold since says so where the views would be,
         on the same dark pill; a sold one's photo dims (page.css). -#}
@@ -90,18 +87,27 @@
     {%- endif %}
   </div>
   {#- The details line, which starts with the city, with no pin before it, then the distance from
-      the map pin when there is one: "Tiranë · 2,4 km · 2016 · Naftë". One line, ending in "…" when
+      the map pin when there is one: "Tiranë · 2,4 km · 2016 · Naftë"; on "Më të klikuarat", how
+      many times its page was seen this week instead, in words ("Tiranë · 1 493 shikime këtë
+      javë", "this week" left out on a phone, page.css). One line, ending in "…" when
       longer. In the list, the city is left out (.card-town), as the place line over it has it,
       and when it was posted is at its right end ("para 3 ditësh"); the cards leave that out
       (page.css). The properties' values are in the page's language (ListingCard::details_line,
       listings.rs). -#}
   <div class="card-body">
     <p class="card-summary">
+      {%- if let Some(views) = card.views_display() -%}
+      {%- if let Some(city) = card.place_label() -%}
+      <span class="card-town" translate="no">{{ city }} · </span>
+      {%- endif -%}
+      <span class="card-views">{{ crate::t1("{} shikime këtë javë", views) }}</span><span class="card-views-short">{{ crate::t1("{} shikime", views) }}</span>
+      {%- else -%}
       {%- let rest = card.details_line() -%}
       {%- if let Some(city) = card.place_label() -%}
       <span class="card-town" translate="no">{{ city }}{% if !rest.is_empty() %} · {% endif %}</span>
       {%- endif -%}
       {{- rest -}}
+      {%- endif -%}
     </p>
     <p class="card-when">{{ card.when_text() }}</p>
   </div>
