@@ -88,7 +88,9 @@ export default class extends Controller {
   // What opens floats under the row and takes at most what is left of the screen under it
   // (--top, browse.css), so that its foot shows; it scrolls inside if it needs more.
   fit() {
-    this.element.style.setProperty("--top", `${Math.round(this.toolsTarget.getBoundingClientRect().bottom)}px`);
+    // Measured in the screen's pixels, set in the page's (data-page-size).
+    const zoom = this.element.currentCSSZoom || 1;
+    this.element.style.setProperty("--top", `${Math.round(this.toolsTarget.getBoundingClientRect().bottom / zoom)}px`);
   }
 
   // A change in the form, a box ticked or a field left: the results follow at once, once the

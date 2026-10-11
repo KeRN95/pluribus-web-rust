@@ -91,6 +91,19 @@ document.addEventListener("turbo:before-cache", () => {
   for (const pressed of document.querySelectorAll(".card.pressed, .shortcut.pressed")) pressed.classList.remove("pressed");
 });
 
+// iPhones and iPads zoom into a field whose words are under 16px as it takes the focus, which the
+// page made smaller (data-page-size) makes of every field. There, and only there, the viewport's
+// maximum-scale=1 stops it, while Safari still lets a person pinch to zoom (it has ignored the
+// limit for a finger since iOS 10; Android's Chrome would forbid pinching, so it isn't set there).
+// Turbo puts each page's own viewport tag back as it shows it, so it is set again after each.
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes("Macintosh") && navigator.maxTouchPoints > 1);
+function keepFieldsUnzoomed() {
+  const viewport = document.querySelector('meta[name="viewport"]');
+  if (IOS && viewport && !viewport.content.includes("maximum-scale")) viewport.content += ", maximum-scale=1";
+}
+keepFieldsUnzoomed();
+document.addEventListener("turbo:load", keepFieldsUnzoomed);
+
 // The copy of the page Turbo keeps for going back has new <img>s. Lazy and decoded aside, as the
 // cards' photos are, Safari paints them empty and fills them in a moment later, which shows after
 // a swipe back (the button's cross-fade hides it). Photos the page has already loaded go into the

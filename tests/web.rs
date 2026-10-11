@@ -4781,6 +4781,11 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
     for part in ["closest(`a.shortcut`)", "`.card.pressed, .shortcut.pressed`", "addEventListener(`turbo:before-render`", ".detail.resume()"] {
         assert!(script.contains(part), "{part} in {script}");
     }
+    // iPhones and iPads alone are kept from zooming into a field as it takes the focus (the page's
+    // size can make its words smaller than 16px), after every page Turbo shows.
+    for part in ["iPhone|iPad|iPod", ", maximum-scale=1", "`turbo:load`"] {
+        assert!(script.contains(part), "{part} in {script}");
+    }
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
@@ -4897,6 +4902,12 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
         let order = positions(menu, &sizes.iter().map(String::as_str).collect::<Vec<_>>());
         assert!(order.is_sorted(), "{order:?}");
         assert!(menu.contains(r#"<button type="button" class="text-size-smaller" aria-label="Shkrim më i vogël" aria-pressed="false""#));
+        // And the page's size, everything drawn smaller (2026-10-11): 70, 80, 90 and the whole page,
+        // each a frame's corners a size bigger, after the text's size.
+        let pages: Vec<String> = ["70", "80", "90", "100"].iter().map(|page| format!(r#"aria-label="Faqja {page}%" title="{page}%""#)).collect();
+        let order = positions(menu, &[sizes.last().unwrap().as_str(), r#"<span id="menu-page-size">Madhësia e faqes</span>"#, pages[0].as_str(), pages[1].as_str(), pages[2].as_str(), pages[3].as_str()]);
+        assert!(order.is_sorted(), "{order:?}");
+        assert!(menu.contains(r#"title="100%" aria-pressed="true" data-look-target="page" data-look-page-param="100" data-action="look#page">"#));
         let swatches: Vec<String> = ["mint", "lime", "coral", "orange", "blue"].iter().map(|accent| format!(r#"<input type="radio" class="swatch" name="accent" value="{accent}""#)).collect();
         let order = positions(menu, &swatches.iter().map(String::as_str).collect::<Vec<_>>());
         assert!(order.is_sorted(), "{order:?}");
@@ -4928,6 +4939,7 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
         assert!(home.contains(part), "{part}");
     }
     assert!(home.contains(r#"if (["smaller", "small", "large"].includes(size)) root.dataset.textSize = size;"#));
+    assert!(home.contains(r#"if (["90", "80", "70"].includes(page)) root.dataset.pageSize = page;"#));
     assert!(home.contains(r#"if (["lime", "coral", "orange", "blue"].includes(accent)) root.dataset.accent = accent;"#));
     // Drawn as the canvas has it: white over the page dimmed, its counts in the accent, a link's
     // icon filled with the accent under the pointer; the text's size scales every size in rem.
@@ -4937,6 +4949,12 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
         ".menu::backdrop{background:var(--scrim);}",
         r#":root[data-text-size="smaller"]{--text-scale:.8125;}"#,
         r#":root[data-text-size="large"]{--text-scale:1.1875;}"#,
+        // The page's size: the whole page zoomed, the maps at their own scale, the frame's column
+        // as wide on the screen as before.
+        r#":root[data-page-size="70"]{--page-scale:.7;}"#,
+        "html{zoom:var(--page-scale);}",
+        ":is(.map-canvas,.map-pin-canvas){zoom:calc(1",
+        "--content-width:calc(1068px",
         "html{font-size:calc(100% * var(--text-scale));}",
         "a.menu-row:hover > svg{fill:var(--highlight);}",
     ] {
@@ -5055,7 +5073,8 @@ async fn the_footer_is_drawn_as_the_canvas_has_it(pool: PgPool) {
     assert!(rule(".footer-links a").contains("min-height:var(--size-button-sm)"));
     assert!(rule(".language-switch button").contains("text-decoration:underline"));
     let body = rule("body");
-    assert!(body.contains("flex-direction:column") && body.contains("min-height:100svh"), "{body}");
+    // At least the screen's height, the page's own size divided out (data-page-size).
+    assert!(body.contains("flex-direction:column") && body.contains("min-height:calc(100svh"), "{body}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

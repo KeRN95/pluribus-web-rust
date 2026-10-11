@@ -84,23 +84,27 @@ export default class extends Controller {
   // The popup under the button, or over it where there is more room above; within the screen's
   // width; as tall as the room allows, between SHORTEST and TALLEST, the page scrolled to show it
   // whole where it doesn't fit. In the page's coordinates, so that it scrolls with the button.
+  // Worked out in the screen's pixels, as the button and the window are measured, and set in the
+  // page's, which its own size scales (data-page-size, look_controller.js).
   place() {
     const sheet = this.sheetTarget;
+    const zoom = sheet.currentCSSZoom || 1;
+    const gap = GAP * zoom;
     const button = this.button.getBoundingClientRect();
-    const below = innerHeight - button.bottom - 2 * GAP;
-    const above = button.top - 2 * GAP;
-    const up = below < SHORTEST && above > below;
-    const height = Math.max(SHORTEST, Math.min(TALLEST, up ? above : below));
+    const below = innerHeight - button.bottom - 2 * gap;
+    const above = button.top - 2 * gap;
+    const up = below < SHORTEST * zoom && above > below;
+    const height = Math.max(SHORTEST * zoom, Math.min(TALLEST * zoom, up ? above : below));
     const parent = (sheet.offsetParent ?? document.body).getBoundingClientRect();
-    const left = Math.max(GAP, Math.min(button.left, document.documentElement.clientWidth - WIDTH - GAP));
-    const top = up ? button.top - GAP - height : button.bottom + GAP;
+    const left = Math.max(gap, Math.min(button.left, document.documentElement.clientWidth - WIDTH * zoom - gap));
+    const top = up ? button.top - gap - height : button.bottom + gap;
     sheet.classList.toggle("opens-up", up);
-    sheet.style.setProperty("--height", `${height}px`);
-    sheet.style.setProperty("--left", `${left - parent.left}px`);
-    sheet.style.setProperty("--top", `${top - parent.top}px`);
+    sheet.style.setProperty("--height", `${height / zoom}px`);
+    sheet.style.setProperty("--left", `${(left - parent.left) / zoom}px`);
+    sheet.style.setProperty("--top", `${(top - parent.top) / zoom}px`);
     const box = sheet.getBoundingClientRect();
-    if (box.bottom > innerHeight - GAP) scrollBy({ top: box.bottom - innerHeight + GAP, behavior: "smooth" });
-    else if (box.top < GAP) scrollBy({ top: box.top - GAP, behavior: "smooth" });
+    if (box.bottom > innerHeight - gap) scrollBy({ top: box.bottom - innerHeight + gap, behavior: "smooth" });
+    else if (box.top < gap) scrollBy({ top: box.top - gap, behavior: "smooth" });
   }
 
   // Where there is a mouse, the box to write in takes the focus; on a phone it waits for a tap,
@@ -120,7 +124,7 @@ export default class extends Controller {
     const sheet = this.sheetTarget;
     this.raised = true;
     this.keyboardSeen = false;
-    this.height = sheet.offsetHeight;
+    this.height = sheet.getBoundingClientRect().height; // the screen's pixels, as the keyboard's
     clearTimeout(this.easing);
     visualViewport?.addEventListener("resize", this.fit);
     visualViewport?.addEventListener("scroll", this.fit);
@@ -171,9 +175,10 @@ export default class extends Controller {
   put(top, height) {
     const sheet = this.sheetTarget;
     const body = this.bodyTarget;
+    const zoom = sheet.currentCSSZoom || 1; // given in the screen's pixels, set in the page's
     const atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 120;
-    sheet.style.top = `${top}px`;
-    sheet.style.height = `${height}px`;
+    sheet.style.top = `${top / zoom}px`;
+    sheet.style.height = `${height / zoom}px`;
     sheet.style.bottom = "auto";
     if (atEnd) body.scrollTop = body.scrollHeight;
   }
@@ -222,7 +227,8 @@ export default class extends Controller {
     // however many moves the finger sends in between.
     this.frame ??= requestAnimationFrame(() => {
       this.frame = null;
-      if (this.dragFrom != null) this.sheetTarget.style.transform = `translateY(${this.dragged}px)`;
+      const zoom = this.sheetTarget.currentCSSZoom || 1; // the finger's pixels, the page's
+      if (this.dragFrom != null) this.sheetTarget.style.transform = `translateY(${this.dragged / zoom}px)`;
     });
   }
 
@@ -235,7 +241,7 @@ export default class extends Controller {
     setTimeout(() => (this.justDragged = false), 400);
     const sheet = this.sheetTarget;
     sheet.classList.remove("is-dragging");
-    const away = this.dragged > sheet.offsetHeight / 4 || (this.speed > 0.5 && this.dragged > 10);
+    const away = this.dragged > sheet.getBoundingClientRect().height / 4 || (this.speed > 0.5 && this.dragged > 10);
     if (!away) {
       sheet.style.transform = "";
       return;

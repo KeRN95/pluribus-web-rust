@@ -9,7 +9,7 @@
    and the gap over "Njoftime të ngjashme" (.related; the gap over the path is the listing's own
    padding, inside its height), so that the section starts just out of view on a short listing's
    page, as it does on a long one; svh, so that a phone's toolbars count as showing. */
-.listing { min-height: calc(100vh - var(--size-header) - 1px - 2.5rem); min-height: calc(100svh - var(--size-header) - 1px - 2.5rem); }
+.listing { min-height: calc(100vh / var(--page-scale) - var(--size-header) - 1px - 2.5rem); min-height: calc(100svh / var(--page-scale) - var(--size-header) - 1px - 2.5rem); }
 /* Its parts in grids rather than the flow: the page's (its notices, its path, its photos and the
    rest, .listing-side) and the rest's (the title and the price, the contact bar, the share and the
    report, the details, the description, the seller's card and the map), so that on a phone the
@@ -142,7 +142,7 @@
   /* Across the page a photo's frame is wider than the photo, and no taller than most screens
      leave room for: the photo whole in the middle, its blurred copy filling the sides. */
   .listing-media .gallery-photo,
-  .listing-media .listing-photo { aspect-ratio: auto; height: min(70vh, 38rem); }
+  .listing-media .listing-photo { aspect-ratio: auto; height: calc(min(70vh, 38rem) / var(--page-scale)); }
   /* Every other listing's page is split, as the classifieds sites have it: the path over both
      columns, the photo at the left in a frame taller than wide, three by four, seven twelfths of
      the page (its blurred copy filling what the photo doesn't), and at its right, in a column of
@@ -167,7 +167,7 @@
   .listing-split > .listing-media { grid-column: 1; align-self: start; position: sticky; top: calc(var(--size-header) + 1rem + 1px); }
   .listing-split > .listing-side { grid-column: 2; grid-template-columns: minmax(0, 1fr) auto; }
   .listing-split .listing-media .gallery-photo,
-  .listing-split .listing-media .listing-photo { aspect-ratio: 3 / 4; height: auto; max-height: calc(100vh - var(--size-header) - 8.5rem - 1px); }
+  .listing-split .listing-media .listing-photo { aspect-ratio: 3 / 4; height: auto; max-height: calc(100vh / var(--page-scale) - var(--size-header) - 8.5rem - 1px); }
   .listing-split .listing-side > :is(.listing-header, .listing-details, .listing-description),
   .listing-split .listing-deal > .price-box { max-width: none; }
   .listing-split .listing-header h1 { margin-top: 0; }
@@ -295,12 +295,12 @@
      the views over the slider's corner (the side's third and the gap to their right). One photo
      alone takes the whole width, whole in its frame. */
   .listing-car .listing-media .gallery-photo,
-  .listing-car .listing-media .listing-photo { aspect-ratio: auto; height: 430px; max-height: none; }
+  .listing-car .listing-media .listing-photo { aspect-ratio: auto; height: calc(430px / var(--page-scale)); max-height: none; }
   .listing-car .listing-media:has(.mosaic-side) { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
   .listing-car .listing-media:has(.mosaic-side) .gallery-photo img:not(.gallery-backdrop) { object-fit: cover; }
   .listing-car .listing-media:has(.mosaic-side) .heart { right: calc((100% - 8px) / 3 + 8px + var(--over-edge) - .3rem); }
   .listing-car .listing-media:has(.mosaic-side) .listing-views { right: calc((100% - 8px) / 3 + 8px + var(--over-edge) + var(--over-photo) + .4rem); }
-  .mosaic-side { display: grid; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px; height: 430px; }
+  .mosaic-side { display: grid; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px; height: calc(430px / var(--page-scale)); }
   .listing-car .listing-side { grid-template-columns: minmax(0, 1fr) 21rem; column-gap: 2rem; }
   .listing-car .listing-side > * { grid-column: 1; max-width: none; }
   .listing-car .listing-side > .listing-deal { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; grid-row: 1 / span 40; align-self: start; }
@@ -690,7 +690,7 @@
 /* What a square metre costs: its card under it, as wide as what it says. */
 .area-price { position: relative; width: fit-content; }
 .price-box > .area-price { margin-top: .4rem; }
-.area-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw - 2rem)); }
+.area-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw / var(--page-scale) - 2rem)); }
 /* In a zone with an average, how the square metre compares with it, under the sum: a dot and the
    words in the bubble's colour. */
 .area-price-verdict { display: flex; align-items: center; gap: .45rem; margin: .5rem 0 0; color: var(--tone); font-weight: var(--semibold); }
@@ -712,7 +712,7 @@
    it says. */
 .car-price { position: relative; width: fit-content; }
 .price-box > .car-price { margin-top: 10px; }
-.car-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw - 2rem)); }
+.car-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw / var(--page-scale) - 2rem)); }
 /* The price's block, as the canvas has it: the price on a line of its own, a car's bubble under it,
    10px down, and 12px under those "Llogarit kredinë", a grey pill 48px tall the line's whole width,
    its calculator's icon muted before its words; or, beside what a square metre costs, a pill as
@@ -1004,7 +1004,7 @@
 .description-heading { margin: 0 0 .35rem; font-size: var(--text-lg); font-weight: var(--semibold); line-height: 1.35; }
 
 @media (min-width: 720px) {
-  .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem 1rem; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(calc(220px / var(--page-scale)), 1fr)); gap: 1.5rem 1rem; }
   h1 { font-size: var(--text-3xl); }
   .listing-header h1 { font-size: 1.75rem; }
   .listing-price { font-size: var(--text-3xl); }

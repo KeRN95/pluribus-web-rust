@@ -66,7 +66,7 @@
   right: 0;
   left: 0;
   z-index: 30;
-  max-height: min(60vh, 26rem);
+  max-height: min(60vh / var(--page-scale), 26rem);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 6px;
@@ -167,8 +167,8 @@
   z-index: 30;
   /* As wide as the field, or wider for a narrow one (the welcome form's halves), growing from the
      side nearer the middle of the screen (picker_controller.js): leftward unless .picker-start. */
-  width: max(100%, min(20rem, calc(100vw - 2rem)));
-  max-height: min(70vh, 30rem);
+  width: max(100%, min(20rem, calc(100vw / var(--page-scale) - 2rem)));
+  max-height: min(70vh / var(--page-scale), 30rem);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: .375rem;

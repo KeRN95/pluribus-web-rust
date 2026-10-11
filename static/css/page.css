@@ -392,7 +392,7 @@
 .card-dots,
 .card-step { display: none; }
 
-.cards-big .results .grid { grid-template-columns: minmax(0, 1fr); max-width: 40rem; margin-inline: auto; row-gap: 2.5rem; }
+.cards-big .results .grid { grid-template-columns: minmax(0, 1fr); max-width: calc(40rem / var(--page-scale)); margin-inline: auto; row-gap: 2.5rem; }
 @media (min-width: 960px) {
   .cards-big .results .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; column-gap: 1.5rem; }
 }
@@ -527,7 +527,7 @@
 .cards-list .results .grid { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-12); }
 .cards-list .results .card {
   display: grid;
-  grid-template-columns: 240px auto minmax(0, 1fr);
+  grid-template-columns: calc(240px / var(--page-scale)) auto minmax(0, 1fr);
   grid-template-rows: auto auto auto minmax(0, 1fr);
   grid-template-areas: "photo title title" "photo summary summary" "photo description description" "photo place when";
   column-gap: 18px;
@@ -536,7 +536,7 @@
      least 0: spanning a flexible row at its least auto, the photo would stretch the rows); the words
      beside it, two lines of title and of description at most, fit in its height at every text
      size. */
-  height: calc(180px + 24px);
+  height: calc(180px / var(--page-scale) + 24px);
   padding: 12px;
   border-radius: var(--radius-box);
   background: var(--surface);
@@ -549,14 +549,14 @@
 .cards-list .results .card-media::after {
   grid-area: photo;
   align-self: start;
-  width: 240px;
-  height: 180px;
+  width: calc(240px / var(--page-scale));
+  height: calc(180px / var(--page-scale));
   min-height: 0;
   border-radius: 12px;
 }
 .cards-list .results .card-slides { overflow: hidden; }
 .cards-list .results .card-slides .card-photo { border-radius: 0; }
-.cards-list .results .card-media .card-price { grid-area: photo; align-self: start; max-width: 240px; height: 180px; align-items: flex-end; }
+.cards-list .results .card-media .card-price { grid-area: photo; align-self: start; max-width: calc(240px / var(--page-scale)); height: calc(180px / var(--page-scale)); align-items: flex-end; }
 .cards-list .results .card-media .heart { grid-area: photo; align-self: start; justify-self: end; }
 .cards-list .results :is(.card-seller, .card-dots, .card-step) { display: none; }
 .cards-list .results .card-head { grid-area: title; padding: 4px 8px 0 0; }
@@ -591,17 +591,17 @@
 @media (max-width: 719px) {
   .cards-list .results .grid { row-gap: 10px; }
   .cards-list .results .card {
-    grid-template-columns: 116px auto minmax(0, 1fr);
+    grid-template-columns: calc(116px / var(--page-scale)) auto minmax(0, 1fr);
     grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-areas: "photo title title" "photo summary summary" "photo place when";
     column-gap: var(--space-12);
     row-gap: 3px;
-    height: calc(116px + 20px);
+    height: calc(116px / var(--page-scale) + 20px);
     padding: 10px;
   }
   .cards-list .results :is(.card-slides, .card-media > .card-photo),
-  .cards-list .results .card-media::after { width: 116px; height: 116px; }
-  .cards-list .results .card-media .card-price { max-width: 116px; height: 116px; padding: 0 8px 6px; font-size: 1rem; }
+  .cards-list .results .card-media::after { width: calc(116px / var(--page-scale)); height: calc(116px / var(--page-scale)); }
+  .cards-list .results .card-media .card-price { max-width: calc(116px / var(--page-scale)); height: calc(116px / var(--page-scale)); padding: 0 8px 6px; font-size: 1rem; }
   .cards-list .results .card-head { padding: 2px 0 0; }
   .cards-list .results .card-title { font-size: 1.0714rem; }
   .cards-list .results .card-summary { font-size: .9286rem; }

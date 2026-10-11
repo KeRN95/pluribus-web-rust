@@ -705,6 +705,10 @@ pub const GLOBE: &str = r#"<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><p
 /// A big A and a small one: the text's size (the menu's "Madhësia e shkrimit", base.html).
 pub const TEXT_SIZE: &str = r#"<path d="M4 19 9 5l5 14M5.8 14h6.4"/><path d="M15 19l3-8 3 8M15.9 16.5h4.2"/>"#;
 
+/// A frame's four corners: the page's size (the menu's "Madhësia e faqes", base.html), and, drawn
+/// a size each, its four choices.
+pub const PAGE_SIZE: &str = r#"<path d="M4 9V6a2 2 0 0 1 2-2h3M15 4h3a2 2 0 0 1 2 2v3M20 15v3a2 2 0 0 1-2 2h-3M9 20H6a2 2 0 0 1-2-2v-3"/>"#;
+
 /// A door's frame and an arrow out of it: signing out ("Dil nga llogaria", in "Njoftimet e
 /// mia" and "Cilësimet").
 #[expect(dead_code, reason = "the account's pages take it when they are redrawn")]

@@ -88,7 +88,7 @@
   background: var(--surface);
   box-shadow: var(--shadow);
 }
-.conversation-box.is-first { min-height: min(720px, calc(100dvh - var(--size-header) - 80px)); }
+.conversation-box.is-first { min-height: min(720px, calc(100dvh / var(--page-scale) - var(--size-header) - 80px)); }
 .conversation-box .thread { flex: 1; padding: 18px 0; }
 /* The conversation's head: who with first, their initial in a ring of 32px and their name,
    semibold, a hairline under them; then the listing, its photo (56px, its corners 12px) beside its
@@ -220,7 +220,7 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 @media (max-width: 719px) {
   .conversation-back { margin-top: 10px; }
   .conversation-box { margin: 6px calc(-1 * var(--gutter)) 0; padding: 0; border-radius: 0; background: none; box-shadow: none; }
-  .conversation-box.is-first { min-height: calc(100dvh - var(--size-header) - 36px); }
+  .conversation-box.is-first { min-height: calc(100dvh / var(--page-scale) - var(--size-header) - 36px); }
   .conversation-head { border-top: 1px solid var(--border-soft); background: var(--surface); }
   .conversation-with,
   .conversation-listing { padding: 12px var(--gutter); }
@@ -262,8 +262,8 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 .listing-page { display: contents; }
 .message-sheet {
   position: fixed;
-  inset: max(25vh, calc(100vh - 470px)) 0 0;
-  inset: max(25dvh, calc(100dvh - 470px)) 0 0;
+  inset: max(25vh / var(--page-scale), calc(100vh / var(--page-scale) - 470px)) 0 0;
+  inset: max(25dvh / var(--page-scale), calc(100dvh / var(--page-scale) - 470px)) 0 0;
   z-index: 30;
   display: flex;
   flex-direction: column;

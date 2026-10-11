@@ -95,6 +95,12 @@ Shkrim normal
 Shkrim i madh
 = Large text
 
+Madhësia e faqes
+= Page size
+
+Faqja {}
+= Page {}
+
 Ngjyra
 = Colour
 

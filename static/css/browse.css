@@ -253,7 +253,7 @@
   z-index: 9;
 }
 .map-card-body {
-  max-height: calc(100dvh - var(--top, 12rem) - var(--drop) - 1rem);
+  max-height: calc(100dvh / var(--page-scale) - var(--top, 12rem) - var(--drop) - 1rem);
   overscroll-behavior: contain;
   background: var(--surface);
   border: 1px solid var(--menu-border);
@@ -712,14 +712,14 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   gap: 14px;
   width: max-content;
   min-width: 280px;
-  max-width: min(360px, calc(100vw - var(--rail-width, 0px) - 2 * var(--gutter)));
+  max-width: min(360px, calc(100vw / var(--page-scale) - var(--rail-width, 0px) - 2 * var(--gutter)));
 }
 .drop-card.filter-form { padding: 16px; overflow: visible; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow-float); }
 .drop-card > .filter-group { padding: 0; border-top: 0; }
 .drop-list .picker-list.picker-inline {
   position: static;
   width: auto;
-  max-height: min(320px, 50vh);
+  max-height: min(320px, 50vh / var(--page-scale));
   margin: -6px;
   padding: 0;
   border-radius: 0;

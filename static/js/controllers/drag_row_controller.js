@@ -43,7 +43,8 @@ export default class extends Controller {
       this.row.setPointerCapture(hold.id);
       this.row.classList.add("is-dragging");
     }
-    this.row.scrollLeft = hold.scroll - moved;
+    // The pointer moves in the screen's pixels, the row scrolls in the page's (data-page-size).
+    this.row.scrollLeft = hold.scroll - moved / (this.row.currentCSSZoom || 1);
     hold.moves.push([event.timeStamp, event.clientX]);
     if (hold.moves.length > 5) hold.moves.shift();
   }
@@ -61,7 +62,7 @@ export default class extends Controller {
     const last = hold.moves.at(-1);
     const going = first && last[0] > first[0] && event.timeStamp - last[0] < 100;
     const speed = going ? (last[1] - first[1]) / (last[0] - first[0]) : 0;
-    if (Math.abs(speed) > 0.3) this.row.scrollBy({ left: -speed * 250, behavior: this.smooth });
+    if (Math.abs(speed) > 0.3) this.row.scrollBy({ left: (-speed * 250) / (this.row.currentCSSZoom || 1), behavior: this.smooth });
   }
 
   // The click that ends a drag, which would open the card it ended on.
