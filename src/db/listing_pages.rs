@@ -36,6 +36,27 @@ pub struct ListingCard {
     /// stand-in a tap shows heads itself with too (data-heading).
     #[sqlx(default)]
     pub heading: Option<String>,
+    /// Its category's name and the one above it, if any, as its page's path says them
+    /// (listing.html, .listing-path), which the stand-in a tap shows says too (data-here, data-up).
+    #[sqlx(default)]
+    pub category_name: String,
+    #[sqlx(default)]
+    pub category_parent: Option<String>,
+    /// A property's area, as its page reads it (ListingDetail::area_m2), for whether its page
+    /// shows what a square metre costs (ListingCard::compares).
+    #[sqlx(default)]
+    pub area_m2: Option<Decimal>,
+    /// Its condition and when it was published, as its page says them in the line under its
+    /// title (ListingCard::page_line).
+    #[sqlx(default)]
+    pub condition: Option<String>,
+    #[sqlx(default)]
+    pub published_at: Option<OffsetDateTime>,
+    /// How many key facts its page has under its title, a car's or a property's (web/listings.rs,
+    /// CAR_FACTS, PROPERTY_FACTS): those of them the listing gives, two to a line on a phone, which
+    /// the stand-in a tap shows draws as many of (data-facts).
+    #[sqlx(default)]
+    pub facts: i64,
     pub location_name: Option<String>,
     /// The name of the municipality the listing is in.
     pub city: Option<String>,
@@ -700,6 +721,20 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH RECURSIVE deal_categories AS
                 l.category_id IN (SELECT id FROM deal_categories) AS deal,
                 CASE WHEN l.generated_title IS NOT NULL AND l.category_id IN (SELECT id FROM deal_categories WHERE car)
                      THEN l.title END AS heading,
+                (SELECT c.name FROM categories c WHERE c.id = l.category_id) AS category_name,
+                (SELECT p.name FROM categories c JOIN categories p ON p.id = c.parent_id WHERE c.id = l.category_id) AS category_parent,
+                (SELECT v.value_number FROM listing_attribute_values v JOIN attributes a ON a.id = v.attribute_id
+                 WHERE v.listing_id = l.id AND a.code = 'property_area') AS area_m2,
+                l.condition, l.published_at,
+                -- The key facts a car's page or a property's shows (web/listings.rs, CAR_FACTS and
+                -- PROPERTY_FACTS, whose codes these are): those the listing gives of its category's details.
+                (SELECT count(DISTINCT a.code) FROM listing_attribute_values v
+                 JOIN attributes a ON a.id = v.attribute_id
+                 JOIN effective_category_attributes eca
+                   ON eca.category_id = l.category_id AND eca.attribute_id = v.attribute_id AND eca.show_in_details
+                 WHERE v.listing_id = l.id
+                   AND a.code IN ('vehicle_year', 'vehicle_mileage', 'vehicle_transmission', 'vehicle_fuel',
+                                  'property_rooms', 'property_area', 'property_floor', 'property_furnished')) AS facts,
                 loc.name AS location_name,
                 CASE WHEN loc.location_type = 'AREA' THEN loc.name END AS zone,
                 (SELECT t.name FROM locations t

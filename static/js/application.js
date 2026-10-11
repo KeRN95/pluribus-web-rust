@@ -342,10 +342,13 @@ function standIn(link) {
 
 // A listing's stand-in: the listing page's own frame (listing.html), which listing.css lays out as
 // it lays out the page, so that the page fills it where it stands: its path's row with the steps'
-// circles; the photo the card shows, in the photo's frame (4:3 for a car or a property, data-deal,
+// circles (its words the card's, data-up and data-here, the category above the listing's and its
+// own, as the page says them); the photo the card shows, in the photo's frame (4:3 for a car or a property, data-deal,
 // 6:5 for the others on a phone); the title the page heads itself with (a car's as its seller wrote
 // it, data-heading); the line under it; a car's or a property's key facts; the price, with the
-// loan calculator's circle at its line's end where the page has it (data-loan); the details
+// loan calculator's circle at its line's end where the page has it (data-loan), and the circle
+// that weighs the price after it, grey until the page gives it its verdict's colour
+// (data-compare); the details
 // as grey pills where the page has them under it (not a car's or a property's, whose seller comes
 // there); the description, its start as the card has it; the contact bar at a phone's foot. What
 // the card doesn't know are grey bars where the words will be (.stand-in-text, words about as
@@ -366,26 +369,36 @@ function listingStandIn(card, link) {
   const notes = deal ? said.replace(/[()]/g, "").trim() : said;
   const number = link.pathname.match(/^\/listing\/(\d+)/)?.[1] ?? "";
   const place = card.querySelector(".card-place")?.textContent.trim() || "Tiranë";
-  // The line under the title, about as long as the page's: the made title before it where the
-  // seller's heads the page, what kind and in what state, and on a car's or a property's page
-  // where and when, before the number.
+  // The line under the title, the page's own words as the card has them (data-line), or about as
+  // long as the page's: the made title before it where the seller's heads the page, what kind and
+  // in what state, and on a car's or a property's page where and when, before the number.
   const kind = "Në shitje · E përdorur";
-  const line = deal ? `${head.dataset.heading ? `${named} · ` : ""}${kind} · ${place} · 00.00.2026 · Nr. ${number}` : `${kind} · Numri i njoftimit: ${number}`;
+  const line = head?.dataset.line ?? (deal ? `${head?.dataset.heading ? `${named} · ` : ""}${kind} · ${place} · 00.00.2026 · Nr. ${number}` : `${kind} · Numri i njoftimit: ${number}`);
+  // As many key facts as the page has (data-facts), two to a line on a phone; none but on a car's
+  // or a property's page.
+  const facts = deal ? Number(head.dataset.facts ?? 4) : 0;
   const fact = `<div class="key-fact"><span class="key-fact-icon"></span><div class="key-fact-text"><dt>${unseen("Kilometrazhi")}</dt><dd>${unseen("000 000 km")}</dd></div></div>`;
   const photo = shown ? `<img class="gallery-backdrop" src="${escape(shown)}" alt=""><img class="gallery-interim" src="${escape(shown)}" alt="">` : "";
+  // The path as the page has it: the way back (its chevron this page's own, where it has one), the
+  // category above, the sign between, the listing's own.
+  const chevron = document.querySelector(".breadcrumb-back svg")?.outerHTML ?? "";
+  const path = head?.dataset.here
+    ? `<a class="breadcrumb-back">${chevron}</a><a class="breadcrumb-up">${escape(head.dataset.up ?? "")}</a><span class="breadcrumb-sep" aria-hidden="true">›</span><a class="breadcrumb-here">${escape(head.dataset.here)}</a>`
+    : unseen("Automjete › Makina");
   const note = notes ? `<span class="price-note">${escape(notes)}</span>` : "";
   const pills = ["Samsung", "Galaxy A15", "128 GB", "E re", "Garanci"].map((words) => `<dd class="attribute">${escape(words)}</dd>`).join("");
   const details = deal ? "" : `<section class="listing-details"><h2>${unseen("Detajet")}</h2><dl class="attributes"><div class="attribute-group">${pills}</div></dl></section>`;
   const excerpt = card.querySelector(".card-description-text")?.textContent.trim();
   const description = excerpt ? `<section class="listing-description"><h2>${unseen("Përshkrimi")}</h2><div class="description-fold"><p class="description">${escape(excerpt)}</p></div></section>` : "";
   return `<div class="listing-page"><article class="listing ${deal ? "listing-car" : "listing-split"} stand-in-listing">`
-    + `<div class="listing-tags"><nav class="breadcrumb listing-path">${unseen("Automjete › Makina")}</nav>`
+    + `<div class="listing-tags"><nav class="breadcrumb listing-path">${path}</nav>`
     + '<nav class="listing-steps"><span class="back-button list-button"></span><span class="back-button step-button"></span><span class="back-button step-button"></span></nav></div>'
     + `<div class="listing-media"><div class="gallery"><div class="listing-photos"><div class="gallery-photo">${photo}</div></div></div></div>`
     + `<div class="listing-side"><header class="listing-header"><h1>${escape(head?.dataset.heading || named)}</h1><p class="card-meta listing-kind">${unseen(line)}</p></header>`
-    + (deal ? `<dl class="key-facts">${fact.repeat(4)}</dl>` : "")
+    + (facts > 0 ? `<dl class="key-facts">${fact.repeat(facts)}</dl>` : "")
     + `<div class="listing-deal"><div class="price-box"><div class="price-row"><p class="listing-price"><span class="price-amount">${escape(price)}</span>${note}</p>`
-    + `${head?.hasAttribute("data-loan") ? '<details class="bubble loan" inert><summary></summary></details>' : ""}</div></div></div>`
+    + `${head?.hasAttribute("data-loan") ? '<details class="bubble loan" inert><summary></summary></details>' : ""}`
+    + `${head?.hasAttribute("data-compare") ? '<details class="bubble car-price" inert><summary></summary></details>' : ""}</div></div></div>`
     + `${details}${description}</div>`
     + '<aside class="contact-bar"><span class="button secondary reveal-button"></span><span class="button message-button"></span></aside>'
     + "</article></div>";

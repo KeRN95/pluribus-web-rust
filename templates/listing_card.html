@@ -59,8 +59,11 @@
         page is laid out as a car's or a property's, its photos 4:3 on a phone; data-heading, a
         car's title as its seller wrote it, which its page heads itself with where the card's was
         made from what the car is; data-loan, its page offers the loan calculator, a button at the
-        price's line's end. -#}
-    <div class="card-head"{% if card.deal %} data-deal{% endif %}{% if let Some(heading) = card.heading %} data-heading="{{ heading }}"{% endif %}{% if card.loan() %} data-loan{% endif %}>
+        price's line's end, and data-compare, the circle after it that weighs the price (what a
+        square metre costs, or how a car's price compares); data-line, the line under its page's
+        title in words; data-facts, how many key facts a car's or a property's page has under it; data-up and data-here, its page's path, the category above its own (the
+        front page for one at the top) and its own. -#}
+    <div class="card-head"{% if card.deal %} data-deal data-facts="{{ card.facts }}"{% endif %}{% if let Some(heading) = card.heading %} data-heading="{{ heading }}"{% endif %}{% if card.loan() %} data-loan{% endif %}{% if card.compares() %} data-compare{% endif %} data-line="{{ card.page_line() }}" data-up="{% if let Some(parent) = card.category_parent %}{{ crate::t(parent) }}{% else %}{{ crate::t("Kreu") }}{% endif %}" data-here="{{ crate::t(card.category_name) }}">
       <h2 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h2>
     </div>
     {%- let description = card.description_excerpt() %}

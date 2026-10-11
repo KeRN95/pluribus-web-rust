@@ -5071,10 +5071,13 @@ async fn a_card_says_when_its_page_frames_photos_as_a_cars(pool: PgPool) {
     // does: a car's card whose title was made from what the car is carries the title its seller
     // wrote, its page's heading (data-heading); every other card's title is its page's heading.
     let home = get(pool.clone(), "/").await.body;
-    for (number, deal) in [(1001, true), (1003, true), (1005, false)] {
+    for (number, deal) in [(1001, true), (1003, true), (1004, true), (1005, false)] {
         // A place for the loan calculator's circle at the price's line's end where the page has
-        // it: the Golf on sale at 9 500 € does, a rent doesn't.
-        let loan = number == 1001;
+        // it: the Golf on sale at 9 500 € does, and the house at 185 000 €, a rent doesn't; and
+        // for the circle after it that weighs the price, the house's price per square metre (the
+        // Golf's model has no prices to compare with here).
+        let loan = matches!(number, 1001 | 1004);
+        let compare = number == 1004;
         let at = home.find(&format!(r#"-{number}">"#)).unwrap_or_else(|| panic!("no card {number}"));
         let card = &home[at..];
         let card = &card[..card.find("</article>").unwrap()];
@@ -5084,6 +5087,7 @@ async fn a_card_says_when_its_page_frames_photos_as_a_cars(pool: PgPool) {
         if number != 1005 {
             assert_eq!(head.contains(" data-loan"), loan, "{number}: {head}");
         }
+        assert_eq!(head.contains(" data-compare"), compare, "{number}: {head}");
         let link = r#"<a class="card-link" href=""#;
         let (href, rest) = card[card.find(link).unwrap() + link.len()..].split_once(r#"">"#).unwrap();
         let named = &rest[..rest.find("</a>").unwrap()];
@@ -5091,6 +5095,38 @@ async fn a_card_says_when_its_page_frames_photos_as_a_cars(pool: PgPool) {
         let page = get(pool.clone(), href).await.body;
         let h1 = &page[page.find("<h1>").unwrap() + "<h1>".len()..];
         assert_eq!(&h1[..h1.find("</h1>").unwrap()], heading, "{number}");
+        // Its page's path too: the category above its own, and its own.
+        let attribute = |name: &str| {
+            let (_, value) = head.split_once(&format!(r#" {name}=""#)).unwrap_or_else(|| panic!("{number}: no {name} in {head}"));
+            value[..value.find('"').unwrap()].to_string()
+        };
+        let path = &page[page.find(r#"<nav class="breadcrumb listing-path""#).unwrap()..];
+        let path = &path[..path.find("</nav>").unwrap()];
+        for (name, class) in [("data-up", "breadcrumb-up"), ("data-here", "breadcrumb-here")] {
+            let link = &path[path.find(&format!(r#"class="{class}""#)).unwrap()..];
+            let words = &link[link.find('>').unwrap() + 1..link.find("</a>").unwrap()];
+            assert_eq!(attribute(name), words, "{number}: {name}");
+        }
+        // And the line under its title, in the page's words (those for screen readers aside).
+        let kind = &page[page.find(r#"<p class="card-meta listing-kind">"#).unwrap()..];
+        let kind = &kind[kind.find('>').unwrap() + 1..kind.find("</p>").unwrap()];
+        let mut words = String::new();
+        let mut rest = kind;
+        while let Some(at) = rest.find('<') {
+            words.push_str(&rest[..at]);
+            let tag = &rest[at..];
+            if tag.starts_with(r#"<span class="visually-hidden">"#) {
+                rest = &tag[tag.find("</span>").unwrap() + "</span>".len()..];
+            } else {
+                rest = &tag[tag.find('>').unwrap() + 1..];
+            }
+        }
+        words.push_str(rest);
+        assert_eq!(attribute("data-line"), words.trim(), "{number}: the line under the title");
+        // And on a car's or a property's page as many key facts as the page has.
+        if deal {
+            assert_eq!(attribute("data-facts"), page.matches(r#"<div class="key-fact">"#).count().to_string(), "{number}: its key facts");
+        }
     }
 }
 

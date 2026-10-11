@@ -113,6 +113,16 @@ impl Photo {
     }
 }
 
+/// What kind of listing it is, and in what condition when it has one: "Në shitje · E përdorur",
+/// as a listing's page says it under its title.
+fn kind_line(listing_type: &str, condition: Option<&str>) -> String {
+    let kind = format::listing_type(listing_type);
+    match condition {
+        Some(condition) => format!("{kind} · {}", format::condition(condition)),
+        None => kind.to_string(),
+    }
+}
+
 /// What a loan for it would be, where its page offers the loan calculator: something on sale at
 /// a set price, a negotiable one or one from which, of more than 500 €, or 50 000 Lekë.
 fn loan_amount(listing_type: &str, price_type: &str, currency: &str, price_amount: Option<Decimal>) -> Option<Decimal> {
@@ -134,6 +144,48 @@ impl ListingCard {
     /// stand-in a tap shows keeps a place for (data-loan, application.js).
     pub fn loan(&self) -> bool {
         loan_amount(&self.listing_type, &self.price_type, &self.currency, self.price_amount).is_some()
+    }
+
+    /// Whether its page has a circle after the loan calculator's that weighs its price: what a
+    /// square metre of it costs (ListingDetail::area_price: on sale at a price, with an area), or
+    /// how it compares with what cars of its model and year ask (car_prices::CarPrice: a verdict),
+    /// which the stand-in a tap shows keeps a place for too (data-compare).
+    /// The line under its page's title, in words, as the page says it (listing.html, .listing-kind):
+    /// on a car's or a property's page the title made from what the car is first where the
+    /// seller's heads the page, what kind and in what state, where, when and its number; on the
+    /// others what kind and in what state and its number. The stand-in a tap shows says it, unseen,
+    /// so that it wraps as the page's does (data-line).
+    pub fn page_line(&self) -> String {
+        let kind = kind_line(&self.listing_type, self.condition.as_deref());
+        if !self.deal {
+            return format!("{kind} · {}: {}", t("Numri i njoftimit"), self.public_no);
+        }
+        let mut parts = Vec::new();
+        if self.heading.is_some() {
+            parts.push(self.title.clone());
+        }
+        parts.push(kind);
+        // Where, as the page's query says it (db::listing): a zone with its town after it, or the
+        // place alone.
+        let place = match (&self.zone, &self.city) {
+            (Some(zone), Some(city)) => Some(format!("{zone}, {city}")),
+            (Some(_), None) => None,
+            (None, _) => self.location_name.clone(),
+        };
+        parts.extend(place);
+        parts.extend(self.published_at.map(|published| format::when(published, time::OffsetDateTime::now_utc())));
+        parts.push(t1("Nr. {}", self.public_no));
+        parts.join(" · ")
+    }
+
+    pub fn compares(&self) -> bool {
+        let priced = matches!(self.price_type.as_str(), "FIXED" | "NEGOTIABLE" | "FROM");
+        let area = self.listing_type == "SELL" && priced && self.price_amount.is_some() && self.area_m2.is_some_and(|area| area > Decimal::ZERO);
+        let car = match (self.price_normalized, self.model_median) {
+            (Some(price), Some(median)) => price > Decimal::ZERO && car_prices::verdict(price, median).is_some(),
+            _ => false,
+        };
+        area || car
     }
 
     /// "1 234": how many times its page was seen this week, for "Më të klikuarat".
@@ -442,11 +494,7 @@ impl ListingDetail {
 
     /// What kind of listing it is, and in what condition when it has one: "Në shitje · E përdorur".
     pub fn kind_line(&self) -> String {
-        let kind = format::listing_type(&self.listing_type);
-        match self.condition.as_deref() {
-            Some(condition) => format!("{kind} · {}", format::condition(condition)),
-            None => kind.to_string(),
-        }
+        kind_line(&self.listing_type, self.condition.as_deref())
     }
 
     pub fn status_label(&self) -> Option<&'static str> {
