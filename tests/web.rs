@@ -7237,12 +7237,14 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     let home = html(pool.clone(), "/").await;
     let row = section(&home, "most-viewed-heading");
     assert_eq!(card_numbers(row), vec![1002, 1001]);
-    // A row of cards (card_row.html), its cards' ids its own; the cards of the grid's, small,
-    // those of the browse pages.
-    assert!(row.contains(r#"<div class="card-row"><article class="card" id="most-viewed-1002">"#), "{row}");
-    // Two cards are as wide as every row's, 236px (180px on phones), and their photos are fetched
-    // for it; the first one's before anything else on the page.
-    assert!(row.contains(&format!(r#"sizes="{ROW_SIZES}""#)), "{row}");
+    // Two big cards (card_row.html's card_pair), their ids their own, as the user asked on
+    // 2026-10-11 (a row of small cards that slid sideways before): two to a line from 960px up,
+    // one over the other under it (.big-cards).
+    assert!(home.contains(r#"<section class="most-viewed big-cards" aria-labelledby="most-viewed-heading">"#), "{home}");
+    assert!(row.contains(r#"<div class="grid"><article class="card" id="most-viewed-1002">"#), "{row}");
+    // Their photos are fetched as wide as the big cards' grid has them; the first one's before
+    // anything else on the page.
+    assert!(row.contains(&format!(r#"sizes="{BIG_SIZES}""#)) && !row.contains(ROW_SIZES), "{row}");
     assert_eq!(home.matches(r#"fetchpriority="high""#).count(), 1);
     let first = &row[row.find(r#"<article class="card""#).unwrap()..];
     assert!(first[..first.find("</article>").unwrap()].contains(r#"fetchpriority="high""#), "{row}");
@@ -7300,21 +7302,22 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
     assert_eq!(row(&html(pool.clone(), "/c/makina").await), [1001, 1002]);
     assert_eq!(row(&html(pool.clone(), "/c/apartamente").await), [1003]);
     assert_eq!(row(&html(pool.clone(), "/c/vila-dhe-shtepi").await), [1004]);
-    // The welcome page's has all five, the next card showing at the row's edge: its photos are
-    // fetched as wide as a row's cards, narrower than a column of the grid (ROW_SIZES).
+    // The welcome page's has the two seen the most of all five, as big cards, their photos
+    // fetched as wide as the big cards' grid has them (BIG_SIZES).
     let home = html(pool.clone(), "/").await;
     let all = section(&home, "most-viewed-heading");
-    assert_eq!(all.matches(r#"<article class="card""#).count(), 5, "{all}");
-    assert!(all.contains(&format!(r#"sizes="{ROW_SIZES}""#)) && !all.contains(SMALL_SIZES), "{all}");
+    assert_eq!(all.matches(r#"<article class="card""#).count(), 2, "{all}");
+    assert_eq!(card_numbers(all)[0], 1002);
+    assert!(all.contains(&format!(r#"sizes="{BIG_SIZES}""#)) && !all.contains(SMALL_SIZES) && !all.contains(ROW_SIZES), "{all}");
     // A round button beside the view menu folds it away, pressed while it shows; the cookie it
     // sets (most_viewed_controller.js) keeps it folded on the next pages, where it stays in the
     // page, hidden, its photos waiting, and the results' first photo comes first instead.
     assert!(vehicles.contains(r#"class="button secondary round-button most-viewed-button" aria-controls="most-viewed" aria-pressed="true""#));
-    assert!(vehicles.contains(r#"<section class="most-viewed" id="most-viewed" data-controller="drag-row" aria-labelledby="most-viewed-heading">"#));
+    assert!(vehicles.contains(r#"<section class="most-viewed big-cards" id="most-viewed" aria-labelledby="most-viewed-heading">"#));
     assert!(section(&vehicles, "most-viewed-heading").contains(r#"fetchpriority="high""#));
     let folded = get_with_cookie(pool.clone(), "/c/automjete", "most-viewed=hidden").await.body;
     assert!(folded.contains(r#"aria-controls="most-viewed" aria-pressed="false""#));
-    assert!(folded.contains(r#"<section class="most-viewed" id="most-viewed" hidden data-controller="drag-row""#));
+    assert!(folded.contains(r#"<section class="most-viewed big-cards" id="most-viewed" hidden aria-labelledby="most-viewed-heading">"#));
     let row_html = section(&folded, "most-viewed-heading");
     let lazy = |html: &str| html.matches(r#"loading="lazy""#).count();
     assert!(!row_html.contains(r#"fetchpriority="high""#), "{row_html}");

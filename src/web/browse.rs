@@ -218,9 +218,18 @@ impl ListingPage {
     }
 
     /// A row of small cards that slides sideways (card_row.html), its cards' ids starting with
-    /// `card_ids` (MOST_VIEWED_IDS...): the first `eager` load their photo straight away.
+    /// `card_ids` (SEEN_IDS, FEATURED_IDS...): the first `eager` load their photo straight away.
     pub fn row(cards: Vec<ListingCard>, card_ids: &'static str, eager: usize) -> Self {
         Self { cards, next: None, layout: Cards::Small, eager, card_ids, lead: false }
+    }
+
+    /// The first two of these as big cards (card_row.html's card_pair; .big-cards in page.css),
+    /// two to a line from 960px up and one over the other under it, their photos as wide as the
+    /// big cards' grid has them: "Më të klikuarat", as the user asked on 2026-10-11 (a row of small
+    /// cards that slid sideways before). The first `eager` load their photo straight away.
+    pub fn pair(mut cards: Vec<ListingCard>, card_ids: &'static str, eager: usize) -> Self {
+        cards.truncate(2);
+        Self { cards, next: None, layout: Cards::Big, eager, card_ids, lead: false }
     }
 
     /// The page's first cards, whose first photo the browser fetches first (lead).
@@ -247,7 +256,7 @@ impl ListingPage {
     }
 
     fn in_row(&self) -> bool {
-        self.card_ids != LISTING_IDS
+        self.card_ids != LISTING_IDS && self.layout == Cards::Small
     }
 
     /// The page's class for how its cards show: none for small ones.
@@ -385,8 +394,8 @@ pub async fn home(
     // some, else "Më të klikuarat"'s; without either, the listings' first does.
     let seen = (!seen.is_empty()).then(|| ListingPage::row(seen, SEEN_IDS, 2).leading());
     let most_viewed = (!most_viewed.is_empty()).then(|| {
-        let row = ListingPage::row(most_viewed, MOST_VIEWED_IDS, 2);
-        if seen.is_none() { row.leading() } else { row }
+        let pair = ListingPage::pair(most_viewed, MOST_VIEWED_IDS, 2);
+        if seen.is_none() { pair.leading() } else { pair }
     });
     let page = if seen.is_none() && most_viewed.is_none() { page.leading() } else { page };
     let origin = seo::origin(&headers);
@@ -884,8 +893,8 @@ async fn browse(
     let featured = (!featured.is_empty()).then(|| ListingPage::row(featured, FEATURED_IDS, 2).leading());
     let most_viewed_shown = cookie(&headers, MOST_VIEWED_COOKIE).as_deref() != Some("hidden");
     let most_viewed = (!most_viewed.is_empty()).then(|| {
-        let row = ListingPage::row(most_viewed, MOST_VIEWED_IDS, if most_viewed_shown { 2 } else { 0 });
-        if most_viewed_shown && featured.is_none() { row.leading() } else { row }
+        let pair = ListingPage::pair(most_viewed, MOST_VIEWED_IDS, if most_viewed_shown { 2 } else { 0 });
+        if most_viewed_shown && featured.is_none() { pair.leading() } else { pair }
     });
     // Counted among at most COUNT_LIMIT + 1 listings, as the count is: past that, numbers would
     // mislead, and the names go alone.

@@ -64,8 +64,8 @@
 
 {%- if let Some(page) = seen %}
 {#- The listings the visitor saw lately, the latest first, still on the site (browse.rs,
-    SEEN_COOKIE, which application.js keeps), in a row like "Më të klikuarat" under them, a
-    reserved or sold one saying so over its photo; "Pastro" forgets them (recent_controller.js). -#}
+    SEEN_COOKIE, which application.js keeps), in a row of small cards that slides sideways
+    (card_row.html), a reserved or sold one saying so over its photo; "Pastro" forgets them (recent_controller.js). -#}
 <section class="seen-lately" data-controller="drag-row recent" aria-labelledby="seen-heading">
   <div class="row-head">
     <h2 id="seen-heading">{{ crate::t("Shikuar së fundmi") }}</h2>
@@ -76,11 +76,12 @@
 {%- endif %}
 
 {%- if let Some(page) = most_viewed %}
-{#- The listings seen the most this week, the most first (db::most_viewed, views.rs), in a row of
-    cards that slides sideways (card_row.html), each saying how many times it was seen. -#}
-<section class="most-viewed" data-controller="drag-row" aria-labelledby="most-viewed-heading">
+{#- The two listings seen the most this week, the most first (db::most_viewed, views.rs), as two
+    big cards (card_row.html, card_pair), each saying how many times it was seen: the user's ask of
+    2026-10-11 (a row of small cards that slid sideways before). -#}
+<section class="most-viewed big-cards" aria-labelledby="most-viewed-heading">
   <h2 id="most-viewed-heading">{{ crate::t("Më të klikuarat") }}</h2>
-  {% call rows::card_row(page) %}
+  {% call rows::card_pair(page) %}
 </section>
 {%- endif %}
 

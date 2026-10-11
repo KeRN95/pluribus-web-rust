@@ -334,13 +334,14 @@
   {%- if let Some(page) = most_viewed %}
   {#- In every main category and a few big subcategories, with no filter on, their listings seen the
       most this week, the most first, as the welcome page has them for every category
-      (db::most_viewed, views.rs): its row of cards that slides sideways (card_row.html), each
-      saying how many times it was seen; under the page's buttons, and small whatever size the
-      page's own cards are (.cards-big .results). Folded away by its button in the row, it stays
-      in the page, hidden, its photos waiting until it shows again. -#}
-  <section class="most-viewed" id="most-viewed"{% if !most_viewed_shown %} hidden{% endif %} data-controller="drag-row" aria-labelledby="most-viewed-heading">
+      (db::most_viewed, views.rs): the two seen the most as big cards (card_row.html,
+      card_pair), each saying how many times it was seen, whatever size the page's own cards are
+      (the user's ask of 2026-10-11; a row of small cards that slid sideways before); under the
+      page's buttons. Folded away by its button in the row, it stays in the page, hidden, its
+      photos waiting until it shows again. -#}
+  <section class="most-viewed big-cards" id="most-viewed"{% if !most_viewed_shown %} hidden{% endif %} aria-labelledby="most-viewed-heading">
     <h2 id="most-viewed-heading">{{ crate::t("Më të klikuarat") }}</h2>
-    {% call rows::card_row(page) %}
+    {% call rows::card_pair(page) %}
   </section>
   {%- endif %}
 

@@ -1,11 +1,20 @@
-{#- A row of listing cards that slides sideways: the welcome page's "Më të klikuarat", a
-    category's, and a seller's other listings under one of theirs. One
+{#- A row of listing cards that slides sideways: the welcome page's "Shikuar së fundmi", a
+    category's "Të veçuara", and a seller's other listings under one of theirs. One
     component wherever it is: the browse pages' small cards (listing_card.html), as many across as
     the grid under them has, a quarter of the next one showing at the edge when there are more
     (.card-row in page.css); a finger slides it, a mouse drags it (drag_row_controller.js). Its
     cards' ids are the row's own (ListingPage::row). -#}
 {%- macro card_row(page) -%}
 <div class="card-row">
+  {%- for card in page.cards %}{% include "listing_card.html" %}{% endfor %}
+</div>
+{%- endmacro %}
+
+{#- Two big cards (ListingPage::pair): "Më të klikuarat", on the welcome page and a category's, in
+    the big cards' grid, two to a line from 960px up, one over the other under it, their photos
+    sliding as the big cards' do (.big-cards in page.css, slides_controller.js). -#}
+{%- macro card_pair(page) -%}
+<div class="grid">
   {%- for card in page.cards %}{% include "listing_card.html" %}{% endfor %}
 </div>
 {%- endmacro %}
