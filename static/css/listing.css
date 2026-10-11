@@ -714,10 +714,16 @@
   height: var(--size-button);
   padding: 0 1.25rem;
   font: inherit;
+  font-size: .9375rem;
   font-weight: var(--semibold);
+  white-space: nowrap;
 }
 .loan > summary > svg:first-child { width: 19px; height: 19px; color: var(--muted); }
-.price-row.with-area > :is(.area-price, .loan) { flex: 1 1 0; width: auto; }
+/* Half the line each, as the canvas has a property's: 12px of room either side, their icons 17px,
+   so that "Llogarit kredinë" keeps one line in the deal's column. */
+.price-row.with-area > :is(.area-price, .loan) { flex: 1 1 0; width: auto; min-width: 0; }
+.price-row.with-area > :is(.area-price, .loan) > summary { gap: 6px; padding: 0 12px; }
+.price-row.with-area > :is(.area-price, .loan) > summary > svg:first-child { width: 17px; height: 17px; }
 /* Open, the calculator in a white box under the pill, in the page rather than over it, the pill in
    the main colour with its chevron up, as the canvas has it; beside what a square metre costs, it
    takes the line under it, the whole of it. */

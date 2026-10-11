@@ -31,15 +31,14 @@ use crate::{
 };
 
 /// How wide a listing's photos show, for the browser to pick a copy of each (Photo::webp_srcset):
-/// as wide as the page on a wide screen (listing.css), up to 760px on others.
-pub const GALLERY_SIZES: &str =
-    "(min-width: 1100px) 1068px, (min-width: 960px) calc(100vw - 2rem), (min-width: 792px) 760px, calc(100vw - 2rem)";
-/// The same for every other listing, whose photo stands at the left of its page from 960 px up,
+/// for every listing but a car's or a property's, whose photo stands at the left of its page from
+/// 960 px up,
 /// seven twelfths of the page, which is 60rem at most there, less the 2rem between the columns
 /// (.listing-split, listing.css).
 pub const SPLIT_GALLERY_SIZES: &str =
     "(min-width: 992px) 541px, (min-width: 960px) calc((100vw - 4rem) * .5833), (min-width: 792px) 760px, calc(100vw - 2rem)";
-/// The same for a car's page, whose slider is the mosaic's first two thirds from 960 px up, the
+/// The same for a car's page and a property's, whose slider is the mosaic's first two thirds from
+/// 960 px up, the
 /// page 60rem at most and the rail beside it 88 px from 720 px up, the gutters 1rem (.listing-car,
 /// listing.css); the page's 760 px column under 960.
 pub const CAR_GALLERY_SIZES: &str = "(min-width: 1080px) 635px, (min-width: 960px) calc((100vw - 128px) * .6667), (min-width: 880px) 760px, (min-width: 720px) calc(100vw - 120px), calc(100vw - 2rem)";
@@ -53,6 +52,10 @@ pub const LOAN_DOWN_PERCENT: u32 = 35;
 /// A car's key facts, in a row under its title (listing.html, .key-facts), in this order: the
 /// year, the mileage, the gearbox and the fuel, as FINN has them. They leave the details.
 const CAR_FACTS: [&str; 4] = ["vehicle_year", "vehicle_mileage", "vehicle_transmission", "vehicle_fuel"];
+
+/// A property's key facts, as the canvas has them: its rooms, its area, its floor and whether it is
+/// furnished.
+const PROPERTY_FACTS: [&str; 4] = ["property_rooms", "property_area", "property_floor", "property_furnished"];
 
 /// The categories whose listings' pages show where they are on a map, under the seller: property
 /// (Prona and those under it) and cars (Makina), which buyers go to see.
@@ -89,7 +92,7 @@ pub struct Slide<'a> {
 
 impl Photo {
     /// A WebP photo's copies for the browser to pick from on the listing page, which shows it
-    /// whole (GALLERY_SIZES): each by its longer side.
+    /// whole (CAR_GALLERY_SIZES, SPLIT_GALLERY_SIZES): each by its longer side.
     pub fn webp_srcset(&self) -> Option<String> {
         let full = self.webp_url.as_deref()?;
         let (width, height) = photos::Copies::size(self.width_px, self.height_px);
@@ -511,23 +514,26 @@ struct ListingShow {
     whatsapp_share: String,
     /// For a property or a car, where it is, on a map under the seller.
     map: Option<ListingMap>,
-    /// A property's or a car's page (MAPPED) has its photos across the page from 960 px up; every
-    /// other listing's is split there, the photo at the left and the rest at its right
-    /// (.listing-split, listing.css), its photos sized for that (SPLIT_GALLERY_SIZES).
-    wide_photos: bool,
-    /// A car's page (Makina), laid out as FINN's from 960 px up (.listing-car, listing.css): the
-    /// photos across the page, and under them the title, the description and the details at the
-    /// left, and the price, the ways to the seller and the seller's card in a
-    /// column at the right (.listing-deal), its photos sized for the page (CAR_GALLERY_SIZES).
+    /// A car's page or a property's (MAPPED), laid out as the canvas has a car's from 960 px up
+    /// (.listing-car, listing.css): the photos a mosaic, and under them the title, the key facts,
+    /// the description and the details at the left, and the price, the seller and the ways to reach
+    /// them in a column at the right (.listing-deal), its photos sized for that
+    /// (CAR_GALLERY_SIZES). Every other listing's is split there, the photo at the left and the
+    /// rest at its right (.listing-split), its photos sized for that (SPLIT_GALLERY_SIZES).
+    deal_page: bool,
+    /// A car's page (Makina): its title as its seller wrote it, the one made from what the car is
+    /// over the line under it, and how its price compares with its model's.
     car_page: bool,
     /// For a car up for sale at a price, how it compares with what cars of its model and year
     /// ask (car_price.html).
     car_price: Option<car_prices::CarPrice>,
-    /// A car's key facts, in a row under its title: the year, the mileage, the gearbox and the
-    /// fuel (CAR_FACTS), each with its icon; none on any other page.
+    /// A car's or a property's key facts, in a row under its title: a car's year, mileage, gearbox
+    /// and fuel (CAR_FACTS), a property's rooms, area, floor and furnishing (PROPERTY_FACTS), each
+    /// with its icon; none on any other page.
     facts: Vec<Detail>,
-    /// On a car's page, its options, the details with several values (a multi-select's), listed
-    /// under their own names after the grid of the others; elsewhere among the details.
+    /// On a car's or a property's page, its options, the details with several values (a
+    /// multi-select's: a car's equipment, a property's amenities), listed under their own names
+    /// after the grid of the others; elsewhere among the details.
     options: Vec<Detail>,
     /// Listings like it, under it (db::related_listings): `page`, the name listing_card.html
     /// reads its cards by.
@@ -748,24 +754,30 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             values: attribute.shown.clone(),
         }
     };
-    // A car's page (Makina) has its key facts in a row under the title, which leave the details,
-    // and its options under their own names after the grid of the others (listing.html).
+    // A car's page (Makina) and a property's (MAPPED) have their key facts in a row under the title,
+    // which leave the details, and their options under their own names after the grid of the
+    // others (listing.html); and their photos a mosaic, and where it is, on a map under the seller.
     let car_page = slugs.contains(&"makina");
+    let deal_page = slugs.iter().any(|slug| MAPPED.contains(slug));
+    let fact_codes: &[&str] = if car_page {
+        &CAR_FACTS
+    } else if deal_page {
+        &PROPERTY_FACTS
+    } else {
+        &[]
+    };
     let car_price = match car_page {
         true => db::car_price(&state.db, listing.id)
             .await?
             .and_then(|car| car_prices::CarPrice::new(car, &listing.currency, listing.eur_rate)),
         false => None,
     };
-    let facts: Vec<Detail> = if car_page {
-        CAR_FACTS.iter().filter_map(|code| attributes.iter().find(|attribute| attribute.code == *code)).map(detail_of).collect()
-    } else {
-        Vec::new()
-    };
+    let facts: Vec<Detail> =
+        fact_codes.iter().filter_map(|code| attributes.iter().find(|attribute| attribute.code == *code)).map(detail_of).collect();
     let mut details: Vec<Detail> = attributes
         .iter()
         .filter(|attribute| !(titled && properties::TITLE_CODES.contains(&attribute.code.as_str())))
-        .filter(|attribute| !(car_page && CAR_FACTS.contains(&attribute.code.as_str())))
+        .filter(|attribute| !fact_codes.contains(&attribute.code.as_str()))
         .map(detail_of)
         .collect();
     // A property's zone in its town comes first among its details, lit as its cards say it too:
@@ -783,11 +795,9 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         details.insert(0, zone);
     }
     let (details, options): (Vec<Detail>, Vec<Detail>) =
-        if car_page { details.into_iter().partition(|detail| !detail.multi) } else { (details, Vec::new()) };
-    // A property or a car: its photos across the page, and where it is, on a map under the seller.
-    let wide_photos = slugs.iter().any(|slug| MAPPED.contains(slug));
+        if deal_page { details.into_iter().partition(|detail| !detail.multi) } else { (details, Vec::new()) };
     let map = match (listing.latitude, listing.longitude) {
-        (Some(latitude), Some(longitude)) if wide_photos => {
+        (Some(latitude), Some(longitude)) if deal_page => {
             Some(ListingMap { latitude, longitude, place: listing.location_name.clone().unwrap_or_default() })
         }
         _ => None,
@@ -816,7 +826,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             just_published,
             whatsapp_share,
             map,
-            wide_photos,
+            deal_page,
             car_page,
             car_price,
             facts,

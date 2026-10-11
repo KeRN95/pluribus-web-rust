@@ -13,14 +13,14 @@
 <div class="listing-page" data-controller="message-sheet"
      data-action="keydown.esc@document->message-sheet#close turbo:before-cache@document->message-sheet#close">
 {#- Shown to anyone but its seller, the page says so (application.js), for "Më të klikuarat". A
-    car's page (car_page, listings.rs) is laid out as FINN has its from 960 px up (listing.css,
-    .listing-car): the photos across the page, and under them the title, the key facts, the
-    description and the details at the left, and the price, the ways to the seller and the
-    seller's card in a column at the right (.listing-deal, below). For all but a car's or a
-    property's listing (wide_photos) the page is split there, as the classifieds sites have it
-    (.listing-split): the photo at the left in a frame taller than wide, and the rest
-    (.listing-side, below) in a column at its right. -#}
-<article class="listing{% if car_page %} listing-car{% else if !wide_photos %} listing-split{% endif %}"{% if !own && listing.on_site() %} data-seen-url="/listing/{{ listing.public_no }}/pare" data-listing-number="{{ listing.public_no }}"{% endif %}>
+    car's page and a property's (deal_page, listings.rs) are laid out as the canvas has a car's
+    from 960 px up (listing.css, .listing-car): the photos a mosaic, and under them the title, the
+    key facts, the description and the details at the left, and the price, the seller and the ways
+    to reach them in a column at the right (.listing-deal, below). (A property's photos ran across
+    the page once, the rest under them.) Every other listing's page is split there, as the
+    classifieds sites have it (.listing-split): the photo at the left in a frame taller than wide,
+    and the rest (.listing-side, below) in a column at its right. -#}
+<article class="listing{% if deal_page %} listing-car{% else %} listing-split{% endif %}"{% if !own && listing.on_site() %} data-seen-url="/listing/{{ listing.public_no }}/pare" data-listing-number="{{ listing.public_no }}"{% endif %}>
   {%- if posted || just_published %}
   {#- Posted just now (post.rs), said once: it is up; without signing in, changing it later takes
       signing in; and the ways to share it (share_note.html). -#}
@@ -86,8 +86,8 @@
   {#- Each photo whole in its frame, over a blurred copy of itself where it doesn't fill it: its tiny
       copy, which is in the page and so shows at once, until the photo has loaded too (a photo kept
       before there were any has its card-sized copy blurred). A photo kept as WebP offers its four
-      copies in a picture, for the browser to pick the one the screen needs (GALLERY_SIZES, or
-      SPLIT_GALLERY_SIZES where the photo stands beside the rest), with its JPEG for browsers
+      copies in a picture, for the browser to pick the one the screen needs (CAR_GALLERY_SIZES for
+      a car's or a property's mosaic, SPLIT_GALLERY_SIZES where the photo stands beside the rest), with its JPEG for browsers
       without WebP. Several make a strip to slide through one at a time, as a
       big card's photos (slides_controller.js): a finger or a mouse, pressed and moved, slides them,
       dots over their foot say which shows, a counter in its corner its number (a click on it
@@ -101,7 +101,7 @@
       <div class="gallery-photo">
         <img class="gallery-backdrop" src="{{ photo.backdrop() }}" alt=""{% if photo.placeholder.is_none() && loop.index > 2 %} loading="lazy"{% endif %}>
         {%- if let Some(webp) = photo.webp_srcset() %}
-        <picture><source type="image/webp" srcset="{{ webp }}" sizes="{% if car_page %}{{ CAR_GALLERY_SIZES }}{% else if wide_photos %}{{ GALLERY_SIZES }}{% else %}{{ SPLIT_GALLERY_SIZES }}{% endif %}">
+        <picture><source type="image/webp" srcset="{{ webp }}" sizes="{% if deal_page %}{{ CAR_GALLERY_SIZES }}{% else %}{{ SPLIT_GALLERY_SIZES }}{% endif %}">
         {%- endif %}
         <img src="{{ photo.url }}" alt="{{ listing.title }}{% if photos.len() > 1 %}, {{ crate::t2("foto {} nga {}", loop.index, photos.len()) }}{% endif %}"
           {%- if let Some(width) = photo.width_px %} width="{{ width }}"{% endif %}
@@ -147,8 +147,8 @@
     {%- endif %}
   </div>
   {% endif %}
-  {%- if car_page && photos.len() > 1 %}
-  {#- A car's photos as the canvas lays them out from 960 px up, a mosaic: the slider (above) the
+  {%- if deal_page && photos.len() > 1 %}
+  {#- A car's or a property's photos as the canvas lays them out from 960 px up, a mosaic: the slider (above) the
       first two thirds, and beside it the next two photos, one over the other, each going to its
       photo in the slider; the second says how many more there are ("+4") and shows the filmstrip
       of them all as well (slides_controller.js, tile). Under 960 px the slider alone. -#}
@@ -162,9 +162,10 @@
   </div>
   {%- endif %}
   {#- Over the photo's top corner, on one line: where it is and when it went up, the date in bold
-      ("Publikuar më" for screen readers); a car's page says those in the line under its title. -#}
+      ("Publikuar më" for screen readers); a car's or a property's page says those in the line
+      under its title. -#}
   {%- let published = listing.published_display() %}
-  {%- if !car_page && (listing.location_name.is_some() || published.is_some()) %}
+  {%- if !deal_page && (listing.location_name.is_some() || published.is_some()) %}
   <p class="listing-meta">
     {%- if let Some(location) = listing.location_name %}<span translate="no">{{ location }}</span>{% endif %}
     {%- if let Some((prefix, date)) = published %}{% if listing.location_name.is_some() %} · {% endif %}<span class="visually-hidden">{{ prefix }} </span><strong>{{ date }}</strong>{% endif -%}
@@ -182,7 +183,7 @@
   {#- The rest: the title and the price, the ways to the seller, the details, the description, the
       seller's card and, for a property or a car, the map. Under the photo, and from 960 px up on a
       split page in the column at its right (listing.css, .listing-side). -#}
-  {%- let aside = car_page && map.is_some() %}
+  {%- let aside = deal_page && map.is_some() %}
   {#- A car's map moves into the column at the right from 960 px up, under the seller's card and
       the buttons, where that column leaves room under them for a square map as wide as it
       (map_aside_controller.js). -#}
@@ -193,11 +194,11 @@
         the make, the model, the engine, the year) heads the line under it. -#}
     <h1>{% if made %}{% if let Some(own) = listing.heading %}{{ own }}{% endif %}{% else %}{{ listing.title }}{% endif %}</h1>
     {#- What it is and in what state ("Në shitje · E përdorur"), and at the end of the line its
-        number, to name it on the phone; on a car's page, as the canvas has it, where it is and when
-        it went up before the number, which a photo's corner says on every other page, and the
+        number, to name it on the phone; on a car's or a property's page, as the canvas has it,
+        where it is and when it went up before the number, which a photo's corner says on every other page, and the
         number shorter ("Nr. 833042"). -#}
     <p class="card-meta listing-kind">{% if made %}<span class="listing-variant">{{ listing.title }}</span> · {% endif %}{{ listing.kind_line() }}
-      {%- if car_page %}
+      {%- if deal_page %}
       {%- if let Some(location) = listing.location_name %} · <span translate="no">{{ location }}</span>{% endif %}
       {%- if let Some((prefix, date)) = published %} · <span class="visually-hidden">{{ prefix }} </span>{{ date }}{% endif %} · <span class="listing-number">{{ crate::t1("Nr. {}", listing.public_no) }}</span>
       {%- else %} · <span class="listing-number">{{ crate::t("Numri i njoftimit") }}: {{ listing.public_no }}</span>{% endif %}</p>
@@ -232,7 +233,7 @@
         colour, its chevron up, while it is open; a tap outside or Escape closes it
         (dropdown_controller.js). -#}
     <div class="price-row{% if area_price.is_some() %} with-area{% endif %}">
-      <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if car_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
+      <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if deal_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
       {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
       {%- if let Some(car) = car_price %}{% include "car_price.html" %}{% endif %}
       <details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" data-loan-down-percent-value="{{ LOAN_DOWN_PERCENT }}">
@@ -250,14 +251,14 @@
     {%- else %}
     {#- The price, and smaller after it what qualifies it: "/muaj", "(i diskutueshëm)"; a property
         on sale says under it what a square metre of it costs (area_price.html). -#}
-    <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if car_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
+    <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if deal_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
     {%- if let Some(area) = area_price %}{% include "area_price.html" %}{% endif %}
     {%- if let Some(car) = car_price %}{% include "car_price.html" %}{% endif %}
     {%- endif %}
   </div>
-  {#- On a car's page the seller's card comes under the price, with the ways to reach them inside
-      it (seller_card.html). -#}
-  {%- if car_page %}{% include "seller_card.html" %}{% endif %}
+  {#- On a car's or a property's page the seller comes under the price, with the ways to reach
+      them under them (seller_card.html). -#}
+  {%- if deal_page %}{% include "seller_card.html" %}{% endif %}
 
   {#- How to reach the seller, under the price: the contact bar (contact_bar.html), the phone and
       the message, wide pills, which on a phone is the bar at the foot of the screen; on a car's
@@ -266,8 +267,8 @@
       car's page those are in the seller's card too, beside the message, but on the seller's own
       page, where their own buttons join them under the card. The seller themselves come after
       the description (below). -#}
-  {%- if !car_page %}{% include "contact_bar.html" %}{% endif %}
-  {%- if !car_page || own %}{% include "listing_actions.html" %}{% endif %}
+  {%- if !deal_page %}{% include "contact_bar.html" %}{% endif %}
+  {%- if !deal_page || own %}{% include "listing_actions.html" %}{% endif %}
   {%- if (own || moderator) && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}{% include "promotion_note.html" %}{% endif %}
   {%- if blocked %}
   {#- The visitor blocked its seller, from a report's thanks (report.html) or a conversation: said
@@ -277,7 +278,7 @@
   {%- endif %}
   </div>
 
-  {% if car_page %}
+  {% if deal_page %}
   {#- Then, a hairline over each (listing.css): the description, the details in a grid, a name
       over its value, each with its icon (.spec-grid), and the options, a car's several-valued
       details, in columns with a check each, under their own names (.options), and the map. -#}
@@ -344,7 +345,7 @@
     rather than a pin; the place's name over the map's top left, in a dark pill, as the canvas
     labels its map. -#}
 <section class="listing-map-section" aria-label="{{ crate::t("Vendndodhja") }}"{% if aside %} data-map-aside-target="map"{% endif %}>
-  {%- if car_page %}
+  {%- if deal_page %}
   <h2>{{ crate::t("Lokacioni") }}</h2>
   {%- endif %}
   <div class="listing-map" data-controller="listing-map"

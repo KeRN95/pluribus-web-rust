@@ -2611,15 +2611,20 @@ async fn every_detail_has_its_icon_its_categorys_where_that_says_more(pool: PgPo
         r#"<dd class="attribute" title="Marka"><svg class="attribute-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">"#,
         r#"<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/>"#,
     )));
+    // A flat's page is laid out as a car's, as the canvas has it: its rooms, area, floor and
+    // furnishing are its key facts in a row under its title, each with its icon, its name over its
+    // value (they were pills once, among its details).
     let flat = html(pool.clone(), "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
-    let start = flat.find(r#"<dl class="attributes">"#).unwrap();
-    let details = &flat[start..start + flat[start..].find("</dl>").unwrap()];
-    assert_eq!(details.matches(r#"<dd class="attribute"#).count(), details.matches(r#"<svg class="attribute-icon""#).count());
-    assert!(details.contains("</svg>2+1</dd>") && details.contains("</svg>I mobiluar</dd>"));
-    assert!(details.contains(r#"</svg><span class="attribute-label" aria-hidden="true">Kati</span>4</dd>"#));
-    // The category's key facts, those its cards show (the rooms, the area), are lit; the rest not.
-    assert!(details.contains(r#"<dd class="attribute is-key" title="Dhoma">"#) && details.contains(r#"<dd class="attribute is-key" title="Sipërfaqja">"#), "{details}");
-    assert!(details.contains(r#"<dd class="attribute" title="Kati">"#), "{details}");
+    let start = flat.find(r#"<dl class="key-facts">"#).unwrap();
+    let facts = &flat[start..start + flat[start..].find("</dl>").unwrap()];
+    assert_eq!(facts.matches(r#"<div class="key-fact">"#).count(), 4, "{facts}");
+    assert_eq!(facts.matches(r#"<svg class="key-fact-icon""#).count(), 4, "{facts}");
+    for value in ["<dd>2+1</dd>", "<dd>85\u{a0}m²</dd>", "<dd>4</dd>", "<dd>I mobiluar</dd>"] {
+        assert!(facts.contains(value), "{value} in {facts}");
+    }
+    assert!(!flat.contains(r#"<dl class="attributes">"#));
+    // Beside a photo, among the pills, the category's key facts, those its cards show, are lit.
+    assert!(phone.contains(r#"<dd class="attribute is-key""#), "{phone}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -3094,12 +3099,13 @@ async fn a_property_says_its_zone(pool: PgPool) {
     assert_eq!(zone, "Blloku");
     assert!(at_tirana);
 
-    // Its page says so, in its place and first among its details; its card too, and filtering by
-    // Tirana or searching for Blloku finds it.
+    // Its page says so, in its place and first among its details (its area is a key fact over
+    // them); its card too, and filtering by Tirana or searching for Blloku finds it.
     let page = html(pool.clone(), &format!("/listing/{number}-apartament-2-1-me-ashensor")).await;
     assert!(page.contains("Blloku, Tiranë · "));
-    let details = &page[page.find(r#"<dl class="attributes">"#).unwrap()..];
-    assert!(details.find(r#"title="Zona""#).unwrap() < details.find("Sipërfaqja").unwrap());
+    let details = &page[page.find(r#"<dl class="spec-grid">"#).unwrap()..];
+    assert!(details[..details.find("</dt>").unwrap()].ends_with("Zona"), "{details}");
+    assert!(details.contains("<dd>Blloku</dd>"), "{details}");
     let card = format!(r#"href="/listing/{number}-apartament-2-1-me-ashensor""#);
     let flats = html(pool.clone(), "/c/apartamente").await;
     assert!(flats.contains(&card) && flats.contains("Blloku, Tiranë"));
@@ -7072,7 +7078,7 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     // saw says nothing.
     let page = get(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await.body;
     assert!(page.contains(r#"<p class="listing-views" title="3 shikime">"#), "{page}");
-    let unseen = get(pool.clone(), "/listing/1003-apartament-2-1-me-qira-ne-tirane").await.body;
+    let unseen = get(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await.body;
     assert!(unseen.contains("listing-meta") && !unseen.contains("listing-views"));
 }
 
@@ -7655,12 +7661,13 @@ async fn a_listing_but_a_cars_or_a_propertys_stands_beside_its_photo(pool: PgPoo
     assert!(!phone.contains("map-aside"), "only a car's page");
     let deal = &golf[golf.find(r#"<div class="listing-deal""#).unwrap()..golf.find(r#"<section class="listing-description">"#).unwrap()];
     assert!(deal.contains(r#"<div class="price-box">"#) && deal.contains(r#"<section class="seller-section""#), "{deal}");
-    // A property's keeps its photos across the page, its details as pills, the seller's card after
-    // the description and the map under it.
+    // A property's is laid out as a car's, as the canvas has it (its photos ran across the page
+    // once, its details as pills): the deal at the right, its amenities under their own name, its
+    // map able to move into the column.
     let flat = html(pool, "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
-    assert!(!flat.contains("listing-split") && !flat.contains("listing-car") && flat.contains(r#"<dl class="attributes">"#), "{flat}");
-    let side = &flat[flat.find(r#"<div class="listing-side">"#).unwrap()..];
-    assert!(side.find(r#"<section class="listing-map-section""#).unwrap() < side.find("</article>").unwrap());
+    assert!(flat.contains("listing-car") && !flat.contains("listing-split") && !flat.contains(r#"<dl class="attributes">"#), "{flat}");
+    assert!(flat.contains(r#"<div class="listing-side" data-controller="map-aside">"#), "{flat}");
+    assert!(flat.contains(r#"<ul class="options">"#), "{flat}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

@@ -6,15 +6,15 @@
     how quickly they answer and when they were last here, all leading to their profile
     (listing.css, .seller-head), under a heading of its own, "Shitësi", as the details and the
     description have theirs. Under the description, across the page or the column beside the
-    photo; the ways to reach them are the buttons under the price. On a car's page it stands in the
-    deal's column at the right (.listing-deal) with those under it (.seller-card, no box either):
+    photo; the ways to reach them are the buttons under the price. On a car's or a property's page
+    it stands in the deal's column at the right (.listing-deal) with those under it (.seller-card, no box either):
     16 px under the seller, the message's pill with the share and the report beside it, and under
     them the phone's (contact_bar.html, listing_actions.html; on the seller's own page those stay
     under the seller, with their own buttons); on a phone the bar is at the screen's foot as on
     every page and the seller on their own (listing.css, .listing-car). -#}
 <section class="seller-section" aria-labelledby="seller-heading">
   <h2 id="seller-heading">{{ crate::t("Shitësi") }}</h2>
-  {%- if car_page %}
+  {%- if deal_page %}
   <div class="seller-card">
   {%- endif %}
   <div class="seller-head">
@@ -43,7 +43,7 @@
       <svg class="seller-chevron" data-icon="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
     </a>
   </div>
-  {%- if car_page %}{% include "contact_bar.html" %}{% if !own %}{% include "listing_actions.html" %}{% endif %}
+  {%- if deal_page %}{% include "contact_bar.html" %}{% if !own %}{% include "listing_actions.html" %}{% endif %}
   </div>
   {%- endif %}
 </section>
