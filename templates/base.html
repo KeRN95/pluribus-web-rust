@@ -175,35 +175,42 @@
     <span class="button secondary reveal-button" data-part="email">{% include "mail.svg" %}<span class="button-label">{{ crate::t("Shfaq email-in") }}</span></span>
     <span class="button message-button" data-part="message"><svg class="contact-icon" data-icon="message-circle" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg><span class="button-label">{{ crate::t("Shkruaji shitësit") }}</span></span>
   </template>
-  {#- The rail, the menu folded, at the screen's left from 720px up, under the menu's lines
-      (base.css, .rail): posting, a square in the "Posto" colours with the plus, then the front
-      page, the search (every category's listings, with the bar's search), the listings kept and
-      the conversations, each its icon over its name; the one the page is (rail::here) on a grey
-      pill, its name bolder. The listings kept have a dot in the accent while some dropped their
-      price unseen (heart_controller.js), the conversations how many have messages unread
-      (inbox_controller.js). Phones have the menu instead, and the front page's bar posting
-      (home.html, header_post). -#}
+  {#- The rail, the menu folded, at the screen's left from 720px up (base.css, .rail): the open menu's
+      places in icons alone, as the user asked on 2026-10-11 ("a replica of the opened menu in the
+      sidebar of the desktop version. Use only icons"; posting, the front page, the search, the
+      listings kept and the conversations, each its icon over its name, until then). Posting, a
+      square in "Posto"'s colours; the account's pages, the notifications and the conversations with
+      how many are new (inbox_controller.js), the listings kept with a dot while some dropped their
+      price unseen (heart_controller.js); every main category (browse::menu_categories); the dark
+      theme's switch (theme_controller.js) and the other language. Each its name for screen readers
+      and the pointer's tooltip (title); the one the page is on a grey pill (rail::here, a category's
+      page its main category, rail::category). Phones have the menu instead, and the front page's
+      bar posting (home.html, header_post). -#}
   {%- let here = crate::web::rail::here() %}
+  {%- let in_category = crate::web::rail::category() %}
   <nav class="rail" aria-label="{{ crate::t("Faqet kryesore") }}">
     <a class="rail-post" href="/shto" aria-label="{{ crate::t("Posto njoftim") }}" title="{{ crate::t("Posto njoftim") }}">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">{{ crate::web::icons::PLUS|safe }}</svg>
     </a>
-    <a class="rail-item" href="/"{% if here == "home" %} aria-current="page"{% endif %}>
-      <span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HOME|safe }}</svg></span>
-      <span class="rail-label">{{ crate::t("Kreu") }}</span>
-    </a>
-    <a class="rail-item" href="/search"{% if here == "search" %} aria-current="page"{% endif %}>
-      <span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SEARCH|safe }}</svg></span>
-      <span class="rail-label">{{ crate::t("Kërko") }}</span>
-    </a>
-    <a class="rail-item rail-saved" href="/te-ruajturat"{% if here == "saved" %} aria-current="page"{% endif %}>
-      <span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg></span>
-      <span class="rail-label">{{ crate::t("Të ruajturat") }}</span>
-    </a>
-    <a class="rail-item" href="/mesazhet"{% if here == "messages" %} aria-current="page"{% endif %} data-controller="inbox">
-      <span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg><span class="inbox-count" data-inbox-target="count" hidden></span></span>
-      <span class="rail-label">{{ crate::t("Mesazhet") }}</span>
-    </a>
+    <a class="rail-item" href="/njoftimet-e-mia" title="{{ crate::t("Njoftimet e mia") }}"{% if here == "mine" %} aria-current="page"{% endif %}><span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::LISTINGS|safe }}</svg></span><span class="rail-label">{{ crate::t("Njoftimet e mia") }}</span></a>
+    <a class="rail-item rail-saved" href="/te-ruajturat" title="{{ crate::t("Të ruajturat") }}"{% if here == "saved" %} aria-current="page"{% endif %}><span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg></span><span class="rail-label">{{ crate::t("Të ruajturat") }}</span></a>
+    <a class="rail-item" href="/kerkimet-e-ruajtura" title="{{ crate::t("Kërkimet e ruajtura") }}"{% if here == "searches" %} aria-current="page"{% endif %}><span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BOOKMARK|safe }}</svg></span><span class="rail-label">{{ crate::t("Kërkimet e ruajtura") }}</span></a>
+    <a class="rail-item" href="/lajmerimet" title="{{ crate::t("Lajmërimet") }}"{% if here == "alerts" %} aria-current="page"{% endif %} data-controller="inbox" data-inbox-url-value="/lajmerimet/numri" data-inbox-name-value="Lajmërimet" data-inbox-counted-value="Lajmërimet: {} të reja"><span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::BELL|safe }}</svg><span class="inbox-count" data-inbox-target="count" hidden></span></span><span class="rail-label">{{ crate::t("Lajmërimet") }}</span></a>
+    <a class="rail-item" href="/mesazhet" title="{{ crate::t("Mesazhet") }}"{% if here == "messages" %} aria-current="page"{% endif %} data-controller="inbox"><span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg><span class="inbox-count" data-inbox-target="count" hidden></span></span><span class="rail-label">{{ crate::t("Mesazhet") }}</span></a>
+    <a class="rail-item" href="/llogaria/cilesimet" title="{{ crate::t("Cilësimet") }}"{% if here == "settings" %} aria-current="page"{% endif %}><span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SETTINGS|safe }}</svg></span><span class="rail-label">{{ crate::t("Cilësimet") }}</span></a>
+    <hr class="rail-line">
+    {%- for category in crate::web::browse::menu_categories() %}
+    <a class="rail-item" href="{{ category.url }}" title="{{ crate::t(category.name) }}"{% if category.url == in_category %} aria-current="page"{% endif %}><span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ category.icon|safe }}</svg></span><span class="rail-label">{{ crate::t(category.name) }}</span></a>
+    {%- endfor %}
+    <hr class="rail-line">
+    <button type="button" class="rail-item rail-theme" title="{{ crate::t("Tema e errët") }}" aria-pressed="false" data-controller="theme" data-action="theme#toggle"><span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MOON|safe }}</svg></span><span class="rail-label">{{ crate::t("Tema e errët") }}</span></button>
+    <form class="rail-language" method="post" action="/gjuha">
+      {%- if crate::i18n::english() %}
+      <button type="submit" class="rail-item" name="gjuha" value="sq" lang="sq" title="Shqip"><span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::GLOBE|safe }}</svg></span><span class="rail-label">Shqip</span></button>
+      {%- else %}
+      <button type="submit" class="rail-item" name="gjuha" value="en" lang="en" title="English"><span class="rail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::GLOBE|safe }}</svg></span><span class="rail-label">English</span></button>
+      {%- endif %}
+    </form>
   </nav>
   {#- The menu, as the canvas has it: a drawer at the screen's left on wider screens and the whole
       screen on phones (base.css, .menu), over the page dimmed, opened by the bar's "Menyja" and

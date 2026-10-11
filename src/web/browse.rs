@@ -1009,7 +1009,10 @@ async fn browse(
     // Where a category page stands, for the trail search engines show under a result (schema.org's
     // BreadcrumbList): the welcome page, the categories above, and the page's own.
     if let (Some(_), Some(current)) = (&page_slug, category) {
-        let trail = categories.ancestors(current).into_iter().chain([current]);
+        // The rail marks the page's main category (rail.rs).
+        let ancestors = categories.ancestors(current);
+        super::rail::set_category(ancestors.first().map_or(&current.slug, |root| &root.slug));
+        let trail = ancestors.into_iter().chain([current]);
         let items: Vec<serde_json::Value> = std::iter::once(("Pluribus".to_string(), format!("{origin}/")))
             .chain(trail.map(|category| (category.name.clone(), format!("{origin}/c/{}", category.slug))))
             .enumerate()

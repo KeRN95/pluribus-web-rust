@@ -8,3 +8,11 @@ Mesazhet
 
 Mesazhet: {} të palexuara
 = Messages: {} unread
+
+# The rail's bell, which says how many notifications are new (inbox_controller.js, by its values).
+
+Lajmërimet
+= Notifications
+
+Lajmërimet: {} të reja
+= Notifications: {} new

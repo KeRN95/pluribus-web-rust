@@ -1039,7 +1039,7 @@ async fn every_listing_has_a_heart_over_its_photo(pool: PgPool) {
     assert_eq!(home.matches(r#"<form class="heart""#).count(), home.matches(r#"<article class="card"#).count());
     assert!(home.contains(r#"<a class="menu-row" href="/te-ruajturat">"#) && !home.contains("saved-shortcut"));
     let cars = get(pool.clone(), "/c/automjete").await.body;
-    assert!(cars.contains(r#"<a class="rail-item rail-saved" href="/te-ruajturat">"#));
+    assert!(cars.contains(r#"<a class="rail-item rail-saved" href="/te-ruajturat" title="Të ruajturat">"#));
     assert!(cars.contains(&heart(1001)));
     assert_eq!(cars.matches(r#"<form class="heart""#).count(), cars.matches(r#"<article class="card"#).count());
     let listing = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
@@ -5564,15 +5564,18 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_rail_and_the_bars_search_lead_everywhere(pool: PgPool) {
-    // The rail, the menu folded (base.html, rail.rs), as the user drew it on 2026-10-11: posting,
-    // then the front page, the search, the listings kept and the conversations, in that order on
-    // every page, the one the page is marked as it (a category's listings are the search's).
+    // The rail, the menu folded (base.html, rail.rs): the open menu's places in icons alone, as the
+    // user asked on 2026-10-11 ("a replica of the opened menu in the sidebar of the desktop version.
+    // Use only icons"): posting, the account's pages, every main category, the dark theme's switch
+    // and the other language, in that order on every page, each its name for screen readers and
+    // the pointer, the one the page is marked as it (a category's page its main category).
     for (path, current) in [
-        ("/", r#"<a class="rail-item" href="/" aria-current="page">"#),
-        ("/c/makina", r#"<a class="rail-item" href="/search" aria-current="page">"#),
-        ("/search", r#"<a class="rail-item" href="/search" aria-current="page">"#),
-        ("/te-ruajturat", r#"<a class="rail-item rail-saved" href="/te-ruajturat" aria-current="page">"#),
-        ("/mesazhet", r#"<a class="rail-item" href="/mesazhet" aria-current="page" data-controller="inbox">"#),
+        ("/", ""),
+        ("/c/automjete", r#"<a class="rail-item" href="/c/automjete" title="Automjete" aria-current="page">"#),
+        ("/c/makina", r#"<a class="rail-item" href="/c/automjete" title="Automjete" aria-current="page">"#),
+        ("/search", ""),
+        ("/te-ruajturat", r#"<a class="rail-item rail-saved" href="/te-ruajturat" title="Të ruajturat" aria-current="page">"#),
+        ("/mesazhet", r#"<a class="rail-item" href="/mesazhet" title="Mesazhet" aria-current="page" data-controller="inbox">"#),
         ("/listing/1001-volkswagen-golf-7-2016-nafte", ""),
     ] {
         let page = html(pool.clone(), path).await;
@@ -5580,15 +5583,29 @@ async fn the_rail_and_the_bars_search_lead_everywhere(pool: PgPool) {
         let rail = &rail[..rail.find("</nav>").unwrap()];
         let order = positions(rail, &[
             r#"<a class="rail-post" href="/shto" aria-label="Posto njoftim""#,
-            r#"<a class="rail-item" href="/""#,
-            r#"<a class="rail-item" href="/search""#,
-            r#"<a class="rail-item rail-saved" href="/te-ruajturat""#,
-            r#"<a class="rail-item" href="/mesazhet""#,
+            r#"<a class="rail-item" href="/njoftimet-e-mia" title="Njoftimet e mia""#,
+            r#"<a class="rail-item rail-saved" href="/te-ruajturat" title="Të ruajturat""#,
+            r#"<a class="rail-item" href="/kerkimet-e-ruajtura" title="Kërkimet e ruajtura""#,
+            r#"<a class="rail-item" href="/lajmerimet" title="Lajmërimet""#,
+            r#"<a class="rail-item" href="/mesazhet" title="Mesazhet""#,
+            r#"<a class="rail-item" href="/llogaria/cilesimet" title="Cilësimet""#,
+            r#"<hr class="rail-line">"#,
+            r#"<a class="rail-item" href="/c/automjete" title="Automjete""#,
+            r#"<a class="rail-item" href="/c/prona" title="Prona""#,
+            r#"<button type="button" class="rail-item rail-theme" title="Tema e errët" aria-pressed="false" data-controller="theme" data-action="theme#toggle">"#,
+            r#"<form class="rail-language" method="post" action="/gjuha">"#,
+            r#"<button type="submit" class="rail-item" name="gjuha" value="en" lang="en" title="English">"#,
         ]);
         assert!(order.is_sorted(), "{path}: {order:?}");
+        assert_eq!(rail.matches(r#"<a class="rail-item" href="/c/"#).count(), 11, "every main category: {rail}");
+        assert_eq!(rail.matches(r#"<hr class="rail-line">"#).count(), 2);
         assert_eq!(rail.matches(r#"aria-current="page""#).count(), usize::from(!current.is_empty()), "{path}: {rail}");
         assert!(rail.contains(current), "{path}: {rail}");
-        assert!(rail.contains(r#"<span class="inbox-count" data-inbox-target="count" hidden></span>"#));
+        // Icons alone: their names for screen readers, and the counts of what is new.
+        assert!(rail.contains(r#"<span class="rail-label">Njoftimet e mia</span>"#) && rail.contains(r#"<span class="rail-label">Automjete</span>"#));
+        assert_eq!(rail.matches(r#"<span class="inbox-count" data-inbox-target="count" hidden></span>"#).count(), 2);
+        assert!(rail.contains(r#"data-controller="inbox" data-inbox-url-value="/lajmerimet/numri" data-inbox-name-value="Lajmërimet" data-inbox-counted-value="Lajmërimet: {} të reja">"#));
+        assert!(!rail.contains(r#"href="/search""#) && !rail.contains(r#"<a class="rail-item" href="/""#), "{rail}");
     }
     // The bar's search, on every page but the front page, whose own is its first thing: in every
     // category and town ("Kërko njoftime"), but on a category's page, which it searches with its
@@ -5614,7 +5631,9 @@ async fn the_rail_and_the_bars_search_lead_everywhere(pool: PgPool) {
         rule[..rule.find('}').unwrap()].to_string()
     };
     assert!(rule(".rail-post").contains("background:var(--post)"));
-    assert!(rule(r#".rail-item[aria-current="page"] .rail-icon"#).contains("background:var(--surface-muted)"));
+    assert!(css.contains(r#".rail-item[aria-current="page"] .rail-icon,.rail-item[aria-pressed="true"] .rail-icon{background:var(--surface-muted);}"#));
+    assert!(css.contains(".rail-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}"));
+    assert!(css.contains("@media (min-width:720px){:root{--rail-width:72px;}"));
     assert!(rule(".top-search").contains("background:var(--surface-muted)"));
     assert!(rule(".welcome-form").contains("background:var(--surface-muted)"));
     assert!(rule(".welcome-search").contains("color:var(--highlight-icon)") && !rule(".welcome-search").contains("background"));

@@ -646,7 +646,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .header-end { display: flex; flex: none; align-items: center; gap: var(--space-4); }
 .header-end { margin-left: auto; }
 @media (min-width: 720px) {
-  :root { --rail-width: 88px; }
+  :root { --rail-width: 72px; }
   .header-inner { padding: 0 var(--gutter) 0 0; }
   .header-start,
   .header-end { flex: 1 1 0; min-width: max-content; }
@@ -670,17 +670,21 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   body > .site-footer { grid-area: footer; }
 }
 
-/* The rail, the menu folded (base.html), as the user drew it on 2026-10-11: from 720px up a column
-   88px wide down the screen's left under the bar, the bar's colour with a hairline at its right,
-   staying put as the page scrolls. At its top posting, a square of 56px with soft corners in
-   "Posto"'s colours (--post, --on-post: the main colour on the light theme, the accent on the
-   dark), the plus 24px; under it the front page, the search, the listings kept and the
-   conversations, 12px apart, each its icon over its name: the icon 22px, drawn a little thinner
-   (1.8), on a pill 56 by 32px, grey where the page is that place (aria-current), its name 12px
-   (a rem's .75), bolder there. Under the pointer the icon fills with the accent, as the menu's
-   rows' do. The conversations' count of those unread sits on the pill's corner, and the listings
-   kept have a dot there while some dropped their price unseen, both in the accent. Phones have
-   no rail: the menu and the front page's row hold its places. */
+/* The rail, the menu folded (base.html): from 720px up a column 72px wide down the screen's left
+   under the bar, the bar's colour with a hairline at its right, staying put as the page scrolls:
+   the open menu's places in icons alone, as the user asked on 2026-10-11 ("a replica of the opened
+   menu in the sidebar of the desktop version. Use only icons"; 88px wide until then, posting, the
+   front page, the search, the listings kept and the conversations, each its icon over its name).
+   At its top posting, a square of 56px with soft corners in "Posto"'s colours (--post, --on-post),
+   the plus 24px; then the account's places, a hairline, every main category, a hairline, the dark
+   theme's switch and the other language, a row of 40px each: its icon, 22px, drawn a little
+   thinner (1.8), on a pill 48 by 32px, grey where the page is that place (aria-current: on a
+   category's page its main category) and while the dark theme is on (aria-pressed), its name for
+   screen readers and the pointer's tooltip (title). Under the pointer the icon fills with the
+   accent, as the menu's rows' do. How many notifications are new and how many conversations have
+   messages unread sit on their pills' corners, and the listings kept have a dot there while some
+   dropped their price unseen, in the accent. A rail taller than the screen scrolls by itself, its
+   bar unseen. Phones have no rail: the menu holds its places. */
 .rail { display: none; }
 @media (min-width: 720px) {
   .rail {
@@ -691,13 +695,16 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-12);
     height: calc(100vh / var(--page-scale) - var(--size-header));
     height: calc(100svh / var(--page-scale) - var(--size-header));
     padding: var(--space-12) 0 var(--space-16);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
     background: var(--header);
     border-right: 1px solid var(--border);
   }
+  .rail::-webkit-scrollbar { display: none; }
 }
 .rail-post {
   display: grid;
@@ -705,7 +712,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   place-items: center;
   width: 56px;
   height: 56px;
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-12);
   border-radius: var(--radius-box);
   background: var(--post);
   color: var(--on-post);
@@ -713,34 +720,38 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   transition: background-color .15s;
 }
 .rail-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
   width: 100%;
-  padding: 0 4px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--text);
-  font-size: .75rem;
-  font-weight: var(--medium);
-  line-height: 1.25;
-  text-align: center;
+  font: inherit;
   text-decoration: none;
+  cursor: pointer;
 }
-.rail-icon { position: relative; display: grid; flex: none; place-items: center; width: 56px; height: 32px; border-radius: var(--radius-pill); }
-.rail-item[aria-current="page"] .rail-icon { background: var(--surface-muted); }
-.rail-item[aria-current="page"] .rail-label { font-weight: var(--bold); }
+.rail-icon { position: relative; display: grid; flex: none; place-items: center; width: 48px; height: 32px; border-radius: var(--radius-pill); }
+.rail-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.rail-item[aria-current="page"] .rail-icon,
+.rail-item[aria-pressed="true"] .rail-icon { background: var(--surface-muted); }
+.rail-line { flex: none; width: 32px; height: 1px; margin: var(--space-8) 0; border: 0; background: var(--border); }
+.rail-language { display: contents; }
 @media (hover: hover) {
   .rail-post:hover { background: var(--post-hover); }
   .rail-item:hover .rail-icon svg { fill: var(--highlight); }
 }
 .rail-post:active { background: var(--post-hover); }
 .rail-item:active .rail-icon svg { fill: var(--highlight); }
-.rail-icon .inbox-count { top: -3px; right: 6px; box-shadow: 0 0 0 2px var(--header); }
+.rail-icon .inbox-count { top: -3px; right: 2px; box-shadow: 0 0 0 2px var(--header); }
 .rail-saved.has-drops .rail-icon::before {
   content: "";
   position: absolute;
   top: 2px;
-  right: 14px;
+  right: 10px;
   width: 8px;
   height: 8px;
   border-radius: var(--radius-pill);

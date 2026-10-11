@@ -898,10 +898,6 @@ pub const CLOSE: &str = r#"<g transform="scale(.09375)" stroke="none"><path d="M
 /// Phosphor's `plus`.
 pub const PLUS: &str = r#"<g transform="scale(.09375)" stroke="none"><path d="M216,56V200a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V56A16,16,0,0,1,56,40H200A16,16,0,0,1,216,56Z"/><path fill="currentColor" d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></g>"#;
 
-/// A house, its door at its foot: the front page (the rail's "Kreu", base.html).
-/// Phosphor's `house-simple`.
-pub const HOME: &str = r#"<g transform="scale(.09375)" stroke="none"><path d="M216,120v96H40V120a8,8,0,0,1,2.34-5.66l80-80a8,8,0,0,1,11.32,0l80,80A8,8,0,0,1,216,120Z"/><path fill="currentColor" d="M219.31,108.68l-80-80a16,16,0,0,0-22.62,0l-80,80A15.87,15.87,0,0,0,32,120v96a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V120A15.87,15.87,0,0,0,219.31,108.68ZM208,208H48V120l80-80,80,80Z"/></g>"#;
-
 /// An office block with a lower wing: a store without a logo of its own, in its round avatar (a
 /// listing's seller row, its page, an invitation into it: seller_card.html, profile.html,
 /// store_invitation.html), as a person has the initial of their name.
