@@ -265,6 +265,10 @@ async fn a_store_has_its_page_and_its_people_post_as_it(pool: PgPool) {
     assert_eq!(get_with_cookie(pool.clone(), "/dyqani/auto-elbasani/ndrysho", &besa).await.status, StatusCode::NOT_FOUND);
     let form = get_with_cookie(pool.clone(), "/dyqani/auto-elbasani/ndrysho", &ana).await.body;
     assert!(form.contains(r#"value="Auto Elbasani""#) && form.contains(r#"name="remove_logo""#) && form.contains(r#"value="L12345678A""#), "{form}");
+    // The pictures' fields have ids of their own, which their two labels each name: the header's
+    // logo is "logo".
+    assert!(form.matches(r#"id="logo""#).count() == 1 && form.contains(r#"<input id="store-logo" name="logo" type="file""#), "{form}");
+    assert!(form.matches(r#"for="store-logo""#).count() == 2 && form.matches(r#"for="store-cover""#).count() == 2, "{form}");
     let changed = [("name", "Auto Elbasani Plus"), ("phone", "054 222 333"), ("city", "elbasan"), ("remove_logo", "1")];
     let saved = post_store(&pool, "/dyqani/auto-elbasani/ndrysho", &changed, &[], &ana).await;
     assert_eq!(saved.location.as_deref(), Some("/biznes/auto-elbasani"), "{}", saved.body);

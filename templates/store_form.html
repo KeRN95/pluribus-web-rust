@@ -31,10 +31,11 @@
 
     {#- The two pictures side by side: each its frame, the one there now or a dashed one with a
         camera, then "Zgjidh foton", which opens the file picker (the field itself out of sight with
-        the script, as it is without it), and "Hiqe" under one there now. -#}
+        the script, as it is without it), and "Hiqe" under one there now. Their ids are the store's
+        own (the header's logo is "logo"), so that their labels name them. -#}
     <div class="form-row picture-row">
     <div class="field store-picture">
-      <label class="field-label" for="logo">{{ crate::t("Logoja") }} <span class="optional">{{ crate::t("(katrore)") }}</span></label>
+      <label class="field-label" for="store-logo">{{ crate::t("Logoja") }} <span class="optional">{{ crate::t("(katrore)") }}</span></label>
       <div class="picture-pick" data-controller="picture-pick">
         <span class="picture-frame round" data-picture-pick-target="frame">
           {%- if let Some(store) = store %}{% if let Some(logo) = store.logo_url %}
@@ -42,8 +43,8 @@
           {%- endif %}{% endif %}
           <svg class="picture-empty" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CAMERA|safe }}</svg>
         </span>
-        <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" data-picture-pick-target="input" data-action="picture-pick#show">
-        <label class="button secondary picture-button" for="logo" aria-hidden="true">{{ crate::t("Zgjidh foton") }}</label>
+        <input id="store-logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" data-picture-pick-target="input" data-action="picture-pick#show">
+        <label class="button secondary picture-button" for="store-logo" aria-hidden="true">{{ crate::t("Zgjidh foton") }}</label>
       </div>
       {%- if let Some(store) = store %}{% if store.logo_url.is_some() %}
       <label class="notice-setting"><input type="checkbox" name="remove_logo" value="1"{% if form.remove_logo %} checked{% endif %}><span>{{ crate::t("Hiqe") }}</span></label>
@@ -52,7 +53,7 @@
     </div>
 
     <div class="field store-picture">
-      <label class="field-label" for="cover">{{ crate::t("Kopertina") }} <span class="optional">{{ crate::t("(e gjerë, tre herë më shumë se e lartë)") }}</span></label>
+      <label class="field-label" for="store-cover">{{ crate::t("Kopertina") }} <span class="optional">{{ crate::t("(e gjerë, tre herë më shumë se e lartë)") }}</span></label>
       <div class="picture-pick" data-controller="picture-pick">
         <span class="picture-frame wide" data-picture-pick-target="frame">
           {%- if let Some(store) = store %}{% if let Some(cover) = store.cover_url %}
@@ -60,8 +61,8 @@
           {%- endif %}{% endif %}
           <svg class="picture-empty" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CAMERA|safe }}</svg>
         </span>
-        <input id="cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" data-picture-pick-target="input" data-action="picture-pick#show">
-        <label class="button secondary picture-button" for="cover" aria-hidden="true">{{ crate::t("Zgjidh foton") }}</label>
+        <input id="store-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" data-picture-pick-target="input" data-action="picture-pick#show">
+        <label class="button secondary picture-button" for="store-cover" aria-hidden="true">{{ crate::t("Zgjidh foton") }}</label>
       </div>
       {%- if let Some(store) = store %}{% if store.cover_url.is_some() %}
       <label class="notice-setting"><input type="checkbox" name="remove_cover" value="1"{% if form.remove_cover %} checked{% endif %}><span>{{ crate::t("Hiqe") }}</span></label>
