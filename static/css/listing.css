@@ -265,7 +265,7 @@
 /* Room between the photos and the title, and a hairline under the kind's line, the page's one;
    "Lokacioni" over the map, as the description and the details have their headings. The price a
    phone's size on every screen (1.75rem; other pages' grow from 720 px up); what qualifies it is
-   under it, as on every listing's page (.price-note). */
+   under it, as on every listing's page (.price-under). */
 .listing-car > .listing-side { margin-top: 16px; }
 .listing-car .listing-header { padding-bottom: 14px; border-bottom: 1px solid var(--border); }
 .listing-car .listing-side > .listing-map-section { margin-top: 1.75rem; }
@@ -707,14 +707,21 @@
    one line whatever qualifies the price. */
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: var(--lp-title); letter-spacing: -.02em; line-height: 1.25; }
 .listing-price { margin: 0; font-size: var(--lp-price); line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
-/* What qualifies the price ("/muaj", "i diskutueshëm": price_note_alone, listings.rs), and a
-   drop (price_drop.html), on a line of their own right under the price's, quietly, out of its
+/* What kind of listing it is (.price-kind, below), what qualifies the price ("i diskutueshëm":
+   price_negotiable, listings.rs; the month, "/muaj", left out since 2026-10-12), and a drop
+   (price_drop.html), on a line of their own right under the price's, quietly, out of its
    line, so that the price stands level with its buttons: the user's ask of 2026-10-11, "separate
    stuff like me qera, i diskutueshem from the price, and put it right below, very close to the
    price" (the note was inside the price's line, under the figure, on a line of its own since
    earlier that day; half the figure's size and in brackets after it before that, which a narrow
    phone broke over two lines). */
 .price-under { margin: -2px 0 0; color: var(--muted); font-size: var(--lp-small); line-height: 1.4; }
+/* What kind of listing it is first on the line ("Në shitje", "Me qira"), semibold, in the
+   accent's colour, its shade for words on the light theme (--highlight-text, base.css): the
+   user's ask of 2026-10-12, "remove ne shitje from the below title section and add it to below
+   price ... put only the ne shitje or me qera in the sites accent color" (it headed the line
+   under the title, and the month, "/muaj", stood here, gone from the page since). */
+.price-kind { margin-right: .5rem; color: var(--highlight-text); font-weight: var(--semibold); }
 .price-note { margin-right: .5rem; }
 /* The figure itself on a band of the accent across its foot, as Tradera marks its prices (the
    user's ask of 2026-10-11, "a semi background on the price"): a thick underline, which a browser

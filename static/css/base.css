@@ -88,6 +88,12 @@
      is on takes there, as dark as the photo under the white figure (the user's pick of 2026-10-11,
      the accent itself before it). */
   --price-mark-photo: color-mix(in srgb, var(--highlight) var(--filter-share-dark), #1b1b1b);
+  /* Words in the accent's colour: what kind of listing it is, under its price (listing.css,
+     .price-kind; the user's ask of 2026-10-12, "put only the ne shitje or me qera in the sites
+     accent color"). On the light theme the accent itself is too pale for words (mint is 1.6:1 on
+     the page), so its shade, as much of it as of our near-black, 4.5:1 at least for every accent;
+     on the dark theme the accent's line (--highlight-line), bright on the dark grey. */
+  --highlight-text: color-mix(in srgb, var(--highlight) 45%, #1b1b1b);
   --logo-dot: currentColor;              /* the logo's i's dot: black as its letters, on white */
   --logo-counter: var(--highlight);      /* the inside of the logo's b: the accent, on white */
   --dot-edge: inset 0 0 0 1.5px rgb(27 27 27 / 45%); /* a ring inside an unread dot, on white */
@@ -293,6 +299,7 @@
   --on-glass-muted: rgb(255 255 255 / 72%);
   --on-glass-hover: rgb(255 255 255 / 10%);
   --glow-strength: 55%;
+  --highlight-text: var(--highlight-line);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -356,6 +363,7 @@
     --on-glass-muted: rgb(255 255 255 / 72%);
     --on-glass-hover: rgb(255 255 255 / 10%);
     --glow-strength: 55%;
+    --highlight-text: var(--highlight-line);
   }
 }
 

@@ -415,20 +415,23 @@ function listingStandIn(card, link) {
   const shown = card.querySelector("img.card-photo")?.currentSrc;
   const amount = card.querySelector(".card-amount");
   const price = amount?.firstChild?.textContent.trim() ?? "";
-  // Under the price's line what qualifies it, as the page says it: without its brackets, on a line
-  // of its own (price_note_alone, listings.rs; .price-under).
-  const said = [...(amount?.querySelectorAll(".card-note") ?? [])].map((note) => note.textContent.trim()).join(" ");
-  const notes = said.replace(/[()]/g, "").trim();
+  // Under the price's line what kind of listing it is, in the accent's colour (data-kind), and
+  // what qualifies the price, as the page says it: "i diskutueshëm" without its brackets, the
+  // month, which the card keeps, left out (.price-under; ListingDetail::price_negotiable).
+  const negotiable = amount?.querySelector(".card-negotiable")?.textContent.replace(/[()]/g, "").trim() ?? "";
   const number = link.pathname.match(/^\/listing\/(\d+)/)?.[1] ?? "";
   const place = card.querySelector(".card-place")?.textContent.trim() || "Tiranë";
   // The line under the title, the page's own words as the card has them (data-line), or about as
-  // long as the page's: the made title before it where the seller's heads the page, what kind and
-  // in what state, and on a car's or a property's page where and when, before the number.
-  const kind = "Në shitje · E përdorur";
-  const line = head?.dataset.line ?? (deal ? `${head?.dataset.heading ? `${named} · ` : ""}${kind} · ${place} · 00.00.2026 · Nr. ${number}` : `${kind} · Numri i njoftimit: ${number}`);
-  // The page's own line in words, its last part, the number, whole on one line (.listing-number).
+  // long as the page's: the made title before it where the seller's heads the page, in what
+  // state, and on a car's or a property's page where and when, before the number.
+  const state = "E përdorur";
+  const line = head?.dataset.line ?? (deal ? `${head?.dataset.heading ? `${named} · ` : ""}${state} · ${place} · 00.00.2026 · Nr. ${number}` : `${state} · Numri i njoftimit: ${number}`);
+  // The page's own line in words, its last part, the number, whole on one line (.listing-number),
+  // the number alone where nothing comes before it.
   const end = line.lastIndexOf(" · ");
-  const spoken = head?.dataset.line && end > 0 ? `${escape(line.slice(0, end))} · <span class="listing-number">${escape(line.slice(end + 3))}</span>` : unseen(line);
+  const spoken = head?.dataset.line
+    ? `${end > 0 ? `${escape(line.slice(0, end))} · ` : ""}<span class="listing-number">${escape(end > 0 ? line.slice(end + 3) : line)}</span>`
+    : unseen(line);
   // As many key facts as the page has (data-facts), two to a line on a phone; none but on a car's
   // or a property's page.
   const facts = deal ? Number(head.dataset.facts ?? 4) : 0;
@@ -443,7 +446,10 @@ function listingStandIn(card, link) {
   const path = head?.dataset.here
     ? `<a class="breadcrumb-back">${chevron}</a><a class="breadcrumb-up">${escape(head.dataset.up ?? "")}</a><span class="breadcrumb-sep" aria-hidden="true">›</span><a class="breadcrumb-here">${escape(head.dataset.here)}</a>`
     : unseen("Automjete › Makina");
-  const note = notes ? `<span class="price-note">${escape(notes)}</span>` : "";
+  const qualified = negotiable ? `<span class="price-note">${escape(negotiable)}</span>` : "";
+  const under = head?.dataset.kind || qualified
+    ? `<p class="price-under">${head?.dataset.kind ? `<span class="price-kind">${escape(head.dataset.kind)}</span>` : ""}${qualified}</p>`
+    : "";
   const pills = ["Samsung", "Galaxy A15", "128 GB", "E re", "Garanci"].map((words) => `<dd class="attribute">${escape(words)}</dd>`).join("");
   const details = deal ? "" : `<section class="listing-details"><h2>${unseen("Detajet")}</h2><dl class="attributes"><div class="attribute-group">${pills}</div></dl></section>`;
   const words = head?.dataset.description ?? card.querySelector(".card-description-text")?.textContent.trim();
@@ -466,7 +472,7 @@ function listingStandIn(card, link) {
     + `<div class="price-box"><div class="price-row"><p class="listing-price"><span class="price-amount">${escape(price)}</span></p>`
     + `${head?.hasAttribute("data-loan") ? '<details class="bubble loan" inert><summary></summary></details>' : ""}`
     + `${head?.hasAttribute("data-compare") ? '<details class="bubble car-price" inert><summary></summary></details>' : ""}</div>`
-    + `${note ? `<p class="price-under">${note}</p>` : ""}</div>`
+    + `${under}</div>`
     + `${details}${description}</div>`
     + contact
     + "</article></div>";

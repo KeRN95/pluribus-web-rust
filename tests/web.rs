@@ -2701,8 +2701,11 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(!response.body.contains(r#"<p class="listing-meta">"#) && !response.body.contains("Numri i njoftimit: 1001"));
     // One photo: no mosaic, the slider alone.
     assert!(!response.body.contains("mosaic-side"));
-    // What kind of listing it is, and its condition, over the price, not among the details.
-    assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur · <span translate="no">Tiranë</span>"#));
+    // Its condition under the title, not among the details; what kind of listing it is under the
+    // price, in the accent's colour (the user's ask of 2026-10-12: it headed the line under the
+    // title).
+    assert!(response.body.contains(r#"<p class="card-meta listing-kind">E përdorur · <span translate="no">Tiranë</span>"#));
+    assert!(response.body.contains(r#"<p class="price-under"><span class="price-kind">Në shitje</span></p>"#), "{}", response.body);
     assert!(!response.body.contains(">Gjendja</dt>"));
     // A car's page, laid out as FINN's: its key facts, the year, the mileage, the gearbox and the
     // fuel, in a row under the title, each with its icon and its name over its value; the rest of
@@ -2729,7 +2732,7 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     // 2026-10-11: "separate stuff like me qera, i diskutueshem from the price, and put it right
     // below, very close to the price").
     let mercedes = html(pool.clone(), "/listing/1002-mercedes-benz-c-220-2018-automatike").await;
-    assert!(mercedes.contains(r#"<p class="price-under"><span class="price-note">i diskutueshëm</span></p>"#), "{mercedes}");
+    assert!(mercedes.contains(r#"<p class="price-under"><span class="price-kind">Në shitje</span><span class="price-note">i diskutueshëm</span></p>"#), "{mercedes}");
     let line = &mercedes[mercedes.find(r#"<p class="listing-price">"#).expect("the price")..];
     assert!(line[..line.find("</p>").unwrap()].ends_with("</span>") && !line[..line.find("</p>").unwrap()].contains("price-note"));
     // And on every other listing's page, on every screen (the user's ask of 2026-10-11): it was
@@ -2737,7 +2740,12 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     let sofa = html(pool.clone(), "/listing/1007-divan-qoshe-ngjyre-gri").await;
     assert!(sofa.contains(r#"<span class="price-note">i diskutueshëm</span>"#) && !sofa.contains(r#"class="price-note"> ("#), "{sofa}");
     let site_css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    assert!(site_css.contains(".price-under{margin:-2px 0 0;color:var(--muted);font-size:var(--lp-small);line-height:1.4;}.price-note{margin-right:.5rem;}"));
+    // What kind of listing it is first on that line, semibold, in the accent's colour: its shade
+    // for words on the light theme, the accent's line on the dark (the user's ask of 2026-10-12).
+    assert!(site_css.contains(".price-under{margin:-2px 0 0;color:var(--muted);font-size:var(--lp-small);line-height:1.4;}"));
+    assert!(site_css.contains(".price-kind{margin-right:.5rem;color:var(--highlight-text);font-weight:var(--semibold);}.price-note{margin-right:.5rem;}"));
+    assert!(site_css.contains("--highlight-text:color-mix(in srgb,var(--highlight) 45%,#1b1b1b);"));
+    assert_eq!(site_css.matches("--highlight-text:var(--highlight-line);").count(), 2, "the dark theme's, picked and the device's");
     // The price's buttons as tall as its line, 36px, level with the figure (the user's ask of the
     // same day, "a bit smaller, size of the row of the price so they are more in line"; a finger
     // has 40px of each), and the seller under a hairline, with no heading.
@@ -2910,12 +2918,14 @@ async fn costly_things_on_sale_offer_a_loan_calculator(pool: PgPool) {
     }
     // A rent is paid monthly already.
     let rent = html(pool.clone(), "/listing/1003-apartament-2-1-me-qira-ne-tirane").await;
-    // The month under the price, smaller, off the band of the accent across the figure's foot
-    // (as Tradera marks its prices, 2026-10-11) and out of the price's line; a rent says nothing
-    // of square metres.
+    // What kind it is under the price, smaller, off the band of the accent across the figure's
+    // foot (as Tradera marks its prices, 2026-10-11) and out of the price's line; no month there
+    // (the user's ask of 2026-10-12, "remove the / month marking": its card keeps it); a rent
+    // says nothing of square metres.
     assert!(rent.contains("<p class=\"listing-price\"><span class=\"price-amount\">450\u{a0}€</span></p>"));
-    let under = rent.find("<p class=\"price-under\"><span class=\"price-note\">/muaj</span></p>").expect("the month under the price");
-    assert!(rent.find("<div class=\"price-row\">").unwrap() < under && !rent[rent.find("<div class=\"price-row\">").unwrap()..under].contains("price-note"));
+    let under = rent.find("<p class=\"price-under\"><span class=\"price-kind\">Me qira</span></p>").expect("the kind under the price");
+    let box_at = rent.find("<div class=\"price-box\">").unwrap();
+    assert!(rent.find("<div class=\"price-row\">").unwrap() < under && !rent[box_at..under + 60].contains("/muaj"));
     assert!(!rent.contains("Llogarit kredinë"));
     assert!(!rent.contains("price-per-area"));
     // A house on sale says what a square metre costs, 185 000 € for 200 m², in a circle at its
@@ -5655,6 +5665,9 @@ async fn a_card_says_when_its_page_frames_photos_as_a_cars(pool: PgPool) {
         }
         words.push_str(rest);
         assert_eq!(attribute("data-line"), words.trim(), "{number}: the line under the title");
+        // What kind of listing it is, as the page says it under the price.
+        let kind = &page[page.find(r#"<span class="price-kind">"#).expect("the kind") + r#"<span class="price-kind">"#.len()..];
+        assert_eq!(attribute("data-kind"), &kind[..kind.find("</span>").unwrap()], "{number}: its kind");
         // And on a car's or a property's page as many key facts as the page has.
         if deal {
             assert_eq!(attribute("data-facts"), page.matches(r#"<div class="key-fact">"#).count().to_string(), "{number}: its key facts");
@@ -7884,7 +7897,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         r#"<nav class="breadcrumb listing-path""#,
         r#"<div class="gallery">"#,
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
-        r#"<p class="card-meta listing-kind">Në shitje · E përdorur · "#,
+        r#"<p class="card-meta listing-kind">E përdorur · "#,
         r#"<dl class="key-facts">"#,
         r#"<div class="price-box">"#,
         r#"<p class="listing-price">"#,
@@ -8463,7 +8476,7 @@ async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
     let golf = en("/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     assert!(golf.contains("<dt>Fuel</dt><dd>Diesel</dd>") && golf.contains("<dt>Gearbox</dt><dd>Manual</dd>"), "{golf}");
     assert!(golf.contains("<dt>Mileage</dt><dd>148\u{a0}000\u{a0}km</dd>"), "{golf}");
-    assert!(golf.contains(r#"<p class="card-meta listing-kind">For sale · Used ·"#), "{golf}");
+    assert!(golf.contains(r#"<p class="card-meta listing-kind">Used ·"#) && golf.contains(r#"<span class="price-kind">For sale</span>"#), "{golf}");
     assert!(golf.contains(r#"<span class="button-label">Show number</span>"#) && golf.contains("<h2>Location</h2>"), "{golf}");
     assert!(golf.contains(r#"<span class="listing-number">No. 1001</span>"#), "{golf}");
 

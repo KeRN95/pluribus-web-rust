@@ -113,16 +113,6 @@ impl Photo {
     }
 }
 
-/// What kind of listing it is, and in what condition when it has one: "Në shitje · E përdorur",
-/// as a listing's page says it under its title.
-fn kind_line(listing_type: &str, condition: Option<&str>) -> String {
-    let kind = format::listing_type(listing_type);
-    match condition {
-        Some(condition) => format!("{kind} · {}", format::condition(condition)),
-        None => kind.to_string(),
-    }
-}
-
 /// What a loan for it would be, where its page offers the loan calculator: something on sale at
 /// a set price, a negotiable one or one from which, of more than 500 €, or 50 000 Lekë.
 fn loan_amount(listing_type: &str, price_type: &str, currency: &str, price_amount: Option<Decimal>) -> Option<Decimal> {
@@ -152,19 +142,22 @@ impl ListingCard {
     /// which the stand-in a tap shows keeps a place for too (data-compare).
     /// The line under its page's title, in words, as the page says it (listing.html, .listing-kind):
     /// on a car's or a property's page the title made from what the car is first where the
-    /// seller's heads the page, what kind and in what state, where, when and its number; on the
-    /// others what kind and in what state and its number. The stand-in a tap shows says it, unseen,
-    /// so that it wraps as the page's does (data-line).
+    /// seller's heads the page, in what state, where, when and its number; on the others in what
+    /// state and its number (what kind, "Në shitje", stands under the price since 2026-10-12, as
+    /// the user asked). The stand-in a tap shows says it, unseen, so that it wraps as the page's
+    /// does (data-line).
     pub fn page_line(&self) -> String {
-        let kind = kind_line(&self.listing_type, self.condition.as_deref());
+        let condition = self.condition.as_deref().map(|condition| format::condition(condition).to_string());
+        let mut parts: Vec<String> = Vec::new();
         if !self.deal {
-            return format!("{kind} · {}: {}", t("Numri i njoftimit"), self.public_no);
+            parts.extend(condition);
+            parts.push(format!("{}: {}", t("Numri i njoftimit"), self.public_no));
+            return parts.join(" · ");
         }
-        let mut parts = Vec::new();
         if self.heading.is_some() {
             parts.push(self.title.clone());
         }
-        parts.push(kind);
+        parts.extend(condition);
         // Where, as the page's query says it (db::listing): a zone with its town after it, or the
         // place alone.
         let place = match (&self.zone, &self.city) {
@@ -176,6 +169,12 @@ impl ListingCard {
         parts.extend(self.published_at.map(|published| format::when(published, time::OffsetDateTime::now_utc())));
         parts.push(t1("Nr. {}", self.public_no));
         parts.join(" · ")
+    }
+
+    /// What kind of listing it is, as its page says it under its price ("Në shitje"), for the
+    /// stand-in a tap shows (data-kind).
+    pub fn kind_label(&self) -> &str {
+        format::listing_type(&self.listing_type)
     }
 
     pub fn compares(&self) -> bool {
@@ -394,13 +393,15 @@ impl ListingDetail {
         format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).0
     }
 
-    /// "/muaj", " (i diskutueshëm)", or empty.
-    /// The note on a line of its own under the price, as every listing's page has it: without its
-    /// brackets, "i diskutueshëm", "/muaj i diskutueshëm".
-    pub fn price_note_alone(&self) -> String {
-        self.price_note().replace(['(', ')'], "").trim().to_string()
+    /// What qualifies the price on the line under it, after what kind of listing it is:
+    /// "i diskutueshëm", without its brackets, or nothing. Its month ("/muaj"), which the cards
+    /// keep, the page leaves out, as the user asked on 2026-10-12 ("remove the / month marking").
+    pub fn price_negotiable(&self) -> String {
+        let negotiable = t("(i diskutueshëm)");
+        if self.price_note().contains(negotiable) { negotiable.replace(['(', ')'], "") } else { String::new() }
     }
 
+    /// "/muaj", " (i diskutueshëm)", or empty.
     pub fn price_note(&self) -> String {
         format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).1
     }
@@ -512,9 +513,15 @@ impl ListingDetail {
         Some((prefix, when))
     }
 
-    /// What kind of listing it is, and in what condition when it has one: "Në shitje · E përdorur".
-    pub fn kind_line(&self) -> String {
-        kind_line(&self.listing_type, self.condition.as_deref())
+    /// What kind of listing it is, on the line under its price, in the accent's colour: "Në
+    /// shitje", "Me qira" (the user's ask of 2026-10-12; it headed the line under the title).
+    pub fn kind_label(&self) -> &str {
+        format::listing_type(&self.listing_type)
+    }
+
+    /// In what condition, at the head of the line under its title, when it has one: "E përdorur".
+    pub fn condition_label(&self) -> Option<&str> {
+        self.condition.as_deref().map(format::condition)
     }
 
     pub fn status_label(&self) -> Option<&'static str> {
