@@ -205,8 +205,10 @@
 
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 
-/* A filter picked, as a chip: on, so filled with the main colour, as the canvas has the filters
-   on, its words semibold in its own, small, its cross after its words. */
+/* A filter picked, as a chip: on, so in the accent, toned down (--filter-on: the accent mixed into
+   the page, as the user asked on 2026-10-11; the main colour, as the canvas has the filters on,
+   before), its words semibold in the text's colour, small, its cross after its words; a little
+   more of the accent under the pointer. */
 .filter-chip {
   display: inline-flex;
   align-items: center;
@@ -214,8 +216,8 @@
   padding: .3rem .55rem .3rem .8rem;
   border: 1px solid transparent;
   border-radius: 999px;
-  background: var(--main);
-  color: var(--on-main);
+  background: var(--filter-on);
+  color: var(--text);
   font-size: var(--text-sm);
   font-weight: var(--semibold);
   text-decoration: none;
@@ -223,7 +225,7 @@
 }
 .filter-chip svg { opacity: .8; }
 @media (hover: hover) {
-  .filter-chip:hover { background: var(--main-hover); }
+  .filter-chip:hover { background: var(--filter-on-hover); }
   .filter-chip:hover svg { opacity: 1; }
 }
 .clear-filters { padding: .3rem .4rem; color: var(--muted); font-size: var(--text-sm); }
@@ -437,8 +439,9 @@ html:has(.filters.is-open) { overflow: hidden; }
 .button-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .button-count { flex: none; font-weight: var(--bold); }
 .button-count::before { content: "· "; }
-/* The filters picked, in the row after "Filtrat": chips 40px tall in the main colour, semibold,
-   their cross after their words; "Pastro filtrat" after them, quieter, as tall to tap. */
+/* The filters picked, in the row after "Filtrat": chips 40px tall in the toned-down accent
+   (--filter-on), semibold, their cross after their words; "Pastro filtrat" after them, quieter,
+   as tall to tap. */
 .browse-tools .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); margin: 0; }
 .browse-tools .filter-chip { height: var(--size-button-sm); gap: 7px; padding: 0 12px 0 14px; font-size: .9375rem; }
 .browse-tools .clear-filters { display: inline-flex; align-items: center; min-height: var(--size-button-sm); padding: 0 4px; font-size: .9375rem; }

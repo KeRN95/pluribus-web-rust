@@ -68,7 +68,11 @@
       {#- The logo: the name in lowercase in Clash Display Semibold, drawn as shapes (logo.svg),
           its i's dot apart in the accent, and the word for screen readers (the site's icon,
           above, is its p). Turbo keeps it from page to page (data-turbo-permanent), so that its
-          colours slide to the other theme's rather than changing at once (base.css, .logo). -#}
+          colours slide to the other theme's rather than changing at once (base.css, .logo). The
+          bar's start (the logo) and its end (the account) are as wide as each other from 720px
+          up, so that the search between them stands in the middle of the page beside the rail
+          (.header-start, .header-end). -#}
+      <div class="header-start">
       <a class="logo" id="logo" href="/" data-turbo-permanent translate="no">{% include "logo.svg" %}<span class="visually-hidden">pluribus</span></a>
       {%- if crate::web::type_trial() %}
       {#- Trying typefaces (TYPE_TRIAL=true, web::type_trial): "Ff" opens a panel that picks the
@@ -107,8 +111,9 @@
         </form>
       </details>
       {%- endif %}
+      </div>
       {#- The search, in the bar on every page but the front page, whose own is its first thing
-          (home.html empties the block): a grey pill as wide as the bar leaves it, the magnifier at
+          (home.html empties the block): a grey pill in the bar's middle, at most 720px wide, the magnifier at
           its start searching the words typed, as Enter does, in every category and town ("Kërko
           njoftime"); a category's page searches its own listings with its filters kept, and says
           so ("Kërko në Makina", browse.html). Suggestions open under it as words are typed
@@ -132,9 +137,11 @@
           expired and they haven't seen it (account_controller.js, notifications.rs). The text's
           size and the theme are the menu's, posting, the listings kept and the conversations the
           rail's (below; on phones the menu's, and the front page's row with its search). -#}
+      <div class="header-end">
       <a class="icon-button account-button" href="/llogaria" aria-label="{{ crate::t("Llogaria") }}" title="{{ crate::t("Llogaria") }}" data-controller="account">
         <svg data-icon="user" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
       </a>
+      </div>
     </div>
   </header>
   {#- The rail, the menu folded, at the screen's left from 720px up, under the menu's lines

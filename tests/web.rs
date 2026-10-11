@@ -4692,8 +4692,9 @@ async fn buttons_are_pills_in_the_main_colour_or_the_grey(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn pills_chips_and_badges_are_grey_or_the_main_colour(pool: PgPool) {
-    // The redesign's pills (the categories', the path's), chips (a filter on) and badges: grey with
-    // no outline, what is picked or on in the main colour, a badge's tone in its tint.
+    // The redesign's pills (the categories', the path's), chips and badges: grey with no outline,
+    // what is picked in the main colour, a filter that is on in the accent toned down (2026-10-11),
+    // a badge's tone in its tint.
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     let rule = |selector: &str| {
         let at = css.find(&format!("}}{selector}{{")).unwrap_or_else(|| panic!("{selector}"));
@@ -4702,7 +4703,7 @@ async fn pills_chips_and_badges_are_grey_or_the_main_colour(pool: PgPool) {
     };
     assert!(rule(".shortcut").contains("background:var(--surface-muted)"));
     assert!(rule(".category-path .shortcut.is-selected").contains("background:var(--main)"));
-    assert!(rule(".filter-chip").contains("background:var(--main)"));
+    assert!(rule(".filter-chip").contains("background:var(--filter-on)"));
     let badge = rule(".badge");
     for part in ["height:1.5rem", "background:var(--surface-muted)", "color:var(--muted)"] {
         assert!(badge.contains(part), "{part} in {badge}");
@@ -4901,6 +4902,11 @@ async fn the_rail_and_the_bars_search_lead_everywhere(pool: PgPool) {
     assert!(rule(".top-search").contains("background:var(--surface-muted)"));
     assert!(rule(".welcome-form").contains("background:var(--surface-muted)"));
     assert!(rule(".welcome-search").contains("background:var(--search-knob)"));
+    // The bar's search stands in the middle of the page beside the rail: the bar's start and end
+    // grow alike around it. A filter that is on is in the accent, toned down (2026-10-11).
+    assert!(bar.contains(r#"<div class="header-start">"#) && bar.contains(r#"<div class="header-end">"#), "{bar}");
+    assert!(css.contains(".header-start,.header-end{flex:1 1 0;min-width:max-content;}"));
+    assert!(rule(".filter-chip").contains("background:var(--filter-on)"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

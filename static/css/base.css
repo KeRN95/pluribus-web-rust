@@ -56,6 +56,12 @@
   /* The front page's search button, on its grey pill: lime with the dark magnifier; on the dark
      theme, and with a darker accent, a grey a shade off the pill's, the magnifier in the accent. */
   --search-knob: var(--lime);
+  /* A filter that is on (its chip, browse.css): the accent toned down, mixed into the page, 40% of
+     it on the light theme (24% on the dark, where more would dim the words), the words the text's;
+     a little more of it under the pointer. The user's ask of 2026-10-11, in place of the main
+     colour. */
+  --filter-on: color-mix(in srgb, var(--highlight) 40%, var(--bg));
+  --filter-on-hover: color-mix(in srgb, var(--highlight) 55%, var(--bg));
   --logo-edge: rgb(27 27 27 / 45%);      /* a line inside the logo's lime dot, on white */
   --dot-edge: inset 0 0 0 1.5px rgb(27 27 27 / 45%); /* a ring inside an unread dot, on white */
   --choice-darkred: #9b1b1b;
@@ -197,6 +203,8 @@
   --lime-knob: var(--surface-muted);
   --lime-icon: var(--lime);
   --search-knob: var(--surface-muted-hover);
+  --filter-on: color-mix(in srgb, var(--highlight) 24%, var(--bg));
+  --filter-on-hover: color-mix(in srgb, var(--highlight) 34%, var(--bg));
   --logo-edge: transparent;
   --dot-edge: 0 0 0 0 transparent;
   --choice-darkred: #e37170;
@@ -262,6 +270,8 @@
     --lime-knob: var(--surface-muted);
     --lime-icon: var(--lime);
     --search-knob: var(--surface-muted-hover);
+    --filter-on: color-mix(in srgb, var(--highlight) 24%, var(--bg));
+    --filter-on-hover: color-mix(in srgb, var(--highlight) 34%, var(--bg));
     --logo-edge: transparent;
     --dot-edge: 0 0 0 0 transparent;
     --choice-darkred: #e37170;
@@ -497,11 +507,20 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   :root { --size-header: 56px; }
   .header-inner { gap: 0; padding: 0 8px 0 var(--gutter); }
 }
-/* From 720px up the bar runs the screen's width, the menu's lines over the rail (below) and the
-   logo where the page beside the rail starts. */
+/* The bar's start (the logo, and the type trial's "Ff") and its end (the account). From 720px up the
+   bar runs the screen's width, the menu's lines over the rail (below) and the logo where the page
+   beside the rail starts; its start and end then grow alike, never narrower than what they hold,
+   so that the search between them stands in the middle of the page beside the rail, as the
+   user asked on 2026-10-11 (on a narrow screen it gives up width first). */
+.header-start,
+.header-end { display: flex; flex: none; align-items: center; gap: var(--space-4); }
+.header-end { margin-left: auto; }
 @media (min-width: 720px) {
   :root { --rail-width: 88px; }
   .header-inner { padding: 0 var(--gutter) 0 0; }
+  .header-start,
+  .header-end { flex: 1 1 0; min-width: max-content; }
+  .header-end { justify-content: flex-end; }
 }
 
 /* The page as a grid from 720px up: the English offer and the bar across the top, the rail down
@@ -640,6 +659,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .top-search { height: var(--size-button-sm); margin: 0 var(--space-8); padding: 0 2px 0 0; }
   .top-search-go { width: 36px; }
 }
+@media (min-width: 720px) {
+  .top-search { flex: 0 1 720px; }
+}
 @media (max-width: 399px) {
   .type-menu { display: none; }
 }
@@ -767,6 +789,9 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .menu-button:hover { background: var(--surface-muted); }
 }
 .menu-button-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The count's holder is no box of its own, so that the lines alone stand in the button's middle
+   (it took a row of the button's grid once, which lifted them); the count sits at the corner. */
+.menu-unread { display: contents; }
 .menu-button .inbox-count { top: 0; right: -2px; box-shadow: 0 0 0 2px var(--header); }
 @media (min-width: 720px) {
   .menu-button { width: 48px; height: 48px; margin: 0 calc((var(--rail-width) - 48px) / 2 + var(--gutter)) 0 calc((var(--rail-width) - 48px) / 2); }
