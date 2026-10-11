@@ -711,7 +711,6 @@ pub const PAGE_SIZE: &str = r#"<path d="M4 9V6a2 2 0 0 1 2-2h3M15 4h3a2 2 0 0 1 
 
 /// A door's frame and an arrow out of it: signing out ("Dil nga llogaria", in "Njoftimet e
 /// mia" and "Cilësimet").
-#[expect(dead_code, reason = "the account's pages take it when they are redrawn")]
 pub const LOG_OUT: &str = r#"<path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14"/><path d="M10 16.5 5.5 12 10 7.5M5.5 12h10"/>"#;
 
 /// An i in a circle: a note on how things stand (a seller's own listing awaiting review,

@@ -4646,7 +4646,7 @@ async fn sellers_edit_their_own_listings(pool: PgPool) {
     assert!(mine.contains("Samsung Galaxy S21, 256 GB"));
     assert!(mine.contains(&format!(r#"href="/listing/{no}/ndrysho""#)));
     let out = mine.find(r#"<form class="sign-out" action="/dil" method="post">"#).expect("signing out");
-    assert!(mine[out..].contains(r#"<button type="submit" class="button secondary">Dil nga llogaria</button>"#));
+    assert!(mine[out..].contains(r#"<button type="submit" class="button secondary"><svg"#) && mine[out..].contains("</svg>Dil nga llogaria</button>"));
     assert!(out > mine.find(r#"href="/shto""#).unwrap(), "last on the page");
 }
 

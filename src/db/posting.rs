@@ -518,6 +518,28 @@ impl std::iter::Sum for ListingStats {
 /// The user's own listings, or with `store` that store's, whoever of its people posted them (the
 /// caller checks the user posts for it); newest first, deleted ones left out, each with what it
 /// drew.
+/// Each listing's first photo's card-sized copy, by its number, for "Njoftimet e mia"'s rows; none
+/// for a listing without one.
+pub async fn first_photos(db: &PgPool, numbers: &[i64]) -> sqlx::Result<HashMap<i64, String>> {
+    let rows: Vec<(i64, String)> = sqlx::query_as(
+        "SELECT l.public_no, coalesce(m.thumbnail_url, m.public_url)
+         FROM listings l
+         JOIN LATERAL (
+             SELECT m.thumbnail_url, m.public_url
+             FROM listing_media m
+             WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'
+               AND coalesce(m.thumbnail_url, m.public_url) IS NOT NULL
+             ORDER BY m.is_cover DESC, m.sort_order
+             LIMIT 1
+         ) m ON true
+         WHERE l.public_no = ANY($1)",
+    )
+    .bind(numbers)
+    .fetch_all(db)
+    .await?;
+    Ok(rows.into_iter().collect())
+}
+
 pub async fn my_listings(db: &PgPool, user_id: Uuid, store: Option<Uuid>) -> sqlx::Result<Vec<MyListing>> {
     let rows = sqlx::query!(
         r#"SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS "title!", l.status, l.listing_type,

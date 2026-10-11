@@ -1065,12 +1065,19 @@ struct MyListingsPage {
     store: Option<db::MyStore>,
     /// The promotions on the listings shown (db/promotions.rs).
     promotions: Vec<db::OnPromotion>,
+    /// Each listing's first photo, by its number, at its row's start as the canvas has it.
+    photos: HashMap<i64, String>,
 }
 
 impl MyListingsPage {
     /// The promotions on the listing with this number now.
     pub fn promoted(&self, public_no: &i64) -> Vec<&db::OnPromotion> {
         self.promotions.iter().filter(|promotion| promotion.public_no == *public_no).collect()
+    }
+
+    /// The listing with this number's first photo, where it has one.
+    pub fn photo(&self, public_no: &i64) -> Option<&str> {
+        self.photos.get(public_no).map(String::as_str)
     }
 }
 
@@ -1087,6 +1094,11 @@ impl MyListing {
 
     pub fn price_display(&self) -> String {
         format::price(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
+    }
+
+    /// Its price and what follows it ("/muaj (i diskutueshëm)"), which its row says quieter.
+    pub fn price_parts(&self) -> (String, String) {
+        format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
     }
 
     /// Listings that are no longer simply up say so.
@@ -1250,8 +1262,9 @@ pub async fn my_listings(State(state): State<AppState>, headers: HeaderMap, Quer
     };
     let totals = listings.iter().map(|listing| listing.stats).sum();
     let numbers: Vec<i64> = listings.iter().map(|listing| listing.public_no).collect();
-    let promotions = db::listing_promotions(&state.db, &numbers).await?;
-    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending, notifications, stores, store, promotions })
+    let (promotions, photos) =
+        tokio::try_join!(db::listing_promotions(&state.db, &numbers), db::first_photos(&state.db, &numbers))?;
+    render(MyListingsPage { signed_in_as: signed_in_as(&user), listings, totals, pending, notifications, stores, store, promotions, photos })
 }
 
 /// What a listing drew, or all of a seller's listings together, as "Njoftimet e mia" says it, in

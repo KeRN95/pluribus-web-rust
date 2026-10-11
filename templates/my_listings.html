@@ -9,7 +9,11 @@
 {%- endmacro %}
 
 {% block content %}
-<section class="account">
+{#- As the canvas has it (posting.css, .my-listings-page): a column of 900px in the middle of the
+    page; what the listings drew in three white tiles; the listings in one white box, a row each,
+    its photo, then its title, price, badges and what it drew, its buttons at the row's end (under
+    it on a phone). -#}
+<section class="account my-listings-page">
   {#- Over the heading, the account's pages (account_nav.html), the notifications with how many
       are new: a listing about to expire, a price dropped, a saved search's new listings, a
       message left unread. -#}
@@ -62,12 +66,20 @@
   <ul class="my-listings">
     {% for listing in listings %}
     <li class="my-listing">
+      {#- Its photo, leading to it as its title does (out of the keyboard's way, the title being
+          the link). -#}
+      <a class="my-listing-photo" href="{{ listing.url() }}" tabindex="-1" aria-hidden="true">
+        {%- if let Some(photo) = self.photo(listing.public_no) %}<img src="{{ photo }}" alt="" width="64" height="64" loading="lazy">{% else %}<span class="placeholder"></span>{% endif -%}
+      </a>
       <div class="my-listing-text">
         <a class="my-listing-title" href="{{ listing.url() }}">{{ listing.title }}</a>
+        {#- Its price, what follows it quieter, then where it stands, each in its pill. -#}
+        {%- let (price, note) = listing.price_parts() %}
         <span class="my-listing-meta">
-          {{ listing.price_display() }}{% if let Some(label) = listing.status_label() %} · <span class="badge{% if let Some(tone) = listing.status_tone() %} {{ tone }}{% endif %}">{{ label }}</span>{% endif %}
-          {%- if let Some(soon) = listing.expires_soon() %} · <span class="badge warn">{{ soon }}</span>{% endif %}
-          {%- for promotion in self.promoted(listing.public_no) %} · <span class="badge promoted">{{ crate::t(promotion.name) }}, {{ crate::t1("deri më {}", promotion.until()) }}</span>{% endfor %}
+          <span class="my-listing-price">{{ price }}</span>{% if !note.is_empty() %} <span class="my-listing-note">{{ note }}</span>{% endif %}
+          {%- if let Some(label) = listing.status_label() %} <span class="badge{% if let Some(tone) = listing.status_tone() %} {{ tone }}{% endif %}">{{ label }}</span>{% endif %}
+          {%- if let Some(soon) = listing.expires_soon() %} <span class="badge warn">{{ soon }}</span>{% endif %}
+          {%- for promotion in self.promoted(listing.public_no) %} <span class="badge promoted">{{ crate::t(promotion.name) }}, {{ crate::t1("deri më {}", promotion.until()) }}</span>{% endfor %}
         </span>
         <span class="my-listing-stats">
           <span title="{{ listing.stats.views_title() }}">{% call stat_icon(crate::web::icons::EYE) %}<span class="visually-hidden">{{ crate::t("Shikime") }}: </span>{{ crate::format::count(listing.stats.views) }}</span>
@@ -82,7 +94,7 @@
       <div class="my-listing-actions">
         {%- if listing.renewable() %}
         <form method="post" action="/listing/{{ listing.public_no }}/rifresko">
-          <button type="submit" class="button small">{{ crate::t("Rifresko") }}</button>
+          <button type="submit" class="button small"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::RENEW|safe }}</svg>{{ crate::t("Rifresko") }}</button>
         </form>
         {%- endif %}
         {%- if listing.editable() %}
@@ -120,11 +132,11 @@
     {% endfor %}
   </ul>
   {% endif %}
-  <p><a class="button" href="/shto">+ {{ crate::t("Shto një njoftim") }}</a></p>
+  <p class="my-listings-add"><a class="button" href="/shto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PLUS|safe }}</svg>{{ crate::t("Shto një njoftim") }}</a></p>
   {#- Last, signing out (account::sign_out, /dil), as "Cilësimet" has it too: the session ends
       and the welcome page comes, as the posting form's note offers too. -#}
   <form class="sign-out" action="/dil" method="post">
-    <button type="submit" class="button secondary">{{ crate::t("Dil nga llogaria") }}</button>
+    <button type="submit" class="button secondary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::LOG_OUT|safe }}</svg>{{ crate::t("Dil nga llogaria") }}</button>
   </form>
 </section>
 {% endblock %}
