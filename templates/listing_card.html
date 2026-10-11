@@ -62,8 +62,9 @@
     {#- In the list, under the title and the details, the start of its description, as many lines
         as the room under them holds (lines_controller.js; two without scripts, one on a phone),
         ending in "…" when it has more: the card opens the listing for the rest. The cards leave it
-        out (page.css). -#}
-    <p class="card-description" data-lines-target="text">{{ description }}</p>
+        out (page.css). The paragraph is the room, which the script measures; the words in it are
+        clamped to its lines, so that none shows past the last. -#}
+    <p class="card-description" data-lines-target="text"><span class="card-description-text">{{ description }}</span></p>
     {%- endif %}
     {#- The price, what follows it (/muaj, i diskutueshëm) a size down; one that dropped lately is
         followed, as on the listing's page, by what it was, struck through, and by how much, in a

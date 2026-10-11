@@ -7841,16 +7841,16 @@ async fn a_card_carries_the_start_of_its_description(pool: PgPool) {
     let golf = card_of(&html(pool.clone(), "/c/makina").await, 1001);
     let description = positions(&golf, &[
         r#"<h2 class="card-title">"#,
-        r#"<p class="card-description" data-lines-target="text">Makina është në gjendje shumë të mirë, e mirëmbajtur rregullisht. Kambio manuale, 148 000 km.</p>"#,
+        r#"<p class="card-description" data-lines-target="text"><span class="card-description-text">Makina është në gjendje shumë të mirë, e mirëmbajtur rregullisht. Kambio manuale, 148 000 km.</span></p>"#,
     ]);
     assert!(description.is_sorted(), "{golf}");
     // A long one, its lines run together, is cut at a word near 400 characters, ending in "…".
     let long = format!("Shumë e mirë.\n\n{}", "fjalë ".repeat(120));
     sqlx::query("UPDATE listings SET description = $2 WHERE public_no = $1").bind(1001_i64).bind(&long).execute(&pool).await.unwrap();
     let golf = card_of(&html(pool.clone(), "/c/makina").await, 1001);
-    let open = r#"<p class="card-description" data-lines-target="text">"#;
+    let open = r#"<p class="card-description" data-lines-target="text"><span class="card-description-text">"#;
     let text = &golf[golf.find(open).unwrap() + open.len()..];
-    let text = &text[..text.find("</p>").unwrap()];
+    let text = &text[..text.find("</span>").unwrap()];
     assert!(text.starts_with("Shumë e mirë. fjalë fjalë") && text.ends_with("fjalë…"), "{text}");
     assert!(text.chars().count() <= 401, "{}", text.chars().count());
     // An empty one, no block.
@@ -7866,10 +7866,13 @@ async fn a_card_carries_the_start_of_its_description(pool: PgPool) {
     assert!(!list_card[..list_card.find('}').unwrap()].contains("background:"), "no box at rest");
     assert!(css.contains(".cards-list .results .card:hover{background:var(--surface);box-shadow:var(--shadow);}"));
     assert!(css.contains(".cards-list .results .card:focus-within{background:var(--surface);box-shadow:var(--shadow);}"));
-    let text = &css[css.find(".cards-list .results .card-description{").expect("the list's description")..];
-    let text = &text[..text.find('}').unwrap()];
-    assert!(text.contains("align-self:stretch;") && text.contains("-webkit-line-clamp:var(--lines,2);"), "{text}");
-    assert!(css.contains(".cards-list .results .card-description{margin:0;padding-right:0;font-size:.8571rem;line-height:1.45;-webkit-line-clamp:var(--lines,1);line-clamp:var(--lines,1);}"));
+    // The room is the stretched paragraph; the clamp is on the words in it, so that no line shows
+    // past the last (on the stretched box itself the next one peeked out under it).
+    let room = &css[css.find(".cards-list .results .card-description{").expect("the list's description")..];
+    let room = &room[..room.find('}').unwrap()];
+    assert!(room.contains("align-self:stretch;") && room.contains("overflow:hidden;") && !room.contains("line-clamp"), "{room}");
+    assert!(css.contains(".cards-list .results .card-description-text{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:var(--lines,2);line-clamp:var(--lines,2);}"));
+    assert!(css.contains(".cards-list .results .card-description-text{-webkit-line-clamp:var(--lines,1);line-clamp:var(--lines,1);}"));
     assert!(css.contains("grid-template-rows:auto auto minmax(0,1fr) auto;"));
 }
 

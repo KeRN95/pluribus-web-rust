@@ -573,13 +573,16 @@
 .cards-list .results .card-summary { grid-area: summary; margin: 0; overflow: hidden; color: var(--muted); font-size: .875rem; text-overflow: ellipsis; white-space: nowrap; }
 .cards-list .results .card-summary:empty { display: none; }
 .cards-list .results .card-town { display: none; }
-/* The start of the description under them, stretched over the room its row has, as many whole
-   lines in it as fit (--lines, which lines_controller.js sets as the room changes; two without
-   scripts, one on a phone), ending in "…" when it has more: the card opens the listing for the
-   rest; none at all where there is no room for one line. Only in the list. */
+/* The start of the description under them: the paragraph stretched over the room its row has,
+   which lines_controller.js measures, and in it the words clamped to as many whole lines as fit
+   (--lines, which the script sets as the room changes; two without scripts, one on a phone),
+   ending in "…" when it has more: the card opens the listing for the rest; none at all where there
+   is no room for one line. The clamp is on the words inside, not on the stretched paragraph, which
+   would show the top of the line after the last through the room left under it. Only in the
+   list. */
 .card-description { display: none; }
 .cards-list .results .card-description {
-  display: -webkit-box;
+  display: block;
   grid-area: description;
   align-self: stretch;
   margin: 2px 0 0;
@@ -588,6 +591,10 @@
   font-size: .875rem;
   line-height: 1.55;
   overflow-wrap: anywhere;
+}
+.cards-list .results .card-description-text {
+  display: -webkit-box;
+  overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--lines, 2);
   line-clamp: var(--lines, 2);
@@ -617,7 +624,8 @@
   .cards-list .results .card-head { padding: 2px 0 0; }
   .cards-list .results .card-title { font-size: 1.0714rem; }
   .cards-list .results .card-summary { font-size: .9286rem; }
-  .cards-list .results .card-description { margin: 0; padding-right: 0; font-size: .8571rem; line-height: 1.45; -webkit-line-clamp: var(--lines, 1); line-clamp: var(--lines, 1); }
+  .cards-list .results .card-description { margin: 0; padding-right: 0; font-size: .8571rem; line-height: 1.45; }
+  .cards-list .results .card-description-text { -webkit-line-clamp: var(--lines, 1); line-clamp: var(--lines, 1); }
   .cards-list .results :is(.card-media .card-place, .card-when) { padding-bottom: 2px; font-size: .9286rem; }
   .cards-list .results .card-when { margin-left: calc(-1 * var(--space-12)); }
 }
