@@ -43,32 +43,34 @@
   --post: var(--main);
   --on-post: var(--on-main);
   --post-hover: var(--main-hover);
-  /* The accent, lime by default, one of five the menu offers (data-accent on <html>, below): the
-     logo's dot and what is new or unread, the dots and counts. Light as lime is, it is only ever a
-     background on the light theme, behind dark icons or numbers (--highlight-knob and
-     --highlight-icon: a magnifier or a bookmark dark on a lime circle), and an unread dot and the
-     logo's have a dark edge inside them on the white (--dot-edge, --logo-edge); the darker choices
-     colour the icon on the grey instead, take white numbers and need no edge. The names are the
+  /* The accent, lime by default, one of five the menu offers (data-accent on <html>, below), every
+     one as bright as lime since 2026-10-11, as the user asked (coral, orange, blue and mint, the
+     same in both themes; four darker ones before): the logo's dot and what is new or unread, the
+     dots and counts. Bright as they are, they are only ever a background on the light theme,
+     behind dark icons or numbers (--highlight-knob and --highlight-icon: a magnifier or a bookmark
+     dark on an accent circle, --on-highlight on a count, 6:1 at least), and an unread dot and the
+     logo's have a dark edge inside them on the white (--dot-edge, --logo-edge). The names are the
      Pluribus design system's (its tokens.json), as every token here. */
   --lime: #c8ff00;
-  --lime-knob: var(--lime);
-  --lime-icon: #1b1b1b;
-  /* The front page's search button, on its grey pill: lime with the dark magnifier; on the dark
-     theme, and with a darker accent, a grey a shade off the pill's, the magnifier in the accent. */
-  --search-knob: var(--lime);
-  /* A filter that is on (its chip, browse.css): the accent toned down, mixed into the page, 40% of
-     it on the light theme (24% on the dark, where more would dim the words), the words the text's;
-     a little more of it under the pointer. The user's ask of 2026-10-11, in place of the main
-     colour. */
-  --filter-on: color-mix(in srgb, var(--highlight) 40%, var(--bg));
-  --filter-on-hover: color-mix(in srgb, var(--highlight) 55%, var(--bg));
-  --logo-edge: rgb(27 27 27 / 45%);      /* a line inside the logo's lime dot, on white */
+  --choice-coral: #ff6b6b;
+  --choice-orange: #ff9f1c;
+  --choice-blue: #4dabff;
+  --choice-mint: #2de38c;
+  --highlight-knob: var(--highlight);
+  --highlight-icon: #1b1b1b;
+  /* The front page's search button, on its grey pill: the accent with the dark magnifier; on the
+     dark theme a grey a shade off the pill's, the magnifier in the accent. */
+  --search-knob: var(--highlight);
+  /* A filter that is on (its chip, browse.css): the accent toned down, mixed into the page, as much
+     of it as lets each accent show as itself with the words in the text's colour (--filter-share,
+     which the accent sets below, the light theme's and the dark's: lime, the lightest, the most of
+     it on the light theme and the least on the dark); a little more of it under the pointer. The
+     user's ask of 2026-10-11, in place of the main colour. */
+  --filter-share: var(--filter-share-light);
+  --filter-on: color-mix(in srgb, var(--highlight) var(--filter-share), var(--bg));
+  --filter-on-hover: color-mix(in srgb, var(--highlight) calc(var(--filter-share) + 12%), var(--bg));
+  --logo-edge: rgb(27 27 27 / 45%);      /* a line inside the logo's dot, on white */
   --dot-edge: inset 0 0 0 1.5px rgb(27 27 27 / 45%); /* a ring inside an unread dot, on white */
-  --choice-darkred: #9b1b1b;
-  --choice-terracotta: #ba5837;
-  --choice-blue: #4679a7;
-  --choice-olive: #5d6d46;
-  --on-choice: #ffffff;
   /* States: a kept listing's heart, places on a map, what is wrong. */
   --location: #4a7fb0;
   --red: #e0203a;
@@ -200,18 +202,12 @@
   --post: var(--highlight);
   --on-post: var(--on-highlight);
   --post-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
-  --lime-knob: var(--surface-muted);
-  --lime-icon: var(--lime);
+  --highlight-knob: var(--surface-muted);
+  --highlight-icon: var(--highlight);
   --search-knob: var(--surface-muted-hover);
-  --filter-on: color-mix(in srgb, var(--highlight) 24%, var(--bg));
-  --filter-on-hover: color-mix(in srgb, var(--highlight) 34%, var(--bg));
+  --filter-share: var(--filter-share-dark);
   --logo-edge: transparent;
   --dot-edge: 0 0 0 0 transparent;
-  --choice-darkred: #e37170;
-  --choice-terracotta: #de886c;
-  --choice-blue: #75a2d0;
-  --choice-olive: #91a477;
-  --on-choice: #1b1b1b;
   --location: #6a9bcc;
   --red: #ff4f5e;
   --red-bg: #4a2428;
@@ -267,18 +263,12 @@
     --post: var(--highlight);
     --on-post: var(--on-highlight);
     --post-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
-    --lime-knob: var(--surface-muted);
-    --lime-icon: var(--lime);
+    --highlight-knob: var(--surface-muted);
+    --highlight-icon: var(--highlight);
     --search-knob: var(--surface-muted-hover);
-    --filter-on: color-mix(in srgb, var(--highlight) 24%, var(--bg));
-    --filter-on-hover: color-mix(in srgb, var(--highlight) 34%, var(--bg));
+    --filter-share: var(--filter-share-dark);
     --logo-edge: transparent;
     --dot-edge: 0 0 0 0 transparent;
-    --choice-darkred: #e37170;
-    --choice-terracotta: #de886c;
-    --choice-blue: #75a2d0;
-    --choice-olive: #91a477;
-    --on-choice: #1b1b1b;
     --location: #6a9bcc;
     --red: #ff4f5e;
     --red-bg: #4a2428;
@@ -313,26 +303,21 @@
 }
 
 /* The accent the visitor picked (data-accent on <html>; lime when there is none): the colour
-   itself, what stands on it, and the circle a magnifier or a bookmark sits in and its line; a
-   darker choice needs no edge inside its dots. Each theme gives the choices its own shade above. */
+   itself, the same in both themes, what stands on it, dark on every one of them, and how much of
+   it a filter that is on takes, the light theme's and the dark's (--filter-share-light,
+   --filter-share-dark): the pale tint on the light theme and the deep one on the dark as strong
+   for each, more of a darker accent on the dark theme and less on the light, lime, the lightest,
+   the other way round. */
 :root {
   --highlight: var(--lime);
   --on-highlight: #1b1b1b;
-  --highlight-knob: var(--lime-knob);
-  --highlight-icon: var(--lime-icon);
+  --filter-share-light: 45%;
+  --filter-share-dark: 24%;
 }
-:root[data-accent="darkred"] { --highlight: var(--choice-darkred); }
-:root[data-accent="terracotta"] { --highlight: var(--choice-terracotta); }
-:root[data-accent="blue"] { --highlight: var(--choice-blue); }
-:root[data-accent="olive"] { --highlight: var(--choice-olive); }
-:root:is([data-accent="darkred"], [data-accent="terracotta"], [data-accent="blue"], [data-accent="olive"]) {
-  --on-highlight: var(--on-choice);
-  --highlight-knob: var(--surface-muted);
-  --highlight-icon: var(--highlight);
-  --search-knob: var(--surface-muted-hover);
-  --logo-edge: transparent;
-  --dot-edge: 0 0 0 0 transparent;
-}
+:root[data-accent="coral"] { --highlight: var(--choice-coral); --filter-share-light: 28%; --filter-share-dark: 38%; }
+:root[data-accent="orange"] { --highlight: var(--choice-orange); --filter-share-light: 35%; --filter-share-dark: 30%; }
+:root[data-accent="blue"] { --highlight: var(--choice-blue); --filter-share-light: 30%; --filter-share-dark: 34%; }
+:root[data-accent="mint"] { --highlight: var(--choice-mint); --filter-share-light: 38%; --filter-share-dark: 27%; }
 
 /* The old names, pointing at the new colours while the pages move to them one by one (until the
    clean-up, step 44 of the redesign): the old accent, buttons and their tint are the main colour
@@ -867,20 +852,19 @@ html:has(.menu[open]) { overflow: hidden; }
 .menu-about { display: flex; flex-wrap: wrap; column-gap: 18px; padding: 0 10px; font-size: var(--text-sm); }
 .menu-about a { display: inline-flex; align-items: center; min-height: var(--size-button-sm); color: var(--muted); text-decoration: none; }
 .menu-about a:hover { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
-/* The accents, round, 24px within a 40px tap: lime, then the four darker ones (data-accent, each
-   the theme's own shade), a hairline round each (--swatch-edge: lime alone hardly shows on
-   white), the one picked ringed in the text's colour. Radios, so the arrow keys go from one to
-   the next. */
+/* The accents, round, 24px within a 40px tap: lime, then coral, orange, blue and mint, as bright
+   as lime (data-accent), a hairline round each (--swatch-edge: lime alone hardly shows on white),
+   the one picked ringed in the text's colour. Radios, so the arrow keys go from one to the next. */
 .swatches { display: flex; align-items: center; margin-right: -8px; }
 input[type="radio"].swatch,
 input[type="radio"].swatch:checked { width: var(--size-button-sm); height: var(--size-button-sm); border: 0; border-radius: var(--radius-pill); background: transparent; box-shadow: none; }
 input[type="radio"].swatch::before { content: ""; width: 24px; height: 24px; border-radius: var(--radius-pill); background: var(--swatch); box-shadow: inset 0 0 0 1px var(--swatch-edge); }
 input[type="radio"].swatch:checked::before { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
 .swatch[value="lime"] { --swatch: var(--lime); }
-.swatch[value="darkred"] { --swatch: var(--choice-darkred); }
-.swatch[value="terracotta"] { --swatch: var(--choice-terracotta); }
+.swatch[value="coral"] { --swatch: var(--choice-coral); }
+.swatch[value="orange"] { --swatch: var(--choice-orange); }
 .swatch[value="blue"] { --swatch: var(--choice-blue); }
-.swatch[value="olive"] { --swatch: var(--choice-olive); }
+.swatch[value="mint"] { --swatch: var(--choice-mint); }
 @media (max-width: 719px) {
   .menu { width: 100%; box-shadow: none; }
   .menu-top { padding: 0 8px 0 var(--gutter); }

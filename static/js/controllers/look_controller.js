@@ -2,10 +2,11 @@ import { Controller } from "@hotwired/stimulus";
 
 // The look the visitor picks, kept in their browser (localStorage) as the theme is
 // (theme_controller.js): the text's size, "small" or "large" (data-text-size on <html>; the normal
-// one none), and the accent, "darkred", "terracotta", "blue" or "olive" (data-accent; lime none),
-// which the inline script in base.html puts back before each page's first paint
-// (web::THEME_SCRIPT). In the menu's "Pamja dhe gjuha" and the bar's "Aa": each shows which is
-// picked, and the others follow when one changes (look:changed).
+// one none), and the accent, "coral", "orange", "blue" or "mint" (data-accent; lime none), which
+// the inline script in base.html puts back before each page's first paint (web::THEME_SCRIPT,
+// which turns an older pick, "darkred", "terracotta" or "olive", into its bright one). In the
+// menu's "Pamja dhe gjuha": each control shows which is picked, and the others follow when one
+// changes (look:changed).
 export default class extends Controller {
   static targets = ["size", "accent"];
 

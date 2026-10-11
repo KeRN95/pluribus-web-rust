@@ -98,17 +98,17 @@ Ngjyra
 Lime
 = Lime
 
-E kuqe e errët
-= Dark red
+Koral
+= Coral
 
-Terrakota
-= Terracotta
+Portokalli
+= Orange
 
 Blu
 = Blue
 
-Ulliri
-= Olive
+Nenexhik
+= Mint
 
 Njoftimet e mia
 = My listings

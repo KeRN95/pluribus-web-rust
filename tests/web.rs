@@ -4796,7 +4796,7 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
         for size in ["small", "normal", "large"] {
             assert!(menu.contains(&format!(r#"data-look-size-param="{size}""#)), "{size}");
         }
-        for accent in ["lime", "darkred", "terracotta", "blue", "olive"] {
+        for accent in ["lime", "coral", "orange", "blue", "mint"] {
             assert!(menu.contains(&format!(r#"<input type="radio" class="swatch" name="accent" value="{accent}""#)), "{accent}");
         }
         assert!(menu.contains(r#"<input type="checkbox" class="switch" role="switch" data-controller="theme""#));
@@ -4839,6 +4839,21 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     }
     let count = &css[css.find("}.menu-count{").expect("the menu's counts") + 1..];
     assert!(count[..count.find('}').unwrap()].contains("background:var(--highlight)"));
+    // Every accent as bright as lime (2026-10-11), the same in both themes and dark words on each,
+    // a filter that is on taking as much of it as each needs; a pick from before, a darker one,
+    // comes back as its bright one.
+    for rule in [
+        "--choice-coral:#ff6b6b;",
+        "--choice-orange:#ff9f1c;",
+        "--choice-blue:#4dabff;",
+        "--choice-mint:#2de38c;",
+        r#":root[data-accent="coral"]{--highlight:var(--choice-coral);--filter-share-light:28%;--filter-share-dark:38%;}"#,
+        "--filter-on:color-mix(in srgb,var(--highlight) var(--filter-share),var(--bg));",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    assert_eq!(css.matches("--on-highlight:").count(), 1);
+    assert!(home.contains(r#"const older = { darkred: "coral", terracotta: "orange", olive: "mint" };"#));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
