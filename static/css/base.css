@@ -453,22 +453,32 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 
 /* Header */
 
+/* The bar over every page, as the canvas draws it: white on the light theme, the page's own
+   colour on the dark one (--header), a hairline under it, 60px tall (56px on phones,
+   --size-header), its row as wide as the page's column (--content-width, .container, page.css)
+   and its buttons 4px apart. It stays at the top as the page scrolls. */
 .site-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  background: var(--header);
   border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(12px);
 }
 
 .header-inner {
   display: flex;
   align-items: center;
-  gap: .75rem;
-  max-width: 1100px;
+  gap: var(--space-4);
+  max-width: calc(var(--content-width) + 2 * var(--gutter));
+  height: var(--size-header);
   margin: 0 auto;
-  padding: .65rem 1rem;
+  padding: 0 var(--gutter);
+}
+/* On phones the bar is 56px, and its last button comes nearer the screen's edge, its icon where the
+   page's gutter ends. */
+@media (max-width: 719px) {
+  :root { --size-header: 56px; }
+  .header-inner { padding: 0 8px 0 var(--gutter); }
 }
 
 /* The logo: the name in lowercase in Clash Display Semibold (Indian Type Foundry's, from
@@ -548,49 +558,53 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .search .icon-button { background: var(--button); color: var(--on-button); }
 .search .icon-button:hover { background: var(--button-hover); }
 
-/* The listings kept, the conversations, the account and, after it, the theme: round buttons on
-   the surface at the top bar's right end, the logo's margin taking the room before them, plain
-   as the account is (tint marks what is picked or open, not where to go). The welcome page's bar
-   has the account and the theme alone: its listings kept and conversations are the round buttons
-   in the row with its search (home.html, welcome.css), as posting is on no other page. */
+/* The listings kept, the conversations, the account and, after it, the theme: bare round buttons
+   at the bar's right end, as the canvas draws them, 40px (--size-button-sm) with their icons at
+   22px in the words' colour, a grey circle under the pointer; the logo's margin takes the room
+   before them. The welcome page's bar has the account and the theme alone: its listings kept and
+   conversations are the round buttons in the row with its search (home.html, welcome.css), as
+   posting is on no other page. */
 .logo { margin-right: auto; }
 .saved-button,
 .inbox-button,
 .account-button,
-.theme-toggle { background: var(--surface); border-color: var(--border); }
-.saved-button:hover,
-.inbox-button:hover,
-.account-button:hover,
-.theme-toggle:hover { background: var(--surface-muted); }
-/* The conversations' count (messages.css), the kept listings' dot and the account's (a listing of
-   the user's about to expire or expired, account_controller.js) sit on the button's edge,
-   ringed in its surface. */
-.saved-button,
-.inbox-button,
-.account-button { position: relative; }
+.theme-toggle { position: relative; width: var(--size-button-sm); height: var(--size-button-sm); border: 0; }
+@media (hover: hover) {
+  .saved-button:hover,
+  .inbox-button:hover,
+  .account-button:hover,
+  .theme-toggle:hover { background: var(--surface-muted); }
+}
+/* What is new, in the accent (--highlight), as everything unread is: the conversations' count
+   (messages.css), and a dot of 8px on the kept listings' heart while some dropped their price
+   unseen (heart_controller.js) and on the account while a listing of the user's is about to
+   expire or expired (account_controller.js), ringed in the bar's colour, with a dark edge inside
+   it on the light theme, where lime alone hardly shows on white (--dot-edge). */
 .saved-button.has-drops::before,
 .account-button.has-news::before {
   content: "";
   position: absolute;
-  top: 12%;
-  right: 12%;
-  width: .5rem;
-  height: .5rem;
-  border-radius: 50%;
-  background: var(--button);
-  box-shadow: 0 0 0 2px var(--surface);
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--highlight);
+  box-shadow: 0 0 0 2px var(--header), var(--dot-edge);
 }
-/* Trying typefaces (TYPE_TRIAL=true; base.html, type_trial_controller.js): "Aa" before the
-   account, a round button like it, marked as an open menu is while its panel shows; the panel
-   under the bar's right end, a card like the menus', with the headings' and the text's lists and
-   their weight sliders, each slider's number after it, and "Rikthe". The headings' weights come
-   from it as --heading-weight and --subheading-weight (h1 and h2, above), the text's as --regular
-   and --semibold. */
+/* Trying typefaces (TYPE_TRIAL=true; base.html, type_trial_controller.js): "Aa" after the logo, a
+   bare round button like the bar's others, its letters 15px bold, in the main colour while its
+   panel shows, as an open menu's button is; the panel under the bar's right end, a card like the
+   menus', with the headings' and the text's lists and their weight sliders, each slider's number
+   after it, and "Rikthe". The headings' weights come from it as --heading-weight and
+   --subheading-weight (h1 and h2, above), the text's as --regular and --semibold. */
 .type-menu { position: relative; }
-.type-menu > summary { list-style: none; cursor: pointer; background: var(--surface); border-color: var(--border); font-size: var(--text-sm); font-weight: var(--semibold); }
+.type-menu > summary { width: var(--size-button-sm); height: var(--size-button-sm); border: 0; list-style: none; cursor: pointer; font-size: .9375rem; font-weight: var(--bold); }
 .type-menu > summary::-webkit-details-marker { display: none; }
-.type-menu > summary:hover { background: var(--surface-muted); }
-.type-menu[open] > summary { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+@media (hover: hover) {
+  .type-menu > summary:hover { background: var(--surface-muted); }
+}
+.type-menu[open] > summary { background: var(--main); color: var(--on-main); }
 .type-panel {
   position: absolute;
   top: calc(100% + .5rem);

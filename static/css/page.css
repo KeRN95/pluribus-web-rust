@@ -3,7 +3,7 @@
 
 /* Page */
 
-.container { max-width: 1100px; margin: 0 auto; padding: 0 var(--gutter) 3rem; }
+.container { max-width: calc(var(--content-width) + 2 * var(--gutter)); margin: 0 auto; padding: 0 var(--gutter) 3rem; }
 
 .categories { display: flex; gap: .5rem; overflow-x: auto; padding: 1rem 0 .25rem; scrollbar-width: none; }
 
@@ -815,12 +815,13 @@ a.notification-line:hover .notification-title { text-decoration: underline; text
 .language-switch button { padding: .65rem .5rem; border: 0; background: none; color: var(--text); font: inherit; cursor: pointer; }
 .language-switch button:hover { text-decoration: underline; }
 
-/* English offered at the top of the page (web/language.rs): a quiet band above the header, its
-   question and the two answers on a line where they fit. */
-.language-offer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem 1rem; padding: .6rem 16px; background: var(--surface-muted); border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+/* English offered at the top of the page (web/language.rs): a quiet band above the header, in the
+   grey of secondary controls (so its words are the text's colour, as the design system has words
+   on that grey), its question and the two answers on a line where they fit: "English" a small
+   button in the main colour, "Vazhdo në shqip" underlined, each 40px tall to tap. */
+.language-offer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-8) var(--space-16); padding: var(--space-8) var(--gutter); background: var(--surface-muted); border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
 .language-offer p { margin: 0; color: var(--text); }
-.language-offer .button { min-height: 2.25rem; padding: 0 1rem; }
-.language-stay { padding: .5rem; border: 0; background: none; color: var(--muted); font: inherit; cursor: pointer; text-decoration: underline; }
+.language-stay { min-height: var(--size-button-sm); padding: 0 .5rem; border: 0; background: none; color: var(--text); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .site-footer p { margin: 0; }
 
 /* The pages about the site: a column of text as wide as a line reads well, the sections'

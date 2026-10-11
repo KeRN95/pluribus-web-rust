@@ -49,7 +49,7 @@
       offered in English, until they choose either (web/language.rs). -#}
   <form class="language-offer" method="post" action="/gjuha" lang="en">
     <p>Pluribus is in Albanian. Would you like it in English?</p>
-    <button type="submit" class="button" name="gjuha" value="en">English</button>
+    <button type="submit" class="button small" name="gjuha" value="en">English</button>
     <button type="submit" class="language-stay" name="gjuha" value="sq" lang="sq">Vazhdo në shqip</button>
   </form>
   {%- endif %}
@@ -99,17 +99,18 @@
         </form>
       </details>
       {%- endif %}
-      {#- Before the account, the listings kept and the conversations, round buttons like it, so
-          that every page reaches them in a tap: the heart, with a dot while kept listings dropped
-          their price unseen (heart_controller.js), and the speech bubble, with how many
-          conversations have messages unread (inbox_controller.js). The welcome page has them in
-          the row with its search instead (home.html empties the block). -#}
+      {#- Before the account, the listings kept and the conversations, bare round buttons like
+          it, so that every page reaches them in a tap: the heart, with a dot in the accent while
+          kept listings dropped their price unseen (heart_controller.js), and the speech bubble,
+          with how many conversations have messages unread, in the accent too
+          (inbox_controller.js). The welcome page has them in the row with its search instead
+          (home.html empties the block). -#}
       {%- block header_shortcuts %}
       <a class="icon-button saved-button" href="/te-ruajturat" aria-label="{{ crate::t("Të ruajturat") }}" title="{{ crate::t("Të ruajturat") }}">
-        <svg data-icon="heart" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg>
+        <svg data-icon="heart" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::HEART|safe }}</svg>
       </a>
       <a class="icon-button inbox-button" href="/mesazhet" aria-label="{{ crate::t("Mesazhet") }}" title="{{ crate::t("Mesazhet") }}" data-controller="inbox">
-        <svg data-icon="message-circle" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
+        <svg data-icon="message-circle" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHAT|safe }}</svg>
         <span class="inbox-count" data-inbox-target="count" hidden></span>
       </a>
       {%- endblock %}
@@ -119,14 +120,14 @@
           the welcome page's round plus, in the row with its search (home.html), and no top
           bar's. -#}
       <a class="icon-button account-button" href="/llogaria" aria-label="{{ crate::t("Llogaria") }}" title="{{ crate::t("Llogaria") }}" data-controller="account">
-        <svg data-icon="user" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+        <svg data-icon="user" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
       </a>
       {#- After the account, the theme: a moon on the light one, a sun on the dark, the theme it
           switches to (theme_controller.js), on every page, the welcome page's too. -#}
       {%- block theme_toggle %}
       <button type="button" class="icon-button theme-toggle" data-controller="theme" data-action="theme#toggle" aria-label="{{ crate::t("Tema e errët") }}" aria-pressed="false" title="{{ crate::t("Tema e errët") }}">
-        <svg class="icon-moon" data-icon="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MOON|safe }}</svg>
-        <svg class="icon-sun" data-icon="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SUN|safe }}</svg>
+        <svg class="icon-moon" data-icon="moon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::MOON|safe }}</svg>
+        <svg class="icon-sun" data-icon="sun" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::SUN|safe }}</svg>
       </button>
       {%- endblock %}
     </div>

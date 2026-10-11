@@ -385,21 +385,23 @@
 @media (hover: hover) {
   .post-shortcut:hover { border-color: transparent; background: var(--post-hover); }
 }
-/* The conversations' count of those unread (messages.css), ringed in the button's tint. */
-.inbox-shortcut .inbox-count { box-shadow: 0 0 0 2px var(--tone-bg); }
-/* The listings kept: a dot in the buttons' coral at the heart's top right while some dropped their
-   price unseen (heart_controller.js; ::before, as a phone's target is ::after),
-   ringed in the button's tint. */
+/* The conversations' count of those unread (messages.css), on the circle's edge, ringed in the
+   button's grey. */
+.inbox-shortcut .inbox-count { top: -2px; right: -2px; box-shadow: 0 0 0 2px var(--tone-bg); }
+/* The listings kept: a dot of 8px in the accent at the heart's top right while some dropped their
+   price unseen, as the bar's heart has it (base.css; heart_controller.js; ::before, as a phone's
+   target is ::after), ringed in the button's grey, with the dark edge inside it on the light
+   theme (--dot-edge). */
 .saved-shortcut.has-drops::before {
   content: "";
   position: absolute;
   top: 15%;
   right: 15%;
-  width: .55rem;
-  height: .55rem;
-  border-radius: 50%;
-  background: var(--button);
-  box-shadow: 0 0 0 2px var(--tone-bg);
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--highlight);
+  box-shadow: 0 0 0 2px var(--tone-bg), var(--dot-edge);
 }
 @media (prefers-reduced-motion: reduce) {
   .circle-shortcut:active { transform: none; }

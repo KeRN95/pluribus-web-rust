@@ -4663,6 +4663,30 @@ async fn cards_are_drawn_as_the_canvas_has_them(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
+async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
+    // The bar over every page: white on the light theme and the page's colour on the dark one (the
+    // header token), a hairline under it, as tall as the design system has it; its round buttons
+    // bare, 40px; what is unread in the accent, a dot ringed in the bar's colour with its edge on
+    // the light theme, the conversations' count with its number on the accent. (The stylesheet
+    // comes minified: web::site_css.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let rule = |selector: &str| {
+        let at = css.find(&format!("}}{selector}{{")).unwrap_or_else(|| panic!("{selector}"));
+        let rule = &css[at + 1..];
+        rule[..rule.find('}').unwrap()].to_string()
+    };
+    let header = rule(".site-header");
+    assert!(header.contains("background:var(--header)") && header.contains("border-bottom:1px solid var(--border)"), "{header}");
+    assert!(rule(".header-inner").contains("height:var(--size-header)"));
+    let buttons = rule(".saved-button,.inbox-button,.account-button,.theme-toggle");
+    assert!(buttons.contains("width:var(--size-button-sm)") && buttons.contains("border:0"), "{buttons}");
+    let dot = rule(".saved-button.has-drops::before,.account-button.has-news::before");
+    assert!(dot.contains("background:var(--highlight)") && dot.contains("box-shadow:0 0 0 2px var(--header),var(--dot-edge)"), "{dot}");
+    let count = rule(".inbox-count");
+    assert!(count.contains("background:var(--highlight)") && count.contains("color:var(--on-highlight)"), "{count}");
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn a_short_descriptions_fold_button_stays_hidden(pool: PgPool) {
     // The button that unfolds a long description waits with the hidden attribute until the
     // controller finds the description long (fold_controller.js). Its own display rule would

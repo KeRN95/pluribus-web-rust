@@ -1,22 +1,23 @@
 /* Messages (messages.rs): the header's count, the inbox, a conversation and the box to write in. */
 
 /* The button for the conversations, in the top bar (base.html) or the welcome page's row with its
-   search (home.html, welcome.css, which rings it in the button's tint): how many have messages
-   unread, in the buttons' coral at its top right (inbox_controller.js). */
+   search (home.html, welcome.css, which rings it in the button's grey): how many have messages
+   unread, at its top right, in the accent as everything unread is (--highlight), the number dark
+   on lime (--on-highlight), 11px bold in a pill 18px tall, as the canvas draws it
+   (inbox_controller.js). */
 .inbox-count {
   position: absolute;
-  top: -.3rem;
-  right: -.35rem;
-  min-width: 1.15rem;
-  height: 1.15rem;
-  padding: 0 .28rem;
-  border-radius: 999px;
-  background: var(--button);
-  color: var(--on-button);
-  box-shadow: 0 0 0 2px var(--surface);
-  font-size: .7rem;
+  top: 3px;
+  right: 1px;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--highlight);
+  color: var(--on-highlight);
+  font-size: .6875rem;
   font-weight: var(--bold);
-  line-height: 1.15rem;
+  line-height: 1.125rem;
   text-align: center;
 }
 .inbox-count[hidden] { display: none; }

@@ -5,11 +5,11 @@
 /* Its path as far below the header as the welcome page's first line and a category page's path,
    as the page's sides are from the screen's (--gutter). */
 .listing { max-width: 760px; padding-top: var(--gutter); }
-/* At least a screen tall, less the header (its padding, its button and its hairline, base.css)
+/* At least a screen tall, less the header (its height and its hairline, base.css)
    and the gap over "Njoftime të ngjashme" (.related; the gap over the path is the listing's own
    padding, inside its height), so that the section starts just out of view on a short listing's
    page, as it does on a long one; svh, so that a phone's toolbars count as showing. */
-.listing { min-height: calc(100vh - 3.55rem - 1px - 2.5rem); min-height: calc(100svh - 3.55rem - 1px - 2.5rem); }
+.listing { min-height: calc(100vh - var(--size-header) - 1px - 2.5rem); min-height: calc(100svh - var(--size-header) - 1px - 2.5rem); }
 /* Its parts in grids rather than the flow: the page's (its notices, its path, its photos and the
    rest, .listing-side) and the rest's (the title and the price, the contact bar, the share and the
    report, the details, the description, the seller's card and the map), so that on a phone the
@@ -168,23 +168,23 @@
      listing (three by four of seven twelfths of the page, or as tall as the screen leaves it,
      below), so the path keeps its height as one steps through them whatever the column beside
      the photo holds; a column taller than the photo runs on under the screen. Under the header
-     (3.55rem and a hairline, base.css) stand the page's gutter, the banner and its gutter, the
+     (--size-header and a hairline, base.css) stand the page's gutter, the banner and its gutter, the
      path (its round buttons, 2.95rem and 2px, browse.css, and .75rem under them) and the frame;
      the room under the frame reaches the page's foot (its min-height, above, 2.5rem over the
      section) and on through the 2.5rem under it to the screen's. None where the frame takes
      all the room. */
-  .listing-split > .listing-banner { height: max(0px, calc((100svh - 11.25rem - 3px - min((min(60rem, 100vw - 2rem) - 2rem) * 7 / 9, 100vh - 12.05rem - 1px)) / 2)); }
-  /* The photo and its filmstrip stay put under the top bar (3.55rem and its hairline, base.css,
+  .listing-split > .listing-banner { height: max(0px, calc((100svh - var(--size-header) - 7.7rem - 3px - min((min(60rem, 100vw - 2rem) - 2rem) * 7 / 9, 100vh - var(--size-header) - 8.5rem - 1px)) / 2)); }
+  /* The photo and its filmstrip stay put under the top bar (--size-header and its hairline, base.css,
      and 1rem under it) while the column beside them scrolls, and go with the page once the
      column has all gone by: sticky within their grid row, which the column's height sets. The
      frame is no taller than the screen leaves room for under the bar, less 6.5rem (the 5.5rem
      the filmstrip took under it before it went over the photo's foot, and 1rem), so that the
      photo stays in sight whole while it stands still; a wide screen that is short gets a wider
      frame, its blurred copy filling the sides, as across the page. */
-  .listing-split > .listing-media { grid-column: 1; align-self: start; position: sticky; top: calc(4.55rem + 1px); }
+  .listing-split > .listing-media { grid-column: 1; align-self: start; position: sticky; top: calc(var(--size-header) + 1rem + 1px); }
   .listing-split > .listing-side { grid-column: 2; grid-template-columns: minmax(0, 1fr) auto; }
   .listing-split .listing-media .gallery-photo,
-  .listing-split .listing-media .listing-photo { aspect-ratio: 3 / 4; height: auto; max-height: calc(100vh - 12.05rem - 1px); }
+  .listing-split .listing-media .listing-photo { aspect-ratio: 3 / 4; height: auto; max-height: calc(100vh - var(--size-header) - 8.5rem - 1px); }
   .listing-split .listing-side > :is(.listing-header, .listing-details, .listing-description),
   .listing-split .listing-deal > .price-box { max-width: none; }
   .listing-split .listing-header h1 { margin-top: 0; }
@@ -325,7 +325,7 @@
   .listing-car .listing-deal > .listing-map-section { margin-top: 1.5rem; }
   .listing-car .listing-deal .listing-map { aspect-ratio: 1; height: auto; }
   .listing-car .listing-media .gallery-photo,
-  .listing-car .listing-media .listing-photo { aspect-ratio: 4 / 3; height: auto; max-height: calc(100vh - 12.05rem - 1px); }
+  .listing-car .listing-media .listing-photo { aspect-ratio: 4 / 3; height: auto; max-height: calc(100vh - var(--size-header) - 8.5rem - 1px); }
   .listing-car .listing-side { grid-template-columns: minmax(0, 1fr) 21rem; column-gap: 2rem; }
   .listing-car .listing-side > * { grid-column: 1; max-width: none; }
   .listing-car .listing-side > .listing-deal { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; grid-row: 1 / span 40; align-self: start; }
