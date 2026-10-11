@@ -524,6 +524,18 @@ h2 { margin: 1.75rem 0 .75rem; font-size: var(--text-xl); font-weight: var(--sub
 .stand-in-text { color: transparent; background: var(--placeholder-from); border-radius: 6px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .stand-in-listing .key-fact-icon { border-radius: 8px; background: var(--placeholder-from); }
 .stand-in-listing .attribute { color: transparent; }
+/* So that nothing moves as the page fills it, whatever the page's size and the text's (the user's
+   report of 2026-10-11, "on some settings site jumps"). On a phone its contact bar stands at the
+   screen's foot, with the shadow of the page's bar there: the page's is sticky, last in a column
+   that runs on under the screen (listing.css), while the stand-in's column is short, and on a
+   small page or text size it ended over the foot, the bar floating there until the page dropped
+   it down, up to 140px. And the loan's circle, empty, sits at its line's top: on the words'
+   baseline, as the page's, with its icon in it, sits unharmed, it took the line's descent under it
+   too, the price's row up to 7px taller than the page's. */
+@media (max-width: 719px) {
+  .stand-in-listing .contact-bar { position: fixed; right: 0; bottom: 0; left: 0; margin: 0; box-shadow: 0 -2px 6px rgb(0 0 0 / 6%), 0 -8px 20px rgb(0 0 0 / 8%); }
+}
+.stand-in-listing .bubble > summary { vertical-align: top; }
 /* The card's copy of a listing's first photo, softly blurred, in the stand-in and on the page until
    the page's own photo has loaded over it (application.js, interim): the listing's photo frame
    lays it out as its photo (listing.css, .gallery-photo img). */

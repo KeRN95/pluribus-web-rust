@@ -4908,6 +4908,19 @@ async fn a_listing_folds_the_bars_search_behind_a_magnifier(pool: PgPool) {
     assert!(application.contains("`search-folded`") && application.contains("`search-open`"), "{application}");
 }
 
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn a_listings_stand_in_holds_still_at_every_page_and_text_size(pool: PgPool) {
+    // As a listing's page fills its stand-in, nothing moves, whatever the page's size and the text's
+    // (the user's report of 2026-10-11, "on some settings site jumps"; measured at all sixteen on a
+    // 390px phone): on a phone the stand-in's contact bar stands at the screen's foot, where the
+    // page's sticky one is (the stand-in's short column ended over the foot on a small page or text
+    // size, the bar floating there), and the loan's empty circle sits at its line's top, as tall as
+    // the page's with its icon. (The stylesheet comes minified: web::site_css.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    assert!(css.contains("@media (max-width:719px){.stand-in-listing .contact-bar{position:fixed;right:0;bottom:0;left:0;margin:0;"), "the bar at the foot");
+    assert!(css.contains(".stand-in-listing .bubble > summary{vertical-align:top;}"));
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_way_back_is_a_chevron_level_with_its_words(pool: PgPool) {
     // The breadcrumb's way back is Phosphor's chevron, its Regular weight's (the Duotone's caret is
