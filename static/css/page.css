@@ -513,15 +513,19 @@
   :is(.cards-big .results, .big-cards) .card-step::before { transition: none; }
 }
 
-/* The list (the view menu), as the canvas draws it: one listing a white box (the surface, rounder
-   corners, the soft shadow), 12px apart, the whole of the page's width. In it the photo at the
-   left, its first alone, 240 by 180 with corners of 12px (a square of 116px on phones), the price
-   on it at its foot over the shade and the heart white at its top right, as a card's are; beside
-   it the title (17px semibold; 15px on up to two lines on phones), the details line under it,
-   muted (its town left out, .card-town), the start of the description, two lines at most (none on
-   phones), and at the foot where it is and when it was posted, muted, "Blloku, Tiranë · Dje"
-   (.card-place and .card-when, which the cards leave out). The photo's box (.card-media) gives its
-   parts to the card's own grid, the seller over the photo left out. */
+/* The list (the view menu): one listing a line 12px from the next, the whole of the page's width,
+   on the page itself, with no box round it but under the pointer or the keyboard's focus, the white
+   box the canvas draws (the surface, rounder corners, the soft shadow), as the user asked on
+   2026-10-11 (a box round every one until then); its padding taken back, so that the photo stands
+   on the page's edge as the heading over the list does, the box reaching out round it. In it the
+   photo at the left, its first alone, 240 by 180 with corners of 12px (a square of 116px on
+   phones), the price on it at its foot over the shade and the heart white at its top right, as a
+   card's are; beside it the title (17px semibold; 15px on up to two lines on phones), the details
+   line under it, muted (its town left out, .card-town), the start of the description, two lines
+   at most (one on phones, since the same day), and at the foot where it is and when it was
+   posted, muted, "Blloku, Tiranë · Dje" (.card-place and .card-when, which the cards leave out),
+   each cut with "…" where its room ends. The photo's box (.card-media) gives its parts to the
+   card's own grid, the seller over the photo left out. */
 .card-when,
 .card-place { display: none; }
 .cards-list .results .grid { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-12); }
@@ -537,10 +541,14 @@
      beside it, two lines of title and of description at most, fit in its height at every text
      size. */
   height: calc(180px / var(--page-scale) + 24px);
+  margin-inline: -12px;
   padding: 12px;
   border-radius: var(--radius-box);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  transition: background-color .15s, box-shadow .15s;
+}
+.cards-list .results .card:focus-within { background: var(--surface); box-shadow: var(--shadow); }
+@media (hover: hover) {
+  .cards-list .results .card:hover { background: var(--surface); box-shadow: var(--shadow); }
 }
 .cards-list .results .card::before { content: none; }
 .cards-list .results :is(.card-media, .card-body) { display: contents; }
@@ -564,8 +572,8 @@
 .cards-list .results .card-summary { grid-area: summary; margin: 0; overflow: hidden; color: var(--muted); font-size: .875rem; text-overflow: ellipsis; white-space: nowrap; }
 .cards-list .results .card-summary:empty { display: none; }
 .cards-list .results .card-town { display: none; }
-/* The start of the description under them, two lines at most, ending in "…" when it has more: the
-   card opens the listing for the rest. Only in the list, and not on phones. */
+/* The start of the description under them, two lines at most (one on a phone, below), ending in
+   "…" when it has more: the card opens the listing for the rest. Only in the list. */
 .card-description { display: none; }
 .cards-list .results .card-description {
   display: -webkit-box;
@@ -592,11 +600,12 @@
   .cards-list .results .grid { row-gap: 10px; }
   .cards-list .results .card {
     grid-template-columns: calc(116px / var(--page-scale)) auto minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr);
-    grid-template-areas: "photo title title" "photo summary summary" "photo place when";
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas: "photo title title" "photo summary summary" "photo description description" "photo place when";
     column-gap: var(--space-12);
     row-gap: 3px;
     height: calc(116px / var(--page-scale) + 20px);
+    margin-inline: -10px;
     padding: 10px;
   }
   .cards-list .results :is(.card-slides, .card-media > .card-photo),
@@ -605,7 +614,7 @@
   .cards-list .results .card-head { padding: 2px 0 0; }
   .cards-list .results .card-title { font-size: 1.0714rem; }
   .cards-list .results .card-summary { font-size: .9286rem; }
-  .cards-list .results .card-description { display: none; }
+  .cards-list .results .card-description { display: block; max-height: none; margin: 0; padding-right: 0; font-size: .8571rem; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
   .cards-list .results :is(.card-media .card-place, .card-when) { padding-bottom: 2px; font-size: .9286rem; }
   .cards-list .results .card-when { margin-left: calc(-1 * var(--space-12)); }
 }

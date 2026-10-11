@@ -7838,6 +7838,15 @@ async fn a_card_carries_the_start_of_its_description(pool: PgPool) {
     // An empty one, no block.
     sqlx::query("UPDATE listings SET description = '' WHERE public_no = $1").bind(1001_i64).execute(&pool).await.unwrap();
     assert!(!card_of(&html(pool.clone(), "/c/makina").await, 1001).contains("card-description"));
+    // In the list a listing has no box round it but under the pointer or the keyboard's focus, and
+    // its description shows on a phone too, one line there, cut with "…" (the user's ask of
+    // 2026-10-11). (The stylesheet comes minified: web::site_css.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let list_card = &css[css.find(".cards-list .results .card{").expect("the list's card")..];
+    assert!(!list_card[..list_card.find('}').unwrap()].contains("background:"), "no box at rest");
+    assert!(css.contains(".cards-list .results .card:hover{background:var(--surface);box-shadow:var(--shadow);}"));
+    assert!(css.contains(".cards-list .results .card:focus-within{background:var(--surface);box-shadow:var(--shadow);}"));
+    assert!(css.contains(".cards-list .results .card-description{display:block;max-height:none;margin:0;padding-right:0;font-size:.8571rem;line-height:1.45;text-overflow:ellipsis;white-space:nowrap;}"));
 }
 
 /// Sets a listing's price, as its seller's edit does, which listing_price_history records.
