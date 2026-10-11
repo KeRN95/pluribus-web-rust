@@ -7677,17 +7677,17 @@ async fn a_category_page_says_where_it_is_over_its_name(pool: PgPool) {
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
     assert!(gps.contains(r#"<a class="breadcrumb-back title-back" href="/c/pjese-dhe-aksesore" aria-label="Kthehu""#));
     assert!(!gps.contains("breadcrumb-up"), "{gps}");
-    // The way back on a circle in the accent, the chevron dark on it, a shade darker under the
-    // pointer. (The stylesheet comes minified: web::site_css.)
+    // The way back is the bare chevron in the words' colour, a grey circle under the pointer (on a
+    // circle in the accent for a moment on 2026-10-11, which the user asked back the same day).
+    // (The stylesheet comes minified: web::site_css.)
     let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for rule in [
-        "margin:0;border-radius:var(--radius-pill);background:var(--highlight);color:var(--on-highlight);",
-        ".breadcrumb-back:active{background-color:var(--highlight-hover);}",
-        ".title-back{align-self:flex-start;width:1.2em;height:1.2em;margin:-.03em -6px 0 -.1em;padding:.1em;background-clip:content-box;font-size:1.875rem;}",
+        ".breadcrumb-back{display:flex;flex:none;align-items:center;justify-content:center;width:var(--size-button-sm);height:var(--size-button-sm);margin:0 -4px 0 -12px;border-radius:var(--radius-pill);color:var(--text);}",
+        ".title-back{align-self:flex-start;height:1.2em;margin:-.03em -8px 0 -12px;font-size:1.875rem;}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
-    assert!(!css.contains(".browse-up"));
+    assert!(!css.contains(".browse-up") && !css.contains(".breadcrumb-back:active"));
     // A main category's page has no breadcrumb since the user's ask of 2026-10-11 (it said "Kreu"
     // over the page's name): its way back, to the welcome page without scripts, stands before its
     // name; its subcategories stand under its heading. A search's heading stays a heading, without

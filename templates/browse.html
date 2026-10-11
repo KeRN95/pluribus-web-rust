@@ -69,10 +69,10 @@
 <div class="browse-heading">
   <div class="browse-heading-text">
     {%- if category_page %}
-    {#- A category's way back: the chevron before its name, on a circle in the accent, to the page
-        before, or, opened from elsewhere, the category above it or the welcome page
-        (back_controller.js). A subcategory's page names the category above it nowhere else: the
-        user asked on 2026-10-11 for its line over the name to go. -#}
+    {#- A category's way back: the chevron before its name, to the page before, or, opened from
+        elsewhere, the category above it or the welcome page (back_controller.js). A subcategory's
+        page names the category above it nowhere else: the user asked on 2026-10-11 for its line
+        over the name to go. -#}
     <a class="breadcrumb-back title-back" href="{% if let Some(parent) = parent %}{{ parent.url }}{% else %}/{% endif %}" aria-label="{{ crate::t("Kthehu") }}" title="{{ crate::t("Kthehu") }}" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">{{ crate::web::icons::CHEVRON_LEFT|safe }}</svg></a>
     {%- endif %}
     <h1 class="browse-title">{{ heading }}</h1>
