@@ -3,10 +3,11 @@
     signed in by e-mail), and a message, "Shkruaji shitësit", wide pills that say their names, the
     way to the seller being what the page is for; on a phone a bar at the foot of the screen, which
     stays while the listing scrolls, a slight shadow over it while it floats (listing.css,
-    .contact-bar; sticky_controller.js). Nothing for a seller nobody reaches this way: their own
-    listing with no number to show, or one off the site. -#}
+    .contact-bar; sticky_controller.js). Nothing for the seller themselves, as the canvas has
+    their own page (their own number was there once), nor on a listing nobody reaches this way,
+    one with no number to show off the site. -#}
 {%- let message = !own && (listing.status == "ACTIVE" || listing.status == "RESERVED") %}
-{%- if reveal.is_some() || message %}
+{%- if !own && (reveal.is_some() || message) %}
 <aside class="contact-bar" aria-label="{{ crate::t("Kontakti") }}" data-controller="sticky">
   {% if let Some(reveal) = reveal %}
   {#- The phone, "Shfaq numrin", in a plain pill; the number that takes its place is marked as

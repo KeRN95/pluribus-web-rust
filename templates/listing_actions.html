@@ -2,7 +2,7 @@
     (listing.html): beside the contact bar from 720 px up and under the price alone on a phone; on
     a car's page in the seller's card, beside the message's pill from 960 px up (seller_card.html,
     listing.css), but on the seller's own page, where they stay under the card. -#}
-<div class="actions">
+<div class="actions{% if own %} own{% endif %}">
   {%- if own %}
   {#- The seller's own: edit it; one on sale or for rent, say it is sold ("U shit", "U dha me
       qira") or reserved, or take the reservation off; take it down for a while, or put a paused
@@ -47,7 +47,7 @@
     <button type="submit" class="button secondary danger"><svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::TRASH|safe }}</svg>{{ crate::t("Fshi") }}</button>
   </form>
   {%- endif %}
-  <div data-controller="share" data-share-url-value="{{ listing.url() }}" data-share-title-value="{{ listing.title }}">
+  <div class="share" data-controller="share" data-share-url-value="{{ listing.url() }}" data-share-title-value="{{ listing.title }}">
     {#- A link in a circle, like the copy button beside the number: the phone's share sheet, or
         where there is none, the link copied, a check for a moment (share_controller.js). -#}
     <button type="button" class="button secondary icon-circle share-button" data-share-target="button" data-action="share#share" aria-label="{{ crate::t("Shpërndaje") }}" title="{{ crate::t("Shpërndaje") }}">

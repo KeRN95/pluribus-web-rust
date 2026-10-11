@@ -13,7 +13,9 @@
     under the seller, with their own buttons); on a phone the bar is at the screen's foot as on
     every page and the seller on their own (listing.css, .listing-car). -#}
 <section class="seller-section" aria-labelledby="seller-heading">
-  <h2 id="seller-heading">{{ crate::t("Shitësi") }}</h2>
+  {#- On their own car's or property's page, where their own buttons follow (listing_actions.html),
+      "Njoftimi yt", as the canvas has it. -#}
+  <h2 id="seller-heading">{% if deal_page && own %}{{ crate::t("Njoftimi yt") }}{% else %}{{ crate::t("Shitësi") }}{% endif %}</h2>
   {%- if deal_page %}
   <div class="seller-card">
   {%- endif %}

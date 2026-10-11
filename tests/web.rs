@@ -6823,6 +6823,25 @@ async fn moderators_review_listings_with_anothers_photos_and_suspend_accounts(po
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_listing_waiting_for_a_moderator_can_be_deleted_by_its_seller(pool: PgPool) {
+    // Waiting for a moderator, its page offers its seller "Fshi", and deleting it works (it gave
+    // "not found" once: the waiting status wasn't among those a delete takes). Their own page
+    // offers no "Shfaq numrin": the number is theirs.
+    let ana = session_for(&pool, "11111111-1111-4111-8111-111111111111").await;
+    sqlx::query("UPDATE listings SET status = 'PENDING_REVIEW', review_reason = 'NEW_ACCOUNT' WHERE public_no = 1005")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let page = get_with_cookie(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri", &ana).await.body;
+    assert!(page.contains(r#"<form method="post" action="/listing/1005/fshi""#), "{page}");
+    assert!(!page.contains("contact-bar"), "{page}");
+    let deleted = post_form(pool.clone(), "/listing/1005/fshi", &[], Some(&ana)).await;
+    assert_eq!(deleted.status, StatusCode::SEE_OTHER, "{}", deleted.body);
+    let status: String = sqlx::query_scalar("SELECT status FROM listings WHERE public_no = 1005").fetch_one(&pool).await.unwrap();
+    assert_eq!(status, "DELETED");
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn posting_without_signing_in_is_limited_per_network(pool: PgPool) {
     // Twenty an hour from one network (IP address), each under a new number; the next waits.
     let started = started();

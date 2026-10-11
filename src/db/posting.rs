@@ -381,7 +381,7 @@ impl ListingAction {
             Self::Sell => (&["ACTIVE", "RESERVED"], "SOLD"),
             Self::Reserve => (&["ACTIVE"], "RESERVED"),
             Self::Unreserve => (&["RESERVED"], "ACTIVE"),
-            Self::Delete => (&["DRAFT", "ACTIVE", "RESERVED", "SOLD", "EXPIRED", "PAUSED", "SUSPENDED", "REJECTED"], "DELETED"),
+            Self::Delete => (&["DRAFT", "PENDING_REVIEW", "ACTIVE", "RESERVED", "SOLD", "EXPIRED", "PAUSED", "SUSPENDED", "REJECTED"], "DELETED"),
         }
     }
 

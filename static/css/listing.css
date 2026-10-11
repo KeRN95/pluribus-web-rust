@@ -194,15 +194,6 @@
      the share and the report stay in the row under the bar, at its right end. */
   .listing-split .contact-bar:has(.message-button):has(.whatsapp-button) .contact-revealed { width: 100%; }
   .listing-split .listing-deal > .contact-bar:has(.message-button):has(.whatsapp-button) + .actions { margin-top: .5rem; }
-  /* The seller's own view: the phone's pill across the column but for the share's circle, which
-     stands beside it at the line's end, level with it, as the circles do for anyone else (it
-     leaves the row under, which it would not fit, by standing out of it); and under them their
-     own buttons, Ndrysho, Çaktivizo and Fshi, each with its icon, on a line of their own, as wide
-     as their words. */
-  .listing-split .listing-deal > .contact-bar:has(+ .actions .danger) { grid-column: 1 / -1; margin-right: 0; }
-  .listing-split .contact-bar:has(+ .actions .danger) :is(.reveal-button, .contact-revealed) { width: calc(100% - var(--size-round) - .5rem); }
-  .listing-split .listing-deal > .contact-bar + .actions:has(.danger) { grid-column: 1 / -1; position: relative; align-self: auto; margin-top: .6rem; margin-bottom: 0; }
-  .listing-split .actions:has(.danger) .share-button { position: absolute; top: calc((var(--size-button) - var(--size-round)) / 2 - var(--size-button) - .6rem); right: 0; }
   .listing-split .contact-bar .contact-revealed .reveal-contact { flex: 1 1 auto; }
 }
 
@@ -614,7 +605,19 @@
 /* Under the buttons, quietly: that the visitor blocked the seller (from a report's thanks,
    report.html), with where to let them be again. Reporting is a button among the others. */
 .blocked-note,
-.promotion-note { margin: 1rem 0 0; color: var(--muted); font-size: var(--text-sm); }
+.promotion-note { margin: 14px 0 0; color: var(--muted); font-size: var(--text-sm); }
+/* The way to a promotion, in the words' colour, semibold, as the canvas has it. */
+.promotion-note a { color: var(--text); font-weight: var(--semibold); }
+/* The seller's own buttons (listing_actions.html, .actions.own), as the canvas has them: under
+   their own car or property, two to a line, each the line's half, Fshi across the last line but
+   for the share's circle beside it, level with it; beside a photo, small (40px, 14px), as wide as
+   their words, the share's circle as small, on lines that wrap. */
+.listing-car .actions.own { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.listing-car .actions.own .button:not(.icon-circle) { width: 100%; justify-content: center; }
+.listing-car .actions.own > form:has(.danger) { grid-column: 1 / -1; margin-right: calc(var(--size-round) + 8px); }
+.listing-car .actions.own > .share { grid-column: 1 / -1; justify-self: end; margin-top: calc((var(--size-button) - var(--size-round)) / 2 - var(--size-button) - 8px); }
+.listing-split .actions.own .button { min-height: var(--size-button-sm); padding: 0 14px; font-size: .875rem; }
+.listing-split .actions.own .button.icon-circle { width: var(--size-button-sm); height: var(--size-button-sm); padding: 0; }
 /* Just posted: it is up, and under that the ways to share it, a button each and "Njoftimet e
    mia" after them (share_note.html). */
 .posted-note p { margin: 0; }
