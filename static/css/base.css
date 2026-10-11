@@ -33,7 +33,6 @@
   --muted-on-grey: #666666;     /* words on the grey of secondary controls, 5:1 (a badge, a count) */
   --control-edge: #858585;      /* an unticked box's or radio's edge, a switch's track: 3:1 */
   --focus-field: 0 0 0 3px rgb(27 27 27 / 14%); /* round a focused field, its hairline in the main colour */
-  --focus-search: 0 0 0 4px rgb(27 27 27 / 14%); /* round the search bar in use */
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 8 256 256' fill='%23707070'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E"); /* a native select's, in the muted colour: Phosphor's caret */
   --border: #dedede;
   --border-soft: #e8e8e8;       /* lines inside a card or a list */
@@ -227,7 +226,6 @@
   --muted-on-grey: var(--muted);
   --control-edge: #757575;
   --focus-field: 0 0 0 3px rgb(232 232 232 / 18%);
-  --focus-search: 0 0 0 4px rgb(232 232 232 / 18%);
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 8 256 256' fill='%23a3a3a3'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");
   --border: #333333;
   --border-soft: #2a2a2a;
@@ -290,7 +288,6 @@
     --muted-on-grey: var(--muted);
     --control-edge: #757575;
     --focus-field: 0 0 0 3px rgb(232 232 232 / 18%);
-    --focus-search: 0 0 0 4px rgb(232 232 232 / 18%);
     --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 8 256 256' fill='%23a3a3a3'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");
     --border: #333333;
     --border-soft: #2a2a2a;

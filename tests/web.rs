@@ -4992,11 +4992,12 @@ async fn a_card_carries_its_pages_words_for_the_stand_in(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
-async fn the_front_pages_categories_are_a_line_of_tiles_on_a_wide_screen(pool: PgPool) {
-    // From 720px up the front page has the search in the middle, 720px at most, and under it the
-    // main categories on one line of tiles that slides sideways, a mouse dragging it: each its
-    // icon on one of Material's soft shapes, in turn, over its name (the user's ask of 2026-10-11,
-    // the pluribus-tests canvas's Material front page in the site's accent). Phones keep the pills.
+async fn the_front_pages_categories_are_a_line_of_tiles(pool: PgPool) {
+    // The front page's main categories are one line of tiles that slides sideways, a mouse
+    // dragging it: each its icon on one of Material's soft shapes, in turn, over its name (the
+    // user's asks of 2026-10-11, the pluribus-tests canvas's Material front page in the site's
+    // accent, on a wide screen and then on phones); from 720px up the search over them stands in
+    // the middle, 720px at most; in use it has no edge or ring round it, Material's way.
     let home = html(pool.clone(), "/").await;
     let nav = &home[home.find(r#"<nav class="shortcuts" data-controller="drag-row" aria-label="Kategoritë">"#).expect("the categories")..];
     let nav = &nav[..nav.find("</nav>").unwrap()];
@@ -5007,9 +5008,12 @@ async fn the_front_pages_categories_are_a_line_of_tiles_on_a_wide_screen(pool: P
     // (The stylesheet comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for rule in [
-        ".shortcut-shape{display:contents;}",
         "@media (min-width:720px){.welcome-tools{max-width:720px;margin-inline:auto;}",
-        ".welcome .shortcuts{flex-wrap:nowrap;justify-content:space-between;gap:2px;margin-top:28px;padding-block:3px;overflow-x:auto;",
+        ".welcome .shortcuts{flex-wrap:nowrap;gap:2px;margin-top:28px;padding-block:3px;overflow-x:auto;",
+        "@media (min-width:720px){.welcome .shortcuts{justify-content:space-between;}}",
+        // On phones, as the canvas's phone board has them: the line from the screen's edge to its
+        // edge, the first shape level with the page's side, the tiles 84px, the shapes 56px.
+        "@media (max-width:719px){.welcome .shortcuts{margin:20px calc(-1 * var(--gutter)) 0;padding-inline:calc(var(--gutter) - 14px);}.welcome .shortcut{width:84px;font-size:.8571rem;}.welcome .shortcut-shape{width:56px;height:56px;}.welcome .shortcut-shape::before{inset:-4px;transform:scale(.875);}.welcome .shortcut-icon{width:26px;height:26px;}}",
         ".welcome .shortcut{flex:none;flex-direction:column;gap:8px;width:96px;",
         ".welcome .shortcut-shape{position:relative;display:grid;flex:none;place-items:center;width:64px;height:64px;}",
         ".welcome .shortcut:nth-child(6n + 1) .shortcut-shape::before{clip-path:path(",
@@ -5019,6 +5023,7 @@ async fn the_front_pages_categories_are_a_line_of_tiles_on_a_wide_screen(pool: P
     ] {
         assert!(css.contains(rule), "{rule}");
     }
+    assert!(!css.contains(".welcome-form:focus-within") && !css.contains("--focus-search"), "no edge or ring round the search in use");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
