@@ -80,10 +80,11 @@
       <span aria-hidden="true">–</span>
       <input type="text" inputmode="numeric" name="price_max" value="{{ filters.price_max_value() }}" placeholder="{{ crate::t("deri") }}" aria-label="{{ crate::t("Çmimi deri") }}" autocomplete="off"
              data-price-range-target="max" data-action="change->price-range#typed">
-      <div class="picker" data-controller="picker">
-      <select name="currency" aria-label="{{ crate::t("Monedha") }}" data-price-range-target="currency" data-action="price-range#slide">
-        {% for choice in filters.currency_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
-      </select>
+      {#- The currency, a two-part toggle as the canvas has it: € or Lekë, the one picked raised. -#}
+      <div class="segmented currency-choice" role="radiogroup" aria-label="{{ crate::t("Monedha") }}">
+        {%- for choice in filters.currency_choices() %}
+        <label><input type="radio" name="currency" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %} data-price-range-target="currency" data-action="price-range#slide">{{ choice.label }}</label>
+        {%- endfor %}
       </div>
     </div>
     <div class="price-track">

@@ -6191,10 +6191,11 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     let pages = [
         ("/shto", 7),
         ("/shto/fushat?category=makina", 11),
-        ("/search?q=golf", 4),
-        ("/c/makina", 13),
+        ("/search?q=golf", 3),
+        ("/c/makina", 12),
         ("/harta", 2),
     ];
+    // (The price's currency is a two-part toggle of radios, no list.)
     for (uri, selects) in pages {
         let page = get_with_cookie(pool.clone(), uri, &ana).await.body;
         // The typeface panel's two lists (TYPE_TRIAL, base.html) are the browser's own: not the

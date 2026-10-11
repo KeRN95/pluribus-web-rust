@@ -283,13 +283,14 @@
     </details>
   </div>
 
-  {#- The filters' card: over the results under the row on a phone, its name and "Mbyll" at the
-      top and at the foot "Pastro" and the button that shows the results, saying how many there
-      are now (they follow every change, under the card); the same on every screen. -#}
+  {#- The filters, as the canvas has them: a sheet at the screen's right, the whole screen on
+      phones, over the page dimmed, its name and a cross that folds it at the top, and at the foot
+      "Pastro" and the button that shows the results, saying how many there are now (they follow
+      every change, under the sheet). -#}
   <aside class="filters" id="filters" aria-labelledby="filters-heading" data-filters-target="panel">
     <div class="filters-header">
       <h2 id="filters-heading">{{ crate::t("Filtrat") }}</h2>
-      <button type="button" class="filters-close" data-action="filters#fold">{{ crate::t("Mbyll") }}</button>
+      <button type="button" class="filters-close" aria-label="{{ crate::t("Mbyll") }}" title="{{ crate::t("Mbyll") }}" data-action="filters#fold"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CLOSE|safe }}</svg></button>
     </div>
     {% include "filters.html" %}
     <div class="filters-footer">

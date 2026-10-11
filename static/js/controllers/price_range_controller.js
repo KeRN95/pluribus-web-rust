@@ -39,7 +39,7 @@ export default class extends Controller {
   // again, it lets go of them.
   pick({ currentTarget, params: { min, max, currency } }) {
     const again = currentTarget.getAttribute("aria-pressed") === "true";
-    this.currencyTarget.value = currency;
+    for (const radio of this.currencyTargets) radio.checked = radio.value === currency;
     this.minTarget.value = again ? "" : min;
     this.maxTarget.value = again ? "" : max;
     this.typed();
@@ -118,7 +118,9 @@ export default class extends Controller {
     return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
   }
 
+  // The currency picked, the toggle's radio that is checked (filters.html).
   get currency() {
-    return this.currencyTarget.value in BASE ? this.currencyTarget.value : "EUR";
+    const picked = this.currencyTargets.find((radio) => radio.checked)?.value;
+    return picked in BASE ? picked : "EUR";
   }
 }

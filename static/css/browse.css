@@ -251,19 +251,17 @@
 .browse-tools > *,
 .browse-tools .round-button { position: relative; z-index: 9; }
 .map-card { display: contents; }
-/* What the row opens, the search's box, the map's card and the filters' (which is the page's own,
-   outside the row): under the head, the row being its last line, a little apart from it (--drop),
-   as wide as it, over the results. */
+/* What the row opens, the search's box and the map's card: under the head, the row being its last
+   line, a little apart from it (--drop), as wide as it, over the results. (The filters are a sheet
+   of their own, below.) */
 .search-panel,
-.map-card-body,
-.filters {
+.map-card-body {
   position: absolute;
   top: calc(100% + var(--drop));
   right: 0;
   left: 0;
   z-index: 9;
 }
-.filters,
 .map-card-body {
   max-height: calc(100dvh - var(--top, 12rem) - var(--drop) - 1rem);
   overscroll-behavior: contain;
@@ -274,25 +272,38 @@
   animation: menu-in .16s ease-out;
 }
 .map-card-body { overflow-y: auto; scrollbar-width: thin; }
-/* The filters' card, under the row as the map's is, but outside it (it is the page's): a column of
-   its head, its form, which scrolls, and its foot. */
+/* The filters, as the canvas draws them: a sheet 460px wide at the screen's right, its whole height
+   (the whole screen on phones), white with what floats' shadow over the page dimmed, the header
+   too (--scrim; z-index over the sticky header's 10), appearing without sliding as the design
+   system has sheets, the page behind still: a column of its head, its form, which scrolls, and
+   its foot. */
 .filters {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
   display: none;
   flex-direction: column;
+  width: min(460px, 100%);
   overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
 }
 .filters.is-open { display: flex; }
-/* Its head: its name, and "Mbyll", which folds it, applying what was typed. */
+html:has(.filters.is-open) { overflow: hidden; }
+/* Its head: its name, 20px bold, and a cross in a grey circle that folds it, applying what was
+   typed, under a hairline. */
 .filters-header {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: .7rem .75rem .7rem 1rem;
+  padding: 16px 16px 16px 24px;
   border-bottom: 1px solid var(--border);
 }
-.filters-header h2 { margin: 0; font-size: var(--text-lg); font-weight: var(--semibold); }
+.filters-header h2 { margin: 0; font-size: 1.25rem; font-weight: var(--bold); letter-spacing: -.01em; }
 /* A row's head with a note at its end: "Të veçuara" and that they are promoted, which leads to
    how one is. */
 .row-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
@@ -307,27 +318,36 @@
 :is(.featured-row > .row-head, .most-viewed) > h2 { margin: 0; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
 .most-viewed > h2 { margin-bottom: 12px; }
 .filters-close {
-  padding: .4rem .9rem;
-  border: 1px solid var(--menu-border);
-  border-radius: 999px;
-  background: var(--surface);
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--size-button-sm);
+  height: var(--size-button-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
   color: var(--text);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--semibold);
   cursor: pointer;
   transition: background-color .15s;
 }
-.filters-close:hover { background: var(--surface-muted); }
-/* Its foot, always in sight under the form: "Pastro", and the button that shows the results,
-   saying how many there are now. */
+@media (hover: hover) {
+  .filters-close:hover { background: var(--surface-muted-hover); }
+}
+/* Its foot, always in sight under the form: "Pastro", grey, and the button that shows the results,
+   saying how many there are now, in the main colour, taking the rest of the line. */
 .filters-footer {
   display: flex;
   flex: none;
-  gap: .6rem;
-  padding: .75rem 1rem;
+  gap: var(--space-8);
+  padding: 16px 24px;
   border-top: 1px solid var(--border);
   background: var(--surface);
+}
+@media (max-width: 719px) {
+  .filters { width: 100%; box-shadow: none; }
+  .filters-header { padding: 8px 8px 8px var(--gutter); }
+  .filters-footer { padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom)); }
 }
 .filters-footer .button { justify-content: center; white-space: nowrap; }
 .filters-footer .filters-show { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -339,16 +359,9 @@
   inset: 0;
   z-index: 8;
   background: var(--scrim);
-  animation: fade-in .16s ease-out;
 }
-@keyframes fade-in {
-  from { opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .filters,
-  .map-card-body,
-  .browse-scrim { animation: none; }
-}
+/* Under the filters' sheet it dims the header too. */
+.browse:has(.filters.is-open) .browse-scrim { z-index: 39; }
 /* The round buttons: only their icons, on the grey of secondary controls with no outline, as the
    listing page's share button is; while what they open is open, filled with the main colour, their
    icon and words in its own, as a picked pill is; a press sinks them a little. The search is one of them: plain until its box is open, then marked as the others are
@@ -462,25 +475,29 @@
   .cards-menu[open] > .button.cards-button:hover { background: var(--main-hover); }
 }
 
-/* The filters' form, between the card's head and foot, scrolling if it needs more room. */
+/* The filters' form, between the sheet's head and foot, scrolling if it needs more room: one
+   column, as the canvas has it, each filter a section of its own under a hairline (--border-soft),
+   its name over it in the words' colour, semibold (15px; 14px on phones). */
 .filter-form {
   display: grid;
   flex: 1 1 auto;
-  gap: 1.25rem;
+  align-content: start;
   min-height: 0;
-  padding: 1rem;
+  padding: 0 24px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
 }
-.filter-group { display: grid; gap: .45rem; min-width: 0; margin: 0; padding: 0; border: 0; }
-/* A filter's name as the listing form's: small, in the quiet grey, so that the choices stand out.
-   A legend floated is laid out as any other child, so every name has its group's gap under it. */
-.filter-label { padding: 0; color: var(--muted); font-size: var(--text-sm); font-weight: var(--semibold); letter-spacing: .01em; }
+:is(.filter-form, .more-fields) > :is(.filter-group, .more-filters) { padding: 18px 0; border-top: 1px solid var(--border-soft); }
+.filter-form > .filter-place { border-top: 0; }
+.filter-group { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+/* A legend floated is laid out as any other child, so every name has its group's gap under it. */
+.filter-label { padding: 0; color: var(--text); font-size: .9375rem; font-weight: var(--semibold); }
 fieldset.filter-group > .filter-label { float: left; width: 100%; }
-/* A filter's name starts where the text in its field does, past the field's border and padding,
-   rather than at its rounded edge, which makes the name look set off to the side. */
-.filter-form .filter-label { padding-left: calc(.7rem + 1px); }
+@media (max-width: 719px) {
+  .filter-form { padding: 0 var(--gutter); }
+  .filter-label { font-size: 1rem; }
+}
 .check { display: flex; align-items: center; gap: .55rem; padding: .1rem 0; cursor: pointer; }
 .check input { flex: none; margin: 0; }
 /* The filters' options, a chip each rather than a tick, drawn as the listing form's options are
@@ -489,7 +506,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
    results is (a car's body types keep their icon over the name instead of the check). The name starts where the filter's does. A group's boxes wrap side by side under its name,
    which takes a line of its own. The box is the whole target; the input is there for keyboards
    and screen readers, its ring round the box. */
-.filter-options { display: flex; flex-wrap: wrap; gap: .35rem; }
+.filter-options { display: flex; flex-wrap: wrap; gap: var(--space-8); }
 .filter-options > .filter-label { margin-bottom: .1rem; }
 .filter-form .check {
   position: relative;
@@ -549,32 +566,51 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
    (the column on a laptop). */
 .filter-place-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .filter-place-row .picker { flex: 1 1 9rem; min-width: 0; }
-.filter-form .filter-locate { flex: none; gap: .3rem; min-height: 0; padding: .55rem .8rem; border-color: var(--border-strong); border-radius: 10px; white-space: nowrap; }
-.filter-locate .pin-icon { margin: 0; }
-.filter-form .field-hint { margin: 0; padding-left: calc(.7rem + 1px); }
+.filter-form .filter-locate { flex: none; gap: 7px; padding: 0 16px; white-space: nowrap; }
+.filter-locate .pin-icon { margin: 0; color: inherit; }
+.filter-form .field-hint { margin: 0; }
 .filter-form .field-hint[hidden] { display: none; }
 /* Zona, under the place: hidden where the town picked has no zones (filters_controller.js). */
 .filter-form .filter-group[hidden] { display: none; }
-/* A range, from and to: two typed fields, or two dropdowns of steps (a year's, kilometres). */
-.range { display: flex; align-items: center; gap: .4rem; color: var(--muted); }
-.range input { flex: 1; }
-.range .picker { flex: 1 1 0; min-width: 0; }
+/* A range, from and to: two typed fields, or two dropdowns of steps (a year's, kilometres), side by
+   side and as wide, as the canvas has them, no dash between. */
+.range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; color: var(--muted); }
+.range > span { display: none; }
+.range .picker { min-width: 0; }
 .range .picker-list { width: max(100%, 8rem); }
-.filter-form .range select { flex: none; width: auto; }
-/* The price: typed, from and to, the currency beside them; under them its two ends on one track
-   (price_range_controller.js): the stretch between them in the site's coral, the ends white and
-   round with a soft shadow, big enough for a finger. The two range inputs lie on top of each other
-   and let every touch through but their ends'; the prices show beside the name. Under the track
-   the quick choices, pills, the one the prices are on the accent's tint. */
-.price-filter .filter-label output { margin-left: .3rem; color: var(--text); letter-spacing: 0; }
-.price-typed { display: flex; align-items: center; gap: .4rem; color: var(--muted); }
-.price-typed input { flex: 1 1 0; }
-.price-typed .picker { flex: none; width: 5.75rem; }
+/* The price, as the canvas has it: the prices it is on at the name's line's end, muted; typed, from
+   and to, and the currency beside them, a two-part toggle (€ | Lekë, the one picked raised); under
+   them its two ends on one track (price_range_controller.js): the stretch between them in the main
+   colour, the ends white rings of it, big enough for a finger. The two range inputs lie on top of
+   each other and let every touch through but their ends'. Under the track the quick choices,
+   chips, the one the prices are on in the main colour. */
+.price-filter > .filter-label { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.price-filter .filter-label output { color: var(--muted); font-size: .875rem; font-weight: var(--regular); letter-spacing: 0; }
+.price-typed { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+.price-typed input { flex: 1 1 0; min-width: 0; }
+.currency-choice { flex: none; align-self: stretch; align-items: center; }
+.currency-choice > label {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 42px;
+  height: 100%;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  color: var(--text);
+  font-size: .9375rem;
+  font-weight: var(--semibold);
+  cursor: pointer;
+  transition: background-color .15s, box-shadow .15s;
+}
+.currency-choice input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.currency-choice > label:has(input:checked) { background: var(--surface); box-shadow: var(--shadow); }
+.currency-choice > label:has(input:focus-visible) { outline: 2px solid var(--main); outline-offset: 2px; }
 .price-track { position: relative; height: 2.2rem; margin: 0 .2rem; }
 .price-track::before,
 .price-fill { content: ""; position: absolute; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; }
-.price-track::before { left: 0; right: 0; background: var(--border-strong); }
-.price-fill { background: var(--button); }
+.price-track::before { left: 0; right: 0; background: var(--border); }
+.price-fill { background: var(--main); }
 .price-track input[type="range"] {
   position: absolute;
   top: 50%;
@@ -595,29 +631,29 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .price-track input[type="range"]::-webkit-slider-thumb {
   width: 24px;
   height: 24px;
-  border: 1px solid rgb(0 0 0 / 12%);
+  border: 2px solid var(--main);
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+  background: var(--surface);
+  box-shadow: none;
   cursor: pointer;
   pointer-events: auto;
   -webkit-appearance: none;
   appearance: none;
 }
 .price-track input[type="range"]::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
-  border: 1px solid rgb(0 0 0 / 12%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--main);
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+  background: var(--surface);
+  box-shadow: none;
   cursor: pointer;
   pointer-events: auto;
 }
 .price-track input[type="range"]:focus { outline: none; }
-.price-track input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--accent); }
-.price-track input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--accent); }
-.price-choices { display: flex; flex-wrap: wrap; gap: .35rem; }
+.price-track input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: var(--focus-field); }
+.price-track input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: var(--focus-field); }
+.price-choices { display: flex; flex-wrap: wrap; gap: var(--space-8); }
 .price-choice {
   min-height: var(--size-chip);
   padding: 0 .875rem;
@@ -638,15 +674,17 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   .price-choice:hover { background: var(--surface-muted-hover); }
   .price-choice[aria-pressed="true"]:hover { background: var(--main-hover); }
 }
-/* The rest, under "Më shumë filtra": its name a row across the form, a hairline over it, the
-   chevron turning as it opens; its fields laid out as the form's (below). */
-.more-filters { border-top: 1px solid var(--border); }
+/* The rest, under "Më shumë filtra": its name a row across the form, a section of its own under a
+   hairline as the others are, the chevron turning as it opens; its fields laid out as the form's,
+   each a section. */
+.more-filters { padding-bottom: 0; }
 .more-filters > summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: .5rem;
-  padding: .85rem 0 .1rem calc(.7rem + 1px);
+  min-height: var(--size-button-sm);
+  font-size: .9375rem;
   font-weight: var(--semibold);
   list-style: none;
   cursor: pointer;
@@ -655,30 +693,17 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .more-filters > summary .chevron { flex: none; color: var(--muted); transition: transform .15s; }
 .more-filters[open] > summary .chevron { transform: rotate(180deg); }
 .more-filters > summary:hover .chevron { color: var(--text); }
-.more-fields { display: grid; gap: 1.25rem .75rem; align-items: start; padding-top: 1.1rem; }
+.more-fields { display: grid; align-items: start; padding-top: 4px; }
 .filter-actions { display: flex; align-items: center; gap: .75rem; }
 .filter-actions .button { flex: 1; justify-content: center; white-space: nowrap; }
-/* The form in two columns, and so the fields under "Më shumë filtra": a field takes a line of its
-   own, unless it is a small one (filter-half: a dropdown, a range, a few boxes), which shares its
-   line with the next small one, Marka beside Modeli, Viti beside Kilometrazhi, Karburanti beside
-   Kambio. Wider, in four, a field of its own taking two of them; without JavaScript, the button
-   under them all, as wide as its words. */
+/* One column in the sheet, every filter a line of its own, the small ones too (filter-half, which
+   stood side by side in the card the filters were once); without JavaScript, the button under them
+   all. */
 .filter-form,
-.more-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: .75rem; align-items: start; }
+.more-fields { grid-template-columns: minmax(0, 1fr); }
 :is(.filter-form, .more-fields) > * { grid-column: 1 / -1; }
-:is(.filter-form, .more-fields) > .filter-half { grid-column: auto; }
-@media (min-width: 720px) {
-  .filter-actions .button { flex: none; padding-inline: 2rem; }
-}
-@media (min-width: 960px) {
-  .filter-form,
-  .more-fields { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 1.5rem; }
-  :is(.filter-form, .more-fields) > * { grid-column: span 2; }
-  :is(.filter-form, .more-fields) > .filter-half { grid-column: span 1; }
-  :is(.filter-form, .more-fields) > :is(.filter-icons, .filter-place, .more-filters, noscript) { grid-column: 1 / -1; }
-}
+.filter-form noscript .filter-actions { padding: 18px 0; }
 
-/* Nothing found: what would find more, buttons under the words. */
 /* Nothing found, as the canvas has it: a white box, 56px under the head (28px on phones), its
    words in the middle: a magnifier in a grey circle of 64px, that nothing was found, semibold and
    a size up, what would find more under it, muted, and the buttons that would, grey, side by
