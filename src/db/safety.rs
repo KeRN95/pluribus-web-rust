@@ -4,6 +4,7 @@
 //! proved theirs by signing in with a code, which listings and profiles say are verified.
 
 use super::*;
+use crate::domain::Status;
 
 /// What a report says is wrong, by the codes reports keep (reports.reason_code), in the order the
 /// form offers them. The first four are serious (SERIOUS_REASONS).
@@ -53,7 +54,7 @@ pub async fn report_listing(
     else {
         return Ok(Reported::NotReportable);
     };
-    if owner == reporter || !matches!(status.as_str(), "ACTIVE" | "RESERVED") {
+    if owner == reporter || !Status::parse(&status).is_some_and(Status::up) {
         return Ok(Reported::NotReportable);
     }
     let taken = sqlx::query(
@@ -234,8 +235,8 @@ pub async fn decide(db: &PgPool, public_no: i64, moderator: Uuid, decision: Deci
         })
         .execute(&mut *tx)
         .await?;
-    let action = match (decision, status.as_str()) {
-        (Decision::Keep, "SUSPENDED") => {
+    let action = match (decision, Status::parse(&status)) {
+        (Decision::Keep, Some(Status::Suspended)) => {
             // Back as it was before the reports took it off: active, or reserved.
             let was: Option<String> = sqlx::query_scalar(
                 "SELECT metadata->>'from' FROM moderation_actions
@@ -246,10 +247,13 @@ pub async fn decide(db: &PgPool, public_no: i64, moderator: Uuid, decision: Deci
             .fetch_optional(&mut *tx)
             .await?
             .flatten();
-            let back = was.filter(|was| was == "RESERVED").unwrap_or_else(|| "ACTIVE".to_string());
+            let back = match was.as_deref().and_then(Status::parse) {
+                Some(Status::Reserved) => Status::Reserved,
+                _ => Status::Active,
+            };
             sqlx::query("UPDATE listings SET status = $2, updated_at = now() WHERE id = $1")
                 .bind(id)
-                .bind(back)
+                .bind(back.as_str())
                 .execute(&mut *tx)
                 .await?;
             "RESTORE_LISTING"
@@ -395,9 +399,9 @@ pub struct ReportTarget {
 }
 
 impl ReportTarget {
-    /// On the site, so there is something to report: active or reserved.
+    /// On the site, so there is something to report: active or reserved (Status::up).
     pub fn reportable(&self) -> bool {
-        matches!(self.status.as_str(), "ACTIVE" | "RESERVED")
+        Status::parse(&self.status).is_some_and(Status::up)
     }
 }
 

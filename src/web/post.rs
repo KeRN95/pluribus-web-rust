@@ -33,6 +33,7 @@ use crate::{
         self, Categories, Category, City, FormAttribute, ListingAction, ListingProperty, MyListing, NewListing,
         OwnListing, OwnPhoto, SessionUser, Zone,
     },
+    domain::{Condition, ListingType, ReviewReason, Status},
     format::{self, Contact},
     i18n::{t, t1, t2},
     media::MAX_PHOTOS,
@@ -53,8 +54,8 @@ pub(super) const PRICE_TYPES: [(&str, &str); 4] = [
     ("FREE", "Falas"),
     ("ON_REQUEST", "Me marrëveshje"),
 ];
-pub(super) const CONDITIONS: [&str; 4] = ["NEW", "LIKE_NEW", "USED", "FOR_PARTS"];
-pub(super) const LISTING_TYPES: [&str; 6] = ["SELL", "BUY", "RENT", "WANTED_RENT", "SERVICE", "JOB"];
+pub(super) const CONDITIONS: [&str; 4] = Condition::NAMES;
+pub(super) const LISTING_TYPES: [&str; 6] = ListingType::NAMES;
 
 /// The category whose listings can say their zone in the town (Blloku, Tiranë), and its
 /// subcategories': property.
@@ -729,7 +730,7 @@ pub async fn new_listing(State(state): State<AppState>, headers: HeaderMap) -> R
     render(page)
 }
 
-/// The stores this poster may post for (db::POSTING_ROLES); none for someone not signed in.
+/// The stores this poster may post for (Role::posts); none for someone not signed in.
 async fn posting_stores(state: &AppState, user: Option<&SessionUser>) -> Result<Vec<db::MyStore>> {
     let Some(user) = user else {
         return Ok(Vec::new());
@@ -860,9 +861,9 @@ pub async fn create_listing(
     let review = if state.moderators.is_empty() {
         None
     } else if db::photos_elsewhere(&state.db, &hashes, poster.business_id.unwrap_or(poster.id)).await? {
-        Some(db::DUPLICATE_PHOTOS)
+        Some(ReviewReason::DuplicatePhotos)
     } else if user.is_none() && existing.is_none() {
-        Some(db::NEW_ACCOUNT)
+        Some(ReviewReason::NewAccount)
     } else {
         None
     };
@@ -882,7 +883,7 @@ pub async fn create_listing(
     }
     record_unsigned_post(ip.as_deref());
     if let Some(contact) = &contact
-        && (waits || review == Some(db::NEW_ACCOUNT))
+        && (waits || review == Some(ReviewReason::NewAccount))
     {
         // To the code page, which says the listing goes up once the code is typed: for a contact
         // an account has, the only way (a code that couldn't go out leaves the listing waiting,
@@ -1101,51 +1102,48 @@ impl MyListing {
         format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
     }
 
-    /// Listings that are no longer simply up say so.
-    pub fn status_label(&self) -> Option<&'static str> {
-        match self.status.as_str() {
-            "ACTIVE" => None,
-            "RESERVED" => Some(t("Rezervuar")),
-            "SOLD" => Some(format::sold(&self.listing_type)),
-            "EXPIRED" => Some(t("Skaduar")),
-            "PENDING_REVIEW" | "DRAFT" => Some(t("Në pritje")),
-            "PAUSED" => Some(t("Çaktivizuar")),
-            "SUSPENDED" => Some(t("Në shqyrtim")),
-            "REJECTED" => Some(t("Hequr nga moderatorët")),
-            _ => Some(t("Jo aktiv")),
-        }
+    /// Where it stands. The schema's CHECK allows no status Status lacks (its test holds it to the
+    /// migrations); one would count as deleted here: "Jo aktiv", and no button.
+    fn status(&self) -> Status {
+        Status::parse(&self.status).unwrap_or(Status::Deleted)
     }
 
-    /// The tone its badge takes (.badge.warn, .badge.danger in listing.css), as the canvas has
-    /// them: a reservation in the warm yellow, a listing expired or taken off in red's tint; the
-    /// rest grey (waiting for review, paused, sold).
+    /// Its kind, likewise: one ListingType lacked couldn't be sold, and would be spoken of as one
+    /// on sale.
+    fn kind(&self) -> Option<ListingType> {
+        ListingType::parse(&self.listing_type)
+    }
+
+    /// Listings that are no longer simply up say so (Status::seller_label).
+    pub fn status_label(&self) -> Option<&'static str> {
+        self.status().seller_label(self.kind().unwrap_or(ListingType::Sell))
+    }
+
+    /// The tone its badge takes (Status::tone): a reservation in the warm yellow, a listing expired
+    /// or taken off in red's tint; the rest grey (waiting for review, paused, sold).
     pub fn status_tone(&self) -> Option<&'static str> {
-        match self.status.as_str() {
-            "RESERVED" => Some("warn"),
-            "EXPIRED" | "SUSPENDED" | "REJECTED" => Some("danger"),
-            _ => None,
-        }
+        self.status().tone()
     }
 
     /// Up, or taken down by its seller for a while: it can be edited.
     pub fn editable(&self) -> bool {
-        matches!(self.status.as_str(), "ACTIVE" | "RESERVED" | "PAUSED")
+        self.status().editable()
     }
 
     /// Up on the site, so it can be taken down for a while ("Çaktivizo").
     pub fn pausable(&self) -> bool {
-        matches!(self.status.as_str(), "ACTIVE" | "RESERVED")
+        self.status().pausable()
     }
 
     /// Taken down by its seller, or sold, so it can be put back up ("Aktivizo").
     pub fn resumable(&self) -> bool {
-        matches!(self.status.as_str(), "PAUSED" | "SOLD")
+        self.status().resumable()
     }
 
     /// Up, and on sale or for rent, so it can be said to be sold ("U shit", "U dha me qira") or
     /// reserved.
     pub fn sellable(&self) -> bool {
-        self.pausable() && db::SELLABLE_KINDS.contains(&self.listing_type.as_str())
+        self.kind().is_some_and(|kind| self.status().sellable(kind))
     }
 
     /// The button that says it is sold: "U shit", or "U dha me qira" for a rental.
@@ -1155,15 +1153,15 @@ impl MyListing {
 
     /// Up or reserved and expiring within a week: "Skadon pas 3 ditësh" (format::expires_soon).
     pub fn expires_soon(&self) -> Option<String> {
-        match self.status.as_str() {
-            "ACTIVE" | "RESERVED" => format::expires_soon(self.expires_at?, time::OffsetDateTime::now_utc()),
-            _ => None,
+        if !self.status().up() {
+            return None;
         }
+        format::expires_soon(self.expires_at?, time::OffsetDateTime::now_utc())
     }
 
     /// Expired, or expiring within a week: "Rifresko" keeps it up db::LISTING_DAYS more.
     pub fn renewable(&self) -> bool {
-        self.status == "EXPIRED" || self.expires_soon().is_some()
+        self.status().renewable(self.expires_soon().is_some())
     }
 }
 

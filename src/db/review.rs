@@ -5,11 +5,6 @@
 
 use super::*;
 
-/// Why a listing waits for a moderator (listings.review_reason): the first listing of an account
-/// no code has confirmed, posted without signing in; or a photo another seller's listing has too.
-pub const NEW_ACCOUNT: &str = "NEW_ACCOUNT";
-pub const DUPLICATE_PHOTOS: &str = "DUPLICATE_PHOTOS";
-
 /// The status history's reason for listings an account's suspension takes off the site.
 const SUSPENDED_WITH_ACCOUNT: &str = "Llogaria u pezullua";
 

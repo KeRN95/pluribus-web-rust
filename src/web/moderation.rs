@@ -25,6 +25,7 @@ use super::{Result, account::current_user, filters::Choice, not_found, propertie
 use crate::{
     AppState,
     db::{self, Approval, Decision, MergeTarget, PendingOption, ReportedListing, SessionUser},
+    domain::ReviewReason,
     format,
 };
 
@@ -81,11 +82,11 @@ impl db::PendingListing {
         format!("/listing/{}-{}", self.public_no, self.slug)
     }
 
-    /// Why it waits.
+    /// Why it waits (ReviewReason).
     pub fn why(&self) -> &'static str {
-        match self.reason.as_str() {
-            db::DUPLICATE_PHOTOS => "Foto të njëjta me njoftimin e një shitësi tjetër",
-            _ => "Llogari e re, pa e konfirmuar numrin me kod",
+        match ReviewReason::parse(&self.reason) {
+            Some(ReviewReason::DuplicatePhotos) => "Foto të njëjta me njoftimin e një shitësi tjetër",
+            Some(ReviewReason::NewAccount) | None => "Llogari e re, pa e konfirmuar numrin me kod",
         }
     }
 

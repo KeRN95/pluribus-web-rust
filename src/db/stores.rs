@@ -4,13 +4,9 @@
 //! how to reach it. Its people (business_members): its owner, and those its owner and admins asked
 //! in (business_invitations, 0035), each with a role.
 
-use crate::format::Contact;
+use crate::{domain::Role, format::Contact};
 
 use super::*;
-
-/// The roles that may post a store's listings, and those that may change the store itself.
-pub const POSTING_ROLES: [&str; 3] = ["OWNER", "ADMIN", "EDITOR"];
-pub const MANAGING_ROLES: [&str; 2] = ["OWNER", "ADMIN"];
 
 /// What a store's form fills in, checked (web/stores.rs).
 #[derive(Debug, Default)]
@@ -94,14 +90,14 @@ pub struct MyStore {
 }
 
 impl MyStore {
-    /// Whether the user may post its listings.
+    /// Whether the user may post its listings (Role::posts).
     pub fn posts(&self) -> bool {
-        POSTING_ROLES.contains(&self.role.as_str())
+        Role::parse(&self.role).is_some_and(Role::posts)
     }
 
-    /// Whether the user may change the store itself.
+    /// Whether the user may change the store itself (Role::manages).
     pub fn manages(&self) -> bool {
-        MANAGING_ROLES.contains(&self.role.as_str())
+        Role::parse(&self.role).is_some_and(Role::manages)
     }
 }
 
@@ -260,9 +256,10 @@ pub async fn update_store(
     Ok(gone)
 }
 
-/// The roles a store's people are given, the owner's aside: who changes the store and its people
-/// (ADMIN), who posts its listings (EDITOR), and who answers its messages alone (VIEWER).
-pub const GIVEN_ROLES: [&str; 3] = ["ADMIN", "EDITOR", "VIEWER"];
+/// The roles a store's people are given, the owner's aside (Role::GIVEN), as the database spells
+/// them: who changes the store and its people (ADMIN), who posts its listings (EDITOR), and who
+/// answers its messages alone (VIEWER).
+pub const GIVEN_ROLES: [&str; 3] = Role::names(Role::GIVEN);
 
 /// One of a store's people, as its page of people lists them.
 #[derive(Debug, sqlx::FromRow)]
@@ -301,10 +298,10 @@ pub async fn role_in(db: &PgPool, store_id: Uuid, user_id: Uuid) -> sqlx::Result
         .await
 }
 
-/// Whether the user posts for the store (POSTING_ROLES), and so may change its listings
+/// Whether the user posts for the store (Role::posts), and so may change its listings
 /// (manages_listing, 0035).
 pub async fn posts_for(db: &PgPool, store_id: Uuid, user_id: Uuid) -> sqlx::Result<bool> {
-    Ok(role_in(db, store_id, user_id).await?.is_some_and(|role| POSTING_ROLES.contains(&role.as_str())))
+    Ok(role_in(db, store_id, user_id).await?.as_deref().and_then(Role::parse).is_some_and(Role::posts))
 }
 
 /// An invitation into a store, with the store it is for.

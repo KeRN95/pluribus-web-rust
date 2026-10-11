@@ -28,6 +28,7 @@ use super::{
 use crate::{
     AppState,
     db::{self, City, ImageChange, SessionUser, StoreFields, StoreImage},
+    domain::Role,
     format::{self, Contact},
     i18n::{self, Lang, in_lang, t, t1, t2},
     media, sender,
@@ -298,7 +299,7 @@ pub async fn create_store(State(state): State<AppState>, headers: HeaderMap, sub
 }
 
 /// The store at this address, with the user and their role in it, for its owner and admins
-/// (db::MANAGING_ROLES); None for anyone else.
+/// (Role::manages); None for anyone else.
 async fn managed(state: &AppState, headers: &HeaderMap, slug: &str) -> Result<Option<(SessionUser, db::Store, String)>> {
     let Some(user) = current_user(state, headers).await? else {
         return Ok(None);
@@ -307,12 +308,12 @@ async fn managed(state: &AppState, headers: &HeaderMap, slug: &str) -> Result<Op
         return Ok(None);
     };
     match db::role_in(&state.db, store.id, user.id).await? {
-        Some(role) if db::MANAGING_ROLES.contains(&role.as_str()) => Ok(Some((user, store, role))),
+        Some(role) if Role::parse(&role).is_some_and(Role::manages) => Ok(Some((user, store, role))),
         _ => Ok(None),
     }
 }
 
-/// The store at this address, for someone who may change it (db::MANAGING_ROLES).
+/// The store at this address, for someone who may change it (Role::manages).
 async fn managed_store(state: &AppState, headers: &HeaderMap, slug: &str) -> Result<Option<db::Store>> {
     Ok(managed(state, headers, slug).await?.map(|(_, store, _)| store))
 }

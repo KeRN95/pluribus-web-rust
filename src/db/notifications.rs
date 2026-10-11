@@ -4,14 +4,11 @@
 //! are unread.
 
 use super::*;
+use crate::domain::NotificationKind;
 
 /// How far back /lajmerimet goes, in days, and how many notifications it shows at most.
 pub const NOTIFICATIONS_DAYS: i32 = 90;
 pub const NOTIFICATIONS_MOST: i64 = 100;
-
-/// The kinds about the user's own listings, which the account button's dot stands for: the others
-/// have the heart's dot (prices dropped, saved searches) and the conversations' count (messages).
-pub const OWN_LISTING_KINDS: [&str; 3] = ["EXPIRING", "EXPIRED", "PROMOTED"];
 
 /// A notification, with what it is about while that is still there to open.
 #[derive(Debug, sqlx::FromRow)]
@@ -63,7 +60,7 @@ pub async fn notifications(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<Notif
 }
 
 /// How many of the user's notifications of the last NOTIFICATIONS_DAYS are unread: all of them,
-/// and those about their own listings (OWN_LISTING_KINDS).
+/// and those about their own listings (NotificationKind::OWN_LISTING).
 #[derive(Debug, Default, Clone, Copy, sqlx::FromRow)]
 pub struct Unread {
     pub all: i64,
@@ -71,6 +68,7 @@ pub struct Unread {
 }
 
 pub async fn unread_notifications(db: &PgPool, user_id: Uuid) -> sqlx::Result<Unread> {
+    let own = NotificationKind::names(NotificationKind::OWN_LISTING);
     sqlx::query_as(
         "SELECT count(*) AS \"all\", count(*) FILTER (WHERE notification_type = ANY($3)) AS own
          FROM notifications
@@ -78,7 +76,7 @@ pub async fn unread_notifications(db: &PgPool, user_id: Uuid) -> sqlx::Result<Un
     )
     .bind(user_id)
     .bind(NOTIFICATIONS_DAYS)
-    .bind(&OWN_LISTING_KINDS[..])
+    .bind(&own[..])
     .fetch_one(db)
     .await
 }

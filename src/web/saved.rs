@@ -19,7 +19,7 @@ use super::{
     browse::{LISTING_IDS, ListingPage},
     not_found, render,
 };
-use crate::{AppState, db, format, i18n::t};
+use crate::{AppState, db, domain::Status, format, i18n::t};
 
 /// The most listings /te-ruajturat shows.
 const SAVED_MOST: i64 = 200;
@@ -104,25 +104,20 @@ struct SavedPage {
 }
 
 impl db::GoneListing {
-    /// Why it isn't on the site, as its row says, in the page's language.
+    /// Why it isn't on the site, as its row says, in the page's language (Status::gone_label).
     pub fn label(&self) -> &'static str {
-        match self.status.as_str() {
-            "PAUSED" => t("Çaktivizuar nga shitësi"),
-            "DELETED" => t("U fshi"),
-            "EXPIRED" => t("Skadoi"),
-            "SUSPENDED" | "REJECTED" => t("Hequr nga faqja"),
-            _ => t("Jo në faqe"),
+        match Status::parse(&self.status) {
+            Some(status) => status.gone_label(),
+            None => t("Jo në faqe"),
         }
     }
 
-    /// The tone its badge takes (.badge.danger in listing.css), as the canvas has them: one
-    /// expired or taken off in red's tint, as "Njoftimet e mia" has it; the rest grey (paused or
-    /// deleted by its seller).
+    /// The tone its badge takes (Status::tone), as the canvas has them: one expired or taken off
+    /// in red's tint, as "Njoftimet e mia" has it; the rest grey (paused or deleted by its
+    /// seller). A reservation's yellow never shows here: one reserved is on the site
+    /// (db::saved_gone).
     pub fn status_tone(&self) -> Option<&'static str> {
-        match self.status.as_str() {
-            "EXPIRED" | "SUSPENDED" | "REJECTED" => Some("danger"),
-            _ => None,
-        }
+        Status::parse(&self.status).and_then(Status::tone)
     }
 }
 

@@ -28,6 +28,7 @@ use super::{
 use crate::{
     AppState,
     db::{self, Conversation, InboxEntry, Message, MessageTarget, SessionUser},
+    domain::{ListingType, Status},
     format,
     i18n::{english, t, t1},
 };
@@ -97,14 +98,11 @@ pub struct ListingHead {
 }
 
 /// What a conversation's head says of its listing's status (`status`, of a listing of kind
-/// `kind`): nothing while it is up.
+/// `kind`): nothing while it is up (Status::conversation_label). A status the schema doesn't
+/// allow would count as off the site, and a kind it doesn't as one on sale.
 fn listing_status(status: Option<&str>, kind: Option<&str>) -> Option<&'static str> {
-    match status? {
-        "ACTIVE" => None,
-        "RESERVED" => Some(t("Rezervuar")),
-        "SOLD" => Some(format::sold(kind.unwrap_or("SELL"))),
-        _ => Some(t("Jo më në faqe")),
-    }
+    let kind = kind.and_then(ListingType::parse).unwrap_or(ListingType::Sell);
+    Status::parse(status?).unwrap_or(Status::Deleted).conversation_label(kind)
 }
 
 /// A conversation's page, or the page that starts one about a listing.

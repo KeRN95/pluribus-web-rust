@@ -3,6 +3,7 @@
 
 pub mod ai;
 pub mod db;
+pub mod domain;
 pub mod expiry;
 pub mod format;
 pub mod i18n;

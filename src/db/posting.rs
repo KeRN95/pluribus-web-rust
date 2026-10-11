@@ -1,6 +1,7 @@
 //! Posting and editing listings, pausing and taking them down.
 
 use super::*;
+use crate::domain::{ListingType, ReviewReason, Status};
 
 /// How many listings the user posted in the last day, and whether one of them has this title.
 pub struct RecentPosts {
@@ -43,7 +44,7 @@ pub struct NewListing<'a> {
     pub publish: bool,
     /// Why it waits for a moderator instead of going up (review.rs, NEW_ACCOUNT or
     /// DUPLICATE_PHOTOS), if it does; a draft keeps it for when its contact is confirmed.
-    pub review: Option<&'a str>,
+    pub review: Option<ReviewReason>,
     /// The store it is posted as (stores.rs), one its poster may post for; None for their own.
     pub business_id: Option<Uuid>,
 }
@@ -230,7 +231,7 @@ pub async fn create_listing(db: &PgPool, listing: &NewListing<'_>) -> sqlx::Resu
         listing.publish,
         LISTING_DAYS,
         listing.business_id,
-        listing.review,
+        listing.review.map(ReviewReason::as_str),
     )
     .fetch_one(&mut *tx)
     .await?;
@@ -368,28 +369,42 @@ pub enum ListingAction {
     Delete,
 }
 
-/// The kinds of listing that can be sold or reserved: those on sale and those for rent (a wanted
-/// ad, a job or a service has nothing to hand over).
-pub const SELLABLE_KINDS: [&str; 2] = ["SELL", "RENT"];
+/// The kinds of listing that can be sold or reserved (ListingType::SELLABLE), as the database
+/// spells them, for web/listings.rs, which still compares a listing's kind with these.
+pub const SELLABLE_KINDS: [&str; 2] = ListingType::names(ListingType::SELLABLE);
 
 impl ListingAction {
-    /// The statuses the action applies to, and the one it leaves.
-    fn statuses(self) -> (&'static [&'static str], &'static str) {
+    /// Whether it applies to a listing in `status`, by the rules "Njoftimet e mia" offers its
+    /// buttons by (Status's): pausing one that can be paused, putting back up one that can be,
+    /// selling one up (of a kind that can be sold: `kinds`), reserving one active, taking the
+    /// reservation off one reserved, and deleting any not deleted yet.
+    fn applies_to(self, status: Status) -> bool {
         match self {
-            Self::Pause => (&["ACTIVE", "RESERVED"], "PAUSED"),
-            Self::Resume => (&["PAUSED", "SOLD"], "ACTIVE"),
-            Self::Sell => (&["ACTIVE", "RESERVED"], "SOLD"),
-            Self::Reserve => (&["ACTIVE"], "RESERVED"),
-            Self::Unreserve => (&["RESERVED"], "ACTIVE"),
-            Self::Delete => (&["DRAFT", "PENDING_REVIEW", "ACTIVE", "RESERVED", "SOLD", "EXPIRED", "PAUSED", "SUSPENDED", "REJECTED"], "DELETED"),
+            Self::Pause => status.pausable(),
+            Self::Resume => status.resumable(),
+            Self::Sell => status.up(),
+            Self::Reserve => status == Status::Active,
+            Self::Unreserve => status == Status::Reserved,
+            Self::Delete => status != Status::Deleted,
+        }
+    }
+
+    /// The status it leaves.
+    fn leaves(self) -> Status {
+        match self {
+            Self::Pause => Status::Paused,
+            Self::Resume | Self::Unreserve => Status::Active,
+            Self::Sell => Status::Sold,
+            Self::Reserve => Status::Reserved,
+            Self::Delete => Status::Deleted,
         }
     }
 
     /// The kinds of listing it applies to: selling and reserving only to those that can be
-    /// handed over (SELLABLE_KINDS); None for every kind.
-    fn kinds(self) -> Option<&'static [&'static str]> {
+    /// handed over (ListingType::SELLABLE); None for every kind.
+    fn kinds(self) -> Option<&'static [ListingType]> {
         match self {
-            Self::Sell | Self::Reserve | Self::Unreserve => Some(&SELLABLE_KINDS),
+            Self::Sell | Self::Reserve | Self::Unreserve => Some(&ListingType::SELLABLE),
             Self::Pause | Self::Resume | Self::Delete => None,
         }
     }
@@ -401,8 +416,8 @@ impl ListingAction {
 /// as the schema asks of a sold listing, and putting one back up clears it and gives it its
 /// LISTING_DAYS again. The status history records the seller as the one who changed it.
 pub async fn change_own_listing(db: &PgPool, public_no: i64, user_id: Uuid, action: ListingAction) -> sqlx::Result<bool> {
-    let (from, to) = action.statuses();
-    let from: Vec<String> = from.iter().map(|status| status.to_string()).collect();
+    let from: Vec<String> = Status::ALL.into_iter().filter(|status| action.applies_to(*status)).map(|status| status.to_string()).collect();
+    let to = action.leaves().as_str();
     let kinds: Option<Vec<String>> = action.kinds().map(|kinds| kinds.iter().map(|kind| kind.to_string()).collect());
     let mut tx = db.begin().await?;
     sqlx::query!("SELECT set_config('app.user_id', $1, true)", user_id.to_string())

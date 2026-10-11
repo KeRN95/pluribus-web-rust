@@ -1,6 +1,7 @@
 //! The listings a signed-in visitor keeps (the hearts).
 
 use super::*;
+use crate::domain::Status;
 
 /// Keeps the listing numbered `public_no` for the user (`keep`), or lets it go. Only an active
 /// listing can be kept; one kept already stays as it was. False when there is no such listing to
@@ -14,7 +15,7 @@ pub async fn set_saved(db: &PgPool, user_id: Uuid, public_no: i64, keep: bool) -
         return Ok(false);
     };
     if keep {
-        if status != "ACTIVE" {
+        if Status::parse(&status) != Some(Status::Active) {
             return Ok(false);
         }
         sqlx::query("INSERT INTO saved_listings (user_id, listing_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")

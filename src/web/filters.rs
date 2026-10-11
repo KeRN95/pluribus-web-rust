@@ -36,7 +36,7 @@ use crate::{
 /// costs the database a lookup or two.
 pub const SEARCH_CHARS: usize = 100;
 
-const CONDITIONS: [&str; 4] = ["NEW", "LIKE_NEW", "USED", "FOR_PARTS"];
+const CONDITIONS: [&str; 4] = crate::domain::Condition::NAMES;
 const CURRENCIES: [&str; 2] = ["EUR", "ALL"];
 
 /// How far around the map pin to look, in whole kilometres, 1 to 50: in the map's form, what its
