@@ -179,8 +179,9 @@
 }
 
 /* The heart over a listing's photo, at its top right corner (heart.html), as the canvas has it: a
-   white outline 22px across with a soft shadow under it, so that it shows on any photo, bright or
-   dark, no circle behind it (one stood there once); once the listing is kept, filled with the
+   white outline with a soft shadow under it, so that it shows on any photo, bright or dark, 16.5px
+   across on the cards, a quarter under the canvas's 22px, which the listing's own page keeps
+   (below; the user's ask of 2026-10-11), no circle behind it (one stood there once); once the listing is kept, filled with the
    site's red (--red), its white line kept, with a beat as it fills, in every part of the site. The
    button is a finger's size, 44px (--circle and --reach; the circle shows only under a pointer in
    the list, below). Over the card's stretched link and a big card's photos and shades; pressing it
@@ -214,8 +215,8 @@
 }
 .heart-button svg {
   position: relative;
-  width: 22px;
-  height: 22px;
+  width: 16.5px;
+  height: 16.5px;
   fill: transparent;
   color: var(--on-photo);
   filter: drop-shadow(0 1px 3px var(--photo-shade));

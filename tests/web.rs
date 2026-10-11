@@ -4919,7 +4919,8 @@ async fn fields_checkboxes_and_radios_are_drawn_as_the_canvas_has_them(pool: PgP
 
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn cards_are_drawn_as_the_canvas_has_them(pool: PgPool) {
-    // A card's heart a white outline 22px with a soft shadow and no circle behind it; its price
+    // A card's heart a white outline 16.5px with a soft shadow and no circle behind it (a quarter
+    // under the canvas's 22px, which the listing's own page keeps: the user's ask of 2026-10-11); its price
     // white and bold over a shade along the photo's bottom edge; a kept listing's status in a dark
     // pill over the photo. (The stylesheet comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
@@ -4929,7 +4930,8 @@ async fn cards_are_drawn_as_the_canvas_has_them(pool: PgPool) {
         rule[..rule.find('}').unwrap()].to_string()
     };
     let heart = rule(".heart-button svg");
-    assert!(heart.contains("width:22px") && heart.contains("drop-shadow(0 1px 3px var(--photo-shade))"), "{heart}");
+    assert!(heart.contains("width:16.5px") && heart.contains("drop-shadow(0 1px 3px var(--photo-shade))"), "{heart}");
+    assert!(rule(".listing-media .heart-button svg").contains("width:22px"));
     assert!(!rule(".heart-button::before").contains("background:"));
     let shade = rule(".card-media::after");
     assert!(shade.contains("linear-gradient(") && shade.contains("var(--photo-shade)"), "{shade}");
