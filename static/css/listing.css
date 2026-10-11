@@ -329,9 +329,10 @@
 /* The photos' glow, as YouTube's ambient light takes the colours of what plays (the user's ask of
    2026-10-11, "a blur / shadow similar to how youtube hues its background based on whats its
    playing"): behind the photos the one that shows once more, its tiny copy (in the page, so at
-   once) stretched over their box, blurred far past its edges and its colours livelier (--glow,
-   base.css), faint (--glow-strength: 45%, 60% on the dark theme), so that the page round them,
-   the bar's frost too, takes their colours. It follows the photos as they slide, the next one's
+   once) stretched over their box, blurred far past its edges and its colours a little livelier
+   (--glow, base.css), as faint as YouTube's (--glow-strength: 12%, 22% on the dark theme; the
+   user found 45% and 60% far too strong), so that the page round them, the bar's frost too, takes
+   a hint of their colours. It follows the photos as they slide, the next one's
    fading in over the last's (slides_controller.js, shine), and a stand-in's is its card's photo
    (application.js, listingStandIn). It is under everything on the page, the words round the
    photos among them (z-index: -1, in the page's own layer, none of the boxes round it being a
