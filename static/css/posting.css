@@ -29,16 +29,51 @@
   .account-nav { gap: 6px; }
   .account-nav a { min-height: 34px; }
 }
-/* "Cilësimet" (settings.html): a section each under its heading, the contacts a line each with
-   "Hiqe" at its end, the buttons of the devices' section side by side. */
-.settings h2 { margin-top: 2rem; }
-.settings-form { margin-bottom: .5rem; }
-.settings-contacts { margin: .75rem 0 1rem; }
-.settings-contact { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; padding: .55rem 0; border-top: 1px solid var(--border); }
-.settings-contact dt { flex: 0 0 5rem; color: var(--muted); }
+/* "Cilësimet" (settings.html), as the canvas has it: a column of 600px in the middle of the page,
+   24px under the top bar (18px on a phone), the heading 30px (26px) and the lead under it, 16px;
+   a section each under its heading, 22px (19px), 34px apart (the first 28px under the lead), its
+   note 13px 6px under it; a form's field 14px down and its button 12px under it, as wide as its
+   words and 42px tall, the rows' and the boxes' buttons 34px; the contacts a row each between
+   hairlines, its kind muted in a column of its own, the address semibold, "Hiqe" at its end; the
+   buttons of the devices' section side by side, 8px apart. (In the page's column at the left
+   once, the buttons 48px and across the form.) */
+.account.settings { margin-inline: auto; padding-top: 24px; }
+.settings h1 { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
+.settings .lead { margin: 8px 0 0; font-size: 1rem; line-height: 1.55; }
+.settings > .notice { margin: 18px 0 0; }
+.settings h2 { margin: 34px 0 0; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
+.settings .lead + h2,
+.settings .lead + .notice + h2 { margin-top: 28px; }
+.settings h2 + p { margin: 8px 0 0; line-height: 1.55; }
+.settings h2 + .field-hint { margin: 6px 0 0; line-height: 1.5; }
+.settings-form { gap: 12px; justify-items: start; margin: 14px 0 0; }
+.settings-form > .field { justify-self: stretch; }
+.settings-form .field-hint { margin-top: -1px; }
+.settings .button:not(.small) { min-height: 42px; padding: 0 14px; font-size: var(--text-sm); }
+.settings .button.small { gap: 8px; min-height: 34px; }
+.settings-contacts { display: grid; grid-template-columns: minmax(64px, max-content) minmax(0, 1fr) auto; column-gap: 12px; margin: 10px 0 0; }
+.settings-contact { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; padding: 12px 0; border-top: 1px solid var(--border-soft); }
+.settings-contact:last-child { border-bottom: 1px solid var(--border-soft); }
+.settings-contact dt { color: var(--muted); }
 .settings-contact dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-.settings-contact dd:last-child:not(:nth-child(2)) { margin-left: auto; }
-.settings-buttons { display: flex; flex-wrap: wrap; gap: .6rem; }
+.settings-contact strong { font-weight: var(--semibold); }
+.settings-contacts + .settings-form { margin-top: 16px; }
+.settings .language-choice { margin-top: 12px; }
+.settings-more { margin: 14px 0 0; }
+.settings-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+@media (max-width: 719px) {
+  .account.settings { padding-top: 18px; }
+}
+/* After an account closed itself (account_closed.html): as signing in, a column of 480px in the
+   middle of the page, 48px under the top bar (24px on a phone), the heading 30px (26px), what
+   became of it under it, 16px, and the way to the welcome page 20px down. */
+.account.account-closed { max-width: 480px; margin-inline: auto; padding-top: 48px; }
+.account-closed h1 { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
+.account-closed .lead { margin: 8px 0 0; font-size: 1rem; line-height: 1.55; }
+.account-closed .lead + p { margin: 20px 0 0; }
+@media (max-width: 719px) {
+  .account.account-closed { padding-top: 24px; }
+}
 .account h1 { margin: 0 0 .3rem; }
 .account .lead { margin: 0 0 1.25rem; color: var(--muted); }
 .account .lead strong { white-space: nowrap; }
@@ -192,12 +227,12 @@
 .my-listings-page .sign-out { margin-top: 28px; }
 .my-stat svg,
 .my-listing-stats svg { flex: none; }
-/* What the account hears of (settings.html): a box a line, its name and what it does, and "Ruaj"
-   under them. */
-.notice-settings { display: grid; justify-items: start; gap: .9rem; margin: 1rem 0 1.5rem; }
-.notice-setting { display: flex; align-items: flex-start; gap: .6rem; font-weight: var(--semibold); cursor: pointer; }
-.notice-setting input { margin: .1rem 0 0; }
-.notice-setting .field-hint { display: block; margin-top: .15rem; font-weight: var(--regular); }
+/* What the account hears of (settings.html), as the canvas has it: a box a line, 16px apart, its
+   name semibold and what it does under it, 13px, and "Ruaj" under them. */
+.notice-settings { display: grid; justify-items: start; gap: 16px; margin: 14px 0 0; }
+.notice-setting { display: flex; align-items: flex-start; gap: 12px; font-weight: var(--semibold); cursor: pointer; }
+.notice-setting input { margin: 0; }
+.notice-setting .field-hint { display: block; margin-top: 3px; font-weight: var(--regular); }
 /* Each listing's buttons, 34px, 6px apart, at the row's end on lines that wrap; on a phone under
    the photo and the rest, from the row's start. */
 .my-listing-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 330px; }
@@ -269,22 +304,21 @@
   .report .form-actions > *,
   .report .form-actions form .button { width: 100%; }
 }
-/* "Cilësimet": the sellers the user blocked, each with its button to let them be again. */
-.blocked-heading { margin: 2rem 0 .2rem; font-size: var(--text-xl); }
 /* "Dil nga llogaria", "Njoftimet e mia"'s last thing, a little apart from what is over it. */
 .sign-out { margin-top: 2.5rem; }
-.blocked-sellers { display: grid; gap: .45rem; margin: .7rem 0 0; padding: 0; list-style: none; }
-.blocked-seller {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .75rem;
-  padding: .55rem .9rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+/* "Cilësimet": the sellers the user blocked, as the canvas has them, in one white box 12px under
+   the note, a row each between hairlines: the initial in its ring, 32px, the name semibold, and
+   at the row's end the button to let them be again, 34px. (A bordered box each once.) */
+.blocked-sellers { margin: 12px 0 0; padding: 0 16px; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); list-style: none; }
+.blocked-seller { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; }
+.blocked-seller + .blocked-seller { border-top: 1px solid var(--border-soft); }
+.blocked-seller a { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--text); font-weight: var(--semibold); text-decoration: none; }
+@media (hover: hover) {
+  .blocked-seller a:hover .blocked-seller-name { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
 }
-.blocked-seller a { overflow: hidden; color: var(--text); font-weight: var(--semibold); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.blocked-seller a:active .blocked-seller-name { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
+.blocked-seller .avatar { width: 32px; height: 32px; font-size: .8125rem; }
+.blocked-seller-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .blocked-seller form { display: contents; }
 /* The moderators' page (/moderim): its two parts, the reported listings and the typed names; a
    reported listing's reasons as pills, and what its reporters wrote, quoted. */
@@ -641,15 +675,25 @@
 .store-logo-preview { border-radius: 50%; object-fit: cover; }
 .store-cover-preview { border-radius: 8px; object-fit: cover; }
 .store-whatsapp { margin: -.25rem 0 1rem; }
-/* The stores in "Cilësimet": a line each, its name, the user's role, and at its end its people
-   and its form, or the way out; over them an invitation waiting, a line with its two buttons. */
-.settings-stores { margin: .5rem 0 1rem; padding: 0; list-style: none; }
-.settings-store { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; padding: .55rem 0; border-top: 1px solid var(--border); }
-.settings-store > a { color: var(--text); font-weight: var(--semibold); text-decoration: none; }
-.settings-store-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-left: auto; }
-.store-invitation { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; margin: .5rem 0; padding: .75rem .9rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
-.store-invitation p { flex: 1 1 14rem; margin: 0; }
+/* The stores in "Cilësimet", as the canvas has them: a row each between hairlines, its name
+   semibold over the user's role, 13px, and at the row's end its people and its form, or the way
+   out, 34px; over them an invitation waiting, in a white box, its two buttons 10px under its
+   words. (Lines on the page's grey once, the invitation in a bordered box, its buttons beside.) */
+.settings-stores { margin: 14px 0 0; padding: 0; list-style: none; }
+.settings-store { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 12px 0; border-top: 1px solid var(--border-soft); }
+.settings-store:last-child { border-bottom: 1px solid var(--border-soft); }
+.settings-store-what { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
+.settings-store-what > a { color: var(--text); font-weight: var(--semibold); overflow-wrap: anywhere; text-decoration: none; }
+@media (hover: hover) {
+  .settings-store-what > a:hover { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
+}
+.settings-store-what > a:active { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
+.settings-store-what .field-hint { margin: 0; }
+.settings-store-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.store-invitation { margin: 14px 0 0; padding: 14px 16px; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); }
+.store-invitation p { margin: 0; line-height: 1.5; }
 .store-invitation a { color: var(--text); font-weight: var(--semibold); }
+.store-invitation-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 /* A store's people (store_people.html): its name back to its page over the heading; a line
    each, the initial, the name and the contact, and at its end the role, or for those the user
    handles its menu with "Ruaj" and "Hiq"; an invitation's line its sending buttons and

@@ -158,6 +158,9 @@ Llogaria u fshi
 Njoftimet e tua u fshinë bashkë me fotot, dhe numri, email-i dhe emri u hoqën. Faleminderit që e përdore Pluribus-in.
 = Your listings were deleted with their photos, and your number, email and name were removed. Thank you for using Pluribus.
 
+Njoftimet e tua u fshinë bashkë me fotot, dyqanet që kishe krijuar u mbyllën bashkë me njoftimet e tyre, dhe numri, email-i dhe emri u hoqën. Faleminderit që e përdore Pluribus-in.
+= Your listings were deleted with their photos, the stores you created were closed with their listings, and your number, email and name were removed. Thank you for using Pluribus.
+
 Te faqja e parë
 = Go to the home page
 

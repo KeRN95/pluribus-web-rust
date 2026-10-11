@@ -3,10 +3,15 @@
 {% block title %}{{ crate::t("Llogaria u fshi") }} | Pluribus{% endblock %}
 
 {% block content %}
-{#- After an account closed itself (settings.rs, close): signed out, what became of it. -#}
-<section class="account">
+{#- After an account closed itself (settings.rs, close): signed out, what became of it, its
+    stores too when it owned any, as the settings said they would be. -#}
+<section class="account account-closed">
   <h1>{{ crate::t("Llogaria u fshi") }}</h1>
+  {%- if stores %}
+  <p class="lead">{{ crate::t("Njoftimet e tua u fshinë bashkë me fotot, dyqanet që kishe krijuar u mbyllën bashkë me njoftimet e tyre, dhe numri, email-i dhe emri u hoqën. Faleminderit që e përdore Pluribus-in.") }}</p>
+  {%- else %}
   <p class="lead">{{ crate::t("Njoftimet e tua u fshinë bashkë me fotot, dhe numri, email-i dhe emri u hoqën. Faleminderit që e përdore Pluribus-in.") }}</p>
+  {%- endif %}
   <p><a class="button" href="/">{{ crate::t("Te faqja e parë") }}</a></p>
 </section>
 {% endblock %}

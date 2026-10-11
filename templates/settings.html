@@ -4,10 +4,11 @@
 {% block title %}{{ crate::t("Cilësimet") }} | Pluribus{% endblock %}
 
 {% block content %}
-{#- The account's settings (settings.rs), a section each under its heading: the name; the phone
-    number and the e-mail address, a code sent to one added or changed, either taken off while the
-    other stays; what it hears of; those it blocked; the devices signed in; signing out; closing it.
-    A form's line at the top says what it did; one sent back keeps what was typed, with why. -#}
+{#- The account's settings (settings.rs), a section each under its heading, in the canvas's
+    column: the name; the phone number and the e-mail address, a code sent to one added or changed,
+    either taken off while the other stays; what it hears of; its language; its stores; those it
+    blocked; the devices signed in; signing out; closing it. A form's line at the top says what it
+    did; one sent back keeps what was typed, with why. -#}
 <section class="account settings">
   {% call account::account_nav("settings", unread) %}
   <h1>{{ crate::t("Cilësimet") }}</h1>
@@ -82,12 +83,13 @@
 
   <h2>{{ crate::t("Gjuha") }}</h2>
   {#- The language the pages and the e-mails speak (web/language.rs, kept on the account too), each
-      named in itself, the one in use pressed. -#}
+      named in itself, the one in use pressed; what it changes under the heading, as every
+      section's note is. -#}
+  <p class="field-hint">{{ crate::t("Faqet, dhe email-et që të dërgojmë.") }}</p>
   <form class="segmented language-choice" method="post" action="/gjuha">
     <button type="submit" name="gjuha" value="sq" lang="sq" aria-pressed="{{ !crate::i18n::english() }}">Shqip</button>
     <button type="submit" name="gjuha" value="en" lang="en" aria-pressed="{{ crate::i18n::english() }}">English</button>
   </form>
-  <p class="field-hint">{{ crate::t("Faqet, dhe email-et që të dërgojmë.") }}</p>
 
   <h2>{{ crate::t("Dyqanet") }}</h2>
   {#- The invitations waiting for the account's contacts, each to take or turn down; the stores it
@@ -97,8 +99,10 @@
   {%- for invitation in invitations %}
   <div class="store-invitation">
     <p><a href="/ftesa/{{ invitation.id }}">{{ invitation.store_name }}</a> {{ crate::t1("të fton si „{}“.", crate::web::stores::role_name(invitation.role)) }}</p>
-    <form method="post" action="/ftesa/{{ invitation.id }}/prano"><button type="submit" class="button small">{{ crate::t("Prano") }}</button></form>
-    <form method="post" action="/ftesa/{{ invitation.id }}/refuzo"><button type="submit" class="button secondary small">{{ crate::t("Refuzo") }}</button></form>
+    <div class="store-invitation-actions">
+      <form method="post" action="/ftesa/{{ invitation.id }}/prano"><button type="submit" class="button small">{{ crate::t("Prano") }}</button></form>
+      <form method="post" action="/ftesa/{{ invitation.id }}/refuzo"><button type="submit" class="button secondary small">{{ crate::t("Refuzo") }}</button></form>
+    </div>
   </div>
   {%- endfor %}
   {%- if stores.is_empty() %}
@@ -107,8 +111,10 @@
   <ul class="settings-stores">
     {%- for store in stores %}
     <li class="settings-store">
-      <a href="/biznes/{{ store.slug }}">{{ store.display_name }}</a>
-      <span class="field-hint">{{ crate::web::stores::role_name(store.role) }}</span>
+      <span class="settings-store-what">
+        <a href="/biznes/{{ store.slug }}">{{ store.display_name }}</a>
+        <span class="field-hint">{{ crate::web::stores::role_name(store.role) }}</span>
+      </span>
       <span class="settings-store-actions">
         {%- if store.manages() %}
         <a class="button secondary small" href="/dyqani/{{ store.slug }}/njerezit">{{ crate::t("Njerëzit") }}</a>
@@ -125,7 +131,7 @@
   </ul>
   {%- endif %}
   {%- if more_stores %}
-  <p><a class="button secondary" href="/dyqani/krijo">{{ crate::t("Krijo një dyqan") }}</a></p>
+  <p class="settings-more"><a class="button secondary" href="/dyqani/krijo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PLUS|safe }}</svg>{{ crate::t("Krijo një dyqan") }}</a></p>
   {%- endif %}
 
   {%- if !blocked.is_empty() %}
@@ -137,7 +143,7 @@
   <ul class="blocked-sellers">
     {%- for seller in blocked %}
     <li class="blocked-seller">
-      <a href="{{ seller.url }}">{{ seller.name }}</a>
+      <a href="{{ seller.url }}"><span class="avatar" aria-hidden="true">{{ seller.initial() }}</span><span class="blocked-seller-name">{{ seller.name }}</span></a>
       <form method="post" action="/llogaria/zhblloko/{{ seller.id }}">
         <button type="submit" class="button secondary small">{{ crate::t("Zhblloko") }}</button>
       </form>
@@ -155,7 +161,7 @@
     </form>
     {%- endif %}
     <form action="/dil" method="post">
-      <button type="submit" class="button secondary">{{ crate::t("Dil nga llogaria") }}</button>
+      <button type="submit" class="button secondary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::LOG_OUT|safe }}</svg>{{ crate::t("Dil nga llogaria") }}</button>
     </form>
   </div>
 

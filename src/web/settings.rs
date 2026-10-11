@@ -69,6 +69,13 @@ impl SettingsPage {
     }
 }
 
+impl db::BlockedSeller {
+    /// The first letter of their name, in its ring before it.
+    pub fn initial(&self) -> String {
+        format::initial(&self.name)
+    }
+}
+
 /// The page for this user, the fields as their account has them.
 async fn settings_page(state: &AppState, user: &SessionUser, done: Option<&'static str>) -> Result<SettingsPage> {
     let (settings, preferences, blocked, sessions, unread, stores, owned, invitations) = tokio::try_join!(
@@ -294,7 +301,10 @@ pub async fn other_devices(State(state): State<AppState>, headers: HeaderMap) ->
 
 #[derive(Template)]
 #[template(path = "account_closed.html")]
-struct ClosedPage;
+struct ClosedPage {
+    /// Whether it owned stores, which closed with it.
+    stores: bool,
+}
 
 #[derive(Deserialize)]
 pub struct CloseForm {
@@ -315,10 +325,11 @@ pub async fn close(State(state): State<AppState>, headers: HeaderMap, Form(form)
         page.close_error = Some(t("Shkruaj FSHI në kutinë sipër butonit, që të dimë se e do vërtet."));
         return again(page);
     }
+    let stores = db::stores_owned(&state.db, user.id).await? > 0;
     let photos = db::delete_account(&state.db, user.id).await?;
     photos::delete(&state.media, &photos).await;
     tracing::info!(user = %user.id, photos = photos.len(), "an account closed itself");
-    let mut response = render(ClosedPage)?;
+    let mut response = render(ClosedPage { stores })?;
     response.headers_mut().append(axum::http::header::SET_COOKIE, account::forget_session(&headers));
     Ok(response)
 }

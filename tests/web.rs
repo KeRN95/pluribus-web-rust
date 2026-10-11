@@ -434,6 +434,7 @@ async fn closing_an_account_closes_the_stores_it_owns(pool: PgPool) {
 
     let closed = post_form(pool.clone(), "/llogaria/fshi", &[("konfirmo", "FSHI")], Some(&ana)).await;
     assert!(closed.body.contains("<h1>Llogaria u fshi</h1>"), "{}", closed.body);
+    assert!(closed.body.contains("dyqanet që kishe krijuar u mbyllën bashkë me njoftimet e tyre"), "{}", closed.body);
     // Her store is closed, its listings with it, whoever posted them, and its logo's file.
     let status = |slug: &'static str| {
         let pool = pool.clone();
@@ -8534,6 +8535,7 @@ async fn closing_an_account_takes_its_listings_photos_and_contacts_away(pool: Pg
     let closed = post_form(pool.clone(), "/llogaria/fshi", &[("konfirmo", " fshi ")], Some(&ana)).await;
     assert_eq!(closed.status, StatusCode::OK);
     assert!(closed.body.contains("<h1>Llogaria u fshi</h1>"), "{}", closed.body);
+    assert!(!closed.body.contains("dyqanet"), "{}", closed.body);
     assert_eq!(closed.cookie("session"), Some(""));
     // Its listing gone, its contact and its photo with it, the file out of the store.
     assert_eq!(get(pool.clone(), &url).await.status, StatusCode::NOT_FOUND);
@@ -8819,7 +8821,10 @@ async fn a_blocked_sellers_listings_leave_the_pages_of_whoever_blocked_them(pool
 
     // "Cilësimet" lists her, to let be again, and says so after.
     let settings = get_with_cookie(pool.clone(), "/llogaria/cilesimet", &besnik).await.body;
-    assert!(settings.contains(r#"<a href="/perdorues/11111111-1111-4111-8111-111111111111">Ana</a>"#), "{settings}");
+    assert!(
+        settings.contains(r#"<a href="/perdorues/11111111-1111-4111-8111-111111111111"><span class="avatar" aria-hidden="true">A</span><span class="blocked-seller-name">Ana</span></a>"#),
+        "{settings}"
+    );
     let unblocked = post_form(pool.clone(), "/llogaria/zhblloko/11111111-1111-4111-8111-111111111111", &[], Some(&besnik)).await;
     assert_eq!(unblocked.location.as_deref(), Some("/llogaria/cilesimet?u=zhbllokuar"));
     assert!(get_with_cookie(pool.clone(), "/llogaria/cilesimet?u=zhbllokuar", &besnik).await.body.contains("U zhbllokua."));
