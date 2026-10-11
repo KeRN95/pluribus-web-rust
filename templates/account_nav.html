@@ -1,7 +1,8 @@
 {#- The account's own pages, a row of pills over each one's heading ("Njoftimet e mia",
     "Lajmërimet", "Cilësimet"; post.rs, notifications.rs, settings.rs): its listings, its
     notifications with how many are new, its conversations, the listings it keeps, its settings.
-    The page it is on is marked, as what is picked is (posting.css, .account-nav). -#}
+    The page it is on is marked, as what is picked is, filled with the main colour, the others
+    grey pills, as the canvas draws them (posting.css, .account-nav). -#}
 {%- macro account_nav(here, unread) -%}
 <nav class="account-nav" aria-label="{{ crate::t("Llogaria jote") }}">
   <a href="/njoftimet-e-mia"{% if here == "listings" %} aria-current="page"{% endif %}>{{ crate::t("Njoftimet e mia") }}</a>
