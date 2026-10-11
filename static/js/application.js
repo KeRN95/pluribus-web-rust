@@ -463,10 +463,10 @@ function listingStandIn(card, link) {
     + `<div class="listing-media">${glow}<div class="gallery"><div class="listing-photos"><div class="gallery-photo">${photo}</div></div></div></div>`
     + `<div class="listing-side"><header class="listing-header"><h1>${escape(head?.dataset.heading || named)}</h1><p class="card-meta listing-kind">${spoken}</p></header>`
     + (facts > 0 ? `<dl class="key-facts">${fact.repeat(facts)}</dl>` : "")
-    + `<div class="listing-deal"><div class="price-box"><div class="price-row"><p class="listing-price"><span class="price-amount">${escape(price)}</span></p>`
+    + `<div class="price-box"><div class="price-row"><p class="listing-price"><span class="price-amount">${escape(price)}</span></p>`
     + `${head?.hasAttribute("data-loan") ? '<details class="bubble loan" inert><summary></summary></details>' : ""}`
     + `${head?.hasAttribute("data-compare") ? '<details class="bubble car-price" inert><summary></summary></details>' : ""}</div>`
-    + `${note ? `<p class="price-under">${note}</p>` : ""}</div></div>`
+    + `${note ? `<p class="price-under">${note}</p>` : ""}</div>`
     + `${details}${description}</div>`
     + contact
     + "</article></div>";

@@ -36,8 +36,8 @@
 .listing-side > :is(.listing-details, .listing-description, .listing-options) { margin-top: 1.75rem; }
 .listing-side > :is(.listing-details, .listing-description, .listing-options, .seller-section) > h2,
 .listing-deal > .seller-section > h2 { margin-top: 0; }
-/* The deal's parts (the price, and on the seller's own page their buttons; listing.html,
-   .listing-deal) are the rest's grid items like the others, the deal itself no box (display:
+/* The price's box and the deal's parts (on the seller's own page their buttons; listing.html,
+   .price-box, .listing-deal) are the rest's grid items like the others, the deal itself no box (display:
    contents, in the car page's rules below). */
 @media (min-width: 720px) {
   .listing-side { grid-template-columns: auto minmax(0, 1fr); }
@@ -170,7 +170,7 @@
 @media (min-width: 960px) {
   .listing { max-width: none; }
   .listing-side > :is(.listing-header, .listing-details, .listing-description, .listing-options),
-  .listing-deal > .price-box { max-width: 46rem; }
+  .listing-side > .price-box { max-width: 46rem; }
   /* Across the page a photo's frame is wider than the photo, and no taller than most screens
      leave room for: the photo whole in the middle, its blurred copy filling the sides. */
   .listing-media .gallery-photo,
@@ -201,7 +201,7 @@
   .listing-split .listing-media .gallery-photo,
   .listing-split .listing-media .listing-photo { aspect-ratio: 3 / 4; height: auto; max-height: calc(100vh / var(--page-scale) - var(--size-header) - 8.5rem - 1px); }
   .listing-split .listing-side > :is(.listing-header, .listing-details, .listing-description),
-  .listing-split .listing-deal > .price-box { max-width: none; }
+  .listing-split .listing-side > .price-box { max-width: none; }
   .listing-split .listing-header h1 { margin-top: 0; }
   /* The bar under the seller, in the column: its pills on a line each, the message's first, the
      phone's under it (by order; a phone's bar keeps the phone first), the revealed number taking
@@ -323,19 +323,32 @@
   .mosaic-side { display: grid; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px; height: calc(430px / var(--page-scale)); }
   .listing-car .listing-side { grid-template-columns: minmax(0, 1fr) 21rem; column-gap: 2rem; }
   .listing-car .listing-side > * { grid-column: 1; max-width: none; }
-  .listing-car .listing-side > .listing-deal { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; grid-row: 1 / span 40; align-self: start; }
+  .listing-car .listing-side > .listing-deal { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; grid-row: 2 / span 40; align-self: start; }
   .listing-car .listing-deal > * { grid-column: 1; align-self: auto; max-width: none; margin-right: 0; }
   .listing-car .listing-header h1 { margin-top: 0; }
-  /* Under a hairline (above; "Shitësi" over it until 2026-10-11, a heading as the column's
-     "Lokacioni" and the page's others are), the seller and, 16px under them, the ways to reach
-     them, with no box round them, as the canvas has it
+  /* The price beside the title, in its row of the grid, at the column's head: as tall as the
+     title's block, its hairline at its foot level with the title's, the figure's line as tall
+     as the title's first, what qualifies the price as far under it as the kind's line is under
+     the title, so that the two read as one band across the page (the user's ask of 2026-10-11,
+     "make sure the price gets same space as title vertically wise"; the price's box stood at
+     the head of the deal's column, its line under it lower than the title's); its circles
+     centred on the figure's line, standing a little over and under it. The deal under it, from
+     the next row. */
+  .listing-car .listing-side > .price-box { grid-column: 2; grid-row: 1; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .listing-car .listing-side > .price-box > .price-row { height: calc(var(--lp-title) * 1.25); min-height: 0; }
+  .listing-car .listing-side > .price-box > .price-under { margin-top: .35rem; line-height: 1.55; }
+  /* Under the price's hairline ("Shitësi" over the seller until 2026-10-11, a heading as the
+     column's "Lokacioni" and the page's others are), 16px under it as the key facts stand under
+     the title's, the seller and, 16px under them, the ways to reach them, with no box round them, as the canvas has it
      (seller_card.html, .seller-card: a card once, the bar under a hairline in it): the bar's
      pills on a line each, 8px apart, the message's first, the column's width; the share and the
      report under the section, after a hairline (.listing-share, above; they stood beside the
      message's pill until 2026-10-11). On the seller's own page their own buttons stay under the
      seller. */
-  .listing-car .listing-deal > .seller-section { margin-top: 1.75rem; }
+  .listing-car .listing-deal > .seller-section { margin-top: 0; }
   .listing-car .listing-deal > .seller-section > h2 { margin-top: 0; }
+  .listing-car .listing-deal > .seller-section > h2,
+  .listing-car .listing-deal > .seller-section > .seller-card:first-child > .seller-head { padding-top: 16px; border-top: 0; }
   .listing-car .listing-deal .contact-bar { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 16px; }
   .listing-car .contact-bar .button { flex: none; }
   .listing-car .contact-bar .message-button { order: -1; }

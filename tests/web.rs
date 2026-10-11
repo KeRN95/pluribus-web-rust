@@ -7872,9 +7872,9 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur · "#,
         r#"<dl class="key-facts">"#,
-        r#"<div class="listing-deal""#,
         r#"<div class="price-box">"#,
         r#"<p class="listing-price">"#,
+        r#"<div class="listing-deal""#,
         r#"<section class="seller-section" aria-label="Shitësi">"#,
         r#"<div class="seller-card">"#,
         &format!(r#"<a class="seller" href="{ana}">"#),
@@ -8768,10 +8768,11 @@ async fn a_listing_but_a_cars_or_a_propertys_stands_beside_its_photo(pool: PgPoo
     assert!(side.find(r#"<section class="seller-section" aria-label="Shitësi">"#).unwrap() < article_end);
     assert!(!phone.contains("seller-heading"), "no heading over the seller but on their own car's or property's page");
     assert!(side[..article_end].contains(r#"<h2>Përshkrimi</h2>"#) && !phone.contains("listing-map-section"));
-    // The deal (the price, the bar, the circles) is in the flow there, the seller's card after
-    // the description, not in it.
-    let deal = &phone[phone.find(r#"<div class="listing-deal">"#).unwrap()..phone.find(r#"<section class="listing-details">"#).unwrap()];
-    assert!(deal.contains(r#"<div class="price-box">"#) && !deal.contains("seller-section"), "{deal}");
+    // The price, then the deal (on the seller's own page their buttons), are in the flow there,
+    // the seller's card after the description, not in the deal.
+    let deal_at = phone.find(r#"<div class="listing-deal">"#).unwrap();
+    let deal = &phone[deal_at..phone.find(r#"<section class="listing-details">"#).unwrap()];
+    assert!(phone.find(r#"<div class="price-box">"#).unwrap() < deal_at && !deal.contains("seller-section"), "{deal}");
     assert!(!phone.contains("key-facts") && !phone.contains("spec-grid"));
     let order = positions(&phone, &["<h2>Detajet</h2>", "<h2>Përshkrimi</h2>", r#"<section class="seller-section""#]);
     assert!(order.is_sorted(), "{order:?}");
@@ -8785,8 +8786,21 @@ async fn a_listing_but_a_cars_or_a_propertys_stands_beside_its_photo(pool: PgPoo
     assert!(golf.contains(r#"<div class="listing-deal" data-map-aside-target="deal">"#));
     assert!(golf.contains(r#"<section class="listing-map-section" aria-label="Vendndodhja" data-map-aside-target="map">"#));
     assert!(!phone.contains("map-aside"), "only a car's page");
-    let deal = &golf[golf.find(r#"<div class="listing-deal""#).unwrap()..golf.find(r#"<section class="listing-description">"#).unwrap()];
-    assert!(deal.contains(r#"<div class="price-box">"#) && deal.contains(r#"<section class="seller-section""#), "{deal}");
+    // The price before the deal, which holds the seller's card: from 960 px up the price stands
+    // beside the title, in its row, the deal under it from the next (the user's ask of
+    // 2026-10-11, "make sure the price gets same space as title vertically wise").
+    let deal_at = golf.find(r#"<div class="listing-deal""#).unwrap();
+    let deal = &golf[deal_at..golf.find(r#"<section class="listing-description">"#).unwrap()];
+    assert!(golf.find(r#"<div class="price-box">"#).unwrap() < deal_at && deal.contains(r#"<section class="seller-section""#), "{deal}");
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    for rule in [
+        ".listing-car .listing-side > .listing-deal{display:grid;grid-template-columns:minmax(0,1fr);align-content:start;grid-column:2;grid-row:2 / span 40;align-self:start;}",
+        ".listing-car .listing-side > .price-box{grid-column:2;grid-row:1;padding-bottom:18px;border-bottom:1px solid var(--border);}",
+        ".listing-car .listing-side > .price-box > .price-row{height:calc(var(--lp-title) * 1.25);min-height:0;}",
+        ".listing-car .listing-side > .price-box > .price-under{margin-top:.35rem;line-height:1.55;}",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
     // A property's is laid out as a car's, as the canvas has it (its photos ran across the page
     // once, its details as pills): the deal at the right, its amenities under their own name, its
     // map able to move into the column.

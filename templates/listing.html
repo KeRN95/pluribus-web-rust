@@ -224,11 +224,10 @@
     {%- endfor %}
   </dl>
   {%- endif %}
-  {#- The deal: the price, the ways to the seller, the share and the report, and on a car's page
-      the seller's card. Its parts stand in the rest's grid with the others (display: contents),
-      but on a car's page from 960 px up it is a column at the page's right (listing.css,
-      .listing-deal). -#}
-  <div class="listing-deal"{% if aside %} data-map-aside-target="deal"{% endif %}>
+  {#- The price, in the rest's grid with the others; on a car's or a property's page from 960 px up
+      at the page's right, beside the title, in its row, as tall as its block, so that the two
+      read as one (listing.css, .price-box; the user's ask of 2026-10-11, "make sure the price gets
+      same space as title vertically wise"). -#}
   <div class="price-box">
     {%- let area_price = listing.area_price() %}
     {%- let loan = listing.loan_amount() %}
@@ -266,6 +265,11 @@
     <p class="price-under">{% if !note.is_empty() %}<span class="price-note">{{ listing.price_note_alone() }}</span>{% endif %}{% include "price_drop.html" %}</p>
     {%- endif %}
   </div>
+  {#- The deal: the ways to the seller, the share and the report, and on a car's page the
+      seller's card. Its parts stand in the rest's grid with the others (display: contents), but on
+      a car's page from 960 px up it is a column at the page's right, under the price (listing.css,
+      .listing-deal). -#}
+  <div class="listing-deal"{% if aside %} data-map-aside-target="deal"{% endif %}>
   {#- On a car's or a property's page the seller comes under the price, with the ways to reach
       them under them (seller_card.html). -#}
   {%- if deal_page %}{% include "seller_card.html" %}{% endif %}
