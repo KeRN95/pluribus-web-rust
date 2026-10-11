@@ -626,7 +626,7 @@
 /* Under it, how quickly the seller answers and when they were last on the site, in the
    summary's grey, on lines of its own as it needs them. */
 .seller-activity { color: var(--muted); font-size: var(--text-xs); }
-.profile-header .profile-activity { margin-top: .15rem; color: var(--muted); font-size: var(--text-xs); }
+.profile-header .profile-activity { margin-top: 2px; color: var(--muted); font-size: var(--text-sm); }
 @media (hover: hover) {
   .seller:hover { background: var(--surface-muted); }
 }
@@ -649,35 +649,45 @@
 }
 .avatar.large { width: 3rem; height: 3rem; border-width: 2px; font-size: var(--text-xl); }
 .avatar-icon { width: 45%; height: 45%; }
-/* The seller's details, in a white box as the canvas has its boxes: the surface, rounder corners,
-   the soft shadow, no outline. */
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: .85rem;
-  margin: 1rem 0 .75rem;
-  padding: 1rem;
-  background: var(--surface);
-  border-radius: var(--radius-box);
-  box-shadow: var(--shadow);
+/* The seller's details, as the canvas has them, on the page's grey, 28px under the top bar (22px
+   on a phone), 20px under a store's cover (16px): the initial or the logo, 72px (64px), its letter
+   30px; the name 30px (26px), since when and how many listings under it, muted, how quickly they
+   answer, 14px, and their number proved theirs, semibold, after its shield. (In a white box once,
+   the initial 48px.) */
+.profile-header { display: flex; align-items: center; gap: 16px; margin: 28px 0 0; }
+.profile-header > .avatar { width: 72px; height: 72px; font-size: 1.875rem; }
+.profile-header > div { min-width: 0; }
+.profile-header h1 { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; overflow-wrap: anywhere; }
+.profile-header p { margin: 4px 0 0; color: var(--muted); }
+.store-cover + .profile-header { margin-top: 20px; }
+@media (max-width: 719px) {
+  .profile-header { margin-top: 22px; }
+  .profile-header > .avatar { width: 64px; height: 64px; }
+  .store-cover + .profile-header { margin-top: 16px; }
 }
-.profile-header h1 { margin: 0; font-size: var(--text-2xl); line-height: 1.2; }
-.profile-header p { margin: .15rem 0 0; color: var(--muted); font-size: var(--text-sm); }
-/* A store's page (profile.html, stores.rs): its cover across the column over its head, rounded
-   as the cards are; its logo round in place of the initial; "Ndrysho dyqanin" at the head's end
-   for its people; under it what it says, its address and hours as a short list, and its ways to
-   reach it as buttons on a line that wraps. */
-.store-cover { display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; margin: 1rem 0 0; border-radius: var(--radius); object-fit: cover; background: var(--surface-muted); }
+/* A store's page (profile.html, stores.rs), as the canvas has it: its cover across the column over
+   its head, 24px under the top bar (16px on a phone), its corners 16px; its logo round in place of
+   the initial; "Ndrysho dyqanin" at the head's end for its people, 34px; under it "Për dyqanin",
+   22px (19px), what it says, its address and hours as a short list, their names muted in a column
+   of their own, and its ways to reach it as grey buttons, 40px, on a line that wraps. */
+.store-cover { display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; margin: 24px 0 0; border-radius: var(--radius-box); object-fit: cover; background: var(--surface-muted); }
 .avatar-logo { border: 0; object-fit: cover; background: var(--surface); }
-.store-edit { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; margin-left: auto; }
-.store-info { max-width: 42rem; margin: 0 0 1.25rem; }
-.store-about { margin: 0 0 .6rem; white-space: pre-line; }
-.store-facts { display: grid; gap: .35rem; margin: .75rem 0; }
-.store-facts div { display: flex; gap: .75rem; }
-.store-facts dt { flex: 0 0 4rem; color: var(--muted); }
+.store-edit { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
+.store-edit .button.small { min-height: 34px; }
+.store-info { max-width: 42rem; margin: 0; }
+.store-info h2 { margin: 26px 0 8px; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
+.store-about { margin: 0; line-height: 1.6; white-space: pre-line; }
+.store-about + .store-about { margin-top: 10px; }
+.store-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 14px 0 0; }
+.store-facts div { display: contents; }
+.store-facts dt { color: var(--muted); }
 .store-facts dd { margin: 0; }
-.store-contacts { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0 0; }
+.store-contacts { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+.store-contacts .button { min-height: 40px; padding: 0 14px; font-size: var(--text-sm); }
 .store-contacts svg { flex: none; }
+@media (max-width: 719px) {
+  .store-cover { margin-top: 16px; }
+}
 /* A store's form (store_form.html): its sections' headings, its pictures now with "Hiqe". */
 .store-form h2 { margin: 1.75rem 0 .5rem; font-size: var(--text-lg); }
 .store-current { display: flex; align-items: center; gap: .9rem; margin: .25rem 0 .5rem; }
@@ -726,22 +736,33 @@
    34px, 12px under the heading. */
 .whose-listings { margin: 12px 0 0; }
 .whose-listings a { min-height: 34px; }
-/* Its verified number keeps the green its badge has everywhere (page.css), its size too. */
-.profile-header .verified { margin-top: .3rem; color: var(--below); font-size: var(--text-xs); }
-/* Searching one seller's listings: a small field under their name. */
+/* Its verified number, as the canvas has it on a profile: in the text's colour, semibold, 13.5px,
+   after its shield, 16px. (In the green of the seller's card on a listing's page once, page.css.) */
+.profile-header .verified { gap: 6px; margin-top: 6px; color: var(--text); font-size: .84375rem; }
+/* Searching one seller's listings, as the canvas has it: a pill of a field 18px under the head,
+   48px tall and 440px wide at most (across a phone), the magnifier muted before the words, its
+   hairline in the main colour with the soft ring when focused, as every field's; Enter sends it.
+   Then the cards, 26px down (20px on a phone). (A small field with a round button at its end once,
+   ringed in the accent when focused.) */
 .profile-search {
   display: flex;
   align-items: center;
-  gap: .25rem;
-  max-width: 22rem;
-  margin: 0 0 1rem;
-  padding: .2rem .2rem .2rem .85rem;
-  background: var(--surface);
+  gap: 10px;
+  max-width: 440px;
+  height: var(--size-field);
+  margin: 18px 0 0;
+  padding: 0 6px 0 16px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
 }
-.profile-search:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
-.profile-search input { flex: 1; min-width: 0; padding: .3rem 0; border: 0; background: transparent; color: inherit; font: inherit; font-size: max(16px, var(--text-md)); outline: none; }
-.profile-search .icon-button { width: 2rem; height: 2rem; background: var(--button); color: var(--on-button); }
-.profile-search .icon-button:hover { background: var(--button-hover); }
-.profile-found { margin: -.4rem 0 1rem; color: var(--muted); font-size: var(--text-sm); }
+.profile-search:focus-within { border-color: var(--main); box-shadow: var(--focus-field); }
+.profile-search-icon { flex: none; color: var(--muted); }
+.profile-search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-size: .9375rem; outline: none; }
+.profile-found { margin: 12px 0 0; color: var(--muted); font-size: var(--text-sm); }
+:is(.profile-search, .profile-found) + :is(.grid, .empty) { margin-top: 26px; }
+@media (max-width: 719px) {
+  .profile-search { max-width: none; }
+  .profile-search input { font-size: 16px; }
+  :is(.profile-search, .profile-found) + :is(.grid, .empty) { margin-top: 20px; }
+}
