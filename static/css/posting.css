@@ -64,15 +64,16 @@
 @media (max-width: 719px) {
   .account.settings { padding-top: 18px; }
 }
-/* After an account closed itself (account_closed.html): as signing in, a column of 480px in the
-   middle of the page, 48px under the top bar (24px on a phone), the heading 30px (26px), what
-   became of it under it, 16px, and the way to the welcome page 20px down. */
-.account.account-closed { max-width: 480px; margin-inline: auto; padding-top: 48px; }
+/* After an account closed itself (account_closed.html), as the canvas has it: a column of 600px in
+   the middle of the page, 48px under the top bar (28px on a phone), the heading 30px (26px), what
+   became of it under it, 16px, and the way to the welcome page 22px down, across a phone. */
+.account.account-closed { margin-inline: auto; padding-top: 48px; }
 .account-closed h1 { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
 .account-closed .lead { margin: 8px 0 0; font-size: 1rem; line-height: 1.55; }
-.account-closed .lead + p { margin: 20px 0 0; }
+.account-closed .lead + p { margin: 22px 0 0; }
 @media (max-width: 719px) {
-  .account.account-closed { padding-top: 24px; }
+  .account.account-closed { padding-top: 28px; }
+  .account-closed .lead + p .button { width: 100%; }
 }
 .account h1 { margin: 0 0 .3rem; }
 .account .lead { margin: 0 0 1.25rem; color: var(--muted); }
