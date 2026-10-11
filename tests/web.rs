@@ -951,7 +951,7 @@ async fn the_welcome_page_shows_the_listings_seen_lately(pool: PgPool) {
 async fn a_search_with_words_says_what_and_where_for_the_last_searches(pool: PgPool) {
     // What it searched and where, which application.js keeps among the last searches.
     let search = html(pool.clone(), "/search?q=golf").await;
-    assert!(search.contains(r#"<section class="results" aria-labelledby="results-heading" data-search-words="golf" data-search-address="/search?q=golf">"#), "{search}");
+    assert!(search.contains(r#"<section class="results" data-controller="lines" aria-labelledby="results-heading" data-search-words="golf" data-search-address="/search?q=golf">"#), "{search}");
     let cars = html(pool.clone(), "/c/makina?q=golf&vehicle_fuel=DIESEL").await;
     assert!(cars.contains(r#"data-search-words="golf" data-search-address="/c/makina?q=golf&vehicle_fuel=DIESEL""#), "{cars}");
     // Words are the visitor's own: what would end the attribute or open a tag is escaped.
@@ -7831,14 +7831,14 @@ async fn a_card_carries_the_start_of_its_description(pool: PgPool) {
     let golf = card_of(&html(pool.clone(), "/c/makina").await, 1001);
     let description = positions(&golf, &[
         r#"<h2 class="card-title">"#,
-        r#"<p class="card-description">Makina është në gjendje shumë të mirë, e mirëmbajtur rregullisht. Kambio manuale, 148 000 km.</p>"#,
+        r#"<p class="card-description" data-lines-target="text">Makina është në gjendje shumë të mirë, e mirëmbajtur rregullisht. Kambio manuale, 148 000 km.</p>"#,
     ]);
     assert!(description.is_sorted(), "{golf}");
     // A long one, its lines run together, is cut at a word near 400 characters, ending in "…".
     let long = format!("Shumë e mirë.\n\n{}", "fjalë ".repeat(120));
     sqlx::query("UPDATE listings SET description = $2 WHERE public_no = $1").bind(1001_i64).bind(&long).execute(&pool).await.unwrap();
     let golf = card_of(&html(pool.clone(), "/c/makina").await, 1001);
-    let open = r#"<p class="card-description">"#;
+    let open = r#"<p class="card-description" data-lines-target="text">"#;
     let text = &golf[golf.find(open).unwrap() + open.len()..];
     let text = &text[..text.find("</p>").unwrap()];
     assert!(text.starts_with("Shumë e mirë. fjalë fjalë") && text.ends_with("fjalë…"), "{text}");
@@ -7847,14 +7847,20 @@ async fn a_card_carries_the_start_of_its_description(pool: PgPool) {
     sqlx::query("UPDATE listings SET description = '' WHERE public_no = $1").bind(1001_i64).execute(&pool).await.unwrap();
     assert!(!card_of(&html(pool.clone(), "/c/makina").await, 1001).contains("card-description"));
     // In the list a listing has no box round it but under the pointer or the keyboard's focus, and
-    // its description shows on a phone too, one line there, cut with "…" (the user's ask of
-    // 2026-10-11). (The stylesheet comes minified: web::site_css.)
+    // its description fills the room under its details, as many whole lines as fit, the last ending
+    // in "…" (lines_controller.js sets --lines; two without scripts, one on a phone), on a phone
+    // too: the user's asks of 2026-10-11. (The stylesheet comes minified: web::site_css.)
+    assert!(html(pool.clone(), "/c/makina").await.contains(r#"<section class="results" data-controller="lines" aria-labelledby="results-heading">"#));
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     let list_card = &css[css.find(".cards-list .results .card{").expect("the list's card")..];
     assert!(!list_card[..list_card.find('}').unwrap()].contains("background:"), "no box at rest");
     assert!(css.contains(".cards-list .results .card:hover{background:var(--surface);box-shadow:var(--shadow);}"));
     assert!(css.contains(".cards-list .results .card:focus-within{background:var(--surface);box-shadow:var(--shadow);}"));
-    assert!(css.contains(".cards-list .results .card-description{display:block;max-height:none;margin:0;padding-right:0;font-size:.8571rem;line-height:1.45;text-overflow:ellipsis;white-space:nowrap;}"));
+    let text = &css[css.find(".cards-list .results .card-description{").expect("the list's description")..];
+    let text = &text[..text.find('}').unwrap()];
+    assert!(text.contains("align-self:stretch;") && text.contains("-webkit-line-clamp:var(--lines,2);"), "{text}");
+    assert!(css.contains(".cards-list .results .card-description{margin:0;padding-right:0;font-size:.8571rem;line-height:1.45;-webkit-line-clamp:var(--lines,1);line-clamp:var(--lines,1);}"));
+    assert!(css.contains("grid-template-rows:auto auto minmax(0,1fr) auto;"));
 }
 
 /// Sets a listing's price, as its seller's edit does, which listing_price_history records.

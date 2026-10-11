@@ -521,10 +521,11 @@
    photo at the left, its first alone, 240 by 180 with corners of 12px (a square of 116px on
    phones), the price on it at its foot over the shade and the heart white at its top right, as a
    card's are; beside it the title (17px semibold; 15px on up to two lines on phones), the details
-   line under it, muted (its town left out, .card-town), the start of the description, two lines
-   at most (one on phones, since the same day), and at the foot where it is and when it was
-   posted, muted, "Blloku, Tiranë · Dje" (.card-place and .card-when, which the cards leave out),
-   each cut with "…" where its room ends. The photo's box (.card-media) gives its parts to the
+   line under it, muted (its town left out, .card-town), the start of the description, as many
+   lines as the room left under them holds (lines_controller.js: the user's ask of 2026-10-11; two
+   at most before, one on phones), and at the foot where it is and when it was posted, muted,
+   "Blloku, Tiranë · Dje" (.card-place and .card-when, which the cards leave out), each cut with
+   "…" where its room ends. The photo's box (.card-media) gives its parts to the
    card's own grid, the seller over the photo left out. */
 .card-when,
 .card-place { display: none; }
@@ -532,14 +533,13 @@
 .cards-list .results .card {
   display: grid;
   grid-template-columns: calc(240px / var(--page-scale)) auto minmax(0, 1fr);
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   grid-template-areas: "photo title title" "photo summary summary" "photo description description" "photo place when";
   column-gap: 18px;
   row-gap: 6px;
-  /* As tall as the photo, which sets it, the foot's row taking what the words over it leave (its
-     least 0: spanning a flexible row at its least auto, the photo would stretch the rows); the words
-     beside it, two lines of title and of description at most, fit in its height at every text
-     size. */
+  /* As tall as the photo, which sets it, the description's row taking what the title, the details
+     and the foot leave (its least 0: spanning a flexible row at its least auto, the photo would
+     stretch the rows). */
   height: calc(180px / var(--page-scale) + 24px);
   margin-inline: -12px;
   padding: 12px;
@@ -572,14 +572,15 @@
 .cards-list .results .card-summary { grid-area: summary; margin: 0; overflow: hidden; color: var(--muted); font-size: .875rem; text-overflow: ellipsis; white-space: nowrap; }
 .cards-list .results .card-summary:empty { display: none; }
 .cards-list .results .card-town { display: none; }
-/* The start of the description under them, two lines at most (one on a phone, below), ending in
-   "…" when it has more: the card opens the listing for the rest. Only in the list. */
+/* The start of the description under them, stretched over the room its row has, as many whole
+   lines in it as fit (--lines, which lines_controller.js sets as the room changes; two without
+   scripts, one on a phone), ending in "…" when it has more: the card opens the listing for the
+   rest; none at all where there is no room for one line. Only in the list. */
 .card-description { display: none; }
 .cards-list .results .card-description {
   display: -webkit-box;
   grid-area: description;
-  align-self: start;
-  max-height: 3.1em; /* two lines, which the grid's rows also go by (a clamp alone, they don't) */
+  align-self: stretch;
   margin: 2px 0 0;
   padding-right: 8px;
   overflow: hidden;
@@ -587,9 +588,10 @@
   line-height: 1.55;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: var(--lines, 2);
+  line-clamp: var(--lines, 2);
 }
+.cards-list .results .card-description[data-no-room] { visibility: hidden; }
 .cards-list .results :is(.card-media .card-place, .card-when) { display: block; align-self: end; margin: 0; padding-bottom: 4px; overflow: hidden; color: var(--muted); font-size: .8125rem; text-overflow: ellipsis; white-space: nowrap; }
 .cards-list .results .card-media .card-place { grid-area: place; }
 .cards-list .results .card-place .pin-icon { display: none; }
@@ -600,7 +602,7 @@
   .cards-list .results .grid { row-gap: 10px; }
   .cards-list .results .card {
     grid-template-columns: calc(116px / var(--page-scale)) auto minmax(0, 1fr);
-    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
     grid-template-areas: "photo title title" "photo summary summary" "photo description description" "photo place when";
     column-gap: var(--space-12);
     row-gap: 3px;
@@ -614,7 +616,7 @@
   .cards-list .results .card-head { padding: 2px 0 0; }
   .cards-list .results .card-title { font-size: 1.0714rem; }
   .cards-list .results .card-summary { font-size: .9286rem; }
-  .cards-list .results .card-description { display: block; max-height: none; margin: 0; padding-right: 0; font-size: .8571rem; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+  .cards-list .results .card-description { margin: 0; padding-right: 0; font-size: .8571rem; line-height: 1.45; -webkit-line-clamp: var(--lines, 1); line-clamp: var(--lines, 1); }
   .cards-list .results :is(.card-media .card-place, .card-when) { padding-bottom: 2px; font-size: .9286rem; }
   .cards-list .results .card-when { margin-left: calc(-1 * var(--space-12)); }
 }

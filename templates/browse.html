@@ -352,7 +352,7 @@
   {#- A search with words says what it searched and where (the address "Ruaj kërkimin" keeps),
       for the visitor's last searches, which a search box offers while empty (application.js,
       recent_searches.js). -#}
-  <section class="results" aria-labelledby="results-heading"{% if let Some(q) = filters.q.as_deref() %} data-search-words="{{ q }}" data-search-address="{{ save_address }}"{% endif %}>
+  <section class="results" data-controller="lines" aria-labelledby="results-heading"{% if let Some(q) = filters.q.as_deref() %} data-search-words="{{ q }}" data-search-address="{{ save_address }}"{% endif %}>
     {#- The listings' heading, as the canvas has it, a section's title: on a category page their
         order ("Njoftimet më të reja"; in English the order's word first, "Newest listings"),
         elsewhere the order alone ("Më të përshtatshmet"), which the row's last button opens. -#}

@@ -59,10 +59,11 @@
     </div>
     {%- let description = card.description_excerpt() %}
     {%- if !description.is_empty() %}
-    {#- In the list, under the title, the start of its description, three lines at most, ending in
-        "…" when it has more: the card opens the listing for the rest. The cards leave it out
-        (page.css). -#}
-    <p class="card-description">{{ description }}</p>
+    {#- In the list, under the title and the details, the start of its description, as many lines
+        as the room under them holds (lines_controller.js; two without scripts, one on a phone),
+        ending in "…" when it has more: the card opens the listing for the rest. The cards leave it
+        out (page.css). -#}
+    <p class="card-description" data-lines-target="text">{{ description }}</p>
     {%- endif %}
     {#- The price, what follows it (/muaj, i diskutueshëm) a size down; one that dropped lately is
         followed, as on the listing's page, by what it was, struck through, and by how much, in a
