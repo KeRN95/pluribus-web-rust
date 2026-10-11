@@ -905,6 +905,20 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   .search-folded .header-inner { grid-template-rows: var(--size-header-row); padding-bottom: 0; }
   .search-folded.search-open .header-inner { grid-template-rows: var(--size-header-row) var(--size-button-sm); padding-bottom: 8px; }
 }
+/* "Posto", the site's main thing to do, on a phone's front page (home.html, the header_post
+   block), as the user asked on 2026-10-11 ("put the plus icon near the account one"; it stood
+   after the page's search until then): its plus alone just before the account, on a circle of
+   36px in the accent, the plus dark on it in both themes, as every button that does a page's
+   thing (--post, --on-post), 40px to tap as the account is, a shade darker under the pointer or
+   a finger (--post-hover). From 720px up the rail has it (.rail-post), and the bar none. */
+.header-post { width: var(--size-button-sm); height: var(--size-button-sm); padding: 2px; border: 0; background: var(--post) content-box; color: var(--on-post); transition: background-color .15s; }
+.header-post:active { background-color: var(--post-hover); }
+@media (hover: hover) {
+  .header-post:hover { background-color: var(--post-hover); }
+}
+@media (min-width: 720px) {
+  .header-post { display: none; }
+}
 /* The menu's button at the bar's left, before the logo: its three lines, 24px, on a bare round
    button, a grey circle under the pointer, the word "Menyja" kept for screen readers; 40px on
    phones, and from 720px up 48px over the rail's middle (the menu folded), the logo where the page

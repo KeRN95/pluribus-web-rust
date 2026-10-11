@@ -822,20 +822,26 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     // asks the page's question.
     assert!(body.contains(r#"<button type="submit" class="icon-button welcome-search" aria-label="Kërko""#));
     assert!(body.contains(r#"placeholder="Çfarë po kërkon?""#));
-    // The search leads a row of its own over the categories, with, for phones (the rail has it
-    // from 720px up), "Posto", its plus with its word kept for screen readers; no button opens the
-    // search, which stands open. The listings kept and the conversations, round buttons after
-    // "Posto" until 2026-10-11, went at the user's word (the menu has them); the theme is the
-    // menu's too.
+    // The search is alone in a row of its own over the categories; no button opens the search,
+    // which stands open. "Posto", after it on phones until 2026-10-11, is in the bar, its plus just
+    // before the account (the user's ask: "put the plus icon near the account one"), named for
+    // screen readers as the rail's is; the rail has it from 720px up (base.css). The listings kept
+    // and the conversations, round buttons after "Posto" once, went at the user's word (the menu
+    // has them); the theme is the menu's too.
     let nav = body.find(r#"<nav class="shortcuts" data-controller="drag-row" aria-label="Kategoritë">"#).unwrap();
-    let row = positions(&body, &[
-        r#"<div class="welcome-tools">"#,
-        r#"<form class="welcome-form""#,
-        r#"<a class="welcome-post" href="/shto">"#,
+    let start = body.find(r#"<div class="welcome-tools">"#).unwrap();
+    let row = &body[start..nav];
+    assert!(row.contains(r#"<form class="welcome-form""#) && !row.contains("/shto"), "{row}");
+    assert!(!body.contains("welcome-post"));
+    let bar = &body[body.find(r#"<header class="site-header">"#).unwrap()..body.find("</header>").unwrap()];
+    let end = positions(bar, &[
+        r#"<div class="header-end">"#,
+        r#"<a class="icon-button header-post" href="/shto" aria-label="Posto njoftim" title="Posto njoftim">"#,
+        r#"<svg data-icon="plus""#,
+        r#"<a class="icon-button account-button" href="/llogaria""#,
     ]);
-    assert!(row.is_sorted() && row[2] < nav, "{row:?} before {nav}");
+    assert!(end.is_sorted(), "{end:?}");
     assert!(!body.contains("circle-shortcut") && !body.contains("saved-shortcut") && !body.contains("inbox-shortcut"), "{body}");
-    assert!(body.contains(r#"<span class="welcome-post-word">Posto</span>"#));
     assert!(!body.contains("theme-shortcut"));
     assert!(!body.contains("search-shortcut") && !body.contains("welcome-search-panel") && !body.contains("welcome-scrim"));
     // Then every category's pill straight in the list, no group round any of them, so that they
@@ -858,17 +864,18 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(!list.contains("circle-shortcut"), "{list}");
     // Every page's top bar has the account alone at its right end, as the user asked on 2026-10-11,
     // the welcome page's too: the text's size and the theme are the menu's, posting, the listings
-    // kept and the conversations the rail's (on phones the welcome page's row has posting, and the
-    // menu the others). (The search's magnifier before it is a listing's alone, hidden elsewhere:
-    // a_listing_folds_the_bars_search_behind_a_magnifier.)
+    // kept and the conversations the rail's (on phones the menu's, and posting the welcome page's
+    // bar's too, its plus just before the account). (The search's magnifier before it is a
+    // listing's alone, hidden elsewhere: a_listing_folds_the_bars_search_behind_a_magnifier.)
     let cars = get(pool.clone(), "/c/automjete").await.body;
-    for page in [&body, &cars] {
+    for (page, posting) in [(&body, true), (&cars, false)] {
         assert!(!page.contains("post-button"));
         // The typeface panel ("Ff") stands there only while TYPE_TRIAL is on (.env).
         let trial = std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true");
         assert_eq!(page.contains(r#"<details class="type-menu" data-controller="dropdown type-trial""#), trial);
         let bar = &page[page.find(r#"<header class="site-header">"#).unwrap()..page.find("</header>").unwrap()];
-        assert_eq!(bar.matches("icon-button").count(), 2 + usize::from(trial), "{bar}");
+        assert_eq!(bar.contains(r#"<a class="icon-button header-post" href="/shto""#), posting, "{bar}");
+        assert_eq!(bar.matches("icon-button").count(), 2 + usize::from(trial) + usize::from(posting), "{bar}");
         assert!(bar.contains(r#"<button type="button" class="icon-button search-button""#), "{bar}");
         assert!(bar.contains(r#"<a class="icon-button account-button" href="/llogaria""#));
         for gone in ["theme-toggle", "text-size-menu", "saved-button", "inbox-button"] {
@@ -4801,7 +4808,7 @@ async fn buttons_are_pills_in_the_accent_or_the_grey(pool: PgPool) {
     assert!(rule(".button.secondary").contains("background:var(--surface-muted)"));
     assert!(rule(".button.danger").contains("color:var(--danger)"));
     assert!(rule(".button.small").contains("min-height:var(--size-button-sm)"));
-    assert!(rule(".welcome-post").contains("background:var(--post)"));
+    assert!(rule(".header-post").contains("background:var(--post) content-box"));
     let light = &css[css.find(":root{color-scheme:light;").expect("the light theme")..];
     let light = &light[..light.find('}').unwrap()];
     for token in ["--post:var(--highlight);", "--on-post:var(--on-highlight);", "--post-hover:var(--highlight-hover);", "--highlight-hover:color-mix(in srgb,var(--highlight) 88%,#1b1b1b);"] {
@@ -4896,6 +4903,7 @@ async fn a_listing_folds_the_bars_search_behind_a_magnifier(pool: PgPool) {
         r#"<a class="icon-button account-button" href="/llogaria""#,
     ]);
     assert!(order.is_sorted(), "{order:?}");
+    assert!(!bar.contains("header-post"), "{bar}");
     // Every other page's bar has its search open (the front page none), the magnifier there but
     // hidden, so that a listing's stand-in, which is the page's bar (application.js), has it.
     for page in ["/", "/c/makina", "/search?q=golf", "/promovo"] {
@@ -4922,9 +4930,10 @@ async fn a_listing_folds_the_bars_search_behind_a_magnifier(pool: PgPool) {
     for part in ["`search-open`", "`search-folded`", "`Escape`", "new FocusEvent(`focus`)"] {
         assert!(script.contains(part), "{part} in {script}");
     }
-    // A listing's stand-in has its bar folded, any other page's open.
+    // A listing's stand-in has its bar folded, any other page's open, and none the front page's
+    // "Posto", its bar's alone (home.html, header_post).
     let application = get(pool, &format!("/static/js/application.js?v={version}")).await.body;
-    assert!(application.contains("`search-folded`") && application.contains("`search-open`"), "{application}");
+    assert!(application.contains("`search-folded`") && application.contains("`search-open`") && application.contains("`.header-post`"), "{application}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
@@ -5037,6 +5046,33 @@ async fn the_front_pages_categories_are_a_line_of_tiles(pool: PgPool) {
         assert!(css.contains(rule), "{rule}");
     }
     assert!(!css.contains(".welcome-form:focus-within") && !css.contains("--focus-search"), "no edge or ring round the search in use");
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn the_front_pages_search_is_materials_search_bar(pool: PgPool) {
+    // The front page's search is the canvas's Material search bar (the user's ask of 2026-10-11,
+    // "make search bar google style like in the design"): a grey pill 64px tall, its words 18px
+    // 24px in, its round button 48px, 8px in; on phones the page's width, 56px, the words 16px and
+    // the button 40px. Its edge is clear, a pixel of the padding (there for forced colours).
+    // "Posto", which stood after it on phones, is the bar's now, before the account: a circle of
+    // 36px in the accent, 40px to tap, which the rail has from 720px up. (The stylesheet comes
+    // minified: web::site_css.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    for rule in [
+        ".welcome-form{display:flex;align-items:center;gap:var(--space-12);height:64px;padding:0 7px 0 23px;border:1px solid transparent;border-radius:var(--radius-pill);background:var(--surface-muted);}",
+        "font-size:max(16px,1.125rem);",
+        ".welcome-search{width:var(--size-button);height:var(--size-button);background:var(--search-knob);color:var(--highlight-icon);}",
+        ".welcome-search svg{width:22px;height:22px;}",
+        "@media (min-width:720px){.welcome-tools{max-width:720px;margin-inline:auto;}}",
+        "@media (max-width:719px){.welcome-form{height:56px;}.welcome-search{width:var(--size-button-sm);height:var(--size-button-sm);}.welcome-search svg{width:20px;height:20px;}}",
+        ".header-post{width:var(--size-button-sm);height:var(--size-button-sm);padding:2px;border:0;background:var(--post) content-box;color:var(--on-post);",
+        ".header-post:active{background-color:var(--post-hover);}",
+        "@media (hover:hover){.header-post:hover{background-color:var(--post-hover);}}",
+        "@media (min-width:720px){.header-post{display:none;}}",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    assert!(!css.contains("welcome-post") && !css.contains(".welcome-tools{display:flex"), "nothing left of the row's old parts");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]

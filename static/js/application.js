@@ -340,10 +340,12 @@ function standIn(link) {
   }
   const card = link.closest(".card");
   // The bar as the page coming has it: a listing's with its search folded away behind the
-  // magnifier (base.css, .search-folded), any other's with its search there.
+  // magnifier (base.css, .search-folded), any other's with its search there, and none with the
+  // front page's "Posto", its bar's alone (home.html, header_post).
   const bar = page.body.querySelector(".site-header");
   bar?.classList.remove("search-open");
   bar?.classList.toggle("search-folded", Boolean(card));
+  bar?.querySelector(".header-post")?.remove();
   const main = Object.assign(page.createElement("main"), { className: "container" });
   main.setAttribute("aria-busy", "true");
   main.setAttribute("data-stand-in", "");
