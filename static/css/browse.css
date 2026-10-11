@@ -40,9 +40,11 @@
    40px tall, the way back first, a chevron 40px wide to tap, then the category above, a link in the
    muted grey (the words' colour and underlined under the pointer), a › muted too, and the page's
    own in the text's colour, semibold; a name too long for the line ends in "…". 14px on phones. The
-   page's heading under it, its name 30px bold (26px on phones), as the canvas has a page's
-   title. */
-.breadcrumb { display: flex; align-items: center; gap: var(--space-8); min-width: 0; height: var(--size-button-sm); font-size: .9375rem; white-space: nowrap; }
+   words at the font's own line height, so that their capitals sit in the line's middle, on the
+   chevron's, at every text size (at the page's 1.55 their baseline was rounded up to a pixel and
+   a half off it, the chevron left low beside them: the user, 2026-10-11). The page's heading under
+   it, its name 30px bold (26px on phones), as the canvas has a page's title. */
+.breadcrumb { display: flex; align-items: center; gap: var(--space-8); min-width: 0; height: var(--size-button-sm); font-size: .9375rem; line-height: normal; white-space: nowrap; }
 .breadcrumb-back { display: flex; flex: none; align-items: center; justify-content: center; width: var(--size-button-sm); height: var(--size-button-sm); margin: 0 -4px 0 -12px; border-radius: var(--radius-pill); color: var(--text); }
 @media (hover: hover) {
   .breadcrumb-back:hover { background: var(--surface-muted); }
@@ -58,10 +60,11 @@
 }
 /* The heading's line, as the canvas has it (browse.html): the page's name, and after it, on its
    baseline, how many it found, quieter (15px; 14px on phones); "Ruaj kërkimin" at the line's end,
-   a grey pill 40px tall with the bookmark in the accent (--highlight-knob behind its line,
-   --highlight-icon for it: the accent with a dark line on the light theme, a line of it on the
-   dark), its words medium; kept, the same grey pill with a tick in the words' colour in place of
-   the bookmark, as the canvas has it. On phones the icon alone, round, its words kept for screen
+   a grey pill 40px tall with the bookmark in the words' colour, empty, its words medium; under the
+   pointer or a finger the bookmark filled with the accent and the words underlined in it, as the
+   welcome page's categories are (welcome.css; the bookmark was in the accent at rest until the
+   user asked for it plain, 2026-10-11); kept, the same grey pill with a tick in place of the
+   bookmark, as the canvas has it. On phones the icon alone, round, its words kept for screen
    readers. */
 .browse-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); }
 .browse-heading-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-12); min-width: 0; }
@@ -86,10 +89,14 @@
   transition: background-color .15s;
   -webkit-tap-highlight-color: transparent;
 }
-.save-search-button > svg { flex: none; fill: var(--highlight-knob); color: var(--highlight-icon); }
-.save-search-button.is-saved > svg { fill: none; color: inherit; }
+.save-search-button > svg { flex: none; fill: none; }
+.save-search-button:active { background: var(--surface-muted-hover); }
+.save-search-button:active > svg { fill: var(--highlight); }
+.save-search-button:active .save-search-label { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
 @media (hover: hover) {
   .save-search-button:hover { background: var(--surface-muted-hover); }
+  .save-search-button:hover > svg { fill: var(--highlight); }
+  .save-search-button:hover .save-search-label { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
 }
 @media (max-width: 719px) {
   .browse-heading .result-count { font-size: 1rem; }

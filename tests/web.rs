@@ -4797,6 +4797,34 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
     }
 }
 
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_way_back_is_a_chevron_level_with_its_words(pool: PgPool) {
+    // The breadcrumb's way back is Phosphor's chevron, its Regular weight's (the Duotone's caret is
+    // a triangle), moved into the middle of its box as every caret is (icons.rs), and the
+    // breadcrumb's words stand at the font's own line height, so that their capitals sit level
+    // with it: the user found it off the middle of its line on 2026-10-11.
+    let page = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
+    let back = &page[page.find(r#"class="breadcrumb-back""#).expect("the way back")..];
+    let back = &back[..back.find("</a>").unwrap()];
+    assert!(back.contains(r#"<g transform="translate(.75 0) scale(.09375)" stroke="none"><path fill="currentColor" d="M165.66,202.34"#), "{back}");
+    assert!(!page.contains("M160,48V208L80,128Z") && !page.contains("M176,128,96,208V48Z"), "no caret drawn as a triangle");
+    // (The stylesheet comes minified: web::site_css.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let crumb = &css[css.find(".breadcrumb{").expect("the breadcrumb")..];
+    let crumb = &crumb[..crumb.find('}').unwrap()];
+    assert!(crumb.contains("line-height:normal"), "{crumb}");
+    // "Ruaj kërkimin"'s bookmark is plain until the pointer or a finger is on it, when it fills
+    // with the accent as a category's pill does (the user's ask of the same day).
+    for rule in [
+        ".save-search-button > svg{flex:none;fill:none;}",
+        ".save-search-button:active > svg{fill:var(--highlight);}",
+        ".save-search-button:hover > svg{fill:var(--highlight);}",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    assert!(!css.contains("--highlight-knob"));
+}
+
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn pills_chips_and_badges_are_grey_or_the_main_colour(pool: PgPool) {
     // The redesign's pills (the categories', the path's), chips and badges: grey with no outline,

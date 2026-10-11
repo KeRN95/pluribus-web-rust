@@ -32,7 +32,7 @@
   --placeholder: #949494;
   --focus-field: 0 0 0 3px rgb(27 27 27 / 14%); /* round a focused field, its hairline in the main colour */
   --focus-search: 0 0 0 4px rgb(27 27 27 / 14%); /* round the search bar in use */
-  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23707070' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); /* a native select's, in the muted colour */
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 8 256 256' fill='%23707070'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E"); /* a native select's, in the muted colour: Phosphor's caret */
   --border: #dedede;
   --border-soft: #e8e8e8;       /* lines inside a card or a list */
   --border-strong: #c6c6c6;
@@ -50,9 +50,8 @@
      offers (data-accent on <html>, below), every one as bright as lime (mint, lime, coral, orange
      and blue, the same in both themes): the logo's dot, what is new or unread, the dots and counts,
      and the buttons that do a page's thing. Bright as they are, they are only ever a background on
-     the light theme, behind dark icons, words or numbers (--highlight-knob and --highlight-icon: a
-     magnifier or a bookmark dark on an accent circle, --on-highlight on a count or a button, 6:1 at
-     least), and an unread dot and the logo's have a dark edge inside them on the white
+     the light theme, behind dark icons, words or numbers (--highlight-icon: the magnifier dark on
+     the front page's accent circle, --on-highlight on a count or a button, 6:1 at least), and an unread dot and the logo's have a dark edge inside them on the white
      (--dot-edge, --logo-edge). The names are the Pluribus design system's (its tokens.json), as
      every token here. */
   --choice-mint: #2de38c;
@@ -62,7 +61,6 @@
   --choice-blue: #4dabff;
   /* A button in the accent under the pointer: a shade darker (a shade lighter on the dark theme). */
   --highlight-hover: color-mix(in srgb, var(--highlight) 88%, #1b1b1b);
-  --highlight-knob: var(--highlight);
   --highlight-icon: #1b1b1b;
   /* The front page's search button, on its grey pill: the accent with the dark magnifier; on the
      dark theme a grey a shade off the pill's, the magnifier in the accent. */
@@ -204,7 +202,7 @@
   --placeholder: #7d7d7d;
   --focus-field: 0 0 0 3px rgb(232 232 232 / 18%);
   --focus-search: 0 0 0 4px rgb(232 232 232 / 18%);
-  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 8 256 256' fill='%23a3a3a3'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");
   --border: #333333;
   --border-soft: #2a2a2a;
   --border-strong: #4f4f4f;
@@ -212,7 +210,6 @@
   --main-hover: #ffffff;
   --on-main: #1b1b1b;
   --highlight-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
-  --highlight-knob: var(--surface-muted);
   --highlight-icon: var(--highlight);
   --search-knob: var(--surface-muted-hover);
   --filter-share: var(--filter-share-dark);
@@ -263,7 +260,7 @@
     --placeholder: #7d7d7d;
     --focus-field: 0 0 0 3px rgb(232 232 232 / 18%);
     --focus-search: 0 0 0 4px rgb(232 232 232 / 18%);
-    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 8 256 256' fill='%23a3a3a3'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");
     --border: #333333;
     --border-soft: #2a2a2a;
     --border-strong: #4f4f4f;
@@ -271,7 +268,6 @@
     --main-hover: #ffffff;
     --on-main: #1b1b1b;
     --highlight-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
-    --highlight-knob: var(--surface-muted);
     --highlight-icon: var(--highlight);
     --search-knob: var(--surface-muted-hover);
     --filter-share: var(--filter-share-dark);
