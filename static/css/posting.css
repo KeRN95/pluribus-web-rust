@@ -28,9 +28,41 @@
 .account-form > .button { justify-content: center; }
 .account-note { margin-top: 1rem; color: var(--muted); font-size: var(--text-sm); }
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; }
-.form-error { margin: 0; padding: .7rem .9rem; border-radius: 10px; background: var(--badge); }
-/* News for the visitor, in the same box: "Njoftimi yt u publikua." */
-.notice { margin: 1rem 0; padding: .7rem .9rem; border-radius: 10px; background: var(--badge); }
+/* An error over a form: the words in red on red's tint, as the design system has errors. */
+.form-error { margin: 0; padding: .875rem 1rem; border-radius: var(--radius); background: var(--danger-bg); color: var(--danger); line-height: 1.5; }
+/* Notices, as the canvas has them: words on a tint with an icon before them, 14px corners. Grey
+   with the info's i for how things stand (a listing off the site and why, whom an invitation is
+   for); green with a check for what went well (.ok: saved, sent, thanked), in a notice's own green
+   words (--below-note); yellow for a limit reached (.warn, --near-note). One that holds more than
+   a line of words (just published with the ways to share it, a draft offered back with its
+   buttons) stacks them, with no icon. */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: .625rem;
+  margin: 1rem 0;
+  padding: .875rem 1rem;
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  color: var(--text);
+  line-height: 1.5;
+}
+.notice::before {
+  content: "";
+  flex: none;
+  width: 1.1875rem;
+  height: 1.1875rem;
+  margin-top: .0625rem;
+  background: currentColor;
+  -webkit-mask: var(--info) center / contain no-repeat;
+  mask: var(--info) center / contain no-repeat;
+}
+.notice.ok { background: var(--below-bg); color: var(--below-note); }
+.notice.ok::before { -webkit-mask-image: var(--check); mask-image: var(--check); }
+.notice.warn { background: var(--near-bg); color: var(--near-note); }
+.notice:is(.posted-note, .draft-note) { display: block; }
+.notice:is(.posted-note, .draft-note)::before { content: none; }
+.notice[hidden] { display: none; }
 .field-error { margin: .15rem 0 0; color: var(--danger); font-size: var(--text-sm); }
 .field-hint { margin: .15rem 0 0; color: var(--muted); font-size: .8125rem; line-height: 1.5; }
 .optional { color: var(--muted); font-weight: var(--regular); }
@@ -427,16 +459,16 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 }
 .avatar.large { width: 3rem; height: 3rem; border-width: 2px; font-size: var(--text-xl); }
 .avatar-icon { width: 45%; height: 45%; }
-/* The seller's details, in a card like the site's others: the soft surface, a hairline border. */
+/* The seller's details, in a white box as the canvas has its boxes: the surface, rounder corners,
+   the soft shadow, no outline. */
 .profile-header {
   display: flex;
   align-items: center;
   gap: .85rem;
   margin: 1rem 0 .75rem;
-  padding: .9rem 1rem;
+  padding: 1rem;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-box);
   box-shadow: var(--shadow);
 }
 .profile-header h1 { margin: 0; font-size: var(--text-2xl); line-height: 1.2; }

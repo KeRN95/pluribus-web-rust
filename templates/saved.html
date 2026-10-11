@@ -23,8 +23,8 @@
   {#- The listings kept whose price dropped since the visitor last looked (db::price_drops): from
       what to what. Once shown, the page says so (data-seen-url, application.js): they are seen, up
       to the latest of them, and the header's heart loses its dot. -#}
-  <div class="notice price-drops" data-seen-url="{{ self.seen_url() }}">
-    <p class="price-drops-title">{{ crate::t("Çmime më të ulëta te njoftimet që ke ruajtur") }}</p>
+  <div class="price-drops" data-seen-url="{{ self.seen_url() }}">
+    <p class="price-drops-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PRICE_TAG|safe }}</svg>{{ crate::t("Çmime më të ulëta te njoftimet që ke ruajtur") }}</p>
     <ul>
       {%- for drop in drops %}
       {%- let (was, now) = drop.prices() %}

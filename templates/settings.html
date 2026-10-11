@@ -13,7 +13,7 @@
   <h1>{{ crate::t("Cilësimet") }}</h1>
   <p class="lead">{{ crate::t1("Llogaria jote në Pluribus që nga {}.", self.since()) }}</p>
   {%- if let Some(done) = done %}
-  <p class="notice" role="status">{{ done }}</p>
+  <p class="notice ok" role="status">{{ done }}</p>
   {%- endif %}
 
   <h2>{{ crate::t("Emri") }}</h2>

@@ -12,7 +12,7 @@
   <h1>{{ crate::t("Njerëzit e dyqanit") }}</h1>
   <p class="lead">{{ crate::t("Kush punon për") }} <strong>{{ store.display_name }}</strong>: {{ crate::t("poston njoftimet e tij dhe u përgjigjet mesazheve të tij.") }}</p>
   {%- if let Some(done) = done %}
-  <p class="notice" role="status">{{ done }}</p>
+  <p class="notice ok" role="status">{{ done }}</p>
   {%- endif %}
 
   <ul class="people">

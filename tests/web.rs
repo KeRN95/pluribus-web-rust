@@ -7469,7 +7469,7 @@ async fn those_who_keep_a_listing_hear_when_its_price_drops(pool: PgPool) {
     assert_eq!((unseen(&besnik).await, unseen(&dritan).await, unseen(&ana).await), (1, 0, 0));
     // His page says so over the cards, from what to what, and asks to be told when it is shown.
     let page = get_with_cookie(pool.clone(), "/te-ruajturat", &besnik).await.body;
-    assert!(page.contains(r#"<div class="notice price-drops" data-seen-url="/te-ruajturat/pare?deri="#), "{page}");
+    assert!(page.contains(r#"<div class="price-drops" data-seen-url="/te-ruajturat/pare?deri="#), "{page}");
     let drop = format!(
         "<li><a href=\"/listing/{no}-samsung-galaxy-s21-128-gb\">Samsung Galaxy S21, 128 GB</a>: nga <del>32\u{a0}000\u{a0}Lekë</del> në 29\u{a0}000\u{a0}Lekë</li>"
     );

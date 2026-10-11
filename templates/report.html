@@ -13,7 +13,7 @@
   <p>{{ crate::t("Hyr në llogari që ta raportosh. Kur disa llogari raportojnë të njëjtin njoftim, ai fshihet nga faqja derisa ta shohin moderatorët, prandaj pa llogari nuk mund të raportohet.") }}</p>
   <p><a class="button" href="/llogaria">{{ crate::t("Hyr") }}</a></p>
   {%- when ReportState::Done %}
-  <p class="notice" role="status">{{ crate::t("Faleminderit! Moderatorët do ta shohin raportimin tënd.") }}</p>
+  <p class="notice ok" role="status">{{ crate::t("Faleminderit! Moderatorët do ta shohin raportimin tënd.") }}</p>
   {%- if blocked %}
   {#- The seller blocked too, from here or from a conversation: said, with where to let them be
       again. -#}

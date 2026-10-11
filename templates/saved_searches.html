@@ -16,7 +16,7 @@
   <p><a class="button" href="/llogaria">{{ crate::t("Hyr") }}</a></p>
   {%- else %}
   {%- if full %}
-  <p class="notice" role="status">{{ crate::t1("Ke ruajtur {} kërkime, sa mund të mbash: fshi një për të ruajtur një tjetër.", crate::db::SEARCHES_MOST) }}</p>
+  <p class="notice warn" role="status">{{ crate::t1("Ke ruajtur {} kërkime, sa mund të mbash: fshi një për të ruajtur një tjetër.", crate::db::SEARCHES_MOST) }}</p>
   {%- endif %}
   {%- if rows.is_empty() %}
   {#- Its text has an apostrophe ("s'ke"): the catalogue's as it is (|safe), which escaping would
