@@ -5203,6 +5203,9 @@ async fn the_way_back_is_a_chevron_level_with_its_words(pool: PgPool) {
         ".save-search-button > svg{flex:none;fill:none;}",
         ".save-search-button:active > svg{fill:var(--highlight);}",
         ".save-search-button:hover > svg{fill:var(--highlight);}",
+        // Kept, the pill itself filled with the accent, its tick and words dark on it.
+        ".save-search-button.is-saved{background:var(--highlight);color:var(--on-highlight);}",
+        ".save-search-button.is-saved:hover{background:var(--highlight-hover);}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }

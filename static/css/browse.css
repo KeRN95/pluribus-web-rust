@@ -74,9 +74,10 @@
    a grey pill 40px tall with the bookmark in the words' colour, empty, its words medium; under the
    pointer or a finger the bookmark filled with the accent and the words underlined in it, as the
    welcome page's categories are (welcome.css; the bookmark was in the accent at rest until the
-   user asked for it plain, 2026-10-11); kept, the same grey pill with a tick in place of the
-   bookmark, as the canvas has it. On phones the icon alone, round, its words kept for screen
-   readers. */
+   user asked for it plain, 2026-10-11); kept, the pill filled with the accent, a tick in place
+   of the bookmark and the words dark on it, as a filled button is (--on-highlight), a shade off
+   under the pointer (the user's ask of 2026-10-11; the same grey pill until then). On phones the
+   icon alone, round, its words kept for screen readers. */
 .browse-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); }
 .browse-heading-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-12); min-width: 0; }
 .browse-heading .result-count { margin: 0; color: var(--muted); font-size: .9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -118,6 +119,15 @@
   .save-search-button:hover { background: var(--surface-muted-hover); }
   .save-search-button:hover > svg { fill: var(--highlight); }
   .save-search-button:hover .save-search-label { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
+}
+.save-search-button.is-saved { background: var(--highlight); color: var(--on-highlight); }
+.save-search-button.is-saved:active { background: var(--highlight-hover); }
+.save-search-button.is-saved:active > svg { fill: none; }
+.save-search-button.is-saved:active .save-search-label { text-decoration: none; }
+@media (hover: hover) {
+  .save-search-button.is-saved:hover { background: var(--highlight-hover); }
+  .save-search-button.is-saved:hover > svg { fill: none; }
+  .save-search-button.is-saved:hover .save-search-label { text-decoration: none; }
 }
 @media (max-width: 719px) {
   .browse-heading .result-count { font-size: 1rem; }
