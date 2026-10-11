@@ -29,7 +29,8 @@
   --text: #1b1b1b;              /* eerie black */
   --muted: #707070;             /* secondary text, 4.6:1 on the page */
   --placeholder: #949494;
-  --ring: rgb(27 27 27 / 14%);  /* round a focused field, its hairline in the main colour */
+  --focus-field: 0 0 0 3px rgb(27 27 27 / 14%); /* round a focused field, its hairline in the main colour */
+  --focus-search: 0 0 0 4px rgb(27 27 27 / 14%); /* round the search bar in use */
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23707070' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); /* a native select's, in the muted colour */
   --border: #dedede;
   --border-soft: #e8e8e8;       /* lines inside a card or a list */
@@ -46,12 +47,14 @@
      logo's dot and what is new or unread, the dots and counts. Light as lime is, it is only ever a
      background on the light theme, behind dark icons or numbers (--highlight-knob and
      --highlight-icon: a magnifier or a bookmark dark on a lime circle), and an unread dot and the
-     logo's have a dark edge inside them on the white (--dot-edge, its colour); the darker choices
-     colour the icon on the grey instead, take white numbers and need no edge. */
+     logo's have a dark edge inside them on the white (--dot-edge, --logo-edge); the darker choices
+     colour the icon on the grey instead, take white numbers and need no edge. The names are the
+     Pluribus design system's (its tokens.json), as every token here. */
   --lime: #c8ff00;
   --lime-knob: var(--lime);
   --lime-icon: #1b1b1b;
-  --lime-edge: rgb(27 27 27 / 45%);
+  --logo-edge: rgb(27 27 27 / 45%);      /* a line inside the logo's lime dot, on white */
+  --dot-edge: inset 0 0 0 1.5px rgb(27 27 27 / 45%); /* a ring inside an unread dot, on white */
   --choice-darkred: #9b1b1b;
   --choice-terracotta: #ba5837;
   --choice-blue: #4679a7;
@@ -75,10 +78,28 @@
   /* A promoted card's panel: a warm yellow, the one colour the greys leave the cards. */
   --promo: #f9f2dc;
   --promo-edge: rgb(187 139 27 / 35%);
+  /* On a photo, the same in both themes: the shade under the words, the words, a label over it
+     ("Rezervuar") and the good-price tag. */
+  --photo-shade: rgb(0 0 0 / 55%);
+  --on-photo: #ffffff;
+  --photo-label: rgb(27 27 27 / 60%);
+  --photo-tag: #566a3c;
+  --photo-tag-bg: #e9eee0;
+  /* A notice's words on its tint (--below-bg, --near-bg). */
+  --below-note: #3f5129;
+  --near-note: #5c4300;
+  --header: var(--surface);     /* the header: white here, the page's ground on the dark theme */
+  --knob: #ffffff;              /* a switch's knob */
+  --knob-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+  --swatch-edge: rgb(27 27 27 / 12%); /* round an accent's swatch in the menu */
+  /* The map's ground, roads and parks, and the edge round its markers. */
+  --map-land: #ededed;
+  --map-road: #ffffff;
+  --map-park: #e2e6d8;
+  --marker-edge: #ffffff;
   --placeholder-from: #ececec;
   --placeholder-to: #e4e4e4;
   --shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 4px 16px rgb(0 0 0 / 5%);
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 4%); /* raised a little: a segment picked, a card on the grey */
   --shadow-float: 0 16px 48px rgb(0 0 0 / 14%), 0 2px 6px rgb(0 0 0 / 5%); /* what floats: sheets, the menu */
   --scrim: rgb(0 0 0 / 20%); /* the page dimmed under what floats over it */
   /* Glass: the welcome page's open search and its suggestions, over the pills (welcome.css): the
@@ -89,7 +110,30 @@
   --on-glass: var(--text);
   --on-glass-muted: var(--muted);
   --on-glass-hover: rgb(27 27 27 / 7%);
-  --radius: 14px;
+  --radius: 14px;               /* photos in cards, notices */
+  --radius-pill: 999px;         /* whatever you press: buttons, pills, chips, badges, counts, avatars */
+  --radius-field: 12px;         /* whatever you type into: fields, selects, code boxes; menu rows */
+  --radius-box: 16px;           /* white boxes, lists of rows, pop-overs, maps */
+  --radius-panel: 20px;         /* the promoted panel */
+  --radius-check: 7px;          /* checkboxes */
+  /* Heights of what you press, in pixels as the design system has them, so that nothing a finger
+     taps is under 40px on a phone either; and the frame's width. */
+  --size-button: 48px;
+  --size-button-lg: 50px;       /* the front page's search and "Posto" */
+  --size-button-sm: 40px;
+  --size-chip: 36px;            /* chips and tabs */
+  --size-round: 46px;           /* round icon buttons */
+  --size-field: 48px;
+  --size-header: 60px;
+  --content-width: 1068px;
+  /* The canvas's spacing steps, named by their pixels. */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-22: 22px;
+  --space-30: 30px;
   /* The room between the page and the screen's sides (.container), and as much over the first
      line of the welcome page and of a category page, under the header. */
   --gutter: 1rem;
@@ -132,7 +176,8 @@
   --text: #e8e8e8;
   --muted: #a3a3a3;
   --placeholder: #7d7d7d;
-  --ring: rgb(232 232 232 / 18%);
+  --focus-field: 0 0 0 3px rgb(232 232 232 / 18%);
+  --focus-search: 0 0 0 4px rgb(232 232 232 / 18%);
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   --border: #333333;
   --border-soft: #2a2a2a;
@@ -145,7 +190,8 @@
   --post-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
   --lime-knob: var(--surface-muted);
   --lime-icon: var(--lime);
-  --lime-edge: transparent;
+  --logo-edge: transparent;
+  --dot-edge: 0 0 0 0 transparent;
   --choice-darkred: #e37170;
   --choice-terracotta: #de886c;
   --choice-blue: #75a2d0;
@@ -164,10 +210,17 @@
   --above-bg: #4b2c2a;
   --promo: #2f2a17;
   --promo-edge: rgb(240 199 90 / 30%);
+  --below-note: #bccf9f;
+  --near-note: #f3d27a;
+  --header: var(--bg);
+  --swatch-edge: rgb(255 255 255 / 14%);
+  --map-land: #262626;
+  --map-road: #363636;
+  --map-park: #28301f;
+  --marker-edge: var(--bg);
   --placeholder-from: #2a2a2a;
   --placeholder-to: #303030;
   --shadow: 0 1px 2px rgb(0 0 0 / 30%);
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 30%);
   --shadow-float: 0 16px 48px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 30%);
   --scrim: rgb(0 0 0 / 45%);
   --glass-edge: rgb(255 255 255 / 25%);
@@ -187,7 +240,8 @@
     --text: #e8e8e8;
     --muted: #a3a3a3;
     --placeholder: #7d7d7d;
-    --ring: rgb(232 232 232 / 18%);
+    --focus-field: 0 0 0 3px rgb(232 232 232 / 18%);
+    --focus-search: 0 0 0 4px rgb(232 232 232 / 18%);
     --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     --border: #333333;
     --border-soft: #2a2a2a;
@@ -200,7 +254,8 @@
     --post-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
     --lime-knob: var(--surface-muted);
     --lime-icon: var(--lime);
-    --lime-edge: transparent;
+    --logo-edge: transparent;
+    --dot-edge: 0 0 0 0 transparent;
     --choice-darkred: #e37170;
     --choice-terracotta: #de886c;
     --choice-blue: #75a2d0;
@@ -219,10 +274,17 @@
     --above-bg: #4b2c2a;
     --promo: #2f2a17;
     --promo-edge: rgb(240 199 90 / 30%);
+    --below-note: #bccf9f;
+    --near-note: #f3d27a;
+    --header: var(--bg);
+    --swatch-edge: rgb(255 255 255 / 14%);
+    --map-land: #262626;
+    --map-road: #363636;
+    --map-park: #28301f;
+    --marker-edge: var(--bg);
     --placeholder-from: #2a2a2a;
     --placeholder-to: #303030;
     --shadow: 0 1px 2px rgb(0 0 0 / 30%);
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 30%);
     --shadow-float: 0 16px 48px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 30%);
     --scrim: rgb(0 0 0 / 45%);
     --glass-edge: rgb(255 255 255 / 25%);
@@ -233,15 +295,13 @@
 }
 
 /* The accent the visitor picked (data-accent on <html>; lime when there is none): the colour
-   itself, what stands on it, the circle a magnifier or a bookmark sits in and its line, and the
-   colour of the edge inside the unread dots and the logo's. Each theme gives the choices its own
-   shade above. */
+   itself, what stands on it, and the circle a magnifier or a bookmark sits in and its line; a
+   darker choice needs no edge inside its dots. Each theme gives the choices its own shade above. */
 :root {
   --highlight: var(--lime);
   --on-highlight: #1b1b1b;
   --highlight-knob: var(--lime-knob);
   --highlight-icon: var(--lime-icon);
-  --dot-edge: var(--lime-edge);
 }
 :root[data-accent="darkred"] { --highlight: var(--choice-darkred); }
 :root[data-accent="terracotta"] { --highlight: var(--choice-terracotta); }
@@ -251,7 +311,8 @@
   --on-highlight: var(--on-choice);
   --highlight-knob: var(--surface-muted);
   --highlight-icon: var(--highlight);
-  --dot-edge: transparent;
+  --logo-edge: transparent;
+  --dot-edge: 0 0 0 0 transparent;
 }
 
 /* The old names, pointing at the new colours while the pages move to them one by one (until the
@@ -299,7 +360,7 @@ input[type="radio"] {
   height: 1.375rem;
   margin: 0;
   border: 2px solid var(--border-strong);
-  border-radius: 7px;
+  border-radius: var(--radius-check);
   background: var(--surface);
   -webkit-appearance: none;
   appearance: none;
@@ -333,8 +394,8 @@ input[type="checkbox"].switch::before {
   width: 1.375rem;
   height: 1.375rem;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+  background: var(--knob);
+  box-shadow: var(--knob-shadow);
   transition: transform .15s;
 }
 input[type="checkbox"].switch:checked { background: var(--main); }
@@ -415,7 +476,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    logo's typeface alone, drawn as the font's shapes (logo.svg) so that no font loads for it and
    its i's dot can take a colour of its own: the letters in the text's colour, the dot in the
    accent, with a dark edge inside it on the light theme, where lime alone hardly shows on white
-   (--dot-edge, transparent on the dark theme and with a darker accent). The drawing is the font's
+   (--logo-edge, transparent on the dark theme and with a darker accent). The drawing is the font's
    line, ascender to descender, 1.14em tall and 4.126em wide: at 26px, 107 x 30, and on phones at
    24px, 99 x 27, in pixels, as the round buttons beside it set the bar's height. (The site's icon,
    in the tab and on home screens, is its p, light on eerie black, the lime square over it.) The
@@ -432,7 +493,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 }
 .logo-mark { display: block; width: 4.126em; height: 1.14em; }
 .logo-dot { fill: var(--highlight); transition: fill .45s ease; }
-.logo-dot-edge { stroke: var(--dot-edge); transition: stroke .45s ease; }
+.logo-dot-edge { stroke: var(--logo-edge); transition: stroke .45s ease; }
 @media (max-width: 719px) {
   .logo { font-size: 24px; }
 }

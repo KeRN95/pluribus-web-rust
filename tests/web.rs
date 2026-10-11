@@ -3691,8 +3691,8 @@ async fn the_site_is_called_pluribus(pool: PgPool) {
     // The dot takes the accent, and its edge the unread dots' edge, which only lime has, and only
     // on the light theme.
     let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    assert!(css.contains(".logo-dot{fill:var(--highlight);") && css.contains(".logo-dot-edge{stroke:var(--dot-edge);"));
-    assert!(css.contains("--lime-edge:rgb(27 27 27 / 45%);") && css.contains("--dot-edge:var(--lime-edge);"));
+    assert!(css.contains(".logo-dot{fill:var(--highlight);") && css.contains(".logo-dot-edge{stroke:var(--logo-edge);"));
+    assert!(css.contains("--logo-edge:rgb(27 27 27 / 45%);") && css.contains("--dot-edge:inset 0 0 0 1.5px rgb(27 27 27 / 45%);"));
     assert!(!home.contains("thinking"));
     assert!(home.contains(r#"<title>Pluribus</title>"#) && home.contains("© 2026 Pluribus"));
     assert!(home.contains(
@@ -4570,7 +4570,7 @@ async fn every_part_of_the_site_has_the_one_main_colour(pool: PgPool) {
     assert!(!css.contains(".saved-shortcut{--tone") && !css.contains(".inbox-shortcut{--tone"));
     let kept = &css[css.find(r#".heart-button[aria-pressed="true"] svg{"#).expect("the kept heart")..];
     let kept = &kept[..kept.find('}').unwrap()];
-    assert!(kept.contains("fill:var(--red)") && kept.contains("stroke:#fff"), "{kept}");
+    assert!(kept.contains("fill:var(--red)") && kept.contains("stroke:var(--on-photo)"), "{kept}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
@@ -4587,12 +4587,12 @@ async fn buttons_are_pills_in_the_main_colour_or_the_grey(pool: PgPool) {
         rule[..rule.find('}').unwrap()].to_string()
     };
     let button = rule(".button");
-    for part in ["min-height:3rem", "border-radius:999px", "background:var(--main)", "color:var(--on-main)", "font-weight:var(--semibold)"] {
+    for part in ["min-height:var(--size-button)", "border-radius:var(--radius-pill)", "background:var(--main)", "color:var(--on-main)", "font-weight:var(--semibold)"] {
         assert!(button.contains(part), "{part} in {button}");
     }
     assert!(rule(".button.secondary").contains("background:var(--surface-muted)"));
     assert!(rule(".button.danger").contains("color:var(--danger)"));
-    assert!(rule(".button.small").contains("min-height:2.125rem"));
+    assert!(rule(".button.small").contains("min-height:var(--size-button-sm)"));
     assert!(rule(".post-shortcut").contains("--tone-bg:var(--post)"));
     let dark = &css[css.find(r#":root[data-theme="dark"]{"#).expect("the dark theme")..];
     assert!(dark[..dark.find('}').unwrap()].contains("--post:var(--highlight);"));
@@ -4632,10 +4632,10 @@ async fn fields_checkboxes_and_radios_are_drawn_as_the_canvas_has_them(pool: PgP
     };
     let fields = &css[css.find(".picker-button{width:100%").expect("the fields' rule")..];
     let fields = &fields[..fields.find('}').unwrap()];
-    for part in ["min-height:3rem", "border:1px solid var(--border)", "border-radius:.75rem", "background-color:var(--surface)"] {
+    for part in ["min-height:var(--size-field)", "border:1px solid var(--border)", "border-radius:var(--radius-field)", "background-color:var(--surface)"] {
         assert!(fields.contains(part), "{part} in {fields}");
     }
-    assert!(css.contains("box-shadow:0 0 0 3px var(--ring)") && css.contains("--ring:rgb(27 27 27 / 14%)"));
+    assert!(css.contains("box-shadow:var(--focus-field)") && css.contains("--focus-field:0 0 0 3px rgb(27 27 27 / 14%)"));
     assert!(rule(r#"input[type="checkbox"]:checked"#).contains("background:var(--main)"));
     assert!(rule(r#"input[type="radio"]:checked"#).contains("box-shadow:inset 0 0 0 4px var(--surface)"));
     assert!(rule(".field-label").contains("color:var(--text)"));
@@ -4653,13 +4653,13 @@ async fn cards_are_drawn_as_the_canvas_has_them(pool: PgPool) {
         rule[..rule.find('}').unwrap()].to_string()
     };
     let heart = rule(".heart-button svg");
-    assert!(heart.contains("width:22px") && heart.contains("drop-shadow(0 1px 3px rgb(0 0 0 / 55%))"), "{heart}");
+    assert!(heart.contains("width:22px") && heart.contains("drop-shadow(0 1px 3px var(--photo-shade))"), "{heart}");
     assert!(!rule(".heart-button::before").contains("background:"));
     let shade = rule(".card-media::after");
-    assert!(shade.contains("linear-gradient(") && shade.contains("rgb(0 0 0 / 55%)"), "{shade}");
+    assert!(shade.contains("linear-gradient(") && shade.contains("var(--photo-shade)"), "{shade}");
     let price = rule(".card-media .card-price");
-    assert!(price.contains("color:#fff") && price.contains("font-weight:var(--bold)"), "{price}");
-    assert!(rule(".card-status").contains("background:rgb(27 27 27 / 60%)"));
+    assert!(price.contains("color:var(--on-photo)") && price.contains("font-weight:var(--bold)"), "{price}");
+    assert!(rule(".card-status").contains("background:var(--photo-label)"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

@@ -666,7 +666,7 @@
    figures in rows, their sum under a line. */
 .bubble > summary {
   display: inline-flex; align-items: center; gap: .45rem;
-  min-height: 2.25rem; padding: 0 .875rem; border: 1px solid transparent; border-radius: 999px;
+  min-height: var(--size-chip); padding: 0 .875rem; border: 1px solid transparent; border-radius: var(--radius-pill);
   background: var(--surface-muted); color: var(--text); font-size: var(--text-sm); font-weight: var(--semibold);
   list-style: none; cursor: pointer; transition: background-color .15s;
 }
@@ -678,7 +678,7 @@
   left: 0;
   z-index: 30;
   padding: 1rem;
-  border-radius: 1rem;
+  border-radius: var(--radius-box);
   background: var(--surface);
   box-shadow: var(--shadow-float);
   font-size: var(--text-sm);
@@ -753,7 +753,7 @@
   height: 1.5rem;
   margin-left: .4rem;
   padding: 0 .5625rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-muted);
   color: var(--muted);
   font-size: .78125rem;
@@ -778,16 +778,17 @@
    (white on the light theme, eerie black on the light grey of the dark one), a shade off under the
    pointer; a secondary one on the grey of secondary controls, a shade darker under it; a danger
    one (deleting) that grey with red words, on red's tint under the pointer; a small one, for a
-   list's rows, 34px tall (2.125rem) with its words a size down. */
+   list's rows, 40px tall with its words a size down (the heights are the design system's,
+   --size-button and --size-button-sm, in pixels, so that a finger has 40px on a phone too). */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: .5rem;
-  min-height: 3rem;
+  min-height: var(--size-button);
   padding: 0 1.25rem;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--main);
   color: var(--on-main);
   font: inherit;
@@ -807,7 +808,7 @@
 .button.secondary:hover { background: var(--surface-muted-hover); }
 .button.danger { color: var(--danger); }
 .button.danger:hover { background: var(--danger-bg); }
-.button.small { gap: .375rem; min-height: 2.125rem; padding: 0 .875rem; font-size: .84375rem; }
+.button.small { gap: .375rem; min-height: var(--size-button-sm); padding: 0 .875rem; font-size: .84375rem; }
 @media (prefers-reduced-motion: reduce) {
   .button { transition: none; }
   .button:active { transform: none; }
@@ -819,7 +820,7 @@
 /* Two or three choices side by side in one grey track, the one in use raised on the surface with
    a faint shadow, as the canvas has the text's size and the language in the menu (and Cilësimet
    has the language): .segmented, its buttons with aria-pressed. */
-.segmented { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--surface-muted); }
+.segmented { display: inline-flex; padding: 3px; border-radius: var(--radius-pill); background: var(--surface-muted); }
 .segmented > button {
   min-height: 2rem;
   padding: 0 .75rem;
@@ -834,7 +835,7 @@
   transition: background-color .15s, box-shadow .15s;
   -webkit-tap-highlight-color: transparent;
 }
-.segmented > button[aria-pressed="true"] { background: var(--surface); box-shadow: var(--shadow-card); }
+.segmented > button[aria-pressed="true"] { background: var(--surface); box-shadow: var(--shadow); }
 @media (hover: hover) {
   .segmented > button[aria-pressed="false"]:hover { background: var(--surface-muted-hover); }
 }
@@ -875,7 +876,7 @@
    46px across (2.875rem), a little shorter than the pills beside them; a check for a moment once
    they copy (copy_controller.js, share_controller.js). */
 .actions .button.icon-circle,
-.contact-bar .button.icon-circle { flex: none; width: 2.875rem; min-height: 0; height: 2.875rem; padding: 0; }
+.contact-bar .button.icon-circle { flex: none; width: var(--size-round); min-height: 0; height: var(--size-round); padding: 0; }
 /* Phones: the bar at the foot of the page (last in the grid, by order), which stays at the
    screen's bottom while the listing scrolls (sticky) and settles after the description, so that
    the way to the seller is at hand wherever the reader is, as the apps have it: from the screen's

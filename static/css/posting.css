@@ -344,10 +344,10 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .property-fields .checks .check {
   position: relative;
   gap: .375rem;
-  min-height: 2.25rem;
+  min-height: var(--size-chip);
   padding: 0 .875rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-muted);
   font-size: var(--text-sm);
   transition: background-color .15s;
