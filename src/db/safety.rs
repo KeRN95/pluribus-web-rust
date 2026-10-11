@@ -375,8 +375,8 @@ pub async fn verify_contact(db: &PgPool, user: Uuid, phone: Option<&str>, email:
     Ok(())
 }
 
-/// What the report page shows of a listing: its title and address, whether it is on the site to
-/// report, and whose it is.
+/// What the report page shows of a listing: its title and address, its first photo, its price and
+/// its town (the card at the page's top), whether it is on the site to report, and whose it is.
 #[derive(Debug, sqlx::FromRow)]
 pub struct ReportTarget {
     pub public_no: i64,
@@ -384,6 +384,14 @@ pub struct ReportTarget {
     pub title: String,
     pub status: String,
     pub created_by_user_id: Uuid,
+    /// Its first photo's card-sized copy.
+    pub photo: Option<String>,
+    pub price_amount: Option<Decimal>,
+    pub currency: String,
+    pub price_type: String,
+    pub listing_type: String,
+    /// The municipality it is in, as its card names it.
+    pub town: Option<String>,
 }
 
 impl ReportTarget {
@@ -395,8 +403,15 @@ impl ReportTarget {
 
 pub async fn report_target(db: &PgPool, public_no: i64) -> sqlx::Result<Option<ReportTarget>> {
     sqlx::query_as(
-        "SELECT public_no, slug, coalesce(generated_title, title) AS title, status, created_by_user_id
-         FROM listings WHERE public_no = $1 AND status <> 'DELETED'",
+        "SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.status, l.created_by_user_id,
+                (SELECT coalesce(m.thumbnail_url, m.public_url)
+                 FROM listing_media m
+                 WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'
+                 ORDER BY m.is_cover DESC, m.sort_order
+                 LIMIT 1) AS photo,
+                l.price_amount, l.currency::text AS currency, l.price_type, l.listing_type,
+                (SELECT t.name FROM locations t WHERE t.id = location_municipality(l.location_id)) AS town
+         FROM listings l WHERE l.public_no = $1 AND l.status <> 'DELETED'",
     )
     .bind(public_no)
     .fetch_optional(db)

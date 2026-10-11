@@ -8618,6 +8618,12 @@ async fn a_reported_listing_comes_off_the_site_until_a_moderator_decides(pool: P
     // The form offers its reasons, and needs one; "Tjetër" needs what is wrong.
     let form = get_with_cookie(pool.clone(), "/listing/1001/raporto", &reporters[0]).await.body;
     assert_eq!(form.matches(r#"<input type="radio" name="reason""#).count(), 7);
+    // The listing at the page's top, as the canvas has it: a small card, its photo beside its
+    // title and its price and town under it, all one link to it.
+    let card = &form[form.find(r#"<a class="report-listing" href="/listing/1001-volkswagen-golf-7-2016-nafte">"#).expect("the listing's card")..];
+    let card = &card[..card.find("</a>").unwrap()];
+    assert!(card.contains(r#"<img src="https://images.unsplash.com/"#), "{card}");
+    assert!(card.contains("<span class=\"report-listing-meta\">9\u{a0}500\u{a0}€ · <span translate=\"no\">Tiranë</span></span>"), "{card}");
     let none = report(&reporters[0], "", "").await;
     assert_eq!(none.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert!(none.body.contains("Zgjidh çfarë nuk shkon me njoftimin."));

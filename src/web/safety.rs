@@ -20,6 +20,7 @@ use super::{
 use crate::{
     AppState,
     db::{self, ListingCard, Reported, ReportTarget},
+    format,
     i18n::t,
 };
 
@@ -70,6 +71,11 @@ struct ReportPage {
     public_no: i64,
     title: String,
     url: String,
+    /// The listing's card at the page's top, as the canvas has it: its first photo beside its
+    /// title, and its price (without what follows it, "/muaj") and its town under it.
+    photo: Option<String>,
+    price: String,
+    town: Option<String>,
     state: ReportState,
     reasons: &'static [Reason],
     /// The form as sent, when it comes back with what to put right.
@@ -86,6 +92,9 @@ impl ReportPage {
             public_no: target.public_no,
             title: target.title.clone(),
             url: format!("/listing/{}-{}", target.public_no, target.slug),
+            photo: target.photo.clone(),
+            price: format::price_parts(target.price_amount, &target.currency, &target.price_type, &target.listing_type).0,
+            town: target.town.clone(),
             state,
             reasons: &REASONS,
             reason: String::new(),

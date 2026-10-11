@@ -123,25 +123,62 @@
 @media (max-width: 719px) {
   .my-listing { flex-direction: column; align-items: stretch; }
 }
-/* Reporting a listing (report.html): the reasons as boxes to pick one of, each its name and what
-   it covers, the one picked outlined in the accent. */
-.report-reasons { display: grid; gap: .45rem; min-width: 0; margin: 0; padding: 0; border: 0; }
-.report-reasons legend { margin-bottom: .45rem; padding: 0; }
-.report-reason {
+/* Reporting a listing (report.html), as the canvas has it: a column of 640px in the middle of the
+   page; the heading, 30px (26px on a phone); the listing under it as a small white card, its
+   photo (56px) beside its title, semibold on one line, and its price and its town under it, 13px
+   and muted, a chevron at its end; then the reasons in one white box, a row each between
+   hairlines, each its radio, its name and what it covers, quieter; the explanation and the button
+   under them, 18px apart. Once sent, the thanks, what blocking does and its buttons, 18px apart;
+   on a phone each button across the column. The reasons were boxes of their own once, the one
+   picked outlined in the accent, and the listing its title alone, a link. */
+.account.report { max-width: 640px; margin-inline: auto; padding-top: 28px; }
+.report h1 { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
+.report-listing {
   display: flex;
-  align-items: flex-start;
-  gap: .65rem;
-  padding: .65rem .8rem;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: var(--radius-box);
   background: var(--surface);
-  cursor: pointer;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  text-decoration: none;
 }
-.report-reason:has(input:checked) { border-color: var(--accent); }
-.report-reason input { margin: .1rem 0 0; }
-.report-reason-text { display: grid; gap: .1rem; }
+.report-listing img,
+.report-listing .placeholder { flex: none; width: 56px; height: 56px; border-radius: 12px; object-fit: cover; }
+.report-listing-text { display: flex; flex-direction: column; min-width: 0; }
+.report-listing-title { overflow: hidden; font-weight: var(--semibold); text-overflow: ellipsis; white-space: nowrap; }
+.report-listing-meta { color: var(--muted); font-size: .8125rem; }
+.report-listing-chevron { flex: none; margin-left: auto; color: var(--muted); }
+/* Under the pointer or a finger, its title underlined in the accent, as the site's links are. */
+@media (hover: hover) {
+  .report-listing:hover .report-listing-title { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
+}
+.report-listing:active .report-listing-title { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
+.report .account-form { gap: 18px; margin-top: 22px; }
+.report-reasons { min-width: 0; margin: 0; padding: 0; border: 0; }
+.report-reasons legend { margin: 0 0 10px; padding: 0; font-size: 1rem; font-weight: var(--bold); }
+.report-reason-rows { overflow: hidden; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); }
+.report-reason { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; cursor: pointer; }
+.report-reason + .report-reason { border-top: 1px solid var(--border-soft); }
+.report-reason input { flex: none; margin: 0; }
+.report-reason-text { display: flex; flex-direction: column; gap: 2px; }
 .report-reason-label { font-weight: var(--semibold); }
-.report-reason .field-hint { margin: 0; }
+.report-reason .field-hint { margin: 0; line-height: 1.45; }
+/* Signed out, what reporting takes, 22px under the card. */
+.report-listing + p { margin: 22px 0 0; }
+.report .notice { margin: 22px 0 0; }
+.report .notice ~ p:not(.form-actions) { margin: 18px 0 0; line-height: 1.6; }
+/* The buttons 8px apart; under the thanks 18px down (in the form, its gap does that). */
+.report .form-actions { gap: 8px; }
+.report > .form-actions { margin-top: 18px; }
+@media (max-width: 719px) {
+  .account.report { padding-top: 22px; }
+  .report .form-actions { flex-direction: column; }
+  .report .form-actions > *,
+  .report .form-actions form .button { width: 100%; }
+}
 /* "Cilësimet": the sellers the user blocked, each with its button to let them be again. */
 .blocked-heading { margin: 2rem 0 .2rem; font-size: var(--text-xl); }
 /* "Dil nga llogaria", "Njoftimet e mia"'s last thing, a little apart from what is over it. */
