@@ -150,6 +150,7 @@
   --size-round: 46px;           /* round icon buttons */
   --size-field: 48px;
   --size-header: 60px;
+  --size-header-row: 60px;      /* the bar's first row; on phones with the search, the bar is two */
   --content-width: calc(1068px / var(--page-scale)); /* the page's own size divided out (data-page-size, below) */
   /* The rail's width at the screen's left (.rail): none on phones, 88px from 720px up (below), so
      that what is measured against the screen's width leaves it out. */
@@ -511,8 +512,23 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    button comes nearer the screen's edge, its icon where the page's gutter ends. The type trial's
    button (below) has no room left under 400px. */
 @media (max-width: 719px) {
-  :root { --size-header: 56px; }
+  :root { --size-header: 56px; --size-header-row: 56px; }
   .header-inner { gap: 0; padding: 0 8px 0 var(--gutter); }
+}
+/* On phones the bar's search (every page's but the front page's) has a second row of the bar to
+   itself, the whole of it between the page's gutters, 40px tall with 8px under it, as the user
+   asked on 2026-10-11 (it shared the first row with the logo and the account, its words cut
+   short): the bar grows to 104px, and --size-header, which the pages under it reckon with, with it. */
+@media (max-width: 719px) {
+  :root:has(.header-inner > .top-search) { --size-header: calc(var(--size-header-row) + var(--size-button-sm) + 8px); }
+  .header-inner:has(> .top-search) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: var(--size-header-row) var(--size-button-sm);
+    align-items: center;
+    padding-bottom: 8px;
+  }
+  .header-inner > .top-search { grid-column: 1 / -1; grid-row: 2; max-width: none; margin: 0 calc(var(--gutter) - 8px) 0 0; }
 }
 /* The bar's start (the logo, and the type trial's "Ff") and its end (the account). From 720px up the
    bar runs the screen's width, the menu's lines over the rail (below) and the logo where the page
@@ -626,11 +642,12 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 }
 
 /* The bar's search (base.html; browse.html's for a category's listings): a grey pill 44px tall
-   (40px on phones) taking the width the logo and the account leave it, at most 720px, no outline,
-   as the user drew it on 2026-10-11, the magnifier at its start, muted, the words 16px (no
-   smaller, or phones zoom in), the question muted; in use the pill turns the fields' white with
-   the main colour's edge and the search bar's ring (--focus-search), and a cross empties it while
-   it has words. Its suggestions open under it (.suggestions, welcome.css). */
+   (40px on phones, on a row of the bar to itself) taking the width the logo and the account leave
+   it, at most 720px, no outline, as the user drew it on 2026-10-11, the magnifier at its start,
+   muted, the words 16px (no smaller, or phones zoom in), the question muted; in use it stays as it
+   is, with no edge or ring round it (the user's ask of the same day: it turned the fields' white
+   with the main colour's edge and a ring, --focus-search), and a cross empties it while it has
+   words. Its suggestions open under it (.suggestions, welcome.css). */
 .top-search {
   position: relative;
   display: flex;
@@ -646,7 +663,6 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   border-radius: var(--radius-pill);
   background: var(--surface-muted);
 }
-.top-search:focus-within { border-color: var(--main); background: var(--input); box-shadow: var(--focus-search); }
 .top-search input {
   flex: 1;
   min-width: 0;
@@ -876,7 +892,7 @@ html { zoom: var(--page-scale); }
 .menu[open] { display: flex; }
 .menu::backdrop { background: var(--scrim); }
 html:has(.menu[open]) { overflow: hidden; }
-.menu-top { display: flex; flex: none; align-items: center; justify-content: space-between; height: var(--size-header); padding: 0 16px 0 24px; border-bottom: 1px solid var(--border); }
+.menu-top { display: flex; flex: none; align-items: center; justify-content: space-between; height: var(--size-header-row); padding: 0 16px 0 24px; border-bottom: 1px solid var(--border); }
 .menu-close { display: grid; flex: none; place-items: center; width: var(--size-button-sm); height: var(--size-button-sm); padding: 0; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text); cursor: pointer; }
 @media (hover: hover) {
   .menu-close:hover { background: var(--surface-muted); }

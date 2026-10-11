@@ -69,6 +69,16 @@
 .browse-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); }
 .browse-heading-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-12); min-width: 0; }
 .browse-heading .result-count { margin: 0; color: var(--muted); font-size: .9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* A main category's way back, before its name, where the breadcrumb's was (the user's ask of
+   2026-10-11): the chevron, 22px, in a target as tall as the name's line (1.2em at its size) at
+   the line's top, .03em higher, as the browser rounds the name's baseline up a little, so that it
+   stands within a pixel of the middle of the name's capitals at every text size; pulled 12px into
+   the gutter, as the breadcrumb's, and 4px from the name. */
+.title-back { align-self: flex-start; height: 1.2em; margin: -.03em -8px 0 -12px; font-size: 1.875rem; }
+.title-back svg { flex: none; width: 22px; height: 22px; }
+@media (max-width: 719px) {
+  .title-back { font-size: 1.857rem; }
+}
 .save-search { flex: none; margin: 0; }
 .save-search-button {
   display: inline-flex;

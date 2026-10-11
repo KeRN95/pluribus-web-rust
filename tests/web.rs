@@ -4829,6 +4829,14 @@ async fn the_way_back_is_a_chevron_level_with_its_words(pool: PgPool) {
     let back = &back[..back.find("</a>").unwrap()];
     assert!(back.contains(r#"<g transform="translate(.75 0) scale(.09375)" stroke="none"><path fill="currentColor" d="M165.66,202.34"#), "{back}");
     assert!(!page.contains("M160,48V208L80,128Z") && !page.contains("M176,128,96,208V48Z"), "no caret drawn as a triangle");
+    // A main category's page has no breadcrumb: its way back stands before its name (the user's
+    // ask of the same day); a subcategory's keeps its breadcrumb.
+    let cars = html(pool.clone(), "/c/automjete").await;
+    assert!(!cars.contains(r#"<nav class="breadcrumb""#), "{cars}");
+    let title = &cars[cars.find(r#"<div class="browse-heading-text">"#).expect("the heading's line")..];
+    let back = title.find(r#"<a class="breadcrumb-back title-back" href="/" aria-label="Kthehu""#).expect("the way back");
+    assert!(back < title.find(r#"<h1 class="browse-title">Automjete</h1>"#).unwrap(), "{title}");
+    assert!(html(pool.clone(), "/c/makina").await.contains(r#"<nav class="breadcrumb" aria-label="Rruga">"#));
     // (The stylesheet comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     let crumb = &css[css.find(".breadcrumb{").expect("the breadcrumb")..];
@@ -4844,6 +4852,11 @@ async fn the_way_back_is_a_chevron_level_with_its_words(pool: PgPool) {
         assert!(css.contains(rule), "{rule}");
     }
     assert!(!css.contains("--highlight-knob"));
+    // On phones the bar's search has a row of the bar to itself, the whole of it, the bar's height
+    // (--size-header) growing with it; in use it has no edge or ring round it.
+    assert!(css.contains(".header-inner > .top-search{grid-column:1 / -1;grid-row:2;"));
+    assert!(css.contains(":root:has(.header-inner > .top-search){--size-header:calc(var(--size-header-row) + var(--size-button-sm) + 8px);}"));
+    assert!(!css.contains(".top-search:focus-within"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
@@ -7124,10 +7137,11 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn a_category_pages_way_up_keeps_the_words_and_the_town(pool: PgPool) {
-    // Over a main category the way up is the welcome page; its subcategories, the pills under its
-    // heading, keep the town and the words, and so does the way up from one of them.
+    // A main category's way back, before its name, is the welcome page (it has no breadcrumb); its
+    // subcategories, the pills under its heading, keep the town and the words, and so does the way
+    // up from one of them.
     let page = html(pool.clone(), "/c/prona?city=durres&q=shtepi").await;
-    assert!(page.contains(r#"<a class="breadcrumb-up" href="/">Kreu</a>"#));
+    assert!(page.contains(r#"<a class="breadcrumb-back title-back" href="/""#) && !page.contains(r#"<nav class="breadcrumb""#));
     assert!(page.contains(r#"<a class="shortcut" href="/c/apartamente?q=shtepi&city=durres">"#));
     let flats = html(pool.clone(), "/c/apartamente?city=durres&q=shtepi").await;
     assert!(flats.contains(r#"<a class="breadcrumb-up" href="/c/prona?q=shtepi&city=durres">Prona</a>"#), "{flats}");
@@ -7162,11 +7176,13 @@ async fn a_category_page_says_where_it_is_in_a_breadcrumb(pool: PgPool) {
     let gps = html(pool.clone(), "/c/gps-dhe-navigatore").await;
     assert!(gps.contains(r#"<a class="breadcrumb-back" href="/c/pjese-dhe-aksesore" aria-label="Kthehu""#));
     assert!(gps.contains(r#"<a class="breadcrumb-up" href="/c/pjese-dhe-aksesore">Pjesë / aksesorë</a>"#));
-    // A main category's way up is the welcome page, "Kreu"; its subcategories stand under its
-    // heading. A search's heading stays a heading, without either trail.
+    // A main category's page has no breadcrumb since the user's ask of 2026-10-11 (it said "Kreu"
+    // over the page's name): its way back, to the welcome page without scripts, stands before its
+    // name; its subcategories stand under its heading. A search's heading stays a heading, without
+    // either.
     let vehicles = html(pool.clone(), "/c/automjete").await;
-    assert!(vehicles.contains(r#"<a class="breadcrumb-back" href="/" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#), "back to the welcome page without scripts");
-    assert!(vehicles.contains(r#"<a class="breadcrumb-up" href="/">Kreu</a>"#));
+    assert!(vehicles.contains(r#"<a class="breadcrumb-back title-back" href="/" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#), "back to the welcome page without scripts");
+    assert!(!vehicles.contains(r#"<nav class="breadcrumb""#) && !vehicles.contains(r#"<a class="breadcrumb-up" href="/">Kreu</a>"#));
     let at = positions(&vehicles, &[
         r#"<h1 class="browse-title">Automjete</h1>"#,
         r#"<nav class="subcategories" aria-label="Nënkategoritë">"#,
@@ -7530,7 +7546,7 @@ async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
     assert!(cars.contains(r#"aria-label="Filters: No filters""#) && cars.contains(r#"placeholder="Search in Cars""#), "{cars}");
     assert!(cars.contains(">All of Albania<") && cars.contains(r#"<a class="breadcrumb-up" href="/c/automjete">Vehicles</a>"#), "{cars}");
     let vehicles = en("/c/automjete").await.body;
-    assert!(vehicles.contains(">Motorbikes<") && vehicles.contains(">Commercial vehicles<") && vehicles.contains(r#"<a class="breadcrumb-up" href="/">Home</a>"#), "{vehicles}");
+    assert!(vehicles.contains(">Motorbikes<") && vehicles.contains(">Commercial vehicles<") && vehicles.contains(r#"<a class="breadcrumb-back title-back" href="/" aria-label="Back""#), "{vehicles}");
     assert!(cars.contains(r#"<summary class="sort-button" aria-label="Sort: Newest" title="Sort: Newest">Newest<svg"#), "{cars}");
     assert!(cars.contains(r#"<h2 class="results-heading" id="results-heading">Newest listings</h2>"#), "{cars}");
     assert!(cars.contains(r#"<p class="result-count" id="result-count" data-show="Show 2 listings">2 listings</p>"#), "{cars}");
