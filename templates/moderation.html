@@ -64,7 +64,7 @@
     {% for listing in reported %}
     <li class="pending-option">
       <div class="pending-head">
-        <span class="pending-attribute">{{ listing.reporters_text() }} · {{ listing.when() }}{% if listing.hidden() %} · <span class="badge">Fshehur</span>{% endif %}</span>
+        <span class="pending-attribute">{{ listing.reporters_text() }} · {{ listing.when() }}{% if listing.hidden() %} · <span class="badge danger">Fshehur</span>{% endif %}</span>
         <a class="pending-label" href="{{ listing.url() }}">{{ listing.title }}</a>
         <span class="my-listing-meta">nga <a href="{{ listing.seller_url }}">{{ listing.seller_name }}</a></span>
       </div>

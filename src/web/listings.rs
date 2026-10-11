@@ -432,6 +432,17 @@ impl ListingDetail {
         }
     }
 
+    /// The tone its badge takes (.badge.warn, .badge.danger in listing.css), as the canvas has
+    /// them: a reservation in the warm yellow, a listing expired or taken off in red's tint; the
+    /// rest grey.
+    pub fn status_tone(&self) -> Option<&'static str> {
+        match self.status.as_str() {
+            "RESERVED" => Some("warn"),
+            "EXPIRED" | "SUSPENDED" | "REJECTED" => Some("danger"),
+            _ => None,
+        }
+    }
+
     /// On the site for anyone with its link: not taken off it by its reports or the moderators,
     /// nor down for a while by its seller, nor expired (expiry.rs).
     pub fn on_site(&self) -> bool {

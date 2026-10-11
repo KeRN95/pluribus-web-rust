@@ -4599,6 +4599,27 @@ async fn buttons_are_pills_in_the_main_colour_or_the_grey(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
+async fn pills_chips_and_badges_are_grey_or_the_main_colour(pool: PgPool) {
+    // The redesign's pills (the categories', the path's), chips (a filter on) and badges: grey with
+    // no outline, what is picked or on in the main colour, a badge's tone in its tint.
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let rule = |selector: &str| {
+        let at = css.find(&format!("}}{selector}{{")).unwrap_or_else(|| panic!("{selector}"));
+        let rule = &css[at + 1..];
+        rule[..rule.find('}').unwrap()].to_string()
+    };
+    assert!(rule(".shortcut").contains("background:var(--surface-muted)"));
+    assert!(rule(".category-path .shortcut.is-selected").contains("background:var(--main)"));
+    assert!(rule(".filter-chip").contains("background:var(--main)"));
+    let badge = rule(".badge");
+    for part in ["height:1.5rem", "background:var(--surface-muted)", "color:var(--muted)"] {
+        assert!(badge.contains(part), "{part} in {badge}");
+    }
+    assert!(rule(".badge.danger").contains("background:var(--danger-bg)"));
+    assert!(rule(".badge.state").contains("background:var(--main)"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn a_short_descriptions_fold_button_stays_hidden(pool: PgPool) {
     // The button that unfolds a long description waits with the hidden attribute until the
     // controller finds the description long (fold_controller.js). Its own display rule would
@@ -5225,9 +5246,9 @@ async fn sellers_say_a_listing_is_reserved_or_sold(pool: PgPool) {
     assert_eq!(reserved.location.as_deref(), Some(url.as_str()));
     assert_eq!(status(pool.clone()).await, ("RESERVED".to_string(), false));
     let page = get(pool.clone(), &url).await.body;
-    assert!(page.contains(r#"<span class="badge">Rezervuar</span>"#) && page.contains("phone-reveal"));
+    assert!(page.contains(r#"<span class="badge warn">Rezervuar</span>"#) && page.contains("phone-reveal"));
     let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
-    assert!(mine.contains(r#"<span class="badge">Rezervuar</span>"#) && mine.contains(&form(&unreserve)) && mine.contains(&form(&sell)));
+    assert!(mine.contains(r#"<span class="badge warn">Rezervuar</span>"#) && mine.contains(&form(&unreserve)) && mine.contains(&form(&sell)));
     assert_eq!(post_form(pool.clone(), &reserve, &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
     // The reservation off, up as before; from "Njoftimet e mia", back there.
     let unreserved = post_from_page(pool.clone(), &unreserve, "/njoftimet-e-mia", &ana).await;
@@ -5319,13 +5340,13 @@ async fn a_saved_search_counts_and_tells_of_its_new_listings(pool: PgPool) {
     // Its page names it by its category and filters, with nothing new yet.
     let list = get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body;
     assert!(list.contains(&format!(r#"<a class="saved-search-name" href="/kerkimet/{id}">Telefona · Tiranë</a>"#)), "{list}");
-    assert!(!list.contains(r#"<span class="badge">"#));
+    assert!(!list.contains(r#"<span class="badge state">"#));
 
     // A phone put up in Tiranë since: one new listing, and, once the alerts' gap has passed since
     // it was kept, an alert: a notification, the heart's dot, a word by the link on /te-ruajturat.
     post_listing(&pool, &ana).await;
     let list = get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body;
-    assert!(list.contains(r#"<span class="badge">1 njoftim i ri</span>"#), "{list}");
+    assert!(list.contains(r#"<span class="badge state">1 njoftim i ri</span>"#), "{list}");
     assert_eq!(alerts().await.unwrap(), 0);
     // Four hours pass, for the search and the listings alike.
     sqlx::query("UPDATE saved_searches SET created_at = created_at - interval '4 hours'").execute(&pool).await.unwrap();
@@ -5359,7 +5380,7 @@ async fn a_saved_search_counts_and_tells_of_its_new_listings(pool: PgPool) {
     assert_eq!(post_form(pool.clone(), &format!("/kerkimet/{id}/fshi"), &[], Some(&ana)).await.status, StatusCode::NOT_FOUND);
     let opened = get_with_cookie(pool.clone(), &format!("/kerkimet/{id}"), &besa).await;
     assert_eq!(opened.location.as_deref(), Some(search));
-    assert!(!get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body.contains(r#"<span class="badge">"#));
+    assert!(!get_with_cookie(pool.clone(), "/kerkimet-e-ruajtura", &besa).await.body.contains(r#"<span class="badge state">"#));
     assert_eq!(unseen(pool.clone(), besa.clone()).await, 0);
 
     // Its alerts off, none, however much comes; on again from its page.
@@ -5432,7 +5453,7 @@ async fn listings_expire_unless_their_sellers_renew_them(pool: PgPool) {
     )
     .await;
     let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
-    assert!(mine.contains(r#"<span class="badge">Skadon pas 5 ditësh</span>"#), "{mine}");
+    assert!(mine.contains(r#"<span class="badge warn">Skadon pas 5 ditësh</span>"#), "{mine}");
     assert!(mine.contains(&renew_form));
     let own = get_with_cookie(pool.clone(), &url, &ana).await.body;
     assert!(own.contains(&renew_form) && own.contains(r#"title="Skadon pas 5 ditësh""#), "{own}");
@@ -5475,11 +5496,11 @@ async fn listings_expire_unless_their_sellers_renew_them(pool: PgPool) {
     // listing up or taken down for a while; and it on "Njoftimet e mia", likewise.
     let own = get_with_cookie(pool.clone(), &url, &ana).await;
     assert_eq!(own.status, StatusCode::OK);
-    assert!(own.body.contains(r#"<span class="badge">Skaduar</span>"#), "{}", own.body);
+    assert!(own.body.contains(r#"<span class="badge danger">Skaduar</span>"#), "{}", own.body);
     assert!(own.body.contains("Ky njoftim skadoi: askush tjetër nuk e sheh. „Rifresko“ e kthen në faqe për 60 ditë të tjera."));
     assert!(own.body.contains(&renew_form) && !own.body.contains(&format!("/listing/{no}/aktivizo")) && !own.body.contains(&format!("/listing/{no}/caktivizo")));
     let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
-    assert!(mine.contains(r#"<span class="badge">Skaduar</span>"#) && mine.contains(&renew_form), "{mine}");
+    assert!(mine.contains(r#"<span class="badge danger">Skaduar</span>"#) && mine.contains(&renew_form), "{mine}");
 
     // Renewed by nobody else; by Ana, from its page: up again for 60 days, back on that page, and,
     // published 60 days ago, at the top of "newest first" again.
@@ -8210,13 +8231,13 @@ async fn a_reported_listing_comes_off_the_site_until_a_moderator_decides(pool: P
     // Its seller still sees it, told why, and so do the moderators.
     let own = get_with_cookie(pool.clone(), golf, &ana).await.body;
     assert!(own.contains("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë."));
-    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(r#"<span class="badge">Në shqyrtim</span>"#));
+    assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(r#"<span class="badge danger">Në shqyrtim</span>"#));
     let moderator = new_seller(&pool, MODERATOR).await;
     assert_eq!(get_with_cookie(pool.clone(), golf, &moderator).await.status, StatusCode::OK);
     // On /moderim, the hidden first: who reported it and why, and what they wrote.
     assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &moderator).await.body.contains("Për miratim (1)"));
     let queue = get_with_cookie(pool.clone(), "/moderim", &moderator).await.body;
-    for text in ["4 veta e raportuan", r#"<span class="badge">Fshehur</span>"#, "<li>Mashtrim (2)</li>", "<li>Njoftim i rremë</li>",
+    for text in ["4 veta e raportuan", r#"<span class="badge danger">Fshehur</span>"#, "<li>Mashtrim (2)</li>", "<li>Njoftim i rremë</li>",
                  "<li>Të dhëna të gabuara</li>", "Kërkon para përpara, pa e parë makinën."] {
         assert!(queue.contains(text), "{text}: {queue}");
     }
@@ -8245,7 +8266,7 @@ async fn a_reported_listing_comes_off_the_site_until_a_moderator_decides(pool: P
     assert_eq!(get(pool.clone(), iphone).await.status, StatusCode::NOT_FOUND);
     assert!(get_with_cookie(pool.clone(), iphone, &ana).await.body.contains("Moderatorët e hoqën këtë njoftim nga faqja."));
     let mine = get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body;
-    assert!(mine.contains(r#"<span class="badge">Hequr nga moderatorët</span>"#));
+    assert!(mine.contains(r#"<span class="badge danger">Hequr nga moderatorët</span>"#));
     let deleted = post_form(pool.clone(), "/listing/1005/fshi", &[], Some(&ana)).await;
     assert_eq!(deleted.location.as_deref(), Some("/njoftimet-e-mia"));
     // Nobody else decides.

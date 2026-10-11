@@ -76,6 +76,7 @@
   --placeholder-from: #ececec;
   --placeholder-to: #e4e4e4;
   --shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 4px 16px rgb(0 0 0 / 5%);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 4%); /* raised a little: a segment picked, a card on the grey */
   --shadow-float: 0 16px 48px rgb(0 0 0 / 14%), 0 2px 6px rgb(0 0 0 / 5%); /* what floats: sheets, the menu */
   --scrim: rgb(0 0 0 / 20%); /* the page dimmed under what floats over it */
   /* Glass: the welcome page's open search and its suggestions, over the pills (welcome.css): the
@@ -162,6 +163,7 @@
   --placeholder-from: #2a2a2a;
   --placeholder-to: #303030;
   --shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 30%);
   --shadow-float: 0 16px 48px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 30%);
   --scrim: rgb(0 0 0 / 45%);
   --glass-edge: rgb(255 255 255 / 25%);
@@ -214,6 +216,7 @@
     --placeholder-from: #2a2a2a;
     --placeholder-to: #303030;
     --shadow: 0 1px 2px rgb(0 0 0 / 30%);
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 30%);
     --shadow-float: 0 16px 48px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 30%);
     --scrim: rgb(0 0 0 / 45%);
     --glass-edge: rgb(255 255 255 / 25%);

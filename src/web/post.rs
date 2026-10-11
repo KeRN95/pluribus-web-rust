@@ -1084,6 +1084,17 @@ impl MyListing {
         }
     }
 
+    /// The tone its badge takes (.badge.warn, .badge.danger in listing.css), as the canvas has
+    /// them: a reservation in the warm yellow, a listing expired or taken off in red's tint; the
+    /// rest grey (waiting for review, paused, sold).
+    pub fn status_tone(&self) -> Option<&'static str> {
+        match self.status.as_str() {
+            "RESERVED" => Some("warn"),
+            "EXPIRED" | "SUSPENDED" | "REJECTED" => Some("danger"),
+            _ => None,
+        }
+    }
+
     /// Up, or taken down by its seller for a while: it can be edited.
     pub fn editable(&self) -> bool {
         matches!(self.status.as_str(), "ACTIVE" | "RESERVED" | "PAUSED")

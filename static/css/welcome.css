@@ -258,11 +258,11 @@
 .field { display: grid; grid-template-columns: minmax(0, 1fr); gap: .3rem; min-width: 0; }
 .field-label { color: var(--muted); font-size: var(--text-sm); font-weight: var(--semibold); letter-spacing: .01em; }
 
-/* The welcome page's categories, all of them at once, as pills like the listing page's details
-   (.attribute): the menus' hairline on the surface, each as wide as its name, one after another
-   and on to the next line; the icon before the name, in the name's colour (it was muted until
-   2026-10-10, a shade apart from its label). Under the pointer or a finger a pill takes a warm
-   shade, and a press sinks it a little. */
+/* The welcome page's categories, all of them at once, as pills as the canvas has them: on the grey
+   of secondary controls with no outline, each as wide as its name, one after another and on to
+   the next line; the icon before the name, in the name's colour (it was muted until 2026-10-10, a
+   shade apart from its label). Under the pointer or a finger a pill takes a darker grey, and a
+   press sinks it a little. */
 .shortcuts { display: flex; flex-wrap: wrap; gap: .55rem; margin: 1.25rem 0 0; }
 /* A little bigger than the details' pills, being the way into the site. */
 .shortcut {
@@ -270,9 +270,9 @@
   align-items: center;
   gap: .55rem;
   padding: .7rem 1.1rem .7rem 1rem;
-  border: 1px solid var(--menu-border);
+  border: 1px solid transparent;
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--surface-muted);
   color: var(--text);
   font-size: var(--text-md);
   font-weight: var(--medium);
@@ -282,9 +282,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 .shortcut-icon { flex: none; }
-.shortcut:active { background: var(--surface-muted); transform: scale(.97); }
+.shortcut:active { background: var(--surface-muted-hover); transform: scale(.97); }
 @media (hover: hover) {
-  .shortcut:hover { background: var(--surface-muted); }
+  .shortcut:hover { background: var(--surface-muted-hover); }
 }
 @media (prefers-reduced-motion: reduce) {
   .shortcut:active { transform: none; }

@@ -30,8 +30,8 @@
 .subcategories .shortcut-icon { width: 18px; height: 18px; }
 .category-up { color: var(--muted); }
 /* Back, and three levels down the way beyond the pills, before them: circles as tall as they are,
-   their icons the welcome page's size (20px; 18 on a phone), both plain, on the surface with the
-   menus' hairline: the chevron says back, the category's icon says where the other leads, and the
+   their icons the welcome page's size (20px; 18 on a phone), both plain, on the grey of secondary
+   controls with no outline: the chevron says back, the category's icon says where the other leads, and the
    page's own pill after them is the line's one marked thing. (Back wore the page's colour's tint
    once, as that pill does: one tinted thing more on a line with the search's circle beside it;
    and the welcome page's house stood after it once, where the logo leads too.) */
@@ -43,26 +43,24 @@
   justify-content: center;
   width: var(--size);
   height: var(--size);
-  border: 1px solid var(--menu-border);
+  border: 1px solid transparent;
   border-radius: 50%;
-  background: var(--surface);
+  background: var(--surface-muted);
   color: var(--text);
   transition: background-color .15s, border-color .15s, transform .1s;
   -webkit-tap-highlight-color: transparent;
 }
-.back-button:active { background: var(--surface-muted); transform: scale(.94); }
+.back-button:active { background: var(--surface-muted-hover); transform: scale(.94); }
 @media (hover: hover) {
-  .back-button:hover { background: var(--surface-muted); }
+  .back-button:hover { background: var(--surface-muted-hover); }
 }
 /* The path's icons, the welcome page's size (18px on a phone, below). The selected pill, the page's
-   own, marked as the welcome page's search is: the coral's tint, a border of the coral, and its
-   icon and name in the coral. */
+   own, filled with the main colour, its icon and name in its own, as a picked pill is. */
 .category-path .shortcut-icon,
 .back-button svg { width: 20px; height: 20px; }
 .category-path .shortcut.is-selected {
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  background: var(--badge);
-  color: var(--accent);
+  background: var(--main);
+  color: var(--on-main);
 }
 .category-path h1 { margin: 0; font: inherit; line-height: inherit; }
 
@@ -76,7 +74,7 @@
 .category-switch .chevron { flex: none; color: inherit; transition: transform .15s; }
 .category-switch[open] .chevron { transform: rotate(180deg); }
 @media (hover: hover) {
-  .category-switch summary:hover { border-color: var(--accent); }
+  .category-switch summary:hover { background: var(--main-hover); }
 }
 .category-level { display: none; }
 .category-switch[open] + .category-level { display: contents; }
@@ -170,25 +168,25 @@
 
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 
-/* A filter picked, as a chip: plain, in no colour, as the order's pill is (the surface, the menus'
-   hairline, its words in the text's colour), small, its cross after its words. */
+/* A filter picked, as a chip: on, so filled with the main colour, as the canvas has the filters
+   on, its words semibold in its own, small, its cross after its words. */
 .filter-chip {
   display: inline-flex;
   align-items: center;
   gap: .35rem;
   padding: .3rem .55rem .3rem .8rem;
-  border: 1px solid var(--menu-border);
+  border: 1px solid transparent;
   border-radius: 999px;
-  background: var(--surface);
-  color: var(--text);
+  background: var(--main);
+  color: var(--on-main);
   font-size: var(--text-sm);
-  font-weight: var(--medium);
+  font-weight: var(--semibold);
   text-decoration: none;
   transition: background-color .15s, border-color .15s;
 }
-.filter-chip svg { opacity: .65; }
+.filter-chip svg { opacity: .8; }
 @media (hover: hover) {
-  .filter-chip:hover { border-color: var(--border-strong); background: var(--surface-muted); }
+  .filter-chip:hover { background: var(--main-hover); }
   .filter-chip:hover svg { opacity: 1; }
 }
 .clear-filters { padding: .3rem .4rem; color: var(--muted); font-size: var(--text-sm); }
@@ -449,9 +447,9 @@
   align-items: center;
   gap: .3rem;
   padding: .4rem .85rem;
-  border: 1px solid var(--menu-border);
+  border: 1px solid transparent;
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--surface-muted);
   color: var(--text);
   font: inherit;
   font-size: var(--text-sm);
@@ -465,13 +463,12 @@
 }
 .small-pill > svg { flex: none; }
 /* "Ruaj kërkimin" (searches.rs), at the end of the count's and chips' line, pushed to its right
-   end: a small pill with a bell in the muted colour; kept, "Kërkimi u ruajt", marked as what is
-   picked is (the accent's tint, a border of it, its words and bell in it). */
+   end: a small pill with a bell in the muted colour; kept, "Kërkimi u ruajt", the same grey pill,
+   its words saying so and its bell in the text's colour. */
 .save-search { display: contents; }
 .save-search-button { margin-left: auto; }
 .save-search-button > svg { color: var(--muted); }
-.save-search-button.is-saved { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
-.save-search-button.is-saved > svg { color: var(--accent); }
+.save-search-button.is-saved > svg { color: var(--text); }
 .sort-button { list-style: none; }
 .sort-button::-webkit-details-marker { display: none; }
 /* The cards' view, the row's last button (browse-tools): round, as the search's is, with the icon
@@ -490,9 +487,9 @@
 .sort-menu[open] > .sort-button,
 .cards-menu[open] > .button.cards-button { background: var(--main); color: var(--on-main); }
 @media (hover: hover) {
-  .small-pill:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
+  .small-pill:hover { background: var(--surface-muted-hover); }
   .sort-menu[open] > .sort-button:hover,
-  .cards-menu[open] > .button.cards-button:hover { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+  .cards-menu[open] > .button.cards-button:hover { background: var(--main-hover); }
 }
 
 /* The filters' form, between the card's head and foot, scrolling if it needs more room. */
@@ -516,10 +513,10 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .filter-form .filter-label { padding-left: calc(.7rem + 1px); }
 .check { display: flex; align-items: center; gap: .55rem; padding: .1rem 0; cursor: pointer; }
 .check input { flex: none; width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--button); }
-/* The filters' options, a box each rather than a tick, drawn as the listing form's options are,
-   like Claude's toggles, if boxier: the menus' hairline round the name on the fields' white;
-   picked, on the accent's tint, the hairline in the accent, as the chip it makes above the results
-   is. The name starts where the filter's does. A group's boxes wrap side by side under its name,
+/* The filters' options, a chip each rather than a tick, drawn as the listing form's options are
+   and as the canvas has them: round-ended, on the grey of secondary controls; picked, filled with
+   the main colour, its words semibold in its own after a check, as the chip it makes above the
+   results is (a car's body types keep their icon over the name instead of the check). The name starts where the filter's does. A group's boxes wrap side by side under its name,
    which takes a line of its own. The box is the whole target; the input is there for keyboards
    and screen readers, its ring round the box. */
 .filter-options { display: flex; flex-wrap: wrap; gap: .35rem; }
@@ -528,10 +525,13 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   position: relative;
   display: inline-flex;
   justify-self: start; /* a yes-or-no filter's lone box keeps its width */
-  padding: .35rem .7rem;
-  border: 1px solid var(--menu-border);
-  border-radius: 9px;
-  background: var(--input);
+  align-items: center;
+  gap: .375rem;
+  min-height: 2.25rem;
+  padding: 0 .875rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-muted);
   font-size: var(--text-sm);
   line-height: 1.3;
   transition: background-color .15s, border-color .15s;
@@ -539,11 +539,21 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   user-select: none;
 }
 .filter-form .check input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.filter-form .check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+.filter-form .check:has(input:checked) { background: var(--main); color: var(--on-main); font-weight: var(--semibold); }
+.filter-form .check:has(input:checked)::before {
+  content: "";
+  flex: none;
+  width: .9rem;
+  height: .9rem;
+  background: currentColor;
+  -webkit-mask: var(--check) center / contain no-repeat;
+  mask: var(--check) center / contain no-repeat;
+}
+.filter-form .filter-icons .check::before { content: none; }
 .filter-form .check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (hover: hover) {
-  .filter-form .check:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
-  .filter-form .check:has(input:checked):hover { border-color: var(--accent); }
+  .filter-form .check:hover { background: var(--surface-muted-hover); }
+  .filter-form .check:has(input:checked):hover { background: var(--main-hover); }
 }
 /* Boxes with icons, a car's body types (Karroceria), on a line of their own: the car's side over
    its name, the boxes as wide as each other: four to a line on a phone, however wide, and from a
@@ -561,7 +571,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   text-align: center;
 }
 .check-icon { flex: none; }
-.filter-form .check:has(input:checked) .check-icon { color: var(--accent); }
+.filter-form .check:has(input:checked) .check-icon { color: inherit; }
 @media (min-width: 720px) {
   .filter-form .filter-icons { grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); }
 }
@@ -639,10 +649,11 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 .price-track input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--accent); }
 .price-choices { display: flex; flex-wrap: wrap; gap: .35rem; }
 .price-choice {
-  padding: .35rem .7rem;
-  border: 1px solid var(--menu-border);
+  min-height: 2.25rem;
+  padding: 0 .875rem;
+  border: 0;
   border-radius: 999px;
-  background: var(--input);
+  background: var(--surface-muted);
   color: var(--text);
   font: inherit;
   font-size: var(--text-sm);
@@ -652,10 +663,10 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   transition: background-color .15s, border-color .15s;
   -webkit-tap-highlight-color: transparent;
 }
-.price-choice[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+.price-choice[aria-pressed="true"] { background: var(--main); color: var(--on-main); font-weight: var(--semibold); }
 @media (hover: hover) {
-  .price-choice:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
-  .price-choice[aria-pressed="true"]:hover { border-color: var(--accent); }
+  .price-choice:hover { background: var(--surface-muted-hover); }
+  .price-choice[aria-pressed="true"]:hover { background: var(--main-hover); }
 }
 /* The rest, under "Më shumë filtra": its name a row across the form, a hairline over it, the
    chevron turning as it opens; its fields laid out as the form's (below). */

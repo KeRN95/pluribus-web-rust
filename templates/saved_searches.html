@@ -27,7 +27,7 @@
     {%- for row in rows %}
     <li class="saved-search">
       <a class="saved-search-name" href="/kerkimet/{{ row.search.id }}">{{ row.search.name }}</a>
-      {%- if let Some(new) = row.new_text() %}<span class="badge">{{ new }}</span>{% endif %}
+      {%- if let Some(new) = row.new_text() %}<span class="badge state">{{ new }}</span>{% endif %}
       <form method="post" action="/kerkimet/{{ row.search.id }}/lajmerime">
         {%- if row.search.alerts_enabled %}
         <button type="submit" class="button secondary small" title="{{ crate::t("Mos më lajmëro më për këtë kërkim") }}">{{ crate::t("Ndalo lajmërimet") }}</button>

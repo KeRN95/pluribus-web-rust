@@ -65,8 +65,8 @@
       <div class="my-listing-text">
         <a class="my-listing-title" href="{{ listing.url() }}">{{ listing.title }}</a>
         <span class="my-listing-meta">
-          {{ listing.price_display() }}{% if let Some(label) = listing.status_label() %} · <span class="badge">{{ label }}</span>{% endif %}
-          {%- if let Some(soon) = listing.expires_soon() %} · <span class="badge">{{ soon }}</span>{% endif %}
+          {{ listing.price_display() }}{% if let Some(label) = listing.status_label() %} · <span class="badge{% if let Some(tone) = listing.status_tone() %} {{ tone }}{% endif %}">{{ label }}</span>{% endif %}
+          {%- if let Some(soon) = listing.expires_soon() %} · <span class="badge warn">{{ soon }}</span>{% endif %}
           {%- for promotion in self.promoted(listing.public_no) %} · <span class="badge promoted">{{ crate::t(promotion.name) }}, {{ crate::t1("deri më {}", promotion.until()) }}</span>{% endfor %}
         </span>
         <span class="my-listing-stats">

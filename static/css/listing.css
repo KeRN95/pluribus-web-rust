@@ -271,7 +271,6 @@
   gap: .5rem;
   height: 3.1rem;
   padding: 0 1.3rem 0 1.1rem;
-  border-color: var(--menu-border);
   font: inherit;
   font-weight: var(--semibold);
 }
@@ -660,26 +659,28 @@
 .price-drop { margin-left: .25rem; padding: .1rem .5rem; border-radius: 999px; background: var(--below-bg); color: var(--below); font-weight: var(--bold); }
 /* Bubbles under the price, which open a card under them as the menus open theirs; a tap outside
    or Escape closes it (dropdown_controller.js): what a square metre of a property on sale costs,
-   whose card says how it was worked out (area_price.html), and "Llogarit kredinë", whose card is
-   the loan calculator. A card's figures stand in rows, their sum under a line. */
+   whose card says how it was worked out (area_price.html), a car's price against its model's
+   (car_price.html), and "Llogarit kredinë", whose card is the loan calculator. Pills as the
+   canvas's are, 36px tall, on the grey of secondary controls with no outline (a verdict's in its
+   tint, below); a card, the surface raised over the page with no outline, its corners rounder, its
+   figures in rows, their sum under a line. */
 .bubble > summary {
-  display: inline-flex; align-items: center; gap: .35rem;
-  padding: .3rem .7rem; border: 1px solid var(--border); border-radius: 999px;
-  background: var(--surface); color: var(--text); font-size: var(--text-sm); font-weight: var(--semibold);
+  display: inline-flex; align-items: center; gap: .45rem;
+  min-height: 2.25rem; padding: 0 .875rem; border: 1px solid transparent; border-radius: 999px;
+  background: var(--surface-muted); color: var(--text); font-size: var(--text-sm); font-weight: var(--semibold);
   list-style: none; cursor: pointer; transition: background-color .15s;
 }
 .bubble > summary::-webkit-details-marker { display: none; }
-.bubble > summary:hover, .bubble[open] > summary { background: var(--surface-muted); }
+.bubble > summary:hover, .bubble[open] > summary { background: var(--surface-muted-hover); }
 .bubble-card {
   position: absolute;
   top: calc(100% + .4rem);
   left: 0;
   z-index: 30;
-  padding: .8rem .9rem;
-  border: 1px solid var(--menu-border);
-  border-radius: var(--radius);
+  padding: 1rem;
+  border-radius: 1rem;
   background: var(--surface);
-  box-shadow: var(--menu-shadow);
+  box-shadow: var(--shadow-float);
   font-size: var(--text-sm);
   transform-origin: top left;
   animation: menu-in .14s ease-out;
@@ -711,7 +712,6 @@
 :is(.area-price, .car-price).price-near { --tone: var(--near); --tone-bg: var(--near-bg); }
 :is(.area-price, .car-price).price-above { --tone: var(--above); --tone-bg: var(--above-bg); }
 :is(.area-price, .car-price):is(.price-below, .price-near, .price-above) > summary {
-  border-color: color-mix(in srgb, var(--tone) 30%, transparent);
   background: var(--tone-bg);
   color: var(--tone);
 }
@@ -743,7 +743,30 @@
 .loan-monthly dd { font-size: var(--text-lg); font-weight: var(--bold); letter-spacing: -.01em; }
 .loan-message { color: var(--text); }
 
-.badge { margin-left: .4rem; padding: .2rem .65rem; border-radius: 999px; background: var(--badge); font-size: var(--text-sm); font-weight: var(--semibold); }
+/* Badges, as the canvas has them: a word or two in a small pill, 24px tall, semibold and a size
+   down, grey with the muted colour unless their tone says otherwise: .warn in the warm yellow (a
+   reservation, a listing about to expire, a promotion, .promoted), .danger in red's tint (expired,
+   taken off, hidden), .ok in green's (done well), .state in the main colour (what is new). */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 1.5rem;
+  margin-left: .4rem;
+  padding: 0 .5625rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: .78125rem;
+  font-weight: var(--semibold);
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.badge.warn,
+.badge.promoted { background: var(--near-bg); color: var(--near); }
+.badge.danger { background: var(--danger-bg); color: var(--danger); }
+.badge.ok { background: var(--below-bg); color: var(--below); }
+.badge.state { background: var(--main); color: var(--on-main); }
 /* The share and the report, and a seller's own buttons, under the price: from 720 px up on the
    contact bar's line, after it (the grid above), on a phone under the price alone, the bar being
    at the screen's foot there. */
@@ -792,6 +815,32 @@
 
 /* The share and the report, and a seller's own buttons, under the price. */
 .actions .button.secondary { gap: .45rem; }
+
+/* Two or three choices side by side in one grey track, the one in use raised on the surface with
+   a faint shadow, as the canvas has the text's size and the language in the menu (and Cilësimet
+   has the language): .segmented, its buttons with aria-pressed. */
+.segmented { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--surface-muted); }
+.segmented > button {
+  min-height: 2rem;
+  padding: 0 .75rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--semibold);
+  cursor: pointer;
+  transition: background-color .15s, box-shadow .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.segmented > button[aria-pressed="true"] { background: var(--surface); box-shadow: var(--shadow-card); }
+@media (hover: hover) {
+  .segmented > button[aria-pressed="false"]:hover { background: var(--surface-muted-hover); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .segmented > button { transition: none; }
+}
 /* How to reach the seller (contact_bar.html, .contact-bar): the phone, "Shfaq numrin" (an envelope,
    "Shfaq email-in", for a seller who signed in by e-mail), and a message, "Shkruaji shitësit", a
    speech bubble: wide pills that say their names, a little taller than the circles beside them,

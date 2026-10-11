@@ -63,7 +63,7 @@
         {{ crate::t(category.name) }}</a>
     </nav>
     {%- if let Some(label) = listing.status_label() %}
-    <span class="badge">{{ label }}</span>
+    <span class="badge{% if let Some(tone) = listing.status_tone() %} {{ tone }}{% endif %}">{{ label }}</span>
     {%- endif %}
     {#- At the line's right end, as the classifieds sites have them, three round buttons like the
         back one: to the category's list, by the list's icon as the view menu has it, and to the

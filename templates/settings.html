@@ -83,9 +83,9 @@
   <h2>{{ crate::t("Gjuha") }}</h2>
   {#- The language the pages and the e-mails speak (web/language.rs, kept on the account too), each
       named in itself, the one in use pressed. -#}
-  <form class="settings-buttons language-choice" method="post" action="/gjuha">
-    <button type="submit" class="button secondary" name="gjuha" value="sq" lang="sq" aria-pressed="{{ !crate::i18n::english() }}">Shqip</button>
-    <button type="submit" class="button secondary" name="gjuha" value="en" lang="en" aria-pressed="{{ crate::i18n::english() }}">English</button>
+  <form class="segmented language-choice" method="post" action="/gjuha">
+    <button type="submit" name="gjuha" value="sq" lang="sq" aria-pressed="{{ !crate::i18n::english() }}">Shqip</button>
+    <button type="submit" name="gjuha" value="en" lang="en" aria-pressed="{{ crate::i18n::english() }}">English</button>
   </form>
   <p class="field-hint">{{ crate::t("Faqet, dhe email-et që të dërgojmë.") }}</p>
 

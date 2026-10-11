@@ -20,8 +20,6 @@
 .settings-contact dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .settings-contact dd:last-child:not(:nth-child(2)) { margin-left: auto; }
 .settings-buttons { display: flex; flex-wrap: wrap; gap: .6rem; }
-/* The language in use, among the two (settings.html): picked, in the tint. */
-.language-choice .button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
 .account h1 { margin: 0 0 .3rem; }
 .account .lead { margin: 0 0 1.25rem; color: var(--muted); }
 .account .lead strong { white-space: nowrap; }
@@ -335,42 +333,36 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
   transform-origin: 0 0;
 }
 .vehicle-fields .tile-plain input { padding-left: calc(.7rem / var(--s)); }
-/* Options as Claude's toggles: pills with a hairline, a + before each, which turns into the
-   accent's check, on its tint, once chosen. The checkbox stays, out of sight but in reach of the
-   keyboard; the pill shows its focus. */
+/* Options as the canvas's chips: round-ended, 36px tall, on the grey of secondary controls;
+   chosen, filled with the main colour, its words semibold in its own after a check. The checkbox
+   stays, out of sight but in reach of the keyboard; the chip shows its focus. */
 .property-fields .checks { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .15rem; }
 .property-fields .checks .check {
   position: relative;
-  gap: .35rem;
-  padding: .4rem .8rem .4rem .6rem;
-  border: 1px solid var(--menu-border);
+  gap: .375rem;
+  min-height: 2.25rem;
+  padding: 0 .875rem;
+  border: 0;
   border-radius: 999px;
-  background: var(--input);
+  background: var(--surface-muted);
   font-size: var(--text-sm);
-  transition: background-color .15s, border-color .15s;
+  transition: background-color .15s;
 }
 .property-fields .checks .check input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.property-fields .checks .check::before {
+.property-fields .checks .check:has(input:checked) { background: var(--main); color: var(--on-main); font-weight: var(--semibold); }
+.property-fields .checks .check:has(input:checked)::before {
   content: "";
   flex: none;
-  width: .95rem;
-  height: .95rem;
-  background: var(--muted);
-  -webkit-mask: var(--plus) center / contain no-repeat;
-  mask: var(--plus) center / contain no-repeat;
-}
-.property-fields .checks .check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 40%, transparent); background: var(--badge); }
-.property-fields .checks .check:has(input:checked)::before {
-  background: var(--accent);
-  -webkit-mask-image: var(--check);
-  mask-image: var(--check);
+  width: .9rem;
+  height: .9rem;
+  background: currentColor;
+  -webkit-mask: var(--check) center / contain no-repeat;
+  mask: var(--check) center / contain no-repeat;
 }
 .property-fields .checks .check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (hover: hover) {
-  .property-fields .checks .check:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
-}
-:root {
-  --plus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+  .property-fields .checks .check:hover { background: var(--surface-muted-hover); }
+  .property-fields .checks .check:has(input:checked):hover { background: var(--main-hover); }
 }
 .other-input { margin-top: .4rem; }
 .property-fields .other-input[hidden] { display: none; }

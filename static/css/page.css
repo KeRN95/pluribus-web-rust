@@ -10,9 +10,9 @@
 .chip {
   flex: none;
   padding: .4rem .9rem;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--surface-muted);
   color: var(--text);
   font-size: var(--text-sm);
   font-weight: var(--medium);
@@ -115,7 +115,7 @@
 
 /* Hover effects only where there is a real pointer; on phones they would stick after a tap. */
 @media (hover: hover) {
-  .chip:hover { background: var(--surface-muted); border-color: var(--border-strong); }
+  .chip:hover { background: var(--surface-muted-hover); }
   .card:hover::before { opacity: 1; }
 }
 
@@ -719,7 +719,7 @@
 .saved-search { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .6rem; padding: .75rem 0; border-top: 1px solid var(--border); }
 .saved-search-name { flex: 1 1 14rem; min-width: 0; color: var(--text); font-weight: var(--semibold); text-decoration: none; }
 .saved-search-name:hover { text-decoration: underline; text-underline-offset: .15em; }
-.saved-search .badge { flex: none; margin: 0; color: var(--accent); }
+.saved-search .badge { flex: none; margin: 0; }
 .saved-search form { display: contents; }
 /* The notifications (notifications.html): a line each, its kind's icon in the muted colour, its
    title, what a message said in two lines at most, and when; one unread has its title in the
