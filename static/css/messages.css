@@ -161,6 +161,7 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; font-size: var(--t
   bottom: .3rem;
   justify-content: center;
   width: 2.15rem;
+  min-height: 0;
   height: 2.15rem;
   padding: 0;
   border-radius: 50%;

@@ -312,10 +312,9 @@
   .map-card-body,
   .browse-scrim { animation: none; }
 }
-/* The round buttons: only their icons, in the page's own colours, on the surface with the menus'
-   hairline, as the listing page's share button is; while what they open is open, marked as a
-   selected pill is, on the accent's tint, their icon and words in the coral; a press sinks them a
-   little. The search is one of them: plain until its box is open, then marked as the others are
+/* The round buttons: only their icons, on the grey of secondary controls with no outline, as the
+   listing page's share button is; while what they open is open, filled with the main colour, their
+   icon and words in its own, as a picked pill is; a press sinks them a little. The search is one of them: plain until its box is open, then marked as the others are
    (it wore the coral's tint always once, as the welcome page's does, one tinted thing more on a
    line that has the page's own pill). (Three classes, to win over .button and .button.secondary,
    which come later.) */
@@ -324,8 +323,8 @@
   justify-content: center;
   width: var(--row);
   height: var(--row);
+  min-height: 0;
   padding: 0;
-  border-color: var(--menu-border);
   border-radius: 50%;
   list-style: none;
   transition: background-color .15s, border-color .15s, transform .1s;
@@ -333,7 +332,7 @@
 .browse-tools .round-button::-webkit-details-marker { display: none; }
 .browse-tools .round-button:active { transform: scale(.97); }
 .browse-tools .button.round-button[aria-expanded="true"],
-.browse-tools .button.round-button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+.browse-tools .button.round-button[aria-pressed="true"] { background: var(--main); color: var(--on-main); }
 .browse-tools .round-button svg { width: 20px; height: 20px; }
 .round-button .pin-icon { margin: 0; color: inherit; }
 /* The filters' and the map's buttons say their names and what is on: pills as wide as their
@@ -489,7 +488,7 @@
 .cards-options .sort-option { display: flex; align-items: center; gap: .55rem; }
 .cards-options .sort-option > svg { flex: none; }
 .sort-menu[open] > .sort-button,
-.cards-menu[open] > .button.cards-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
+.cards-menu[open] > .button.cards-button { background: var(--main); color: var(--on-main); }
 @media (hover: hover) {
   .small-pill:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
   .sort-menu[open] > .sort-button:hover,
@@ -570,7 +569,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
    (the column on a laptop). */
 .filter-place-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .filter-place-row .picker { flex: 1 1 9rem; min-width: 0; }
-.filter-form .filter-locate { flex: none; gap: .3rem; padding: .55rem .8rem; border-color: var(--border-strong); border-radius: 10px; white-space: nowrap; }
+.filter-form .filter-locate { flex: none; gap: .3rem; min-height: 0; padding: .55rem .8rem; border-color: var(--border-strong); border-radius: 10px; white-space: nowrap; }
 .filter-locate .pin-icon { margin: 0; }
 .filter-form .field-hint { margin: 0; padding-left: calc(.7rem + 1px); }
 .filter-form .field-hint[hidden] { display: none; }

@@ -277,11 +277,6 @@
 }
 .listing-car .loan > summary svg { width: 20px; height: 20px; color: var(--muted); }
 .listing-car .loan .bubble-card { left: 0; right: 0; width: auto; }
-/* The message's pill drawn as a picked pill is, the path's own (browse.css, .category-path
-   .shortcut.is-selected): the page's colour's tint, a border of that colour and its words in it;
-   the phone's pill as on every page. */
-.listing-car .contact-bar .message-button { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
-.listing-car .contact-bar .message-button:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--badge)); }
 .spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.25rem; margin: 0; }
 .spec { min-width: 0; }
 .spec dt { display: flex; align-items: center; gap: .35rem; color: var(--muted); font-size: var(--text-sm); }
@@ -754,18 +749,28 @@
    at the screen's foot there. */
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .9rem 0 0; }
 
-/* Buttons as Claude's: a 10px corner, medium weight, the coral filled with white words, a press that
-   sinks them a little; the secondary ones on the surface with a hairline, a darker one under the pointer. */
+/* Buttons as the redesign's canvas has them: pills with no outline, their words a weight up and a
+   little smaller than the text, 48px tall (3rem) unless their place says otherwise, an icon .5rem
+   before the words; a press sinks them a little. The main colour filled, its words in its own
+   (white on the light theme, eerie black on the light grey of the dark one), a shade off under the
+   pointer; a secondary one on the grey of secondary controls, a shade darker under it; a danger
+   one (deleting) that grey with red words, on red's tint under the pointer; a small one, for a
+   list's rows, 34px tall (2.125rem) with its words a size down. */
 .button {
   display: inline-flex;
   align-items: center;
-  padding: .55rem 1.1rem;
+  justify-content: center;
+  gap: .5rem;
+  min-height: 3rem;
+  padding: 0 1.25rem;
   border: 1px solid transparent;
-  border-radius: 10px;
-  background: var(--button);
-  color: var(--on-button);
+  border-radius: 999px;
+  background: var(--main);
+  color: var(--on-main);
   font: inherit;
-  font-weight: var(--medium);
+  font-size: .9375rem;
+  font-weight: var(--semibold);
+  line-height: 1.25;
   text-decoration: none;
   cursor: pointer;
   transition: background-color .15s, border-color .15s, transform .1s;
@@ -773,24 +778,26 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.button:hover { background: var(--button-hover); }
+.button:hover { background: var(--main-hover); }
 .button:active { transform: scale(.98); }
-.button.secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
-.button.secondary:hover { background: var(--surface-muted); border-color: var(--border-strong); }
+.button.secondary { background: var(--surface-muted); color: var(--text); }
+.button.secondary:hover { background: var(--surface-muted-hover); }
+.button.danger { color: var(--danger); }
+.button.danger:hover { background: var(--danger-bg); }
+.button.small { gap: .375rem; min-height: 2.125rem; padding: 0 .875rem; font-size: .84375rem; }
+@media (prefers-reduced-motion: reduce) {
+  .button { transition: none; }
+  .button:active { transform: none; }
+}
 
-/* The listing's actions drawn like Claude's: pills, a press sinks them a little; the share and the
-   report, and a seller's own buttons, on the surface with the menus' hairline. */
-.actions .button,
-.contact-bar .button { border-radius: 999px; transition: background-color .15s, border-color .15s, transform .1s; }
-.actions .button:active,
-.contact-bar .button:active { transform: scale(.97); }
-.actions .button.secondary { gap: .45rem; border-color: var(--menu-border); }
+/* The share and the report, and a seller's own buttons, under the price. */
+.actions .button.secondary { gap: .45rem; }
 /* How to reach the seller (contact_bar.html, .contact-bar): the phone, "Shfaq numrin" (an envelope,
    "Shfaq email-in", for a seller who signed in by e-mail), and a message, "Shkruaji shitësit", a
    speech bubble: wide pills that say their names, a little taller than the circles beside them,
    the way to the seller being what the page is for. The message is filled in the page's colour,
-   as the site's main buttons are (.button's own look), and the phone plain, on the surface with
-   the menus' hairline as the share and the report are, its icon in the muted colour and in the
+   as the site's main buttons are (.button's own look), and the phone plain, on the grey of
+   secondary controls as the share and the report are, its icon in the muted colour and in the
    text's under the pointer, as the browse row's buttons have theirs (it wore the coral's tint
    once, one tinted thing more beside the filled one). Once tapped, the number takes the phone's
    place, after the same icon, marked as the site marks what is picked (a category page's own
@@ -801,7 +808,6 @@
 .contact-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .9rem; }
 .contact-bar form { display: contents; }
 .contact-bar .button { justify-content: center; gap: .5rem; height: 3.1rem; padding: 0 1.3rem 0 1.1rem; font-weight: var(--semibold); white-space: nowrap; }
-.contact-bar .button.secondary { border-color: var(--menu-border); }
 .contact-bar .button-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .contact-bar .reveal-button .contact-icon { color: var(--muted); transition: color .15s; }
 .button.reveal-contact {
@@ -816,11 +822,11 @@
 }
 .contact-icon { flex: none; }
 .contact-revealed { display: flex; align-items: center; gap: .5rem; min-width: 0; }
-/* The copy and share buttons: an icon in a circle on the surface, with the menus' hairline, a
-   little shorter than the pills; a check for a moment once they copy (copy_controller.js,
-   share_controller.js). */
+/* The round icon buttons (the copy, the share, the report, WhatsApp): an icon in a grey circle,
+   46px across (2.875rem), a little shorter than the pills beside them; a check for a moment once
+   they copy (copy_controller.js, share_controller.js). */
 .actions .button.icon-circle,
-.contact-bar .button.icon-circle { flex: none; justify-content: center; width: 2.85rem; height: 2.85rem; padding: 0; }
+.contact-bar .button.icon-circle { flex: none; width: 2.875rem; min-height: 0; height: 2.875rem; padding: 0; }
 /* Phones: the bar at the foot of the page (last in the grid, by order), which stays at the
    screen's bottom while the listing scrolls (sticky) and settles after the description, so that
    the way to the seller is at hand wherever the reader is, as the apps have it: from the screen's
@@ -853,12 +859,6 @@
 .icon-circle.is-copied .icon-copy,
 .icon-circle.is-copied .icon-link { display: none; }
 .icon-circle.is-copied .icon-copied { display: block; color: var(--accent); }
-@media (prefers-reduced-motion: reduce) {
-  .actions .button,
-  .contact-bar .button { transition: none; }
-  .actions .button:active,
-  .contact-bar .button:active { transform: none; }
-}
 
 /* The listing's details as pills, smaller than the category pills (the text a size down, 14px,
    their icons 16px), the menus' hairline on the surface, each as wide as what it says, one after

@@ -337,10 +337,10 @@
 
 /* The round buttons in the row with the search (home.html, .welcome-tools), as tall as the
    categories' pills under them (--pill): the one for posting a listing, then the listings kept and
-   the conversations, which no top bar holds (it has the account and the theme, base.html). All
-   plain (.plain-shortcut), on the surface with the menus' hairline and their icon in the text's
-   colour, as the back button is (browse.css); a circle's colour (--tone) and its tint
-   (--tone-bg) are there for one that would be marked as picked or open. Their icons are the
+   the conversations, which no top bar holds (it has the account and the theme, base.html): the
+   listings kept and the conversations plain (.plain-shortcut), on the grey of secondary controls
+   with no outline and their icon in the text's colour, and posting filled (.post-shortcut); a
+   circle's colour (--tone) and its fill (--tone-bg) say which. Their icons are the
    pills' size beside them. On a phone a finger's target is bigger than the button, as a pill's
    is (::after, from the gaps). */
 .circle-shortcut {
@@ -367,13 +367,21 @@
 @media (hover: hover) {
   .circle-shortcut:hover { border-color: var(--tone); }
 }
-/* The plain ones, the back button's kind: the surface, the hairline, the icon in the text's
-   colour; a warm shade under the pointer or a press. The ring round the conversations' count and
-   the kept listings' dot is the surface's then. */
-.plain-shortcut { --tone: var(--text); --tone-bg: var(--surface); border-color: var(--menu-border); }
-.plain-shortcut:active { border-color: var(--menu-border); background: var(--surface-muted); }
+/* The plain ones: the grey of secondary controls, the icon in the text's colour, a shade darker
+   under the pointer or a press. The ring round the conversations' count and the kept listings' dot
+   is that grey then. */
+.plain-shortcut { --tone: var(--text); --tone-bg: var(--surface-muted); border-color: transparent; }
+.plain-shortcut:active { border-color: transparent; background: var(--surface-muted-hover); }
 @media (hover: hover) {
-  .plain-shortcut:hover { border-color: var(--menu-border); background: var(--surface-muted); }
+  .plain-shortcut:hover { border-color: transparent; background: var(--surface-muted-hover); }
+}
+/* Posting a listing, the site's main thing to do ("Posto"): the one round button filled, in the
+   main colour with its plus white on the light theme, in the accent, lime, with its plus dark on
+   the dark one (--post, --on-post). */
+.post-shortcut { --tone: var(--on-post); --tone-bg: var(--post); border-color: transparent; }
+.post-shortcut:active { border-color: transparent; background: var(--post-hover); }
+@media (hover: hover) {
+  .post-shortcut:hover { border-color: transparent; background: var(--post-hover); }
 }
 /* The conversations' count of those unread (messages.css), ringed in the button's tint. */
 .inbox-shortcut .inbox-count { box-shadow: 0 0 0 2px var(--tone-bg); }

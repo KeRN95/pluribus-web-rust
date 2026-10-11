@@ -24,6 +24,7 @@
   --bg: #f7f7f7;                /* the page */
   --surface: #ffffff;           /* the header, cards, fields, menus */
   --surface-muted: #ececec;     /* grey buttons and the other secondary controls */
+  --surface-muted-hover: #e2e2e2; /* that grey under the pointer */
   --input: #ffffff;
   --text: #1b1b1b;              /* eerie black */
   --muted: #707070;             /* secondary text, 4.6:1 on the page */
@@ -34,6 +35,11 @@
   --main: #1b1b1b;              /* the main colour, the text's: solid buttons, what is picked */
   --main-hover: #383838;
   --on-main: #ffffff;
+  /* "Posto", the site's main thing to do: the main colour on the light theme; on the dark one
+     the accent, lime with dark words, the one button filled with it. */
+  --post: var(--main);
+  --on-post: var(--on-main);
+  --post-hover: var(--main-hover);
   /* The accent, lime by default, one of five the menu offers (data-accent on <html>, below): the
      logo's dot and what is new or unread, the dots and counts. Light as lime is, it is only ever a
      background on the light theme, behind dark icons or numbers (--highlight-knob and
@@ -54,6 +60,7 @@
   --red: #e0203a;
   --red-bg: #fbe0e2;
   --danger: #b42318;
+  --danger-bg: #fbe5e1;          /* its tint: a danger button under the pointer */
   /* Under, about and over an average: a property's square metre against its zone's, a car's price
      against its model's and year's; the first green also says what went well (a price drop, a
      verified seller). */
@@ -117,6 +124,7 @@
   --bg: #1b1b1b;
   --surface: #242424;
   --surface-muted: #2c2c2c;
+  --surface-muted-hover: #363636;
   --input: #242424;
   --text: #e8e8e8;
   --muted: #a3a3a3;
@@ -127,6 +135,9 @@
   --main: #e8e8e8;
   --main-hover: #ffffff;
   --on-main: #1b1b1b;
+  --post: var(--highlight);
+  --on-post: var(--on-highlight);
+  --post-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
   --lime-knob: var(--surface-muted);
   --lime-icon: var(--lime);
   --lime-edge: transparent;
@@ -139,6 +150,7 @@
   --red: #ff4f5e;
   --red-bg: #4a2428;
   --danger: #f97066;
+  --danger-bg: #4b2c2a;
   --below: #a3b887;
   --below-bg: #2b3322;
   --near: #f0c75a;
@@ -164,6 +176,7 @@
     --bg: #1b1b1b;
     --surface: #242424;
     --surface-muted: #2c2c2c;
+    --surface-muted-hover: #363636;
     --input: #242424;
     --text: #e8e8e8;
     --muted: #a3a3a3;
@@ -174,6 +187,9 @@
     --main: #e8e8e8;
     --main-hover: #ffffff;
     --on-main: #1b1b1b;
+    --post: var(--highlight);
+    --on-post: var(--on-highlight);
+    --post-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
     --lime-knob: var(--surface-muted);
     --lime-icon: var(--lime);
     --lime-edge: transparent;
@@ -186,6 +202,7 @@
     --red: #ff4f5e;
     --red-bg: #4a2428;
     --danger: #f97066;
+    --danger-bg: #4b2c2a;
     --below: #a3b887;
     --below-bg: #2b3322;
     --near: #f0c75a;

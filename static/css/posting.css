@@ -90,10 +90,6 @@
    under it. */
 .my-listing-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
 .my-listing-actions form { display: contents; }
-.button.small { padding: .4rem .75rem; font-size: var(--text-sm); }
-/* Deleting: the danger colour, on the quiet button. */
-.button.secondary.danger { color: var(--danger); }
-.button.secondary.danger:hover { border-color: var(--danger); }
 @media (max-width: 719px) {
   .my-listing { flex-direction: column; align-items: stretch; }
 }
@@ -487,7 +483,7 @@ button.photo-remove { justify-self: start; padding: 0; border: 0; background: no
 .person-role select { width: auto; padding-top: .4rem; padding-bottom: .4rem; }
 .person-role-name { color: var(--muted); font-size: var(--text-sm); }
 .person-actions { display: flex; align-items: center; gap: .4rem; }
-.person-actions .icon-circle { justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; }
+.person-actions .icon-circle { width: 2.25rem; min-height: 0; height: 2.25rem; padding: 0; }
 .people-roles { margin: 0 0 1rem; padding: 0; border: 0; }
 .people-roles .notice-setting { margin: .35rem 0; }
 /* An invitation (store_invitation.html): the store's head, then its two buttons on a line. */

@@ -803,14 +803,15 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     // The search button is a magnifier at the end of the field's pill, as in Claude's app.
     assert!(body.contains(r#"<button type="submit" class="icon-button welcome-search" aria-label="Kërko""#));
     // The search leads a row of its own over the categories, with the round buttons the other
-    // pages have in no top bar: the plus, then the listings kept and the conversations, all plain,
-    // in that row and nowhere else on the page; no button opens the search, which stands open.
+    // pages have in no top bar: the plus, filled ("Posto"), then the listings kept and the
+    // conversations, plain, in that row and nowhere else on the page; no button opens the search,
+    // which stands open.
     // The theme is in the top bar (below), not among them.
     let nav = body.find(r#"<nav class="shortcuts" aria-label="Kategoritë">"#).unwrap();
     let row = positions(&body, &[
         r#"<div class="welcome-tools">"#,
         r#"<form class="welcome-form""#,
-        r#"<a class="circle-shortcut plain-shortcut plus-shortcut" href="/shto" aria-label="Shto njoftim""#,
+        r#"<a class="circle-shortcut post-shortcut" href="/shto" aria-label="Shto njoftim""#,
         r#"<a class="circle-shortcut plain-shortcut saved-shortcut" href="/te-ruajturat" aria-label="Të ruajturat""#,
         r#"<a class="circle-shortcut plain-shortcut inbox-shortcut" href="/mesazhet" aria-label="Mesazhet" title="Mesazhet" data-controller="inbox">"#,
     ]);
@@ -4570,6 +4571,31 @@ async fn every_part_of_the_site_has_the_one_main_colour(pool: PgPool) {
     let kept = &css[css.find(r#".heart-button[aria-pressed="true"] svg{"#).expect("the kept heart")..];
     let kept = &kept[..kept.find('}').unwrap()];
     assert!(kept.contains("fill:var(--red)") && kept.contains("stroke:#fff"), "{kept}");
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn buttons_are_pills_in_the_main_colour_or_the_grey(pool: PgPool) {
+    // The redesign's buttons (listing.css): pills with no outline, 48px tall, their words
+    // semibold; the main colour with its own words, a secondary one on the grey of secondary
+    // controls, a danger one that grey with red words, a small one 34px tall. "Posto", the welcome
+    // page's plus, is the main colour on the light theme and the accent on the dark one.
+    // (The stylesheet comes minified: web::site_css, a rule right after the one before it.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    let rule = |selector: &str| {
+        let at = css.find(&format!("}}{selector}{{")).unwrap_or_else(|| panic!("{selector}"));
+        let rule = &css[at + 1..];
+        rule[..rule.find('}').unwrap()].to_string()
+    };
+    let button = rule(".button");
+    for part in ["min-height:3rem", "border-radius:999px", "background:var(--main)", "color:var(--on-main)", "font-weight:var(--semibold)"] {
+        assert!(button.contains(part), "{part} in {button}");
+    }
+    assert!(rule(".button.secondary").contains("background:var(--surface-muted)"));
+    assert!(rule(".button.danger").contains("color:var(--danger)"));
+    assert!(rule(".button.small").contains("min-height:2.125rem"));
+    assert!(rule(".post-shortcut").contains("--tone-bg:var(--post)"));
+    let dark = &css[css.find(r#":root[data-theme="dark"]{"#).expect("the dark theme")..];
+    assert!(dark[..dark.find('}').unwrap()].contains("--post:var(--highlight);"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
