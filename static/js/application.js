@@ -294,6 +294,22 @@ document.addEventListener("turbo:before-render", ({ detail: { newBody } }) => {
   photo?.closest("picture, .gallery-photo > img")?.before(Object.assign(document.createElement("img"), { className: "gallery-interim", src: interim, alt: "" }));
   interim = null;
 });
+// A listing's photos that haven't come by the time its page shows come in whole, fading in over
+// what stands in for them (the card's copy, blurred, or the photo's own tiny one behind it),
+// rather than drawing themselves in from the top down as their bytes come, a sharp edge sweeping
+// down the blurred copy (listing.css, .is-coming; the user's report of 2026-10-11, "a glitch when
+// photo loads"). Marked as the page shows, before it is drawn, so that one the browser has at hand
+// shows at once, untouched. A page that only changes in place keeps its photos as they are.
+document.addEventListener("turbo:render", ({ detail: { renderMethod } }) => {
+  if (renderMethod === "morph") return;
+  for (const photo of document.querySelectorAll(".gallery-photo img:not(.gallery-backdrop, .gallery-interim)")) {
+    if (photo.complete) continue;
+    photo.classList.add("is-coming");
+    const come = () => photo.classList.remove("is-coming");
+    photo.addEventListener("load", come, { once: true });
+    photo.addEventListener("error", come, { once: true });
+  }
+});
 
 // A link a stand-in is shown for: one that leads the whole page to another of the site's pages
 // by a plain GET (Turbo's own click, turbo:click, has left out the links it doesn't follow), not

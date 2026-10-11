@@ -4921,6 +4921,22 @@ async fn a_listings_stand_in_holds_still_at_every_page_and_text_size(pool: PgPoo
     assert!(css.contains(".stand-in-listing .bubble > summary{vertical-align:top;}"));
 }
 
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn a_listings_photo_comes_in_whole(pool: PgPool) {
+    // A listing's photo that hasn't come by the time its page shows, after a tap, is unseen until
+    // it has loaded whole and then fades in over its blurred copy, rather than drawing itself in
+    // from the top down as its bytes come, a sharp edge sweeping down the blur (the user's report
+    // of 2026-10-11, "a glitch when photo loads"); one the browser has at hand shows at once,
+    // untouched. (The stylesheet and the script come minified: web::site_css, web::minified_js.)
+    let version = marketplace::web::asset_version();
+    let css = get(pool.clone(), &format!("/static/css/site.css?v={version}")).await.body;
+    assert!(css.contains(".gallery-photo img:not(.gallery-backdrop){transition:opacity .2s ease-out;}.gallery-photo img.is-coming{opacity:0;transition:none;}"));
+    let script = get(pool, &format!("/static/js/application.js?v={version}")).await.body;
+    for part in ["`turbo:render`", "`is-coming`", "`.gallery-photo img:not(.gallery-backdrop, .gallery-interim)`"] {
+        assert!(script.contains(part), "{part}");
+    }
+}
+
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_way_back_is_a_chevron_level_with_its_words(pool: PgPool) {
     // The breadcrumb's way back is Phosphor's chevron, its Regular weight's (the Duotone's caret is
