@@ -5227,7 +5227,8 @@ async fn a_listings_photos_glow_as_youtubes_ambient_light(pool: PgPool) {
     assert!(page[glow..].starts_with(&format!(r#"{source}" alt=""></div><div class="gallery">"#)), "{page}");
     assert!(page.contains(&format!(r#"<img class="gallery-backdrop" src="{source}" alt="""#)));
     // Blurred far past the photos' edges, its colours a little livelier, as faint as YouTube's
-    // ("waaaaay more subtle", the user asked of 45% and 60%), a little less on the dark theme;
+    // ("waaaaay more subtle", the user asked of 45% and 60%; of 12%, "a bit more in white"), the
+    // same on both themes;
     // under every word on the page, and under the photos' box, whose ground is the page's, so that
     // it shows round them alone. A split page's photo stands still as its column scrolls, a layer
     // of its own: there the photos' box goes under the listing's words, its glow under it, and
@@ -5235,13 +5236,13 @@ async fn a_listings_photos_glow_as_youtubes_ambient_light(pool: PgPool) {
     let version = marketplace::web::asset_version();
     let css = get(pool.clone(), &format!("/static/css/site.css?v={version}")).await.body;
     for rule in [
-        "--glow:blur(72px) saturate(120%);--glow-strength:12%;",
+        "--glow:blur(72px) saturate(120%);--glow-strength:22%;",
         ".listing-media{border-radius:var(--radius);background:var(--bg);}.listing-glow{position:absolute;inset:0;z-index:-1;opacity:var(--glow-strength);filter:var(--glow);pointer-events:none;}",
         "@media (min-width:960px){.listing-split{isolation:isolate;}.listing-split > .listing-media{z-index:-1;}.listing-split ~ .related{position:relative;}}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
-    assert_eq!(css.matches("--glow-strength:22%;").count(), 2, "the dark theme, picked and the device's");
+    assert_eq!(css.matches("--glow-strength:").count(), 1, "the same on both themes");
     // As the photos slide, the one that shows lends it its colours, fading in over the last's; a
     // stand-in's is its card's photo.
     let slides = get(pool.clone(), &format!("/static/js/controllers/slides_controller.js?v={version}")).await.body;
@@ -5765,10 +5766,14 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     assert_eq!(css.matches("--on-highlight:").count(), 1);
     // A listing's price on a band of it across the figure's foot, as Tradera marks its prices
     // (2026-10-11): a thick underline under the letters, in the tint a filter that is on takes, as
-    // quiet as the user asked.
+    // quiet as the user asked, and as thin, reaching an eighth of an em up the figure ("a bit
+    // smaller, going less into the top"). The price as large and as bold as the title (the user's
+    // ask of the same day; the headline before, 36px and a step bolder).
     for rule in [
         "--price-mark:var(--filter-on);",
-        ".price-amount{text-decoration-line:underline;text-decoration-color:var(--price-mark);text-decoration-thickness:.34em;text-decoration-skip-ink:none;text-underline-offset:-.2em;}",
+        ".price-amount{text-decoration-line:underline;text-decoration-color:var(--price-mark);text-decoration-thickness:.26em;text-decoration-skip-ink:none;text-underline-offset:-.12em;}",
+        ".listing-header h1{margin:.75rem 0 .35rem;font-size:1.714rem;letter-spacing:-.02em;line-height:1.25;}.listing-price{margin:0;font-size:1.714rem;line-height:1.15;font-weight:var(--heading-weight,var(--bold));letter-spacing:-.02em;}",
+        ".listing-header h1,.listing-price{font-size:1.75rem;}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
@@ -8015,7 +8020,7 @@ async fn a_phone_sees_the_listings_on_its_first_screen(pool: PgPool) {
         // "I promovuar" over its photo).
         // In the dark theme's band in both themes, as dark as the photo (the user's pick of the
         // same day, the accent itself first).
-        ".card.is-promoted .card-figure{text-decoration-line:underline;text-decoration-color:var(--price-mark-photo);text-decoration-thickness:.34em;text-decoration-skip-ink:none;text-underline-offset:-.2em;}",
+        ".card.is-promoted .card-figure{text-decoration-line:underline;text-decoration-color:var(--price-mark-photo);text-decoration-thickness:.26em;text-decoration-skip-ink:none;text-underline-offset:-.12em;}",
         "--price-mark-photo:color-mix(in srgb,var(--highlight) var(--filter-share-dark),#1b1b1b);",
     ] {
         assert!(css.contains(rule), "{rule}");

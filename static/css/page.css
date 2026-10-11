@@ -289,16 +289,17 @@
    across its foot, as the listing's page marks its own (listing.css, .price-amount), in place of
    a pill saying "I promovuar" over the photo, as the user asked on 2026-10-11: in the dark
    theme's band, the deep green of mint, in both themes (--price-mark-photo, the user's pick; the
-   accent itself first), as dark as the photo's shade under the white figure, which it covers to a
-   fifth of an em over the baseline; the month and "(i diskutueshëm)" stay off it, as they do there
-   (.card-figure, the figure alone; screen readers hear "I promovuar" before it,
+   accent itself first), as dark as the photo's shade under the white figure, which it covers to an
+   eighth of an em over the baseline, as thin as the page's (a fifth until the user asked for that
+   one "a bit smaller, going less into the top"); the month and "(i diskutueshëm)" stay off it, as
+   they do there (.card-figure, the figure alone; screen readers hear "I promovuar" before it,
    listing_card.html). */
 .card.is-promoted .card-figure {
   text-decoration-line: underline;
   text-decoration-color: var(--price-mark-photo);
-  text-decoration-thickness: .34em;
+  text-decoration-thickness: .26em;
   text-decoration-skip-ink: none;
-  text-underline-offset: -.2em;
+  text-underline-offset: -.12em;
 }
 .listing-media .heart { position: absolute; top: calc(var(--over-edge) - .3rem); right: calc(var(--over-edge) - .3rem); z-index: 2; }
 .listing-media .heart-button { --circle: var(--over-photo); --reach: .3rem; }

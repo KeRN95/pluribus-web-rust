@@ -147,11 +147,12 @@
   --frost-sheet: color-mix(in srgb, var(--surface) 80%, transparent);
   /* The glow round a listing's photos, as YouTube's ambient light takes the colours of what plays
      (the user's ask of 2026-10-11): the photo that shows, blurred far past its edges and its
-     colours a little livelier (--glow), and as faint as YouTube's (--glow-strength), a little
-     less faint on the dark theme, the one YouTube shows its on; "waaaaay more subtle", the user
-     asked once they had seen it at 45% and 60%, blurred 48px and 160% livelier. */
+     colours a little livelier (--glow), and as faint as YouTube's (--glow-strength), the same
+     on both themes: "waaaaay more subtle", the user asked once they had seen it at 45% and 60%
+     (the dark theme's), blurred 48px and 160% livelier, and then of 12% on the light theme, "a
+     bit more in white. its almost invisible". */
   --glow: blur(72px) saturate(120%);
-  --glow-strength: 12%;
+  --glow-strength: 22%;
   /* Glass: the welcome page's open search and its suggestions, over the pills (welcome.css): the
      text input's colour (white, and the dark theme's own dark) at 65%, blurred, with its edge and
      the words and their shading on it, those in the theme's colours below. */
@@ -205,7 +206,7 @@
   --text-lg: 1.125rem;   /* 18: leads, a listing's own title over its description */
   --text-xl: 1.25rem;    /* 20: section headings, a browse page's heading */
   --text-2xl: 1.6rem;    /* 25.6: page titles */
-  --text-3xl: 2.25rem;   /* 36: a listing's price, page titles on wide screens */
+  --text-3xl: 2.25rem;   /* 36: page titles on wide screens */
   /* The weights, from quiet to loud: lead text, body, emphasis (chips, values), headings and
      labels, prices, and the initials in avatars. */
   --light: 300;
@@ -281,7 +282,6 @@
   --on-glass: #fff;
   --on-glass-muted: rgb(255 255 255 / 72%);
   --on-glass-hover: rgb(255 255 255 / 10%);
-  --glow-strength: 22%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -344,7 +344,6 @@
     --on-glass: #fff;
     --on-glass-muted: rgb(255 255 255 / 72%);
     --on-glass-hover: rgb(255 255 255 / 10%);
-    --glow-strength: 22%;
   }
 }
 

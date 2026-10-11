@@ -330,8 +330,8 @@
    2026-10-11, "a blur / shadow similar to how youtube hues its background based on whats its
    playing"): behind the photos the one that shows once more, its tiny copy (in the page, so at
    once) stretched over their box, blurred far past its edges and its colours a little livelier
-   (--glow, base.css), as faint as YouTube's (--glow-strength: 12%, 22% on the dark theme; the
-   user found 45% and 60% far too strong), so that the page round them, the bar's frost too, takes
+   (--glow, base.css), as faint as YouTube's (--glow-strength: 22% on both themes; the user found
+   45% and 60% far too strong, and 12% on the light theme almost invisible), so that the page round them, the bar's frost too, takes
    a hint of their colours. It follows the photos as they slide, the next one's
    fading in over the last's (slides_controller.js, shine), and a stand-in's is its card's photo
    (application.js, listingStandIn). It is under everything on the page, the words round the
@@ -620,14 +620,11 @@
 .listing-steps .back-button { --size: var(--size-button-sm); }
 .listing-steps .back-button svg { width: 18px; height: 18px; }
 .listing-steps .is-off { opacity: .35; pointer-events: none; }
-/* The price is the headline, as the canvas has it: 32px, a step bolder than the headings (800 to
-   their 700, or a step over the weight being tried, base.css), 30px on a phone, the title over
-   it. */
+/* The price as large and as bold as the title, as the user asked on 2026-10-11 (it was the
+   headline, as the canvas has it, 36px and a step bolder than the headings, 30px on a phone):
+   24px on a phone, 28px from 720px up (below), in the headings' weight. */
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: 1.714rem; letter-spacing: -.02em; line-height: 1.25; }
-.listing-price { margin: 0; font-size: 2.143rem; line-height: 1.15; font-weight: calc(var(--heading-weight, var(--bold)) + 100); letter-spacing: -.02em; }
-@media (min-width: 720px) {
-  .listing-price { font-size: 2rem; }
-}
+.listing-price { margin: 0; font-size: 1.714rem; line-height: 1.15; font-weight: var(--heading-weight, var(--bold)); letter-spacing: -.02em; }
 /* What qualifies the price ("/muaj", "i diskutueshëm": price_note_alone, listings.rs) on a line
    of its own under it, quietly, on every listing's page and every screen, as the user asked on
    2026-10-11 (a car's or a property's page alone had it so; the others had it after the figure,
@@ -635,15 +632,17 @@
 .price-note { display: block; margin-top: .3rem; color: var(--muted); font-size: var(--text-sm); font-weight: 400; letter-spacing: normal; }
 /* The figure itself on a band of the accent across its foot, as Tradera marks its prices (the
    user's ask of 2026-10-11, "a semi background on the price"): a thick underline, which a browser
-   draws under the letters, a third of an em, from a fifth of an em over the baseline, on every
-   line if the words wrap ("Çmimi me marrëveshje" on a narrow phone), in the accent toned down
-   (--price-mark, base.css); what follows it ("/muaj") and a drop stay off it. */
+   draws under the letters, a quarter of an em, from an eighth of an em over the baseline (a third
+   of an em from a fifth over it until the user asked the same day for it "a bit smaller, going
+   less into the top"), on every line if the words wrap ("Çmimi me marrëveshje" on a narrow
+   phone), in the accent toned down (--price-mark, base.css); what follows it ("/muaj") and a drop
+   stay off it. */
 .price-amount {
   text-decoration-line: underline;
   text-decoration-color: var(--price-mark);
-  text-decoration-thickness: .34em;
+  text-decoration-thickness: .26em;
   text-decoration-skip-ink: none;
-  text-underline-offset: -.2em;
+  text-underline-offset: -.12em;
 }
 /* Under the buttons, quietly: that the visitor blocked the seller (from a report's thanks,
    report.html), with where to let them be again. Reporting is a button among the others. */
@@ -1024,8 +1023,8 @@
 @media (min-width: 720px) {
   .grid { grid-template-columns: repeat(auto-fill, minmax(calc(220px / var(--page-scale)), 1fr)); gap: 1.5rem 1rem; }
   h1 { font-size: var(--text-3xl); }
-  .listing-header h1 { font-size: 1.75rem; }
-  .listing-price { font-size: var(--text-3xl); }
+  .listing-header h1,
+  .listing-price { font-size: 1.75rem; }
 }
 
 /* Phones: everything smaller, since nearly all of it is sized in rem: 14px instead of 16px, and
