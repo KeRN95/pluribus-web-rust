@@ -597,15 +597,6 @@ impl<'a> Filters<'a> {
         url(&format!("/c/{}", category.slug), kept)
     }
 
-    /// Every category, keeping what category_url keeps.
-    pub fn all_categories_url(&self) -> String {
-        let kept = self
-            .pairs()
-            .into_iter()
-            .filter(|(name, _)| matches!(name.as_str(), "q" | "city" | "lat" | "lng" | "radius"));
-        url("/search", kept)
-    }
-
     /// The filters the map page's form has no fields for, which it carries along hidden.
     pub fn hidden_map_fields(&self) -> Vec<(String, String)> {
         self.pairs()

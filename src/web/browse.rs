@@ -440,20 +440,15 @@ struct BrowsePage<'a> {
     fields: Vec<Field>,
     chips: Vec<Chip>,
     clear_url: String,
-    /// On a category page, the category above it, the row's first pill: a way up.
+    /// On a category page, the category above it, its breadcrumb's way up (the welcome page over a
+    /// main category).
     parent: Option<Subcategory>,
-    /// On a category page three levels down, the category above its parent, which the round button
-    /// before the pills leads to by its icon (no such button otherwise).
-    above_parent: Option<Subcategory>,
-    /// On a category page, its own icon, on its pill.
-    heading_icon: Option<&'static str>,
     subcategories: Vec<Subcategory>,
     /// On a search across every category, the categories its listings are in, the most first.
     found_in: Vec<FoundIn>,
-    /// On a category page, the other categories at its level, which its own pill shows as pills
-    /// after it: those beside it; for a main category, the other main ones, after "Të gjitha
-    /// njoftimet". None on a search, whose heading is just a heading.
-    level: Option<Vec<Subcategory>>,
+    /// A category page, which says where it is in a breadcrumb over its heading; a search's heading
+    /// is just a heading.
+    category_page: bool,
     /// The cookie the view button sets on this page (cards_cookie).
     cards_cookie: String,
     /// The listings a promotion features among the page's matches ("Të veçuara"), a row over
@@ -931,19 +926,13 @@ async fn browse(
             None => t("Të gjitha njoftimet").to_string(),
         },
     };
-    // The category above this one, the row's first pill: a way up; the one above that, which the
-    // round button before the pills leads to; and this one's own icon.
-    let way_up = |of: &db::Category| {
-        of.parent_id.and_then(|id| categories.by_id(id)).map(|above| {
-            (above, Subcategory { name: above.name.clone(), url: filters.category_url(above), icon: category_icon(above) })
-        })
-    };
-    let (parent, above_parent) = match (&page_slug, category.and_then(way_up)) {
-        (Some(_), Some((above, link))) => (Some(link), way_up(above).map(|(_, link)| link)),
-        _ => (None, None),
-    };
-    let heading_icon = match (&page_slug, category) {
-        (Some(_), Some(current)) => category_icon(current),
+    // The category above this one, the breadcrumb's way up, its links keeping the words, the town
+    // and the map pin, as the category links do.
+    let parent = match (&page_slug, category) {
+        (Some(_), Some(current)) => current
+            .parent_id
+            .and_then(|id| categories.by_id(id))
+            .map(|above| Subcategory { name: above.name.clone(), url: filters.category_url(above), icon: category_icon(above) }),
         _ => None,
     };
     // Where the listings' own heading on a category page says they are, after their order (the
@@ -973,29 +962,7 @@ async fn browse(
                 .collect()
         })
         .unwrap_or_default();
-    // The other categories at this one's level, which its pill shows as pills after it: those
-    // beside it, not itself; for a main category, the other main ones, after "Të gjitha
-    // njoftimet". The links keep the words, the town and the map pin, as the category links do.
-    let level: Option<Vec<Subcategory>> = match (&page_slug, category) {
-        (Some(_), Some(current)) => {
-            let others = |category: &&db::Category| category.id != current.id;
-            let pill = |category: &db::Category| Subcategory {
-                name: category.name.clone(),
-                url: filters.category_url(category),
-                icon: category_icon(category),
-            };
-            Some(match current.parent_id {
-                Some(parent) => categories.children(parent).filter(others).map(pill).collect(),
-                None => {
-                    // Its name in the page's language where it shows, as the categories' are
-                    // (browse.html).
-                    let all = Subcategory { name: "Të gjitha njoftimet".to_string(), url: filters.all_categories_url(), icon: None };
-                    std::iter::once(all).chain(categories.top_level().filter(others).map(pill)).collect()
-                }
-            })
-        }
-        _ => None,
-    };
+    let category_page = page_slug.is_some() && category.is_some();
     // What the page says about itself (seo.rs), its first listing's photo for the preview; a
     // search's results are not for search engines to list, a category's page is, with its filters.
     let origin = seo::origin(&headers);
@@ -1053,11 +1020,9 @@ async fn browse(
         clear_url: filters.clear_url(),
         filters: &filters,
         parent,
-        above_parent,
-        heading_icon,
         subcategories,
         found_in,
-        level,
+        category_page,
         cards_cookie,
         featured,
         most_viewed,

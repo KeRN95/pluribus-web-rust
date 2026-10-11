@@ -41,6 +41,14 @@ Njoftimet më të reja
 Kthehu
 = Back
 
+# A category page's breadcrumb (browse.html): its name for screen readers, and the welcome page
+# over a main category.
+Rruga
+= Breadcrumb
+
+Kreu
+= Home
+
 {}: ndrysho kategorinë
 = {}: change category
 

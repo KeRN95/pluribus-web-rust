@@ -26,53 +26,29 @@
      data-cards-small-value="{{ Cards::Small.sizes() }}" data-cards-big-value="{{ Cards::Big.sizes() }}" data-cards-list-value="{{ Cards::List.sizes() }}" data-cards-cookie-value="{{ cards_cookie }}"
      data-place-town-value="{{ filters.town_slug() }}"
      data-action="keydown.esc@document->filters#foldAll turbo:before-cache@document->filters#reset section:open@document->filters#foldFor section:open@document->filters#fit turbo:before-morph-element->filters#keep turbo:before-morph-attribute->filters#keepAttribute turbo:morph@document->filters#counted">
-  {#- The head: where the page is, in pills, or a search's heading; its subcategories; and the row
+  {#- The head: where the page is, in a breadcrumb, with its heading, or a search's heading; its
+      subcategories; and the row
       of buttons, one under another on a phone, the row sharing the first line on a wide screen,
       at its right end (browse.css, .browse-head). What the row opens floats under the head, or
       under its first line where the row shares it. -#}
   <div class="browse-head">
-{%- if let Some(level) = level %}
-{#- A category page says where it is and where to go next in pills. On a line of their own, small:
-    a round back button; the category above it, quieter, a way up; and the page's own, filled, the heading, which shows
-    the other categories at its level as pills after it on the line, and hides them again. It is a
-    <details> holding its pill alone, those pills standing after it (.category-level, browse.css),
-    so that they take their places on the line, and it opens and closes without scripts
-    (disclosure_controller.js keeps it open while the page refreshes in place). -#}
-<nav class="category-pills" aria-label="{{ crate::t("Kategoritë") }}">
-  <div class="category-path">
-    {#- Back, round, first: to the page before, or, opened from elsewhere, a level up
-        (back_controller.js). -#}
-    <a class="back-button" href="{% if let Some(parent) = parent %}{{ parent.url }}{% else %}/{% endif %}" aria-label="{{ crate::t("Kthehu") }}" title="{{ crate::t("Kthehu") }}" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
-    {#- Then, round too, on a page three levels down, the way up beyond the pills, by its icon: the
-        category above its parent (way_up.html, which a listing's path has too). -#}
-    {%- include "way_up.html" %}
-    {%- if let Some(parent) = parent %}
-    <a class="shortcut small category-up" href="{{ parent.url }}">
-      {%- if let Some(icon) = parent.icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
-      {{ crate::t(parent.name) }}</a>
-    {%- endif %}
-    {%- if level.is_empty() %}
-    {#- Alone at its level: nothing to show, its pill only says where the page is. -#}
-    <div class="shortcut small is-selected" aria-current="page">
-      {%- if let Some(icon) = heading_icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
-      <h1>{{ heading }}</h1></div>
-    {%- else %}
-    <details class="category-switch" data-controller="disclosure" data-action="turbo:before-morph-attribute->disclosure#keep">
-      <summary class="shortcut small is-selected" aria-label="{{ crate::t1("{}: ndrysho kategorinë", heading) }}" aria-current="page">
-        {%- if let Some(icon) = heading_icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
-        <h1>{{ heading }}</h1><svg class="chevron" data-icon="chevron-down" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
-    </details>
-    {#- The others at its level, as small as it, each with its icon. -#}
-    <div class="category-level">
-      {%- for entry in level %}
-      <a class="shortcut small" href="{{ entry.url }}">
-        {%- if let Some(icon) = entry.icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
-        {{ crate::t(entry.name) }}</a>
-      {%- endfor %}
-    </div>
-    {%- endif %}
-  </div>
+{%- if category_page %}
+{#- A category page says where it is as the canvas has it: a line of words, the way back first (a
+    chevron: to the page before, or, opened from elsewhere, a level up, back_controller.js), then
+    the category above it, quieter, a link (over a main category the welcome page, "Kreu"), and
+    after a › the page's own, in the text's colour (browse.css, .breadcrumb); under it the page's
+    heading, its name big. -#}
+<nav class="breadcrumb" aria-label="{{ crate::t("Rruga") }}">
+  <a class="breadcrumb-back" href="{% if let Some(parent) = parent %}{{ parent.url }}{% else %}/{% endif %}" aria-label="{{ crate::t("Kthehu") }}" title="{{ crate::t("Kthehu") }}" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
+  {%- if let Some(parent) = parent %}
+  <a class="breadcrumb-up" href="{{ parent.url }}">{{ crate::t(parent.name) }}</a>
+  {%- else %}
+  <a class="breadcrumb-up" href="/">{{ crate::t("Kreu") }}</a>
+  {%- endif %}
+  <span class="breadcrumb-sep" aria-hidden="true">›</span>
+  <span class="breadcrumb-here" aria-current="page">{{ heading }}</span>
 </nav>
+<h1 class="browse-title">{{ heading }}</h1>
 {%- if !corrections.is_empty() %}
 <p class="search-corrections">{{ crate::t1("Shfaqen edhe rezultatet për {}.", corrections) }}</p>
 {%- endif %}

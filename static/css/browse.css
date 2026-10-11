@@ -64,22 +64,25 @@
 }
 .category-path h1 { margin: 0; font: inherit; line-height: inherit; }
 
-/* The selected pill shows the other categories at its level as pills after it, on its line, and
-   hides them again. They stand after its <details> (.category-level), whose box gives way to them
-   when it is open (display: contents), so that they take their places on the line as the pills
-   before them do, coming in as the menus do. */
-.category-switch .shortcut.is-selected { padding-right: .7rem; cursor: pointer; }
-.category-switch summary { list-style: none; }
-.category-switch summary::-webkit-details-marker { display: none; }
-.category-switch .chevron { flex: none; color: inherit; transition: transform .15s; }
-.category-switch[open] .chevron { transform: rotate(180deg); }
+/* Where a category page is, as the canvas draws it (browse.html, .breadcrumb): a line of words
+   40px tall, the way back first, a chevron 40px wide to tap, then the category above, a link in the
+   muted grey (the words' colour and underlined under the pointer), a › muted too, and the page's
+   own in the text's colour, semibold; a name too long for the line ends in "…". 14px on phones. The
+   page's heading under it, its name 30px bold (26px on phones), as the canvas has a page's
+   title. */
+.breadcrumb { display: flex; align-items: center; gap: var(--space-8); min-width: 0; height: var(--size-button-sm); font-size: .9375rem; white-space: nowrap; }
+.breadcrumb-back { display: flex; flex: none; align-items: center; justify-content: center; width: var(--size-button-sm); height: var(--size-button-sm); margin: 0 -4px 0 -12px; border-radius: var(--radius-pill); color: var(--text); }
 @media (hover: hover) {
-  .category-switch summary:hover { background: var(--main-hover); }
+  .breadcrumb-back:hover { background: var(--surface-muted); }
 }
-.category-level { display: none; }
-.category-switch[open] + .category-level { display: contents; }
-@media (prefers-reduced-motion: no-preference) {
-  .category-switch[open] + .category-level > .shortcut { animation: menu-in .14s ease-out; }
+.breadcrumb-up { min-width: 0; overflow: hidden; color: var(--muted); text-decoration: none; text-overflow: ellipsis; }
+.breadcrumb-up:hover { color: var(--text); text-decoration: underline; text-underline-offset: .2em; }
+.breadcrumb-sep { flex: none; color: var(--muted); }
+.breadcrumb-here { min-width: 0; overflow: hidden; color: var(--text); font-weight: var(--semibold); text-overflow: ellipsis; }
+.browse-title { margin: 4px 0 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
+@media (max-width: 719px) {
+  .breadcrumb { font-size: 1rem; }
+  .browse-title { margin-top: 2px; font-size: 1.857rem; }
 }
 /* Phones: the path's pills (a listing's too) the welcome page's size there (welcome.css), as on
    every screen, and the subcategories' alike, about 35 px tall; the back button as tall as they
@@ -161,9 +164,9 @@
 .browse-head > .categories { padding: 0 0 .25rem; }
 @media (min-width: 960px) {
   .browse-head { grid-template-columns: minmax(0, 1fr) auto; column-gap: 1rem; align-items: center; }
-  .browse-head > :is(.category-pills, .results-header) { grid-area: 1 / 1; }
+  .browse-head > :is(.breadcrumb, .results-header) { grid-area: 1 / 1; }
   .browse-head > .browse-tools { grid-area: 1 / 2; justify-self: end; }
-  .browse-head > :is(.subcategories, .categories, .search-corrections) { grid-column: 1 / -1; }
+  .browse-head > :is(.browse-title, .subcategories, .categories, .search-corrections) { grid-column: 1 / -1; }
 }
 
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
