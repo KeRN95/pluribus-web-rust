@@ -5485,6 +5485,9 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for rule in [
         ".menu::backdrop{background:var(--scrim);}",
+        // On a phone four fifths of the screen, the page dimmed beside it, floating as it does
+        // from 720px up (the user's ask of 2026-10-11; the whole screen until then).
+        "@media (max-width:719px){.menu{width:min(380px,80%);}",
         // The sizes: large, the text bigger; compact, the whole page zoomed to 90%, or, with a
         // mouse, to 80% with the text bigger in it; the maps at their own scale, the frame's
         // column as wide on the screen as before.

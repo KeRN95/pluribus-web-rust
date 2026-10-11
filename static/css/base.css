@@ -1015,8 +1015,9 @@ html { zoom: var(--page-scale); }
 :is(.map-canvas, .map-pin-canvas) { zoom: calc(1 / var(--page-scale)); }
 
 /* The menu (base.html, menu_controller.js), as the canvas draws it: a modal dialog, a drawer 380px
-   wide at the screen's left from 720px up and the whole screen on phones, white, floating over
-   the page dimmed (--shadow-float, --scrim), appearing without sliding as the design system has
+   wide at the screen's left, on a phone four fifths of the screen, the page dimmed beside it, as
+   the user asked on 2026-10-11 (the whole screen until then), white, floating over the page
+   dimmed (--shadow-float, --scrim; a tap on it closes the menu), appearing without sliding as the design system has
    menus, the page behind still. Its top as tall as the bar, the logo and the cross under a
    hairline; under it, scrolling on its own, "Posto njoftim" across, then its groups, each under
    a hairline with its name small and muted: rows 44px tall, an icon of 20px drawn a little
@@ -1084,7 +1085,7 @@ input[type="radio"].swatch:checked::before { box-shadow: 0 0 0 2px var(--surface
 .swatch[value="orange"] { --swatch: var(--choice-orange); }
 .swatch[value="blue"] { --swatch: var(--choice-blue); }
 @media (max-width: 719px) {
-  .menu { width: 100%; box-shadow: none; }
+  .menu { width: min(380px, 80%); }
   .menu-top { padding: 0 8px 0 var(--gutter); }
   .menu-body { padding: 16px 14px 24px; }
 }
