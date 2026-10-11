@@ -62,8 +62,13 @@
         price's line's end, and data-compare, the circle after it that weighs the price (what a
         square metre costs, or how a car's price compares); data-line, the line under its page's
         title in words; data-facts, how many key facts a car's or a property's page has under it; data-up and data-here, its page's path, the category above its own (the
-        front page for one at the top) and its own. -#}
-    <div class="card-head"{% if card.deal %} data-deal data-facts="{{ card.facts }}"{% endif %}{% if let Some(heading) = card.heading %} data-heading="{{ heading }}"{% endif %}{% if card.loan() %} data-loan{% endif %}{% if card.compares() %} data-compare{% endif %} data-line="{{ card.page_line() }}" data-up="{% if let Some(parent) = card.category_parent %}{{ crate::t(parent) }}{% else %}{{ crate::t("Kreu") }}{% endif %}" data-here="{{ crate::t(card.category_name) }}">
+        front page for one at the top) and its own; data-description, its page's description, its
+        lines as they are, as much as the page shows of it folded and more; data-reveal, what its
+        page's contact bar offers to show of the seller ("phone", "email"), and data-closed where
+        it offers no message either (a listing sold since, on /te-ruajturat). Attributes, which no
+        search engine reads as the page's words, and nothing the card shows. -#}
+    {%- let stand_in = card.stand_in_description() %}
+    <div class="card-head"{% if card.deal %} data-deal data-facts="{{ card.facts }}"{% endif %}{% if let Some(heading) = card.heading %} data-heading="{{ heading }}"{% endif %}{% if card.loan() %} data-loan{% endif %}{% if card.compares() %} data-compare{% endif %}{% if !stand_in.is_empty() %} data-description="{{ stand_in }}"{% endif %}{% if let Some(reveal) = card.reveal %} data-reveal="{{ reveal }}"{% endif %}{% if !card.messages() %} data-closed{% endif %} data-line="{{ card.page_line() }}" data-up="{% if let Some(parent) = card.category_parent %}{{ crate::t(parent) }}{% else %}{{ crate::t("Kreu") }}{% endif %}" data-here="{{ crate::t(card.category_name) }}">
       <h2 class="card-title"><a class="card-link" href="{{ card.url() }}">{{ card.title }}</a></h2>
     </div>
     {%- let description = card.description_excerpt() %}

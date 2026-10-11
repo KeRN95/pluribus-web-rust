@@ -4942,6 +4942,54 @@ async fn a_listings_photo_comes_in_whole(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_card_carries_its_pages_words_for_the_stand_in(pool: PgPool) {
+    // The stand-in a tap shows while a listing's page comes says what the card knows of the page in
+    // words (the user's asks of 2026-10-11): its description, its lines as they are, as much as the
+    // page shows of it folded and more (data-description); what its contact bar offers to show of
+    // the seller (data-reveal); the line under its title (data-line). Attributes, which no search
+    // engine reads as the page's words, and nothing the card shows.
+    sqlx::query("UPDATE listings SET description = $2 WHERE public_no = $1").bind(1001_i64).bind("Rreshti i parë.\nRreshti i dytë, me fjalë.").execute(&pool).await.unwrap();
+    sqlx::query("UPDATE listing_contacts c SET show_phone = false, email = 'shitesi@example.com', show_email = true FROM listings l WHERE l.id = c.listing_id AND l.public_no = 1002")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let cars = html(pool.clone(), "/c/makina").await;
+    let golf = card_of(&cars, 1001);
+    assert!(golf.contains("data-description=\"Rreshti i parë.\nRreshti i dytë, me fjalë.\""), "{golf}");
+    assert!(golf.contains(r#" data-reveal="phone""#) && !golf.contains("data-closed"), "{golf}");
+    assert!(card_of(&cars, 1002).contains(r#" data-reveal="email""#));
+    // A long one is cut at a word, past the dozen lines its page shows of it folded.
+    sqlx::query("UPDATE listings SET description = $2 WHERE public_no = $1").bind(1001_i64).bind("fjalë ".repeat(400)).execute(&pool).await.unwrap();
+    let golf = card_of(&html(pool.clone(), "/c/makina").await, 1001);
+    let open = "data-description=\"";
+    let carried = &golf[golf.find(open).unwrap() + open.len()..];
+    let carried = &carried[..carried.find('"').unwrap()];
+    let length = carried.chars().count();
+    assert!((1500..=1600).contains(&length) && carried.ends_with("fjalë"), "{length}");
+    // The page gives the stand-in its own parts as it words them: the description's heading and
+    // its fold's button, the contact bar's pills with their icons. Inert, in a template.
+    let parts = &cars[cars.find(r#"<template id="stand-in-parts">"#).expect("the stand-in's parts")..];
+    let parts = &parts[..parts.find("</template>").unwrap()];
+    for part in [
+        r#"<h2 data-part="description">Përshkrimi</h2>"#,
+        r#"data-part="more" data-fold-target="button" hidden>"#,
+        r#"<span class="button secondary reveal-button" data-part="phone">"#,
+        r#"<span class="button-label">Shfaq numrin</span>"#,
+        r#"<span class="button-label">Shfaq email-in</span>"#,
+        r#"<span class="button message-button" data-part="message">"#,
+        r#"<span class="button-label">Shkruaji shitësit</span>"#,
+    ] {
+        assert!(parts.contains(part), "{part}");
+    }
+    // The stand-in folds its description with the page's own controller, at hand on every page.
+    // (The script comes minified: web::minified_js.)
+    let script = get(pool, &format!("/static/js/application.js?v={}", marketplace::web::asset_version())).await.body;
+    for part in ["`stand-in-parts`", r#"data-controller="fold""#, "controllers/fold_controller.js"] {
+        assert!(script.contains(part), "{part}");
+    }
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_way_back_is_a_chevron_level_with_its_words(pool: PgPool) {
     // The breadcrumb's way back is Phosphor's chevron, its Regular weight's (the Duotone's caret is
     // a triangle), moved into the middle of its box as every caret is (icons.rs), and the

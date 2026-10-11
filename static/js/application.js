@@ -5,6 +5,7 @@ import { Application } from "@hotwired/stimulus";
 // listings are kept, for the header's heart too; the town's, to forget it (below); refresh.js, the
 // filled-in fields of a GET form (below).
 import HeartController from "controllers/heart_controller.js";
+import FoldController from "controllers/fold_controller.js";
 import { rememberSearch } from "controllers/recent_searches.js";
 import PlaceController, { forgetTown } from "controllers/place_controller.js";
 import { filledIn } from "controllers/refresh.js";
@@ -15,9 +16,12 @@ import { filledIn } from "controllers/refresh.js";
 // (web::render), and a part of the page that comes later (a frame, a stream, the next page Turbo
 // shows) brings its own. A module's address is in the import map, with the fingerprint.
 const application = Application.start();
-const requested = new Set(["heart", "place"]);
+const requested = new Set(["heart", "place", "fold"]);
 application.register("heart", HeartController);
 application.register("place", PlaceController);
+// A description's fold, at hand on every page, so that a listing's stand-in, which folds its
+// description as the page does (listingStandIn), is folded before it is first drawn.
+application.register("fold", FoldController);
 
 function load(identifier) {
   if (requested.has(identifier)) return;
@@ -369,11 +373,21 @@ function standIn(link) {
 // there); the description, its start as the card has it; the contact bar at a phone's foot. What
 // the card doesn't know are grey bars where the words will be (.stand-in-text, words about as
 // long, unseen), which wrap as the page's do. The photo is the card's, softly blurred until the
-// page's own comes (.gallery-interim).
+// page's own comes (.gallery-interim). What the card knows of its page's words shows as words, as
+// the user asked on 2026-10-11 ("load përshkrimi and the generated subheader", "the chat and phone
+// number button as we already know their value"): the line under the title (data-line), its
+// number whole on one line as the page has it; the description (data-description, its lines as
+// they are), under the page's heading, folded by the page's own controller at a dozen lines with
+// "Shfaq të gjithë përshkrimin" under them (fold_controller.js); and the contact bar's pills, the
+// phone's or the e-mail's (data-reveal) and the message's (none where data-closed), their icons and
+// words the page's own (#stand-in-parts, base.html).
 function listingStandIn(card, link) {
   const escape = (text) => text.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const unseen = (text) => `<span class="stand-in-text">${escape(text)}</span>`;
   const head = card.querySelector(".card-head");
+  // The page's own parts, as the server words them (base.html, #stand-in-parts).
+  const parts = document.getElementById("stand-in-parts")?.content;
+  const part = (name) => parts?.querySelector(`[data-part="${name}"]`)?.outerHTML ?? "";
   const deal = Boolean(head?.hasAttribute("data-deal"));
   const named = card.querySelector(".card-link")?.textContent.trim() ?? "";
   const shown = card.querySelector("img.card-photo")?.currentSrc;
@@ -390,6 +404,9 @@ function listingStandIn(card, link) {
   // in what state, and on a car's or a property's page where and when, before the number.
   const kind = "Në shitje · E përdorur";
   const line = head?.dataset.line ?? (deal ? `${head?.dataset.heading ? `${named} · ` : ""}${kind} · ${place} · 00.00.2026 · Nr. ${number}` : `${kind} · Numri i njoftimit: ${number}`);
+  // The page's own line in words, its last part, the number, whole on one line (.listing-number).
+  const end = line.lastIndexOf(" · ");
+  const spoken = head?.dataset.line && end > 0 ? `${escape(line.slice(0, end))} · <span class="listing-number">${escape(line.slice(end + 3))}</span>` : unseen(line);
   // As many key facts as the page has (data-facts), two to a line on a phone; none but on a car's
   // or a property's page.
   const facts = deal ? Number(head.dataset.facts ?? 4) : 0;
@@ -404,19 +421,28 @@ function listingStandIn(card, link) {
   const note = notes ? `<span class="price-note">${escape(notes)}</span>` : "";
   const pills = ["Samsung", "Galaxy A15", "128 GB", "E re", "Garanci"].map((words) => `<dd class="attribute">${escape(words)}</dd>`).join("");
   const details = deal ? "" : `<section class="listing-details"><h2>${unseen("Detajet")}</h2><dl class="attributes"><div class="attribute-group">${pills}</div></dl></section>`;
-  const excerpt = card.querySelector(".card-description-text")?.textContent.trim();
-  const description = excerpt ? `<section class="listing-description"><h2>${unseen("Përshkrimi")}</h2><div class="description-fold"><p class="description">${escape(excerpt)}</p></div></section>` : "";
+  const words = head?.dataset.description ?? card.querySelector(".card-description-text")?.textContent.trim();
+  const description = words
+    ? `<section class="listing-description">${part("description") || `<h2>${unseen("Përshkrimi")}</h2>`}`
+      + `<div class="description-fold" data-controller="fold"><p class="description" data-fold-target="text">${escape(words)}</p>${part("more")}</div></section>`
+    : "";
+  // The contact bar's pills as the page has them; none where the page has none.
+  const reveal = head?.dataset.reveal ? part(head.dataset.reveal) : "";
+  const message = head?.hasAttribute("data-closed") ? "" : part("message");
+  const contact = !parts
+    ? '<aside class="contact-bar"><span class="button secondary reveal-button"></span><span class="button message-button"></span></aside>'
+    : reveal || message ? `<aside class="contact-bar">${reveal}${message}</aside>` : "";
   return `<div class="listing-page"><article class="listing ${deal ? "listing-car" : "listing-split"} stand-in-listing">`
     + `<div class="listing-tags"><nav class="breadcrumb listing-path">${path}</nav>`
     + '<nav class="listing-steps"><span class="back-button list-button"></span><span class="back-button step-button"></span><span class="back-button step-button"></span></nav></div>'
     + `<div class="listing-media"><div class="gallery"><div class="listing-photos"><div class="gallery-photo">${photo}</div></div></div></div>`
-    + `<div class="listing-side"><header class="listing-header"><h1>${escape(head?.dataset.heading || named)}</h1><p class="card-meta listing-kind">${unseen(line)}</p></header>`
+    + `<div class="listing-side"><header class="listing-header"><h1>${escape(head?.dataset.heading || named)}</h1><p class="card-meta listing-kind">${spoken}</p></header>`
     + (facts > 0 ? `<dl class="key-facts">${fact.repeat(facts)}</dl>` : "")
     + `<div class="listing-deal"><div class="price-box"><div class="price-row"><p class="listing-price"><span class="price-amount">${escape(price)}</span>${note}</p>`
     + `${head?.hasAttribute("data-loan") ? '<details class="bubble loan" inert><summary></summary></details>' : ""}`
     + `${head?.hasAttribute("data-compare") ? '<details class="bubble car-price" inert><summary></summary></details>' : ""}</div></div></div>`
     + `${details}${description}</div>`
-    + '<aside class="contact-bar"><span class="button secondary reveal-button"></span><span class="button message-button"></span></aside>'
+    + contact
     + "</article></div>";
 }
 

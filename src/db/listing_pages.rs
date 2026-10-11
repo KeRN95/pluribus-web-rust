@@ -57,6 +57,15 @@ pub struct ListingCard {
     /// the stand-in a tap shows draws as many of (data-facts).
     #[sqlx(default)]
     pub facts: i64,
+    /// What its page's description starts with, its lines as they are, one character past
+    /// PAGE_DESCRIPTION so that a longer one shows it was cut, and what its page offers to reveal
+    /// of the seller ("phone", "email", none: db::visible_contact): the stand-in a tap shows draws
+    /// its page's description and contact bar from them (ListingCard::stand_in_description;
+    /// data-description, data-reveal).
+    #[sqlx(default)]
+    pub page_description: String,
+    #[sqlx(default)]
+    pub reveal: Option<String>,
     pub location_name: Option<String>,
     /// The name of the municipality the listing is in.
     pub city: Option<String>,
@@ -123,6 +132,12 @@ pub struct ListingCard {
 
 /// How much of a description a card carries, in characters.
 pub const DESCRIPTION_EXCERPT: usize = 400;
+
+/// How much of its page's description a card carries for the stand-in a tap shows, its lines as
+/// they are, in characters: more than a dozen lines' worth, which the page shows of it folded
+/// (description.html), at any width and text size (a dozen lines are about 1 300 characters at the
+/// widest column and the smallest text).
+pub const PAGE_DESCRIPTION: usize = 1600;
 
 /// A photo's WebP copies (media.rs), as a card has them: the card's (the small one's address is
 /// it with its own ending, web/photos.rs), the middle one (none for a photo no bigger), the full
@@ -726,6 +741,15 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH RECURSIVE deal_categories AS
                 (SELECT v.value_number FROM listing_attribute_values v JOIN attributes a ON a.id = v.attribute_id
                  WHERE v.listing_id = l.id AND a.code = 'property_area') AS area_m2,
                 l.condition, l.published_at,
+                -- What its page's description starts with, its lines as they are, one character past
+                -- PAGE_DESCRIPTION, and what its page offers to reveal of the seller, the phone or
+                -- else the e-mail while it is up, as visible_contact reads it: for the stand-in a
+                -- tap shows (ListingCard::stand_in_description, reveal).
+                left(coalesce(l.description, ''), 1601) AS page_description,
+                (SELECT CASE WHEN c.show_phone AND c.phone_e164 IS NOT NULL THEN 'phone'
+                             WHEN c.show_email AND c.email IS NOT NULL THEN 'email' END
+                 FROM listing_contacts c
+                 WHERE c.listing_id = l.id AND l.status IN ('ACTIVE', 'RESERVED')) AS reveal,
                 -- The key facts a car's page or a property's shows (web/listings.rs, CAR_FACTS and
                 -- PROPERTY_FACTS, whose codes these are): those the listing gives of its category's details.
                 (SELECT count(DISTINCT a.code) FROM listing_attribute_values v

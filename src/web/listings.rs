@@ -229,6 +229,26 @@ impl ListingCard {
         }
     }
 
+    /// What the stand-in a tap shows draws its page's description from (data-description): all
+    /// of it, its lines as they are, or, when it is longer than db::PAGE_DESCRIPTION, that much,
+    /// cut at a word, more than the dozen lines the page shows of it folded (description.html).
+    pub fn stand_in_description(&self) -> String {
+        if self.page_description.chars().count() <= db::PAGE_DESCRIPTION {
+            return self.page_description.clone();
+        }
+        let cut: String = self.page_description.chars().take(db::PAGE_DESCRIPTION).collect();
+        match cut.rfind(char::is_whitespace) {
+            Some(at) => cut[..at].trim_end().to_string(),
+            None => cut,
+        }
+    }
+
+    /// Whether its page offers a message to its seller (contact_bar.html: a listing up or reserved),
+    /// for the stand-in's contact bar (data-closed when it doesn't).
+    pub fn messages(&self) -> bool {
+        matches!(self.status.as_str(), "ACTIVE" | "RESERVED" | "")
+    }
+
     /// What the list's card shows of its description: all of it, or, when it is longer than
     /// db::DESCRIPTION_EXCERPT, that much, cut at a word and ending in "…".
     pub fn description_excerpt(&self) -> String {
