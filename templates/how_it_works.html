@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{%- import "about_nav.html" as about %}
 
 {% block title %}{{ crate::t("Si funksionon") }} | Pluribus{% endblock %}
 
@@ -7,6 +8,8 @@
 {% block content %}
 {#- How the site works, for someone new to it (web/pages.rs). In English, how_it_works_en.html,
     said as a whole: a change here is a change there too. -#}
+<div class="about-page">
+{% call about::about_nav("how") %}
 <article class="text-page">
   <h1>{{ crate::t("Si funksionon Pluribus") }}</h1>
   {%- if crate::i18n::english() %}{% include "how_it_works_en.html" %}{% else %}
@@ -34,4 +37,5 @@
   <p>Shiko edhe <a href="/siguria">këshillat e sigurisë</a> dhe <a href="/kushtet">kushtet e përdorimit</a>.</p>
   {%- endif %}
 </article>
+</div>
 {% endblock %}

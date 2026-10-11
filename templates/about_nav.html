@@ -1,0 +1,12 @@
+{#- The pages about the site (pages.rs), down the left of each from 720px up, as the canvas has
+    them: the five as the footer names them, the one it is on filled with the main colour, as what
+    is picked is (page.css, .about-nav). On a phone the footer alone leads to them. -#}
+{%- macro about_nav(here) -%}
+<nav class="about-nav" aria-label="{{ crate::t("Rreth faqes") }}">
+  <a href="/si-funksionon"{% if here == "how" %} aria-current="page"{% endif %}>{{ crate::t("Si funksionon") }}</a>
+  <a href="/siguria"{% if here == "safety" %} aria-current="page"{% endif %}>{{ crate::t("Këshilla sigurie") }}</a>
+  <a href="/kushtet"{% if here == "terms" %} aria-current="page"{% endif %}>{{ crate::t("Kushtet") }}</a>
+  <a href="/privatesia"{% if here == "privacy" %} aria-current="page"{% endif %}>{{ crate::t("Privatësia") }}</a>
+  <a href="/kontakt"{% if here == "contact" %} aria-current="page"{% endif %}>{{ crate::t("Kontakt") }}</a>
+</nav>
+{%- endmacro %}

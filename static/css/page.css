@@ -883,6 +883,38 @@ a.notification-line:active .notification-title { text-decoration: underline 2px 
 .text-page p { margin: 0 0 1rem; }
 .text-page ul { margin: 0 0 1rem; padding-left: 1.25rem; }
 .text-page li + li { margin-top: .5rem; }
+/* The five pages about the site (how_it_works.html, safety_tips.html, terms.html, privacy.html,
+   contact.html), as the canvas has them: 40px under the top bar (24px on a phone), from 720px up
+   the five down the left, 220px wide, staying in sight as the text scrolls, the one open filled
+   with the main colour (about_nav.html), 72px from a column of text 680px wide; the heading 36px
+   (28px on a phone), the date of the last change under it, 13px, the lead 19px (17px) and muted,
+   the sections' headings 21px (19px), 36px (28px) apart, the text 16px, its lines 1.7 apart, its
+   links underlined in the text's colour. (One column at the left once, as wide as a line reads
+   well, the five in the footer alone.) */
+.about-page { display: grid; grid-template-columns: 220px minmax(0, 680px); gap: 72px; align-items: start; padding-top: 40px; }
+.about-nav { position: sticky; top: calc(var(--size-header) + 24px); display: flex; flex-direction: column; gap: 4px; }
+.about-nav a { display: flex; align-items: center; min-height: var(--size-button-sm); padding: 0 14px; border-radius: var(--radius-pill); color: var(--text); text-decoration: none; }
+@media (hover: hover) {
+  .about-nav a:hover { background: var(--surface-muted); }
+}
+.about-nav a:active { background: var(--surface-muted); }
+.about-nav a[aria-current="page"] { background: var(--main); color: var(--on-main); font-weight: var(--semibold); }
+.about-page .text-page { max-width: none; }
+.about-page .text-page h1 { margin: 0; font-size: 2.25rem; letter-spacing: -.025em; line-height: 1.15; }
+.about-page .text-page .updated { margin: 8px 0 0; font-size: .8125rem; }
+.about-page .text-page .lead { margin: 14px 0 0; color: var(--muted); font-size: 1.1875rem; font-weight: var(--regular); line-height: 1.55; }
+.about-page .text-page h2 { margin: 36px 0 0; font-size: 1.3125rem; letter-spacing: -.01em; line-height: 1.3; }
+.about-page .text-page p { margin: 10px 0 0; font-size: 1rem; line-height: 1.7; }
+.about-page .text-page ul { margin: 6px 0 0; padding-left: 20px; }
+.about-page .text-page li { margin-top: 8px; padding-left: 4px; font-size: 1rem; line-height: 1.65; }
+.about-page .text-page a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 719px) {
+  .about-page { display: block; padding-top: 24px; }
+  .about-nav { display: none; }
+  .about-page .text-page h1 { font-size: 2rem; }
+  .about-page .text-page h2 { margin-top: 28px; }
+  .about-page .text-page :is(p, li) { font-size: 1.143rem; }
+}
 /* /promovo (promote.html), as the canvas has it: a column of 760px in the middle of the page (at
    the left once, as the other pages about the site are), the heading 30px (26px on a phone), the
    lead 16px and muted; each promotion on a line of its own between hairlines, one over the first

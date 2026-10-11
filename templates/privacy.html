@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{%- import "about_nav.html" as about %}
 
 {% block title %}{{ crate::t("Privatësia") }} | Pluribus{% endblock %}
 
@@ -13,6 +14,8 @@
     (what is kept, who else gets it, for how long), change this page too, and its date
     (PRIVACY_UPDATED), and its English, privacy_en.html, a faithful translation of the whole,
     which says the Albanian applies. -#}
+<div class="about-page">
+{% call about::about_nav("privacy") %}
 <article class="text-page">
   <h1>{{ crate::t("Privatësia") }}</h1>
   {%- if crate::i18n::english() %}{% include "privacy_en.html" %}{% else %}
@@ -77,4 +80,5 @@
   <p>Shiko edhe <a href="/kushtet">kushtet e përdorimit</a>.</p>
   {%- endif %}
 </article>
+</div>
 {% endblock %}

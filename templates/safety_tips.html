@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{%- import "about_nav.html" as about %}
 
 {% block title %}{{ crate::t("Këshilla sigurie") }} | Pluribus{% endblock %}
 
@@ -7,6 +8,8 @@
 {% block content %}
 {#- How to buy and sell without being cheated (web/pages.rs). In English, safety_tips_en.html,
     said as a whole: a change here is a change there too. -#}
+<div class="about-page">
+{% call about::about_nav("safety") %}
 <article class="text-page">
   <h1>{{ crate::t("Këshilla sigurie") }}</h1>
   {%- if crate::i18n::english() %}{% include "safety_tips_en.html" %}{% else %}
@@ -55,4 +58,5 @@
   <p>Diçka që s'e gjen këtu? <a href="/kontakt">Na shkruaj</a>.</p>
   {%- endif %}
 </article>
+</div>
 {% endblock %}

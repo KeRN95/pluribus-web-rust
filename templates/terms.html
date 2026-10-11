@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{%- import "about_nav.html" as about %}
 
 {% block title %}{{ crate::t("Kushtet e përdorimit") }} | Pluribus{% endblock %}
 
@@ -8,6 +9,8 @@
 {#- The terms of use (web/pages.rs): written to be read, each section a heading and a few lines.
     In English, terms_en.html, a faithful translation of the whole, which says the Albanian
     applies: a change here is a change there too. -#}
+<div class="about-page">
+{% call about::about_nav("terms") %}
 <article class="text-page">
   <h1>{{ crate::t("Kushtet e përdorimit") }}</h1>
   {%- if crate::i18n::english() %}{% include "terms_en.html" %}{% else %}
@@ -41,4 +44,5 @@
   <p>Shiko edhe <a href="/privatesia">privatësinë</a> dhe <a href="/siguria">këshillat e sigurisë</a>.</p>
   {%- endif %}
 </article>
+</div>
 {% endblock %}

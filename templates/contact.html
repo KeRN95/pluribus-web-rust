@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{%- import "about_nav.html" as about %}
 
 {% block title %}{{ crate::t("Kontakt") }} | Pluribus{% endblock %}
 
@@ -8,6 +9,8 @@
 {#- How to reach the site (web/pages.rs): the address CONTACT_EMAIL names, when one is set, and
     the quicker ways for what has one of its own (Raporto, Blloko). In English, contact_en.html,
     said as a whole: a change here is a change there too. -#}
+<div class="about-page">
+{% call about::about_nav("contact") %}
 <article class="text-page">
   <h1>{{ crate::t("Kontakt") }}</h1>
   {%- if crate::i18n::english() %}{% include "contact_en.html" %}{% else %}
@@ -26,4 +29,5 @@
   <p>Shiko edhe <a href="/si-funksionon">si funksionon Pluribus</a> dhe <a href="/siguria">këshillat e sigurisë</a>.</p>
   {%- endif %}
 </article>
+</div>
 {% endblock %}
