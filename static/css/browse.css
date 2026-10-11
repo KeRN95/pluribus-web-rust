@@ -63,7 +63,8 @@
 }
 /* The heading's line, as the canvas has it (browse.html): the page's name, and after it, on its
    baseline, how many it found, quieter (15px; 14px on phones); "Ruaj kërkimin" at the line's end,
-   a grey pill 40px tall with the bookmark in the words' colour, empty, its words medium; under the
+   a grey pill 36px tall, as the row's pills under it (40px until 2026-10-11), with the bookmark in
+   the words' colour, empty, its words medium, 14px; under the
    pointer or a finger the bookmark filled with the accent and the words underlined in it, as the
    welcome page's categories are (welcome.css; the bookmark was in the accent at rest until the
    user asked for it plain, 2026-10-11); kept, the pill filled with the accent, a tick in place
@@ -89,15 +90,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  height: var(--size-button-sm);
-  padding: 0 14px;
+  gap: 6px;
+  height: var(--size-chip);
+  padding: 0 12px;
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--surface-muted);
   color: var(--text);
   font: inherit;
-  font-size: .9375rem;
+  font-size: .875rem;
   font-weight: var(--medium);
   white-space: nowrap;
   cursor: pointer;
@@ -124,7 +125,7 @@
 }
 @media (max-width: 719px) {
   .browse-heading .result-count { font-size: 1rem; }
-  .save-search-button { width: var(--size-button-sm); padding: 0; }
+  .save-search-button { width: var(--size-button-sm); height: var(--size-button-sm); padding: 0; }
   .save-search-button > svg { width: 18px; height: 18px; }
   .save-search-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
@@ -149,9 +150,11 @@
    --drop the room between the row and what opens under it; both measure where the search's box,
    the map's card and the filters' go, under the head (below). As far below the header as the
    page's sides are from the screen's (--gutter). */
-/* --row is the row's round buttons' size, 40px as the canvas has them (--size-button-sm), on
-   every screen. */
-.browse { --row: var(--size-button-sm); --drop: .75rem; position: relative; margin-top: var(--gutter); }
+/* --row is the row's round buttons' size, a chip's 36px (--size-chip), as every other pill on the
+   site is, the filters' sheet's and its dropdowns' choices among them, on every screen: the user
+   asked on 2026-10-11 for the filter pills a bit smaller (40px as the canvas has them until then,
+   --size-button-sm). */
+.browse { --row: var(--size-chip); --drop: .75rem; position: relative; margin-top: var(--gutter); }
 /* The head, as the canvas has it: a category's breadcrumb, the heading's line, the subcategories,
    then the row of buttons, one under another, 12px apart and 14px over the subcategories and the
    row (10px and 12px on phones). What the row opens is placed by the head (position: relative;
@@ -393,27 +396,28 @@ html:has(.filters.is-open) { overflow: hidden; }
 .browse-tools .round-button:active { transform: scale(.97); }
 .browse-tools .button.round-button[aria-expanded="true"],
 .browse-tools .button.round-button[aria-pressed="true"] { background: var(--main); color: var(--on-main); }
-.browse-tools .round-button svg { width: 18px; height: 18px; }
+.browse-tools .round-button svg { width: 17px; height: 17px; }
 .round-button .pin-icon { margin: 0; color: inherit; }
 /* The filters' and the map's buttons say their names and what is on, as the canvas has them: pills
-   as wide as their words rather than circles, 14px of room either side, their icons 17px in the
-   words' colour; "Filtrat" semibold, with how many filters are on after it in bold ("Filtrat · 2");
+   as wide as their words rather than circles, 12px of room either side, their words 14px (13px on
+   phones, where a rem is 14px), a size down since the user's ask of 2026-10-11, their icons 16px
+   in the words' colour; "Filtrat" semibold, with how many filters are on after it in bold ("Filtrat · 2");
    the map "Harta", or once a place is picked its pin alone (below), and where the row wraps, on a
    wide screen, the one to give up width, its words ending in "…" (a phone's line slides instead). */
 .browse-tools .button.round-button.labelled {
   width: auto;
   min-width: 0;
-  gap: 7px;
-  padding: 0 14px;
+  gap: 6px;
+  padding: 0 12px;
   border-radius: var(--radius-pill);
-  font-size: .9375rem;
+  font-size: .875rem;
   font-weight: var(--regular);
   white-space: nowrap;
 }
 .browse-tools .button.round-button.filters-open { font-weight: var(--semibold); }
-.browse-tools .labelled svg { flex: none; width: 17px; height: 17px; }
+.browse-tools .labelled svg { flex: none; width: 16px; height: 16px; }
 @media (max-width: 719px) {
-  .browse-tools .button.round-button.labelled { font-size: 1rem; }
+  .browse-tools .button.round-button.labelled { font-size: .9286rem; }
 }
 .browse-tools .button.map-button { flex: 0 1 auto; }
 @media (max-width: 719px) {
@@ -427,15 +431,15 @@ html:has(.filters.is-open) { overflow: hidden; }
 .button-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .button-count { flex: none; font-weight: var(--bold); }
 .button-count::before { content: "· "; }
-/* The filters picked, in the row after "Filtrat": chips 40px tall in the toned-down accent
-   (--filter-on), semibold, their cross after their words; "Pastro filtrat" after them, quieter,
-   as tall to tap. */
+/* The filters picked, in the row after "Filtrat": chips as tall as the row's pills (--row) in the
+   toned-down accent (--filter-on), semibold, their cross after their words; "Pastro filtrat"
+   after them, quieter, as tall to tap. Their words as the pills' are. */
 .browse-tools .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); margin: 0; }
-.browse-tools .filter-chip { height: var(--size-button-sm); gap: 7px; padding: 0 12px 0 14px; font-size: .9375rem; }
-.browse-tools .clear-filters { display: inline-flex; align-items: center; min-height: var(--size-button-sm); padding: 0 4px; font-size: .9375rem; }
+.browse-tools .filter-chip { height: var(--row); gap: 6px; padding: 0 10px 0 12px; font-size: .875rem; }
+.browse-tools .clear-filters { display: inline-flex; align-items: center; min-height: var(--row); padding: 0 4px; font-size: .875rem; }
 @media (max-width: 719px) {
   .browse-tools .filter-chip,
-  .browse-tools .clear-filters { font-size: 1rem; }
+  .browse-tools .clear-filters { font-size: .9286rem; }
 }
 /* The order, last in the row: its words, medium, and a chevron, no pill of its own (a grey pill
    in a phone's line, as the others there are); its menu under it, from its right end (on phones,
@@ -444,9 +448,10 @@ html:has(.filters.is-open) { overflow: hidden; }
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  height: var(--size-button-sm);
+  height: var(--row);
   padding: 0 4px 0 8px;
   color: var(--text);
+  font-size: .875rem;
   font-weight: var(--medium);
   list-style: none;
   cursor: pointer;
@@ -457,7 +462,7 @@ html:has(.filters.is-open) { overflow: hidden; }
 .browse-tools .sort-menu > .sort-options { right: 0; left: auto; transform-origin: top right; }
 @media (max-width: 719px) {
   .browse-filters-line > .sort-menu { position: static; }
-  .browse-filters-line .sort-button { height: var(--row); gap: 6px; padding: 0 14px; border-radius: var(--radius-pill); background: var(--surface-muted); font-size: 1rem; font-weight: var(--regular); }
+  .browse-filters-line .sort-button { height: var(--row); gap: 6px; padding: 0 12px; border-radius: var(--radius-pill); background: var(--surface-muted); font-size: .9286rem; font-weight: var(--regular); }
   .browse-filters-line .sort-menu[open] > .sort-button { background: var(--main); color: var(--on-main); }
   .browse-filters-line > .sort-menu:not(.cards-menu) > .sort-options { top: calc(100% + var(--drop)); right: auto; left: 0; transform-origin: top left; }
   .browse-filters-line > .cards-menu > .sort-options { top: calc(100% + var(--drop)); }

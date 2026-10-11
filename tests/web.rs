@@ -4907,6 +4907,29 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
+async fn the_filter_rows_pills_are_a_chips_size(pool: PgPool) {
+    // The row's pills, its round buttons, the filters picked and the order are a chip's 36px
+    // (--size-chip), as every other pill on the site is, the filters' sheet's choices among them,
+    // their words 14px (13px on phones): the user's ask of 2026-10-11, "make the filter pills a bit
+    // smaller" (40px, --size-button-sm, until then). "Ruaj kërkimin" over the row is as tall.
+    // (The stylesheet comes minified: web::site_css.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    for rule in [
+        ".browse{--row:var(--size-chip);",
+        "gap:6px;padding:0 12px;border-radius:var(--radius-pill);font-size:.875rem;",
+        "@media (max-width:719px){.browse-tools .button.round-button.labelled{font-size:.9286rem;}}",
+        ".browse-tools .filter-chip{height:var(--row);gap:6px;padding:0 10px 0 12px;font-size:.875rem;}",
+        ".browse-tools .clear-filters{display:inline-flex;align-items:center;min-height:var(--row);",
+        "height:var(--size-chip);padding:0 12px;",
+        ".filter-form .check{",
+        "min-height:var(--size-chip);",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+    assert!(!css.contains("--row:var(--size-button-sm)"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn a_phones_bar_tucks_its_search_away_on_the_way_down(pool: PgPool) {
     // On a phone the bar's search row tucks away as the page scrolls down and comes back as it
     // scrolls up, the bar's own row staying (the user's ask of 2026-10-11, "when i scroll down i
