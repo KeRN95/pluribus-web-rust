@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {%- import "card_row.html" as rows %}
 
-{#- A main category's pill, as the canvas draws it: its icon, a little thinner (1.8), then its name. -#}
+{#- A main category's pill, as the canvas draws it: its icon, a little thinner (1.8), then its name;
+    from 720px up a tile, the icon on a shape over the name (welcome.css, .shortcut-shape). -#}
 {%- macro pill(shortcut) %}
     <a class="shortcut" href="{{ shortcut.url }}">
-      <svg class="shortcut-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ shortcut.icon|safe }}</svg>
-      {{- crate::t(shortcut.name) -}}
+      <span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ shortcut.icon|safe }}</svg></span>
+      <span class="shortcut-name">{{- crate::t(shortcut.name) -}}</span>
     </a>
 {%- endmacro %}
 
@@ -54,8 +55,9 @@
       name, every one the category pages' pills' size, all side by side in one list that wraps
       wherever the line ends: first the four most looked for, Automjete, Prona, Elektronikë and
       Veshje / aksesorë (MAIN_ON_WELCOME in browse.rs), then every other main category, in its
-      order. -#}
-  <nav class="shortcuts" aria-label="{{ crate::t("Kategoritë") }}">
+      order. From 720px up one line of tiles instead, which slides sideways where the page is
+      narrower than they are, a mouse dragging it (drag_row_controller.js; welcome.css). -#}
+  <nav class="shortcuts" data-controller="drag-row" aria-label="{{ crate::t("Kategoritë") }}">
     {%- for shortcut in main %}{% call pill(shortcut) %}{% endfor %}
     {%- for shortcut in others %}{% call pill(shortcut) %}{% endfor %}
   </nav>

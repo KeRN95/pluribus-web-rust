@@ -1,7 +1,8 @@
 import { Controller } from "@hotwired/stimulus";
 
 // A row of cards that slides sideways (card_row.html: "Më të klikuarat", a seller's
-// other listings), moved by a mouse as a finger moves it: pressed on the row and moved, it drags
+// other listings), or the front page's line of categories from 720px up (home.html, the row being
+// the element itself), moved by a mouse as a finger moves it: pressed on the row and moved, it drags
 // the row along; let go, the row carries on a little the way it was going, and the click that ends
 // the drag opens no card. Not the wheel: these rows sit in long pages, which it scrolls; a
 // trackpad's sideways swipe slides them as ever.
@@ -11,7 +12,7 @@ const DRAG_FROM = 5;
 
 export default class extends Controller {
   connect() {
-    this.row = this.element.querySelector(".card-row");
+    this.row = this.element.querySelector(".card-row") ?? this.element;
     if (!this.row) return;
     this.listeners = {
       pointerdown: [this.row, (event) => this.grab(event)],

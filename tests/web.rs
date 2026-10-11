@@ -827,7 +827,7 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     // search, which stands open. The listings kept and the conversations, round buttons after
     // "Posto" until 2026-10-11, went at the user's word (the menu has them); the theme is the
     // menu's too.
-    let nav = body.find(r#"<nav class="shortcuts" aria-label="Kategoritë">"#).unwrap();
+    let nav = body.find(r#"<nav class="shortcuts" data-controller="drag-row" aria-label="Kategoritë">"#).unwrap();
     let row = positions(&body, &[
         r#"<div class="welcome-tools">"#,
         r#"<form class="welcome-form""#,
@@ -901,7 +901,8 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     assert!(shortcuts.is_sorted(), "{shortcuts:?}");
     assert_eq!(body.matches(r#"<a class="shortcut""#).count(), main.len());
     for (_, name) in main {
-        assert!(body.contains(&format!("</svg>{name}</a>")), "{name}");
+        assert!(body.contains(&format!(r#"</svg></span>
+      <span class="shortcut-name">{name}</span>"#)), "{name}");
     }
     // Each with its icon.
     assert_eq!(body.matches(r#"<a class="shortcut""#).count(), body.matches(r#"<svg class="shortcut-icon""#).count());
@@ -4139,11 +4140,12 @@ async fn open_pages_reload_in_full_when_the_css_or_javascript_changes(pool: PgPo
         "controllers/refresh.js",
         "controllers/inbox_controller.js",
         "controllers/theme_controller.js",
+        // The categories' line, which a mouse drags from 720px up (the user's ask of 2026-10-11).
+        "controllers/drag_row_controller.js",
     ] {
         assert!(home.iter().any(|module| module == used), "{used} in {home:?}");
     }
-    // Nor, with no listing seen yet and so no row of the most seen, the row's.
-    for unused in ["controllers/map_controller.js", "controllers/leaflet.js", "controllers/filters_controller.js", "controllers/drag_row_controller.js"] {
+    for unused in ["controllers/map_controller.js", "controllers/leaflet.js", "controllers/filters_controller.js"] {
         assert!(!home.iter().any(|module| module == unused), "{unused} in {home:?}");
     }
     assert_eq!(home.len(), home.iter().collect::<std::collections::HashSet<_>>().len(), "{home:?}");
@@ -4990,6 +4992,36 @@ async fn a_card_carries_its_pages_words_for_the_stand_in(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_front_pages_categories_are_a_line_of_tiles_on_a_wide_screen(pool: PgPool) {
+    // From 720px up the front page has the search in the middle, 720px at most, and under it the
+    // main categories on one line of tiles that slides sideways, a mouse dragging it: each its
+    // icon on one of Material's soft shapes, in turn, over its name (the user's ask of 2026-10-11,
+    // the pluribus-tests canvas's Material front page in the site's accent). Phones keep the pills.
+    let home = html(pool.clone(), "/").await;
+    let nav = &home[home.find(r#"<nav class="shortcuts" data-controller="drag-row" aria-label="Kategoritë">"#).expect("the categories")..];
+    let nav = &nav[..nav.find("</nav>").unwrap()];
+    assert!(nav.contains(r#"<a class="shortcut" href="/c/automjete">
+      <span class="shortcut-shape" aria-hidden="true"><svg class="shortcut-icon""#), "{nav}");
+    assert!(nav.contains(r#"<span class="shortcut-name">Automjete</span>"#));
+    assert_eq!(nav.matches(r#"<span class="shortcut-shape" aria-hidden="true">"#).count(), nav.matches(r#"<a class="shortcut""#).count());
+    // (The stylesheet comes minified: web::site_css.)
+    let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
+    for rule in [
+        ".shortcut-shape{display:contents;}",
+        "@media (min-width:720px){.welcome-tools{max-width:720px;margin-inline:auto;}",
+        ".welcome .shortcuts{flex-wrap:nowrap;justify-content:space-between;gap:2px;margin-top:28px;padding-block:3px;overflow-x:auto;",
+        ".welcome .shortcut{flex:none;flex-direction:column;gap:8px;width:96px;",
+        ".welcome .shortcut-shape{position:relative;display:grid;flex:none;place-items:center;width:64px;height:64px;}",
+        ".welcome .shortcut:nth-child(6n + 1) .shortcut-shape::before{clip-path:path(",
+        ".welcome .shortcut:nth-child(6n + 6) .shortcut-shape::before{clip-path:path(",
+        ".welcome .shortcut-icon{position:relative;width:28px;height:28px;}",
+        ".welcome .shortcut:hover .shortcut-shape::before{background:var(--surface-muted-hover);}",
+    ] {
+        assert!(css.contains(rule), "{rule}");
+    }
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn the_way_back_is_a_chevron_level_with_its_words(pool: PgPool) {
     // The breadcrumb's way back is Phosphor's chevron, its Regular weight's (the Duotone's caret is
     // a triangle), moved into the middle of its box as every caret is (icons.rs), and the
@@ -5278,7 +5310,7 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     let slugs = |part: &str| -> Vec<String> {
         part.match_indices(r#"href="/c/"#).map(|(at, _)| part[at + 9..].split('"').next().unwrap().to_string()).collect()
     };
-    let pills = &home[home.find(r#"<nav class="shortcuts" aria-label="Kategoritë">"#).unwrap()..];
+    let pills = &home[home.find(r#"<nav class="shortcuts" data-controller="drag-row" aria-label="Kategoritë">"#).unwrap()..];
     let pills = &pills[..pills.find("</nav>").unwrap()];
     let menu = &home[home.find(r#"<h2 id="menu-categories">"#).unwrap()..];
     let menu = &menu[..menu.find("</ul>").unwrap()];
@@ -7900,7 +7932,7 @@ async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
     // Browsing: the welcome page, a category's page with its filters, the database's names in
     // English.
     let home = en("/").await.body;
-    assert!(home.contains(r#"<h1 class="visually-hidden">What are you looking for?</h1>"#) && home.contains("</svg>Vehicles</a>"), "{home}");
+    assert!(home.contains(r#"<h1 class="visually-hidden">What are you looking for?</h1>"#) && home.contains(r#"<span class="shortcut-name">Vehicles</span>"#), "{home}");
     assert!(home.contains(r#"<h2 id="latest-heading">Newest listings</h2>"#), "{home}");
     let cars = en("/c/makina").await.body;
     assert!(cars.contains("<title>Cars | Pluribus</title>") && cars.contains(r#"<h1 class="browse-title">Cars</h1>"#), "{cars}");

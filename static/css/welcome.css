@@ -327,6 +327,74 @@
   .welcome .shortcut-icon { width: 16px; height: 16px; }
 }
 
+/* From 720px up, as the user drew it on 2026-10-11 (the front page of the pluribus-tests canvas's
+   Material boards, in the site's accent): the search in the middle, 720px at most, and 28px under
+   it the main categories on one line, spread over it where it has room and sliding sideways where
+   the page is narrower than they are, its scrollbar unseen (a trackpad slides it, a mouse drags it,
+   drag_row_controller.js). Each a tile 96px wide: its icon, 28px, on a shape of 64px in the grey of
+   secondary controls, Material's soft shapes in turn as the canvas has them (cookies of nine lobes,
+   four, seven and six, nine scallops, twelve), its name under it, 13px and medium, on two lines at
+   most. Under the pointer, a finger or once tapped, the shape takes the darker grey, the icon fills
+   with the accent and the name is underlined in it, as the pills' were. On phones the pills stay
+   (.shortcut-shape no box of its own there). */
+.shortcut-shape { display: contents; }
+@media (min-width: 720px) {
+  .welcome-tools { max-width: 720px; margin-inline: auto; }
+  .welcome .shortcuts {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 2px;
+    margin-top: 28px;
+    padding-block: 3px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .welcome .shortcuts::-webkit-scrollbar { display: none; }
+  .welcome .shortcut {
+    flex: none;
+    flex-direction: column;
+    gap: 8px;
+    width: 96px;
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    font-size: .8125rem;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+  }
+  .welcome .shortcut:is(:hover, :active) { background: none; }
+  .welcome .shortcut-shape { position: relative; display: grid; flex: none; place-items: center; width: 64px; height: 64px; }
+  .welcome .shortcut-shape::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--surface-muted);
+    transition: background-color .15s;
+  }
+  .welcome .shortcut:nth-child(6n + 1) .shortcut-shape::before { clip-path: path("M32 0 L34.7 0.6 L37.1 2.1 L39.3 3.9 L41.8 5.2 L44.5 5.7 L47.3 5.8 L50.1 6.2 L52.6 7.5 L54.3 9.7 L55.1 12.4 L55.7 15.1 L56.7 17.8 L58.5 19.9 L60.5 21.8 L62.4 23.9 L63.5 26.4 L63.4 29.2 L62.3 31.8 L61 34.3 L60.1 37 L60 39.8 L60.5 42.5 L60.5 45.3 L59.7 48 L57.8 50 L55.3 51.3 L52.7 52.4 L50.3 53.8 L48.5 56 L47 58.3 L45.3 60.5 L43 62.1 L40.2 62.4 L37.4 61.9 L34.8 60.9 L32 60.5 L29.2 60.9 L26.6 61.9 L23.8 62.4 L21 62.1 L18.7 60.5 L17 58.3 L15.5 56 L13.7 53.8 L11.3 52.4 L8.7 51.3 L6.2 50 L4.3 48 L3.5 45.3 L3.5 42.5 L4 39.8 L3.9 37 L3 34.3 L1.7 31.8 L0.6 29.2 L0.5 26.4 L1.6 23.9 L3.5 21.8 L5.5 19.9 L7.3 17.8 L8.3 15.1 L8.9 12.4 L9.7 9.7 L11.4 7.5 L13.9 6.2 L16.7 5.8 L19.5 5.7 L22.2 5.2 L24.7 3.9 L26.9 2.1 L29.3 0.6Z"); }
+  .welcome .shortcut:nth-child(6n + 2) .shortcut-shape::before { clip-path: path("M32 0 L34.5 0.4 L36.8 1.7 L38.7 3.4 L40.4 5.4 L41.9 7.6 L43.4 9.7 L45 11.7 L46.8 13.5 L48.7 15.3 L50.5 17.2 L52.3 19 L54.3 20.6 L56.4 22.1 L58.6 23.6 L60.6 25.3 L62.3 27.2 L63.6 29.5 L64 32 L63.6 34.5 L62.3 36.8 L60.6 38.7 L58.6 40.4 L56.4 41.9 L54.3 43.4 L52.3 45 L50.5 46.8 L48.7 48.7 L46.8 50.5 L45 52.3 L43.4 54.3 L41.9 56.4 L40.4 58.6 L38.7 60.6 L36.8 62.3 L34.5 63.6 L32 64 L29.5 63.6 L27.2 62.3 L25.3 60.6 L23.6 58.6 L22.1 56.4 L20.6 54.3 L19 52.3 L17.2 50.5 L15.3 48.7 L13.5 46.8 L11.7 45 L9.7 43.4 L7.6 41.9 L5.4 40.4 L3.4 38.7 L1.7 36.8 L0.4 34.5 L0 32 L0.4 29.5 L1.7 27.2 L3.4 25.3 L5.4 23.6 L7.6 22.1 L9.7 20.6 L11.7 19 L13.5 17.2 L15.3 15.3 L17.2 13.5 L19 11.7 L20.6 9.7 L22.1 7.6 L23.6 5.4 L25.3 3.4 L27.2 1.7 L29.5 0.4Z"); }
+  .welcome .shortcut:nth-child(6n + 3) .shortcut-shape::before { clip-path: path("M32 0 L34.7 0.4 L37.3 1.4 L39.7 2.7 L42.1 4.1 L44.6 5.1 L47.3 5.9 L49.9 6.7 L52.4 7.7 L54.6 9.4 L56.3 11.6 L57.3 14.1 L58.1 16.7 L58.9 19.4 L59.9 21.9 L61.3 24.3 L62.6 26.7 L63.6 29.3 L64 32 L63.6 34.7 L62.6 37.3 L61.3 39.7 L59.9 42.1 L58.9 44.6 L58.1 47.3 L57.3 49.9 L56.3 52.4 L54.6 54.6 L52.4 56.3 L49.9 57.3 L47.3 58.1 L44.6 58.9 L42.1 59.9 L39.7 61.3 L37.3 62.6 L34.7 63.6 L32 64 L29.3 63.6 L26.7 62.6 L24.3 61.3 L21.9 59.9 L19.4 58.9 L16.7 58.1 L14.1 57.3 L11.6 56.3 L9.4 54.6 L7.7 52.4 L6.7 49.9 L5.9 47.3 L5.1 44.6 L4.1 42.1 L2.7 39.7 L1.4 37.3 L0.4 34.7 L0 32 L0.4 29.3 L1.4 26.7 L2.7 24.3 L4.1 21.9 L5.1 19.4 L5.9 16.7 L6.7 14.1 L7.7 11.6 L9.4 9.4 L11.6 7.7 L14.1 6.7 L16.7 5.9 L19.4 5.1 L21.9 4.1 L24.3 2.7 L26.7 1.4 L29.3 0.4Z"); }
+  .welcome .shortcut:nth-child(6n + 4) .shortcut-shape::before { clip-path: path("M32 0 L34.7 0.3 L37.2 1.4 L39.5 2.7 L41.6 4.5 L43.8 6.1 L46.1 7.6 L48.5 8.8 L51 9.8 L53.6 10.8 L55.9 12.2 L58.1 13.9 L59.7 16 L60.8 18.5 L61.1 21.2 L61.1 23.9 L60.7 26.6 L60.4 29.3 L60.2 32 L60.4 34.7 L60.7 37.4 L61.1 40.1 L61.1 42.8 L60.8 45.5 L59.7 48 L58.1 50.1 L55.9 51.8 L53.6 53.2 L51 54.2 L48.5 55.2 L46.1 56.4 L43.8 57.9 L41.6 59.5 L39.5 61.3 L37.2 62.6 L34.7 63.7 L32 64 L29.3 63.7 L26.8 62.6 L24.5 61.3 L22.4 59.5 L20.2 57.9 L17.9 56.4 L15.5 55.2 L13 54.2 L10.4 53.2 L8.1 51.8 L5.9 50.1 L4.3 48 L3.2 45.5 L2.9 42.8 L2.9 40.1 L3.3 37.4 L3.6 34.7 L3.8 32 L3.6 29.3 L3.3 26.6 L2.9 23.9 L2.9 21.2 L3.2 18.5 L4.3 16 L5.9 13.9 L8.1 12.2 L10.4 10.8 L13 9.8 L15.5 8.8 L17.9 7.6 L20.2 6.1 L22.4 4.5 L24.5 2.7 L26.8 1.4 L29.3 0.3Z"); }
+  .welcome .shortcut:nth-child(6n + 5) .shortcut-shape::before { clip-path: path("M32 0 L34.7 0.6 L37.1 2 L39.5 3.6 L42.1 4.5 L44.9 4.8 L47.7 4.9 L50.3 5.8 L52.3 7.7 L53.5 10.3 L54.5 12.9 L55.9 15.3 L58 17.2 L60.2 18.9 L62 21.1 L62.7 23.8 L62.4 26.5 L61.6 29.2 L61.1 32 L61.6 34.8 L62.4 37.5 L62.7 40.2 L62 42.9 L60.2 45.1 L58 46.8 L55.9 48.7 L54.5 51.1 L53.5 53.7 L52.3 56.3 L50.3 58.2 L47.7 59.1 L44.9 59.2 L42.1 59.5 L39.5 60.4 L37.1 62 L34.7 63.4 L32 64 L29.3 63.4 L26.9 62 L24.5 60.4 L21.9 59.5 L19.1 59.2 L16.3 59.1 L13.7 58.2 L11.7 56.3 L10.5 53.7 L9.5 51.1 L8.1 48.7 L6 46.8 L3.8 45.1 L2 42.9 L1.3 40.2 L1.6 37.5 L2.4 34.8 L2.9 32 L2.4 29.2 L1.6 26.5 L1.3 23.8 L2 21.1 L3.8 18.9 L6 17.2 L8.1 15.3 L9.5 12.9 L10.5 10.3 L11.7 7.7 L13.7 5.8 L16.3 4.9 L19.1 4.8 L21.9 4.5 L24.5 3.6 L26.9 2 L29.3 0.6Z"); }
+  .welcome .shortcut:nth-child(6n + 6) .shortcut-shape::before { clip-path: path("M32 0 L34.7 0.6 L37.2 1.8 L39.8 2.9 L42.5 3.3 L45.3 3.5 L48 4.3 L50 6.2 L51.6 8.5 L53.3 10.7 L55.5 12.4 L57.8 14 L59.7 16 L60.5 18.7 L60.7 21.5 L61.1 24.2 L62.2 26.8 L63.4 29.3 L64 32 L63.4 34.7 L62.2 37.2 L61.1 39.8 L60.7 42.5 L60.5 45.3 L59.7 48 L57.8 50 L55.5 51.6 L53.3 53.3 L51.6 55.5 L50 57.8 L48 59.7 L45.3 60.5 L42.5 60.7 L39.8 61.1 L37.2 62.2 L34.7 63.4 L32 64 L29.3 63.4 L26.8 62.2 L24.2 61.1 L21.5 60.7 L18.7 60.5 L16 59.7 L14 57.8 L12.4 55.5 L10.7 53.3 L8.5 51.6 L6.2 50 L4.3 48 L3.5 45.3 L3.3 42.5 L2.9 39.8 L1.8 37.2 L0.6 34.7 L0 32 L0.6 29.3 L1.8 26.8 L2.9 24.2 L3.3 21.5 L3.5 18.7 L4.3 16 L6.2 14 L8.5 12.4 L10.7 10.7 L12.4 8.5 L14 6.2 L16 4.3 L18.7 3.5 L21.5 3.3 L24.2 2.9 L26.8 1.8 L29.3 0.6Z"); }
+  .welcome .shortcut-icon { position: relative; width: 28px; height: 28px; }
+  .welcome .shortcut-name { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+  .welcome .shortcut:active .shortcut-shape::before,
+  .welcome .shortcut.pressed .shortcut-shape::before { background: var(--surface-muted-hover); }
+}
+@media (min-width: 720px) and (hover: hover) {
+  .welcome .shortcuts { cursor: grab; user-select: none; }
+  .welcome .shortcuts.is-dragging,
+  .welcome .shortcuts.is-dragging * { cursor: grabbing; }
+  .welcome .shortcut:hover .shortcut-shape::before { background: var(--surface-muted-hover); }
+}
+@media (min-width: 720px) and (prefers-reduced-motion: reduce) {
+  .welcome .shortcut-shape::before { transition: none; }
+}
+
 /* "Posto", the site's main thing to do, after the search on phones (the rail has it from 720px up):
    the plus alone, round, 46px, its word kept for screen readers, in the accent with dark words on
    both themes (--post, --on-post), as every button that does a page's thing. */
