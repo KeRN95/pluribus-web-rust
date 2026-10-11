@@ -1230,6 +1230,36 @@ async fn the_map_page_reloads_only_its_results(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn the_map_page_sets_its_map_from_a_box_beside_it(pool: PgPool) {
+    // As the canvas lays it out: the map, then the box of what sets it, one under another: how far,
+    // the category, a town to move the map onto, "Vendndodhja ime", then "Vendos hartën" and the
+    // button that folds the map; the results under both, after how many there are.
+    let page = html(pool.clone(), "/harta").await;
+    let order = positions(&page, &[
+        r#"<div class="map-layout">"#,
+        r#"<div class="map-canvas" id="map-canvas""#,
+        r#"<form id="map-form" class="map-form map-controls""#,
+        r#"<div class="field map-radius">"#,
+        r#"<label class="field-label" for="map-category">Kategoria</label>"#,
+        r#"<label class="field-label" for="map-town">Qyteti</label>"#,
+        r#"<button type="button" class="button secondary map-locate" data-action="map#locate">"#,
+        r#"<div class="map-actions">"#,
+        r#"<button type="button" class="button map-confirm" data-action="map#confirm">Vendos hartën</button>"#,
+        r#"<turbo-frame id="map-results""#,
+        r#"<div class="map-count">"#,
+    ]);
+    assert!(order.is_sorted(), "{order:?}");
+    // The town moves the map, and says so until one is picked.
+    assert!(page.contains(r#"<select id="map-town" aria-label="Qyteti" data-map-target="town" data-action="map#goToTown">"#));
+    assert!(page.contains(r#"<option value="">Zgjidh qytetin</option>"#));
+    // "Vendndodhja ime" has the crosshair, here and in a category's map card.
+    let crosshair = r#"<circle cx="12" cy="12" r="2.5"/>"#;
+    assert!(page[page.find("map-locate").unwrap()..].contains(crosshair));
+    let cars = html(pool, "/c/makina").await;
+    assert!(cars[cars.find(r#"class="map-pill map-locate""#).unwrap()..].contains(crosshair));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
 async fn any_whole_distance_up_to_50_km_can_be_picked(pool: PgPool) {
     let seven = html(pool.clone(), "/search?lat=41.32833&lng=19.81806&radius=7").await;
     assert!(seven.contains("Brenda 7 km nga pika"));

@@ -67,6 +67,7 @@
 .map-card .map-overlay { position: absolute; top: .6rem; right: .6rem; left: .6rem; z-index: 1; pointer-events: none; }
 .map-card .map-overlay > * { pointer-events: auto; }
 .map-card .map-town .picker-list { max-height: min(55vh, 30rem); }
+/* As the canvas labels its map: a dark pill at 60 %, white words, 13px semibold. */
 .map-card .map-distance,
 .map-card .map-status {
   position: absolute;
@@ -74,99 +75,114 @@
   z-index: 1;
   max-width: calc(100% - 1.4rem);
   margin: 0;
-  padding: .2rem .6rem;
-  border-radius: 999px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
   background: rgb(27 27 27 / 60%);
-  color: #f7f7f7;
-  font-size: var(--text-xs);
+  color: #ffffff;
+  font-size: .8125rem;
+  font-weight: var(--semibold);
   pointer-events: none;
 }
-.map-card .map-distance { bottom: .7rem; font-weight: var(--medium); font-variant-numeric: tabular-nums; }
+.map-card .map-distance { bottom: .7rem; font-variant-numeric: tabular-nums; }
 .map-card .map-status { bottom: 2.9rem; }
 
-.map-header { margin: 1.25rem 0 1rem; }
-.map-header h1 { margin: 0 0 .3rem; }
-.map-header .lead { margin: 0; }
+/* The map page, as the canvas lays it out: the heading and how to use the map; under them the map,
+   560px tall, and beside it a white box of 320px with what sets it (the surface, rounder corners,
+   the soft shadow; 20px of room inside, 18px between its parts); the results under both, the
+   page's whole width, after how many there are. Below 960px the box goes under the map, and on
+   phones the map takes the screen's whole width, 340px tall, square-cornered, with what sets it
+   under it in no box (below). */
+.map-header { margin: 24px 0 0; }
+.map-header h1 { margin: 0; }
+.map-header .lead { margin: 8px 0 0; }
+.map-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; margin-top: 20px; }
+.map-page .map-canvas { height: 440px; aspect-ratio: auto; }
+.map-controls { display: flex; flex-direction: column; gap: 18px; margin: 0; padding: 20px; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); }
+.map-controls .field { margin: 0; }
+/* How far, its name and the distance at the ends of one line (14px semibold, the distance 17px
+   bold, following the zoom); under it, quietly, that the zoom sets it. */
+.map-radius .field-label { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; font-size: .875rem; font-weight: var(--semibold); }
+.map-radius output { color: var(--text); font-size: 1.0625rem; font-weight: var(--bold); font-variant-numeric: tabular-nums; }
+.map-radius-hint { margin: 6px 0 0; color: var(--muted); font-size: .8125rem; line-height: 1.45; }
+/* "Vendndodhja ime", a grey button its box's width, its crosshair and words from its start, as
+   the canvas has it; then "Vendos hartën" in the main colour and the button that folds the map,
+   grey, one under the other, the box's whole width. */
+.map-controls .map-locate { justify-content: flex-start; gap: 10px; padding: 0 16px; font-weight: var(--regular); }
+.map-controls .map-locate svg { flex: none; }
+.map-actions { display: grid; gap: 8px; }
+.map-actions .button { width: 100%; justify-content: center; }
+.map-toggle[hidden] { display: none; }
+/* The map folded away ("Fshih hartën"): its box alone, at its own width, and the results under it. */
+.map-hidden .map-canvas,
+.map-hidden .map-confirm { display: none; }
+.map-page.map-hidden .map-layout { grid-template-columns: minmax(0, 320px); }
+.map-status { margin: 0; color: var(--muted); font-size: var(--text-sm); }
+.map-status:empty { display: none; }
+@media (min-width: 960px) {
+  .map-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+  .map-page .map-canvas { height: 560px; }
+}
+@media (max-width: 719px) {
+  .map-header { margin-top: 18px; }
+  .map-layout { gap: 18px; margin-top: 14px; }
+  .map-page .map-canvas { height: 340px; margin: 0 calc(-1 * var(--gutter)); border-radius: 0; }
+  .map-controls { gap: 16px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+}
 
-.map-form { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; margin-bottom: 1rem; }
-/* The radius only needs room for "50 km", so on phones both selects share one row. */
-.map-form .field { flex: 1 1 10rem; max-width: 16rem; }
-.map-form .map-radius { flex: 1 1 12rem; max-width: 20rem; }
-/* The distance the circle covers beside its name, in the text's colour; under it, quietly, that
-   the zoom sets it. */
-.map-radius output { margin-left: .25rem; color: var(--text); font-weight: var(--bold); }
-.map-radius .field-label { margin: 0; }
-.map-radius-hint { margin: 0; color: var(--muted); font-size: var(--text-xs); }
-/* "Vendndodhja ime" and the towns' menu beside it, pills as the welcome page's categories are
-   (.shortcut): the menu's says the place now ("Gjithë Shqipëria", "Durrës", the map's point) or,
-   on the map page, "Qyteti", its chevron turning as its list, of the towns by county, opens. A
-   press sinks them a little; they wrap under each other where they don't fit side by side. */
-.map-place { display: flex; flex: 1 1 18rem; flex-wrap: wrap; align-items: center; gap: .5rem; min-width: 0; }
+/* "Vendndodhja ime" and the towns' menu over the card's map, side by side, wrapping where they
+   don't fit: white pills 40px tall with the soft shadow, the crosshair before the words, the
+   menu's saying the place now ("Gjithë Shqipëria", "Durrës", the map's point), its chevron
+   turning as its list, of the towns by county, opens; a shade darker under the pointer. */
+.map-place { display: flex; flex: 1 1 18rem; flex-wrap: wrap; align-items: center; gap: var(--space-8); min-width: 0; }
 .map-place .picker { flex: 0 1 auto; min-width: 0; max-width: 100%; }
 .map-pill,
-.map-town .picker-button {
+.map-card .map-town .picker-button {
   display: inline-flex;
   align-items: center;
-  gap: .45rem;
+  gap: 7px;
   width: auto;
   max-width: 100%;
   min-height: 0;
-  padding: .6rem 1.05rem .6rem .95rem;
-  border: 1px solid var(--menu-border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  height: var(--size-button-sm);
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: var(--shadow);
   color: var(--text);
   font: inherit;
-  font-size: var(--text-md);
+  font-size: .9375rem;
   font-weight: var(--medium);
-  line-height: 1.3;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color .15s, transform .1s;
+  transition: background-color .15s;
   -webkit-tap-highlight-color: transparent;
 }
-.map-town .picker-button { padding-right: 2.4rem; }
-.map-town .picker-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.map-pill .pin-icon { flex: none; width: 16px; height: 16px; margin: 0; }
-.map-pill:active,
-.map-town .picker-button:active { background: color-mix(in srgb, var(--surface-muted) 95%, transparent); transform: scale(.97); }
+.map-card .map-town .picker-button { padding-right: 2.4rem; }
+.map-card .map-town .picker-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.map-pill svg { flex: none; width: 17px; height: 17px; }
 @media (hover: hover) {
   .map-pill:hover,
-  .map-town .picker-button:hover { background: color-mix(in srgb, var(--surface-muted) 95%, transparent); }
+  .map-card .map-town .picker-button:hover { background: var(--surface-muted); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .map-pill:active,
-  .map-town .picker-button:active { transform: none; }
-}
-.map-toggle[hidden] { display: none; }
-/* Under the map on the map page, the button that sets its point, in the site's colour, the whole
-   width. */
-.map-confirm { justify-content: center; padding-block: .7rem; }
-.map-stage .map-confirm { width: 100%; margin-top: .75rem; }
-/* The map folded away ("Fshih hartën"): the results get the whole width. */
-.map-hidden .map-canvas,
-.map-hidden .map-confirm { display: none; }
-.map-status { flex-basis: 100%; margin: 0; color: var(--muted); font-size: var(--text-sm); }
-.map-status:empty { display: none; }
 
-.map-layout { display: grid; gap: 1rem; }
-
-/* 3:2, three wide and two tall, so the page around it is easy to scroll. z-index: 0 keeps
-   Leaflet's own layers (z-index up to 1000) under the sticky header. */
+/* z-index: 0 keeps Leaflet's own layers (z-index up to 1000) under the sticky header. While the
+   tiles come, the canvas's map ground. */
 .map-canvas {
   position: relative;
   z-index: 0;
   aspect-ratio: 3 / 2;
   overflow: hidden;
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--map-land);
+  border-radius: var(--radius-box);
 }
 
-/* A frame of its own box: unlike the next-page frames, its contents mustn't join the layout. */
-.map-results { display: block; }
-.map-results .result-count { margin: 0 0 .75rem; }
-.map-note { margin: -.5rem 0 .75rem; color: var(--muted); font-size: var(--text-sm); }
+/* A frame of its own box: unlike the next-page frames, its contents mustn't join the layout. How
+   many, 17px bold, and the note beside it, muted, 26px under the map, 14px over the cards. */
+.map-results { display: block; margin-top: 26px; }
+.map-count { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 14px; }
+.map-count .result-count { margin: 0; color: var(--text); font-size: 1.0625rem; font-weight: var(--bold); }
+.map-note { margin: 0; color: var(--muted); font-size: .875rem; }
 
 /* The pin, in the location colour: Claude's blue, lighter in the dark theme. It stands fixed in
    the middle of the map, its tip on it, and the map moves under it, as on Facebook's
@@ -209,37 +225,42 @@
   position: absolute;
   border: 2px solid var(--location);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--location) 8%, transparent);
+  background: color-mix(in srgb, var(--location) 12%, transparent);
   pointer-events: none;
 }
-/* A dot for each listing. CSS beats the colours Leaflet sets as attributes. */
-.map-dot { stroke: #fff; fill: var(--accent); }
-/* Listings near each other while the map is zoomed out: one bubble with their count. Taps go
-   through it to the map (map_controller.js). */
+/* A dot for each listing, as the canvas has them: the main colour, edged in the page's own (white
+   on the light theme; on the dark, light dots edged in its dark). CSS beats the colours Leaflet
+   sets as attributes. */
+.map-dot { stroke: var(--marker-edge); fill: var(--main); }
+/* Listings near each other while the map is zoomed out: one bubble with their count, the dots'
+   colours. Taps go through it to the map (map_controller.js). */
 .map-canvas .map-cluster {
-  display: grid; place-items: center; box-sizing: border-box; border: 2px solid #fff; border-radius: 50%;
-  background: var(--accent); color: #fff; font: 700 11px/1 var(--font); box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+  display: grid; place-items: center; box-sizing: border-box; border: 2px solid var(--marker-edge); border-radius: 50%;
+  background: var(--main); color: var(--on-main); font: 700 11px/1 var(--font); box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
 }
 
-/* Two classes, so these win over leaflet.css, which loads after this file (and colours links blue). */
-.map-canvas.leaflet-container { background: var(--surface-muted); font-family: var(--font); }
-.map-canvas .map-popup { display: grid; gap: .15rem; min-width: 10rem; color: #1b1b1b; font: 500 var(--text-sm)/1.35 var(--font); text-decoration: none; }
+/* Two classes, so these win over leaflet.css, which loads after this file (and colours links blue).
+   Leaflet's + and −, as the design system's round buttons are: white, 40px, in one pill with a
+   hairline between them and the soft shadow; its credit on the surface, quieter; a dot's popup a
+   white card of the menus' (the dark theme's surface on the dark). */
+.map-canvas.leaflet-container { background: var(--map-land); font-family: var(--font); }
+.map-canvas.leaflet-container .leaflet-bar { border: 0; border-radius: var(--radius-pill); box-shadow: var(--shadow); overflow: hidden; }
+.map-canvas.leaflet-container .leaflet-bar a { width: 40px; height: 40px; border-radius: 0; border-bottom: 1px solid var(--border-soft); background: var(--surface); color: var(--text); font: 500 20px/40px var(--font); }
+.map-canvas.leaflet-container .leaflet-bar a:last-child { border-bottom: 0; }
+.map-canvas.leaflet-container .leaflet-bar a:hover { background: var(--surface-muted); }
+.map-canvas.leaflet-container .leaflet-bar a.leaflet-disabled { background: var(--surface); color: var(--placeholder); cursor: default; }
+.map-canvas.leaflet-container .leaflet-control-attribution { background: color-mix(in srgb, var(--surface) 80%, transparent); color: var(--muted); }
+.map-canvas.leaflet-container .leaflet-control-attribution a { color: var(--text); }
+.map-canvas.leaflet-container :is(.leaflet-popup-content-wrapper, .leaflet-popup-tip) { background: var(--surface); color: var(--text); box-shadow: var(--shadow-float); }
+.map-canvas.leaflet-container .leaflet-popup-content-wrapper { border-radius: var(--radius-box); }
+.map-canvas .map-popup { display: grid; gap: .15rem; min-width: 10rem; color: var(--text); font: 500 var(--text-sm)/1.35 var(--font); text-decoration: none; }
 .map-popup span { font-weight: var(--bold); }
 
-/* The dark theme dims the (light) map tiles and turns them dark. */
-:root[data-theme="dark"] .map-canvas .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.85) saturate(.6);
-}
-
+/* The tiles, OpenStreetMap's, toned down to the canvas's calm map, on every map of the site: pale
+   grey ground and white roads, a hint of the parks' and the water's colours left; the dark theme
+   turns them dark, as grey. */
+.leaflet-container .leaflet-tile-pane { filter: saturate(.2) brightness(1.03) contrast(.92); }
+:root[data-theme="dark"] .leaflet-container .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) contrast(.8) saturate(.2); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .map-canvas .leaflet-tile-pane {
-    filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.85) saturate(.6);
-  }
-}
-
-/* Wide screens: the map stays beside the results while they scroll. */
-@media (min-width: 960px) {
-  .map-page:not(.map-hidden) .map-layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; gap: 1.5rem; }
-  .map-page .map-stage { position: sticky; top: calc(var(--size-header) + 1px + .75rem); }
-  .map-page:not(.map-hidden) .map-results .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :root:not([data-theme="light"]) .leaflet-container .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) contrast(.8) saturate(.2); }
 }

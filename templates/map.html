@@ -5,8 +5,10 @@
 
 {% block content %}
 {#- map_controller.js draws the map, its pin in the middle; "Vendos hartën" sets the point, and
-    the form reloads only the results panel (a turbo-frame), so the map stays as it is, and the
-    address bar follows. -#}
+    the form reloads only the results (a turbo-frame), so the map stays as it is, and the address
+    bar follows. As the canvas lays it out: the heading and how to use the map; the map, with a
+    white box beside it of what sets it on wide screens (under it, unboxed, on phones: map.css);
+    and the results under both, the page's whole width. -#}
 <div class="map-page" data-controller="map"
   {%- if let Some(near) = filters.near %} data-map-latitude-value="{{ near.latitude }}" data-map-longitude-value="{{ near.longitude }}"{% endif %}
   data-action="turbo:frame-load->map#plot">
@@ -15,67 +17,71 @@
     <p class="lead">{{ crate::t("Lëviz hartën derisa pika të jetë aty ku kërkon, zmadhoje ose zvogëloje për largësinë dhe shtyp „Vendos hartën“.") }}</p>
   </header>
 
-  <form id="map-form" class="map-form" action="/harta" method="get"
-        data-map-target="form" data-turbo-frame="map-results" data-turbo-action="advance">
-    {%- if let Some(near) = filters.near %}
-    <input type="hidden" name="lat" value="{{ "{:.5}"|format(near.latitude) }}" data-map-target="latitude">
-    <input type="hidden" name="lng" value="{{ "{:.5}"|format(near.longitude) }}" data-map-target="longitude">
-    {%- else %}
-    <input type="hidden" name="lat" data-map-target="latitude">
-    <input type="hidden" name="lng" data-map-target="longitude">
-    {%- endif %}
-    {%- for (name, value) in filters.hidden_map_fields() %}
-    <input type="hidden" name="{{ name }}" value="{{ value }}">
-    {%- endfor %}
-    {% include "map_radius.html" %}
-    <div class="field">
-      <label class="field-label" for="map-category">{{ crate::t("Kategoria") }}</label>
-      <div class="picker" data-controller="picker" data-picker-tree-value="true">
-      <select id="map-category" name="category" data-action="map#submit">
-        <option value="">{{ crate::t("Të gjitha kategoritë") }}</option>
-        {% for choice in filters.category_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
-      </select>
-      </div>
-    </div>
-    <div class="map-place">
-      <button type="button" class="map-pill map-locate" data-action="map#locate">
-        {%- include "pin.svg" %}{{ crate::t("Vendndodhja ime") }}
-      </button>
-      {% include "map_town.html" %}
-    </div>
-    {#- The map can be folded away for the results (map_controller.js). -#}
-    <button type="button" class="button secondary map-toggle" data-map-target="toggle" data-action="map#toggleMap"
-            aria-controls="map-canvas" aria-expanded="true" data-show-label="{{ crate::t("Shfaq hartën") }}" data-hide-label="{{ crate::t("Fshih hartën") }}" hidden>{{ crate::t("Fshih hartën") }}</button>
-    <p class="map-status" data-map-target="status" role="status"></p>
-  </form>
-
   <div class="map-layout">
-    {#- The map, and under it the button that sets its point; beside the results on wide screens. -#}
-    <div class="map-stage">
-      <div class="map-canvas" id="map-canvas" data-map-target="canvas" role="region" aria-label="{{ crate::t("Harta") }}"></div>
-      <button type="button" class="button map-confirm" data-action="map#confirm">{{ crate::t("Vendos hartën") }}</button>
-    </div>
-    {#- Links inside go to whole pages (target="_top"); only the form reloads this frame. -#}
-    <turbo-frame id="map-results" class="map-results" target="_top" data-map-target="results">
+    <div class="map-canvas" id="map-canvas" data-map-target="canvas" role="region" aria-label="{{ crate::t("Harta") }}"></div>
+    {#- What sets it: how far (what the circle covers, which the zoom sets), the category, a town
+        to move the map onto, "Vendndodhja ime"; then "Vendos hartën", which sends the map's point,
+        and the button that folds the map away (map_controller.js), shown once the map is there. -#}
+    <form id="map-form" class="map-form map-controls" action="/harta" method="get"
+          data-map-target="form" data-turbo-frame="map-results" data-turbo-action="advance">
+      {%- if let Some(near) = filters.near %}
+      <input type="hidden" name="lat" value="{{ "{:.5}"|format(near.latitude) }}" data-map-target="latitude">
+      <input type="hidden" name="lng" value="{{ "{:.5}"|format(near.longitude) }}" data-map-target="longitude">
+      {%- else %}
+      <input type="hidden" name="lat" data-map-target="latitude">
+      <input type="hidden" name="lng" data-map-target="longitude">
+      {%- endif %}
+      {%- for (name, value) in filters.hidden_map_fields() %}
+      <input type="hidden" name="{{ name }}" value="{{ value }}">
+      {%- endfor %}
+      {% include "map_radius.html" %}
+      <div class="field">
+        <label class="field-label" for="map-category">{{ crate::t("Kategoria") }}</label>
+        <div class="picker" data-controller="picker" data-picker-tree-value="true">
+        <select id="map-category" name="category" data-action="map#submit">
+          <option value="">{{ crate::t("Të gjitha kategoritë") }}</option>
+          {% for choice in filters.category_choices() %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+        </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="map-town">{{ crate::t("Qyteti") }}</label>
+        {% include "map_town.html" %}
+      </div>
+      <button type="button" class="button secondary map-locate" data-action="map#locate"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::LOCATE|safe }}</svg>{{ crate::t("Vendndodhja ime") }}</button>
+      <p class="map-status" data-map-target="status" role="status"></p>
+      <div class="map-actions">
+        <button type="button" class="button map-confirm" data-action="map#confirm">{{ crate::t("Vendos hartën") }}</button>
+        <button type="button" class="button secondary map-toggle" data-map-target="toggle" data-action="map#toggleMap"
+                aria-controls="map-canvas" aria-expanded="true" data-show-label="{{ crate::t("Shfaq hartën") }}" data-hide-label="{{ crate::t("Fshih hartën") }}" hidden>{{ crate::t("Fshih hartën") }}</button>
+      </div>
+    </form>
+  </div>
+
+  {#- The results: how many, and that the map shows the first of them where more have a point;
+      the filters on; a dot on the map for each result, not only for the cards loaded so far; and
+      the cards. Links inside go to whole pages (target="_top"); only the form reloads this
+      frame. -#}
+  <turbo-frame id="map-results" class="map-results" target="_top" data-map-target="results">
+    <div class="map-count">
       <p class="result-count">{{ count }}</p>
       {%- if more_points %}
       <p class="map-note">{{ crate::t1("Në hartë shfaqen {} njoftimet e para të listës.", crate::db::MAP_POINTS) }}</p>
       {%- endif %}
-      {% if !chips.is_empty() %}
-      <ul class="active-filters" aria-label="{{ crate::t("Filtrat e zgjedhur") }}">
-        {% for chip in chips %}
-        <li><a class="filter-chip" href="{{ chip.url }}" aria-label="{{ crate::t1("Hiq filtrin {}", chip.label) }}">{{ chip.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-      {#- A dot on the map for each result, not only for the cards loaded so far. -#}
-      <ul class="map-points" hidden data-map-target="points">
-        {%- for point in points %}
-        <li data-lat="{{ point.latitude }}" data-lng="{{ point.longitude }}" data-url="{{ point.url() }}" data-price="{{ point.price_display() }}">{{ point.title }}</li>
-        {%- endfor %}
-      </ul>
-      {% include "listing_grid.html" %}
-    </turbo-frame>
-  </div>
+    </div>
+    {% if !chips.is_empty() %}
+    <ul class="active-filters" aria-label="{{ crate::t("Filtrat e zgjedhur") }}">
+      {% for chip in chips %}
+      <li><a class="filter-chip" href="{{ chip.url }}" aria-label="{{ crate::t1("Hiq filtrin {}", chip.label) }}">{{ chip.label }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <ul class="map-points" hidden data-map-target="points">
+      {%- for point in points %}
+      <li data-lat="{{ point.latitude }}" data-lng="{{ point.longitude }}" data-url="{{ point.url() }}" data-price="{{ point.price_display() }}">{{ point.title }}</li>
+      {%- endfor %}
+    </ul>
+    {% include "listing_grid.html" %}
+  </turbo-frame>
 </div>
 {% endblock %}

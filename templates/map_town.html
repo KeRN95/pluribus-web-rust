@@ -1,9 +1,10 @@
-{#- The map page's town: the map moves onto it, for "Vendos hartën" to set its point, as with
-    "Vendndodhja ime"; a pill as that one is (map.css). It has no name, so it sends no town of its
-    own: only the map's point counts. A category's card has its own menu (browse.html). -#}
+{#- The map page's town, a field of its box under "Qyteti" (map.html): the map moves onto it, for
+    "Vendos hartën" to set its point, as with "Vendndodhja ime". It has no name, so it sends no
+    town of its own: only the map's point counts. A category's card has its own menu, a pill over
+    the map (browse.html). -#}
 <div class="picker map-town" data-controller="picker">
-<select aria-label="{{ crate::t("Qyteti") }}" data-map-target="town" data-action="map#goToTown">
-  <option value="">{{ crate::t("Qyteti") }}</option>
+<select id="map-town" aria-label="{{ crate::t("Qyteti") }}" data-map-target="town" data-action="map#goToTown">
+  <option value="">{{ crate::t("Zgjidh qytetin") }}</option>
   {%- for group in filters.town_groups() %}
   <optgroup label="{{ group.label }}">
     {%- for town in group.towns %}<option value="{{ town.slug }}" data-lat="{{ town.latitude }}" data-lng="{{ town.longitude }}">{{ town.name }}</option>{% endfor %}

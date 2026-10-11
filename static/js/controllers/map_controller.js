@@ -37,7 +37,8 @@ const SETTLE_MS = 400;
 // The equator's length in metres, which the map (Web Mercator) draws 256 pixels long at zoom 0 and
 // twice as long at each zoom after: at a latitude, a pixel is this times its cosine over 256 * 2^zoom.
 const EQUATOR = 40075016.686;
-const PIN = '<svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>';
+// The pin, as the canvas draws it: the location colour edged in white, a white dot in it.
+const PIN = '<svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Z"/><circle cx="12" cy="9" r="2.6" fill="#fff"/></svg>';
 
 export default class extends Controller {
   static targets = [

@@ -715,8 +715,8 @@ pub const LOG_OUT: &str = r#"<path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2
 #[expect(dead_code, reason = "the notices and the error page take it when they are redrawn")]
 pub const INFO: &str = r#"<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>"#;
 
-/// A crosshair: finding where the visitor is (the map's "Vendndodhja ime", where the pin is now).
-#[expect(dead_code, reason = "the map's panel takes it when it is redrawn")]
+/// A crosshair: finding where the visitor is (the maps' "Vendndodhja ime": map.html, the browse
+/// row's map card).
 pub const LOCATE: &str = r#"<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5"/>"#;
 
 /// Two squares, each with its lines of words: the user's own listings (the menu's "Njoftimet e
