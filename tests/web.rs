@@ -2744,7 +2744,8 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     // for words on the light theme, the accent's line on the dark (the user's ask of 2026-10-12).
     assert!(site_css.contains(".price-under{margin:-2px 0 0;color:var(--muted);font-size:var(--lp-small);line-height:1.4;}"));
     assert!(site_css.contains(".price-kind{margin-right:.5rem;color:var(--highlight-text);font-weight:var(--semibold);}.price-note{margin-right:.5rem;}"));
-    assert!(site_css.contains("--highlight-text:color-mix(in srgb,var(--highlight) 45%,#1b1b1b);"));
+    // Its shade 45% of the accent in our near-black, lime's 38%, 5:1 at least on the page.
+    assert!(site_css.contains("--highlight-text:color-mix(in srgb,var(--highlight) var(--text-share),#1b1b1b);"));
     assert_eq!(site_css.matches("--highlight-text:var(--highlight-line);").count(), 2, "the dark theme's, picked and the device's");
     // The price's buttons as tall as its line, 36px, level with the figure (the user's ask of the
     // same day, "a bit smaller, size of the row of the price so they are more in line"; a finger
@@ -5807,13 +5808,13 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
         "--choice-orange:#ff9f1c;",
         "--choice-blue:#4dabff;",
         "--choice-royal:#275bff;",
-        ":root{--highlight:var(--choice-mint);--on-highlight:#1b1b1b;--highlight-line:var(--highlight);--filter-share-light:38%;--filter-share-dark:27%;}",
+        ":root{--highlight:var(--choice-mint);--on-highlight:#1b1b1b;--highlight-line:var(--highlight);--filter-share-light:38%;--filter-share-dark:27%;--text-share:45%;}",
         r#":root[data-accent="royal"]{--highlight:var(--choice-royal);--on-highlight:#fff;--highlight-line:color-mix(in srgb,var(--choice-royal) 70%,#fff);--filter-share-light:20%;--filter-share-dark:40%;}"#,
         "--highlight-icon:var(--highlight-line);",
         r#".swatch[value="royal"]{--swatch:var(--choice-royal);}"#,
         // Where the swatches no longer fit beside "Ngjyra", they go under it, as the size's words do.
         ".menu-row:has(> :is(.sizes,.swatches)){flex-wrap:wrap;",
-        r#":root[data-accent="lime"]{--highlight:var(--choice-lime);--filter-share-light:45%;--filter-share-dark:24%;}"#,
+        r#":root[data-accent="lime"]{--highlight:var(--choice-lime);--filter-share-light:45%;--filter-share-dark:24%;--text-share:38%;}"#,
         r#":root[data-accent="coral"]{--highlight:var(--choice-coral);--filter-share-light:28%;--filter-share-dark:38%;}"#,
         "--filter-on:color-mix(in srgb,var(--highlight) var(--filter-share),var(--bg));",
     ] {

@@ -91,9 +91,10 @@
   /* Words in the accent's colour: what kind of listing it is, under its price (listing.css,
      .price-kind; the user's ask of 2026-10-12, "put only the ne shitje or me qera in the sites
      accent color"). On the light theme the accent itself is too pale for words (mint is 1.6:1 on
-     the page), so its shade, as much of it as of our near-black, 4.5:1 at least for every accent;
-     on the dark theme the accent's line (--highlight-line), bright on the dark grey. */
-  --highlight-text: color-mix(in srgb, var(--highlight) 45%, #1b1b1b);
+     the page), so its shade, 45% of it in our near-black (--text-share, below; lime, the lightest,
+     38%), 5:1 at least on the page for every accent; on the dark theme the accent's line
+     (--highlight-line), bright on the dark grey. */
+  --highlight-text: color-mix(in srgb, var(--highlight) var(--text-share), #1b1b1b);
   --logo-dot: currentColor;              /* the logo's i's dot: black as its letters, on white */
   --logo-counter: var(--highlight);      /* the inside of the logo's b: the accent, on white */
   --dot-edge: inset 0 0 0 1.5px rgb(27 27 27 / 45%); /* a ring inside an unread dot, on white */
@@ -375,15 +376,18 @@
    that is on takes, the light theme's and the dark's (--filter-share-light, --filter-share-dark):
    the pale tint on the light theme and the deep one on the dark as strong for each, more of a
    darker accent on the dark theme and less on the light, lime, the lightest, the other way round,
-   the royal blue, the darkest, the least of all on the light. */
+   the royal blue, the darkest, the least of all on the light; and how much of it its shade for
+   words on the light theme takes (--text-share, for --highlight-text): 45%, lime's 38%, which at
+   45% was 4.1:1 on the page, under the 4.5:1 small words need. */
 :root {
   --highlight: var(--choice-mint);
   --on-highlight: #1b1b1b;
   --highlight-line: var(--highlight);
   --filter-share-light: 38%;
   --filter-share-dark: 27%;
+  --text-share: 45%;
 }
-:root[data-accent="lime"] { --highlight: var(--choice-lime); --filter-share-light: 45%; --filter-share-dark: 24%; }
+:root[data-accent="lime"] { --highlight: var(--choice-lime); --filter-share-light: 45%; --filter-share-dark: 24%; --text-share: 38%; }
 :root[data-accent="coral"] { --highlight: var(--choice-coral); --filter-share-light: 28%; --filter-share-dark: 38%; }
 :root[data-accent="orange"] { --highlight: var(--choice-orange); --filter-share-light: 35%; --filter-share-dark: 30%; }
 :root[data-accent="blue"] { --highlight: var(--choice-blue); --filter-share-light: 30%; --filter-share-dark: 34%; }
