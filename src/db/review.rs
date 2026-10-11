@@ -251,6 +251,21 @@ pub async fn restore_user(db: &PgPool, user_id: Uuid, moderator: Uuid) -> sqlx::
     Ok(true)
 }
 
+/// Whether a listing's seller is suspended, the account it is posted under or the store it is
+/// posted as: a moderator's suspension takes their listings off the site with it (suspend_user),
+/// which its page says, rather than that it was reported.
+pub async fn seller_suspended(db: &PgPool, public_no: i64) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM listings l
+                        LEFT JOIN users u ON u.id = l.seller_user_id
+                        LEFT JOIN businesses b ON b.id = l.seller_business_id
+                        WHERE l.public_no = $1 AND (u.status = 'SUSPENDED' OR b.status = 'SUSPENDED'))",
+    )
+    .bind(public_no)
+    .fetch_one(db)
+    .await
+}
+
 /// A suspended account, as /moderim lists them.
 #[derive(Debug, sqlx::FromRow)]
 pub struct SuspendedUser {

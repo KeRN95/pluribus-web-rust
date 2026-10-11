@@ -28,9 +28,8 @@
    same on every listing. */
 .listing,
 .listing-side { align-content: start; }
-/* The banner's room (listing.html): none on a phone, nor over a car's or a property's path, which
-   start at the top; a split page's from 960 px up (below). */
-.listing-banner { display: none; }
+/* (A banner's room stood over a split page's path from 960 px up once, empty, kept for an ad: the
+   canvas starts every listing at the page's top.) */
 .listing > *,
 .listing-side > *,
 .listing-deal > * { min-width: 0; }
@@ -49,7 +48,14 @@
 }
 /* Listings like it, under it: the browse pages' grid, as wide as the page, set apart by space
    alone. */
-.related { margin-top: 2.5rem; }
+.related { margin-top: 48px; }
+.related > h2 { font-size: 1.375rem; letter-spacing: -.01em; }
+/* The page's own headings, as the canvas has them: 20px bold (19px on a phone), 10px over what they
+   head. */
+.listing h2 { margin-bottom: 10px; font-size: 1.25rem; letter-spacing: -.01em; }
+@media (max-width: 719px) {
+  .listing h2 { font-size: 1.357rem; }
+}
 /* The seller's other listings say where all of them are at the end of their heading's line, or
    under the heading where the line is too short for both. */
 .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; margin: 1.75rem 0 .75rem; }
@@ -97,9 +103,8 @@
   z-index: 0;
   aspect-ratio: 12 / 5;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-muted);
+  border-radius: var(--radius-box);
+  background: var(--map-land);
 }
 .listing-map-canvas { position: absolute; inset: 0; z-index: 0; aspect-ratio: auto; border: 0; border-radius: 0; }
 .listing-map-place {
@@ -109,18 +114,17 @@
   z-index: 1;
   max-width: calc(100% - 1.2rem);
   margin: 0;
-  padding: .25rem .7rem .25rem .55rem;
+  padding: 5px 12px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgb(27 27 27 / 60%);
-  color: #f7f7f7;
-  font-size: var(--text-xs);
-  font-weight: var(--medium);
+  color: #ffffff;
+  font-size: .8125rem;
+  font-weight: var(--semibold);
   white-space: nowrap;
   text-overflow: ellipsis;
   pointer-events: none;
 }
-.listing-map-place .pin-icon { width: 1.1em; height: 1.1em; margin-right: .25rem; vertical-align: -.2em; }
 /* The circle round its point: the location colour's line round a faint wash of it, as the map
    pages' circle is. CSS beats the colours Leaflet sets as attributes. */
 .listing-map-area { stroke: var(--location); stroke-width: 2; fill: var(--location); fill-opacity: .12; }
@@ -134,14 +138,6 @@
    card and the map across the page. */
 @media (min-width: 960px) {
   .listing { max-width: none; }
-  /* Over the path of a split page, room kept for a banner (listing.html), as much as stands under
-     the photo (below), so that the listing stands in the middle of the screen and its path, its
-     buttons and the photo at the same height on every listing as one steps through them, a gutter
-     under it. It is in the page, whose min-height takes it in, "Njoftime të ngjashme" still just
-     out of view under a short listing. Across the page, a property's, it had a fifth of the
-     photos' height (min(14vh, 7.6rem)), empty, which read as a gap under the header: none there
-     until a banner comes, the path at the page's top as on a car's. */
-  .listing-split > .listing-banner { display: block; margin-bottom: var(--gutter); }
   .listing-side > :is(.listing-header, .listing-details, .listing-description, .listing-options),
   .listing-deal > .price-box { max-width: 46rem; }
   /* Across the page a photo's frame is wider than the photo, and no taller than most screens
@@ -161,19 +157,7 @@
      the sheet's controller is its). The photo is 541 px then, as the classifieds sites have it. */
   .listing-page:has(> .listing-split) { display: block; max-width: 60rem; margin-inline: auto; }
   .listing-split { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: 2rem; }
-  .listing-split > :is(.listing-banner, .notice, .listing-tags) { grid-column: 1 / -1; }
-  /* A split listing stands in the middle of the screen: the banner's room over its path is half
-     of what the screen leaves round the path and the photo's frame, the other half under the
-     photo, "Njoftime të ngjashme" at the screen's foot. The frame is the same on every split
-     listing (three by four of seven twelfths of the page, or as tall as the screen leaves it,
-     below), so the path keeps its height as one steps through them whatever the column beside
-     the photo holds; a column taller than the photo runs on under the screen. Under the header
-     (--size-header and a hairline, base.css) stand the page's gutter, the banner and its gutter, the
-     path (its round buttons, 2.95rem and 2px, browse.css, and .75rem under them) and the frame;
-     the room under the frame reaches the page's foot (its min-height, above, 2.5rem over the
-     section) and on through the 2.5rem under it to the screen's. None where the frame takes
-     all the room. */
-  .listing-split > .listing-banner { height: max(0px, calc((100svh - var(--size-header) - 7.7rem - 3px - min((min(60rem, 100vw - var(--rail-width) - 2rem) - 2rem) * 7 / 9, 100vh - var(--size-header) - 8.5rem - 1px)) / 2)); }
+  .listing-split > :is(.notice, .listing-tags) { grid-column: 1 / -1; }
   /* The photo and its filmstrip stay put under the top bar (--size-header and its hairline, base.css,
      and 1rem under it) while the column beside them scrolls, and go with the page once the
      column has all gone by: sticky within their grid row, which the column's height sets. The
@@ -258,37 +242,23 @@
 .listing-car .listing-header { padding-bottom: 1.05rem; border-bottom: 1px solid var(--border); }
 .listing-car .listing-side > .listing-map-section { margin-top: 1.75rem; }
 .listing-car .listing-map-section > h2 { margin-top: 0; }
-.listing-car .listing-price { font-size: 1.75rem; }
 .listing-car .price-note { display: block; margin-top: .3rem; color: var(--muted); font-size: var(--text-sm); font-weight: 400; }
-/* "Llogarit kredinë" a pill like the phone's, "Shfaq numrin" (.contact-bar): on a line of its own
-   under the price, as wide as the price's box (from 720 px up to 960 as the contact bar under it,
-   below), as tall, its calculator's icon quiet beside its words; the calculator's card opens under
-   it, as wide as it. */
-.listing-car .price-row { flex-direction: column; align-items: stretch; gap: .9rem; }
-.listing-car .loan > summary {
-  display: flex;
-  justify-content: center;
-  gap: .5rem;
-  height: 3.1rem;
-  padding: 0 1.3rem 0 1.1rem;
-  font: inherit;
-  font-weight: var(--semibold);
-}
-.listing-car .loan > summary svg { width: 20px; height: 20px; color: var(--muted); }
-.listing-car .loan .bubble-card { left: 0; right: 0; width: auto; }
-.spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.25rem; margin: 0; }
+/* As the canvas has them: a detail's name over its value, 13px and muted after its icon, the
+   value semibold; three to a line from 720 px up, two on a phone, 12px and 20px apart. The
+   options a line each in the same columns, row after row, a muted check before each. */
+.spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 0; }
 .spec { min-width: 0; }
-.spec dt { display: flex; align-items: center; gap: .35rem; color: var(--muted); font-size: var(--text-sm); }
+.spec dt { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .8125rem; }
 .spec-icon { flex: none; }
-.spec dd { margin: .15rem 0 0; font-weight: var(--semibold); overflow-wrap: anywhere; }
-.options { columns: 2; column-gap: 1.25rem; margin: 0; padding: 0; list-style: none; }
-.options li { display: flex; align-items: center; gap: .45rem; margin-bottom: .45rem; break-inside: avoid; }
-.option-check { flex: none; color: var(--accent); }
+.spec dd { margin: 2px 0 0; font-weight: var(--semibold); overflow-wrap: anywhere; }
+.options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; margin: 0; padding: 0; list-style: none; }
+.options li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.option-check { flex: none; color: var(--muted); }
 @media (min-width: 720px) {
   .listing-car .listing-header h1 { font-size: 1.75rem; }
   .key-facts { grid-template-columns: repeat(4, auto); justify-content: start; gap: 1rem 2.25rem; }
   .spec-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .options { columns: 3; }
+  .options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 /* Under 960 px a car's seller section is no box (its card is the column's, below): its heading and
    the seller's row are the rest's grid items, after the description and the details as on every
@@ -331,7 +301,6 @@
   .listing-car .listing-side > .listing-deal { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; grid-row: 1 / span 40; align-self: start; }
   .listing-car .listing-deal > * { grid-column: 1; align-self: auto; max-width: none; margin-right: 0; }
   .listing-car .listing-header h1 { margin-top: 0; }
-  .listing-car .price-box { padding: 1rem 1.15rem 1.1rem; border: 1px solid var(--menu-border); border-radius: 16px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 6px 16px -8px rgb(0 0 0 / 8%); }
   /* The seller's card (seller_card.html, .seller-card) under "Shitësi", a heading as the
      column's "Lokacioni" and the page's others are, holds the ways to reach them: the price card's
      chrome, the seller's row losing its own; the initial 3rem; the verified check beside the name,
@@ -602,37 +571,32 @@
 @media (prefers-reduced-motion: reduce) {
   .gallery-thumb { transition: none; }
 }
-/* Above the photo, the category's pills as a category page's head has them (browse.css,
-   .category-path); the status after them. */
-.listing-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
-.listing-tags .badge { margin-left: 0; }
-.listing-path { align-self: auto; }
-/* At the line's right end, three round buttons like the back one (browse.css, .back-button), the
-   path's gap apart: to the category's list, and to the listing before this one on it and the one
-   after it. One with nowhere to go stays, greyed, so the three keep their places. On a phone the
-   path's finger targets, half the gaps round each (browse.css, --row-gap and --column-gap). */
-.listing-steps { --row-gap: .4rem; --column-gap: .4rem; display: flex; gap: var(--column-gap); margin-left: auto; }
+/* Above the photo, where it is, as a category page's breadcrumb says it (browse.css,
+   .breadcrumb), its own category a link in the text's colour; the status after it, and at the
+   line's end the step buttons, all on one line, the breadcrumb giving up room first (its names end
+   in "…"); 12px over the photo. */
+.listing-tags { display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-12); }
+.listing-tags .badge { flex: none; margin-left: 0; }
+.listing-path { flex: 0 1 auto; }
+.listing-path .breadcrumb-here { text-decoration: none; }
+.listing-path .breadcrumb-here:hover { text-decoration: underline; text-underline-offset: .2em; }
+/* At the line's right end, three round buttons, grey, 40px, 8px apart, as the canvas draws them
+   (browse.css, .back-button): to the category's list, and to the listing before this one on it
+   and the one after it. One with nowhere to go stays, greyed, so the three keep their places. On
+   a phone the finger targets reach half the gaps round each (browse.css, --row-gap and
+   --column-gap). */
+.listing-steps { --row-gap: var(--space-8); --column-gap: var(--space-8); display: flex; flex: none; gap: var(--column-gap); margin-left: auto; }
+.listing-steps .back-button { --size: var(--size-button-sm); }
+.listing-steps .back-button svg { width: 18px; height: 18px; }
 .listing-steps .is-off { opacity: .35; pointer-events: none; }
-/* On a phone the path's pills are their icons alone but the page's own (browse.css), and where
-   its name leaves the step buttons no room on its line (fit_controller.js finds them under it and
-   says so, .is-tight) that one goes round too, its icon alone in its tint, as tall as the back
-   button, the name still in the link, out of sight. One without an icon keeps its name. */
-@media (max-width: 719px) {
-  .listing-tags.is-tight .listing-path .is-selected:has(.shortcut-icon) {
-    flex: none;
-    justify-content: center;
-    width: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px);
-    height: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px);
-    padding: 0;
-    gap: 0;
-    border-radius: 50%;
-    font-size: 0;
-  }
-}
-/* The price is the headline: on a phone a little over the title's size (24.5px), from a tablet up
-   a size over it (--text-3xl, below), the title under it either way. */
+/* The price is the headline, as the canvas has it: 32px, a step bolder than the headings (800 to
+   their 700, or a step over the weight being tried, base.css), 30px on a phone, the title over
+   it. */
 .listing-header h1 { margin: .75rem 0 .35rem; font-size: var(--text-2xl); }
-.listing-price { margin: 0; font-size: 1.75rem; line-height: 1.15; font-weight: var(--bold); letter-spacing: -.02em; }
+.listing-price { margin: 0; font-size: 2.143rem; line-height: 1.15; font-weight: calc(var(--heading-weight, var(--bold)) + 100); letter-spacing: -.02em; }
+@media (min-width: 720px) {
+  .listing-price { font-size: 2rem; }
+}
 /* What follows the price ("/muaj", "(i diskutueshëm)"), half its size. */
 .price-note { font-size: .5em; letter-spacing: normal; }
 /* Under the buttons, quietly: that the visitor blocked the seller (from a report's thanks,
@@ -720,27 +684,46 @@
 /* A car's price against what cars of its model and year ask: its card under it, as wide as what
    it says. */
 .car-price { position: relative; width: fit-content; }
-.price-box > .car-price { margin-top: .4rem; }
+.price-box > .car-price { margin-top: 10px; }
 .car-price-card { width: max-content; min-width: 15rem; max-width: min(20rem, calc(100vw - 2rem)); }
-/* The price with the loan calculator's bubble beside it. */
-.price-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
-/* With a price per square metre, the price takes a line of its own and the loan calculator's
-   bubble stands on the next, beside what a square metre costs. */
-.price-row.with-area { row-gap: .35rem; }
-.price-row.with-area > .listing-price { flex-basis: 100%; }
-/* The loan calculator's card: on a phone under the price's row and as wide as it, since its bubble
-   stands too near the middle of the screen for the card to fit beside either of the bubble's
-   edges; on wider screens under the bubble, as the square metre's card is. The two fields side
-   by side, the years and the yearly interest; then the down payment, a set share of the price,
-   the loan, its interest and the two together, and last the monthly payment, larger. */
-.loan-card { width: min(26rem, 100%); }
-@media (min-width: 720px) {
-  .loan { position: relative; }
-  .loan-card { width: 24rem; }
+/* The price's block, as the canvas has it: the price on a line of its own, a car's bubble under it,
+   10px down, and 12px under those "Llogarit kredinë", a grey pill 48px tall the line's whole width,
+   its calculator's icon muted before its words; or, beside what a square metre costs, a pill as
+   tall, each half the line. */
+.price-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 8px; }
+.price-row > .listing-price { flex-basis: 100%; }
+.price-row > .car-price { flex-basis: 100%; margin-top: -2px; }
+.loan { flex: 1 1 100%; min-width: 0; }
+.loan > summary,
+.price-row.with-area > .area-price > summary {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  height: var(--size-button);
+  padding: 0 1.25rem;
+  font: inherit;
+  font-weight: var(--semibold);
 }
-.loan-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: .6rem; margin-bottom: .8rem; }
+.loan > summary > svg:first-child { width: 19px; height: 19px; color: var(--muted); }
+.price-row.with-area > :is(.area-price, .loan) { flex: 1 1 0; width: auto; }
+/* Open, the calculator in a white box under the pill, in the page rather than over it, the pill in
+   the main colour with its chevron up, as the canvas has it; beside what a square metre costs, it
+   takes the line under it, the whole of it. */
+.loan[open] > summary { background: var(--main); color: var(--on-main); }
+.loan[open] > summary > svg:first-child { color: inherit; }
+@media (hover: hover) {
+  .loan[open] > summary:hover { background: var(--main-hover); }
+}
+.loan-chevron { display: none; flex: none; transform: rotate(180deg); }
+.loan[open] .loan-chevron { display: block; }
+.loan .bubble-card { position: static; width: auto; margin-top: 10px; padding: 16px; box-shadow: var(--shadow); animation: none; }
+.price-row.with-area > .loan[open] { flex-basis: 100%; order: 1; }
+/* The calculator: the two fields side by side, the years and the yearly interest; then the down
+   payment, a set share of the price, the loan, its interest and the two together, and last the
+   monthly payment, 22px and a step bolder, as the canvas has it. */
+.loan-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 10px; margin-bottom: 14px; }
 .loan-monthly { align-items: baseline; }
-.loan-monthly dd { font-size: var(--text-lg); font-weight: var(--bold); letter-spacing: -.01em; }
+.loan-monthly dd { font-size: 1.375rem; font-weight: calc(var(--heading-weight, var(--bold)) + 100); letter-spacing: -.01em; }
 .loan-message { color: var(--text); }
 
 /* Badges, as the canvas has them: a word or two in a small pill, 24px tall, semibold and a size
@@ -918,28 +901,28 @@
    small circle of the accent's tint once: one tinted thing more on a page with enough of them,
    and the pill's words say what it is.) The groups (a name and its values) leave their pills to
    the line (display: contents). */
-.attributes { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0; }
+.attributes { display: flex; flex-wrap: wrap; gap: var(--space-8); margin: 0; }
 .attribute-group { display: contents; }
 .attribute {
   display: flex;
   align-items: center;
-  gap: .45rem;
+  gap: 7px;
   min-width: 0;
+  min-height: var(--size-chip);
   margin: 0;
-  padding: .55rem .85rem;
-  border: 1px solid var(--menu-border);
-  border-radius: 999px;
-  background: var(--surface);
-  font-size: var(--text-sm);
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  font-size: .875rem;
   font-weight: var(--medium);
 }
 .attribute-icon { flex: none; width: 16px; height: 16px; color: var(--muted); }
 .attribute-label { color: var(--muted); font-weight: normal; }
 .attribute.is-key .attribute-icon { color: var(--text); }
-/* A phone: smaller still (13px, their icons 15px), so more of them share a line. */
+/* A phone: the words 13px, their icons 15px, so more of them share a line. */
 @media (max-width: 719px) {
-  .attributes { gap: .4rem; }
-  .attribute { gap: .4rem; padding: .5rem .7rem; font-size: .875rem; }
+  .attribute { gap: 6px; padding: 0 12px; font-size: .9286rem; }
   .attribute-icon { width: 15px; height: 15px; }
 }
 /* The listing's number, quietly, under the description. */

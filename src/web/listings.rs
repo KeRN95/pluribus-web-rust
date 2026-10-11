@@ -489,11 +489,9 @@ struct ListingShow {
     listing: ListingDetail,
     /// Its category, as a category page's own pill is (browse.html): a link to that page.
     category: Subcategory,
-    /// The category above its own, the pill before it: a way up. None for a main category.
+    /// The category above its own, before it in the breadcrumb: a way up. None for a main
+    /// category, whose breadcrumb's way up is the welcome page.
     parent: Option<Subcategory>,
-    /// Three levels down, the category above that one, which the round button before the pills
-    /// leads to by its icon (no such button otherwise), as on a category page.
-    above_parent: Option<Subcategory>,
     /// The listings either side of it on its category's page, the one before it and the one after
     /// it (db::listing_neighbours), for the round buttons at the right end of the path, after the
     /// one to the list; a button with nowhere to go stays, greyed.
@@ -696,9 +694,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
         icon: category_icon(category),
     };
     let above = |of: &db::Category| of.parent_id.and_then(|id| categories.by_id(id));
-    let parent_category = category.and_then(above);
-    let parent = parent_category.map(pill);
-    let above_parent = parent_category.and_then(above).map(pill);
+    let parent = category.and_then(above).map(pill);
     let category_pill = match category {
         Some(category) => pill(category),
         None => Subcategory { name: listing.category_name.clone(), url: format!("/c/{}", listing.category_slug), icon: None },
@@ -730,6 +726,11 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             Some(t("Njoftimi yt pret miratimin e një moderatori: askush tjetër nuk e sheh ende. Zakonisht brenda pak orësh.").to_string())
         }
         "PENDING_REVIEW" => Some(t("Ky njoftim pret miratimin e moderatorëve.").to_string()),
+        // Off the site with its seller's account or store, which a moderator suspended
+        // (db::suspend_user), or for its reports.
+        "SUSPENDED" if db::seller_suspended(&state.db, listing.public_no).await? => {
+            Some(t("Ky njoftim nuk shfaqet në faqe: llogaria e shitësit është pezulluar.").to_string())
+        }
         "SUSPENDED" => Some(t("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë.").to_string()),
         "REJECTED" => Some(match listing.rejection_reason.as_deref().filter(|_| own) {
             Some(reason) => t1("Moderatorët e hoqën këtë njoftim nga faqja: {}.", reason),
@@ -811,7 +812,6 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             listing,
             category: category_pill,
             parent,
-            above_parent,
             previous,
             next,
             details,

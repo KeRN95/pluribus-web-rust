@@ -21,11 +21,6 @@
     (.listing-split): the photo at the left in a frame taller than wide, and the rest
     (.listing-side, below) in a column at its right. -#}
 <article class="listing{% if car_page %} listing-car{% else if !wide_photos %} listing-split{% endif %}"{% if !own && listing.on_site() %} data-seen-url="/listing/{{ listing.public_no }}/pare" data-listing-number="{{ listing.public_no }}"{% endif %}>
-  {#- Room for a banner over a split page's path from 960 px up (listing.css, .listing-banner):
-      empty for now, kept for an ad, half of what the screen leaves, so that the listing stands in
-      its middle and the path, its buttons and the photo at the same height on every listing as
-      one steps through them. None on a car's page or a property's, which start at the top. -#}
-  <div class="listing-banner" aria-hidden="true"></div>
   {%- if posted || just_published %}
   {#- Posted just now (post.rs), said once: it is up; without signing in, changing it later takes
       signing in; and the ways to share it (share_note.html). -#}
@@ -43,30 +38,27 @@
       alone see it now, are told. -#}
   <p class="notice" role="status">{{ note }}</p>
   {%- endif %}
-  {#- Where it is: its category as a category page's head has it (browse.html), in pills with their
-      icons, after a round back button and, three levels down, the round way beyond them, the
-      category above its parent (way_up.html): the category above it, quieter, a way up, and its
-      own, filled; each leads to its page. On a phone the pills but its own are their icons alone
-      (browse.css), and its own goes to its icon too where its name leaves the step buttons at the
-      line's end no room (fit_controller.js, .is-tight). Then its status, if it isn't simply up. -#}
-  <div class="listing-tags" data-controller="fit">
-    <nav class="category-path listing-path" aria-label="{{ crate::t("Kategoria e njoftimit") }}">
-      <a class="back-button" href="{{ category.url }}" aria-label="{{ crate::t("Kthehu") }}" title="{{ crate::t("Kthehu") }}" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
-      {%- include "way_up.html" %}
+  {#- Where it is, as a category page says it (browse.html, .breadcrumb) and the canvas draws it:
+      at the page's top, a line of words, the way back first (a chevron: to the page before, or,
+      opened from elsewhere, its category, back_controller.js), then the category above its own,
+      quieter (over a main category the welcome page, "Kreu"), and after a › its own, in the text's
+      colour, each a link to its page. Then its status, if it isn't simply up. -#}
+  <div class="listing-tags">
+    <nav class="breadcrumb listing-path" aria-label="{{ crate::t("Kategoria e njoftimit") }}">
+      <a class="breadcrumb-back" href="{{ category.url }}" aria-label="{{ crate::t("Kthehu") }}" title="{{ crate::t("Kthehu") }}" data-controller="back" data-action="back#go"><svg data-icon="chevron-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
       {%- if let Some(parent) = parent %}
-      <a class="shortcut small category-up" href="{{ parent.url }}">
-        {%- if let Some(icon) = parent.icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
-        {{ crate::t(parent.name) }}</a>
+      <a class="breadcrumb-up" href="{{ parent.url }}">{{ crate::t(parent.name) }}</a>
+      {%- else %}
+      <a class="breadcrumb-up" href="/">{{ crate::t("Kreu") }}</a>
       {%- endif %}
-      <a class="shortcut small is-selected" href="{{ category.url }}">
-        {%- if let Some(icon) = category.icon %}<svg class="shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif -%}
-        {{ crate::t(category.name) }}</a>
+      <span class="breadcrumb-sep" aria-hidden="true">›</span>
+      <a class="breadcrumb-here" href="{{ category.url }}">{{ crate::t(category.name) }}</a>
     </nav>
     {%- if let Some(label) = listing.status_label() %}
     <span class="badge{% if let Some(tone) = listing.status_tone() %} {{ tone }}{% endif %}">{{ label }}</span>
     {%- endif %}
-    {#- At the line's right end, as the classifieds sites have them, three round buttons like the
-        back one: to the category's list, by the list's icon as the view menu has it, and to the
+    {#- At the line's right end, as the classifieds sites have them and the canvas draws them,
+        three grey round buttons of 40 px: to the category's list, by the list's icon as the view menu has it, and to the
         listing before this one on that list and the one after it, in the list's own order, newest
         first (db::listing_neighbours); one with nowhere to go stays, greyed, so the three keep
         their places. -#}
@@ -212,10 +204,12 @@
     {%- let area_price = listing.area_price() %}
     {%- let loan = listing.loan_amount() %}
     {%- if let Some(amount) = loan %}
-    {#- The price, and the bubble that opens the loan calculator (loan_controller.js): beside the
-        price, or, for a property on sale, on the line under it beside the bubble that says what a
-        square metre of it costs (area_price.html). Like that one, it opens a card under it, here
-        the calculator (loan_calculator.html); a tap outside or Escape closes it
+    {#- The price, as the canvas has it, on a line of its own; under it, a car's against its
+        model and year (car_price.html), a bubble; then "Llogarit kredinë" (loan_controller.js), a
+        grey pill the line's whole width, or, for a property on sale, half of it beside the pill
+        that says what a square metre of it costs (area_price.html): it opens the calculator
+        (loan_calculator.html) in a white box under it, in the page, the pill filled with the main
+        colour, its chevron up, while it is open; a tap outside or Escape closes it
         (dropdown_controller.js). -#}
     <div class="price-row{% if area_price.is_some() %} with-area{% endif %}">
       <p class="listing-price">{{ listing.price_main() }}{% let note = listing.price_note() %}{% if !note.is_empty() %}<span class="price-note">{% if car_page %}{{ listing.price_note_alone() }}{% else %}{{ note }}{% endif %}</span>{% endif %}{% include "price_drop.html" %}</p>
@@ -223,8 +217,9 @@
       {%- if let Some(car) = car_price %}{% include "car_price.html" %}{% endif %}
       <details class="bubble loan" data-controller="dropdown loan" data-loan-price-value="{{ amount }}" data-loan-currency-value="{{ listing.currency_symbol() }}" data-loan-down-percent-value="{{ LOAN_DOWN_PERCENT }}">
         <summary>
-          <svg data-icon="phone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01"/></svg>
+          <svg data-icon="calculator" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01"/></svg>
           {{ crate::t("Llogarit kredinë") }}
+          <svg class="loan-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CHEVRON_DOWN|safe }}</svg>
         </summary>
         <div class="bubble-card loan-card">
           <p class="bubble-title">{{ crate::t("Llogaritësi i kredisë") }}</p>
@@ -326,7 +321,8 @@
 {#- Where a property or a car is, under its seller: a map half as tall as the photos over it
     (listing.css), which loads as it comes near the screen (listing_map_controller.js). Its point
     is its place's, its town's for a zone without one of its own, so a circle round it says where
-    rather than a pin; the place's name over the map's top left. -#}
+    rather than a pin; the place's name over the map's top left, in a dark pill, as the canvas
+    labels its map. -#}
 <section class="listing-map-section" aria-label="{{ crate::t("Vendndodhja") }}"{% if aside %} data-map-aside-target="map"{% endif %}>
   {%- if car_page %}
   <h2>{{ crate::t("Lokacioni") }}</h2>
@@ -335,7 +331,7 @@
        data-listing-map-latitude-value="{{ map.latitude }}" data-listing-map-longitude-value="{{ map.longitude }}">
     <div class="map-canvas listing-map-canvas" data-listing-map-target="canvas"></div>
     {%- if !map.place.is_empty() %}
-    <p class="listing-map-place" translate="no">{% include "pin.svg" %}{{ map.place }}</p>
+    <p class="listing-map-place" translate="no">{{ map.place }}</p>
     {%- endif %}
   </div>
 </section>

@@ -5,16 +5,6 @@
 
 /* The words searched in place of misspelt ones take a line of their own, under the heading. */
 .search-corrections { margin: 0; color: var(--muted); }
-/* A category page's head: on a line of their own, pills the welcome page's size on every screen
-   (welcome.css, .shortcut; on a phone as there, below), after the back button and the way beyond
-   them: the category above it, quieter, a way up, and the page's own, filled as the row's buttons
-   are when set, the heading at the pill's size with a chevron, which shows the other categories at
-   its level as pills after it; under them, when it has any, its subcategories as pills like the
-   welcome page's. A listing's page has the back button and the first two (listing.html,
-   .listing-path), its category's pill a link. The line is the first of the browse page's head
-   (.browse-head, below), which the row of buttons shares on a wide screen. */
-.category-pills { min-width: 0; }
-.category-path { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
 /* The subcategories, a line of the head under the heading: one group, 8px apart; a search within a
    category has them under its heading alike. On a phone one line that slides sideways (below).
    Their pills as the canvas draws them, 40px tall, the words medium, 15px (14px on phones), each
@@ -22,13 +12,9 @@
 .subcategories { display: flex; flex-wrap: wrap; gap: var(--space-8); min-width: 0; }
 .subcategories .shortcut { min-height: var(--size-button-sm); gap: 7px; padding: 0 16px; font-size: .9375rem; line-height: 1.3; }
 .subcategories .shortcut-icon { width: 17px; height: 17px; }
-.category-up { color: var(--muted); }
-/* Back, and three levels down the way beyond the pills, before them: circles as tall as they are,
-   their icons the welcome page's size (20px; 18 on a phone), both plain, on the grey of secondary
-   controls with no outline: the chevron says back, the category's icon says where the other leads, and the
-   page's own pill after them is the line's one marked thing. (Back wore the page's colour's tint
-   once, as that pill does: one tinted thing more on a line with the search's circle beside it;
-   and the welcome page's house stood after it once, where the logo leads too.) */
+/* A listing's step buttons (listing.css, .listing-steps): circles on the grey of secondary
+   controls with no outline, their icons in the text's colour. (They were the back button and the
+   way beyond a path's pills once, a category's and a listing's.) */
 .back-button {
   --size: calc(1.55 * var(--text-md) + 1.4rem + 2px);
   display: flex;
@@ -48,15 +34,7 @@
 @media (hover: hover) {
   .back-button:hover { background: var(--surface-muted-hover); }
 }
-/* The path's icons, the welcome page's size (18px on a phone, below). The selected pill, the page's
-   own, filled with the main colour, its icon and name in its own, as a picked pill is. */
-.category-path .shortcut-icon,
 .back-button svg { width: 20px; height: 20px; }
-.category-path .shortcut.is-selected {
-  background: var(--main);
-  color: var(--on-main);
-}
-.category-path h1 { margin: 0; font: inherit; line-height: inherit; }
 
 /* Where a category page is, as the canvas draws it (browse.html, .breadcrumb): a line of words
    40px tall, the way back first, a chevron 40px wide to tap, then the category above, a link in the
@@ -143,28 +121,10 @@
     scrollbar-width: none;
   }
   .subcategories::-webkit-scrollbar { display: none; }
-  .category-path { --row-gap: .4rem; --column-gap: .4rem; }
   .subcategories .shortcut { position: relative; padding: 0 14px; font-size: 1rem; }
-  .shortcut.small { position: relative; gap: .4rem; padding: .45rem .85rem .45rem .7rem; font-size: .9375rem; }
-  .back-button { --size: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px); position: relative; }
-  .category-path .shortcut-icon,
+  .back-button { position: relative; }
   .back-button svg { width: 18px; height: 18px; }
-  /* Every pill of the path but the page's own is its icon alone, round and as tall as the back
-     button: the way up shows its category's icon, its name still the link's, for screen readers,
-     out of sight (a category's and a listing's alike). One without an icon keeps its name. */
-  .category-path .category-up:has(.shortcut-icon) {
-    flex: none;
-    justify-content: center;
-    width: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px);
-    height: calc(1.55 * .9375 * var(--text-md) + .9rem + 2px);
-    padding: 0;
-    gap: 0;
-    border-radius: 50%;
-    font-size: 0;
-  }
-  /* In the text's colour, as the house is. */
-  .category-path .category-up .shortcut-icon { color: var(--text); }
-  :is(.subcategories, .category-path) .shortcut::after,
+  .subcategories .shortcut::after,
   .back-button::after {
     content: "";
     position: absolute;

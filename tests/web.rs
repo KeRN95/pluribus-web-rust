@@ -2667,34 +2667,32 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("</svg>ABS</li>") && response.body.contains("</svg>Kondicioner</li>"));
     let order = positions(&response.body, &["<h2>Përshkrimi</h2>", "<h2>Detajet</h2>", r#"<section class="listing-options">"#, r#"<ul class="options">"#]);
     assert!(order.is_sorted(), "{order:?}");
-    // Its category in pills, as a category page's head has them, after a round back button that
-    // leads to its category without scripts, and no house (the logo leads to the welcome page):
-    // the category above it, quieter, a way up, and its own, filled, each with its icon and
-    // leading to its page.
+    // Where it is, as a category page says it and the canvas draws it: a line of words, the way
+    // back first, leading to its category without scripts, and no house (the logo leads to the
+    // welcome page), then the category above its own, quieter, and its own, each a link to its
+    // page.
     let path = positions(&response.body, &[
-        r#"<nav class="category-path listing-path" aria-label="Kategoria e njoftimit">"#,
-        r#"<a class="back-button" href="/c/makina" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#,
-        r#"<a class="shortcut small category-up" href="/c/automjete"><svg class="shortcut-icon""#,
-        r#"<a class="shortcut small is-selected" href="/c/makina"><svg class="shortcut-icon""#,
-        "Makina</a>",
+        r#"<nav class="breadcrumb listing-path" aria-label="Kategoria e njoftimit">"#,
+        r#"<a class="breadcrumb-back" href="/c/makina" aria-label="Kthehu" title="Kthehu" data-controller="back" data-action="back#go">"#,
+        r#"<a class="breadcrumb-up" href="/c/automjete">Automjete</a>"#,
+        r#"<span class="breadcrumb-sep" aria-hidden="true">›</span>"#,
+        r#"<a class="breadcrumb-here" href="/c/makina">Makina</a>"#,
     ]);
-    assert!(path[..4].is_sorted(), "{path:?}");
+    assert!(path.is_sorted(), "{path:?}");
     assert!(!response.body.contains("Faqja kryesore"));
     assert!(!response.body.contains("breadcrumbs"));
     let html = response.body.replace("&#38;", "&");
     assert!(html.contains("photo-1591230740238-e9a71182b67c?auto=format&fit=crop&w=1200"));
-    // Three levels down, a round way beyond the pills leads to the category above the way up, by
-    // its icon, as a category page's does.
+    // Three levels down, the category above its own and its own, as on a category page.
     sqlx::query("UPDATE listings SET category_id = (SELECT id FROM categories WHERE slug = 'gps-dhe-navigatore') WHERE public_no = 1001")
         .execute(&pool)
         .await
         .unwrap();
     let gps = get(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await.body;
     let path = positions(&gps, &[
-        r#"<a class="back-button" href="/c/gps-dhe-navigatore" aria-label="Kthehu""#,
-        r#"<a class="back-button" href="/c/automjete" aria-label="Automjete" title="Automjete"><svg"#,
-        r#"<a class="shortcut small category-up" href="/c/pjese-dhe-aksesore"><svg class="shortcut-icon""#,
-        r#"<a class="shortcut small is-selected" href="/c/gps-dhe-navigatore">"#,
+        r#"<a class="breadcrumb-back" href="/c/gps-dhe-navigatore" aria-label="Kthehu""#,
+        r#"<a class="breadcrumb-up" href="/c/pjese-dhe-aksesore">Pjesë / aksesorë</a>"#,
+        r#"<a class="breadcrumb-here" href="/c/gps-dhe-navigatore">GPS / navigatorë</a>"#,
     ]);
     assert!(path.is_sorted(), "{path:?}");
     assert!(!gps.contains("Faqja kryesore"));
@@ -2714,14 +2712,11 @@ async fn a_listing_steps_to_its_neighbours_on_its_categorys_page(pool: PgPool) {
     let to_golf = format!(r#"<a class="back-button step-button" href="{golf}" aria-label="Njoftimi i mëparshëm" title="Njoftimi i mëparshëm"><svg data-icon="chevron-left""#);
     let to_mercedes = format!(r#"<a class="back-button step-button" href="{mercedes}" aria-label="Njoftimi tjetër" title="Njoftimi tjetër"><svg data-icon="chevron-right""#);
     let page = html(pool.clone(), golf).await;
-    // Over the path, room for a banner, as tall on every listing (listing.css), so that stepping
-    // through them leaves the path and its buttons where they are: empty for now, kept for an ad.
-    let top = positions(&page, &[
-        r#"<article class="listing"#,
-        r#"<div class="listing-banner" aria-hidden="true"></div>"#,
-        r#"<div class="listing-tags" data-controller="fit">"#,
-    ]);
+    // The path at the page's top, as the canvas starts every listing (a banner's room stood over
+    // it once).
+    let top = positions(&page, &[r#"<article class="listing"#, r#"<div class="listing-tags">"#]);
     assert!(top.is_sorted(), "{top:?}");
+    assert!(!page.contains("listing-banner"));
     let steps = positions(&page, &[
         "Makina</a>",
         r#"<nav class="listing-steps" aria-label="Njoftimet e tjera">"#,
@@ -3140,7 +3135,7 @@ async fn a_property_or_a_car_shows_where_it_is_on_a_map_under_its_seller(pool: P
         let section = &page[map..map + page[map..].find("</section>").unwrap()];
         assert!(section.contains(r#"<div class="listing-map" data-controller="listing-map""#), "{section}");
         assert!(section.contains(r#"data-listing-map-latitude-value="41.328333" data-listing-map-longitude-value="19.818056""#), "{section}");
-        assert!(section.contains("</svg>Tiranë</p>"), "{section}");
+        assert!(section.contains(r#"<p class="listing-map-place" translate="no">Tiranë</p>"#), "{section}");
     }
     // A phone's page has none.
     assert!(!html(pool, "/listing/1005-iphone-13-128-gb-si-i-ri").await.contains("listing-map"));
@@ -4702,7 +4697,7 @@ async fn pills_chips_and_badges_are_grey_or_the_main_colour(pool: PgPool) {
         rule[..rule.find('}').unwrap()].to_string()
     };
     assert!(rule(".shortcut").contains("background:var(--surface-muted)"));
-    assert!(rule(".category-path .shortcut.is-selected").contains("background:var(--main)"));
+    assert!(rule(".breadcrumb-here").contains("color:var(--text)"));
     assert!(rule(".filter-chip").contains("background:var(--filter-on)"));
     let badge = rule(".badge");
     for part in ["height:1.5rem", "background:var(--surface-muted)", "color:var(--muted)"] {
@@ -5085,12 +5080,12 @@ async fn parts_say_which_vehicle_they_fit(pool: PgPool) {
     ])
     .await;
 
-    // The listing says it, under the same names, under its category's pills: the one above it, a
-    // way up, and its own, as the category's page has them.
+    // The listing says it, under the same names, under its category's breadcrumb: the one above
+    // it and its own, as the category's page has them.
     let page = get(pool.clone(), &url).await.body;
     positions(&page, &[
-        r#"<a class="shortcut small category-up" href="/c/pjese-dhe-aksesore">"#,
-        r#"<a class="shortcut small is-selected" href="/c/gps-dhe-navigatore">"#,
+        r#"<a class="breadcrumb-up" href="/c/pjese-dhe-aksesore">"#,
+        r#"<a class="breadcrumb-here" href="/c/gps-dhe-navigatore">"#,
     ]);
     for (label, value) in [("Marka e automjetit", "Volkswagen"), ("Modeli i automjetit", "Golf"), ("Nga viti", "2012"), ("Deri në vitin", "2019")] {
         assert!(page.contains(&format!(">{label}</dt>")), "{label}");
@@ -6738,7 +6733,7 @@ async fn moderators_review_listings_with_anothers_photos_and_suspend_accounts(po
     assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &besa).await.body.contains("Në pritje"));
     assert_eq!(get(pool.clone(), &copied).await.status, StatusCode::NOT_FOUND);
     // Besa's other listing, with a photo of her own, goes up.
-    post(besa.clone(), "Laptop i Besës", jpeg(70, 50)).await;
+    let laptop = post(besa.clone(), "Laptop i Besës", jpeg(70, 50)).await;
     assert_eq!(status("Laptop i Besës").await, "ACTIVE");
 
     // The moderators see why it waits, and the listing it took the photo from; refused, Besa
@@ -6759,6 +6754,10 @@ async fn moderators_review_listings_with_anothers_photos_and_suspend_accounts(po
     assert_eq!(post_form(pool.clone(), &format!("/moderim/perdorues/{besa_id}/pezullo"), &[("arsye", "mashtrim")], Some(&ana)).await.status, StatusCode::NOT_FOUND);
     post_form(pool.clone(), &format!("/moderim/perdorues/{besa_id}/pezullo"), &[("arsye", "mashtrim")], Some(&moderator)).await;
     assert_eq!(status("Laptop i Besës").await, "SUSPENDED");
+    // Its page says why to the moderators, the account's suspension rather than reports.
+    let seen = get_with_cookie(pool.clone(), &laptop, &moderator).await.body;
+    assert!(seen.contains("Ky njoftim nuk shfaqet në faqe: llogaria e shitësit është pezulluar."), "{seen}");
+    assert!(!seen.contains("disa njerëz e raportuan"));
     assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &besa).await.body.contains(r#"action="/hyr""#));
     let queue = get_with_cookie(pool.clone(), "/moderim", &moderator).await.body;
     assert!(queue.contains("Llogari të pezulluara") && queue.contains("Mashtrim · ") && queue.contains(&format!("/moderim/perdorues/{besa_id}/rikthe")), "{queue}");
@@ -6821,7 +6820,7 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     // the share, a link in a circle, and the report, beside the message (listing.css); then the
     // description and the details; then her other listings.
     let order = positions(&page, &[
-        r#"<nav class="category-path listing-path""#,
+        r#"<nav class="breadcrumb listing-path""#,
         r#"<div class="gallery">"#,
         r#"<p class="listing-meta">"#,
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",

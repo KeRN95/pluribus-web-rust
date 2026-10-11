@@ -359,6 +359,9 @@ Ky njoftim pret miratimin e moderatorëve.
 Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë.
 = This listing isn’t shown on the site: several people reported it, and the moderators will review it.
 
+Ky njoftim nuk shfaqet në faqe: llogaria e shitësit është pezulluar.
+= This listing isn’t shown on the site: the seller’s account is suspended.
+
 Moderatorët e hoqën këtë njoftim nga faqja: {}.
 = The moderators removed this listing from the site: {}.
 
