@@ -69,6 +69,16 @@ export default class extends Controller {
     if (item) this.go([...item.parentElement.children].indexOf(item));
   }
 
+  // One of a car's mosaic's tiles (listing.html, .mosaic-side): the slider goes to its photo; the
+  // one that says how many more there are shows the filmstrip of them all as well.
+  tile({ params: { index, more } }) {
+    this.go(index);
+    if (!more || !this.hasFilmstripTarget || !this.filmstripTarget.hidden) return;
+    this.filmstripTarget.hidden = false;
+    this.element.querySelector(".gallery-count")?.setAttribute("aria-expanded", "true");
+    this.update();
+  }
+
   // The counter clicked (the button over the photo): the filmstrip shows, the photo that shows
   // marked in it and its thumbnail brought into view, or hides again; the button says which.
   toggleThumbs(event) {

@@ -39,10 +39,10 @@ pub const GALLERY_SIZES: &str =
 /// (.listing-split, listing.css).
 pub const SPLIT_GALLERY_SIZES: &str =
     "(min-width: 992px) 541px, (min-width: 960px) calc((100vw - 4rem) * .5833), (min-width: 792px) 760px, calc(100vw - 2rem)";
-/// The same for a car's page, whose photos run across the page, which is 60rem at most from 960 px
-/// up (.listing-car, listing.css).
-pub const CAR_GALLERY_SIZES: &str =
-    "(min-width: 992px) 960px, (min-width: 960px) calc(100vw - 2rem), (min-width: 792px) 760px, calc(100vw - 2rem)";
+/// The same for a car's page, whose slider is the mosaic's first two thirds from 960 px up, the
+/// page 60rem at most and the rail beside it 88 px from 720 px up, the gutters 1rem (.listing-car,
+/// listing.css); the page's 760 px column under 960.
+pub const CAR_GALLERY_SIZES: &str = "(min-width: 1080px) 635px, (min-width: 960px) calc((100vw - 128px) * .6667), (min-width: 880px) 760px, (min-width: 720px) calc(100vw - 120px), calc(100vw - 2rem)";
 
 /// The down payment the loan calculator takes for given, as a percentage of the price
 /// (loan_calculator.html, loan_controller.js): what Albania's banks ask for a used car, which

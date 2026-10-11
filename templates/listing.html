@@ -147,10 +147,24 @@
     {%- endif %}
   </div>
   {% endif %}
+  {%- if car_page && photos.len() > 1 %}
+  {#- A car's photos as the canvas lays them out from 960 px up, a mosaic: the slider (above) the
+      first two thirds, and beside it the next two photos, one over the other, each going to its
+      photo in the slider; the second says how many more there are ("+4") and shows the filmstrip
+      of them all as well (slides_controller.js, tile). Under 960 px the slider alone. -#}
+  <div class="mosaic-side">
+    {%- for photo in photos.iter().skip(1).take(2) %}
+    <button type="button" class="mosaic-tile" data-action="slides#tile" data-slides-index-param="{{ loop.index }}"{% if loop.index == 2 && photos.len() > 3 %} data-slides-more-param="true"{% endif %} aria-label="{{ crate::t2("Foto {} nga {}", loop.index + 1, photos.len()) }}">
+      <img src="{{ photo.card_url }}" alt="" loading="lazy" decoding="async">
+      {%- if loop.index == 2 && photos.len() > 3 %}<span class="mosaic-more" aria-hidden="true">+{{ photos.len() - 3 }}</span>{% endif %}
+    </button>
+    {%- endfor %}
+  </div>
+  {%- endif %}
   {#- Over the photo's top corner, on one line: where it is and when it went up, the date in bold
-      ("Publikuar më" for screen readers). Its number is under the description. -#}
+      ("Publikuar më" for screen readers); a car's page says those in the line under its title. -#}
   {%- let published = listing.published_display() %}
-  {%- if listing.location_name.is_some() || published.is_some() %}
+  {%- if !car_page && (listing.location_name.is_some() || published.is_some()) %}
   <p class="listing-meta">
     {%- if let Some(location) = listing.location_name %}<span translate="no">{{ location }}</span>{% endif %}
     {%- if let Some((prefix, date)) = published %}{% if listing.location_name.is_some() %} · {% endif %}<span class="visually-hidden">{{ prefix }} </span><strong>{{ date }}</strong>{% endif -%}
@@ -179,8 +193,14 @@
         the make, the model, the engine, the year) heads the line under it. -#}
     <h1>{% if made %}{% if let Some(own) = listing.heading %}{{ own }}{% endif %}{% else %}{{ listing.title }}{% endif %}</h1>
     {#- What it is and in what state ("Në shitje · E përdorur"), and at the end of the line its
-        number, to name it on the phone. -#}
-    <p class="card-meta listing-kind">{% if made %}<span class="listing-variant">{{ listing.title }}</span> · {% endif %}{{ listing.kind_line() }} · <span class="listing-number">{{ crate::t("Numri i njoftimit") }}: {{ listing.public_no }}</span></p>
+        number, to name it on the phone; on a car's page, as the canvas has it, where it is and when
+        it went up before the number, which a photo's corner says on every other page, and the
+        number shorter ("Nr. 833042"). -#}
+    <p class="card-meta listing-kind">{% if made %}<span class="listing-variant">{{ listing.title }}</span> · {% endif %}{{ listing.kind_line() }}
+      {%- if car_page %}
+      {%- if let Some(location) = listing.location_name %} · <span translate="no">{{ location }}</span>{% endif %}
+      {%- if let Some((prefix, date)) = published %} · <span class="visually-hidden">{{ prefix }} </span>{{ date }}{% endif %} · <span class="listing-number">{{ crate::t1("Nr. {}", listing.public_no) }}</span>
+      {%- else %} · <span class="listing-number">{{ crate::t("Numri i njoftimit") }}: {{ listing.public_no }}</span>{% endif %}</p>
   </header>
   {%- if !facts.is_empty() %}
   {#- A car's key facts in a row under the title's hairline, as FINN has them (listings.rs,
@@ -189,7 +209,7 @@
   <dl class="key-facts">
     {%- for fact in facts %}
     <div class="key-fact">
-      {%- if let Some(icon) = fact.icon %}<svg class="key-fact-icon" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}
+      {%- if let Some(icon) = fact.icon %}<svg class="key-fact-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>{% endif %}
       <div class="key-fact-text"><dt>{{ crate::t(fact.label) }}</dt>{% for value in fact.values %}<dd>{{ fact.shown(value) }}</dd>{% endfor %}</div>
     </div>
     {%- endfor %}

@@ -359,6 +359,10 @@ Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do t
 Ky njoftim nuk shfaqet në faqe: llogaria e shitësit është pezulluar.
 = This listing isn’t shown on the site: the seller’s account is suspended.
 
+# A car's number, at the end of the line under its title.
+Nr. {}
+= No. {}
+
 Moderatorët e hoqën këtë njoftim nga faqja: {}.
 = The moderators removed this listing from the site: {}.
 

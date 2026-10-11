@@ -2629,16 +2629,18 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     assert!(response.body.contains("9\u{a0}500\u{a0}€"));
     // Each detail a pill, its icon before its value; its name for screen readers and as a
     // tooltip. The options, several, a pill each.
-    // Where and when it went up, in bold, over the photo, on one line: published two hours ago,
-    // "Sot" (format::when), or "Dje" in the first two hours of the day; its number at the end of
-    // the line under the title.
+    // Where and when it went up, on a car's page in the line under the title, as the canvas has
+    // it (over the photo's corner on every other page): published two hours ago, "Sot"
+    // (format::when), or "Dje" in the first two hours of the day; its number shorter at the end of
+    // that line.
     let now = time::OffsetDateTime::now_utc();
     let when = marketplace::format::when(now - time::Duration::hours(2), now);
-    assert!(response.body.contains(&format!(r#"<p class="listing-meta"><span translate="no">Tiranë</span> · <span class="visually-hidden">Publikuar </span><strong>{when}</strong>"#)));
-    assert!(response.body.contains(r#"<span class="listing-number">Numri i njoftimit: 1001</span></p>"#));
-    assert!(!response.body.contains("Nr. 1001"));
+    assert!(response.body.contains(&format!(r#" · <span translate="no">Tiranë</span> · <span class="visually-hidden">Publikuar </span>{when} · <span class="listing-number">Nr. 1001</span></p>"#)), "{}", response.body);
+    assert!(!response.body.contains(r#"<p class="listing-meta">"#) && !response.body.contains("Numri i njoftimit: 1001"));
+    // One photo: no mosaic, the slider alone.
+    assert!(!response.body.contains("mosaic-side"));
     // What kind of listing it is, and its condition, over the price, not among the details.
-    assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur · <span class="listing-number">"#));
+    assert!(response.body.contains(r#"<p class="card-meta listing-kind">Në shitje · E përdorur · <span translate="no">Tiranë</span>"#));
     assert!(!response.body.contains(">Gjendja</dt>"));
     // A car's page, laid out as FINN's: its key facts, the year, the mileage, the gearbox and the
     // fuel, in a row under the title, each with its icon and its name over its value; the rest of
@@ -2696,6 +2698,32 @@ async fn listing_page_shows_price_and_attributes(pool: PgPool) {
     ]);
     assert!(path.is_sorted(), "{path:?}");
     assert!(!gps.contains("Faqja kryesore"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn a_cars_photos_are_a_mosaic(pool: PgPool) {
+    // Four photos: from 960 px up the slider, and the next two beside it, each going to its photo
+    // in the slider, the second saying how many more there are and showing the filmstrip too.
+    for (at, name) in ["two", "three", "four"].into_iter().enumerate() {
+        sqlx::query(
+            "INSERT INTO listing_media (listing_id, media_type, status, storage_key, public_url, thumbnail_url, width_px, height_px, sort_order)
+             SELECT id, 'IMAGE', 'READY', $1, $2, $3, 1200, 900, $4 FROM listings WHERE public_no = 1001",
+        )
+        .bind(format!("test/{name}"))
+        .bind(format!("https://example.com/{name}.jpg"))
+        .bind(format!("https://example.com/{name}-card.jpg"))
+        .bind(at as i32 + 1)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+    let page = html(pool, "/listing/1001-volkswagen-golf-7-2016-nafte").await;
+    let side = &page[page.find(r#"<div class="mosaic-side">"#).expect("the mosaic's side")..];
+    let side = &side[..side.find("</div>").unwrap()];
+    assert_eq!(side.matches(r#"class="mosaic-tile""#).count(), 2, "{side}");
+    assert!(side.contains(r#"<button type="button" class="mosaic-tile" data-action="slides#tile" data-slides-index-param="1" aria-label="Foto 2 nga 4">"#), "{side}");
+    assert!(side.contains(r#"data-slides-index-param="2" data-slides-more-param="true" aria-label="Foto 3 nga 4">"#), "{side}");
+    assert!(side.contains(r#"<span class="mosaic-more" aria-hidden="true">+1</span>"#), "{side}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -6837,7 +6865,6 @@ async fn every_listing_shows_its_seller_and_their_profile_lists_their_listings(p
     let order = positions(&page, &[
         r#"<nav class="breadcrumb listing-path""#,
         r#"<div class="gallery">"#,
-        r#"<p class="listing-meta">"#,
         "<h1>Volkswagen Golf 7, 2016, naftë</h1>",
         r#"<p class="card-meta listing-kind">Në shitje · E përdorur · "#,
         r#"<dl class="key-facts">"#,
@@ -7329,7 +7356,7 @@ async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
     assert!(golf.contains("<dt>Mileage</dt><dd>148\u{a0}000\u{a0}km</dd>"), "{golf}");
     assert!(golf.contains(r#"<p class="card-meta listing-kind">For sale · Used ·"#), "{golf}");
     assert!(golf.contains(r#"<span class="button-label">Show number</span>"#) && golf.contains("<h2>Location</h2>"), "{golf}");
-    assert!(golf.contains("Listing number: 1001"), "{golf}");
+    assert!(golf.contains(r#"<span class="listing-number">No. 1001</span>"#), "{golf}");
 
     // Posting, signing in, the messages, the pages about the site, and a page that isn't there.
     let form = en("/shto").await.body;

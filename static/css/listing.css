@@ -226,19 +226,22 @@
    one made from what the car is (generated_title) heads the kind's line under it. Then, between
    two hairlines, the car's key facts in a row, each with its icon, its name quiet over its
    value. */
-.listing-car .listing-header h1 { margin-top: 0; font-size: 1.5rem; font-weight: calc(var(--heading-weight, var(--bold)) + 100); }
-.key-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1rem; margin: 1.25rem 0 0; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
-.key-fact { display: flex; align-items: center; gap: .6rem; min-width: 0; }
-.key-fact-icon { flex: none; width: 38px; height: 38px; color: var(--text); }
+.listing-car .listing-header h1 { margin-top: 0; }
+/* As the canvas has them: four to a line from 720 px up, two on a phone, each with its icon, 30px
+   (28px on a phone), its name 13px and muted over its value, semibold; between two hairlines, 16px
+   inside them (14px on a phone). */
+.key-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; margin: 0; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.key-fact { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.key-fact-icon { flex: none; width: 28px; height: 28px; color: var(--text); }
 .key-fact-text { display: grid; min-width: 0; }
-.key-fact dt { color: var(--muted); font-size: var(--text-sm); }
+.key-fact dt { color: var(--muted); font-size: .9286rem; }
 .key-fact dd { margin: 0; font-weight: var(--semibold); overflow-wrap: anywhere; }
 /* Room between the photos and the title, and a hairline under the kind's line, the page's one;
    "Lokacioni" over the map, as the description and the details have their headings. The price a
    phone's size on every screen (1.75rem; other pages' grow from 720 px up), and what qualifies it
    ("i diskutueshëm") on a line of its own under it, quietly. */
-.listing-car > .listing-side { margin-top: 1.075rem; }
-.listing-car .listing-header { padding-bottom: 1.05rem; border-bottom: 1px solid var(--border); }
+.listing-car > .listing-side { margin-top: 16px; }
+.listing-car .listing-header { padding-bottom: 14px; border-bottom: 1px solid var(--border); }
 .listing-car .listing-side > .listing-map-section { margin-top: 1.75rem; }
 .listing-car .listing-map-section > h2 { margin-top: 0; }
 .listing-car .price-note { display: block; margin-top: .3rem; color: var(--muted); font-size: var(--text-sm); font-weight: 400; }
@@ -254,8 +257,11 @@
 .options li { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .option-check { flex: none; color: var(--muted); }
 @media (min-width: 720px) {
-  .listing-car .listing-header h1 { font-size: 1.75rem; }
-  .key-facts { grid-template-columns: repeat(4, auto); justify-content: start; gap: 1rem 2.25rem; }
+  .listing-car > .listing-side { margin-top: 22px; }
+  .listing-car .listing-header { padding-bottom: 18px; }
+  .key-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 16px 0; }
+  .key-fact-icon { width: 30px; height: 30px; }
+  .key-fact dt { font-size: .8125rem; }
   .spec-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -293,8 +299,17 @@
      the buttons, a square as wide as the column. */
   .listing-car .listing-deal > .listing-map-section { margin-top: 1.5rem; }
   .listing-car .listing-deal .listing-map { aspect-ratio: 1; height: auto; }
+  /* The mosaic, as the canvas has it: the slider two thirds of the page, 430px tall, its photo
+     filling it, and the next two photos beside it, one over the other, 8px apart; the heart and
+     the views over the slider's corner (the side's third and the gap to their right). One photo
+     alone takes the whole width, whole in its frame. */
   .listing-car .listing-media .gallery-photo,
-  .listing-car .listing-media .listing-photo { aspect-ratio: 4 / 3; height: auto; max-height: calc(100vh - var(--size-header) - 8.5rem - 1px); }
+  .listing-car .listing-media .listing-photo { aspect-ratio: auto; height: 430px; max-height: none; }
+  .listing-car .listing-media:has(.mosaic-side) { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
+  .listing-car .listing-media:has(.mosaic-side) .gallery-photo img:not(.gallery-backdrop) { object-fit: cover; }
+  .listing-car .listing-media:has(.mosaic-side) .heart { right: calc((100% - 8px) / 3 + 8px + var(--over-edge) - .3rem); }
+  .listing-car .listing-media:has(.mosaic-side) .listing-views { right: calc((100% - 8px) / 3 + 8px + var(--over-edge) + var(--over-photo) + .4rem); }
+  .mosaic-side { display: grid; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px; height: 430px; }
   .listing-car .listing-side { grid-template-columns: minmax(0, 1fr) 21rem; column-gap: 2rem; }
   .listing-car .listing-side > * { grid-column: 1; max-width: none; }
   .listing-car .listing-side > .listing-deal { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; grid-row: 1 / span 40; align-self: start; }
@@ -325,11 +340,18 @@
   .listing-car .listing-deal .seller-card > .actions,
   .listing-car .listing-deal > .actions { margin-top: .75rem; }
 }
-/* Where a car's page is narrower than its 60rem (under 1024 px), its key facts closer together, so
-   that the four keep their line whole beside the deal's 21rem column. */
-@media (min-width: 960px) and (max-width: 1023px) {
-  .key-facts { column-gap: 1.25rem; }
+/* A car's photos 4:3 under 960 px, as the canvas has them on a phone; the mosaic's side only from
+   960 px up (above): its tiles round as the slider is, each photo filling its own, the second
+   darkened under how many more there are, white, 22px bold. */
+@media (max-width: 959px) {
+  .listing-car .listing-media .gallery-photo { aspect-ratio: 4 / 3; }
+  .mosaic-side { display: none; }
 }
+.mosaic-tile { position: relative; min-height: 0; padding: 0; border: 0; border-radius: var(--radius); overflow: hidden; background: var(--surface-muted); cursor: pointer; }
+.mosaic-tile:only-child { grid-row: 1 / -1; }
+.mosaic-tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mosaic-more { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(27 27 27 / 45%); color: #fff; font-size: 1.375rem; font-weight: var(--bold); }
+.mosaic-tile:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
 
 .listing-photo {
   display: block;
@@ -582,7 +604,7 @@
 /* The price is the headline, as the canvas has it: 32px, a step bolder than the headings (800 to
    their 700, or a step over the weight being tried, base.css), 30px on a phone, the title over
    it. */
-.listing-header h1 { margin: .75rem 0 .35rem; font-size: var(--text-2xl); }
+.listing-header h1 { margin: .75rem 0 .35rem; font-size: 1.714rem; letter-spacing: -.02em; line-height: 1.25; }
 .listing-price { margin: 0; font-size: 2.143rem; line-height: 1.15; font-weight: calc(var(--heading-weight, var(--bold)) + 100); letter-spacing: -.02em; }
 @media (min-width: 720px) {
   .listing-price { font-size: 2rem; }
@@ -960,7 +982,7 @@
 @media (min-width: 720px) {
   .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem 1rem; }
   h1 { font-size: var(--text-3xl); }
-  .listing-header h1 { font-size: var(--text-2xl); }
+  .listing-header h1 { font-size: 1.75rem; }
   .listing-price { font-size: var(--text-3xl); }
 }
 
