@@ -780,7 +780,10 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    logo's typeface alone, drawn as the font's shapes (logo.svg) so that no font loads for it and
    its i's dot can take a colour of its own: the letters in the text's colour, the dot in the
    accent, with a dark edge inside it on the light theme, where mint or lime alone hardly shows on
-   white (--logo-edge, transparent on the dark theme). The drawing is the font's
+   white (--logo-edge, transparent on the dark theme). The inside of its b is in the accent too, as
+   the user asked on 2026-10-11 (.logo-counter): the b's counter drawn again under the letters,
+   grown by its line all round, so that no hairline of the bar shows at its edge; the letters
+   round it set it off on white with no edge of its own. The drawing is the font's
    line, ascender to descender, 1.14em tall and 4.126em wide: at 26px, 107 x 30, and on phones at
    24px, 99 x 27, in pixels, as the round buttons beside it set the bar's height. (The site's icon,
    in the tab and on home screens, is its p, light on eerie black, the mint square over it.) The
@@ -798,13 +801,15 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 .logo-mark { display: block; width: 4.126em; height: 1.14em; }
 .logo-dot { fill: var(--highlight); transition: fill .45s ease; }
 .logo-dot-edge { stroke: var(--logo-edge); transition: stroke .45s ease; }
+.logo-counter { fill: var(--highlight); stroke: var(--highlight); transition: fill .45s ease, stroke .45s ease; }
 @media (max-width: 719px) {
   .logo { font-size: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .logo,
   .logo-dot,
-  .logo-dot-edge { transition: none; }
+  .logo-dot-edge,
+  .logo-counter { transition: none; }
 }
 
 .search {
