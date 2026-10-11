@@ -205,14 +205,21 @@
    two hairlines, the car's key facts in a row, each with its icon, its name quiet over its
    value. */
 .listing-car .listing-header h1 { margin-top: 0; }
-/* As the canvas has them: four to a line from 720 px up, two on a phone, each with its icon, 30px
-   (28px on a phone), its name 13px and muted over its value, semibold; between two hairlines, 16px
-   inside them (14px on a phone). */
+/* As the canvas has them: four to a line from 720 px up, two on a phone, each with its icon, 36px
+   (32px on a phone) in a box of its own, so that every name starts at the same distance from its
+   column's edge, its lines 2px whatever its size (the stroke set here, over the drawing's 1.6 at
+   30px), its name 12px and muted over its value, semibold, 8px from the icon's box (its drawing
+   keeps 2px or 3px inside it); the four 8px apart from 720px up (12px before, as on a phone), so
+   that a value as wide as "446 000 km" or "I pamobiluar", 93px and 95px, keeps to one line in the
+   592px column at 1280px; between two hairlines, 16px inside them (14px on a phone). The icon
+   bigger and the name smaller since
+   2026-10-11, the user's ask: "make it more uniform. Make logo bigger, name smaller and the value
+   to be left as is". */
 .key-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; margin: 0; padding: 14px 0; border-bottom: 1px solid var(--border); }
-.key-fact { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.key-fact-icon { flex: none; width: 28px; height: 28px; color: var(--text); }
+.key-fact { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.key-fact-icon { flex: none; width: 32px; height: 32px; stroke-width: 1.5; color: var(--text); }
 .key-fact-text { display: grid; min-width: 0; }
-.key-fact dt { color: var(--muted); font-size: .9286rem; }
+.key-fact dt { color: var(--muted); font-size: .75rem; }
 .key-fact dd { margin: 0; font-weight: var(--semibold); overflow-wrap: anywhere; }
 /* Room between the photos and the title, and a hairline under the kind's line, the page's one;
    "Lokacioni" over the map, as the description and the details have their headings. The price a
@@ -236,9 +243,8 @@
 @media (min-width: 720px) {
   .listing-car > .listing-side { margin-top: 22px; }
   .listing-car .listing-header { padding-bottom: 18px; }
-  .key-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 16px 0; }
-  .key-fact-icon { width: 30px; height: 30px; }
-  .key-fact dt { font-size: .8125rem; }
+  .key-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 16px 0; }
+  .key-fact-icon { width: 36px; height: 36px; stroke-width: 1.35; }
   .spec-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
