@@ -118,6 +118,13 @@ Të veçuara
 Të promovuara · Si?
 = Promoted · How?
 
+# "Të veçuara"'s note (browse.html): the two parts, the second underlined.
+Të promovuara
+= Promoted
+
+Si?
+= How?
+
 Rendit
 = Sort
 

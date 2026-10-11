@@ -759,7 +759,7 @@ async fn pages_that_find_nothing_offer_ways_on(pool: PgPool) {
     // Words that find nothing: how to search for more, and a wanted ad for what no one sells yet.
     let page = get(pool.clone(), "/search?q=xyzzyqqq").await.body;
     assert!(page.contains("Nuk u gjet asnjë njoftim.") && page.contains("Kontrollo si i ke shkruar fjalët"), "{page}");
-    assert!(page.contains(r#"<a class="button secondary" href="/shto">Shto një njoftim „Kërkoj të blej“</a>"#));
+    assert!(page.contains(r#"<a class="button secondary" href="/shto"><svg"#) && page.contains("</svg>Shto një njoftim „Kërkoj të blej“</a>"));
     // An empty category, with no words searched, says neither.
     let empty = get(pool.clone(), "/c/aparate-fotografike").await.body;
     assert!(empty.contains("Nuk u gjet asnjë njoftim.") && !empty.contains("Kontrollo si i ke shkruar") && !empty.contains("Shto një njoftim „Kërkoj të blej“"));
@@ -1360,7 +1360,7 @@ async fn prona_shows_big_cards_until_the_visitor_chooses_small_ones_there(pool: 
 /// (ROW_SIZES).
 const SMALL_SIZES: &str = "(min-width: 1100px) 255px, (min-width: 960px) calc((100vw - 80px) / 4), (min-width: 724px) calc((100vw - 64px) / 3), (min-width: 720px) calc((100vw - 48px) / 2), calc((100vw - 38px) / 2)";
 const BIG_SIZES: &str = "(min-width: 1100px) 522px, (min-width: 960px) calc((100vw - 56px) / 2), (min-width: 720px) 640px, (min-width: 588px) 560px, calc(100vw - 28px)";
-const LIST_SIZES: &str = "(min-width: 720px) 194px, 123px";
+const LIST_SIZES: &str = "(min-width: 720px) 240px, 116px";
 const ROW_SIZES: &str = "(min-width: 720px) 236px, 180px";
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -1664,7 +1664,8 @@ async fn nothing_found_offers_what_would_find_more(pool: PgPool) {
     assert!(page.contains("Nuk u gjet asnjë njoftim."));
     assert!(page.contains(r#"<p class="empty">Provo të heqësh ndonjë filtër nga lart.</p>"#));
     assert!(page.contains(r#"<a class="button secondary" href="/c/makina?lat=42.06813&lng=19.51214&radius=25&vehicle_fuel=DIESEL">Zgjero largësinë në 25 km</a>"#));
-    assert!(page.contains(r#"<a class="button secondary" href="/c/makina?vehicle_fuel=DIESEL" data-forget-town data-turbo-prefetch="false">Kërko në gjithë Shqipërinë</a>"#));
+    assert!(page.contains(r#"<a class="button secondary" href="/c/makina?vehicle_fuel=DIESEL" data-forget-town data-turbo-prefetch="false"><svg"#));
+    assert!(page.contains("</svg>Kërko në gjithë Shqipërinë</a>"));
     let wider = html(pool.clone(), "/c/makina?lat=42.06813&lng=19.51214&radius=25").await;
     assert!(wider.contains("Zgjero largësinë në 50 km</a>") && !wider.contains("Provo të heqësh"));
     let widest = html(pool.clone(), "/c/makina?lat=42.06813&lng=19.51214&radius=50").await;
@@ -6442,7 +6443,7 @@ async fn moderators_promote_listings_which_show_more_until_their_time(pool: PgPo
     let cars = get(pool.clone(), "/c/makina").await.body;
     assert_eq!(featured_numbers(&cars), vec![1001]);
     assert!(cars.contains(r#"<article class="card" id="featured-1001">"#), "{cars}");
-    assert!(cars.contains(r#"<a class="row-note" href="/promovo">Të promovuara · Si?</a>"#));
+    assert!(cars.contains(r#"<a class="row-note" href="/promovo">Të promovuara · <span class="row-note-how">Si?</span></a>"#));
     assert_eq!(result_numbers(&cars), vec![1001, 1002]);
     assert_eq!(featured_numbers(&get(pool.clone(), "/search?q=golf").await.body), vec![1001]);
     assert!(featured_numbers(&get(pool.clone(), "/search?q=mercedes").await.body).is_empty());
@@ -7138,7 +7139,7 @@ async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
     let vehicles = en("/c/automjete").await.body;
     assert!(vehicles.contains("2016 · 148\u{a0}000\u{a0}km · Diesel</p>"), "{vehicles}");
     let nothing = en("/search?q=xyzzyqqq").await.body;
-    assert!(nothing.contains(r#"<p class="empty">No listings found.</p>"#), "{nothing}");
+    assert!(nothing.contains(r#"<p class="empty empty-title">No listings found.</p>"#), "{nothing}");
     // A pin's filter, its chip and its note; the order's name.
     let near = en("/c/makina?lat=41.32833&lng=19.81806&radius=5&sort=price_asc").await.body;
     assert!(near.contains(r#"aria-label="Remove filter: Within 5 km of the pin">"#) && near.contains(r#"<h2 class="results-heading" id="results-heading">Lowest-priced listings</h2>"#), "{near}");

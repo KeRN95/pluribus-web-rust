@@ -23,9 +23,10 @@
 /* How many listings a search found in a category, after its name, quieter. */
 .chip-count { margin-left: .2rem; color: var(--muted); font-weight: var(--regular); }
 
-/* Two columns on every phone; as many as fit on wider screens. The cards have no box, so the
-   space between rows, clearly more than inside a card, is what keeps each one together. */
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem .75rem; }
+/* Two columns on every phone; as many as fit on wider screens, four on the page's column. The cards
+   have no box, so the space between rows, clearly more than between columns, is what keeps each
+   one together: 22px and 16px, as the design system has the grid (18px and 12px on phones). */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px var(--space-12); }
 
 /* A row of the same cards that slides sideways (card_row.html): the welcome page's "Shikuar së
    fundmi" and "Më të klikuarat", a category's, a seller's other listings. As the design system
@@ -498,133 +499,101 @@
   .cards-big .results .card-step::before { transition: none; }
 }
 
-/* The list (the view menu): a line each, one under another, the whole of the page's width. The
-   photo at the line's left, square, its first alone, 8.8rem on a phone and 12.1rem wider (a tenth
-   more than the 8rem and 11rem it had, the lines widened); beside it at the top the price, in the
-   text's colour and a size bigger as nothing is under it, under it where it is, the pin and the
-   town, small and muted (.card-place, which the cards leave out; the details line's own town,
-   .card-town, goes in its place), then the title on up to two lines, and at the foot, level with
-   the photo's bottom, the details line and, at its right, when it was posted (.card-when, which
-   the cards leave out). The heart at the top right, on the page, the text's colour with no
-   circle, as no photo is under it. The photo's box (.card-media) gives its parts to the card's
-   own grid, its shades and the seller over the photo left out. */
+/* The list (the view menu), as the canvas draws it: one listing a white box (the surface, rounder
+   corners, the soft shadow), 12px apart, the whole of the page's width. In it the photo at the
+   left, its first alone, 240 by 180 with corners of 12px (a square of 116px on phones), the price
+   on it at its foot over the shade and the heart white at its top right, as a card's are; beside
+   it the title (17px semibold; 15px on up to two lines on phones), the details line under it,
+   muted (its town left out, .card-town), the start of the description, two lines at most (none on
+   phones), and at the foot where it is and when it was posted, muted, "Blloku, Tiranë · Dje"
+   (.card-place and .card-when, which the cards leave out). The photo's box (.card-media) gives its
+   parts to the card's own grid, the seller over the photo left out. */
 .card-when,
 .card-place { display: none; }
-.cards-list .results .grid { grid-template-columns: minmax(0, 1fr); row-gap: 1.25rem; }
+.cards-list .results .grid { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-12); }
 .cards-list .results .card {
   display: grid;
-  grid-template-columns: 8.8rem minmax(0, 1fr) auto;
-  grid-template-rows: auto auto auto 1fr auto;
-  column-gap: .85rem;
+  grid-template-columns: 240px auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-areas: "photo title title" "photo summary summary" "photo description description" "photo place when";
+  column-gap: 18px;
+  row-gap: 6px;
+  /* As tall as the photo, which sets it, the foot's row taking what the words over it leave (its
+     least 0: spanning a flexible row at its least auto, the photo would stretch the rows); the words
+     beside it, two lines of title and of description at most, fit in its height at every text
+     size. */
+  height: calc(180px + 24px);
+  padding: 12px;
+  border-radius: var(--radius-box);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
-@media (min-width: 720px) {
-  .cards-list .results .card { grid-template-columns: 12.1rem minmax(0, 1fr) auto; column-gap: 1.1rem; }
-}
-.cards-list .results .card-media { display: contents; }
-.cards-list .results .card-media::before,
-.cards-list .results .card-media::after { content: none; }
-.cards-list .results .card-slides,
-.cards-list .results .card-media > .card-photo {
-  grid-column: 1;
-  grid-row: 1 / -1;
+.cards-list .results .card::before { content: none; }
+.cards-list .results :is(.card-media, .card-body) { display: contents; }
+.cards-list .results .card-media::before { content: none; }
+.cards-list .results :is(.card-slides, .card-media > .card-photo),
+.cards-list .results .card-media::after {
+  grid-area: photo;
   align-self: start;
-  height: auto;
+  width: 240px;
+  height: 180px;
   min-height: 0;
-  aspect-ratio: 1;
+  border-radius: 12px;
 }
-.cards-list .results .card-media .card-price {
-  grid-area: 1 / 2;
-  align-self: start;
-  z-index: auto;
-  padding: .1rem 0 0;
-  color: var(--text);
-  font-size: var(--text-md);
-  font-weight: var(--bold);
-  text-shadow: none;
-}
-/* Off the photo, the old price is the muted text's. */
-.cards-list .results .card-was { color: var(--muted); opacity: 1; }
-.cards-list .results :is(.card-drop, .card-bargain) { margin-left: 0; background: var(--below-bg); color: var(--below); }
-/* Where it is, under the price: the pin the size of its letters, in their muted colour. */
-.cards-list .results .card-media .card-place {
-  display: flex;
-  grid-area: 2 / 2;
-  gap: .2em;
-  align-items: center;
-  margin: 0;
-  padding: .15rem 0 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: var(--text-xs);
-  line-height: 1.4;
-  white-space: nowrap;
-}
-.cards-list .results .card-place .pin-icon { flex: none; width: 1em; height: 1em; margin: 0; color: inherit; vertical-align: 0; }
+.cards-list .results .card-slides { overflow: hidden; }
+.cards-list .results .card-slides .card-photo { border-radius: 0; }
+.cards-list .results .card-media .card-price { grid-area: photo; align-self: start; max-width: 240px; height: 180px; align-items: flex-end; }
+.cards-list .results .card-media .heart { grid-area: photo; align-self: start; justify-self: end; }
+.cards-list .results :is(.card-seller, .card-dots, .card-step) { display: none; }
+.cards-list .results .card-head { grid-area: title; padding: 4px 8px 0 0; }
+.cards-list .results .card-title { display: -webkit-box; overflow: hidden; font-size: 1.0625rem; font-weight: var(--semibold); line-height: 1.3; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.cards-list .results .card-summary { grid-area: summary; margin: 0; overflow: hidden; color: var(--muted); font-size: .875rem; text-overflow: ellipsis; white-space: nowrap; }
+.cards-list .results .card-summary:empty { display: none; }
 .cards-list .results .card-town { display: none; }
-.cards-list .results .card-head { grid-area: 3 / 2; padding: .2rem 0 0; }
-.cards-list .results .card-title {
+/* The start of the description under them, two lines at most, ending in "…" when it has more: the
+   card opens the listing for the rest. Only in the list, and not on phones. */
+.card-description { display: none; }
+.cards-list .results .card-description {
   display: -webkit-box;
-  font-size: var(--text-sm);
-  font-weight: var(--regular);
-  white-space: normal;
+  grid-area: description;
+  align-self: start;
+  max-height: 3.1em; /* two lines, which the grid's rows also go by (a clamp alone, they don't) */
+  margin: 2px 0 0;
+  padding-right: 8px;
+  overflow: hidden;
+  font-size: .875rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
 }
-/* The start of the description under the title, muted and a touch smaller than the details
-   line, three lines at most, ending in "…" when it has more: the card opens the listing for
-   the rest. Only in the list. */
-.card-description { display: none; }
-.cards-list .results .card-description {
-  display: -webkit-box;
-  grid-area: 4 / 2 / 5 / 4;
-  align-self: start;
-  margin: 0;
-  padding: .3rem 0 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: calc(var(--text-xs) * .93);
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-}
-@media (min-width: 720px) {
-  .cards-list .results .card-description { font-size: var(--text-xs); }
-}
-.cards-list .results .card-media .heart { grid-area: 1 / 3 / 3 / 4; margin: -.45rem -.45rem 0 0; padding: 0; }
-.cards-list .results .heart-button { --circle: 2rem; --reach: .3rem; color: var(--text); }
-.cards-list .results .heart-button::before { background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.cards-list .results .heart-button svg { width: 19px; height: 19px; stroke: var(--text); stroke-width: 2.2; filter: none; }
-.cards-list .results .heart-button[aria-pressed="true"] svg { fill: var(--red); stroke: var(--red); stroke-width: 2.2; }
-@media (hover: hover) {
-  .cards-list .results .heart-button:hover::before { background: var(--surface-muted); }
-}
-.cards-list .results .card-body {
-  flex-direction: row;
-  grid-area: 5 / 2 / 6 / 4;
-  align-items: baseline;
-  gap: .75rem;
-  padding: .5rem 0 .1rem;
-}
-/* In the list the details line is a pill of no colour, as wide as its words: the surface, the
-   menus' hairline; none when there is nothing to say. */
-.cards-list .results .card-summary {
-  flex: 0 1 auto;
-  min-width: 0;
-  margin: 0;
-  padding: .1rem .55rem;
-  border: 1px solid var(--menu-border);
-  border-radius: 999px;
-  background: var(--surface);
-  font-size: var(--text-xs);
-}
-.cards-list .results .card-summary:empty { display: none; }
-.cards-list .results .card-when { display: block; flex: none; margin: 0 0 0 auto; color: var(--muted); font-size: var(--text-xs); }
-@media (min-width: 720px) {
-  .cards-list .results .card-summary,
-  .cards-list .results .card-when { font-size: var(--text-sm); }
+.cards-list .results :is(.card-media .card-place, .card-when) { display: block; align-self: end; margin: 0; padding-bottom: 4px; overflow: hidden; color: var(--muted); font-size: .8125rem; text-overflow: ellipsis; white-space: nowrap; }
+.cards-list .results .card-media .card-place { grid-area: place; }
+.cards-list .results .card-place .pin-icon { display: none; }
+/* Its own column, after the place's, the columns' gap taken back so that the two read as one line. */
+.cards-list .results .card-when { grid-area: when; margin-left: -18px; }
+.cards-list .results .card:has(.card-place) .card-when::before { content: "\00a0·\00a0"; }
+@media (max-width: 719px) {
+  .cards-list .results .grid { row-gap: 10px; }
+  .cards-list .results .card {
+    grid-template-columns: 116px auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: "photo title title" "photo summary summary" "photo place when";
+    column-gap: var(--space-12);
+    row-gap: 3px;
+    height: calc(116px + 20px);
+    padding: 10px;
+  }
+  .cards-list .results :is(.card-slides, .card-media > .card-photo),
+  .cards-list .results .card-media::after { width: 116px; height: 116px; }
+  .cards-list .results .card-media .card-price { max-width: 116px; height: 116px; padding: 0 8px 6px; font-size: 1rem; }
+  .cards-list .results .card-head { padding: 2px 0 0; }
+  .cards-list .results .card-title { font-size: 1.0714rem; }
+  .cards-list .results .card-summary { font-size: .9286rem; }
+  .cards-list .results .card-description { display: none; }
+  .cards-list .results :is(.card-media .card-place, .card-when) { padding-bottom: 2px; font-size: .9286rem; }
+  .cards-list .results .card-when { margin-left: calc(-1 * var(--space-12)); }
 }
 
 /* The location pin (templates/pin.svg), on a listing's map and beside "Afër meje" and
@@ -669,6 +638,9 @@
 .listing-meta strong { font-weight: var(--semibold); }
 .more { display: inline-block; padding: 1rem; color: var(--muted); }
 .empty { color: var(--muted); }
+/* "Shfaq më shumë", the next page's link while it loads or without scripts (next_page.html): a grey
+   button in the middle, as the design system has secondary buttons. */
+.more { display: inline-flex; align-items: center; justify-content: center; min-height: var(--size-button); margin-top: 8px; padding: 0 20px; border-radius: var(--radius-pill); background: var(--surface-muted); color: var(--text); font-size: .9375rem; font-weight: var(--semibold); text-decoration: none; }
 /* The page not found and the error's (not_found.html, error.html): why, then a search in every
    category, as wide as a line reads well, and the ways home and to posting. */
 .not-found { max-width: 40rem; }

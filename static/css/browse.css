@@ -186,7 +186,7 @@
    row (10px and 12px on phones). What the row opens is placed by the head (position: relative;
    below), under it. The chips of the categories a search found listings in (.categories,
    page.css) are a line of the head too. */
-.browse-head { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); row-gap: var(--space-12); margin: 0 0 1rem; }
+.browse-head { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); row-gap: var(--space-12); margin: 0; }
 .browse-head > :is(.subcategories, .categories, .browse-tools) { margin-top: 2px; }
 .browse-head > .categories { padding: 0 0 .25rem; }
 @media (max-width: 719px) {
@@ -297,7 +297,15 @@
    how one is. */
 .row-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
 .row-head h2 { min-width: 0; }
-.row-note { flex: none; color: var(--muted); font-size: var(--text-sm); }
+.row-note { flex: none; color: var(--muted); font-size: var(--text-sm); text-decoration: none; }
+.row-note-how { text-decoration: underline; text-underline-offset: 2px; }
+/* The rows over the results, "Të veçuara" and "Më të klikuarat", as the canvas has a browse page's
+   sections: 26px under the head and apart, each under a section title, 22px bold (19px on
+   phones, a rem being 14px there), 12px over its cards. */
+.browse > :is(.featured-row, .most-viewed) { margin-top: 26px; }
+.featured-row > .row-head { margin: 0 0 12px; }
+:is(.featured-row > .row-head, .most-viewed) > h2 { margin: 0; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
+.most-viewed > h2 { margin-bottom: 12px; }
 .filters-close {
   padding: .4rem .9rem;
   border: 1px solid var(--menu-border);
@@ -671,8 +679,22 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
 }
 
 /* Nothing found: what would find more, buttons under the words. */
-.empty-state { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-.empty-state .empty { flex-basis: 100%; margin: 0 0 .25rem; }
+/* Nothing found, as the canvas has it: a white box, 56px under the head (28px on phones), its
+   words in the middle: a magnifier in a grey circle of 64px, that nothing was found, semibold and
+   a size up, what would find more under it, muted, and the buttons that would, grey, side by
+   side and wrapping. */
+/* Over it, the results' heading is for screen readers alone, the box saying what there is. */
+.results:has(> .empty-state) .results-head { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 56px; padding: 48px 24px; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); text-align: center; }
+.empty-icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: var(--radius-pill); background: var(--surface-muted); color: var(--muted); }
+.empty-state .empty { max-width: 460px; margin: 0; line-height: 1.55; }
+.empty-state .empty-title { color: var(--text); font-size: 1.0625rem; font-weight: var(--semibold); }
+.empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-8); margin-top: 6px; }
+.empty-actions:empty { display: none; }
+.empty-actions .button svg { flex: none; width: 18px; height: 18px; margin: 0; color: inherit; }
+@media (max-width: 719px) {
+  .empty-state { margin-top: 28px; padding: 32px 20px; }
+}
 /* "Shfaq N njoftime" brings the results' heading to the top, clear of the sticky header. */
 .results-heading { scroll-margin-top: 5rem; }
 

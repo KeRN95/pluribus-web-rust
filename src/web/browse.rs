@@ -140,7 +140,7 @@ impl Cards {
     /// 1rem in from the screen's sides, a rem 14px on a phone): a column of the grid, two on a
     /// phone, three from 724px, four from 960px, .75rem apart on a phone and 1rem wider; for a big
     /// card the line, no wider than 40rem, and half of it, less 1.5rem between them, from 960px; in
-    /// the list, the photo at the line's left, 8.8rem on a phone and 12.1rem wider. In pixels: a sizes
+    /// the list, the photo at the line's left, 240px wide and 116px on a phone. In pixels: a sizes
     /// attribute's rem is always 16px. Just what the cards are, so that a phone's browser doesn't
     /// take a copy bigger than its screen needs: Safari takes the first copy as sharp as the screen
     /// at least, and on an iPhone took the middle one for every small card when this said half the
@@ -149,7 +149,7 @@ impl Cards {
         match self {
             Cards::Small => "(min-width: 1100px) 255px, (min-width: 960px) calc((100vw - 80px) / 4), (min-width: 724px) calc((100vw - 64px) / 3), (min-width: 720px) calc((100vw - 48px) / 2), calc((100vw - 38px) / 2)",
             Cards::Big => "(min-width: 1100px) 522px, (min-width: 960px) calc((100vw - 56px) / 2), (min-width: 720px) 640px, (min-width: 588px) 560px, calc(100vw - 28px)",
-            Cards::List => "(min-width: 720px) 194px, 123px",
+            Cards::List => "(min-width: 720px) 240px, 116px",
         }
     }
 }

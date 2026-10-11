@@ -312,7 +312,7 @@
   <section class="featured-row" data-controller="drag-row" aria-labelledby="featured-heading">
     <div class="row-head">
       <h2 id="featured-heading">{{ crate::t("Të veçuara") }}</h2>
-      <a class="row-note" href="/promovo">{{ crate::t("Të promovuara · Si?") }}</a>
+      <a class="row-note" href="/promovo">{{ crate::t("Të promovuara") }} · <span class="row-note-how">{{ crate::t("Si?") }}</span></a>
     </div>
     {% call rows::card_row(page) %}
   </section>
@@ -346,19 +346,22 @@
     {%- endif %}
     </div>
 
-    {% include "listing_grid.html" %}
     {%- if page.cards.is_empty() %}
-    {#- Nothing found: what would find more, a tap away: a wider circle round the map's point, the
-        whole town rather than its zone, or all of Albania; and the chips above, each a filter less.
-        Words searched found nothing: how to search for more, and a wanted ad for what no one sells
-        yet (the posting form's "Kërkoj të blej"). -#}
+    {#- Nothing found, in a white box as the canvas has it: a magnifier in a grey circle, that
+        nothing was found, then what would find more, a tap away: the chips above, each a filter
+        less; words searched found nothing: how to search for more; and as buttons, a wider circle
+        round the map's point, the whole town rather than its zone, all of Albania, and a wanted
+        ad for what no one sells yet (the posting form's "Kërkoj të blej"). -#}
     <div class="empty-state">
+      <span class="empty-icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+      <p class="empty empty-title">{{ crate::t("Nuk u gjet asnjë njoftim.") }}</p>
       {%- if on > 0 %}
       <p class="empty">{{ crate::t("Provo të heqësh ndonjë filtër nga lart.") }}</p>
       {%- endif %}
       {%- if filters.q.is_some() %}
       <p class="empty">{{ crate::t("Kontrollo si i ke shkruar fjalët, ose provo më pak fjalë, a më të përgjithshme: „Golf“ gjen më shumë se „Golf 7 GTI i zi“.") }}</p>
       {%- endif %}
+      <div class="empty-actions">
       {%- if let Some((url, km)) = filters.wider_url() %}
       <a class="button secondary" href="{{ url }}">{{ crate::t1("Zgjero largësinë në {} km", km) }}</a>
       {%- endif %}
@@ -366,12 +369,15 @@
       <a class="button secondary" href="{{ filters.town_url() }}">{{ crate::t("Kërko në gjithë qytetin") }}</a>
       {%- endif %}
       {%- if !filters.everywhere() %}
-      <a class="button secondary" href="{{ filters.placeless_url() }}" data-forget-town data-turbo-prefetch="false">{{ crate::t("Kërko në gjithë Shqipërinë") }}</a>
+      <a class="button secondary" href="{{ filters.placeless_url() }}" data-forget-town data-turbo-prefetch="false">{% include "pin.svg" %}{{ crate::t("Kërko në gjithë Shqipërinë") }}</a>
       {%- endif %}
       {%- if filters.q.is_some() %}
-      <a class="button secondary" href="/shto">{{ crate::t("Shto një njoftim „Kërkoj të blej“") }}</a>
+      <a class="button secondary" href="/shto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PLUS|safe }}</svg>{{ crate::t("Shto një njoftim „Kërkoj të blej“") }}</a>
       {%- endif %}
+      </div>
     </div>
+    {%- else %}
+    {% include "listing_grid.html" %}
     {%- endif %}
   </section>
 </div>
