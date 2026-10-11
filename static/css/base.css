@@ -49,11 +49,12 @@
   --post-hover: var(--highlight-hover);
   /* The accent, mint by default (the user's pick of 2026-10-11; lime before), one of five the menu
      offers (data-accent on <html>, below), every one as bright as lime (mint, lime, coral, orange
-     and blue, the same in both themes): the logo's dot, what is new or unread, the dots and counts,
-     and the buttons that do a page's thing. Bright as they are, they are only ever a background on
-     the light theme, behind dark icons, words or numbers (--highlight-icon: the magnifier dark on
-     the front page's accent circle, --on-highlight on a count or a button, 6:1 at least), and an unread dot and the logo's have a dark edge inside them on the white
-     (--dot-edge, --logo-edge). The names are the Pluribus design system's (its tokens.json), as
+     and blue, the same in both themes): the logo's dot on the dark theme and the inside of its b
+     on the light, what is new or unread, the dots and counts, and the buttons that do a page's
+     thing. Bright as they are, they are only ever a background on the light theme, behind dark
+     icons, words or numbers (--highlight-icon: the magnifier dark on the front page's accent
+     circle, --on-highlight on a count or a button, 6:1 at least), and an unread dot has a dark edge
+     inside it on the white (--dot-edge). The names are the Pluribus design system's (its tokens.json), as
      every token here. */
   --choice-mint: #2de38c;
   --choice-lime: #c8ff00;
@@ -84,7 +85,8 @@
      is on takes there, as dark as the photo under the white figure (the user's pick of 2026-10-11,
      the accent itself before it). */
   --price-mark-photo: color-mix(in srgb, var(--highlight) var(--filter-share-dark), #1b1b1b);
-  --logo-edge: rgb(27 27 27 / 45%);      /* a line inside the logo's dot, on white */
+  --logo-dot: currentColor;              /* the logo's i's dot: black as its letters, on white */
+  --logo-counter: var(--highlight);      /* the inside of the logo's b: the accent, on white */
   --dot-edge: inset 0 0 0 1.5px rgb(27 27 27 / 45%); /* a ring inside an unread dot, on white */
   /* States: a kept listing's heart, places on a map, what is wrong. */
   --location: #4a7fb0;
@@ -237,7 +239,8 @@
   --highlight-icon: var(--highlight);
   --search-knob: var(--surface-muted-hover);
   --filter-share: var(--filter-share-dark);
-  --logo-edge: transparent;
+  --logo-dot: var(--highlight);
+  --logo-counter: transparent;
   --dot-edge: 0 0 0 0 transparent;
   --location: #6a9bcc;
   --red: #e0203a;
@@ -299,7 +302,8 @@
     --highlight-icon: var(--highlight);
     --search-knob: var(--surface-muted-hover);
     --filter-share: var(--filter-share-dark);
-    --logo-edge: transparent;
+    --logo-dot: var(--highlight);
+    --logo-counter: transparent;
     --dot-edge: 0 0 0 0 transparent;
     --location: #6a9bcc;
     --red: #e0203a;
@@ -778,12 +782,13 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 /* The logo: the name in lowercase in Clash Display Semibold (Indian Type Foundry's, from
    Fontshare; Geist Black until 2026-10-11, Playfair Display SemiBold before 2026-10-10), the
    logo's typeface alone, drawn as the font's shapes (logo.svg) so that no font loads for it and
-   its i's dot can take a colour of its own: the letters in the text's colour, the dot in the
-   accent, with a dark edge inside it on the light theme, where mint or lime alone hardly shows on
-   white (--logo-edge, transparent on the dark theme). The inside of its b is in the accent too, as
-   the user asked on 2026-10-11 (.logo-counter): the b's counter drawn again under the letters,
-   grown by its line all round, so that no hairline of the bar shows at its edge; the letters
-   round it set it off on white with no edge of its own. The drawing is the font's
+   its i's dot can take a colour of its own: the letters in the text's colour; on the light theme
+   the dot black as they are and the inside of its b in the accent, on the dark theme the dot in
+   the accent and the b open (--logo-dot, --logo-counter), as the user asked on 2026-10-11 (the dot
+   was in the accent on both until then, with a dark edge inside it on white, --logo-edge). The
+   b's inside is its counter drawn again under the letters (.logo-counter), grown by its line all
+   round, so that no hairline of the bar shows at its edge; the letters round it set it off on
+   white with no edge of its own. The drawing is the font's
    line, ascender to descender, 1.14em tall and 4.126em wide: at 26px, 107 x 30, and on phones at
    24px, 99 x 27, in pixels, as the round buttons beside it set the bar's height. (The site's icon,
    in the tab and on home screens, is its p, light on eerie black, the mint square over it.) The
@@ -799,16 +804,14 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   transition: color .45s ease;
 }
 .logo-mark { display: block; width: 4.126em; height: 1.14em; }
-.logo-dot { fill: var(--highlight); transition: fill .45s ease; }
-.logo-dot-edge { stroke: var(--logo-edge); transition: stroke .45s ease; }
-.logo-counter { fill: var(--highlight); stroke: var(--highlight); transition: fill .45s ease, stroke .45s ease; }
+.logo-dot { fill: var(--logo-dot); transition: fill .45s ease; }
+.logo-counter { fill: var(--logo-counter); stroke: var(--logo-counter); transition: fill .45s ease, stroke .45s ease; }
 @media (max-width: 719px) {
   .logo { font-size: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .logo,
   .logo-dot,
-  .logo-dot-edge,
   .logo-counter { transition: none; }
 }
 
