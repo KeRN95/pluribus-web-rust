@@ -3,7 +3,9 @@ import { t } from "controllers/i18n.js";
 
 // A listing's message sheet (listing.html). A message button, signed in, loads the conversation
 // into the sheet's frame (data-turbo-frame) and opens it. On a phone it slides up from the screen's
-// bottom (messages.css), the page under it dimmed and held still, a tap on it closing the sheet;
+// bottom (messages.css), the page under it dimmed and held still, a tap on it closing the sheet
+// (not a tap that began in the sheet: rising under the finger as its box takes the focus, the
+// sheet leaves the shade where the finger lifts, and the browser gives the click to the page);
 // its bar at the top, or its head, dragged down past a quarter of its height or flicked down
 // closes it, sliding the rest of the way, and let go sooner it goes back up. From 720 px up it is a popup card from the button
 // instead: under it, or over it where the screen has more room there, as tall as that room allows,
@@ -40,11 +42,18 @@ export default class extends Controller {
   static targets = ["sheet", "body", "frame"];
 
   connect() {
+    // Where a press began: a click that began in the sheet is the sheet's, wherever it ends. On a
+    // phone the box taking the focus raises the sheet between the finger's going down and its
+    // lifting, which leaves the shade under the finger, and the browser then gives the click to
+    // the page: it closed the sheet the moment its box was tapped once.
+    this.pressed = (event) => (this.pressedInSheet = this.sheetTarget.contains(event.target));
     // On a phone, only the page's shade under the sheet: the shade is this element's own
     // (messages.css, .listing-page::after), which is no box itself, so a tap on it is the one tap
     // that reaches this element itself.
     this.outside = (event) => {
-      if (this.sheetTarget.hidden || (this.phone && event.target !== this.element)) return;
+      const began = this.pressedInSheet;
+      this.pressedInSheet = false;
+      if (this.sheetTarget.hidden || began || (this.phone && event.target !== this.element)) return;
       if (this.sheetTarget.contains(event.target) || event.target.closest?.("[data-action~='message-sheet#open']")) return;
       this.close(event);
     };
@@ -57,6 +66,7 @@ export default class extends Controller {
       event.stopPropagation();
     };
     if (this.hasSheetTarget) {
+      document.addEventListener("pointerdown", this.pressed, true);
       document.addEventListener("click", this.outside);
       this.sheetTarget.addEventListener("click", this.afterDrag, true);
     }
@@ -278,6 +288,7 @@ export default class extends Controller {
     if (this.hasSheetTarget) this.lower();
     clearTimeout(this.easing);
     document.documentElement.classList.remove("sheet-open");
+    document.removeEventListener("pointerdown", this.pressed, true);
     document.removeEventListener("click", this.outside);
     if (this.hasSheetTarget) this.sheetTarget.removeEventListener("click", this.afterDrag, true);
   }
