@@ -1116,7 +1116,7 @@ async fn card_details_start_with_the_city(pool: PgPool) {
     let property = get(pool.clone(), "/c/prona").await.body;
     assert!(property.contains("<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Tiranë · </span>2+1 · 85\u{a0}m²</p>"));
     // Rents are per month.
-    assert!(property.contains("450\u{a0}€<span class=\"card-note\">/muaj</span>"));
+    assert!(property.contains("<span class=\"card-figure\">450\u{a0}€</span><span class=\"card-note\">/muaj</span>"));
     // Without properties, the line is just the city.
     let other = get(pool.clone(), "/c/te-tjera").await.body;
     assert!(other.contains("<p class=\"card-summary\"><span class=\"card-town\" translate=\"no\">Berat</span></p>"));
@@ -7038,9 +7038,11 @@ async fn moderators_promote_listings_which_show_more_until_their_time(pool: PgPo
     assert!(featured_numbers(&cars).is_empty() && !cars.contains("is-promoted") && !cars.contains("I promovuar"));
 
     // Featured: first of the results of its category and of the searches it matches, in their own
-    // look, "I promovuar" over its photo, and not again among them (the user's ask of 2026-10-11:
-    // a row of its own over the results until then, "Të veçuara"); nowhere else; on /moderim with
-    // until when; its seller hears of it and sees it.
+    // look, its price marked in the accent as the listing page's is (screen readers hearing "I
+    // promovuar" before it), and not again among them (the user's asks of 2026-10-11: a row of
+    // its own over the results until then, "Të veçuara", and a pill saying "I promovuar" over the
+    // photo after it); nowhere else; on /moderim with until when; its seller hears of it and sees
+    // it.
     let given = promote(&pool, &moderator, "1001", "FEATURED_7D").await;
     assert_eq!(given.location.as_deref(), Some("/moderim#promovime"));
     let cars = get(pool.clone(), "/c/makina").await.body;
@@ -7050,7 +7052,8 @@ async fn moderators_promote_listings_which_show_more_until_their_time(pool: PgPo
     assert!(at.is_sorted(), "{at:?}");
     let promoted = &cars[cars.find(open).unwrap()..];
     let promoted = &promoted[..promoted.find("</article>").unwrap()];
-    assert!(promoted.contains(r#"<p class="card-promoted">I promovuar</p>"#), "{promoted}");
+    assert!(promoted.contains(r#"<p class="card-price"><span class="visually-hidden">I promovuar: </span><span class="card-amount"><span class="card-figure">9"#), "{promoted}");
+    assert!(!cars.contains("card-promoted"));
     assert!(!cars.contains("featured-row") && !cars.contains("Të veçuara") && !cars.contains("row-note"));
     assert_eq!(result_numbers(&cars), vec![1002]);
     assert_eq!(featured_numbers(&get(pool.clone(), "/search?q=golf").await.body), vec![1001]);
@@ -7147,8 +7150,8 @@ async fn moderators_promote_listings_which_show_more_until_their_time(pool: PgPo
     // /promovo says what each does and costs, and how to get one.
     let about = get(pool.clone(), "/promovo?njoftimi=1001").await.body;
     assert!(about.contains("<strong>I veçuar për 7 ditë</strong>") && about.contains("8,99\u{a0}€"), "{about}");
-    assert!(about.contains("Që ta shohin më shumë: mbi njoftimet e tjera me shenjën „I promovuar“, ") && !about.contains("Të veçuara"), "{about}");
-    assert!(about.contains("<span>Del mbi njoftimet e kategorisë së tij dhe të kërkimeve ku përputhet, me shenjën „I promovuar“, me radhë me të tjerët.</span>"), "{about}");
+    assert!(about.contains("Që ta shohin më shumë: mbi njoftimet e tjera me çmimin e shënuar me ngjyrë, ") && !about.contains("Të veçuara"), "{about}");
+    assert!(about.contains("<span>Del mbi njoftimet e kategorisë së tij dhe të kërkimeve ku përputhet, me çmimin e shënuar me ngjyrë, me radhë me të tjerët.</span>"), "{about}");
     assert!(about.contains(r#"<a href="/kontakt">Kontakt</a> me numrin e njoftimit (<strong>1001</strong>)"#), "{about}");
 }
 
@@ -7465,11 +7468,10 @@ async fn a_phone_sees_the_listings_on_its_first_screen(pool: PgPool) {
         "@media (max-width:719px){.browse > .most-viewed{margin-top:20px;}.most-viewed > h2{margin-bottom:10px;}}",
         // A subcategory's way up over its name, level with its first letter after the chevron.
         ".browse-up{min-width:0;margin:0 0 -11px 32px;padding-bottom:3px;overflow:hidden;",
-        // A promoted card says so over its photo, in the list over its photo there; a big one in
-        // place of its seller.
-        ".card-promoted{grid-area:1 / 1;",
-        ".cards-list .results .card-media .card-promoted{grid-area:photo;",
-        ".card.is-promoted .card-seller{display:none;}",
+        // A promoted card's price on the listing page's band, in the accent, the month and
+        // "(i diskutueshëm)" off it (the user's ask of the same day, in place of a pill saying
+        // "I promovuar" over its photo).
+        ".card.is-promoted .card-figure{text-decoration-line:underline;text-decoration-color:var(--highlight);text-decoration-thickness:.34em;text-decoration-skip-ink:none;text-underline-offset:-.2em;}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
@@ -8199,7 +8201,7 @@ async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
     // through, on its card as on its page.
     set_price(&pool, 1001, "9000").await;
     let golf = card_of(&html(pool.clone(), "/c/makina").await, 1001);
-    let badge = "<p class=\"card-price\"><span class=\"card-amount\">9\u{a0}000\u{a0}€</span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>9\u{a0}500\u{a0}€</del><span class=\"card-drop\">−5%</span></p>";
+    let badge = "<p class=\"card-price\"><span class=\"card-amount\"><span class=\"card-figure\">9\u{a0}000\u{a0}€</span></span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>9\u{a0}500\u{a0}€</del><span class=\"card-drop\">−5%</span></p>";
     assert!(golf.contains(badge), "{golf}");
     let page = html(pool.clone(), "/listing/1001-volkswagen-golf-7-2016-nafte").await;
     let was = "<span class=\"price-was\"><span class=\"visually-hidden\">Çmimi ishte </span><del>9\u{a0}500\u{a0}€</del> <span class=\"price-drop\">−5%</span></span>";
@@ -8211,7 +8213,7 @@ async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
     set_price(&pool, 1002, "25000").await;
     assert!(!card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("card-drop"));
     set_price(&pool, 1002, "20000").await;
-    assert!(card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("20\u{a0}000\u{a0}€<span class=\"card-note card-negotiable\"> (i diskutueshëm)</span></span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>21\u{a0}500\u{a0}€</del><span class=\"card-drop\">−7%</span>"));
+    assert!(card_of(&html(pool.clone(), "/c/makina").await, 1002).contains("20\u{a0}000\u{a0}€</span><span class=\"card-note card-negotiable\"> (i diskutueshëm)</span></span><del class=\"card-was\"><span class=\"visually-hidden\">Çmimi ishte </span>21\u{a0}500\u{a0}€</del><span class=\"card-drop\">−7%</span>"));
     // A narrow photo, a small card's or the list's on a phone, keeps the price, its month and the
     // pill: "(i diskutueshëm)" and what it was cut the price short there (the user, 2026-10-11).
     // A big card has room for them.

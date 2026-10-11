@@ -285,24 +285,20 @@
   pointer-events: none;
 }
 .card-media:has(.card-status.is-sold) .card-photo { filter: grayscale(.7); opacity: .75; }
-/* One a promotion features, at the results' top (browse.html): "I promovuar" in a pill over its
-   photo's top left, as a kept listing's status is, smaller; in the list, over its photo there. */
-.card-promoted {
-  grid-area: 1 / 1;
-  align-self: start;
-  justify-self: start;
-  z-index: 6;
-  margin: .625rem;
-  padding: .1875rem .5rem;
-  border-radius: 999px;
-  background: var(--photo-label);
-  color: var(--on-photo);
-  font-size: .6875rem;
-  font-weight: var(--semibold);
-  line-height: 1.2;
-  pointer-events: none;
+/* One a promotion features, at the results' top (browse.html): its price on a band of the accent
+   across its foot, as the listing's page marks its own (listing.css, .price-amount), in place of
+   a pill saying "I promovuar" over the photo, as the user asked on 2026-10-11: the accent itself,
+   where the page's band is its pale tint, so that it shows on the photo's dark shade under the
+   white figure, which it covers to a fifth of an em over the baseline; the month and
+   "(i diskutueshëm)" stay off it, as they do there (.card-figure, the figure alone; screen
+   readers hear "I promovuar" before it, listing_card.html). */
+.card.is-promoted .card-figure {
+  text-decoration-line: underline;
+  text-decoration-color: var(--highlight);
+  text-decoration-thickness: .34em;
+  text-decoration-skip-ink: none;
+  text-underline-offset: -.2em;
 }
-.cards-list .results .card-media .card-promoted { grid-area: photo; margin: .5rem; }
 .listing-media .heart { position: absolute; top: calc(var(--over-edge) - .3rem); right: calc(var(--over-edge) - .3rem); z-index: 2; }
 .listing-media .heart-button { --circle: var(--over-photo); --reach: .3rem; }
 .listing-media .heart-button svg { width: 22px; height: 22px; }
@@ -471,8 +467,6 @@
 .card-seller .avatar { width: 1.5rem; height: 1.5rem; border-color: var(--on-photo); color: var(--on-photo); font-size: .75rem; filter: drop-shadow(0 1px 2px var(--photo-shade)); }
 .card-seller-text { display: grid; min-width: 0; }
 .card-seller-name { font-size: var(--text-xs); font-weight: var(--semibold); }
-/* A big promoted card says so where its seller would be. */
-.card.is-promoted .card-seller { display: none; }
 :is(.cards-big .results, .big-cards) .card-head { padding-top: .7rem; }
 :is(.cards-big .results, .big-cards) .card-title { font-size: var(--text-md); }
 :is(.cards-big .results, .big-cards) .card-summary { font-size: var(--text-sm); }

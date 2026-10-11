@@ -236,9 +236,10 @@ impl ListingPage {
     }
 
     /// The first FEATURED_SHOWN of those a promotion features among a page's matches, at the top
-    /// of its results in the results' own look (the page's layout), each saying it is promoted
-    /// (listing_card.html, .card-promoted): the user's ask of 2026-10-11 ("Të veçuara", a row of
-    /// small cards that slid sideways over the results, before).
+    /// of its results in the results' own look (the page's layout), each with its price marked in
+    /// the accent, as the listing's page marks its own (listing_card.html, .card-figure): the
+    /// user's ask of 2026-10-11 ("Të veçuara", a row of small cards that slid sideways over the
+    /// results, before; a pill saying "I promovuar" over the photo, after).
     pub fn featured(mut cards: Vec<ListingCard>, layout: Cards) -> Self {
         cards.truncate(FEATURED_SHOWN);
         Self { cards, next: None, layout, eager: FEATURED_SHOWN, card_ids: FEATURED_IDS, lead: false }

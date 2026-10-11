@@ -20,7 +20,7 @@ use crate::{
 /// What a kind of promotion does, as the pages say it, in their language.
 pub fn does(promotion_type: &str) -> &'static str {
     match promotion_type {
-        "FEATURED" => t("Del mbi njoftimet e kategorisë së tij dhe të kërkimeve ku përputhet, me shenjën „I promovuar“, me radhë me të tjerët."),
+        "FEATURED" => t("Del mbi njoftimet e kategorisë së tij dhe të kërkimeve ku përputhet, me çmimin e shënuar me ngjyrë, me radhë me të tjerët."),
         "HIGHLIGHT" => t("Karta e tij dallohet me një sfond të verdhë të lehtë, kudo që shfaqet."),
         "BUMP" => t("Ngjitet menjëherë në krye të njoftimeve më të reja, një herë."),
         "CATEGORY_TOP" => t("Ngjitet në krye të njoftimeve më të reja çdo ditë, sa zgjat."),
@@ -86,7 +86,7 @@ pub async fn page(State(state): State<AppState>, headers: HeaderMap, Query(query
     let meta = PageMeta::new(
         &origin,
         "Promovo një njoftim",
-        t("Si shihet më shumë një njoftim në Pluribus: mbi njoftimet e tjera me shenjën „I promovuar“, në krye të më të rejave, ose me një kartë që dallohet."),
+        t("Si shihet më shumë një njoftim në Pluribus: mbi njoftimet e tjera me çmimin e shënuar me ngjyrë, në krye të më të rejave, ose me një kartë që dallohet."),
         seo::canonical(&origin, "/promovo", None),
     );
     let number = query.njoftimi.and_then(|number| number.trim().parse::<i64>().ok()).filter(|number| *number > 0);
