@@ -129,6 +129,15 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 4px 16px rgb(0 0 0 / 5%);
   --shadow-float: 0 16px 48px rgb(0 0 0 / 14%), 0 2px 6px rgb(0 0 0 / 5%); /* what floats: sheets, the menu */
   --scrim: rgb(0 0 0 / 20%); /* the page dimmed under what floats over it */
+  /* Frosted, as Apple's bars and sheets are, and as slightly as the user asked on 2026-10-11:
+     the header, a listing's contact bar at a phone's foot and its message sheet there, each in
+     its own colour a little short of whole, what passes under it showing through, blurred and
+     its colours a little livelier (--frost); the bars at 80%, the sheet, which has words on it,
+     at 92%. Whole where the reader asks for less transparency (below). */
+  --frost: blur(20px) saturate(180%);
+  --frost-header: color-mix(in srgb, var(--header) 80%, transparent);
+  --frost-bar: color-mix(in srgb, var(--bg) 80%, transparent);
+  --frost-sheet: color-mix(in srgb, var(--surface) 92%, transparent);
   /* Glass: the welcome page's open search and its suggestions, over the pills (welcome.css): the
      text input's colour (white, and the dark theme's own dark) at 65%, blurred, with its edge and
      the words and their shading on it, those in the theme's colours below. */
@@ -342,6 +351,17 @@
 :root[data-accent="orange"] { --highlight: var(--choice-orange); --filter-share-light: 35%; --filter-share-dark: 30%; }
 :root[data-accent="blue"] { --highlight: var(--choice-blue); --filter-share-light: 30%; --filter-share-dark: 34%; }
 
+/* Less transparency where the reader has asked their system for it (prefers-reduced-transparency):
+   the frosted bars and sheet whole in their own colours, nothing blurred under them. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --frost: none;
+    --frost-header: var(--header);
+    --frost-bar: var(--bg);
+    --frost-sheet: var(--surface);
+  }
+}
+
 * { box-sizing: border-box; }
 
 /* The page a column at least a screen tall, the header, the page and the footer down it, so that
@@ -487,12 +507,16 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    lines, the logo, the search (every page's but the front page's, .top-search) and the account
    alone at the right end, as the user asked on 2026-10-11 (the canvas had the text's size, the
    listings kept, the conversations and the theme there too: the menu and the rail have them
-   now). It stays at the top as the page scrolls. */
+   now). It stays at the top as the page scrolls, frosted as Apple's bars are, very slightly, as
+   the user asked on 2026-10-11: its colour at 80%, the page showing through it as it scrolls
+   under, blurred (--frost-header, --frost). */
 .site-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--header);
+  background: var(--frost-header);
+  -webkit-backdrop-filter: var(--frost);
+  backdrop-filter: var(--frost);
   border-bottom: 1px solid var(--border);
 }
 

@@ -879,7 +879,9 @@
    screen's bottom while the listing scrolls (sticky) and settles after the description, so that
    the way to the seller is at hand wherever the reader is, as the apps have it: from the screen's
    edge to its edge, a hairline over it on the page's colour, clear of the phone's home bar; over
-   the page but under the sticky header and the message sheet (z-index 7). Each pill takes half of
+   the page but under the sticky header and the message sheet (z-index 7). Frosted as the header
+   is, very slightly, as the user asked on 2026-10-11: the page's colour at 80%, the listing
+   showing through it as it scrolls under, blurred (--frost-bar, --frost). Each pill takes half of
    it; once the number shows, it takes the room and the message keeps its icon alone. While it
    floats over the page a slight shadow rises from it (.is-stuck, sticky_controller.js), gone once
    it settles in its place. */
@@ -892,7 +894,9 @@
     margin: 1.5rem calc(-1 * var(--gutter)) 0;
     padding: .6rem var(--gutter) calc(.6rem + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border);
-    background: var(--bg);
+    background: var(--frost-bar);
+    -webkit-backdrop-filter: var(--frost);
+    backdrop-filter: var(--frost);
     transition: box-shadow .15s;
   }
   .contact-bar.is-stuck { box-shadow: 0 -2px 6px rgb(0 0 0 / 6%), 0 -8px 20px rgb(0 0 0 / 8%); }

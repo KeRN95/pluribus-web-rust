@@ -388,6 +388,35 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
   .message-sheet .conversation-head { touch-action: none; }
   .message-sheet .composer { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
 }
+/* On a phone the sheet is frosted as an iPhone's are, very slightly, as the user asked on
+   2026-10-11: the white at 92%, a little of the dimmed page showing through it, blurred
+   (--frost-sheet, --frost). The box to write in, over the messages as they scroll under it, blurs
+   them rather than hide them on a white band of its own, which would stand out of the frost; on
+   its white again where the reader asks for less transparency (base.css). The frost is a layer
+   of its own under what the sheet holds, not the sheet's background: a box blurring what is
+   behind it sees no further back than an ancestor that blurs its own backdrop, so in a frosted
+   sheet the box saw the sheet's white without the page and stood out whiter than the rest. */
+@media (max-width: 719px) {
+  .message-sheet { background: none; }
+  .message-sheet::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--frost-sheet);
+    -webkit-backdrop-filter: var(--frost);
+    backdrop-filter: var(--frost);
+  }
+  .message-sheet .composer {
+    background: none;
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+  }
+}
+@media (max-width: 719px) and (prefers-reduced-transparency: reduce) {
+  .message-sheet .composer { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
 .message-sheet-wait { margin: 1.25rem 0; color: var(--muted); }
 html.sheet-open { overflow: hidden; }
 /* From 720 px up: the popup card from the button, 400px wide, as tall as the screen allows under

@@ -4941,7 +4941,9 @@ async fn cards_are_drawn_as_the_canvas_has_them(pool: PgPool) {
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
     // The bar over every page: white on the light theme and the page's colour on the dark one (the
-    // header token), a hairline under it, as tall as the design system has it; the account alone
+    // header token), frosted as Apple's bars are (that colour at 80%, what scrolls under it
+    // blurred, and whole where the reader asks for less transparency), a hairline under it, as
+    // tall as the design system has it; the account alone
     // at its right end, a bare round button of 40px; what is unread in the accent, a dot ringed in
     // the bar's colour with its edge on the light theme, the conversations' count with its number
     // on the accent. (The stylesheet comes minified: web::site_css.)
@@ -4952,7 +4954,10 @@ async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
         rule[..rule.find('}').unwrap()].to_string()
     };
     let header = rule(".site-header");
-    assert!(header.contains("background:var(--header)") && header.contains("border-bottom:1px solid var(--border)"), "{header}");
+    assert!(header.contains("background:var(--frost-header)") && header.contains("backdrop-filter:var(--frost)"), "{header}");
+    assert!(header.contains("border-bottom:1px solid var(--border)"), "{header}");
+    assert!(css.contains("--frost-header:color-mix(in srgb,var(--header) 80%,transparent)"));
+    assert!(css.contains("@media (prefers-reduced-transparency:reduce){:root{--frost:none;--frost-header:var(--header);"));
     assert!(rule(".header-inner").contains("height:var(--size-header)"));
     let account = rule(".account-button");
     assert!(account.contains("width:var(--size-button-sm)") && account.contains("margin-left:auto") && account.contains("border:0"), "{account}");
