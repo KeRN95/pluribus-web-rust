@@ -3,7 +3,8 @@
 {% block title %}{{ crate::t("Shkruaj kodin") }} | Pluribus{% endblock %}
 
 {% block content %}
-<section class="account">
+{#- As the sign-in's page (sign_in.html, posting.css, .sign-in), the code in six boxes. -#}
+<section class="account sign-in">
   <h1>{{ crate::t("Shkruaj kodin") }}</h1>
   {% if gone %}
   <p class="form-error" role="alert">{% if let Some(error) = error %}{{ error }}{% endif %}</p>
@@ -18,14 +19,24 @@
   {% endif %}
   <form class="account-form" action="/hyr/kodi" method="post">
     {% if let Some(error) = error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+    {#- The code in six boxes, as the canvas has them: the one input it is typed, pasted or filled
+        into lies over them, their digits shown in them (code_boxes_controller.js); without the
+        script, the input alone. -#}
     <div class="field">
       <label class="field-label" for="code">{{ crate::t("Kodi") }}</label>
-      <input id="code" name="code" required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}"
-             maxlength="7" class="code-input" autofocus{% if let Some(code) = test_code %} value="{{ code }}"{% endif %}>
+      <div class="code-boxes" data-controller="code-boxes">
+        <input id="code" name="code" required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}"
+               maxlength="7" data-code-boxes-target="input" data-action="input->code-boxes#show focus->code-boxes#show blur->code-boxes#show"
+               class="code-input" autofocus{% if let Some(code) = test_code %} value="{{ code }}"{% endif %}>
+        <div class="code-box-row" aria-hidden="true">
+          <span class="code-box" data-code-boxes-target="box"></span><span class="code-box" data-code-boxes-target="box"></span><span class="code-box" data-code-boxes-target="box"></span>
+          <span class="code-box" data-code-boxes-target="box"></span><span class="code-box" data-code-boxes-target="box"></span><span class="code-box" data-code-boxes-target="box"></span>
+        </div>
+      </div>
     </div>
     <button type="submit" class="button">{% if adds %}{{ crate::t("Ruaje") }}{% else %}{{ crate::t("Hyr") }}{% endif %}</button>
   </form>
-  <p class="account-note">{{ crate::t("Nuk erdhi?") }} <a href="{% if adds %}/llogaria/cilesimet{% else %}/llogaria{% endif %}">{{ crate::t("Kërko një kod të ri") }}</a> {{ crate::t("pas një minute.") }}</p>
+  <p class="account-note code-again">{{ crate::t("Nuk erdhi?") }} <a href="{% if adds %}/llogaria/cilesimet{% else %}/llogaria{% endif %}">{{ crate::t("Kërko një kod të ri") }}</a> {{ crate::t("pas një minute.") }}</p>
   {% endif %}
 </section>
 {% endblock %}

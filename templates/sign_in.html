@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}{% if create %}{{ crate::t("Hyr ose krijo llogari") }}{% else %}{{ crate::t("Hyr") }}{% endif %} | Pluribus{% endblock %}
+{% block title %}{% if create %}{{ crate::t("Hyr ose krijo një llogari") }}{% else %}{{ crate::t("Hyr") }}{% endif %} | Pluribus{% endblock %}
 
 {% block content %}
-<section class="account">
+{#- As the canvas has it (posting.css, .sign-in): a column in the middle of the page, the fields
+    and the button in one white box, the note under it. The tab's title says the heading's words
+    ("një" left out once). -#}
+<section class="account sign-in">
   {%- if create %}
   {#- "Llogaria" for someone not signed in: one form signs in or makes an account, by the contact
       typed, so it says both (it said "Krijo një llogari" alone once, which a returning seller took

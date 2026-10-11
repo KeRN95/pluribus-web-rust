@@ -86,7 +86,66 @@
 .field-hint { margin: .15rem 0 0; color: var(--muted); font-size: .8125rem; line-height: 1.5; }
 .optional { color: var(--muted); font-weight: var(--regular); }
 .field textarea { padding: .75rem .875rem; resize: vertical; line-height: 1.55; }
+/* Signing in (sign_in.html) and its code (sign_in_code.html), as the canvas has them: a column of
+   480px in the middle of the page, 48px under the top bar (24px on a phone), the heading 30px (26px
+   on a phone) and the lead under it, 16px; the fields and the button in one white box, 20px in,
+   18px apart, the button across it, 50px tall; under the box the note, 13px (asking for a new
+   code, 14px, its link semibold). (In the page's column at the left once, no box.) */
+.account.sign-in { max-width: 480px; margin-inline: auto; padding-top: 48px; }
+.sign-in h1 { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
+.sign-in .lead { margin: 8px 0 0; font-size: 1rem; font-weight: var(--regular); line-height: 1.55; }
+.sign-in .account-form { gap: 18px; margin-top: 20px; padding: 20px; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); }
+.sign-in .account-form > .button { min-height: var(--size-button-lg); font-size: 1rem; }
+.sign-in > .account-note { margin: 14px 0 0; font-size: .8125rem; line-height: 1.5; }
+.sign-in > .account-note a { color: var(--text); }
+.sign-in > .code-again { font-size: .875rem; }
+.sign-in > .code-again a { font-weight: var(--semibold); }
+@media (max-width: 719px) {
+  .account.sign-in { padding-top: 24px; }
+}
+/* The code: without the script one wide field, its digits spaced out; with it six boxes as the
+   canvas draws them, as wide as they share the line, 8px apart, 60px tall (56px on a phone), the
+   digit 24px bold in each, the next to fill ringed as a focused field is, and the input over
+   them, its own text and caret out of sight (code_boxes_controller.js). (One field always once.) */
 .code-input { max-width: 12rem; font-size: var(--text-2xl) !important; letter-spacing: .3em; text-align: center; }
+.code-boxes { position: relative; }
+.code-box-row { display: none; }
+.code-boxes.has-boxes .code-box-row { display: flex; gap: 8px; }
+.code-box {
+  display: grid;
+  flex: 1 1 0;
+  place-items: center;
+  min-width: 0;
+  height: 60px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-field);
+  background: var(--surface);
+  font-size: 1.5rem;
+  font-weight: var(--bold);
+  transition: border-color .15s, box-shadow .15s;
+}
+.code-box.is-next { border-color: var(--main); box-shadow: var(--focus-field); }
+.code-boxes.has-boxes .code-input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 16px !important;
+  letter-spacing: 0;
+}
+.code-boxes.has-boxes .code-input:focus { box-shadow: none; }
+.code-boxes.has-boxes .code-input::selection { background: transparent; }
+@media (max-width: 719px) {
+  .code-box { height: 56px; }
+}
 .form-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
 .form-actions .button { justify-content: center; }
 .my-listings { display: grid; gap: .6rem; margin: 0 0 1.25rem; padding: 0; list-style: none; }

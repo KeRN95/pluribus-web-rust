@@ -28,9 +28,6 @@ Cilësimet
 
 # templates/sign_in.html
 
-Hyr ose krijo llogari
-= Sign in or create an account
-
 Hyr
 = Sign in
 

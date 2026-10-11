@@ -4298,7 +4298,8 @@ async fn signing_in_takes_a_code_sent_to_the_phone(pool: PgPool) {
     // says it signs in as well as makes an account.
     let page = get(pool.clone(), "/llogaria").await;
     assert!(page.body.contains("<h1>Hyr ose krijo një llogari</h1>"));
-    assert!(page.body.contains("<title>Hyr ose krijo llogari | Pluribus</title>"));
+    // The tab's title says what the heading does ("një" left out once).
+    assert!(page.body.contains("<title>Hyr ose krijo një llogari | Pluribus</title>"));
     assert!(page.body.contains(r#"<form class="account-form" action="/hyr" method="post">"#));
 
     let sent = post_form(
@@ -4322,6 +4323,11 @@ async fn signing_in_takes_a_code_sent_to_the_phone(pool: PgPool) {
 
     let page = get_with_cookie(pool.clone(), "/hyr/kodi", &login).await;
     assert!(page.body.contains("<strong>+355 69 *** **67</strong>"));
+    // The code in six boxes, as the canvas has them, over the one input it goes into, which
+    // stays the field the browser fills in and the form sends (code_boxes_controller.js).
+    assert!(page.body.contains(r#"<div class="code-boxes" data-controller="code-boxes">"#), "{}", page.body);
+    assert_eq!(page.body.matches(r#"<span class="code-box" data-code-boxes-target="box"></span>"#).count(), 6);
+    assert!(page.body.contains(r#"autocomplete="one-time-code""#) && page.body.contains(r#"class="code-input" autofocus"#));
 
     let wrong = post_form(pool.clone(), "/hyr/kodi", &[("code", "000000")], Some(&login)).await;
     assert_eq!(wrong.status, StatusCode::UNPROCESSABLE_ENTITY);
