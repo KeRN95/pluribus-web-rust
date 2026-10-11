@@ -196,6 +196,31 @@
 .row-forget { flex: none; padding: .4rem .25rem; border: 0; background: none; color: var(--muted); font: inherit; font-size: .84375rem; cursor: pointer; }
 .row-forget:is(:hover, :active) { color: var(--text); text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
 
+/* "Shikuar së fundmi" smaller than the other rows' cards, as the user asked on 2026-10-11 ("make
+   shikuar se fundmi posts smaller, around 6 in the screen, and only put the title below"): about
+   six to the screen, six whole and a quarter of the next on the page's column, five and a quarter
+   on a phone, the row running on to its edge; under the photo the title alone, on two lines at
+   most, its details' line gone; over the photo no heart (a listing seen keeps its own on its
+   page). On the page's column the price stays on the photo, a size down, the note after it left
+   out; on a phone, where the photos are 50 to 70px, the photo alone, its corners 10px, a reserved
+   or a sold one's word small over it. */
+.welcome ~ .seen-lately .card-row { gap: var(--space-12); }
+.welcome ~ .seen-lately .card-row > .card { width: calc((100% - 6 * var(--space-12)) / 6.25); }
+.welcome ~ .seen-lately .card :is(.card-summary, .heart) { display: none; }
+.welcome ~ .seen-lately .card-media .card-price { padding: 0 .625rem .5rem; font-size: .875rem; }
+.welcome ~ .seen-lately .card-media .card-price :is(.card-note, .card-was, .card-drop, .card-bargain) { display: none; }
+.welcome ~ .seen-lately .card-title { display: -webkit-box; overflow: hidden; font-size: .875rem; line-height: 1.25; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+@media (max-width: 719px) {
+  .welcome ~ .seen-lately .card-row { gap: var(--space-8); }
+  .welcome ~ .seen-lately .card-row > .card { width: calc((100% + var(--gutter) - 5 * var(--space-8)) / 5.25); }
+  .welcome ~ .seen-lately .card-photo,
+  .welcome ~ .seen-lately .card-media::after { border-radius: 10px; }
+  .welcome ~ .seen-lately .card-media::after,
+  .welcome ~ .seen-lately .card-media .card-price { display: none; }
+  .welcome ~ .seen-lately .card-status { max-width: calc(100% - .5rem); margin: .25rem; padding: .0625rem .375rem; overflow: hidden; font-size: .625rem; text-overflow: ellipsis; white-space: nowrap; }
+  .welcome ~ .seen-lately .card-title { font-size: .8125rem; }
+}
+
 /* A select chosen from a list in the page (picker_controller.js) rather than the phone's own picker.
    The select stays, unseen, where the button is, so a "required" note points there; the list opens
    under the button like the category menu, the choice marked, groups under their headings. A
