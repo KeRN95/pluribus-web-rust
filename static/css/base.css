@@ -52,9 +52,9 @@
      and blue, the same in both themes): the logo's dot on the dark theme and the inside of its b
      on the light, what is new or unread, the dots and counts, and the buttons that do a page's
      thing. Bright as they are, they are only ever a background on the light theme, behind dark
-     icons, words or numbers (--highlight-icon: the magnifier dark on the front page's accent
-     circle, --on-highlight on a count or a button, 6:1 at least), and an unread dot has a dark edge
-     inside it on the white (--dot-edge). The names are the Pluribus design system's (its tokens.json), as
+     icons, words or numbers (--on-highlight on a count or a button, 6:1 at least), never a line
+     (--highlight-icon, below), and an unread dot has a dark edge inside it on the white
+     (--dot-edge). The names are the Pluribus design system's (its tokens.json), as
      every token here. */
   --choice-mint: #2de38c;
   --choice-lime: #c8ff00;
@@ -63,10 +63,10 @@
   --choice-blue: #4dabff;
   /* A button in the accent under the pointer: a shade darker (a shade lighter on the dark theme). */
   --highlight-hover: color-mix(in srgb, var(--highlight) 88%, #1b1b1b);
+  /* An icon in the accent where the accent may be a line, the dark theme (below): the front page's
+     magnifier and a phone's plus in its bar; here the text's dark. (The magnifier stood on a circle
+     in the accent, --search-knob, until the user asked it away on 2026-10-11.) */
   --highlight-icon: #1b1b1b;
-  /* The front page's search button, on its grey pill: the accent with the dark magnifier; on the
-     dark theme a grey a shade off the pill's, the magnifier in the accent. */
-  --search-knob: var(--highlight);
   /* A filter that is on (its chip, browse.css): the accent toned down, mixed into the page, as much
      of it as lets each accent show as itself with the words in the text's colour (--filter-share,
      which the accent sets below, the light theme's and the dark's: lime, the lightest, the most of
@@ -237,7 +237,6 @@
   --on-main: #1b1b1b;
   --highlight-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
   --highlight-icon: var(--highlight);
-  --search-knob: var(--surface-muted-hover);
   --filter-share: var(--filter-share-dark);
   --logo-dot: var(--highlight);
   --logo-counter: transparent;
@@ -300,7 +299,6 @@
     --on-main: #1b1b1b;
     --highlight-hover: color-mix(in srgb, var(--highlight) 85%, #ffffff);
     --highlight-icon: var(--highlight);
-    --search-knob: var(--surface-muted-hover);
     --filter-share: var(--filter-share-dark);
     --logo-dot: var(--highlight);
     --logo-counter: transparent;
@@ -907,14 +905,16 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
 }
 /* "Posto", the site's main thing to do, on a phone's front page (home.html, the header_post
    block), as the user asked on 2026-10-11 ("put the plus icon near the account one"; it stood
-   after the page's search until then): its plus alone just before the account, on a circle of
-   36px in the accent, the plus dark on it in both themes, as every button that does a page's
-   thing (--post, --on-post), 40px to tap as the account is, a shade darker under the pointer or
-   a finger (--post-hover). From 720px up the rail has it (.rail-post), and the bar none. */
-.header-post { width: var(--size-button-sm); height: var(--size-button-sm); padding: 2px; border: 0; background: var(--post) content-box; color: var(--on-post); transition: background-color .15s; }
-.header-post:active { background-color: var(--post-hover); }
+   after the page's search until then): its plus alone just before the account, on a grey circle
+   of 36px (--surface-muted), the plus dark on the light theme and in the accent on the dark one
+   (--highlight-icon), 40px to tap as the account is, the darker grey under the pointer or a
+   finger. Quiet at the user's word of the same day ("tone the plus button down"): it was a circle
+   in the accent with the plus dark on it, as the buttons that do a page's thing are (--post).
+   From 720px up the rail has it (.rail-post), and the bar none. */
+.header-post { width: var(--size-button-sm); height: var(--size-button-sm); padding: 2px; border: 0; background: var(--surface-muted) content-box; color: var(--highlight-icon); transition: background-color .15s; }
+.header-post:active { background-color: var(--surface-muted-hover); }
 @media (hover: hover) {
-  .header-post:hover { background-color: var(--post-hover); }
+  .header-post:hover { background-color: var(--surface-muted-hover); }
 }
 @media (min-width: 720px) {
   .header-post { display: none; }

@@ -4808,7 +4808,8 @@ async fn buttons_are_pills_in_the_accent_or_the_grey(pool: PgPool) {
     assert!(rule(".button.secondary").contains("background:var(--surface-muted)"));
     assert!(rule(".button.danger").contains("color:var(--danger)"));
     assert!(rule(".button.small").contains("min-height:var(--size-button-sm)"));
-    assert!(rule(".header-post").contains("background:var(--post) content-box"));
+    // (The front page's "Posto" in a phone's bar is quiet, a grey circle: the user's ask.)
+    assert!(rule(".header-post").contains("background:var(--surface-muted) content-box"));
     let light = &css[css.find(":root{color-scheme:light;").expect("the light theme")..];
     let light = &light[..light.find('}').unwrap()];
     for token in ["--post:var(--highlight);", "--on-post:var(--on-highlight);", "--post-hover:var(--highlight-hover);", "--highlight-hover:color-mix(in srgb,var(--highlight) 88%,#1b1b1b);"] {
@@ -5052,27 +5053,32 @@ async fn the_front_pages_categories_are_a_line_of_tiles(pool: PgPool) {
 async fn the_front_pages_search_is_materials_search_bar(pool: PgPool) {
     // The front page's search is the canvas's Material search bar (the user's ask of 2026-10-11,
     // "make search bar google style like in the design"): a grey pill 64px tall, its words 18px
-    // 24px in, its round button 48px, 8px in; on phones the page's width, 56px, the words 16px and
-    // the button 40px. Its edge is clear, a pixel of the padding (there for forced colours).
-    // "Posto", which stood after it on phones, is the bar's now, before the account: a circle of
-    // 36px in the accent, 40px to tap, which the rail has from 720px up. (The stylesheet comes
-    // minified: web::site_css.)
+    // 24px in, its button 48px, 8px in; on phones the page's width, 56px, the words 16px and the
+    // button 40px. The button is its magnifier alone, on no circle, dark on the light theme and in
+    // the accent on the dark one, a grey circle under the pointer only. Its edge is clear, a pixel
+    // of the padding (there for forced colours). "Posto", which stood after it on phones, is the
+    // bar's now, before the account, quiet: a grey circle of 36px, 40px to tap, its plus as the
+    // magnifier is, which the rail has from 720px up (the user's asks: "tone the plus button down.
+    // Remove the circle for the search icon. Make it darker on light theme"). (The stylesheet
+    // comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for rule in [
         ".welcome-form{display:flex;align-items:center;gap:var(--space-12);height:64px;padding:0 7px 0 23px;border:1px solid transparent;border-radius:var(--radius-pill);background:var(--surface-muted);}",
         "font-size:max(16px,1.125rem);",
-        ".welcome-search{width:var(--size-button);height:var(--size-button);background:var(--search-knob);color:var(--highlight-icon);}",
+        ".welcome-search{width:var(--size-button);height:var(--size-button);color:var(--highlight-icon);}",
+        "@media (hover:hover){.welcome-search:hover{background:var(--surface-muted-hover);}}",
         ".welcome-search svg{width:22px;height:22px;}",
         "@media (min-width:720px){.welcome-tools{max-width:720px;margin-inline:auto;}}",
         "@media (max-width:719px){.welcome-form{height:56px;}.welcome-search{width:var(--size-button-sm);height:var(--size-button-sm);}.welcome-search svg{width:20px;height:20px;}}",
-        ".header-post{width:var(--size-button-sm);height:var(--size-button-sm);padding:2px;border:0;background:var(--post) content-box;color:var(--on-post);",
-        ".header-post:active{background-color:var(--post-hover);}",
-        "@media (hover:hover){.header-post:hover{background-color:var(--post-hover);}}",
+        ".header-post{width:var(--size-button-sm);height:var(--size-button-sm);padding:2px;border:0;background:var(--surface-muted) content-box;color:var(--highlight-icon);",
+        ".header-post:active{background-color:var(--surface-muted-hover);}",
+        "@media (hover:hover){.header-post:hover{background-color:var(--surface-muted-hover);}}",
         "@media (min-width:720px){.header-post{display:none;}}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
     assert!(!css.contains("welcome-post") && !css.contains(".welcome-tools{display:flex"), "nothing left of the row's old parts");
+    assert!(css.contains(":root{color-scheme:light;") && css.contains("--highlight-icon:#1b1b1b;") && !css.contains("--search-knob"), "the magnifier dark on the light theme, on no circle");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -5484,7 +5490,7 @@ async fn the_rail_and_the_bars_search_lead_everywhere(pool: PgPool) {
     assert!(rule(r#".rail-item[aria-current="page"] .rail-icon"#).contains("background:var(--surface-muted)"));
     assert!(rule(".top-search").contains("background:var(--surface-muted)"));
     assert!(rule(".welcome-form").contains("background:var(--surface-muted)"));
-    assert!(rule(".welcome-search").contains("background:var(--search-knob)"));
+    assert!(rule(".welcome-search").contains("color:var(--highlight-icon)") && !rule(".welcome-search").contains("background"));
     // The bar's search stands in the middle of the page beside the rail: the bar's start and end
     // grow alike around it. A filter that is on is in the accent, toned down (2026-10-11).
     assert!(bar.contains(r#"<div class="header-start">"#) && bar.contains(r#"<div class="header-end">"#), "{bar}");
