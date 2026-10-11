@@ -48,7 +48,7 @@
   .breadcrumb-back:hover { background: var(--surface-muted); }
 }
 .breadcrumb-up { min-width: 0; overflow: hidden; color: var(--muted); text-decoration: none; text-overflow: ellipsis; }
-.breadcrumb-up:hover { color: var(--text); text-decoration: underline; text-underline-offset: .2em; }
+.breadcrumb-up:is(:hover, :active) { color: var(--text); text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
 .breadcrumb-sep { flex: none; color: var(--muted); }
 .breadcrumb-here { min-width: 0; overflow: hidden; color: var(--text); font-weight: var(--semibold); text-overflow: ellipsis; }
 .browse-title { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }

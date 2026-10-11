@@ -4734,8 +4734,10 @@ async fn buttons_are_pills_in_the_accent_or_the_grey(pool: PgPool) {
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
     // A card tapped or clicked underlines its title in the accent until its listing shows, with no
-    // box round it in the main colour, and a category's pill fills its icon with the accent, under
-    // the pointer too: the user's asks of 2026-10-11 (application.js marks either .pressed).
+    // box round it in the main colour, and a category's pill fills its icon with the accent and
+    // underlines its name in it, under the pointer too: the user's asks of 2026-10-11
+    // (application.js marks either .pressed). No blue tap box of the browser's own anywhere: a
+    // link's words, held, are underlined in the accent, the menu's rows' too.
     // (The stylesheet comes minified: web::site_css.)
     let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     for rule in [
@@ -4743,6 +4745,11 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
         ".card:has(.heart:active) .card-link{text-decoration:none;}",
         ".shortcut:active .shortcut-icon,.shortcut.pressed .shortcut-icon{fill:var(--highlight);}",
         ".shortcut:hover .shortcut-icon{fill:var(--highlight);}",
+        ".shortcut:active,.shortcut.pressed{text-decoration:underline 2px var(--highlight);text-underline-offset:.2em;}",
+        ".shortcut:hover{text-decoration:underline 2px var(--highlight);text-underline-offset:.2em;}",
+        "html{-webkit-tap-highlight-color:transparent;}",
+        "a:not([class]):active{text-decoration:underline 2px var(--highlight);text-underline-offset:.2em;}",
+        "a.menu-row:active .menu-row-word{text-decoration:underline 2px var(--highlight);text-underline-offset:.2em;}",
     ] {
         assert!(css.contains(rule), "{rule}");
     }
@@ -4932,10 +4939,10 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     assert!(!css.contains(r#"[data-accent="mint"]"#) && !css.contains("--lime:"));
     assert_eq!(css.matches("--on-highlight:").count(), 1);
     // A listing's price on a band of it across the figure's foot, as Tradera marks its prices
-    // (2026-10-11): a thick underline under the letters, in the accent toned down a step less than
-    // a filter that is on.
+    // (2026-10-11): a thick underline under the letters, in the tint a filter that is on takes, as
+    // quiet as the user asked.
     for rule in [
-        "--price-mark:color-mix(in srgb,var(--highlight) calc(var(--filter-share) + 30%),var(--bg));",
+        "--price-mark:var(--filter-on);",
         ".price-amount{text-decoration-line:underline;text-decoration-color:var(--price-mark);text-decoration-thickness:.34em;text-decoration-skip-ink:none;text-underline-offset:-.2em;}",
     ] {
         assert!(css.contains(rule), "{rule}");

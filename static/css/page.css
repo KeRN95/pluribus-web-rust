@@ -680,7 +680,7 @@
    bell before it there, with how many are new. */
 .saved-switch { margin: 0 0 .25rem; font-size: var(--text-sm); }
 .saved-switch a { display: inline-flex; align-items: center; gap: .35rem; color: var(--muted); font-weight: var(--medium); text-decoration: none; }
-.saved-switch a:hover { color: var(--text); }
+.saved-switch a:is(:hover, :active) { color: var(--text); }
 .saved-switch svg { flex: none; }
 /* The searches kept (saved_searches.html): a line each, its name leading to it, how many listings
    came since it was last opened, its alerts' button and "Fshi"; on a phone the buttons go under
@@ -688,7 +688,7 @@
 .saved-search-list { margin: 1rem 0; padding: 0; list-style: none; }
 .saved-search { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .6rem; padding: .75rem 0; border-top: 1px solid var(--border); }
 .saved-search-name { flex: 1 1 14rem; min-width: 0; color: var(--text); font-weight: var(--semibold); text-decoration: none; }
-.saved-search-name:hover { text-decoration: underline; text-underline-offset: .15em; }
+.saved-search-name:is(:hover, :active) { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
 .saved-search .badge { flex: none; margin: 0; }
 .saved-search form { display: contents; }
 /* The notifications (notifications.html): a line each, its kind's icon in the muted colour, its
@@ -699,7 +699,7 @@
 .notification-list { margin: 1rem 0; padding: 0; list-style: none; }
 .notification { border-top: 1px solid var(--border); }
 .notification-line { display: flex; align-items: flex-start; gap: .75rem; padding: .8rem 0; color: var(--text); text-decoration: none; }
-a.notification-line:hover .notification-title { text-decoration: underline; text-underline-offset: .15em; }
+a.notification-line:is(:hover, :active) .notification-title { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
 .notification-icon { flex: none; margin-top: .1rem; color: var(--muted); }
 .notification-text { display: flex; flex: 1; flex-direction: column; gap: .15rem; min-width: 0; }
 .notification-title { font-weight: var(--medium); overflow-wrap: anywhere; }
@@ -782,7 +782,7 @@ a.notification-line:hover .notification-title { text-decoration: underline; text
 }
 .footer-links { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-22); }
 .footer-links a { display: inline-flex; align-items: center; min-height: var(--size-button-sm); color: var(--muted); text-decoration: none; }
-.footer-links a:hover { text-decoration: underline; }
+.footer-links a:is(:hover, :active) { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
 .site-footer p { margin: 0; }
 /* The other language, named in itself, at the links' end, underlined, as the canvas has it
    (language.rs). */

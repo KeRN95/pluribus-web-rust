@@ -116,7 +116,7 @@
 .welcome ~ :is(.most-viewed, .latest) > h2,
 .welcome ~ .seen-lately .row-head h2 { margin: 0 0 12px; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
 .row-forget { flex: none; padding: .4rem .25rem; border: 0; background: none; color: var(--muted); font: inherit; font-size: .84375rem; cursor: pointer; }
-.row-forget:hover { color: var(--text); text-decoration: underline; text-underline-offset: .15em; }
+.row-forget:is(:hover, :active) { color: var(--text); text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
 
 /* A select chosen from a list in the page (picker_controller.js) rather than the phone's own picker.
    The select stays, unseen, where the button is, so a "required" note points there; the list opens
@@ -272,10 +272,10 @@
 /* The welcome page's categories, all of them at once, as pills as the canvas has them: on the grey
    of secondary controls with no outline, each as wide as its name, one after another and on to
    the next line; the icon before the name, in the name's colour (it was muted until 2026-10-10, a
-   shade apart from its label). Under the pointer or a finger a pill takes a darker grey and its
-   icon fills with the accent, as the menu's and the rail's icons do, and a tapped one keeps it so
-   until its page shows (application.js marks it .pressed; the user's ask of 2026-10-11); nothing
-   moves, as the design system has it. */
+   shade apart from its label). Under the pointer or a finger a pill takes a darker grey, its icon
+   fills with the accent, as the menu's and the rail's icons do, and its name is underlined in it,
+   and a tapped one keeps both until its page shows (application.js marks it .pressed; the user's
+   asks of 2026-10-11); nothing moves, as the design system has it. */
 .shortcuts { display: flex; flex-wrap: wrap; gap: .55rem; margin: 1.25rem 0 0; }
 /* A little bigger than the details' pills, being the way into the site. */
 .shortcut {
@@ -296,11 +296,14 @@
 }
 .shortcut-icon { flex: none; }
 .shortcut:active { background: var(--surface-muted-hover); }
+.shortcut:active,
+.shortcut.pressed { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
 .shortcut:active .shortcut-icon,
 .shortcut.pressed .shortcut-icon { fill: var(--highlight); }
 @media (hover: hover) {
   .shortcut:hover { background: var(--surface-muted-hover); }
   .shortcut:hover .shortcut-icon { fill: var(--highlight); }
+  .shortcut:hover { text-decoration: underline 2px var(--highlight); text-underline-offset: .2em; }
 }
 /* The row over the categories (home.html): the search bar alone from 720px up, the rail having
    posting (base.css, .rail); on phones it takes the width "Posto" leaves it, 46px tall, 8px from

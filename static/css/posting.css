@@ -8,7 +8,7 @@
    marked as what is picked is, the tint and its colour. */
 .account-nav { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 1rem; }
 .account-nav a { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 .85rem; border: 1px solid var(--menu-border); border-radius: 999px; background: var(--surface); color: var(--text); font-size: var(--text-sm); font-weight: var(--medium); text-decoration: none; }
-.account-nav a:hover { background: var(--surface-muted); }
+.account-nav a:is(:hover, :active) { background: var(--surface-muted); }
 .account-nav a[aria-current="page"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: var(--badge); color: var(--accent); }
 /* "Cilësimet" (settings.html): a section each under its heading, the contacts a line each with
    "Hiqe" at its end, the buttons of the devices' section side by side. */

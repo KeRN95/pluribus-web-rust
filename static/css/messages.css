@@ -78,7 +78,7 @@
 .conversation { max-width: 720px; margin-inline: auto; }
 .conversation-back { margin: 22px 0 0; font-size: var(--text-sm); }
 .conversation-back a { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); text-decoration: none; }
-.conversation-back a:hover { color: var(--text); }
+.conversation-back a:is(:hover, :active) { color: var(--text); }
 .conversation-box {
   display: flex;
   flex-direction: column;
@@ -106,8 +106,9 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 .conversation-listing-text { display: grid; gap: 2px; min-width: 0; }
 .conversation-title { margin: 0; overflow: hidden; font-size: 1rem; font-weight: var(--bold); line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
 @media (hover: hover) {
-  .conversation-listing:hover .conversation-title { text-decoration: underline; text-underline-offset: .15em; }
+  .conversation-listing:hover .conversation-title { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
 }
+.conversation-listing:active .conversation-title { text-decoration: underline 2px var(--highlight); text-underline-offset: .15em; }
 .conversation-price { color: var(--muted); font-size: var(--text-sm); }
 /* After the price, once the listing is no longer simply up: reserved, sold or off the site. */
 .conversation-status { margin-left: .5rem; padding: .05rem .5rem; color: var(--text); font-size: var(--text-xs); }
