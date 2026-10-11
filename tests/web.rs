@@ -4739,10 +4739,16 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
     for part in ["root.dataset.theme = theme", "root.dataset.textSize = size", "root.dataset.accent = accent"] {
         assert!(home.contains(part), "{part}");
     }
-    // Drawn as the canvas has it: white over the page dimmed, its counts in the accent; the text's
-    // size scales every size in rem. (The stylesheet comes minified: web::site_css.)
+    // Drawn as the canvas has it: white over the page dimmed, its counts in the accent, a link's
+    // icon filled with the accent under the pointer; the text's size scales every size in rem.
+    // (The stylesheet comes minified: web::site_css.)
     let css = get(pool, &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    for rule in [".menu::backdrop{background:var(--scrim);}", r#":root[data-text-size="large"]{--text-scale:1.1875;}"#, "html{font-size:calc(100% * var(--text-scale));}"] {
+    for rule in [
+        ".menu::backdrop{background:var(--scrim);}",
+        r#":root[data-text-size="large"]{--text-scale:1.1875;}"#,
+        "html{font-size:calc(100% * var(--text-scale));}",
+        "a.menu-row:hover > svg{fill:var(--highlight);}",
+    ] {
         assert!(css.contains(rule), "{rule}");
     }
     let count = &css[css.find("}.menu-count{").expect("the menu's counts") + 1..];
