@@ -162,7 +162,7 @@
    price short there ("9 800 € (i diskut…"; the user, 2026-10-11). A big card has room for them. */
 @media (max-width: 719px) {
   :is(.card-negotiable, .card-was) { display: none; }
-  :is(.cards-big .results, .big-cards) :is(.card-negotiable, .card-was) { display: revert; }
+  .cards-big .results :is(.card-negotiable, .card-was) { display: revert; }
 }
 
 /* The title, under the photo. */
@@ -417,39 +417,39 @@
 .card-dots,
 .card-step { display: none; }
 
-/* Big cards: the results' when the view menu makes them big (.cards-big .results), and always
-   "Më të klikuarat"'s two (.big-cards, card_row.html's card_pair). */
-:is(.cards-big .results, .big-cards) .grid { grid-template-columns: minmax(0, 1fr); max-width: calc(40rem / var(--page-scale)); margin-inline: auto; row-gap: 2.5rem; }
+/* Big cards: the results' when the view menu makes them big (.cards-big .results); "Më të
+   klikuarat"'s two were too, earlier on 2026-10-11 (.big-cards), a row of small cards since. */
+.cards-big .results .grid { grid-template-columns: minmax(0, 1fr); max-width: calc(40rem / var(--page-scale)); margin-inline: auto; row-gap: 2.5rem; }
 @media (min-width: 960px) {
-  :is(.cards-big .results, .big-cards) .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; column-gap: 1.5rem; }
+  .cards-big .results .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; column-gap: 1.5rem; }
 }
-:is(.cards-big .results, .big-cards) .card-media::before { aspect-ratio: 4 / 3; }
-:is(.cards-big .results, .big-cards) .card-slides {
+.cards-big .results .card-media::before { aspect-ratio: 4 / 3; }
+.cards-big .results .card-slides {
   z-index: 2;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
 }
-:is(.cards-big .results, .big-cards) .card-slides::-webkit-scrollbar { display: none; }
-:is(.cards-big .results, .big-cards) .card-slide { scroll-snap-align: start; scroll-snap-stop: always; }
-:is(.cards-big .results, .big-cards) .card-slide + .card-slide { display: block; }
-:is(.cards-big .results, .big-cards) .card-slides.is-dragging,
-:is(.cards-big .results, .big-cards) .card-slides.is-dragging * { cursor: grabbing; }
-:is(.cards-big .results, .big-cards) .card:has(.card-slides.is-dragging) .card-link { text-decoration: none; }
-:is(.cards-big .results, .big-cards) .card-media::after {
+.cards-big .results .card-slides::-webkit-scrollbar { display: none; }
+.cards-big .results .card-slide { scroll-snap-align: start; scroll-snap-stop: always; }
+.cards-big .results .card-slide + .card-slide { display: block; }
+.cards-big .results .card-slides.is-dragging,
+.cards-big .results .card-slides.is-dragging * { cursor: grabbing; }
+.cards-big .results .card:has(.card-slides.is-dragging) .card-link { text-decoration: none; }
+.cards-big .results .card-media::after {
   z-index: 3;
   background:
     linear-gradient(to top, transparent calc(100% - 4.5rem), var(--photo-shade)),
     linear-gradient(to bottom, transparent calc(100% - 5.5rem), var(--photo-shade));
 }
-:is(.cards-big .results, .big-cards) .card-media .card-price { z-index: 4; }
-:is(.cards-big .results, .big-cards) .card-media .card-price { padding: 0 1rem .75rem; font-size: var(--text-lg); }
+.cards-big .results .card-media .card-price { z-index: 4; }
+.cards-big .results .card-media .card-price { padding: 0 1rem .75rem; font-size: var(--text-lg); }
 /* Its seller at the top left, as the price at the bottom: their initial in a small circle, as on
    the listing page, then the name and under it, smaller, since when they are a user, on a shade
    of their own; small, so as not to cover the photo; every touch goes through to the photo. */
 .card-seller { display: none; }
-:is(.cards-big .results, .big-cards) .card-seller {
+.cards-big .results .card-seller {
   display: flex;
   grid-area: 1 / 1;
   align-self: start;
@@ -468,10 +468,10 @@
 .card-seller .avatar { width: 1.5rem; height: 1.5rem; border-color: var(--on-photo); color: var(--on-photo); font-size: .75rem; filter: drop-shadow(0 1px 2px var(--photo-shade)); }
 .card-seller-text { display: grid; min-width: 0; }
 .card-seller-name { font-size: var(--text-xs); font-weight: var(--semibold); }
-:is(.cards-big .results, .big-cards) .card-head { padding-top: .7rem; }
-:is(.cards-big .results, .big-cards) .card-title { font-size: var(--text-md); }
-:is(.cards-big .results, .big-cards) .card-summary { font-size: var(--text-sm); }
-:is(.cards-big .results, .big-cards) .card-dots {
+.cards-big .results .card-head { padding-top: .7rem; }
+.cards-big .results .card-title { font-size: var(--text-md); }
+.cards-big .results .card-summary { font-size: var(--text-sm); }
+.cards-big .results .card-dots {
   display: flex;
   grid-area: 1 / 1;
   align-self: end;
@@ -486,9 +486,9 @@
 /* Under a mouse a dot goes to its photo (slides_controller.js), taking a click a little round it
    too, up to halfway to the next. */
 @media (hover: hover) and (pointer: fine) {
-  :is(.cards-big .results, .big-cards) .card-dots span { position: relative; pointer-events: auto; cursor: pointer; }
-  :is(.cards-big .results, .big-cards) .card-dots span::after { content: ""; position: absolute; inset: -9px -2.5px; }
-  :is(.cards-big .results, .big-cards) .card-dots span:not(.is-current):hover { background: rgb(255 255 255 / 80%); }
+  .cards-big .results .card-dots span { position: relative; pointer-events: auto; cursor: pointer; }
+  .cards-big .results .card-dots span::after { content: ""; position: absolute; inset: -9px -2.5px; }
+  .cards-big .results .card-dots span:not(.is-current):hover { background: rgb(255 255 255 / 80%); }
 }
 /* The arrows, under a mouse: an arrow in white on a small soft dark circle, as the heart's
    (::before), each showing only while the mouse is near its edge of the photo (near-previous,
@@ -496,7 +496,7 @@
    circle, and takes a click a little way round itself too (::after), so that one just off it
    steps the photos rather than opening the listing. */
 @media (hover: hover) {
-  :is(.cards-big .results, .big-cards) .card-step {
+  .cards-big .results .card-step {
     position: relative;
     display: grid;
     place-items: center;
@@ -514,7 +514,7 @@
     opacity: 0;
     transition: opacity .15s;
   }
-  :is(.cards-big .results, .big-cards) .card-step::before {
+  .cards-big .results .card-step::before {
     content: "";
     position: absolute;
     inset: .3rem;
@@ -524,20 +524,20 @@
     backdrop-filter: blur(6px);
     transition: background-color .15s;
   }
-  :is(.cards-big .results, .big-cards) .card-step:hover::before { background: rgb(27 27 27 / 65%); }
-  :is(.cards-big .results, .big-cards) .card-step svg { position: relative; width: 15px; height: 15px; }
-  :is(.cards-big .results, .big-cards) .card-step::after { content: ""; position: absolute; inset: -.6rem; border-radius: 50%; }
-  :is(.cards-big .results, .big-cards) .near-previous .card-previous,
-  :is(.cards-big .results, .big-cards) .near-next .card-next,
-  :is(.cards-big .results, .big-cards) .card-step:focus-visible { opacity: 1; }
+  .cards-big .results .card-step:hover::before { background: rgb(27 27 27 / 65%); }
+  .cards-big .results .card-step svg { position: relative; width: 15px; height: 15px; }
+  .cards-big .results .card-step::after { content: ""; position: absolute; inset: -.6rem; border-radius: 50%; }
+  .cards-big .results .near-previous .card-previous,
+  .cards-big .results .near-next .card-next,
+  .cards-big .results .card-step:focus-visible { opacity: 1; }
   .card-previous { justify-self: start; }
   .card-next { justify-self: end; }
 }
-:is(.cards-big .results, .big-cards) .card-step[hidden] { display: none; }
+.cards-big .results .card-step[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .card-dots span,
-  :is(.cards-big .results, .big-cards) .card-step,
-  :is(.cards-big .results, .big-cards) .card-step::before { transition: none; }
+  .cards-big .results .card-step,
+  .cards-big .results .card-step::before { transition: none; }
 }
 
 /* The list (the view menu): one listing a line 12px from the next, the whole of the page's width,

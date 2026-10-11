@@ -245,11 +245,11 @@ export default class extends Controller {
   }
 
   // A listing's photos always; a card's on a big card only (the results' once the view menu makes
-  // them big, cards_controller.js; "Më të klikuarat"'s two always): a small card's photos don't
+  // them big, cards_controller.js): a small card's photos don't
   // slide, though it has this controller to slide them once it is big, and in a row the drag is
   // the row's.
   get sliding() {
-    return !this.element.closest(".card") || Boolean(this.element.closest(".cards-big .results, .big-cards"));
+    return !this.element.closest(".card") || Boolean(this.element.closest(".cards-big .results"));
   }
 
   get index() {

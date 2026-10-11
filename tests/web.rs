@@ -7714,14 +7714,13 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     let home = html(pool.clone(), "/").await;
     let row = section(&home, "most-viewed-heading");
     assert_eq!(card_numbers(row), vec![1002, 1001]);
-    // Two big cards (card_row.html's card_pair), their ids their own, as the user asked on
-    // 2026-10-11 (a row of small cards that slid sideways before): two to a line from 960px up,
-    // one over the other under it (.big-cards).
-    assert!(home.contains(r#"<section class="most-viewed big-cards" aria-labelledby="most-viewed-heading">"#), "{home}");
-    assert!(row.contains(r#"<div class="grid"><article class="card" id="most-viewed-1002">"#), "{row}");
-    // Their photos are fetched as wide as the big cards' grid has them; the first one's before
-    // anything else on the page.
-    assert!(row.contains(&format!(r#"sizes="{BIG_SIZES}""#)) && !row.contains(ROW_SIZES), "{row}");
+    // A row of small cards that slides sideways, as "Shikuar së fundmi" (card_row.html), their ids
+    // their own, as the user asked on 2026-10-11 (two big cards earlier that day).
+    assert!(home.contains(r#"<section class="most-viewed" data-controller="drag-row" aria-labelledby="most-viewed-heading">"#), "{home}");
+    assert!(row.contains(r#"<div class="card-row"><article class="card" id="most-viewed-1002">"#), "{row}");
+    // Their photos are fetched as wide as the row's cards; the first one's before anything else on
+    // the page.
+    assert!(row.contains(&format!(r#"sizes="{ROW_SIZES}""#)) && !row.contains(BIG_SIZES), "{row}");
     assert_eq!(home.matches(r#"fetchpriority="high""#).count(), 1);
     let first = &row[row.find(r#"<article class="card""#).unwrap()..];
     assert!(first[..first.find("</article>").unwrap()].contains(r#"fetchpriority="high""#), "{row}");
@@ -7736,6 +7735,24 @@ async fn the_most_seen_listings_have_a_row_on_the_welcome_page(pool: PgPool) {
     assert!(page.contains(r#"<p class="listing-views" title="3 shikime">"#), "{page}");
     let unseen = get(pool.clone(), "/listing/1005-iphone-13-128-gb-si-i-ri").await.body;
     assert!(unseen.contains("listing-meta") && !unseen.contains("listing-views"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn most_seen_are_eight_in_a_row(pool: PgPool) {
+    // Ten listings seen this week, each fewer times than the one before: "Më të klikuarat" shows
+    // the eight seen the most, the most first, in a row of small cards as "Shikuar së fundmi" has
+    // them (the user's ask of 2026-10-11, "Load 8 posts").
+    sqlx::query(
+        "INSERT INTO listing_daily_stats (listing_id, stat_date, detail_views)
+         SELECT id, current_date, 100 - public_no % 100 FROM listings WHERE public_no BETWEEN 1001 AND 1010",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let home = html(pool.clone(), "/").await;
+    let row = section(&home, "most-viewed-heading");
+    assert_eq!(card_numbers(row), (1001..=1008).collect::<Vec<_>>(), "{row}");
+    assert!(row.contains(r#"<div class="card-row">"#), "{row}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -7779,22 +7796,22 @@ async fn the_main_categories_and_a_few_big_ones_have_their_own_most_seen(pool: P
     assert_eq!(row(&html(pool.clone(), "/c/makina").await), [1001, 1002]);
     assert_eq!(row(&html(pool.clone(), "/c/apartamente").await), [1003]);
     assert_eq!(row(&html(pool.clone(), "/c/vila-dhe-shtepi").await), [1004]);
-    // The welcome page's has the two seen the most of all five, as big cards, their photos
-    // fetched as wide as the big cards' grid has them (BIG_SIZES).
+    // The welcome page's has all five seen (up to eight, MOST_VIEWED_SHOWN), the most first, in
+    // the row, their photos fetched as wide as the row's cards (ROW_SIZES).
     let home = html(pool.clone(), "/").await;
     let all = section(&home, "most-viewed-heading");
-    assert_eq!(all.matches(r#"<article class="card""#).count(), 2, "{all}");
+    assert_eq!(all.matches(r#"<article class="card""#).count(), 5, "{all}");
     assert_eq!(card_numbers(all)[0], 1002);
-    assert!(all.contains(&format!(r#"sizes="{BIG_SIZES}""#)) && !all.contains(SMALL_SIZES) && !all.contains(ROW_SIZES), "{all}");
+    assert!(all.contains(&format!(r#"sizes="{ROW_SIZES}""#)) && !all.contains(SMALL_SIZES) && !all.contains(BIG_SIZES), "{all}");
     // A round button beside the view menu folds it away, pressed while it shows; the cookie it
     // sets (most_viewed_controller.js) keeps it folded on the next pages, where it stays in the
     // page, hidden, its photos waiting, and the results' first photo comes first instead.
     assert!(vehicles.contains(r#"class="button secondary round-button most-viewed-button" aria-controls="most-viewed" aria-pressed="true""#));
-    assert!(vehicles.contains(r#"<section class="most-viewed big-cards" id="most-viewed" aria-labelledby="most-viewed-heading">"#));
+    assert!(vehicles.contains(r#"<section class="most-viewed" id="most-viewed" data-controller="drag-row" aria-labelledby="most-viewed-heading">"#));
     assert!(section(&vehicles, "most-viewed-heading").contains(r#"fetchpriority="high""#));
     let folded = get_with_cookie(pool.clone(), "/c/automjete", "most-viewed=hidden").await.body;
     assert!(folded.contains(r#"aria-controls="most-viewed" aria-pressed="false""#));
-    assert!(folded.contains(r#"<section class="most-viewed big-cards" id="most-viewed" hidden aria-labelledby="most-viewed-heading">"#));
+    assert!(folded.contains(r#"<section class="most-viewed" id="most-viewed" data-controller="drag-row" hidden aria-labelledby="most-viewed-heading">"#));
     let row_html = section(&folded, "most-viewed-heading");
     let lazy = |html: &str| html.matches(r#"loading="lazy""#).count();
     assert!(!row_html.contains(r#"fetchpriority="high""#), "{row_html}");
@@ -8386,7 +8403,8 @@ async fn a_price_lowered_lately_says_by_how_much(pool: PgPool) {
     // pill: "(i diskutueshëm)" and what it was cut the price short there (the user, 2026-10-11).
     // A big card has room for them.
     let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
-    assert!(css.contains("@media (max-width:719px){:is(.card-negotiable,.card-was){display:none;}:is(.cards-big .results,.big-cards) :is(.card-negotiable,.card-was){display:revert;}}"));
+    assert!(css.contains("@media (max-width:719px){:is(.card-negotiable,.card-was){display:none;}.cards-big .results :is(.card-negotiable,.card-was){display:revert;}}"));
+    assert!(!css.contains("big-cards"));
 
     // Less than 1% is no drop: the iPhone, from 55 000 to 54 700 Lekë. Nor is a price in another
     // currency: the bike, from 25 000 Lekë to 200 €.

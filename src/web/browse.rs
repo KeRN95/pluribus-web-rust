@@ -61,6 +61,9 @@ pub const LISTING_IDS: &str = "listing";
 /// The row of cards that slides sideways, by the word its cards' ids start with: the most seen
 /// this week.
 pub const MOST_VIEWED_IDS: &str = "most-viewed";
+/// How many of the most seen this week that row shows (ListingPage::most_viewed): eight, as the
+/// user asked on 2026-10-11.
+pub const MOST_VIEWED_SHOWN: usize = 8;
 /// Those a promotion features (db::featured_cards), at the top of the results (ListingPage::featured).
 pub const FEATURED_IDS: &str = "featured";
 /// How many of those a promotion features stand at the top of the results: the first of them, in
@@ -226,13 +229,13 @@ impl ListingPage {
         Self { cards, next: None, layout: Cards::Small, eager, card_ids, lead: false }
     }
 
-    /// The first two of these as big cards (card_row.html's card_pair; .big-cards in page.css),
-    /// two to a line from 960px up and one over the other under it, their photos as wide as the
-    /// big cards' grid has them: "Më të klikuarat", as the user asked on 2026-10-11 (a row of small
-    /// cards that slid sideways before). The first `eager` load their photo straight away.
-    pub fn pair(mut cards: Vec<ListingCard>, card_ids: &'static str, eager: usize) -> Self {
-        cards.truncate(2);
-        Self { cards, next: None, layout: Cards::Big, eager, card_ids, lead: false }
+    /// "Më të klikuarat": the first MOST_VIEWED_SHOWN of these in a row of small cards that slides
+    /// sideways, as "Shikuar së fundmi" has them (card_row.html, ListingPage::row), as the user
+    /// asked on 2026-10-11 (two big cards earlier that day, and a row of small ones before those).
+    /// The first `eager` load their photo straight away.
+    pub fn most_viewed(mut cards: Vec<ListingCard>, eager: usize) -> Self {
+        cards.truncate(MOST_VIEWED_SHOWN);
+        Self::row(cards, MOST_VIEWED_IDS, eager)
     }
 
     /// The first FEATURED_SHOWN of those a promotion features among a page's matches, at the top
@@ -414,8 +417,8 @@ pub async fn home(
     // some, else "Më të klikuarat"'s; without either, the listings' first does.
     let seen = (!seen.is_empty()).then(|| ListingPage::row(seen, SEEN_IDS, 2).leading());
     let most_viewed = (!most_viewed.is_empty()).then(|| {
-        let pair = ListingPage::pair(most_viewed, MOST_VIEWED_IDS, 2);
-        if seen.is_none() { pair.leading() } else { pair }
+        let row = ListingPage::most_viewed(most_viewed, 2);
+        if seen.is_none() { row.leading() } else { row }
     });
     let page = if seen.is_none() && most_viewed.is_none() { page.leading() } else { page };
     let origin = seo::origin(&headers);
@@ -913,8 +916,8 @@ async fn browse(
     // the map page, whose map comes first.
     let most_viewed_shown = cookie(&headers, MOST_VIEWED_COOKIE).as_deref() != Some("hidden");
     let most_viewed = (!most_viewed.is_empty()).then(|| {
-        let pair = ListingPage::pair(most_viewed, MOST_VIEWED_IDS, if most_viewed_shown { 2 } else { 0 });
-        if most_viewed_shown { pair.leading() } else { pair }
+        let row = ListingPage::most_viewed(most_viewed, if most_viewed_shown { 2 } else { 0 });
+        if most_viewed_shown { row.leading() } else { row }
     });
     let results_lead = most_viewed.is_none() || !most_viewed_shown;
     // The promoted ones, when a promotion features any of the matches, come first of the results

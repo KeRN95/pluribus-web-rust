@@ -952,8 +952,9 @@ pub async fn featured_cards(db: &PgPool, filter: &ListingFilter, limit: i64) -> 
     query.build_query_as().fetch_all(db).await
 }
 
-/// How many listings the welcome page's "Më të klikuarat" shows, and over how many days their
-/// views count.
+/// How many listings "Më të klikuarat" is read with, and over how many days their views count: it
+/// shows the first eight (web/browse.rs, MOST_VIEWED_SHOWN), the others standing in for those of
+/// accounts the visitor blocked.
 pub const MOST_VIEWED: i64 = 12;
 pub const MOST_VIEWED_DAYS: i32 = 7;
 
