@@ -4719,6 +4719,13 @@ async fn the_menu_leads_everywhere(pool: PgPool) {
         assert!(menu.contains(r#"<input type="checkbox" class="switch" role="switch" data-controller="theme""#));
         assert!(menu.contains(r#"<form class="segmented" method="post" action="/gjuha""#));
         assert!(menu.contains(r#"<button type="submit" name="gjuha" value="sq" lang="sq" aria-pressed="true">Shqip</button>"#));
+        // A row's words stand in a span of their own, closed inside its link, and a count is a span
+        // after them, hidden until there is something to count (a "</span>" inside the count's tag
+        // once showed its attributes as words, in the accent).
+        assert!(!menu.contains("</a></span>"), "{menu}");
+        for target in ["notifications", "messages"] {
+            assert!(menu.contains(&format!(r#"</span><span class="menu-count" data-menu-target="{target}" hidden>"#)), "{target}");
+        }
     }
     // Its categories are the welcome page's pills, in their order.
     let slugs = |part: &str| -> Vec<String> {
