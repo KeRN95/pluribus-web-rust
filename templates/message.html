@@ -1,7 +1,7 @@
-{#- One message in a conversation (conversation.html, messages_stream.html): the visitor's side's
-    on the right in the coral's tint (a colleague's in a store's, with their name over it), the
-    other side's on the left, with when it was sent under it. Its line breaks stay
-    (messages.css); links in it are only text. -#}
+{#- One message in a conversation (conversation.html, messages_stream.html), as the canvas has it:
+    a bubble, the visitor's side's on the right in the main colour (a colleague's in a store's, with
+    their name over it), the other side's on the left in grey, with when it was sent under it. Its
+    line breaks stay (messages.css); links in it are only text. -#}
 <li class="message{% if message.mine %} mine{% endif %}" id="message-{{ message.id }}" data-id="{{ message.id }}">
   {%- if let Some(author) = message.author %}
   <span class="message-author">{{ crate::i18n::name(author) }}</span>

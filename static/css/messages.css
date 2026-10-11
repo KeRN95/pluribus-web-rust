@@ -125,23 +125,23 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
 /* After the price, once the listing is no longer simply up: reserved, sold or off the site. */
 .conversation-status { margin-left: .5rem; padding: .05rem .5rem; color: var(--text); font-size: var(--text-xs); }
 
-/* The messages: the other side's on the left on the surface, the visitor's on the right in the
-   coral's tint, each rounded but for its corner on its own side, with when under it. Line breaks
-   stay; a long word breaks rather than widen the page. */
-.thread { display: flex; flex-direction: column; gap: .45rem; margin: 0; padding: 0 0 .75rem; list-style: none; }
-.message {
-  align-self: flex-start;
-  max-width: min(82%, 34rem);
-  padding: .5rem .8rem .35rem;
-  border: 1px solid var(--menu-border);
-  border-radius: 18px 18px 18px 6px;
-  background: var(--surface);
+/* The messages, as the canvas has them, 10px apart: each a bubble with when under it, 12px and
+   muted, as wide as its words up to 70% of the thread (80% on a phone); the other side's on the
+   left in the grey of secondary controls, the visitor's on the right in the main colour, its words
+   in the main colour's own; rounded 18px but for the corner on its own side, 6px; in a store's
+   conversation a colleague's name over theirs, 12px semibold. Line breaks stay; a long word breaks
+   rather than widen the page. (The bubble was the whole message once, when inside it, the other
+   side's white with a hairline, the visitor's in the coral's tint.) */
+.thread { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0 0 .75rem; list-style: none; }
+.message { display: flex; flex-direction: column; align-items: flex-start; align-self: flex-start; gap: 3px; max-width: 70%; }
+.message.mine { align-items: flex-end; align-self: flex-end; }
+.message-author { display: block; color: var(--muted); font-size: .75rem; font-weight: var(--semibold); }
+.message-body { margin: 0; padding: 10px 14px; border-radius: 18px 18px 18px 6px; background: var(--surface-muted); line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.message.mine .message-body { border-radius: 18px 18px 6px 18px; background: var(--main); color: var(--on-main); }
+.message-time { color: var(--muted); font-size: .75rem; }
+@media (max-width: 719px) {
+  .message { max-width: 80%; }
 }
-.message.mine { align-self: flex-end; border-color: transparent; border-radius: 18px 18px 6px 18px; background: var(--badge); }
-/* A colleague's message in a store's conversation: their name over it. */
-.message-author { display: block; margin-bottom: .1rem; color: var(--muted); font-size: .7rem; font-weight: var(--semibold); }
-.message-body { margin: 0; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
-.message-time { display: block; margin-top: .1rem; color: var(--muted); font-size: .7rem; text-align: right; }
 
 /* The box to write in, as the canvas has it, at the conversation's box's foot, and at the bottom
    of the screen over the messages while they scroll past (sticky, on the box's white), above a
@@ -246,8 +246,9 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
   }
 }
 
-/* Blocking, under it all: quiet, as a link. */
-.conversation-block { margin: 1.5rem 0 0; }
+/* Blocking, under it all, as the canvas has it: quiet, as a link, 14px, in the middle 12px under
+   the conversation's box. (At the left, 24px down, once.) */
+.conversation-block { margin: 12px 0 0; text-align: center; }
 .link-button {
   padding: 0;
   border: 0;
@@ -259,7 +260,10 @@ h1.conversation-with .avatar { width: 2.4rem; height: 2.4rem; border-width: 2px;
   text-underline-offset: .2em;
   cursor: pointer;
 }
-.link-button:hover { color: var(--danger); }
+@media (hover: hover) {
+  .link-button:hover { color: var(--danger); }
+}
+.link-button:active { color: var(--danger); }
 
 /* A listing's message sheet (listing.html, message_sheet_controller.js), white, as the canvas has
    it (on the page's own colour once). On a phone, across the screen's foot, 470px tall as the
