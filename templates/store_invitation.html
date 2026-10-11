@@ -7,6 +7,9 @@
     that lets one do; for the one it waits for, "Prano" and "Refuzo"; for anyone else, which
     contact to sign in with (someone not signed in comes back here after). -#}
 <section class="account store-invite">
+  {#- The store and what it asks, with what the viewer can do about it, in one white box, as the
+      canvas has it; how long it holds under the box. -#}
+  <div class="store-invite-box">
   <header class="profile-header">
     {%- if let Some(logo) = invitation.store_logo %}
     <img class="avatar large avatar-logo" src="{{ logo }}" alt="" width="64" height="64">
@@ -35,6 +38,7 @@
   <p>{{ crate::t("Hyr në Pluribus me") }} <strong>{{ masked }}</strong> {{ crate::t("për ta pranuar.") }} {{ crate::t("Pa llogari? Krijohet vetë, me të njëjtin kod.") }}</p>
   <p><a class="button" href="/llogaria">{{ crate::t("Hyr") }}</a></p>
   {%- endmatch %}
+  </div>
   <p class="account-note">{{ crate::i18n::t1("Ftesa vlen deri më {}.", self.until()) }}</p>
 </section>
 {% endblock %}

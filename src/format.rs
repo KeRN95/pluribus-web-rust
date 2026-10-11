@@ -250,10 +250,19 @@ fn tirana(value: OffsetDateTime) -> OffsetDateTime {
     value.to_offset(UtcOffset::from_hms(if summer { 2 } else { 1 }, 0, 0).expect("an offset"))
 }
 
-/// Albanian mobile numbers as +355 69 123 4567; anything else is shown unchanged.
+/// Albanian numbers as people write them: a mobile as +355 69 123 4567, a fixed line as
+/// Tirana's, its one-digit code apart, +355 4 222 3333, or another town's, its two-digit code
+/// apart, +355 52 123 456 (the few places with a code of three are grouped the same); anything
+/// else is shown unchanged. A store's landline showed as one run of digits once.
 pub fn phone(e164: &str) -> String {
     match e164.strip_prefix("+355") {
         Some(rest) if rest.len() == 9 && rest.starts_with('6') => {
+            format!("+355 {} {} {}", &rest[..2], &rest[2..5], &rest[5..])
+        }
+        Some(rest) if rest.len() == 8 && rest.bytes().all(|b| b.is_ascii_digit()) && rest.starts_with('4') => {
+            format!("+355 {} {} {}", &rest[..1], &rest[1..4], &rest[4..])
+        }
+        Some(rest) if rest.len() == 8 && rest.bytes().all(|b| b.is_ascii_digit()) && !rest.starts_with(['0', '6']) => {
             format!("+355 {} {} {}", &rest[..2], &rest[2..5], &rest[5..])
         }
         _ => e164.to_string(),
@@ -572,5 +581,13 @@ mod tests {
     fn formats_albanian_mobile_numbers() {
         assert_eq!(phone("+355691234567"), "+355 69 123 4567");
         assert_eq!(phone("+390612345678"), "+390612345678");
+    }
+
+    #[test]
+    fn formats_albanian_fixed_lines() {
+        // Tirana's code is one digit, the other towns' two.
+        assert_eq!(phone("+35542223333"), "+355 4 222 3333");
+        assert_eq!(phone("+35552123456"), "+355 52 123 456");
+        assert_eq!(phone("+3554222333"), "+3554222333");
     }
 }

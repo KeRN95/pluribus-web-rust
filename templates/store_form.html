@@ -3,17 +3,20 @@
 {% block title %}{{ heading }} | Pluribus{% endblock %}
 
 {% block content %}
-{#- A store's form (stores.rs), new or its own: the name and what it says of itself, its logo and
-    cover (each kept, replaced or taken off), how to reach it, where it is and when it is open, and
-    its NIPT, which only this form shows. Multipart, for the pictures. A problem stays under its
-    field, the rest as typed; pictures are chosen again. A text of ours with an apostrophe in it
-    ("s'është") goes out as it is (|safe), as it did before it went through crate::t. -#}
+{#- A store's form (stores.rs), new or its own, in the canvas's three white boxes: the name and what
+    it says of itself, its logo and cover side by side (each kept, replaced or taken off, the one
+    chosen shown in its frame, picture_pick_controller.js); how to reach it; where it is and when it
+    is open, and its NIPT, which only this form shows. Multipart, for the pictures. A problem stays
+    under its field, the rest as typed; pictures are chosen again. A text of ours with an
+    apostrophe in it ("s'është") goes out as it is (|safe), as it did before it went through
+    crate::t. -#}
 <section class="account store-form">
   <h1>{{ heading }}</h1>
   <p class="lead">{{ crate::t("Dyqani ka faqen e vet, dhe njoftimet që poston si ai dalin me emrin dhe logon e tij.") }}</p>
-  <form class="account-form" action="{{ action }}" method="post" enctype="multipart/form-data">
+  <form class="account-form store-fields" action="{{ action }}" method="post" enctype="multipart/form-data">
     {%- if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
 
+    <div class="form-box">
     <div class="field">
       <label class="field-label" for="name">{{ crate::t("Emri i dyqanit") }}</label>
       <input id="name" name="name" value="{{ form.name }}" required minlength="2" maxlength="80" autocomplete="organization">
@@ -26,27 +29,50 @@
       {%- if let Some(error) = self.error("description") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
 
-    <div class="field">
+    {#- The two pictures side by side: each its frame, the one there now or a dashed one with a
+        camera, then "Zgjidh foton", which opens the file picker (the field itself out of sight with
+        the script, as it is without it), and "Hiqe" under one there now. -#}
+    <div class="form-row picture-row">
+    <div class="field store-picture">
       <label class="field-label" for="logo">{{ crate::t("Logoja") }} <span class="optional">{{ crate::t("(katrore)") }}</span></label>
-      {%- if let Some(store) = store %}{% if let Some(logo) = store.logo_url %}
-      <p class="store-current"><img class="store-logo-preview" src="{{ logo }}" alt="{{ crate::t("Logoja e tanishme") }}" width="64" height="64">
-        <label class="notice-setting"><input type="checkbox" name="remove_logo" value="1"{% if form.remove_logo %} checked{% endif %}><span>{{ crate::t("Hiqe") }}</span></label></p>
+      <div class="picture-pick" data-controller="picture-pick">
+        <span class="picture-frame round" data-picture-pick-target="frame">
+          {%- if let Some(store) = store %}{% if let Some(logo) = store.logo_url %}
+          <img src="{{ logo }}" alt="{{ crate::t("Logoja e tanishme") }}" width="64" height="64">
+          {%- endif %}{% endif %}
+          <svg class="picture-empty" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CAMERA|safe }}</svg>
+        </span>
+        <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" data-picture-pick-target="input" data-action="picture-pick#show">
+        <label class="button secondary picture-button" for="logo" aria-hidden="true">{{ crate::t("Zgjidh foton") }}</label>
+      </div>
+      {%- if let Some(store) = store %}{% if store.logo_url.is_some() %}
+      <label class="notice-setting"><input type="checkbox" name="remove_logo" value="1"{% if form.remove_logo %} checked{% endif %}><span>{{ crate::t("Hiqe") }}</span></label>
       {%- endif %}{% endif %}
-      <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp">
       {%- if let Some(error) = self.error("logo") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
 
-    <div class="field">
+    <div class="field store-picture">
       <label class="field-label" for="cover">{{ crate::t("Kopertina") }} <span class="optional">{{ crate::t("(e gjerë, tre herë më shumë se e lartë)") }}</span></label>
-      {%- if let Some(store) = store %}{% if let Some(cover) = store.cover_url %}
-      <p class="store-current"><img class="store-cover-preview" src="{{ cover }}" alt="{{ crate::t("Kopertina e tanishme") }}" width="240" height="80">
-        <label class="notice-setting"><input type="checkbox" name="remove_cover" value="1"{% if form.remove_cover %} checked{% endif %}><span>{{ crate::t("Hiqe") }}</span></label></p>
+      <div class="picture-pick" data-controller="picture-pick">
+        <span class="picture-frame wide" data-picture-pick-target="frame">
+          {%- if let Some(store) = store %}{% if let Some(cover) = store.cover_url %}
+          <img src="{{ cover }}" alt="{{ crate::t("Kopertina e tanishme") }}" width="192" height="64">
+          {%- endif %}{% endif %}
+          <svg class="picture-empty" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::CAMERA|safe }}</svg>
+        </span>
+        <input id="cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" data-picture-pick-target="input" data-action="picture-pick#show">
+        <label class="button secondary picture-button" for="cover" aria-hidden="true">{{ crate::t("Zgjidh foton") }}</label>
+      </div>
+      {%- if let Some(store) = store %}{% if store.cover_url.is_some() %}
+      <label class="notice-setting"><input type="checkbox" name="remove_cover" value="1"{% if form.remove_cover %} checked{% endif %}><span>{{ crate::t("Hiqe") }}</span></label>
       {%- endif %}{% endif %}
-      <input id="cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp">
       {%- if let Some(error) = self.error("cover") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+    </div>
     </div>
 
     <h2>{{ crate::t("Si ju gjejnë") }}</h2>
+    <div class="form-box">
     <div class="field">
       <label class="field-label" for="phone">{{ crate::t("Telefoni") }}</label>
       <input id="phone" name="phone" value="{{ form.phone }}" inputmode="tel" autocomplete="tel" placeholder="{{ crate::t("069 123 4567 ose 04 222 3333") }}">
@@ -55,6 +81,7 @@
     </div>
     <label class="notice-setting store-whatsapp"><input type="checkbox" name="whatsapp" value="1"{% if form.whatsapp %} checked{% endif %}>
       <span>{{ crate::t("Ky numër ka WhatsApp") }}<span class="field-hint">{{ crate::t("Faqja e dyqanit jep edhe lidhjen për t'ju shkruar atje.")|safe }}</span></span></label>
+    <div class="form-row">
     <div class="field">
       <label class="field-label" for="email">{{ crate::t("Email-i") }} <span class="optional">{{ crate::t("(s'është i detyrueshëm)")|safe }}</span></label>
       <input id="email" name="email" type="email" value="{{ form.email }}" autocomplete="email" placeholder="{{ crate::t("info@dyqani.al") }}">
@@ -65,8 +92,12 @@
       <input id="website" name="website" value="{{ form.website }}" inputmode="url" autocomplete="url" placeholder="{{ crate::t("www.dyqani.al") }}">
       {%- if let Some(error) = self.error("website") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
+    </div>
+    </div>
 
     <h2>{{ crate::t("Ku ndodhet") }}</h2>
+    <div class="form-box">
+    <div class="form-row">
     <div class="field">
       <label class="field-label" for="city">{{ crate::t("Qyteti") }}</label>
       <select id="city" name="city">
@@ -82,6 +113,8 @@
       <input id="address" name="address" value="{{ form.address }}" maxlength="200" autocomplete="street-address" placeholder="{{ crate::t("Rruga, numri, pranë çfarë") }}">
       {%- if let Some(error) = self.error("address") %}<p class="field-error">{{ error }}</p>{% endif %}
     </div>
+    </div>
+    <div class="form-row">
     <div class="field">
       <label class="field-label" for="hours">{{ crate::t("Orari") }}</label>
       <input id="hours" name="hours" value="{{ form.hours }}" maxlength="300" placeholder="{{ crate::t("E hënë – e shtunë, 9:00 – 19:00") }}">
@@ -91,6 +124,8 @@
       <label class="field-label" for="nipt">NIPT <span class="optional">{{ crate::t("(s'është i detyrueshëm, s'shfaqet)")|safe }}</span></label>
       <input id="nipt" name="nipt" value="{{ form.nipt }}" maxlength="12" autocomplete="off" placeholder="L12345678A">
       {%- if let Some(error) = self.error("nipt") %}<p class="field-error">{{ error }}</p>{% endif %}
+    </div>
+    </div>
     </div>
 
     <button type="submit" class="button">{% if store.is_some() %}{{ crate::t("Ruaj ndryshimet") }}{% else %}{{ crate::t("Krijo dyqanin") }}{% endif %}</button>

@@ -279,6 +279,9 @@ async fn a_store_has_its_page_and_its_people_post_as_it(pool: PgPool) {
     .await
     .unwrap();
     assert_eq!(contact.as_deref(), Some("+35554222333"));
+    // Its page writes the landline as people do, the town's code apart.
+    let page = get(pool.clone(), "/biznes/auto-elbasani").await.body;
+    assert!(page.contains(r#"href="tel:+35554222333""#) && page.contains("</svg>+355 54 222 333</a>"), "{page}");
     assert_eq!(post_store(&pool, "/dyqani/auto-elbasani/ndrysho", &changed, &[], &besa).await.status, StatusCode::NOT_FOUND);
 
     // Another of the same name gets an address of its own.

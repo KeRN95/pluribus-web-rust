@@ -146,6 +146,9 @@ Kopertina
 Kopertina e tanishme
 = Current cover
 
+Zgjidh foton
+= Choose a photo
+
 Si ju gjejnë
 = How people reach you
 

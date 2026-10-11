@@ -688,12 +688,43 @@
 @media (max-width: 719px) {
   .store-cover { margin-top: 16px; }
 }
-/* A store's form (store_form.html): its sections' headings, its pictures now with "Hiqe". */
-.store-form h2 { margin: 1.75rem 0 .5rem; font-size: var(--text-lg); }
-.store-current { display: flex; align-items: center; gap: .9rem; margin: .25rem 0 .5rem; }
-.store-logo-preview { border-radius: 50%; object-fit: cover; }
-.store-cover-preview { border-radius: 8px; object-fit: cover; }
-.store-whatsapp { margin: -.25rem 0 1rem; }
+/* A store's form (store_form.html), as the canvas has it: a column of 720px in the middle of the
+   page, 28px under the top bar (22px on a phone), the heading 30px and the lead under it; then the
+   posting form's white boxes (.form-box), the first 14px under the lead, the others each under its
+   heading, 22px (19px), 28px down; two fields to a line where the canvas pairs them (.form-row),
+   one under another on a phone; the button across the column 22px under the last box, 52px
+   tall, and "Anulo" in the middle under it, muted. (Fields one under another at the left once,
+   the pictures' fields the browser's own.) */
+.account.store-form { max-width: 720px; margin-inline: auto; padding-top: 28px; }
+.store-form h1 { margin: 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
+.store-form .lead { margin: 8px 0 0; font-size: 1rem; line-height: 1.55; }
+.store-fields { gap: 0; margin-top: 14px; }
+.store-fields > .form-error { margin: 0 0 14px; }
+.store-fields > h2 { margin: 28px 0 14px; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
+.store-fields > .button { min-height: 52px; margin-top: 22px; font-size: 1rem; }
+.store-form > .account-note { margin: 14px 0 0; font-size: var(--text-sm); text-align: center; }
+.store-form > .account-note a { color: var(--muted); }
+.store-whatsapp { margin: 0; }
+@media (max-width: 719px) {
+  .account.store-form { padding-top: 22px; }
+}
+/* A store's logo and cover on its form, as the canvas draws them: its frame, round (64px) or wide
+   (192 by 64px, corners of 12px), the picture there now or, dashed, a camera on the page's grey;
+   "Zgjidh foton" beside it, 40px, a label that opens the file field's picker, ringed when the
+   field has the focus; the field itself out of sight once picture_pick_controller.js runs, and
+   without it the field shows as it is and the label goes. "Hiqe" under a picture there now. */
+.picture-pick { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.picture-frame { position: relative; display: grid; flex: none; place-items: center; overflow: hidden; border: 1.5px dashed var(--border-strong); background: var(--bg); color: var(--muted); }
+.picture-frame.round { width: 64px; height: 64px; border-radius: var(--radius-pill); }
+.picture-frame.wide { width: 192px; height: 64px; border-radius: var(--radius-field); }
+.picture-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.picture-frame:has(> img) { border-color: transparent; }
+.picture-pick.has-picker input[type="file"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.picture-pick:not(.has-picker) .picture-button { display: none; }
+.picture-pick input[type="file"]:focus-visible + .picture-button { outline: 2px solid var(--accent); outline-offset: 2px; }
+.picture-pick .picture-button { min-height: 40px; padding: 0 14px; font-size: var(--text-sm); }
+.store-picture { align-content: start; }
+.store-picture > .notice-setting { margin-top: 4px; }
 /* The stores in "Cilësimet", as the canvas has them: a row each between hairlines, its name
    semibold over the user's role, 13px, and at the row's end its people and its form, or the way
    out, 34px; over them an invitation waiting, in a white box, its two buttons 10px under its
@@ -713,25 +744,69 @@
 .store-invitation p { margin: 0; line-height: 1.5; }
 .store-invitation a { color: var(--text); font-weight: var(--semibold); }
 .store-invitation-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-/* A store's people (store_people.html): its name back to its page over the heading; a line
-   each, the initial, the name and the contact, and at its end the role, or for those the user
-   handles its menu with "Ruaj" and "Hiq"; an invitation's line its sending buttons and
-   "Anulo"; the roles to invite with a box a line, each with what it lets one do. */
-.store-people-back { margin: 0 0 .25rem; font-size: var(--text-sm); }
-.store-people-back a { color: var(--muted); }
-.people { margin: .5rem 0 1.25rem; padding: 0; list-style: none; }
-.person { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; padding: .65rem 0; border-top: 1px solid var(--border); }
+/* A store's people (store_people.html), as the canvas has them: a column of 720px in the middle of
+   the page, 24px under the top bar (18px on a phone); its name back to its page, quiet, after a
+   chevron, the heading 30px 10px under it and the lead; the people in one white box 18px under
+   it, a row each between hairlines: the initial in its ring, 40px, the name semibold over the
+   contact, 13px, and at its end the role, muted, or for those the user handles its menu, 150px
+   by 40px, with "Ruaj" and "Hiq", 34px; the invitations waiting likewise under their heading,
+   22px, 30px down, each its sending buttons, round, and "Anulo", 34px; the form that asks someone
+   in, a white box under "Fto dikë": the contact, the roles a radio each with what it lets one
+   do, 14px apart, the button as wide as its words and the note 10px under it. (Lines on the
+   page's grey once, the form at the left.) */
+.account.store-people { max-width: 720px; margin-inline: auto; padding-top: 24px; }
+.store-people-back { margin: 0; font-size: var(--text-sm); }
+.store-people-back a { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); text-decoration: none; }
+.store-people-back svg { flex: none; }
+@media (hover: hover) {
+  .store-people-back a:hover { color: var(--text); }
+}
+.store-people-back a:active { color: var(--text); }
+.store-people h1 { margin: 10px 0 0; font-size: 1.875rem; letter-spacing: -.02em; line-height: 1.2; }
+.store-people .lead { margin: 8px 0 0; font-size: 1rem; line-height: 1.55; }
+.store-people > .notice { margin: 18px 0 0; }
+.store-people > h2 { margin: 30px 0 12px; font-size: 1.375rem; letter-spacing: -.01em; line-height: 1.25; }
+.people { margin: 18px 0 0; padding: 0; overflow: hidden; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); list-style: none; }
+.store-people > h2 + .people { margin-top: 0; }
+.person { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 14px 16px; }
+.person + .person { border-top: 1px solid var(--border-soft); }
+.person > .avatar { width: 40px; height: 40px; border-width: 2px; font-size: 1.0625rem; }
 .person-text { display: flex; flex: 1 1 12rem; flex-direction: column; min-width: 0; }
 .person-name { font-weight: var(--semibold); overflow-wrap: anywhere; }
-.person-role { display: flex; gap: .4rem; }
-.person-role select { width: auto; padding-top: .4rem; padding-bottom: .4rem; }
+.person-text .field-hint { margin: 0; }
+.person-role { display: flex; align-items: center; gap: 6px; }
+.person-role select { width: 150px; min-height: 40px; }
 .person-role-name { color: var(--muted); font-size: var(--text-sm); }
-.person-actions { display: flex; align-items: center; gap: .4rem; }
-.person-actions .icon-circle { width: 2.25rem; min-height: 0; height: 2.25rem; padding: 0; }
-.people-roles { margin: 0 0 1rem; padding: 0; border: 0; }
-.people-roles .notice-setting { margin: .35rem 0; }
-/* An invitation (store_invitation.html): the store's head, then its two buttons on a line. */
-.store-invite-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+.person-actions { display: flex; align-items: center; gap: 6px; }
+.person-actions .icon-circle { width: 34px; height: 34px; min-height: 0; padding: 0; }
+.store-people .button.small { min-height: 34px; }
+.people-invite { gap: 18px; justify-items: start; margin-top: 14px; padding: 20px; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); }
+.people-invite > :is(.field, .people-roles, .form-error) { justify-self: stretch; }
+.people-invite > .field-hint { margin-top: -8px; }
+.people-roles { margin: 0; padding: 0; border: 0; }
+.people-roles > legend { margin: 0 0 10px; padding: 0; }
+.people-roles .notice-setting { margin: 0; }
+.people-roles .notice-setting + .notice-setting { margin-top: 14px; }
+.people-roles .notice-setting .field-hint { margin-top: 2px; line-height: 1.45; }
+@media (max-width: 719px) {
+  .account.store-people { padding-top: 18px; }
+}
+/* An invitation (store_invitation.html), as the canvas has it: a column of 600px in the middle of
+   the page, 48px under the top bar (24px on a phone); the store's head, its initial or logo 64px,
+   and what the invitation asks, with the viewer's buttons 20px under it, 48px, in one white box;
+   how long it holds under the box, 13px. (The head in its own box once, the rest on the grey.) */
+.account.store-invite { margin-inline: auto; padding-top: 48px; }
+.store-invite-box { padding: 24px; border-radius: var(--radius-box); background: var(--surface); box-shadow: var(--shadow); }
+.store-invite .profile-header { margin: 0; }
+.store-invite .profile-header > .avatar { width: 64px; height: 64px; font-size: 1.6875rem; }
+.store-invite .profile-header p { margin-top: 6px; line-height: 1.5; }
+.store-invite-box > :is(.store-invite-actions, .notice, p) { margin: 20px 0 0; }
+.store-invite-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.store-invite > .account-note { margin: 14px 0 0; font-size: .8125rem; line-height: 1.5; }
+@media (max-width: 719px) {
+  .account.store-invite { padding-top: 24px; }
+  .store-invite-box { padding: 20px; }
+}
 /* "Njoftimet e mia": the user's own listings or a store's, a pill each, as the account's row,
    34px, 12px under the heading. */
 .whose-listings { margin: 12px 0 0; }
