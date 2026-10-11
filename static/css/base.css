@@ -476,8 +476,7 @@ h2 { margin: 1.75rem 0 .75rem; font-size: var(--text-xl); font-weight: var(--sub
 
 /* Pages change with the browser's cross-fade (view transitions, base.html), but quickly: its own
    takes a quarter of a second, during which the page takes no taps, and each click felt slow for
-   it. Visitors who ask for less motion get the new page at once, as do touch screens
-   (application.js, which takes the meta off there). */
+   it. Visitors who ask for less motion get the new page at once. */
 ::view-transition-group(*),
 ::view-transition-old(*),
 ::view-transition-new(*) { animation-duration: .1s; }
@@ -486,6 +485,30 @@ h2 { margin: 1.75rem 0 .75rem; font-size: var(--text-xl); font-weight: var(--sub
   ::view-transition-old(*),
   ::view-transition-new(*) { animation: none; }
 }
+/* On a touch screen a page comes in as a drawer, as Chrome and a phone's apps bring theirs, as
+   the user asked on 2026-10-11 (pages came at once there from 2026-10-09, the fade being barely
+   seen on a phone): the next page slides in from the right edge over the one left, which drifts a
+   quarter of the way left and dims under it; going back by a button, the page left slides away
+   to the right over the one come back to, which comes up from under it. Turbo marks the way on
+   <html> while the visit lasts (data-turbo-visit-direction: forward, back). A quarter of a
+   second, easing out, during which the page takes no taps. A page that only changes in place
+   (none) still changes at once, as does a back the browser has animated itself, under a swipe
+   from the screen's edge (application.js). */
+@media (pointer: coarse) {
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+}
+@media (pointer: coarse) and (prefers-reduced-motion: no-preference) {
+  html[data-turbo-visit-direction="forward"]::view-transition-old(root) { animation: drawer-under .25s cubic-bezier(.2, 0, 0, 1) both; }
+  html[data-turbo-visit-direction="forward"]::view-transition-new(root) { animation: drawer-in .25s cubic-bezier(.2, 0, 0, 1) both; box-shadow: -8px 0 24px rgb(0 0 0 / 14%); }
+  html[data-turbo-visit-direction="back"]::view-transition-old(root) { z-index: 1; animation: drawer-out .25s cubic-bezier(.2, 0, 0, 1) both; box-shadow: -8px 0 24px rgb(0 0 0 / 14%); }
+  html[data-turbo-visit-direction="back"]::view-transition-new(root) { animation: drawer-back .25s cubic-bezier(.2, 0, 0, 1) both; }
+}
+@keyframes drawer-in { from { transform: translateX(100%); } }
+@keyframes drawer-out { to { transform: translateX(100%); } }
+@keyframes drawer-under { to { transform: translateX(-25%); filter: brightness(.9); } }
+@keyframes drawer-back { from { transform: translateX(-25%); filter: brightness(.9); } }
 
 /* Frames only group content for Turbo; their cards stay items of the surrounding grid. */
 turbo-frame { display: contents; }

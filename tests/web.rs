@@ -4817,12 +4817,19 @@ async fn a_tapped_card_or_category_shows_it_in_the_accent(pool: PgPool) {
         assert!(css.contains(rule), "{rule}");
     }
     assert!(!css.contains(".card.pressed{") && !css.contains("outline-offset:4px"), "no box round a pressed card");
-    // After a finger's tap the next page waits a moment before it is drawn, so that the mark shows
-    // (the page was fetched as the finger touched it). (The script comes minified too:
-    // web::minified_js.)
+    // The mark comes only once the next page has taken a moment to come, and nothing waits for it:
+    // a page fetched ahead shows at once (the user's ask of 2026-10-11; it was held 200 ms after a
+    // tap so that the mark was seen). (The script comes minified too: web::minified_js.)
     let script = get(pool, &format!("/static/js/application.js?v={}", marketplace::web::asset_version())).await.body;
-    for part in ["closest(`a.shortcut`)", "`.card.pressed, .shortcut.pressed`", "addEventListener(`turbo:before-render`", ".detail.resume()"] {
+    for part in ["closest(`a.shortcut`)", "`.card.pressed, .shortcut.pressed`", "addEventListener(`turbo:click`", "addEventListener(`turbo:before-render`"] {
         assert!(script.contains(part), "{part} in {script}");
+    }
+    assert!(!script.contains(".detail.resume()"), "no page held for the mark: {script}");
+    // On a touch screen the next page comes in as a drawer, from the right, and going back the page
+    // left slides away to the right, by the way Turbo marks on <html> while a visit lasts; the
+    // page cross-fades elsewhere, and changes at once for visitors who ask for less motion.
+    for part in ["data-turbo-visit-direction=", "@keyframes drawer-in{", "@keyframes drawer-out{", "prefers-reduced-motion:no-preference"] {
+        assert!(css.contains(part), "{part}");
     }
     // iPhones and iPads alone are kept from zooming into a field as it takes the focus (the page's
     // size can make its words smaller than 16px), after every page Turbo shows.

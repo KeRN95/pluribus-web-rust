@@ -64,29 +64,20 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
 // A tapped card keeps its title underlined in the accent (page.css, .card.pressed) while its
 // listing loads, and a tapped category's pill its icon filled with it and its name underlined
 // (welcome.css, .shortcut.pressed); the copy of the page Turbo keeps for going back loses them.
-// Only a card's links open it: a big card's arrows step through its photos. iOS only shows :active
-// where a touch listener is, as the one here is. On a phone the page was fetched as the finger
-// touched it (below), so it would show before the mark could be seen: after a tap the next page
-// waits until PRESS_SHOWN has gone by (turbo:before-render, paused), a mouse's click not, its
-// pointer having shown it.
-const PRESS_SHOWN = 200;
-let lastTouch = -Infinity;
-let pressedAt = null;
-document.addEventListener("touchstart", () => { lastTouch = performance.now(); }, { passive: true });
-document.addEventListener("click", (event) => {
-  const card = event.target.closest(".card a")?.closest(".card");
-  const pill = event.target.closest("a.shortcut");
-  card?.classList.add("pressed");
-  pill?.classList.add("pressed");
-  if ((card || pill) && performance.now() - lastTouch < 1000) pressedAt = performance.now();
+// Only once the page has taken PRESS_AFTER to come, as the user asked on 2026-10-11: one fetched
+// ahead (below) shows at once, sliding in on a touch screen (base.css), with no mark and no wait
+// for one (the next page was held 200 ms after a tap so that the mark was seen). Only a card's
+// links open it: a big card's arrows step through its photos. iOS only shows :active where a
+// touch listener is, as the one here is.
+const PRESS_AFTER = 100;
+let pressing = null;
+document.addEventListener("touchstart", () => {}, { passive: true });
+document.addEventListener("turbo:click", (event) => {
+  const pressed = event.target.closest(".card a")?.closest(".card") ?? event.target.closest("a.shortcut");
+  clearTimeout(pressing);
+  if (pressed) pressing = setTimeout(() => pressed.classList.add("pressed"), PRESS_AFTER);
 });
-document.addEventListener("turbo:before-render", (event) => {
-  const wait = pressedAt === null ? 0 : pressedAt + PRESS_SHOWN - performance.now();
-  pressedAt = null;
-  if (wait <= 0) return;
-  event.preventDefault();
-  setTimeout(() => event.detail.resume(), wait);
-});
+document.addEventListener("turbo:before-render", () => clearTimeout(pressing));
 document.addEventListener("turbo:before-cache", () => {
   for (const pressed of document.querySelectorAll(".card.pressed, .shortcut.pressed")) pressed.classList.remove("pressed");
 });
@@ -294,20 +285,9 @@ document.addEventListener("turbo:load", () => {
   if (searched) rememberSearch(searched.dataset.searchWords, searched.dataset.searchAddress);
 });
 
-// On a touch screen, no cross-fade between pages: for it the browser draws both pages whole and
-// fades a tenth of a second, during which the page takes no taps, and a phone's slower CPU draws
-// that out (a visit rendered in 40 ms without it on a phone's layout, 160 with, on a computer); the
-// new page comes at once instead. The meta base.html asks for it with is taken off each page as it
-// shows (the next page's head brings it back, and loses it again), so that no visit has it on its
-// current side, which Turbo needs as well as the new one.
-if (matchMedia("(pointer: coarse)").matches) {
-  const dropViewTransition = () => document.head.querySelector('meta[name="view-transition"]')?.remove();
-  dropViewTransition();
-  document.addEventListener("turbo:load", dropViewTransition);
-}
-
-// Going back or forward, Turbo shows its copy of the page with the cross-fade base.html asks for
-// (view transitions). Where the browser has animated the change itself, as iOS does under a swipe
+// Going back or forward, Turbo shows its copy of the page with the change base.html asks for
+// (view transitions: a cross-fade, on a touch screen the page sliding away as a drawer, base.css).
+// Where the browser has animated the change itself, as iOS does under a swipe
 // from the screen's edge, that would be a second change, from the page left to the page come back
 // to, and the page seems to jump: such a visit goes without it, as do those in browsers that can't
 // tell. The page shown brings the setting back with its head, as after a refresh (refresh.js).
