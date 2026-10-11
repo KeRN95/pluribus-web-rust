@@ -124,7 +124,18 @@ export default class extends Controller {
   // Sets a field as the seller would, with the events that follow (its picker, the lists that
   // depend on it), and tints it; false when it has no such choice.
   set(element, value) {
-    if (!element || element instanceof RadioNodeList) return false;
+    if (!element) return false;
+    // A group of radios (the currency's toggle): the one of that value picked.
+    if (element instanceof RadioNodeList) {
+      const radio = [...element].find((input) => input.value === String(value));
+      if (!radio) return false;
+      if (!radio.checked) {
+        radio.checked = true;
+        this.emit(radio, "change");
+      }
+      this.mark(radio);
+      return true;
+    }
     element.value = value;
     if (element.value !== String(value)) return false;
     this.emit(element, element.tagName === "SELECT" ? "change" : "input");

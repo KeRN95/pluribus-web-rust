@@ -286,6 +286,26 @@ impl ListingFormPage {
     fn photos_left(&self) -> usize {
         MAX_PHOTOS.saturating_sub(self.photos.len())
     }
+
+    /// Whom buyers reach, as the lead says it: posting for a store ("Posto si", form.si) with a
+    /// number of its own, that number; else the poster's contact, masked (signed_in_as), as for a
+    /// store without one (Poster::for_store). None for someone not signed in.
+    fn contact_shown(&self) -> Option<String> {
+        let store = self.stores.iter().find(|store| !self.form.si.is_empty() && store.slug == self.form.si);
+        match store {
+            Some(store) => Some(self.store_contact(store)),
+            None => self.signed_in_as.clone(),
+        }
+    }
+
+    /// Whom buyers reach posting for `store`: its number, or the poster's own contact when it has
+    /// none; for the lead, which the form's script changes as "Posto si" does.
+    fn store_contact(&self, store: &db::MyStore) -> String {
+        match store.public_phone.as_deref() {
+            Some(phone) => format::phone(phone),
+            None => self.signed_in_as.clone().unwrap_or_default(),
+        }
+    }
 }
 
 fn choices<'a>(items: impl Iterator<Item = (&'a str, &'a str)>, selected: &str) -> Vec<Choice> {

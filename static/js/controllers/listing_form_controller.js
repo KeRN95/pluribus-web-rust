@@ -37,6 +37,21 @@ export default class extends Controller {
     this.element.removeEventListener("change", this.picked);
   }
 
+  // The currency's toggle (.currency-choice, its radios): the one of `value` picked, as the form
+  // picks it, not the seller.
+  pickCurrency(value) {
+    const radio = this.currencyTarget.querySelector(`input[value="${CSS.escape(value)}"]`);
+    if (radio) radio.checked = true;
+  }
+
+  // "Posto si": the lead names whom buyers reach then, the store's number or the poster's own
+  // contact (each choice's data-contact, post.rs).
+  posted(event) {
+    const contact = event.target.selectedOptions?.[0]?.dataset.contact;
+    const lead = document.getElementById("poster-contact");
+    if (contact && lead) lead.textContent = contact;
+  }
+
   categoryChanged(event) {
     const option = this.categoryTarget.selectedOptions[0];
     const types = option?.dataset.types?.split(",").filter(Boolean) ?? [];
@@ -49,7 +64,7 @@ export default class extends Controller {
     this.zoneShown();
     // On the first render the currency and the fields are what the server chose (or sent back).
     if (event?.initial) return;
-    if (!this.currencyChosen && option?.dataset.currency) this.currencyTarget.value = option.dataset.currency;
+    if (!this.currencyChosen && option?.dataset.currency) this.pickCurrency(option.dataset.currency);
     this.propertiesTarget.src = `/shto/fushat?category=${encodeURIComponent(option?.value ?? "")}`;
     this.guessZone();
   }

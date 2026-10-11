@@ -29,8 +29,9 @@ export default class extends Controller {
     this.element.removeEventListener("turbo:frame-load", this.update);
   }
 
+  // A field's value by its name; for a group of radios (the currency), the one picked.
   value(name) {
-    return this.element.querySelector(`[name="${name}"]`)?.value?.trim() ?? "";
+    return this.element.elements.namedItem(name)?.value?.trim() ?? "";
   }
 
   async ask() {

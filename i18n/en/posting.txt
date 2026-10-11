@@ -47,9 +47,6 @@ Unë
 Si dyqan, njoftimi del me emrin, logon dhe numrin e dyqanit.
 = As a store, the listing shows the store’s name, logo and number.
 
-Çfarë shet
-= What you’re selling
-
 Titulli
 = Title
 
@@ -68,9 +65,6 @@ Fotot
 Shto foto
 = Add photos
 
-ose tërhiqi këtu
-= or drag them here
-
 Deri në {} foto.
 = Up to {} photos.
 
@@ -85,9 +79,6 @@ Nga titulli, përshkrimi dhe fotot, AI plotëson detajet që mungojnë. Ato që 
 
 Nga titulli, përshkrimi dhe fotot, AI zgjedh kategorinë dhe plotëson detajet, çmimin dhe qytetin. Ti i kontrollon para se ta publikosh.
 = From the title, description and photos, the AI chooses the category and fills in the details, price and town. You check them before posting.
-
-Kategoria dhe çmimi
-= Category and price
 
 Kategoria
 = Category
@@ -117,12 +108,6 @@ p.sh. 9 500
 
 Monedha
 = Currency
-
-Vendi dhe kontakti
-= Location and contact
-
-Vendi
-= Location
 
 Qyteti
 = Town
@@ -168,33 +153,6 @@ Blerësit të kontaktojnë këtu; e shohin vetëm kur shtypin butonin e telefoni
 
 Anulo
 = Cancel
-
-Që të shitet më shpejt
-= To sell it faster
-
-Fotot.
-= Photos.
-
-E para del në karta dhe në krye të njoftimit: zgjidh më të mirën. Në dritë dite, nga disa anë, me defektet që ka.
-= The first shows on cards and at the top of the listing: choose your best. In daylight, from several sides, with any flaws it has.
-
-Titulli.
-= Title.
-
-Çfarë është, me markën, modelin dhe vitin: „Golf 7, 2016, naftë“, jo „Shes makinë“.
-= What it is, with the brand, model and year: “Golf 7, 2016, diesel”, not “Car for sale”.
-
-Çmimi.
-= Price.
-
-Një çmim i qartë sjell më shumë mesazhe se „me marrëveshje“. Për një makinë, forma të thotë çfarë kërkojnë të ngjashmet.
-= A clear price brings more messages than “on request”. For a car, the form tells you what similar ones ask.
-
-Pas publikimit.
-= After posting.
-
-Njoftimi qëndron 60 ditë, dhe e rifreskon me një klik te „Njoftimet e mia“.
-= The listing stays up for 60 days, and you renew it in one click in “My listings”.
 
 Duke publikuar, pranon
 = By posting, you accept

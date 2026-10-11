@@ -233,7 +233,13 @@ async fn a_store_has_its_page_and_its_people_post_as_it(pool: PgPool) {
     // Posted as the store: its seller the store, its number the store's; its card has the logo
     // and leads to the store, whose page lists it.
     let form = get_with_cookie(pool.clone(), "/shto", &ana).await.body;
-    assert!(form.contains(r#"<option value="auto-elbasani">Auto Elbasani</option>"#), "{form}");
+    // Its choice carries whom buyers reach then, its number, which the lead names as it is picked
+    // (listing_form_controller.js), as it does on a form sent back as the store (it named her own
+    // contact once).
+    assert!(form.contains(r#"<option value="auto-elbasani" data-contact="+355 69 111 2233">Auto Elbasani</option>"#), "{form}");
+    let back = post_form(pool.clone(), "/shto", &[listing_fields(("title", ""), &started()), vec![("si", "auto-elbasani")]].concat(), Some(&ana)).await;
+    assert_eq!(back.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(back.body.contains(r#"Blerësit të kontaktojnë te <strong id="poster-contact">+355 69 111 2233</strong>."#), "{}", back.body);
     let not_hers = post_form(pool.clone(), "/shto", &[listing_fields(("", ""), &started()), vec![("si", "nje-tjeter")]].concat(), Some(&ana)).await;
     assert_eq!(not_hers.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert!(not_hers.body.contains("Zgjidh një nga dyqanet e tua, ose veten."));
@@ -3357,43 +3363,51 @@ async fn a_property_in_a_zone_compares_its_square_metre_with_the_zones(pool: PgP
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
-async fn the_listing_form_names_its_fields_in_three_sections(pool: PgPool) {
-    // Signed out: what is sold, its category and price, where it is and how to reach the seller,
-    // each field named over it, the photos taken by a zone, the tips beside it.
+async fn the_listing_form_names_its_fields_in_white_boxes(pool: PgPool) {
+    // Signed out, as the canvas has it: what is sold, its category, its price, where it is and how
+    // to reach the seller, each in a white box, each field named over it, the photos taken by a
+    // zone, then the button across the column (in three sections under headings once, with tips
+    // beside them).
     let form = get(pool.clone(), "/shto").await.body;
-    let sections = positions(
+    let order = positions(
         &form,
         &[
-            r#"<h2 id="section-what">Çfarë shet</h2>"#,
+            r#"<div class="form-box">"#,
             r#"<label class="field-label" for="title">Titulli</label>"#,
             r#"<label class="field-label" for="description">Përshkrimi</label>"#,
             r#"<span class="field-label" id="photos-label">Fotot</span>"#,
             r#"<label class="photo-drop" data-photos-target="zone">"#,
-            r#"<h2 id="section-details">Kategoria dhe çmimi</h2>"#,
+            r#"<div class="form-row category-row">"#,
             r#"<label class="field-label" for="category">Kategoria</label>"#,
+            r#"<div class="price-fields">"#,
             r#"<label class="field-label" for="price_type">Çmimi</label>"#,
-            r#"<h2 id="section-where">Vendi dhe kontakti</h2>"#,
             r#"<label class="field-label" for="city">Qyteti</label>"#,
-            r#"<label class="field-label" for="contact">Celulari ose email-i</label>"#,
             r#"<label class="field-label" for="name">Emri <span class="optional">(s'është i detyrueshëm)</span></label>"#,
-            r#"<aside class="listing-form-tips" aria-labelledby="tips-heading">"#,
+            r#"<label class="field-label" for="contact">Celulari ose email-i</label>"#,
+            r#"<button type="submit" class="button">Publiko njoftimin</button>"#,
         ],
     );
-    assert!(sections.windows(2).all(|pair| pair[0] < pair[1]), "{sections:?}");
+    assert!(order.windows(2).all(|pair| pair[0] < pair[1]), "{order:?}");
+    assert_eq!(form.matches(r#"<div class="form-box">"#).count(), 5, "{form}");
+    assert!(!form.contains("listing-form-tips") && !form.contains(r#"<h2 id="section-"#), "{form}");
     assert!(form.contains(r#"placeholder="p.sh. Golf 7, 2016, naftë""#));
+    // The currency a two-part toggle, as the filters' price has it (a list once).
+    assert!(form.contains(r#"<div class="segmented currency-choice" role="radiogroup" aria-label="Monedha" data-listing-form-target="currency">"#), "{form}");
+    assert_eq!(form.matches(r#"<input type="radio" name="currency""#).count(), 2, "{form}");
     // A listing begun and left in this browser is offered back (draft_controller.js), on a new
     // listing's form alone.
     assert!(form.contains(r#"<div class="notice draft-note" data-draft-target="note" role="status" hidden>"#), "{form}");
 
-    // Signed in, where alone: the name and the contact are the account's.
+    // Signed in, no box for the contact: the name and the contact are the account's.
     let ana = session_for(&pool, ANA_ID).await;
     let form = get_with_cookie(pool.clone(), "/shto", &ana).await.body;
-    assert!(form.contains(r#"<h2 id="section-where">Vendi</h2>"#), "{form}");
+    assert_eq!(form.matches(r#"<div class="form-box">"#).count(), 4, "{form}");
     assert!(!form.contains(r#"id="name""#) && !form.contains(r#"id="contact""#));
-    // An edit has no tips: it was written once already.
+    // An edit: "Anulo" before its button, as wide as its word; no draft.
     let edit = get_with_cookie(pool.clone(), "/listing/1001/ndrysho", &ana).await.body;
-    assert!(edit.contains(r#"<h2 id="section-what">Çfarë shet</h2>"#) && !edit.contains("listing-form-tips") && !edit.contains(r#"id="name""#), "{edit}");
-    assert!(!edit.contains("draft-note") && !edit.contains(" draft\""));
+    let cancel = edit.find(">Anulo</a>").expect("Anulo");
+    assert!(cancel < edit.find(r#"<button type="submit" class="button">Ruaj ndryshimet</button>"#).expect("its button"), "{edit}");
+    assert!(!edit.contains(r#"id="name""#) && !edit.contains("draft-note") && !edit.contains(" draft\""));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
@@ -3463,7 +3477,7 @@ async fn the_listing_form_asks_for_the_writing_first_and_offers_ai_when_it_is_se
     let order = positions(&new, &[r#"name="photos""#, "Plotëso pjesën tjetër me AI", r#"id="category""#]);
     assert!(order.is_sorted(), "{order:?}");
     assert!(new.contains(r##"data-controller="listing-form narrow price-hint draft ai-fill" data-ai-fill-photos-outlet="#listing-photos""##));
-    assert!(new.contains(r#"<div class="field" id="listing-photos" data-controller="photos""#));
+    assert!(new.contains(r#"<div class="field photos-field" id="listing-photos" data-controller="photos""#));
     let session = session_for(&pool, "11111111-1111-4111-8111-111111111111").await;
     let request = Request::get("/listing/1001/ndrysho").header(header::COOKIE, &session).body(Body::empty()).unwrap();
     let edit = send_to(app_with_ai(pool, &url), request).await.body;
@@ -4319,7 +4333,7 @@ async fn signing_in_takes_a_code_sent_to_the_phone(pool: PgPool) {
     // Signed in: the form for the listing, with the contact buyers will get.
     let form = get_with_cookie(pool.clone(), "/shto", &session).await.body;
     assert!(form.contains("Publiko njoftimin"));
-    assert!(form.contains("<strong>+355 69 *** **67</strong>"));
+    assert!(form.contains(r#"<strong id="poster-contact">+355 69 *** **67</strong>"#));
     let (name, status): (String, String) =
         sqlx::query_as("SELECT display_name, status FROM users WHERE phone_e164 = '+355691234567'")
             .fetch_one(&pool)
@@ -6455,8 +6469,10 @@ async fn every_select_is_chosen_from_a_list_in_the_page(pool: PgPool) {
     let plain = r#"data-controller="picker">"#;
     let folding = r#"<div class="picker" data-controller="picker" data-picker-tree-value="true">"#;
     let ana = new_seller(&pool, "+355691112233").await;
+    // (The form's currency is a two-part toggle of radios, as the filters' price has, since the
+    // canvas: a list no longer.)
     let pages = [
-        ("/shto", 7),
+        ("/shto", 6),
         ("/shto/fushat?category=makina", 11),
         ("/search?q=golf", 4),
         ("/c/makina", 16),
@@ -7452,7 +7468,7 @@ async fn every_page_speaks_english_to_whoever_chose_it(pool: PgPool) {
 
     // Posting, signing in, the messages, the pages about the site, and a page that isn't there.
     let form = en("/shto").await.body;
-    assert!(form.contains("<title>Post a listing | Pluribus</title>") && form.contains(r#"<h2 id="section-what">What you’re selling</h2>"#), "{form}");
+    assert!(form.contains("<title>Post a listing | Pluribus</title>") && form.contains(r#"<label class="field-label" for="title">Title</label>"#), "{form}");
     assert!(en("/llogaria").await.body.contains("<h1>Sign in or create an account</h1>"));
     assert!(en("/mesazhet").await.body.contains(r#"<p class="lead">Sign in to message sellers and read your messages.</p>"#));
     let terms = en("/kushtet").await.body;

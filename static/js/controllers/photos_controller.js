@@ -23,6 +23,8 @@ const waiting = new Map();
 
 const CHEVRON = (path) =>
   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
+const CROSS =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 
 export default class extends Controller {
   static targets = ["input", "previews", "status", "zone", "saved", "order", "kept", "removed"];
@@ -197,7 +199,8 @@ export default class extends Controller {
     this.previewsTarget.hidden = this.items.length === 0;
   }
 
-  // One photo of the list: the picture, "Kopertinë" over the first, then its arrows and "Hiq".
+  // One photo of the list: the picture, "Kopertinë" over the first, the cross that takes it out
+  // over its corner, then its arrows under it.
   photo(item, index) {
     const element = document.createElement("li");
     element.className = "photo-item";
@@ -216,12 +219,12 @@ export default class extends Controller {
     }
     frame.append(image);
     if (index === 0) frame.append(Object.assign(document.createElement("span"), { className: "photo-cover", textContent: t("Kopertinë") }));
+    frame.append(this.button(CROSS, null, "remove", index, false));
     const tools = document.createElement("div");
     tools.className = "photo-tools";
     tools.append(
       this.button(CHEVRON("m15 6-6 6 6 6"), t("Më përpara"), "earlier", index, index === 0),
       this.button(CHEVRON("m9 6 6 6-6 6"), t("Më pas"), "later", index, index === this.items.length - 1),
-      this.button(t("Hiq"), null, "remove", index, false),
     );
     element.append(frame, tools);
     return element;
@@ -230,14 +233,9 @@ export default class extends Controller {
   button(content, label, action, index, disabled) {
     const button = Object.assign(document.createElement("button"), { type: "button", disabled });
     button.className = label ? "photo-step" : "photo-remove";
-    if (label) {
-      button.innerHTML = content;
-      button.setAttribute("aria-label", tf("{} (foto {})", label, index + 1));
-      button.title = label;
-    } else {
-      button.textContent = content;
-      button.setAttribute("aria-label", tf("Hiq foton {}", index + 1));
-    }
+    button.innerHTML = content;
+    button.setAttribute("aria-label", label ? tf("{} (foto {})", label, index + 1) : tf("Hiq foton {}", index + 1));
+    button.title = label ?? t("Hiq");
     button.dataset.index = index;
     button.dataset.action = `photos#${action}`;
     return button;

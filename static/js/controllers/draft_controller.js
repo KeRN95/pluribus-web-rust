@@ -54,6 +54,8 @@ export default class extends Controller {
       if (!name || SKIP.has(name) || element.disabled || element.type === "file" || element.type === "submit" || element.type === "button") continue;
       if (element.type === "checkbox") {
         if (element.checked) (fields[name] ??= []).push(element.value);
+      } else if (element.type === "radio") {
+        if (element.checked) fields[name] = element.value;
       } else {
         fields[name] = element.value;
       }
@@ -166,7 +168,16 @@ function forget() {
 // Sets a field as the seller would, with the events that follow (its picker, the lists that depend
 // on it, the zone that follows the town).
 function set(element, value) {
-  if (!element || element instanceof RadioNodeList || value === undefined) return;
+  if (!element || value === undefined) return;
+  // A group of radios (the currency's toggle): the one of that value picked.
+  if (element instanceof RadioNodeList) {
+    const radio = [...element].find((input) => input.value === String(value));
+    if (radio && !radio.checked) {
+      radio.checked = true;
+      radio.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    return;
+  }
   element.value = value;
   element.dispatchEvent(new Event(element.tagName === "SELECT" ? "change" : "input", { bubbles: true }));
 }

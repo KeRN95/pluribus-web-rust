@@ -5,11 +5,14 @@
 {% block content %}
 <section class="account new-listing">
   <h1>{{ heading }}</h1>
-  {%- if let Some(who) = signed_in_as %}
+  {%- if let Some(who) = self.contact_shown() %}
+  {#- Whom buyers reach: the poster's contact, masked, or, posting as a store that has its own
+      number ("Posto si"), the store's (listing_form_controller.js follows the choice). It named the
+      poster's own contact for a store too once. -#}
   {%- if cancel_url.is_some() %}
-  <p class="lead">{{ crate::t("Ndryshimet shfaqen menjëherë.") }} {{ crate::t("Blerësit të kontaktojnë te") }} <strong>{{ who }}</strong>.</p>
+  <p class="lead">{{ crate::t("Ndryshimet shfaqen menjëherë.") }} {{ crate::t("Blerësit të kontaktojnë te") }} <strong id="poster-contact">{{ who }}</strong>.</p>
   {%- else %}
-  <p class="lead">{{ crate::t("Publikohet menjëherë.") }} {{ crate::t("Blerësit të kontaktojnë te") }} <strong>{{ who }}</strong>.</p>
+  <p class="lead">{{ crate::t("Publikohet menjëherë.") }} {{ crate::t("Blerësit të kontaktojnë te") }} <strong id="poster-contact">{{ who }}</strong>.</p>
   {%- endif %}
   {%- else %}
   {#- Not signed in: the account comes with the listing, or for a contact an account has, the
@@ -20,16 +23,16 @@
     <a href="/llogaria">{{ crate::t("Ke llogari? Hyr") }}</a></p>
   {%- endif %}
 
-  {#- The form, and on a wide screen beside it what helps a listing sell (.listing-form-layout in
-      posting.css), which stays in sight as the form scrolls; a phone shows the form alone. -#}
-  <div class="listing-form-layout">
   {#- listing_form_controller.js offers the listing types and the condition the chosen category
       takes, and its usual currency; the server checks them all the same. Multipart, for the photos.
       With the AI set up, a new listing's form fills itself in from what the seller wrote
-      (ai_fill_controller.js, which takes the photos picked from photos_controller.js). In three
-      sections, each under its heading: what is sold, its category, details and price, and where
-      it is (and, for someone not signed in, how to reach them). Every field has its name over it;
-      a placeholder, where there is one, is an example. -#}
+      (ai_fill_controller.js, which takes the photos picked from photos_controller.js). As the
+      canvas has it, in a column in the middle of the page, in white boxes (.form-box, posting.css):
+      what is sold (and, posting for a store, as whom), then the AI's button between the boxes, the
+      category and its own fields, the price, where it is, and, for someone not signed in, how to
+      reach them; the button across the column under them. Every field has its name over it; a
+      placeholder, where there is one, is an example. (In three sections under headings once, with
+      what helps a listing sell beside them on a wide screen.) -#}
   <form class="account-form listing-form" action="{{ action }}" method="post" enctype="multipart/form-data"
         data-controller="listing-form narrow price-hint{% if new_listing %} draft{% endif %}{% if ai_fill %} ai-fill{% endif %}"{% if ai_fill %} data-ai-fill-photos-outlet="#listing-photos"{% if let Some(number) = editing %} data-ai-fill-listing-value="{{ number }}"{% endif %}{% endif %}{% if new_listing %} data-listing-form-guess-value="true"{% endif %}>
     {% if let Some(error) = self.error("form") %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
@@ -44,29 +47,30 @@
       </div>
     </div>
     {%- endif %}
-    {%- if new_listing && !stores.is_empty() %}
-    {#- "Posto si": the poster, or a store they may post for (stores.rs), whose name, logo and
-        number the listing then shows. Its empty choice is the poster, a choice and not a
-        placeholder, so it keeps the text's colour (picker_controller.js). -#}
-    <div class="field">
-      <label class="field-label" for="si">{{ crate::t("Posto si") }}</label>
-      <div class="picker" data-controller="picker" data-picker-placeholder-value="false">
-      <select id="si" name="si">
-        <option value="">{{ crate::t("Unë") }}{% if let Some(who) = signed_in_as %} ({{ who }}){% endif %}</option>
-        {%- for store in stores %}
-        <option value="{{ store.slug }}"{% if store.slug == form.si %} selected{% endif %}>{{ store.display_name }}</option>
-        {%- endfor %}
-      </select>
-      </div>
-      <p class="field-hint">{{ crate::t("Si dyqan, njoftimi del me emrin, logon dhe numrin e dyqanit.") }}</p>
-      {%- if let Some(error) = self.error("si") %}<p class="field-error">{{ error }}</p>{% endif %}
-    </div>
-    {%- endif %}
 
     {#- What the seller writes comes first, the title, the description and the photos, then the
         rest, which the AI can fill in from them. -#}
-    <section class="form-section" aria-labelledby="section-what">
-      <h2 id="section-what">{{ crate::t("Çfarë shet") }}</h2>
+    <div class="form-box">
+      {%- if new_listing && !stores.is_empty() %}
+      {#- "Posto si": the poster, or a store they may post for (stores.rs), whose name, logo and
+          number the listing then shows. Its empty choice is the poster, a choice and not a
+          placeholder, so it keeps the text's colour (picker_controller.js). Each store's choice
+          carries whom buyers reach then, for the lead (listing_form_controller.js, posted). -#}
+      <div class="field">
+        <label class="field-label" for="si">{{ crate::t("Posto si") }}</label>
+        <div class="picker" data-controller="picker" data-picker-placeholder-value="false">
+        <select id="si" name="si" data-action="listing-form#posted">
+          <option value=""{% if let Some(who) = signed_in_as %} data-contact="{{ who }}"{% endif %}>{{ crate::t("Unë") }}{% if let Some(who) = signed_in_as %} ({{ who }}){% endif %}</option>
+          {%- for store in stores %}
+          <option value="{{ store.slug }}" data-contact="{{ self.store_contact(store) }}"{% if store.slug == form.si %} selected{% endif %}>{{ store.display_name }}</option>
+          {%- endfor %}
+        </select>
+        </div>
+        <p class="field-hint">{{ crate::t("Si dyqan, njoftimi del me emrin, logon dhe numrin e dyqanit.") }}</p>
+        {%- if let Some(error) = self.error("si") %}<p class="field-error">{{ error }}</p>{% endif %}
+      </div>
+      {%- endif %}
+
       <div class="field">
         <label class="field-label" for="title">{{ crate::t("Titulli") }}</label>
         <input id="title" name="title" value="{{ form.title }}" required minlength="5" maxlength="120" placeholder="{{ crate::t("p.sh. Golf 7, 2016, naftë") }}"
@@ -83,10 +87,13 @@
 
       {#- Photos: the ones the listing has (when editing), each with "Hiq", then a zone that takes
           more, picked or dropped onto it. photos_controller.js makes them one list, the first the
-          cover, each moved by its arrows or dragged, and makes big phone photos smaller first; it
-          sends their order (photo_order) and those taken out, and puts them back on a form sent
-          back with an error (photos_again). Without it, the input and the "Hiq" boxes. -#}
-      <div class="field" id="listing-photos" data-controller="photos" data-photos-max-value="{{ crate::media::MAX_PHOTOS }}"
+          cover, each moved by its arrows or dragged, taken out by its cross, and makes big phone
+          photos smaller first; it sends their order (photo_order) and those taken out, and puts
+          them back on a form sent back with an error (photos_again). Without it, the input and
+          the "Hiq" boxes. As the canvas has it: before any photo the zone across the box, the
+          camera in a grey circle beside "Shto foto" and what it takes; with photos, squares of
+          110px in a row, the zone a square after them, what it takes under them (posting.css). -#}
+      <div class="field photos-field" id="listing-photos" data-controller="photos" data-photos-max-value="{{ crate::media::MAX_PHOTOS }}"
            data-photos-again-value="{{ photos_again }}" data-photos-left="{{ self.photos_left() }}"
            data-action="dragover->photos#over dragleave->photos#leave drop->photos#dropped">
         <span class="field-label" id="photos-label">{{ crate::t("Fotot") }}</span>
@@ -106,54 +113,58 @@
         <div data-photos-target="removed" hidden></div>
         <label class="photo-drop" data-photos-target="zone">
           <input type="file" name="photos" accept="image/*" multiple aria-labelledby="photos-label" data-photos-target="input" data-action="change->photos#chosen">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2.5"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8.5 5l1.5-2h4l1.5 2"/></svg>
-          <span><strong>{{ crate::t("Shto foto") }}</strong> {{ crate::t("ose tërhiqi këtu") }}</span>
+          <span class="photo-drop-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+          <span class="photo-drop-text">
+            <span class="photo-drop-button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ crate::web::icons::PLUS|safe }}</svg>{{ crate::t("Shto foto") }}</span>
+            <span class="photo-drop-hint">{{ crate::t1("Deri në {} foto.", crate::media::MAX_PHOTOS) }} {{ crate::t("E para, kopertina, del në karta dhe në krye të njoftimit; i rendit me shigjetat ose duke i tërhequr.") }}</span>
+          </span>
         </label>
-        <p class="field-hint">{{ crate::t1("Deri në {} foto.", crate::media::MAX_PHOTOS) }} {{ crate::t("E para, kopertina, del në karta dhe në krye të njoftimit; i rendit me shigjetat ose duke i tërhequr.") }}</p>
+        {#- What the zone takes, under the photos once there are some (in the zone before). -#}
+        <p class="field-hint photo-hint">{{ crate::t1("Deri në {} foto.", crate::media::MAX_PHOTOS) }} {{ crate::t("E para, kopertina, del në karta dhe në krye të njoftimit; i rendit me shigjetat ose duke i tërhequr.") }}</p>
         <p class="field-hint" data-photos-target="status" role="status"></p>
         {% if let Some(error) = self.error("photos") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
+    </div>
 
-      {%- if ai_fill %}
-      {#- "Plotëso pjesën tjetër me AI" (ai_fill_controller.js, web/ai_fill.rs): from the title, the
-          description and the photos, the AI chooses the category and fills in its details, the price
-          and the town, for the seller to check; what it filled is tinted until changed. On an edit,
-          what is missing alone, from the listing's own photos too. -#}
-      <div class="ai-fill">
-        <button type="button" class="button secondary ai-fill-button" data-ai-fill-target="button" data-action="ai-fill#fill">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.9 5 5.1 1.9-5.1 1.9-1.9 5-1.9-5L5 10.4l5.1-1.9z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>
-          {{ crate::t("Plotëso pjesën tjetër me AI") }}
-        </button>
-        {%- if editing.is_some() %}
-        <p class="field-hint" data-ai-fill-target="status" role="status">{{ crate::t("Nga titulli, përshkrimi dhe fotot, AI plotëson detajet që mungojnë. Ato që ke vënë nuk i prek.") }}</p>
-        {%- else %}
-        <p class="field-hint" data-ai-fill-target="status" role="status">{{ crate::t("Nga titulli, përshkrimi dhe fotot, AI zgjedh kategorinë dhe plotëson detajet, çmimin dhe qytetin. Ti i kontrollon para se ta publikosh.") }}</p>
-        {%- endif %}
-      </div>
+    {%- if ai_fill %}
+    {#- "Plotëso pjesën tjetër me AI" (ai_fill_controller.js, web/ai_fill.rs): from the title, the
+        description and the photos, the AI chooses the category and fills in its details, the price
+        and the town, for the seller to check; what it filled is tinted until changed. On an edit,
+        what is missing alone, from the listing's own photos too. Between the boxes, the grey
+        button with what it does beside it (under it on a phone). -#}
+    <div class="ai-fill">
+      <button type="button" class="button secondary ai-fill-button" data-ai-fill-target="button" data-action="ai-fill#fill">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.9 5 5.1 1.9-5.1 1.9-1.9 5-1.9-5L5 10.4l5.1-1.9z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>
+        {{ crate::t("Plotëso pjesën tjetër me AI") }}
+      </button>
+      {%- if editing.is_some() %}
+      <p class="field-hint" data-ai-fill-target="status" role="status">{{ crate::t("Nga titulli, përshkrimi dhe fotot, AI plotëson detajet që mungojnë. Ato që ke vënë nuk i prek.") }}</p>
+      {%- else %}
+      <p class="field-hint" data-ai-fill-target="status" role="status">{{ crate::t("Nga titulli, përshkrimi dhe fotot, AI zgjedh kategorinë dhe plotëson detajet, çmimin dhe qytetin. Ti i kontrollon para se ta publikosh.") }}</p>
       {%- endif %}
-    </section>
+    </div>
+    {%- endif %}
 
-    <section class="form-section" aria-labelledby="section-details">
-      <h2 id="section-details">{{ crate::t("Kategoria dhe çmimi") }}</h2>
-      <div class="field">
-        <label class="field-label" for="category">{{ crate::t("Kategoria") }}</label>
-        {#- Chosen from a list in the page, not the phone's own picker (picker_controller.js). -#}
-        <div class="picker" data-controller="picker" data-picker-tree-value="true">
-        <select id="category" name="category" required data-listing-form-target="category" data-action="listing-form#categoryChanged">
-          <option value="">{{ crate::t("Zgjidh kategorinë") }}</option>
-          {%- for group in category_groups %}
-          {%- if let Some(label) = group.label %}<optgroup label="{{ label }}">{% endif %}
-          {%- for category in group.options %}
-          <option value="{{ category.value }}" data-types="{{ category.types }}" data-currency="{{ category.currency }}"{% if category.uses_condition %} data-condition{% endif %}{% if category.zoned %} data-zoned{% endif %}{% if category.mapped %} data-mapped{% endif %}{% if category.selected %} selected{% endif %}>{{ category.label }}</option>
-          {%- endfor %}
-          {%- if group.label.is_some() %}</optgroup>{% endif %}
-          {%- endfor %}
-        </select>
+    {#- The category, its kind and condition side by side, then its own fields. -#}
+    <div class="form-box">
+      <div class="form-row category-row">
+        <div class="field">
+          <label class="field-label" for="category">{{ crate::t("Kategoria") }}</label>
+          {#- Chosen from a list in the page, not the phone's own picker (picker_controller.js). -#}
+          <div class="picker" data-controller="picker" data-picker-tree-value="true">
+          <select id="category" name="category" required data-listing-form-target="category" data-action="listing-form#categoryChanged">
+            <option value="">{{ crate::t("Zgjidh kategorinë") }}</option>
+            {%- for group in category_groups %}
+            {%- if let Some(label) = group.label %}<optgroup label="{{ label }}">{% endif %}
+            {%- for category in group.options %}
+            <option value="{{ category.value }}" data-types="{{ category.types }}" data-currency="{{ category.currency }}"{% if category.uses_condition %} data-condition{% endif %}{% if category.zoned %} data-zoned{% endif %}{% if category.mapped %} data-mapped{% endif %}{% if category.selected %} selected{% endif %}>{{ category.label }}</option>
+            {%- endfor %}
+            {%- if group.label.is_some() %}</optgroup>{% endif %}
+            {%- endfor %}
+          </select>
+          </div>
+          {% if let Some(error) = self.error("category") %}<p class="field-error">{{ error }}</p>{% endif %}
         </div>
-        {% if let Some(error) = self.error("category") %}<p class="field-error">{{ error }}</p>{% endif %}
-      </div>
-
-      <div class="form-row">
         <div class="field" data-listing-form-target="typeField">
           <label class="field-label" for="listing_type">{{ crate::t("Lloji") }}</label>
           <div class="picker" data-controller="picker">
@@ -178,8 +189,12 @@
       <turbo-frame id="listing-properties" data-listing-form-target="properties">
         {%- include "listing_properties.html" %}
       </turbo-frame>
+    </div>
 
-      <div class="form-row price-row">
+    {#- The price: its kind, the amount and its currency, euros or lekë, a two-part toggle as the
+        filters' price has (.currency-choice); under them, for a car, the hint. -#}
+    <div class="form-box">
+      <div class="price-fields">
         <div class="field">
           <label class="field-label" for="price_type">{{ crate::t("Çmimi") }}</label>
           <div class="picker" data-controller="picker">
@@ -188,15 +203,13 @@
           </select>
           </div>
         </div>
-        <div class="field" data-listing-form-target="amountField">
+        <div class="field amount-field" data-listing-form-target="amountField">
           <label class="field-label" for="price">{{ crate::t("Shuma") }}</label>
-          <div class="amount">
-            <input id="price" name="price" value="{{ form.price }}" inputmode="decimal" placeholder="{{ crate::t("p.sh. 9 500") }}">
-            <div class="picker" data-controller="picker">
-            <select name="currency" aria-label="{{ crate::t("Monedha") }}" data-listing-form-target="currency">
-              {% for choice in currencies %}<option value="{{ choice.value }}"{% if choice.selected %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
-            </select>
-            </div>
+          <input id="price" name="price" value="{{ form.price }}" inputmode="decimal" placeholder="{{ crate::t("p.sh. 9 500") }}">
+          <div class="segmented currency-choice" role="radiogroup" aria-label="{{ crate::t("Monedha") }}" data-listing-form-target="currency">
+            {%- for choice in currencies %}
+            <label><input type="radio" name="currency" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}>{{ choice.label }}</label>
+            {%- endfor %}
           </div>
         </div>
       </div>
@@ -204,13 +217,11 @@
           compares (price_hint_controller.js, car_prices.rs). -#}
       <p class="field-hint price-hint" data-price-hint-target="hint" role="status" hidden></p>
       {% if let Some(error) = self.error("price") %}<p class="field-error">{{ error }}</p>{% endif %}
-    </section>
+    </div>
 
-    {#- Where it is; for someone not signed in, how buyers reach them, and the name their new account
-        takes. A signed-in seller's name is their account's (settings.rs), which their listings
-        show. -#}
-    <section class="form-section" aria-labelledby="section-where">
-      <h2 id="section-where">{% if signed_in_as.is_none() %}{{ crate::t("Vendi dhe kontakti") }}{% else %}{{ crate::t("Vendi") }}{% endif %}</h2>
+    {#- Where it is: the town and its zone side by side, then, for a property or a car, its point
+        on the map. -#}
+    <div class="form-box">
       <div class="form-row">
         <div class="field">
           <label class="field-label" for="city">{{ crate::t("Qyteti") }}</label>
@@ -265,48 +276,38 @@
         <p class="field-hint" data-map-pin-target="status" role="status">{% if form.latitude.is_empty() %}{{ crate::t("Pa të, njoftimi del te qendra e qytetit.") }}{% else %}{{ crate::t("Njoftimi del te pika që vendose, afërsisht.") }}{% endif %}</p>
         {% if let Some(error) = self.error("point") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
+    </div>
 
-      {%- if signed_in_as.is_none() %}
-      <div class="form-row">
-        <div class="field">
-          <label class="field-label" for="contact">{{ crate::t("Celulari ose email-i") }}</label>
-          <input id="contact" name="contact" value="{{ form.contact }}" required autocomplete="username" placeholder="{{ crate::t("p.sh. 069 123 4567") }}">
-          {% if let Some(error) = self.error("contact") %}<p class="field-error">{{ error }}</p>{% endif %}
-        </div>
-        <div class="field">
-          <label class="field-label" for="name">{{ crate::t("Emri") }} <span class="optional">{{ crate::t("(s'është i detyrueshëm)")|safe }}</span></label>
-          <input id="name" name="name" value="{{ form.name }}" maxlength="60" autocomplete="name">
-          {% if let Some(error) = self.error("name") %}<p class="field-error">{{ error }}</p>{% endif %}
-        </div>
+    {%- if signed_in_as.is_none() %}
+    {#- For someone not signed in, the name their new account takes, then how buyers reach them,
+        each across the box, as the canvas has them (the contact first, side by side once). A
+        signed-in seller's name is their account's (settings.rs), which their listings show. -#}
+    <div class="form-box">
+      <div class="field">
+        <label class="field-label" for="name">{{ crate::t("Emri") }} <span class="optional">{{ crate::t("(s'është i detyrueshëm)")|safe }}</span></label>
+        <input id="name" name="name" value="{{ form.name }}" maxlength="60" autocomplete="name">
+        {% if let Some(error) = self.error("name") %}<p class="field-error">{{ error }}</p>{% endif %}
       </div>
-      <p class="field-hint">{{ crate::t("Blerësit të kontaktojnë këtu; e shohin vetëm kur shtypin butonin e telefonit te njoftimi. Me të hyn më vonë, për ta ndryshuar njoftimin.") }}</p>
-      {%- endif %}
-    </section>
+      <div class="field">
+        <label class="field-label" for="contact">{{ crate::t("Celulari ose email-i") }}</label>
+        <input id="contact" name="contact" value="{{ form.contact }}" required autocomplete="username" placeholder="{{ crate::t("p.sh. 069 123 4567") }}">
+        <p class="field-hint">{{ crate::t("Blerësit të kontaktojnë këtu; e shohin vetëm kur shtypin butonin e telefonit te njoftimi. Me të hyn më vonë, për ta ndryshuar njoftimin.") }}</p>
+        {% if let Some(error) = self.error("contact") %}<p class="field-error">{{ error }}</p>{% endif %}
+      </div>
+    </div>
+    {%- endif %}
 
     <div class="trap" aria-hidden="true">
       <label for="website">Faqja</label>
       <input id="website" name="website" tabindex="-1" autocomplete="off">
     </div>
     <input type="hidden" name="started" value="{{ started }}">
+    {#- The button across the column; on an edit "Anulo" before it, as wide as its word. -#}
     <div class="form-actions">
-      <button type="submit" class="button">{{ submit_label }}</button>
       {% if let Some(url) = cancel_url %}<a class="button secondary" href="{{ url }}">{{ crate::t("Anulo") }}</a>{% endif %}
+      <button type="submit" class="button">{{ submit_label }}</button>
     </div>
   </form>
-  {%- if new_listing %}
-  {#- What helps a listing sell, beside the form on a wide screen: the photos, the title, the price,
-      and what happens after (60 days, Rifresko). -#}
-  <aside class="listing-form-tips" aria-labelledby="tips-heading">
-    <h2 id="tips-heading">{{ crate::t("Që të shitet më shpejt") }}</h2>
-    <ul>
-      <li><strong>{{ crate::t("Fotot.") }}</strong> {{ crate::t("E para del në karta dhe në krye të njoftimit: zgjidh më të mirën. Në dritë dite, nga disa anë, me defektet që ka.") }}</li>
-      <li><strong>{{ crate::t("Titulli.") }}</strong> {{ crate::t("Çfarë është, me markën, modelin dhe vitin: „Golf 7, 2016, naftë“, jo „Shes makinë“.") }}</li>
-      <li><strong>{{ crate::t("Çmimi.") }}</strong> {{ crate::t("Një çmim i qartë sjell më shumë mesazhe se „me marrëveshje“. Për një makinë, forma të thotë çfarë kërkojnë të ngjashmet.") }}</li>
-      <li><strong>{{ crate::t("Pas publikimit.") }}</strong> {{ crate::t("Njoftimi qëndron 60 ditë, dhe e rifreskon me një klik te „Njoftimet e mia“.") }}</li>
-    </ul>
-  </aside>
-  {%- endif %}
-  </div>
   {%- if new_listing %}
   {#- Where the seller hands their listing and contact over: the terms it goes up under, and how the
       site keeps what they give (pages.rs). -#}
