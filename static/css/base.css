@@ -130,14 +130,15 @@
   --shadow-float: 0 16px 48px rgb(0 0 0 / 14%), 0 2px 6px rgb(0 0 0 / 5%); /* what floats: sheets, the menu */
   --scrim: rgb(0 0 0 / 20%); /* the page dimmed under what floats over it */
   /* Frosted, as Apple's bars and sheets are, and as slightly as the user asked on 2026-10-11:
-     the header, a listing's contact bar at a phone's foot and its message sheet there, each in
-     its own colour a little short of whole, what passes under it showing through, blurred and
-     its colours a little livelier (--frost); the bars at 80%, the sheet, which has words on it,
-     at 92%. Whole where the reader asks for less transparency (below). */
+     the header and, on a phone, a listing's contact bar and its message sheet, all three in the
+     header's glass, as the user asked once they had seen it (the contact bar on the page's grey
+     and the sheet at 92% first): the bars in the header's colour at 80% (--frost-bar), the sheet
+     in its own at 80% (--frost-sheet), what passes under them showing through, blurred and its
+     colours a little livelier (--frost). Whole where the reader asks for less transparency
+     (below). */
   --frost: blur(20px) saturate(180%);
-  --frost-header: color-mix(in srgb, var(--header) 80%, transparent);
-  --frost-bar: color-mix(in srgb, var(--bg) 80%, transparent);
-  --frost-sheet: color-mix(in srgb, var(--surface) 92%, transparent);
+  --frost-bar: color-mix(in srgb, var(--header) 80%, transparent);
+  --frost-sheet: color-mix(in srgb, var(--surface) 80%, transparent);
   /* Glass: the welcome page's open search and its suggestions, over the pills (welcome.css): the
      text input's colour (white, and the dark theme's own dark) at 65%, blurred, with its edge and
      the words and their shading on it, those in the theme's colours below. */
@@ -356,8 +357,7 @@
 @media (prefers-reduced-transparency: reduce) {
   :root {
     --frost: none;
-    --frost-header: var(--header);
-    --frost-bar: var(--bg);
+    --frost-bar: var(--header);
     --frost-sheet: var(--surface);
   }
 }
@@ -509,12 +509,12 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
    listings kept, the conversations and the theme there too: the menu and the rail have them
    now). It stays at the top as the page scrolls, frosted as Apple's bars are, very slightly, as
    the user asked on 2026-10-11: its colour at 80%, the page showing through it as it scrolls
-   under, blurred (--frost-header, --frost). */
+   under, blurred (--frost-bar, --frost). */
 .site-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--frost-header);
+  background: var(--frost-bar);
   -webkit-backdrop-filter: var(--frost);
   backdrop-filter: var(--frost);
   border-bottom: 1px solid var(--border);

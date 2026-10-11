@@ -4956,10 +4956,13 @@ async fn the_header_is_drawn_as_the_canvas_has_it(pool: PgPool) {
         rule[..rule.find('}').unwrap()].to_string()
     };
     let header = rule(".site-header");
-    assert!(header.contains("background:var(--frost-header)") && header.contains("backdrop-filter:var(--frost)"), "{header}");
+    assert!(header.contains("background:var(--frost-bar)") && header.contains("backdrop-filter:var(--frost)"), "{header}");
     assert!(header.contains("border-bottom:1px solid var(--border)"), "{header}");
-    assert!(css.contains("--frost-header:color-mix(in srgb,var(--header) 80%,transparent)"));
-    assert!(css.contains("@media (prefers-reduced-transparency:reduce){:root{--frost:none;--frost-header:var(--header);"));
+    assert!(css.contains("--frost-bar:color-mix(in srgb,var(--header) 80%,transparent)"));
+    assert!(css.contains("@media (prefers-reduced-transparency:reduce){:root{--frost:none;--frost-bar:var(--header);"));
+    // The contact bar on a phone and the message sheet there are in the header's glass.
+    assert!(css.contains("--frost-sheet:color-mix(in srgb,var(--surface) 80%,transparent)"));
+    assert!(css.contains("background:var(--frost-bar);-webkit-backdrop-filter:var(--frost);backdrop-filter:var(--frost);transition:box-shadow .15s"));
     assert!(rule(".header-inner").contains("height:var(--size-header)"));
     let account = rule(".account-button");
     assert!(account.contains("width:var(--size-button-sm)") && account.contains("margin-left:auto") && account.contains("border:0"), "{account}");
