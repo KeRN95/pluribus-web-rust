@@ -28,8 +28,8 @@
   box-shadow: var(--shadow-float);
   transform-origin: top left;
 }
-.sort-option:has(input:checked) { display: flex; align-items: center; gap: .5rem; background: var(--button); color: var(--on-button); font-weight: var(--medium); }
-.sort-option:has(input:checked):hover { background: var(--button-hover); }
+.sort-option:has(input:checked) { display: flex; align-items: center; gap: .5rem; background: var(--main); color: var(--on-main); font-weight: var(--medium); }
+.sort-option:has(input:checked):hover { background: var(--main-hover); }
 .sort-option:has(input:checked)::after {
   content: "";
   flex: none;
@@ -40,7 +40,7 @@
   -webkit-mask: var(--check) center / contain no-repeat;
   mask: var(--check) center / contain no-repeat;
 }
-.sort-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sort-option:has(input:focus-visible) { outline: 2px solid var(--main); outline-offset: 2px; }
 /* The map on a category or search page: a button in the row (above) that opens it over the
    results, under the row, and folds it again. The card is a square, from the row's left edge: as
    wide as the row, or as high as the screen has left under the row (--top, measured as it opens:

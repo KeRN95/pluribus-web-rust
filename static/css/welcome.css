@@ -180,10 +180,6 @@
   animation: menu-in .14s ease-out;
 }
 .picker-list[hidden] { display: none; }
-:root {
-  --menu-border: color-mix(in srgb, var(--text) 12%, transparent);
-  --menu-shadow: 0 12px 28px -6px rgb(0 0 0 / 16%), 0 2px 6px rgb(0 0 0 / 5%);
-}
 @keyframes menu-in {
   from { opacity: 0; transform: translateY(-4px) scale(.98); }
 }
@@ -196,13 +192,13 @@
 .picker-option:focus { outline: none; background: var(--surface-muted); }
 .picker-option[data-value=""] { color: var(--muted); font-weight: var(--regular); }
 /* The choice in the site's own colour, as its buttons are. */
-.picker-option[aria-selected="true"] { background: var(--button); color: var(--on-button); font-weight: var(--medium); }
+.picker-option[aria-selected="true"] { background: var(--main); color: var(--on-main); font-weight: var(--medium); }
 .picker-option[aria-selected="true"]:hover,
-.picker-option[aria-selected="true"]:focus { background: var(--button-hover); }
+.picker-option[aria-selected="true"]:focus { background: var(--main-hover); }
 .picker-option[aria-selected="true"] .picker-toggle { color: inherit; }
 /* The same for the category menu's page: its row in the site's colour. */
-.picker-option.is-current { background: var(--button); color: var(--on-button); font-weight: var(--medium); }
-.picker-option.is-current:hover { background: var(--button-hover); }
+.picker-option.is-current { background: var(--main); color: var(--on-main); font-weight: var(--medium); }
+.picker-option.is-current:hover { background: var(--main-hover); }
 .picker-option.is-current .picker-toggle { color: inherit; }
 .picker-option[aria-selected="true"],
 .picker-option.is-current { display: flex; align-items: center; gap: .5rem; }
@@ -252,8 +248,7 @@
 @media (prefers-reduced-motion: reduce) {
   .picker-toggle,
   .picker-button::after { transition: none; }
-  .picker-list,
-  .category-menu { animation: none; }
+  .picker-list { animation: none; }
 }
 
 /* Where the select sat beside something, the button does: the posting form's currency next to

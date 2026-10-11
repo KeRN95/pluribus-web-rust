@@ -588,10 +588,10 @@ a.pending-label:active { text-decoration: underline 2px var(--highlight); text-u
 }
 /* What the AI filled in, until the seller changes it: the field tinted the accent. */
 .ai-filled :is(input:not([type="checkbox"]), textarea, .picker-button) {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-strong));
-  background-color: color-mix(in srgb, var(--accent) 7%, var(--input));
+  border-color: color-mix(in srgb, var(--main) 55%, var(--border-strong));
+  background-color: color-mix(in srgb, var(--main) 7%, var(--input));
 }
-.ai-filled .checks .check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+.ai-filled .checks .check:has(input:checked) { border-color: color-mix(in srgb, var(--main) 60%, transparent); }
 /* A category's own fields in the listing form (listing_properties.html), as the canvas has them,
    in the category's white box with no card of their own: two to a line, 18px apart (14px side by
    side), each its name over it and no wider than its column, however long its name (the field
@@ -630,7 +630,7 @@ a.pending-label:active { text-decoration: underline 2px var(--highlight); text-u
   -webkit-mask: var(--check) center / contain no-repeat;
   mask: var(--check) center / contain no-repeat;
 }
-.property-fields .checks .check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.property-fields .checks .check:has(input:focus-visible) { outline: 2px solid var(--main); outline-offset: 2px; }
 @media (hover: hover) {
   .property-fields .checks .check:hover { background: var(--surface-muted-hover); }
   .property-fields .checks .check:has(input:checked):hover { background: var(--main-hover); }
@@ -766,7 +766,7 @@ a.pending-label:active { text-decoration: underline 2px var(--highlight); text-u
 .picture-frame:has(> img) { border-color: transparent; }
 .picture-pick.has-picker input[type="file"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .picture-pick:not(.has-picker) .picture-button { display: none; }
-.picture-pick input[type="file"]:focus-visible + .picture-button { outline: 2px solid var(--accent); outline-offset: 2px; }
+.picture-pick input[type="file"]:focus-visible + .picture-button { outline: 2px solid var(--main); outline-offset: 2px; }
 .picture-pick .picture-button { min-height: 40px; padding: 0 14px; font-size: var(--text-sm); }
 .store-picture { align-content: start; }
 .store-picture > .notice-setting { margin-top: 4px; }

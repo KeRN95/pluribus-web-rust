@@ -336,18 +336,6 @@
 :root[data-accent="orange"] { --highlight: var(--choice-orange); --filter-share-light: 35%; --filter-share-dark: 30%; }
 :root[data-accent="blue"] { --highlight: var(--choice-blue); --filter-share-light: 30%; --filter-share-dark: 34%; }
 
-/* The old names, pointing at the new colours while the pages move to them one by one (until the
-   clean-up, step 44 of the redesign): the old accent, buttons and their tint are the main colour
-   now, the tint the grey of secondary controls. One main colour on every page: the five parts of
-   the site lost their colours of their own. */
-:root {
-  --accent: var(--main);
-  --button: var(--main);
-  --button-hover: var(--main-hover);
-  --on-button: var(--on-main);
-  --badge: var(--surface-muted);
-}
-
 * { box-sizing: border-box; }
 
 /* The page a column at least a screen tall, the header, the page and the footer down it, so that
@@ -457,8 +445,8 @@ h2 {
 h1 { margin: 1.5rem 0 1rem; font-size: var(--text-2xl); line-height: 1.15; }
 h2 { margin: 1.75rem 0 .75rem; font-size: var(--text-xl); font-weight: var(--subheading-weight, var(--heading-weight, var(--bold))); line-height: 1.25; }
 
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--main) 28%, transparent); }
 
 /* Pages change with the browser's cross-fade (view transitions, base.html), but quickly: its own
    takes a quarter of a second, during which the page takes no taps, and each click felt slow for
@@ -484,7 +472,7 @@ picture { display: contents; }
    into view if it has a box, and Turbo waits for that before loading the page. */
 turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -1; text-align: center; }
 
-.turbo-progress-bar { background: var(--accent); }
+.turbo-progress-bar { background: var(--main); }
 
 /* Header */
 
@@ -737,7 +725,7 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   box-shadow: var(--shadow);
 }
 
-.search:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.search:focus-within { outline: 2px solid var(--main); outline-offset: 2px; }
 
 .search input {
   flex: 1;
@@ -766,8 +754,8 @@ turbo-frame[loading="lazy"]:not([complete]) { display: block; grid-column: 1 / -
   cursor: pointer;
 }
 
-.search .icon-button { background: var(--button); color: var(--on-button); }
-.search .icon-button:hover { background: var(--button-hover); }
+.search .icon-button { background: var(--main); color: var(--on-main); }
+.search .icon-button:hover { background: var(--main-hover); }
 
 /* The account, alone at the bar's right end, its margin taking the room before it: a bare round
    button, 40px (--size-button-sm) with its icon at 22px in the words' colour, a grey circle under
@@ -969,15 +957,15 @@ input[type="radio"].swatch:checked::before { box-shadow: 0 0 0 2px var(--surface
   width: 19rem;
   max-width: calc(100vw / var(--page-scale) - 2 * var(--gutter));
   padding: 1rem;
-  border: 1px solid var(--menu-border);
+  border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface);
   box-shadow: var(--shadow);
 }
 .type-group { display: grid; gap: .5rem; min-width: 0; margin: 0; padding: 0; border: 0; }
 .type-group legend { padding: 0; margin-bottom: .2rem; font-size: var(--text-sm); font-weight: var(--semibold); }
-.type-font { width: 100%; padding: .4rem .5rem; border: 1px solid var(--menu-border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: var(--text-sm); }
+.type-font { width: 100%; padding: .4rem .5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: var(--text-sm); }
 .type-range { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr) 2.2rem; gap: .5rem; align-items: center; color: var(--muted); font-size: var(--text-xs); }
-.type-range input { width: 100%; margin: 0; accent-color: var(--accent); }
+.type-range input { width: 100%; margin: 0; accent-color: var(--main); }
 .type-range output { color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
 .type-reset { justify-self: start; }

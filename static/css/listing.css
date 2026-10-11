@@ -54,11 +54,6 @@
 @media (max-width: 719px) {
   .listing h2 { font-size: 1.357rem; }
 }
-/* The seller's other listings say where all of them are at the end of their heading's line, or
-   under the heading where the line is too short for both. */
-.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; margin: 1.75rem 0 .75rem; }
-.section-head h2 { margin: 0; }
-.section-head a { font-size: var(--text-sm); font-weight: var(--semibold); text-underline-offset: .2em; }
 /* Who sells it, under the description, as far under it as the details and the description stand
    under what is over them (1.75rem; it stood 2.5rem under once), under a heading of its own,
    "Shitësi", as they have theirs (the heading keeps no margin over it, like theirs, above), on the
@@ -375,7 +370,7 @@
   filter: blur(24px) brightness(.9);
   transform: scale(1.15);
 }
-.listing-photos:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.listing-photos:focus-visible { outline: 2px solid var(--main); outline-offset: 3px; }
 /* The counter, a button (listing.html): a click shows the filmstrip over the photos' foot, or
    hides it again (slides_controller.js, toggleThumbs). On the soft dark as the other pills over the photo,
    darker under a mouse as the heart's circle is, and while the strip shows, light with dark
@@ -617,7 +612,7 @@
 .posted-note p { margin: 0; }
 .posted-share { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-top: .65rem; }
 .posted-share .button { gap: .35rem; }
-.posted-share .button.is-copied { border-color: var(--accent); color: var(--accent); }
+.posted-share .button.is-copied { border-color: var(--main); color: var(--main); }
 /* A price that dropped lately (price_drop.html): what it was, struck through, quietly, and by how
    much in a green pill, as the zone's bubble says a square metre is cheap for it. */
 .price-was {
@@ -911,7 +906,7 @@
 .icon-circle .icon-copied,
 .icon-circle.is-copied .icon-copy,
 .icon-circle.is-copied .icon-link { display: none; }
-.icon-circle.is-copied .icon-copied { display: block; color: var(--accent); }
+.icon-circle.is-copied .icon-copied { display: block; color: var(--main); }
 
 /* The listing's details as pills, smaller than the category pills (the text a size down, 14px,
    their icons 16px), the menus' hairline on the surface, each as wide as what it says, one after
@@ -967,7 +962,7 @@
   border: 0;
   border-radius: 999px;
   background: none;
-  color: var(--accent);
+  color: var(--main);
   font: inherit;
   font-weight: var(--semibold);
   cursor: pointer;
@@ -978,7 +973,7 @@
    browser's rule for the attribute), so the attribute wins here. It showed under two lines once. */
 .description-more[hidden] { display: none; }
 @media (hover: hover) {
-  .description-more:hover { background: var(--badge); }
+  .description-more:hover { background: var(--surface-muted); }
 }
 /* A car's title as its seller wrote it, over the description. */
 .description-heading { margin: 0 0 .35rem; font-size: var(--text-lg); font-weight: var(--semibold); line-height: 1.35; }

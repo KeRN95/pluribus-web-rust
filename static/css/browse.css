@@ -273,9 +273,9 @@
   max-height: calc(100dvh / var(--page-scale) - var(--top, 12rem) - var(--drop) - 1rem);
   overscroll-behavior: contain;
   background: var(--surface);
-  border: 1px solid var(--menu-border);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: var(--menu-shadow);
+  box-shadow: var(--shadow-float);
   animation: menu-in .16s ease-out;
 }
 .map-card-body { overflow-y: auto; scrollbar-width: thin; }
@@ -540,7 +540,7 @@ fieldset.filter-group > .filter-label { float: left; width: 100%; }
   mask: var(--check) center / contain no-repeat;
 }
 .filter-form .filter-icons .check::before { content: none; }
-.filter-form .check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.filter-form .check:has(input:focus-visible) { outline: 2px solid var(--main); outline-offset: 2px; }
 @media (hover: hover) {
   .filter-form .check:hover { background: var(--surface-muted-hover); }
   .filter-form .check:has(input:checked):hover { background: var(--main-hover); }

@@ -4728,8 +4728,9 @@ async fn every_part_of_the_site_has_the_one_main_colour(pool: PgPool) {
     // (The stylesheet comes minified: web::site_css.)
     let css = get(pool.clone(), &format!("/static/css/site.css?v={}", marketplace::web::asset_version())).await.body;
     assert!(!css.contains("data-section"));
-    // The greys and the main colour, the text's, in either theme; the old names point at them
-    // until the pages have all moved over.
+    // The greys and the main colour, the text's, in either theme; the old names that pointed at
+    // them while the pages moved over went with the redesign's clean-up, every rule naming what
+    // they stood for, and no rule names a colour that isn't there.
     let light = &css[css.find(":root{color-scheme:light;").expect("the light theme")..];
     let light = &light[..light.find('}').unwrap()];
     for token in ["--bg:#f7f7f7;", "--surface:#fff", "--surface-muted:#ececec;", "--border:#dedede;", "--text:#1b1b1b;", "--muted:#707070;", "--main:#1b1b1b;", "--choice-mint:#2de38c;", "--choice-lime:#c8ff00;"] {
@@ -4740,8 +4741,8 @@ async fn every_part_of_the_site_has_the_one_main_colour(pool: PgPool) {
     for token in ["--bg:#1b1b1b;", "--surface:#242424;", "--surface-muted:#2c2c2c;", "--text:#e8e8e8;", "--muted:#a3a3a3;", "--main:#e8e8e8;"] {
         assert!(dark.contains(token), "{token} in {dark}");
     }
-    for token in ["--accent:var(--main)", "--button:var(--main)", "--on-button:var(--on-main)", "--badge:var(--surface-muted)"] {
-        assert!(css.contains(token), "{token}");
+    for name in ["--accent", "--button", "--button-hover", "--on-button", "--badge", "--menu-border", "--menu-shadow"] {
+        assert!(!css.contains(&format!("{name}:")) && !css.contains(&format!("var({name})")), "{name}");
     }
     // A kept listing's heart is filled with the site's one red, in every part of the site, lined
     // thinly in white over a photo; the welcome page's round heart and conversations buttons went
