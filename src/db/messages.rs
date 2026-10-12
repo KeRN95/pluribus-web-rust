@@ -4,10 +4,9 @@
 //! every one of its people (business_members), whose inbox it shares: the one who posted the
 //! listing takes part from the start, and the others as they write or read in it; who left the
 //! store sees it no more. A message is the other side's by who sent it, the buyer or anyone on
-//! the seller's side, so that a colleague's answer is "ours". Times are Albania's
-//! (Europe/Tirane), which the database knows.
-
-use time::PrimitiveDateTime;
+//! the seller's side, so that a colleague's answer is "ours". Times are timestamps, as the
+//! database keeps them (timestamptz, OffsetDateTime), which the pages put on Albania's clock
+//! (web/messages.rs).
 
 use super::*;
 use crate::domain::messaging::SentLately;
@@ -347,9 +346,8 @@ pub struct Message {
     /// For one of a store's people, the colleague who sent it, when it wasn't them.
     pub author: Option<String>,
     pub body: String,
-    /// When it was sent, in Albania's time, and how many days before today that was there.
-    pub sent: PrimitiveDateTime,
-    pub days_ago: i32,
+    /// When it was sent.
+    pub created_at: OffsetDateTime,
 }
 
 /// A conversation's messages, the oldest first: its latest MESSAGES_SHOWN, or those after the
@@ -363,8 +361,7 @@ pub async fn messages(db: &PgPool, conversation_id: Uuid, user_id: Uuid, after: 
                   CASE WHEN c.buyer_user_id <> $2 AND m.sender_user_id <> c.buyer_user_id AND m.sender_user_id <> $2
                        THEN u.display_name END AS "author?",
                   coalesce(m.body, '') AS "body!",
-                  (m.created_at AT TIME ZONE 'Europe/Tirane') AS "sent!",
-                  ((now() AT TIME ZONE 'Europe/Tirane')::date - (m.created_at AT TIME ZONE 'Europe/Tirane')::date) AS "days_ago!"
+                  m.created_at
            FROM messages m
            JOIN conversations c ON c.id = m.conversation_id
            LEFT JOIN users u ON u.id = m.sender_user_id
@@ -427,12 +424,11 @@ pub struct InboxEntry {
     /// For one of a store's people, the store whose conversation it is.
     pub store: Option<String>,
     /// Its latest message: what it says, whether the user sent it (or which colleague did, on a
-    /// store's side), and when, as Message has it.
+    /// store's side), and when it was sent (that message's created_at, as Message has it).
     pub last_body: Option<String>,
     pub last_mine: bool,
     pub last_author: Option<String>,
-    pub last_sent: Option<PrimitiveDateTime>,
-    pub days_ago: Option<i32>,
+    pub last_message_at: Option<OffsetDateTime>,
     /// Messages from the other side the user hasn't read: for one of a store's people, since they
     /// last read it, or until they do since they joined the store.
     pub unread: i64,
@@ -454,8 +450,7 @@ pub async fn inbox(db: &PgPool, user_id: Uuid, limit: i64) -> sqlx::Result<Vec<I
                   last.body AS "last_body?", coalesce(last.sender_user_id = $1, false) AS "last_mine!",
                   CASE WHEN c.buyer_user_id <> $1 AND last.sender_user_id <> c.buyer_user_id AND last.sender_user_id <> $1
                        THEN last.author END AS "last_author?",
-                  (last.created_at AT TIME ZONE 'Europe/Tirane') AS "last_sent?",
-                  ((now() AT TIME ZONE 'Europe/Tirane')::date - (last.created_at AT TIME ZONE 'Europe/Tirane')::date) AS "days_ago?",
+                  last.created_at AS "last_message_at?",
                   (SELECT count(*) FROM messages m
                    WHERE m.conversation_id = c.id
                      AND CASE WHEN c.buyer_user_id = $1 THEN m.sender_user_id <> c.buyer_user_id

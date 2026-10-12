@@ -17,7 +17,7 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
 };
 use serde::Deserialize;
-use time::{PrimitiveDateTime, macros::format_description};
+use time::{OffsetDateTime, macros::format_description};
 use uuid::Uuid;
 
 use super::{
@@ -160,20 +160,44 @@ struct InboxPage {
     conversations: Vec<InboxEntry>,
 }
 
-/// When a message was sent, by Albania's clock: "14:32" today, "Dje, 14:32", then the date (in
-/// English "Yesterday, 14:32", "8 Oct 2026, 14:32").
-fn when(sent: PrimitiveDateTime, days_ago: i32) -> String {
-    let time = format!("{:02}:{:02}", sent.hour(), sent.minute());
-    match days_ago {
+/// When a message was sent, by Albania's clock, as of `now`: "14:32" today, "Dje, 14:32", then the
+/// date (in English "Yesterday, 14:32", "8 Oct 2026, 14:32").
+fn when(sent: OffsetDateTime, now: OffsetDateTime) -> String {
+    let time = clock(sent);
+    match days_ago(sent, now) {
         0 => time,
         1 => format!("{}, {time}", t("Dje")),
         _ => format!("{}, {time}", day(sent, true)),
     }
 }
 
+/// When a conversation's latest message came, as the inbox says it, as of `now`: the time today,
+/// "Dje", the day and month within 300 days, or the date.
+fn when_latest(sent: OffsetDateTime, now: OffsetDateTime) -> String {
+    match days_ago(sent, now) {
+        0 => clock(sent),
+        1 => t("Dje").to_string(),
+        days if days < 300 => day(sent, false),
+        _ => day(sent, true),
+    }
+}
+
+/// How many days before `now` a message was sent, by Tirana's calendar (format::tirana), not by
+/// hours: 0 for today there and 1 for yesterday, whatever the hour in UTC.
+fn days_ago(sent: OffsetDateTime, now: OffsetDateTime) -> i64 {
+    (format::tirana(now).date() - format::tirana(sent).date()).whole_days()
+}
+
+/// The time of day a message was sent, by Albania's clock: "09:05".
+fn clock(sent: OffsetDateTime) -> String {
+    let sent = format::tirana(sent);
+    format!("{:02}:{:02}", sent.hour(), sent.minute())
+}
+
 /// The day a message was sent, by Albania's clock, with its year or without: "08.10.2026",
 /// "08.10"; in English "8 Oct 2026", "8 Oct", as format::date writes a date.
-fn day(sent: PrimitiveDateTime, year: bool) -> String {
+fn day(sent: OffsetDateTime, year: bool) -> String {
+    let sent = format::tirana(sent);
     match (english(), year) {
         (false, true) => format!("{:02}.{:02}.{}", sent.day(), u8::from(sent.month()), sent.year()),
         (false, false) => format!("{:02}.{:02}", sent.day(), u8::from(sent.month())),
@@ -184,22 +208,15 @@ fn day(sent: PrimitiveDateTime, year: bool) -> String {
 
 impl Message {
     pub fn when(&self) -> String {
-        when(self.sent, self.days_ago)
+        when(self.created_at, OffsetDateTime::now_utc())
     }
 }
 
 impl InboxEntry {
-    /// When its latest message came: the time today, "Dje", the day and month this year, or the date.
+    /// When its latest message came (`when_latest`): the time today, "Dje", the day and month within
+    /// 300 days, or the date.
     pub fn when(&self) -> String {
-        let (Some(sent), Some(days_ago)) = (self.last_sent, self.days_ago) else {
-            return String::new();
-        };
-        match days_ago {
-            0 => format!("{:02}:{:02}", sent.hour(), sent.minute()),
-            1 => t("Dje").to_string(),
-            _ if days_ago < 300 => day(sent, false),
-            _ => day(sent, true),
-        }
+        self.last_message_at.map_or_else(String::new, |sent| when_latest(sent, OffsetDateTime::now_utc()))
     }
 
     /// The start of its latest message, on one line.
@@ -461,10 +478,34 @@ mod tests {
 
     #[test]
     fn times_say_today_yesterday_or_the_date() {
-        let sent = datetime!(2026-10-08 9:05);
-        assert_eq!(when(sent, 0), "09:05");
-        assert_eq!(when(sent, 1), "Dje, 09:05");
-        assert_eq!(when(sent, 3), "08.10.2026, 09:05");
+        // 9:05 on the 8th of October in Tirana, by its summer time (UTC+2).
+        let sent = datetime!(2026-10-08 7:05 UTC);
+        assert_eq!(when(sent, datetime!(2026-10-08 18:00 UTC)), "09:05");
+        assert_eq!(when(sent, datetime!(2026-10-09 18:00 UTC)), "Dje, 09:05");
+        assert_eq!(when(sent, datetime!(2026-10-11 18:00 UTC)), "08.10.2026, 09:05");
+    }
+
+    #[test]
+    fn today_and_yesterday_are_tiranas_days() {
+        // Half past midnight on the 10th in Tirana (UTC+2) is 22:30 UTC on the 9th.
+        let now = datetime!(2026-10-09 22:30 UTC);
+        // Ten past midnight there is today; ten to, forty minutes earlier, yesterday; and ten to
+        // midnight on the 8th, under 25 hours before, two days ago.
+        assert_eq!(when(datetime!(2026-10-09 22:10 UTC), now), "00:10");
+        assert_eq!(when(datetime!(2026-10-09 21:50 UTC), now), "Dje, 23:50");
+        assert_eq!(when(datetime!(2026-10-08 21:50 UTC), now), "08.10.2026, 23:50");
+        // The inbox says the same days shorter.
+        assert_eq!(when_latest(datetime!(2026-10-09 22:10 UTC), now), "00:10");
+        assert_eq!(when_latest(datetime!(2026-10-09 21:50 UTC), now), "Dje");
+        assert_eq!(when_latest(datetime!(2026-10-08 21:50 UTC), now), "08.10");
+        // In winter (UTC+1), half past midnight on the 5th of December is 23:30 UTC on the 4th.
+        let now = datetime!(2026-12-04 23:30 UTC);
+        assert_eq!(when(datetime!(2026-12-04 23:05 UTC), now), "00:05");
+        assert_eq!(when(datetime!(2026-12-04 22:59 UTC), now), "Dje, 23:59");
+        // The inbox gives the year from 300 of Tirana's days before on: the 9th of February is
+        // 299 days before the 5th of December, the 8th 300.
+        assert_eq!(when_latest(datetime!(2026-02-09 12:00 UTC), now), "09.02");
+        assert_eq!(when_latest(datetime!(2026-02-08 12:00 UTC), now), "08.02.2026");
     }
 
     #[test]

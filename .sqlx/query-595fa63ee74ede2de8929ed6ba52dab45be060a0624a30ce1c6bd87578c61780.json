@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id, coalesce(l.generated_title, l.title) AS listing_title,\n                  (SELECT coalesce(m.thumbnail_url, m.public_url)\n                   FROM listing_media m\n                   WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'\n                   ORDER BY m.is_cover DESC, m.sort_order\n                   LIMIT 1) AS photo,\n                  CASE WHEN c.buyer_user_id = $1 THEN coalesce(b.display_name, su.display_name)\n                       ELSE bu.display_name END AS \"other_name!\",\n                  CASE WHEN c.buyer_user_id <> $1 THEN b.display_name END AS store,\n                  last.body AS \"last_body?\", coalesce(last.sender_user_id = $1, false) AS \"last_mine!\",\n                  CASE WHEN c.buyer_user_id <> $1 AND last.sender_user_id <> c.buyer_user_id AND last.sender_user_id <> $1\n                       THEN last.author END AS \"last_author?\",\n                  last.created_at AS \"last_message_at?\",\n                  (SELECT count(*) FROM messages m\n                   WHERE m.conversation_id = c.id\n                     AND CASE WHEN c.buyer_user_id = $1 THEN m.sender_user_id <> c.buyer_user_id\n                              ELSE m.sender_user_id = c.buyer_user_id END\n                     AND m.created_at > coalesce(me.last_read_at, joined.at, '-infinity')) AS \"unread!\"\n           FROM conversations c\n           JOIN users bu ON bu.id = c.buyer_user_id\n           JOIN LATERAL (SELECT p.user_id FROM conversation_participants p\n                         WHERE p.conversation_id = c.id AND p.user_id <> c.buyer_user_id\n                         ORDER BY p.joined_at\n                         LIMIT 1) seller ON true\n           JOIN users su ON su.id = seller.user_id\n           LEFT JOIN conversation_participants me ON me.conversation_id = c.id AND me.user_id = $1\n           LEFT JOIN LATERAL (SELECT bm.created_at AS at FROM business_members bm\n                              WHERE bm.business_id = c.seller_business_id AND bm.user_id = $1) joined ON true\n           LEFT JOIN listings l ON l.id = c.listing_id\n           LEFT JOIN businesses b ON b.id = c.seller_business_id\n           LEFT JOIN LATERAL (SELECT m.body, m.sender_user_id, m.created_at, a.display_name AS author\n                              FROM messages m\n                              LEFT JOIN users a ON a.id = m.sender_user_id\n                              WHERE m.conversation_id = c.id AND m.deleted_at IS NULL\n                              ORDER BY m.id DESC\n                              LIMIT 1) last ON true\n           WHERE (c.buyer_user_id = $1 OR c.seller_user_id = $1\n                  OR c.seller_business_id = ANY (ARRAY(SELECT bm.business_id FROM business_members bm WHERE bm.user_id = $1)))\n             AND me.archived_at IS NULL AND c.last_message_at IS NOT NULL\n           ORDER BY c.last_message_at DESC\n           LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "listing_title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "photo",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "other_name!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "store",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "last_body?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "last_mine!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "last_author?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "last_message_at?",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "unread!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      null,
+      true,
+      null,
+      null,
+      false,
+      null
+    ]
+  },
+  "hash": "595fa63ee74ede2de8929ed6ba52dab45be060a0624a30ce1c6bd87578c61780"
+}

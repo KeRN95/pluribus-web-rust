@@ -241,8 +241,9 @@ pub fn when(value: OffsetDateTime, now: OffsetDateTime) -> String {
 
 /// A moment by Albania's clock: Central European Time, an hour ahead of UTC, and two from the
 /// last Sunday of March at 01:00 UTC to the last Sunday of October at 01:00 UTC, the summer
-/// time Europe keeps.
-fn tirana(value: OffsetDateTime) -> OffsetDateTime {
+/// time Europe keeps. Its date is Tirana's day, which "today" and "yesterday" mean on every page
+/// (here, and for a message's time in web/messages.rs).
+pub fn tirana(value: OffsetDateTime) -> OffsetDateTime {
     let utc = value.to_offset(UtcOffset::UTC);
     let last_sunday_at_one = |month: Month| {
         let last = Date::from_calendar_date(utc.year(), month, 31).expect("a month of 31 days");
