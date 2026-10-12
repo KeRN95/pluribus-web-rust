@@ -28,13 +28,17 @@ use super::{
     account::{ClientIp, current_user},
     filters::parse_number,
     photos::Submission,
-    post::{CONDITIONS, LISTING_TYPES, PRICE_TYPES, zoned},
+    post::{CONDITIONS, LISTING_TYPES, PRICE_TYPES},
     properties::{self, OTHER, field_name},
 };
 use crate::{
     AppState,
     ai::Tool,
     db::{self, CatalogueProperty, Categories, Category, City, FormAttribute},
+    domain::{
+        PriceType,
+        listing::{self, MAX_DESCRIPTION_CHARS, MAX_TITLE_CHARS, MIN_DESCRIPTION_CHARS, MIN_TITLE_CHARS, price_of, zoned},
+    },
     i18n::t,
     media::{self, MAX_UPLOAD_BYTES},
 };
@@ -49,9 +53,6 @@ const PHOTO_SIDE: u32 = 1024;
 const FILLS_PER_HOUR: usize = 10;
 /// And the whole site in a day: a ceiling on what the AI can cost, whatever happens.
 const FILLS_PER_DAY: usize = 2_000;
-/// The longest title and description the form takes (post.rs), and so all the AI reads.
-const TITLE_CHARS: usize = 120;
-const DESCRIPTION_CHARS: usize = 5000;
 
 // What the seller is told, which `refusal` says in the page's language: the catalogue (i18n/en/)
 // has each of these texts.
@@ -108,10 +109,11 @@ pub async fn fill(
     let Some(ai) = state.ai.clone() else {
         return Ok(refusal(StatusCode::SERVICE_UNAVAILABLE, UNAVAILABLE));
     };
+    // As much of the writing as the form takes (domain::listing), and at least as much as it asks.
     let field = |name: &str| pairs.iter().find(|(key, _)| key == name).map_or("", |(_, value)| value.trim());
-    let title: String = field("title").chars().take(TITLE_CHARS).collect();
-    let description: String = field("description").chars().take(DESCRIPTION_CHARS).collect();
-    if title.chars().count() < 5 || description.chars().count() < 10 {
+    let title: String = field("title").chars().take(MAX_TITLE_CHARS).collect();
+    let description: String = field("description").chars().take(MAX_DESCRIPTION_CHARS).collect();
+    if title.chars().count() < MIN_TITLE_CHARS || description.chars().count() < MIN_DESCRIPTION_CHARS {
         return Ok(refusal(StatusCode::UNPROCESSABLE_ENTITY, WRITE_FIRST));
     }
     let user = current_user(&state, &headers).await?;
@@ -369,22 +371,7 @@ async fn checked(
         }
     }
 
-    // The price: an amount for a fixed or negotiable one, the kind alone for the others.
-    let price_type = text("price_type").filter(|wanted| PRICE_TYPES.iter().any(|(code, _)| code == wanted));
-    let price = number(&answer["price"]).filter(|price| *price > Decimal::ZERO && *price < Decimal::from(1_000_000_000));
-    match (price_type, price) {
-        (Some(kind @ ("FREE" | "ON_REQUEST")), _) | (Some(kind), None) => {
-            filled.fields.insert("price_type", kind.to_string());
-        }
-        (kind, Some(price)) => {
-            filled.fields.insert("price_type", kind.unwrap_or("FIXED").to_string());
-            filled.fields.insert("price", typed(price));
-            if let Some(currency) = text("currency").filter(|currency| matches!(*currency, "EUR" | "ALL")) {
-                filled.fields.insert("currency", currency.to_string());
-            }
-        }
-        (None, None) => {}
-    }
+    filled.fields.extend(price_fields(answer));
 
     // The town, and a property's zone in it.
     if let Some(city) = text("city").and_then(|slug| cities.iter().find(|city| city.slug == slug)) {
@@ -395,6 +382,31 @@ async fn checked(
         }
     }
     Ok(filled)
+}
+
+/// The price fields the AI's answer fills in, by the form's own rules (listing::price_of): for a
+/// fixed or negotiable price its kind and amount, and the currency where the AI named one the form
+/// has; the kind alone for the others, and for one whose amount the form wouldn't take; nothing
+/// without either.
+fn price_fields(answer: &Value) -> Vec<(&'static str, String)> {
+    let text = |name: &str| answer[name].as_str().map(str::trim).filter(|value| !value.is_empty());
+    let price_type = text("price_type").and_then(PriceType::parse);
+    match price_of(price_type, number(&answer["price"]), text("currency").unwrap_or_default()) {
+        Ok(price) => {
+            let mut fields = vec![("price_type", price.price_type.to_string())];
+            if let Some(amount) = price.amount {
+                fields.push(("price", typed(amount)));
+                let currency = text("currency").filter(|currency| matches!(*currency, "EUR" | "ALL"));
+                fields.extend(currency.map(|currency| ("currency", currency.to_string())));
+            }
+            fields
+        }
+        Err(_) => price_type
+            .filter(|kind| listing::PRICE_TYPES.contains(kind))
+            .map(|kind| ("price_type", kind.to_string()))
+            .into_iter()
+            .collect(),
+    }
 }
 
 /// The fields the tool takes beside the properties.
@@ -526,6 +538,32 @@ mod tests {
         assert_eq!(number(&json!(12.5)).map(typed).as_deref(), Some("12,5"));
         assert_eq!(number(&json!("85")).map(typed).as_deref(), Some("85"));
         assert_eq!(number(&json!(true)), None);
+    }
+
+    #[test]
+    fn the_price_is_filled_in_as_the_form_would_take_it() {
+        let filled = |answer: Value| -> Value {
+            Value::Object(price_fields(&answer).into_iter().map(|(name, value)| (name.to_string(), Value::String(value))).collect())
+        };
+        // An amount, to the cent, with its kind (a fixed one when none is said) and its currency.
+        assert_eq!(
+            filled(json!({"price": 9500, "currency": "EUR", "price_type": "NEGOTIABLE"})),
+            json!({"price_type": "NEGOTIABLE", "price": "9500", "currency": "EUR"})
+        );
+        assert_eq!(filled(json!({"price": "12,345", "currency": "lekë"})), json!({"price_type": "FIXED", "price": "12345"}));
+        assert_eq!(filled(json!({"price": 99.999, "price_type": "FROM"})), json!({"price_type": "FIXED", "price": "100"}));
+        // As much as the form takes: a villa at two and a half billion lekë.
+        assert_eq!(
+            filled(json!({"price": 2_500_000_000_u64, "currency": "ALL"})),
+            json!({"price_type": "FIXED", "price": "2500000000", "currency": "ALL"})
+        );
+        // Free, or on request: the kind alone, whatever the amount.
+        assert_eq!(filled(json!({"price": 300, "currency": "ALL", "price_type": "FREE"})), json!({"price_type": "FREE"}));
+        // An amount the form wouldn't take: the kind alone, if there is one.
+        assert_eq!(filled(json!({"price": 0, "price_type": "FIXED"})), json!({"price_type": "FIXED"}));
+        assert_eq!(filled(json!({"price": 1e12, "price_type": "NEGOTIABLE"})), json!({"price_type": "NEGOTIABLE"}));
+        assert_eq!(filled(json!({"price": -5})), json!({}));
+        assert_eq!(filled(json!({"price_type": "FROM"})), json!({}));
     }
 
     #[test]

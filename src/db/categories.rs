@@ -20,6 +20,12 @@ pub struct Category {
 pub struct Categories(Vec<Category>);
 
 impl Categories {
+    /// These categories, in this order: those `categories` reads, or a test's own
+    /// (domain/listing.rs).
+    pub(crate) fn new(categories: Vec<Category>) -> Self {
+        Self(categories)
+    }
+
     /// Every category, in their order.
     pub fn iter(&self) -> impl Iterator<Item = &Category> {
         self.0.iter()
@@ -93,7 +99,7 @@ pub async fn categories(db: &PgPool) -> sqlx::Result<Categories> {
     )
     .fetch_all(db)
     .await?;
-    Ok(Categories(rows))
+    Ok(Categories::new(rows))
 }
 
 /// A municipality: listings are placed in one (or somewhere inside one), so these are what the

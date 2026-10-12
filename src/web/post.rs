@@ -1,5 +1,5 @@
-//! Posting and editing listings: the form, its checks, and the limits that keep one account from
-//! flooding the site.
+//! Posting and editing listings: the form, the limits that keep one account from flooding the site,
+//! and what the listing's rules (domain::listing) find wrong, said in the page's language.
 
 use std::{
     collections::HashMap,
@@ -14,14 +14,12 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
-use rust_decimal::Decimal;
 use serde::Deserialize;
 
 use super::{
     Result,
     account::{self, ClientIp, MIN_FORM_SECONDS, SignInPage, cookie_header, current_user, display_name, now, redirect_with_cookies},
     filters::{self, Choice, ChoiceGroup, parse_number},
-    listings::MAPPED,
     named, not_found,
     photos::{self, Submission},
     properties::{self, PropertyField},
@@ -31,63 +29,32 @@ use crate::{
     AppState,
     db::{
         self, Categories, Category, City, FormAttribute, ListingAction, ListingProperty, MyListing, NewListing,
-        OwnListing, OwnPhoto, SessionUser, Zone,
+        OwnListing, OwnPhoto, SessionUser,
     },
-    domain::{Condition, ListingType, ReviewReason, Status},
+    domain::{
+        Condition, ListingType, PriceType, ReviewReason, Status,
+        listing::{self, Checked, FieldError, FieldErrors, ListingInput, MAX_DESCRIPTION_CHARS, MAX_TITLE_CHARS, POSTS_PER_DAY, distance_km, mapped},
+    },
     format::{self, Contact},
     i18n::{t, t1, t2},
     media::MAX_PHOTOS,
 };
 
-/// At most this many listings a day from one account.
-const POSTS_PER_DAY: i64 = 5;
-/// The longest title and description a listing takes, in characters.
-const MAX_TITLE_CHARS: usize = 120;
-const MAX_DESCRIPTION_CHARS: usize = 5000;
-/// Links in a listing; spam is mostly links.
-const MAX_LINKS: usize = 2;
+/// Where web/messages.rs, web/filters.rs and web/named.rs have called them, now that a listing's
+/// rules are in domain::listing.
+pub use crate::domain::listing::link_count;
+pub(super) use crate::domain::listing::zoned;
 
-/// The kinds of price, each with its label, which the form shows in the page's language (t).
+/// The kinds of price the form offers (listing::PRICE_TYPES, in its order), each with its label,
+/// which the form shows in the page's language (t).
 pub(super) const PRICE_TYPES: [(&str, &str); 4] = [
-    ("FIXED", "Çmim fiks"),
-    ("NEGOTIABLE", "I diskutueshëm"),
-    ("FREE", "Falas"),
-    ("ON_REQUEST", "Me marrëveshje"),
+    (PriceType::Fixed.as_str(), "Çmim fiks"),
+    (PriceType::Negotiable.as_str(), "I diskutueshëm"),
+    (PriceType::Free.as_str(), "Falas"),
+    (PriceType::OnRequest.as_str(), "Me marrëveshje"),
 ];
 pub(super) const CONDITIONS: [&str; 4] = Condition::NAMES;
 pub(super) const LISTING_TYPES: [&str; 6] = ListingType::NAMES;
-
-/// The category whose listings can say their zone in the town (Blloku, Tiranë), and its
-/// subcategories': property.
-const ZONED: &str = "prona";
-
-pub(super) fn zoned(categories: &Categories, category: &Category) -> bool {
-    category.slug == ZONED || categories.ancestors(category).iter().any(|above| above.slug == ZONED)
-}
-
-/// The categories whose listings' pages show where they are on a map (listings.rs, MAPPED), and
-/// whose form can put them there more exactly than their town's point: property and cars.
-pub(super) fn mapped(categories: &Categories, category: &Category) -> bool {
-    MAPPED.contains(&category.slug.as_str()) || categories.ancestors(category).iter().any(|above| MAPPED.contains(&above.slug.as_str()))
-}
-
-/// How far from its town's point a listing's own may be, in kilometres: a municipality's
-/// villages are well within it, another town isn't.
-const POINT_NEAR_KM: f64 = 40.0;
-
-/// How far apart two points are, in kilometres (the haversine, on a sphere the earth's size).
-fn distance_km((latitude, longitude): (f64, f64), (to_latitude, to_longitude): (f64, f64)) -> f64 {
-    let (from, to) = (latitude.to_radians(), to_latitude.to_radians());
-    let (across, along) = ((to_latitude - latitude).to_radians(), (to_longitude - longitude).to_radians());
-    let a = (across / 2.0).sin().powi(2) + from.cos() * to.cos() * (along / 2.0).sin().powi(2);
-    6371.0 * 2.0 * a.sqrt().asin()
-}
-
-/// A point to about a hundred metres (three decimals of a degree): near enough to say where a
-/// property or a car is, not a private seller's front door.
-fn rounded(point: (f64, f64)) -> (f64, f64) {
-    ((point.0 * 1000.0).round() / 1000.0, (point.1 * 1000.0).round() / 1000.0)
-}
 
 /// What the form sent, kept as typed so the form can show it again next to its errors.
 #[derive(Default)]
@@ -199,6 +166,27 @@ impl ListingForm {
             properties: values,
             photo_order: Vec::new(),
             photos_kept: false,
+        }
+    }
+
+    /// The listing the form describes, for its rules (listing::check): each choice one of its
+    /// kind's values or none, the price read as people type numbers (parse_number), the rest as
+    /// typed.
+    fn input(&self) -> ListingInput {
+        ListingInput {
+            category: self.category.clone(),
+            listing_type: ListingType::parse(&self.listing_type),
+            condition: Condition::parse(&self.condition),
+            title: self.title.clone(),
+            description: self.description.clone(),
+            price_type: PriceType::parse(&self.price_type),
+            price: parse_number(&self.price),
+            currency: self.currency.clone(),
+            city: self.city.clone(),
+            zone: self.zone.clone(),
+            name: self.name.clone(),
+            latitude: self.latitude.clone(),
+            longitude: self.longitude.clone(),
         }
     }
 }
@@ -519,26 +507,34 @@ fn fail(errors: &mut HashMap<String, String>, field: &str, message: &str) {
     errors.entry(field.to_string()).or_insert_with(|| message.to_string());
 }
 
-pub(super) fn link_count(text: &str) -> usize {
-    let text = text.to_lowercase();
-    ["http://", "https://", "www."].iter().map(|marker| text.matches(marker).count()).sum()
+/// What a listing's rules found wrong, each field's first, said in the page's language
+/// (`message`).
+fn add_errors(errors: &mut HashMap<String, String>, found: FieldErrors) {
+    for (field, error) in found {
+        errors.entry(field.to_string()).or_insert_with(|| message(error));
+    }
 }
 
-/// A listing as the form describes it, once every field checks out.
-struct Checked<'a> {
-    category: &'a Category,
-    listing_type: &'a str,
-    condition: Option<&'static str>,
-    title: &'a str,
-    description: &'a str,
-    price_type: &'static str,
-    price: Option<Decimal>,
-    currency: &'static str,
-    city: &'a City,
-    zone: Option<&'a Zone>,
-    name: &'a str,
-    /// A property's or a car's own point on the map, rounded; none for its town's.
-    point: Option<(f64, f64)>,
+/// What the form says of a problem a listing's rules found (listing::FieldError), in the page's
+/// language.
+fn message(error: FieldError) -> String {
+    match error {
+        FieldError::NoCategory => t("Zgjidh kategorinë.").to_string(),
+        FieldError::GroupCategory => t("Zgjidh nënkategorinë, p.sh. Makina te Automjete.").to_string(),
+        FieldError::NoListingType => t("Zgjidh llojin e njoftimit.").to_string(),
+        FieldError::TitleLength { .. } => t("Titulli duhet të ketë 5 deri në 120 shkronja.").to_string(),
+        FieldError::TitleLinks { .. } => t("Titulli nuk mund të ketë lidhje.").to_string(),
+        FieldError::DescriptionLength { .. } => t("Përshkrimi duhet të ketë 10 deri në 5000 shkronja.").to_string(),
+        FieldError::DescriptionLinks { .. } => t("Përshkrimi mund të ketë deri në 2 lidhje.").to_string(),
+        FieldError::NoPrice => t("Shkruaj çmimin, ose zgjidh „Falas“ ose „Me marrëveshje“.").to_string(),
+        FieldError::NoCity => t("Zgjidh qytetin.").to_string(),
+        FieldError::ZoneElsewhere => t("Zgjidh një zonë të qytetit.").to_string(),
+        FieldError::NameLength { .. } => t("Emri mund të ketë deri në 60 shkronja.").to_string(),
+        FieldError::PointFar { .. } => t("Pika në hartë është larg qytetit që zgjodhe: vendose te qyteti, ose hiqe.").to_string(),
+        FieldError::PointUnread => t("Pika në hartë nuk u lexua: vendose përsëri.").to_string(),
+        FieldError::TooManyToday => t1("Ke publikuar {} njoftime sot. Mund të publikosh të tjera nesër.", POSTS_PER_DAY),
+        FieldError::SameTitleToday => t("Ke publikuar tashmë një njoftim me këtë titull sot.").to_string(),
+    }
 }
 
 /// Who a listing is posted as: the account, the contact buyers get, and the store it is posted
@@ -565,6 +561,7 @@ impl<'a> Poster<'a> {
     }
 }
 
+/// A listing that checks out, as the database saves it, posted as `poster`.
 impl<'a> Checked<'a> {
     fn listing(
         &self,
@@ -580,11 +577,11 @@ impl<'a> Checked<'a> {
             title: self.title,
             slug,
             description: self.description,
-            listing_type: self.listing_type,
-            condition: self.condition,
-            price_amount: self.price,
-            currency: self.currency,
-            price_type: self.price_type,
+            listing_type: self.listing_type.as_str(),
+            condition: self.condition.map(Condition::as_str),
+            price_amount: self.price.amount,
+            currency: self.price.currency,
+            price_type: self.price.price_type.as_str(),
             contact_name: (!self.name.is_empty()).then_some(self.name),
             phone: poster.phone,
             email: poster.email,
@@ -596,9 +593,12 @@ impl<'a> Checked<'a> {
     }
 }
 
-/// The checks a new listing and an edit share. Problems go into `errors`, one per field.
+/// The checks a new listing and an edit share: that a person sent the form, neither too soon nor
+/// with the field only scripts fill in (as the sign-in form checks), and the listing's own rules
+/// (listing::check) on `input`, the form's listing. Problems go into `errors`, one per field.
 fn check<'a>(
-    form: &'a ListingForm,
+    form: &ListingForm,
+    input: &'a ListingInput,
     categories: &'a Categories,
     cities: &'a [City],
     errors: &mut HashMap<String, String>,
@@ -607,116 +607,9 @@ fn check<'a>(
     if !form.website.is_empty() || too_fast {
         fail(errors, "form", t("Prit një çast dhe provo përsëri."));
     }
-
-    let category = categories.by_slug(&form.category);
-    if category.is_none() {
-        fail(errors, "category", t("Zgjidh kategorinë."));
-    }
-    // A category with subcategories only groups them.
-    let category = category.filter(|category| {
-        let leaf = !categories.has_children(category.id);
-        if !leaf {
-            fail(errors, "category", t("Zgjidh nënkategorinë, p.sh. Makina te Automjete."));
-        }
-        leaf
-    });
-    let listing_type = match category {
-        Some(category) if category.listing_types.len() == 1 => Some(category.listing_types[0].as_str()),
-        Some(category) => category.listing_types.iter().map(String::as_str).find(|t| *t == form.listing_type),
-        None => None,
-    };
-    if category.is_some() && listing_type.is_none() {
-        fail(errors, "listing_type", t("Zgjidh llojin e njoftimit."));
-    }
-    let condition = match category {
-        Some(category) if category.uses_condition => CONDITIONS.into_iter().find(|c| *c == form.condition),
-        _ => None,
-    };
-
-    let title = form.title.trim();
-    let description = form.description.trim();
-    if !(5..=MAX_TITLE_CHARS).contains(&title.chars().count()) {
-        fail(errors, "title", t("Titulli duhet të ketë 5 deri në 120 shkronja."));
-    } else if link_count(title) > 0 {
-        fail(errors, "title", t("Titulli nuk mund të ketë lidhje."));
-    }
-    if !(10..=MAX_DESCRIPTION_CHARS).contains(&description.chars().count()) {
-        fail(errors, "description", t("Përshkrimi duhet të ketë 10 deri në 5000 shkronja."));
-    } else if link_count(description) > MAX_LINKS {
-        fail(errors, "description", t("Përshkrimi mund të ketë deri në 2 lidhje."));
-    }
-
-    let price_type = PRICE_TYPES.iter().map(|(code, _)| *code).find(|code| *code == form.price_type).unwrap_or("FIXED");
-    let price = match price_type {
-        "FIXED" | "NEGOTIABLE" => match parse_number(&form.price) {
-            Some(price) if price > Decimal::ZERO => Some(price.round_dp(2)),
-            _ => {
-                fail(errors, "price", t("Shkruaj çmimin, ose zgjidh „Falas“ ose „Me marrëveshje“."));
-                None
-            }
-        },
-        _ => None,
-    };
-    let currency = match form.currency.as_str() {
-        "ALL" => "ALL",
-        _ => "EUR",
-    };
-
-    let city = cities.iter().find(|city| city.slug == form.city);
-    if city.is_none() {
-        fail(errors, "city", t("Zgjidh qytetin."));
-    }
-    // A property may say its zone in the town; another town's is a mistake. Other listings have
-    // none.
-    let zone = match (category, city) {
-        (Some(category), Some(city)) if !form.zone.is_empty() && zoned(categories, category) => {
-            let zone = city.zones.iter().find(|zone| zone.slug == form.zone);
-            if zone.is_none() {
-                fail(errors, "zone", t("Zgjidh një zonë të qytetit."));
-            }
-            zone
-        }
-        _ => None,
-    };
-    let name = form.name.trim();
-    if name.chars().count() > 60 {
-        fail(errors, "name", t("Emri mund të ketë deri në 60 shkronja."));
-    }
-    // Where on the map, more exactly than the town's point: a property's or a car's alone, near
-    // the town chosen, rounded to about a hundred metres. Another category's is let go.
-    let point = match (form.latitude.trim(), form.longitude.trim(), category, city) {
-        ("", "", ..) | (_, _, None, _) | (_, _, _, None) => None,
-        (_, _, Some(category), _) if !mapped(categories, category) => None,
-        (latitude, longitude, _, Some(city)) => match (latitude.parse::<f64>(), longitude.parse::<f64>()) {
-            (Ok(latitude), Ok(longitude)) if latitude.is_finite() && longitude.is_finite() => {
-                if distance_km((latitude, longitude), (city.latitude, city.longitude)) <= POINT_NEAR_KM {
-                    Some(rounded((latitude, longitude)))
-                } else {
-                    fail(errors, "point", t("Pika në hartë është larg qytetit që zgjodhe: vendose te qyteti, ose hiqe."));
-                    None
-                }
-            }
-            _ => {
-                fail(errors, "point", t("Pika në hartë nuk u lexua: vendose përsëri."));
-                None
-            }
-        },
-    };
-
-    Some(Checked {
-        category: category?,
-        listing_type: listing_type?,
-        condition,
-        title,
-        description,
-        price_type,
-        price,
-        currency,
-        city: city?,
-        zone,
-        name,
-        point,
-    })
+    let (checked, found) = listing::check(input, categories, cities);
+    add_errors(errors, found);
+    checked
 }
 
 /// The form for a new listing. A visitor who isn't signed in fills in a phone number or e-mail
@@ -760,7 +653,8 @@ pub async fn create_listing(
     let (categories, cities) = tokio::try_join!(db::categories(&state.db), db::cities(&state.db))?;
     let attributes = attributes_for(&state, &categories, &form.category).await?;
     let mut errors = HashMap::new();
-    let checked = check(&form, &categories, &cities, &mut errors);
+    let input = form.input();
+    let checked = check(&form, &input, &categories, &cities, &mut errors);
     let properties = properties::check(&attributes, &form.properties, &mut errors);
     photos::check(&photos, 0, &mut errors);
     // "Posto si": a store the poster may post for, or their own.
@@ -800,15 +694,11 @@ pub async fn create_listing(
         fail(&mut errors, "contact", t("Kjo llogari është pezulluar."));
     }
 
-    // Limits per account: a few listings a day, and the same one only once.
+    // Limits per account: a few listings a day, and the same one only once (listing::daily_limit).
     let account_id = user.as_ref().map(|user| user.id).or(existing.as_ref().map(|account| account.id));
     if let (true, Some(account_id)) = (errors.is_empty(), account_id) {
         let recent = db::recent_posts(&state.db, account_id, form.title.trim()).await?;
-        if recent.count >= POSTS_PER_DAY {
-            fail(&mut errors, "form", &t1("Ke publikuar {} njoftime sot. Mund të publikosh të tjera nesër.", POSTS_PER_DAY));
-        } else if recent.same_title {
-            fail(&mut errors, "title", t("Ke publikuar tashmë një njoftim me këtë titull sot."));
-        }
+        add_errors(&mut errors, listing::daily_limit(&recent).into_iter().collect());
     }
     // And per network without signing in, since no code stands in a script's way.
     if user.is_none() && errors.is_empty() && !unsigned_post_allowed(ip.as_deref()) {
@@ -1003,7 +893,8 @@ pub async fn update_listing(
     let purpose = Purpose::Edit { public_no, slug: listing.slug };
     let attributes = attributes_for(&state, &categories, &form.category).await?;
     let mut errors = HashMap::new();
-    let checked = check(&form, &categories, &cities, &mut errors);
+    let input = form.input();
+    let checked = check(&form, &input, &categories, &cities, &mut errors);
     let properties = properties::check(&attributes, &form.properties, &mut errors);
     let listing_photos = db::own_listing_photos(&state.db, listing.id).await?;
     let removed: Vec<uuid::Uuid> = removed.into_iter().filter(|id| listing_photos.iter().any(|photo| photo.id == *id)).collect();
@@ -1301,5 +1192,30 @@ pub fn this_week(count: impl std::borrow::Borrow<i64>) -> String {
     match *count.borrow() {
         0 => t("Asnjë këtë javë").to_string(),
         count => t1("+{} këtë javë", format::count(count)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The form offers the kinds of price the rules take, in their order, and lays out as a car's
+    /// or a property's page the listings whose form has a map.
+    #[test]
+    fn the_form_offers_what_the_listing_rules_take() {
+        assert_eq!(PRICE_TYPES.map(|(code, _)| code), PriceType::names(listing::PRICE_TYPES));
+        assert_eq!(crate::web::listings::MAPPED, listing::MAPPED);
+    }
+
+    /// Each problem the rules find is said as the form said it before they had codes.
+    #[test]
+    fn each_problem_is_said_in_the_forms_words() {
+        assert_eq!(message(FieldError::TitleLength { chars: 3 }), "Titulli duhet të ketë 5 deri në 120 shkronja.");
+        assert_eq!(message(FieldError::PointFar { km: 80.0 }), "Pika në hartë është larg qytetit që zgjodhe: vendose te qyteti, ose hiqe.");
+        assert_eq!(message(FieldError::TooManyToday), "Ke publikuar 5 njoftime sot. Mund të publikosh të tjera nesër.");
+        let mut errors = HashMap::from([("title".to_string(), "Më parë.".to_string())]);
+        add_errors(&mut errors, vec![("title", FieldError::TitleLinks { links: 1 }), ("price", FieldError::NoPrice), ("price", FieldError::NoCity)]);
+        assert_eq!(errors["title"], "Më parë.");
+        assert_eq!(errors["price"], "Shkruaj çmimin, ose zgjidh „Falas“ ose „Me marrëveshje“.");
     }
 }
