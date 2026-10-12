@@ -18,9 +18,11 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Redirect, Response},
 };
+// Codes and session tokens are kept as their SHA-256, as the API's bearer tokens are
+// (pluribus-api's auth.rs): one function for both.
+use pluribus_services::hash;
 use rand::Rng;
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -47,10 +49,6 @@ const SESSION_DAYS: i32 = 30;
 
 const SESSION_COOKIE: &str = "session";
 const LOGIN_COOKIE: &str = "login";
-
-pub fn hash(value: &str) -> Vec<u8> {
-    Sha256::digest(value.as_bytes()).to_vec()
-}
 
 fn code_hash(contact: &str, code: &str) -> Vec<u8> {
     hash(&format!("{contact}:{code}"))
@@ -404,7 +402,7 @@ pub async fn check_code(
             // their profile, say it is verified.
             db::verify_contact(&state.db, account.id, phone.as_deref(), email.as_deref()).await?;
             let token: String = rand::rng().random::<[u8; 32]>().iter().map(|byte| format!("{byte:02x}")).collect();
-            db::create_session(&state.db, &hash(&token), account.id, SESSION_DAYS).await?;
+            db::create_session(&state.db, &hash(&token), account.id, SESSION_DAYS, "web", None).await?;
             // A language chosen before signing in is the account's now, for its e-mails too
             // (language.rs).
             if let Some(lang) = cookie(&headers, super::language::LANG_COOKIE).and_then(|code| Lang::from_code(&code)) {

@@ -259,12 +259,25 @@ pub async fn publish_draft(db: &PgPool, listing_id: Uuid, user_id: Uuid) -> sqlx
     Ok(published.map(|listing| (listing.public_no, listing.slug)))
 }
 
-pub async fn create_session(db: &PgPool, token_hash: &[u8], user_id: Uuid, days: i32) -> sqlx::Result<()> {
+/// A session for the user, `days` long, its token kept as its hash, made by `client`: the pages
+/// ("web", which name no device) or the phone app ("ios", "android", with the phone's name the
+/// app gives, `device_name`), as migration 0043 has them.
+pub async fn create_session(
+    db: &PgPool,
+    token_hash: &[u8],
+    user_id: Uuid,
+    days: i32,
+    client: &str,
+    device_name: Option<&str>,
+) -> sqlx::Result<()> {
     sqlx::query!(
-        "INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ($1, $2, now() + make_interval(days => $3))",
+        "INSERT INTO sessions (token_hash, user_id, expires_at, client, device_name)
+         VALUES ($1, $2, now() + make_interval(days => $3), $4, $5)",
         token_hash,
         user_id,
         days,
+        client,
+        device_name,
     )
     .execute(db)
     .await
@@ -279,15 +292,18 @@ pub struct SessionUser {
     pub display_name: String,
 }
 
-/// The user a session token belongs to, unless it expired or the account is closed or suspended.
+/// The user a session token belongs to, unless it expired or the account is closed or suspended:
+/// the pages' cookie's, or the phone app's bearer token's (pluribus-api), one table for both.
 pub async fn session_user(db: &PgPool, token_hash: &[u8]) -> sqlx::Result<Option<SessionUser>> {
     // In the same statement, when they were last on the site (users.last_seen_at, which their
-    // listings' seller card says, "Aktiv sot"), moved to now once it is ten minutes old: a write
-    // now and then, not on every page.
+    // listings' seller card says, "Aktiv sot") and when this session was last used
+    // (sessions.last_used_at, migration 0043, for the devices signed in), each moved to now once it
+    // is ten minutes old: a write now and then, not on every page or call.
     sqlx::query_as!(
         SessionUser,
         r#"WITH me AS (
-               SELECT u.id, u.phone_e164::text AS phone, u.email::text AS email, u.display_name, u.last_seen_at
+               SELECT u.id, u.phone_e164::text AS phone, u.email::text AS email, u.display_name, u.last_seen_at,
+                      s.last_used_at
                FROM sessions s
                JOIN users u ON u.id = s.user_id
                WHERE s.token_hash = $1 AND s.expires_at > now() AND u.status = 'ACTIVE'
@@ -295,6 +311,10 @@ pub async fn session_user(db: &PgPool, token_hash: &[u8]) -> sqlx::Result<Option
                UPDATE users u SET last_seen_at = now()
                FROM me
                WHERE u.id = me.id AND (me.last_seen_at IS NULL OR me.last_seen_at < now() - interval '10 minutes')
+           ), used AS (
+               UPDATE sessions s SET last_used_at = now()
+               FROM me
+               WHERE s.token_hash = $1 AND (me.last_used_at IS NULL OR me.last_used_at < now() - interval '10 minutes')
            )
            SELECT me.id AS "id!", me.phone, me.email, me.display_name AS "display_name!" FROM me"#,
         token_hash,

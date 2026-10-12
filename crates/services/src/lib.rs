@@ -1,11 +1,11 @@
-//! What the site does besides answering a page, which its pages (pluribus-web) and, later, its
-//! JSON API (pluribus-api) share: the application's state (`AppState`), who moderates
-//! (`Moderators`), the site's address for what goes out on its own (`site_origin`); photos and
-//! their store (media.rs), sending codes, notices and alerts (sender.rs), the AI that fills in the
-//! listing form (ai.rs), the euro rate (rates.rs), the views (views.rs), the recommendations
-//! (recommended.rs), and the work that runs on its own, which `pluribus_web::app` starts: the
-//! notices of unread messages (notices.rs), the listings' expiry (expiry.rs) and the promotions
-//! in time (promotions.rs).
+//! What the site does besides answering a page, which its pages (pluribus-web) and its JSON API
+//! (pluribus-api) share: the application's state (`AppState`), who moderates (`Moderators`), how
+//! what signs someone in is kept (`hash`), the site's address for what goes out on its own
+//! (`site_origin`); photos and their store (media.rs), sending codes, notices and alerts
+//! (sender.rs), the AI that fills in the listing form (ai.rs), the euro rate (rates.rs), the views
+//! (views.rs), the recommendations (recommended.rs), and the work that runs on its own, which
+//! `pluribus_web::state` starts: the notices of unread messages (notices.rs), the listings' expiry
+//! (expiry.rs) and the promotions in time (promotions.rs).
 
 pub mod ai;
 pub mod expiry;
@@ -21,6 +21,7 @@ use std::sync::Arc;
 
 use pluribus_core::format::Contact;
 use pluribus_db::SessionUser;
+use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 
 use crate::{ai::Ai, media::Media, recommended::Recommended, views::Views};
@@ -72,6 +73,14 @@ impl Moderators {
             Contact::Email(email) => user.email.as_deref().is_some_and(|own| own.eq_ignore_ascii_case(email)),
         })
     }
+}
+
+/// SHA-256, as the database keeps what signs someone in (migration 0007), so that a copy of it
+/// signs no one in: a session's token (`sessions.token_hash`), the pages' cookie or the phone
+/// app's bearer token, and a sign-in code with its contact (`login_codes.code_hash`). The pages
+/// (pluribus-web's account.rs) and the API (pluribus-api's auth.rs) hash alike with it.
+pub fn hash(value: &str) -> Vec<u8> {
+    Sha256::digest(value.as_bytes()).to_vec()
 }
 
 /// The site's address for links made outside a request, which has none to go by: the notices of

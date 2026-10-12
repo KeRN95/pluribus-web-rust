@@ -4,9 +4,27 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
-# The JSON API the phone app will call, under /api/v1: empty until Phase C fills it, and not
-# mounted yet. It shares the pages' state (pluribus-services' AppState) and never the pages
-# themselves (pluribus-web).
+# The JSON API the phone app calls, under /api/v1, which the binary nests beside the pages over
+# the same state (pluribus-services' AppState): its routes, its one error envelope, the language
+# each request asks for, the bearer tokens that sign a request in, and the shapes it answers in.
+# It calls what the pages call, in pluribus-services, pluribus-db and pluribus-core, and never the
+# pages themselves (pluribus-web), which only its tests take in, to mount it beside them as the
+# binary does.
 [dependencies]
+pluribus-core.workspace = true
+pluribus-db.workspace = true
 pluribus-services.workspace = true
+anyhow.workspace = true
 axum.workspace = true
+serde.workspace = true
+sqlx.workspace = true
+time.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+pluribus-web.workspace = true
+http-body-util.workspace = true
+serde_json.workspace = true
+tower.workspace = true

@@ -4,10 +4,12 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
-# The binary, src/main.rs: the server, which serves the site's pages (pluribus-web) and rebuilds
-# now and then the figures they read (pluribus-db). The site itself is the crates under crates/,
-# one for each of its parts, each with its own tests (README, "Project layout").
+# The binary, src/main.rs: the server, which serves the site's pages (pluribus-web) and, beside
+# them under /api/v1, its JSON API (pluribus-api), over one state, and rebuilds now and then the
+# figures they read (pluribus-db). The site itself is the crates under crates/, one for each of
+# its parts, each with its own tests (README, "Project layout").
 [dependencies]
+pluribus-api.workspace = true
 pluribus-db.workspace = true
 pluribus-web.workspace = true
 anyhow.workspace = true
@@ -29,6 +31,7 @@ rust-version = "1.97"
 # Every crate's dependencies, at one version and with one set of features for the whole
 # workspace; each crate names those it uses (`anyhow.workspace = true`).
 [workspace.dependencies]
+pluribus-api = { path = "crates/api" }
 pluribus-core = { path = "crates/core" }
 pluribus-db = { path = "crates/db" }
 pluribus-services = { path = "crates/services" }

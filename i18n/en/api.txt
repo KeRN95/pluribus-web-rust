@@ -1,0 +1,31 @@
+# The JSON API's own texts (crates/api): the error envelope's messages, which each request reads in
+# the language it asks for (crates/api/src/lang.rs). An internal error says what the error page
+# does, "Diçka shkoi keq. Provo përsëri." (pages.txt).
+
+# crates/api/src/error.rs: each code's message
+
+Hyr në llogari për të vazhduar.
+= Sign in to continue.
+
+Ajo që kërkove nuk u gjet.
+= What you asked for wasn’t found.
+
+Disa fusha nuk janë në rregull.
+= Some fields aren’t right.
+
+Shumë kërkesa njëra pas tjetrës. Provo përsëri pas pak.
+= Too many requests in a row. Try again shortly.
+
+# crates/api/src/error.rs: why a JSON body was refused, under "body"
+
+Trupi i kërkesës nuk është JSON i vlefshëm.
+= The request body isn’t valid JSON.
+
+Trupi i kërkesës duhet të dërgohet si JSON, me Content-Type: application/json.
+= The request body must be sent as JSON, with Content-Type: application/json.
+
+Trupi i kërkesës nuk ka atë që duhet: i mungon një fushë, ose një fushë nuk është e llojit të duhur.
+= The request body isn’t what it should be: a field is missing, or one is of the wrong type.
+
+Trupi i kërkesës nuk u lexua dot.
+= The request body couldn’t be read.

@@ -1,9 +1,11 @@
 //! The site's pages, the HTTP layer: routes, error handling and response helpers shared by the page
 //! handlers, the handlers themselves (one module for each part of the site), and the application
-//! as `main` serves it and the tests build it (`app`, `app_with`, `app_with_ai`). The templates
-//! are the repository's templates/ (askama.toml), compiled in; the stylesheets and scripts, and
-//! every file under /static, are read at run time from static/ in the directory the server runs
-//! in, the repository's root.
+//! as `main` serves it (`state`, which starts the work that runs on its own, and `router`, the
+//! pages over it, beside which `main` nests the JSON API, pluribus-api) and the tests build it
+//! (`app_with`, `app_with_ai`, and `state_with`, the API's tests' state). The templates are the
+//! repository's templates/ (askama.toml), compiled in; the stylesheets and scripts, and every file
+//! under /static, are read at run time from static/ in the directory the server runs in, the
+//! repository's root.
 
 mod account;
 mod ai_fill;
@@ -79,13 +81,15 @@ use pluribus_services::{ai, media, recommended, sender, views};
 // The site's address for what goes out on its own (searches.rs's alerts, stores.rs's invitations).
 use pluribus_services::site_origin;
 
-/// The application's router. `main` serves it, with photos in the store .env names (the small and
-/// AVIF copies of those kept before there were any made meanwhile), its moderators, the AI if .env
-/// has a key for it, the views written every minute, the notices of unread messages and the saved
-/// searches' alerts sent as they fall due, the listings whose time is up expired, the promotions
-/// looked after, and the Bank of Albania's euro rate read and taken (pluribus-services' notices.rs,
-/// expiry.rs, promotions.rs and rates.rs, and searches.rs here).
-pub fn app(db: PgPool) -> axum::Router {
+/// The application's state, as `main` serves the pages (`router`) and the JSON API (pluribus-api)
+/// over it, side by side, so that the work that runs on its own runs once, started here: photos in
+/// the store .env names (the small and AVIF copies of those kept before there were any made
+/// meanwhile), its moderators, the AI if .env has a key for it, the views written every minute, the
+/// notices of unread messages and the saved searches' alerts sent as they fall due, the listings
+/// whose time is up expired, the promotions looked after, and the Bank of Albania's euro rate read
+/// and taken (pluribus-services' notices.rs, expiry.rs, promotions.rs and rates.rs, and
+/// searches.rs here). Until the API (C1) this was `app()`, which made the pages' router of it too.
+pub fn state(db: PgPool) -> AppState {
     let ai = Ai::from_env();
     if ai.is_none() {
         tracing::info!("ANTHROPIC_API_KEY isn't set: the listing form has no AI to fill it in");
@@ -100,26 +104,38 @@ pub fn app(db: PgPool) -> axum::Router {
     pluribus_services::promotions::start(db.clone());
     pluribus_services::rates::start(db.clone());
     let recommended = Recommended::kept();
-    router(AppState { db, media, moderators: Moderators::from_env(), ai, views, recommended })
+    AppState { db, media, moderators: Moderators::from_env(), ai, views, recommended }
 }
 
-/// The router with photos kept in `media` and these moderators: the integration tests keep their
+/// The pages with photos kept in `media` and these moderators: the integration tests keep their
 /// photos in memory, and name their own moderator. No AI.
 pub fn app_with(db: PgPool, media: Media, moderators: Moderators) -> axum::Router {
     app_with_ai(db, media, moderators, None)
 }
 
 /// The same with an AI to fill in the listing form: the tests' stands in for Anthropic's API.
-/// Views are written as they come, and no visitor's recommendations kept.
 pub fn app_with_ai(db: PgPool, media: Media, moderators: Moderators, ai: Option<Ai>) -> axum::Router {
+    router(state_with(db, media, moderators, ai))
+}
+
+/// The state the tests build their apps on: the pages' (`app_with`, `app_with_ai`), and the API's,
+/// whose tests nest it beside the pages over this state as `main` does over `state`. Photos kept in
+/// `media`, these moderators and this AI; views written as they come, no visitor's recommendations
+/// kept, and none of the work that runs on its own started.
+pub fn state_with(db: PgPool, media: Media, moderators: Moderators, ai: Option<Ai>) -> AppState {
     let (views, recommended) = (Views::immediate(), Recommended::immediate());
-    router(AppState { db, media, moderators, ai, views, recommended })
+    AppState { db, media, moderators, ai, views, recommended }
 }
 
 /// The posting and edit forms carry photos: MAX_PHOTOS of them, which phones shrink before sending
 /// (photos_controller.js). Other requests keep axum's 2 MB.
 const FORM_WITH_PHOTOS_BYTES: usize = 64 * 1024 * 1024;
 
+/// The pages, every route of "Routes" but the API's, with their layers (the language, the check
+/// on forms from other sites, the security headers, the signed-in cookie, the rail's path,
+/// compression and the log) and their 404 page for any other address but the API's. `main` nests
+/// the JSON API beside them once this is made (pluribus-api, at /api/v1), so that none of these
+/// layers apply to it: a layer covers only the routes made before it.
 pub fn router(state: AppState) -> Router {
     let with_photos = || DefaultBodyLimit::max(FORM_WITH_PHOTOS_BYTES);
     Router::new()

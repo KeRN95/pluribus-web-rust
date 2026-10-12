@@ -6,20 +6,25 @@ use pluribus_core::format::Contact;
 
 use super::*;
 
-/// The account as its settings show it.
+/// The account as its settings show it, and as the API's `/me` gives it.
 #[derive(Debug, sqlx::FromRow)]
 pub struct AccountSettings {
     pub display_name: String,
     pub phone: Option<String>,
     pub email: Option<String>,
+    /// The language its e-mails are in (users.preferred_language): "sq" or "en".
+    pub preferred_language: String,
     pub created_at: OffsetDateTime,
 }
 
 pub async fn account_settings(db: &PgPool, user_id: Uuid) -> sqlx::Result<AccountSettings> {
-    sqlx::query_as("SELECT display_name, phone_e164::text AS phone, email::text AS email, created_at FROM users WHERE id = $1")
-        .bind(user_id)
-        .fetch_one(db)
-        .await
+    sqlx::query_as(
+        "SELECT display_name, phone_e164::text AS phone, email::text AS email, preferred_language, created_at
+         FROM users WHERE id = $1",
+    )
+    .bind(user_id)
+    .fetch_one(db)
+    .await
 }
 
 /// The name the account shows by: on its listings, its profile, in its conversations.

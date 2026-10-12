@@ -6,8 +6,9 @@ rust-version.workspace = true
 
 # What the site does besides answering a page: the photos and their store, sending codes and
 # notices, the AI, the euro rate, the views, the recommendations, the jobs that run on their own
-# (the notices of unread messages, the expiry, the promotions), and the application's state
-# (`AppState`, `Moderators`), which the pages and, later, the API share.
+# (the notices of unread messages, the expiry, the promotions), the application's state
+# (`AppState`, `Moderators`), which the pages and the API share, and how what signs someone in is
+# kept (`hash`), which they share too.
 [dependencies]
 pluribus-core.workspace = true
 pluribus-db.workspace = true

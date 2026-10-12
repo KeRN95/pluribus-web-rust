@@ -6,7 +6,9 @@ rust-version.workspace = true
 
 # The site's pages: the router and its layers, the handlers, the filters, the icons, the rail, the
 # languages' layer, what search engines read, the stylesheets and scripts as pages get them, and
-# the app's constructors (`app`, `app_with`, `app_with_ai`). Its templates are the repository's
+# the app's constructors (`state` and `router`, which the binary serves with the JSON API nested
+# beside them; `app_with`, `app_with_ai` and `state_with`, the tests'). It never sees the API
+# (pluribus-api), whose tests mount it beside these pages. Its templates are the repository's
 # templates/ (askama.toml), compiled in; static/ is read at run time from the directory the
 # server runs in, the repository's root.
 [dependencies]

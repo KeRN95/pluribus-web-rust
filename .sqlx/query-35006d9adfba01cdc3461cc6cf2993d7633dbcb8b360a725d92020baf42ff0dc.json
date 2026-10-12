@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH me AS (\n               SELECT u.id, u.phone_e164::text AS phone, u.email::text AS email, u.display_name, u.last_seen_at,\n                      s.last_used_at\n               FROM sessions s\n               JOIN users u ON u.id = s.user_id\n               WHERE s.token_hash = $1 AND s.expires_at > now() AND u.status = 'ACTIVE'\n           ), seen AS (\n               UPDATE users u SET last_seen_at = now()\n               FROM me\n               WHERE u.id = me.id AND (me.last_seen_at IS NULL OR me.last_seen_at < now() - interval '10 minutes')\n           ), used AS (\n               UPDATE sessions s SET last_used_at = now()\n               FROM me\n               WHERE s.token_hash = $1 AND (me.last_used_at IS NULL OR me.last_used_at < now() - interval '10 minutes')\n           )\n           SELECT me.id AS \"id!\", me.phone, me.email, me.display_name AS \"display_name!\" FROM me",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "phone",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "display_name!",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "35006d9adfba01cdc3461cc6cf2993d7633dbcb8b360a725d92020baf42ff0dc"
+}

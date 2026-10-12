@@ -71,8 +71,13 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("listening on http://{addr}");
 
+    // The pages and, beside them under /api/v1, the JSON API, over one state, whose work that runs
+    // on its own is started once (pluribus_web::state). Nested after the pages' layers are on,
+    // the API has none of them, only its own (pluribus_api::router).
+    let state = pluribus_web::state(db);
+    let app = pluribus_web::router(state.clone()).nest(pluribus_api::PREFIX, pluribus_api::router(state));
     // The connection's address is the visitor's IP for the sign-in limits (web/account.rs).
-    axum::serve(listener, pluribus_web::app(db).into_make_service_with_connect_info::<SocketAddr>())
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(async {
             tokio::signal::ctrl_c().await.ok();
         })
