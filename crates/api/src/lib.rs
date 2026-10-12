@@ -14,13 +14,14 @@ pub mod browse;
 mod dto;
 mod error;
 mod lang;
+pub mod notifications;
 pub mod reference;
 
 use axum::{
     Json, Router,
     extract::{FromRequest, OriginalUri, Request, State},
     middleware,
-    routing::get,
+    routing::{get, post},
 };
 use pluribus_db as db;
 use pluribus_services::AppState;
@@ -44,7 +45,9 @@ pub fn router(state: AppState) -> Router {
 /// signed in (`ApiUser`); the reference data the app loads first, for anyone (reference.rs):
 /// `GET /categories`, `GET /cities` and `GET /categories/{slug}/fields`; and `GET /listings` and
 /// `GET /home`, for anyone, a signed-in caller's lists without the listings of the accounts they
-/// blocked (browse.rs).
+/// blocked (browse.rs); and the user's notifications, `GET /notifications` and
+/// `POST /notifications/seen`, and what the app's badges count, `GET /counts`, signed in
+/// (notifications.rs).
 fn routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
@@ -54,6 +57,9 @@ fn routes() -> Router<AppState> {
         .route("/categories/{slug}/fields", get(reference::fields))
         .route("/listings", get(browse::listings))
         .route("/home", get(browse::home))
+        .route("/notifications", get(notifications::list))
+        .route("/notifications/seen", post(notifications::seen))
+        .route("/counts", get(notifications::counts))
 }
 
 /// Routes in the API's frame, which `router` puts the API's own in, and the tests a probe of

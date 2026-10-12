@@ -1,4 +1,5 @@
-//! Every notification a user has had lately, of whatever kind, for /lajmerimet (web/notifications.rs):
+//! Every notification a user has had lately, of whatever kind, for /lajmerimet
+//! (web/notifications.rs) and the JSON API's pages of them (pluribus-api's notifications.rs):
 //! prices dropped (price_drops.rs), saved searches with new listings (searches.rs), messages left
 //! unread (notices.rs), the user's own listings expiring or expired (expiry.rs); and which of them
 //! are unread. Each with its payload, what its writer kept of what it is about, from which
@@ -41,6 +42,14 @@ pub struct Notification {
 /// The user's notifications of the last NOTIFICATIONS_DAYS, the latest first; NOTIFICATIONS_MOST
 /// at most.
 pub async fn notifications(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<Notification>> {
+    notifications_after(db, user_id, None, NOTIFICATIONS_MOST).await
+}
+
+/// The same, in the same order, from after `after` (a notification's id), `most` at most: the
+/// JSON API's pages of them (pluribus-api's notifications.rs), each going on from the last of the
+/// one before. One gone since (an unseen price drop replaced by a newer, price_drops.rs) still
+/// marks its place by its id, a UUIDv7, which sorts as it was made.
+pub async fn notifications_after(db: &PgPool, user_id: Uuid, after: Option<Uuid>, most: i64) -> sqlx::Result<Vec<Notification>> {
     sqlx::query_as(
         "SELECT n.id, n.notification_type AS kind, n.title, n.body, n.payload, n.created_at, n.read_at IS NOT NULL AS read,
                 l.public_no, l.slug, s.id AS search, c.id AS conversation, i.id AS invitation
@@ -55,12 +64,16 @@ pub async fn notifications(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<Notif
          LEFT JOIN business_invitations i
                 ON i.id = CASE WHEN n.payload ? 'invitation' THEN (n.payload ->> 'invitation')::uuid END AND i.expires_at > now()
          WHERE n.user_id = $1 AND n.created_at > now() - make_interval(days => $2)
+           AND ($4::uuid IS NULL
+                OR (n.created_at, n.id) < (SELECT a.created_at, a.id FROM notifications a WHERE a.id = $4 AND a.user_id = $1)
+                OR (n.id < $4 AND NOT EXISTS (SELECT 1 FROM notifications a WHERE a.id = $4 AND a.user_id = $1)))
          ORDER BY n.created_at DESC, n.id DESC
          LIMIT $3",
     )
     .bind(user_id)
     .bind(NOTIFICATIONS_DAYS)
-    .bind(NOTIFICATIONS_MOST)
+    .bind(most)
+    .bind(after)
     .fetch_all(db)
     .await
 }
