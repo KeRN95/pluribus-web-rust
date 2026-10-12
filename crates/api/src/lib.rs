@@ -27,6 +27,7 @@ pub mod safety;
 pub mod saved;
 pub mod searches;
 pub mod signin;
+pub mod suggestions;
 
 use axum::{
     Json, Router,
@@ -42,7 +43,7 @@ use serde::de::DeserializeOwned;
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 
 pub use auth::{ApiUser, OptionalApiUser};
-pub use dto::{CardPage, HealthDto, MeDto, NotificationPage, Page};
+pub use dto::{CardPage, CategoryNameDto, HealthDto, MeDto, NotificationPage, Page};
 pub use error::{ApiError, ErrorBody, ErrorEnvelope};
 
 use openapi::{Internal, Unauthorized};
@@ -104,7 +105,8 @@ const DELETE: Method = Method::DELETE;
 /// `GET /openapi.json`, for anyone, and `GET /me`, signed in (`ApiUser`); the reference data the
 /// app loads first, for anyone (reference.rs): `GET /categories`, `GET /cities` and
 /// `GET /categories/{slug}/fields`; `GET /listings` and `GET /home`, for anyone, a signed-in
-/// caller's lists without the listings of the accounts they blocked (browse.rs); one listing
+/// caller's lists without the listings of the accounts they blocked (browse.rs); what a search box
+/// suggests, `GET /suggestions`, for anyone (suggestions.rs); one listing
 /// (listing.rs), for anyone, its seller and the moderators seeing it off the site too:
 /// `GET /listings/{no}`, `GET /listings/{no}/related`, `POST /listings/{no}/seen` and
 /// `POST /listings/{no}/contact`; the user's notifications, `GET /notifications` and
@@ -151,6 +153,7 @@ fn table() -> Vec<Route> {
         route(GET, "/listings", browse::listings),
         route(POST, "/listings", own::create),
         route(GET, "/home", browse::home),
+        route(GET, "/suggestions", suggestions::suggestions),
         route(GET, "/listings/{no}", listing::show),
         route(PUT, "/listings/{no}", own::update),
         route(DELETE, "/listings/{no}", own::delete),

@@ -26,6 +26,14 @@
 //! town they picked last, which a query naming no place opens in (`Params::remembering_town`; the
 //! pages keep it in a cookie), and where to look without a pin in the query (`default_pin`: the
 //! pages' map page's Tirana). The parser knows nothing of cookies or pages.
+//!
+//! And how the filters show each property, which the pages' filter sheet and their row of
+//! dropdowns go by, and the API's fields with them (pluribus-api's reference.rs), pluribus-web's
+//! filters.rs's until C13: its kind (`FieldKind`, `Property::kind`: a dropdown, boxes, a range, a
+//! box to tick, a year), the options it offers (`Property::offered`) and whether they are drawn
+//! (`option_icon`, `Property::pictured`), which properties show at once and in what order
+//! (`ParsedFilters::shown_at_once`, `sheet_order`), and the row of dropdowns after Filtrat
+//! (`ParsedFilters::row`, `RowFilter`).
 
 use pluribus_core::domain::{Condition, listing::zoned};
 use pluribus_db::{
@@ -361,6 +369,113 @@ impl<'a> ParsedFilters<'a> {
         }
         pairs
     }
+
+    /// Which of its properties the filters show at once rather than under "Më shumë filtra", in
+    /// their order (`properties`): one the category requires or shows on its cards, one of PRIMARY,
+    /// or the parent or dependent of one (a car's make with its models); every one in a category
+    /// with few (ALL_AT_ONCE), or where few would wait (FEW_MORE). The pages' sheet (pluribus-web's
+    /// `Field::primary`), and the order of the row's (`row`).
+    pub fn shown_at_once(&self) -> Vec<bool> {
+        let mut shown: Vec<bool> = self
+            .properties
+            .iter()
+            .map(|property| {
+                let attribute = property.attribute;
+                attribute.required || attribute.show_in_card || PRIMARY.contains(&attribute.code.as_str())
+            })
+            .collect();
+        for (at, property) in self.properties.iter().enumerate() {
+            let parent = property.attribute.parent_attribute_id.and_then(|id| self.properties.iter().position(|p| p.attribute.id == id));
+            if let Some(parent) = parent {
+                let either = shown[at] || shown[parent];
+                shown[at] = either;
+                shown[parent] = either;
+            }
+        }
+        let waiting = shown.iter().filter(|shown| !**shown).count();
+        if shown.len() <= ALL_AT_ONCE || waiting <= FEW_MORE {
+            shown.fill(true);
+        }
+        shown
+    }
+
+    /// Its properties in the order the filters' sheet lists them, as places in `properties`: those
+    /// shown at once first (`shown_at_once`), each lot in the category's order.
+    pub fn sheet_order(&self) -> Vec<usize> {
+        let shown = self.shown_at_once();
+        let mut order: Vec<usize> = (0..self.properties.len()).collect();
+        order.sort_by_key(|at| !shown[*at]);
+        order
+    }
+
+    /// Whether the kind of listing comes first among the filters: in Prona, where buying and
+    /// renting are two searches. Elsewhere nearly everything is for sale, and it waits under "Më
+    /// shumë filtra", or after the rest where nothing else does.
+    pub fn type_first(&self) -> bool {
+        self.category.is_some_and(|category| {
+            category.slug == "prona" || self.categories.ancestors(category).iter().any(|above| above.slug == "prona")
+        })
+    }
+
+    /// Whether the kind of listing is one of the filters: where the category takes more than one.
+    pub fn types_offered(&self) -> bool {
+        self.category.is_some_and(|category| category.listing_types.len() > 1)
+    }
+
+    /// Whether the condition is one of the filters: across every category, and in one whose
+    /// listings say it, not property's or jobs'.
+    pub fn conditions_offered(&self) -> bool {
+        self.category.is_none_or(|category| category.uses_condition)
+    }
+
+    /// The results page's row of filter dropdowns after Filtrat, as many as the row has room for
+    /// beside the chips of the `chips` filters on (ROW_FILTERS in all), of those buyers narrow by
+    /// most that aren't on yet: on a search across every category the town, where none is set; in
+    /// Prona the kind of listing; then the category's own filters in the sheet's order
+    /// (`sheet_order`), its dropdowns, its boxes and its years, not a car's body types (their
+    /// pictures want the sheet's room), nor a range in a unit (kilometres, square metres), nor a box
+    /// to tick; then the condition, and elsewhere the kind of listing, where the category offers
+    /// them. The price stands fourth, or before the last of fewer (after a lone one), as the canvas
+    /// has them: "Marka, Modeli, Viti, Çmimi, Karburanti"; "Gjendja, Çmimi, Lloji i njoftimit";
+    /// "Qyteti, Çmimi, Gjendja". The pages' row (pluribus-web's `Filters::drops`), and the API's
+    /// fields' places in it with nothing on (pluribus-api's `FieldDto::row`).
+    pub fn row(&self, chips: usize) -> Vec<RowFilter> {
+        let mut offered = Vec::new();
+        if self.category.is_none() && self.city.is_none() && self.near.is_none() {
+            offered.push(RowFilter::City);
+        }
+        let type_open = self.listing_type.is_none() && self.types_offered();
+        if type_open && self.type_first() {
+            offered.push(RowFilter::Type);
+        }
+        for at in self.sheet_order() {
+            let property = &self.properties[at];
+            let fits = match property.kind(&self.properties) {
+                FieldKind::Select => !property.offered(&self.properties).is_empty(),
+                FieldKind::Checkboxes => !property.pictured(&self.properties) && !property.offered(&self.properties).is_empty(),
+                FieldKind::Range => property.attribute.unit.as_deref().is_none_or(str::is_empty),
+                FieldKind::Year => true,
+                FieldKind::Toggle => false,
+            };
+            if fits && !property.active() {
+                offered.push(RowFilter::Property(at));
+            }
+        }
+        if self.conditions.is_empty() && self.conditions_offered() {
+            offered.push(RowFilter::Condition);
+        }
+        if type_open && !self.type_first() {
+            offered.push(RowFilter::Type);
+        }
+        let room = ROW_FILTERS.saturating_sub(chips);
+        let price = self.price_min.is_none() && self.price_max.is_none() && room > 0;
+        offered.truncate(if price { room - 1 } else { room });
+        if price {
+            let at = if offered.len() < 2 { offered.len() } else { (offered.len() - 1).min(3) };
+            offered.insert(at, RowFilter::Price);
+        }
+        offered
+    }
 }
 
 impl<'a> Property<'a> {
@@ -497,6 +612,167 @@ pub fn plain(value: Decimal) -> String {
     value.normalize().to_string()
 }
 
+// ------------------------------------------------------------ how the filters show them
+
+/// How the filters show a property (`Property::kind`): a dropdown of its options, boxes to tick
+/// among them, a range (a number's from and to), a box to tick for a yes, or one year.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FieldKind {
+    Select,
+    Checkboxes,
+    Range,
+    Toggle,
+    /// One year, the buyer's vehicle's, for a part's pair of years ("<x>_year", `year_param`).
+    Year,
+}
+
+/// Properties with at most this many options are offered as boxes, the colours too, longer lists
+/// as a dropdown.
+const CHECKBOX_LIMIT: usize = 8;
+
+/// Properties the filters show at once wherever a category has them, besides those it requires or
+/// shows on its cards (`ParsedFilters::shown_at_once`): what buyers mostly narrow by. The rest wait
+/// under "Më shumë filtra".
+const PRIMARY: [&str; 10] = [
+    "vehicle_body_type",
+    "vehicle_transmission",
+    "vehicle_fuel",
+    "commercial_make",
+    "moto_make",
+    "machine_brand",
+    "electronics_brand",
+    "property_furnished",
+    "job_contract",
+    "job_place",
+];
+
+/// A category with at most this many filters shows them all; so does one that would leave at most
+/// FEW_MORE under "Më shumë filtra".
+const ALL_AT_ONCE: usize = 6;
+const FEW_MORE: usize = 2;
+
+/// How many filters the results page's row has after Filtrat at most, the chips of those on and
+/// the dropdowns of those not on yet together (`ParsedFilters::row`), as the canvas has five.
+pub const ROW_FILTERS: usize = 5;
+
+/// A car's body types, each the car's side, facing right, its windows and its wheels, drawn in
+/// strokes in a box twice as wide as it is tall (48 by 24 units), every car on the same ground:
+/// the filters show them over the names. A body type added later has none until it is drawn.
+const BODY_TYPES: [(&str, &str); 7] = [
+    ("SEDAN", r#"<path d="M8.5 18H5a1 1 0 0 1-1-1v-3.1a1.5 1.5 0 0 1 1.3-1.49L13 11.5l4.1-4.24A2 2 0 0 1 18.5 6.6h11.3a2 2 0 0 1 1.4.58L36 11.5l6.8 1.13A1.5 1.5 0 0 1 44 14.1V17a1 1 0 0 1-1 1h-3.5M15.5 18h17M13 11.5h23M24.5 6.6v4.9"/><circle cx="12" cy="18" r="3"/><circle cx="36" cy="18" r="3"/>"#),
+    ("HATCHBACK", r#"<path d="M11 18H8.5a1 1 0 0 1-1-1v-5l2.9-4.6a2 2 0 0 1 1.7-.8h14.9a2 2 0 0 1 1.4.58L33.1 11.5l6.2 1.13A1.5 1.5 0 0 1 40.5 14.1V17a1 1 0 0 1-1 1h-.5M18 18h14M7.8 11.5h25.3M21 6.6v4.9"/><circle cx="14.5" cy="18" r="3"/><circle cx="35.5" cy="18" r="3"/>"#),
+    ("WAGON", r#"<path d="M8.5 18H5a1 1 0 0 1-1-1v-4.2l1.1-5.1A1.5 1.5 0 0 1 6.6 6.6h23.2a2 2 0 0 1 1.4.58L36 11.5l6.8 1.13A1.5 1.5 0 0 1 44 14.1V17a1 1 0 0 1-1 1h-3.5M15.5 18h17M4.3 11.5H36M14 6.6v4.9M25 6.6v4.9"/><circle cx="12" cy="18" r="3"/><circle cx="36" cy="18" r="3"/>"#),
+    ("SUV", r#"<path d="M8.6 17.5H5a1 1 0 0 1-1-1V9.9l.8-4.7A1.5 1.5 0 0 1 6.3 4h22.5a2 2 0 0 1 1.5.67L34.5 9.5l7.9 1.1A1.5 1.5 0 0 1 44 12.1v4.4a1 1 0 0 1-1 1h-3.6M16.4 17.5h15.2M4.1 9.5h30.4M23.5 4v5.5"/><circle cx="12.5" cy="17.5" r="3.5"/><circle cx="35.5" cy="17.5" r="3.5"/>"#),
+    ("COUPE", r#"<path d="M8.5 18H5a1 1 0 0 1-1-1v-3a1.5 1.5 0 0 1 1.2-1.47L9 11.9l7.6-3.9a4 4 0 0 1 1.8-.45h5.1a3 3 0 0 1 2 .76L30 12l12.8 1.1A1.5 1.5 0 0 1 44 14.6V17a1 1 0 0 1-1 1h-3.5M15.5 18h17M9 11.9 30 12"/><circle cx="12" cy="18" r="3"/><circle cx="36" cy="18" r="3"/>"#),
+    ("CONVERTIBLE", r#"<path d="M8.5 18H5a1 1 0 0 1-1-1v-3.1a1.5 1.5 0 0 1 1.3-1.49L13 11.5h20l9.8 1.13A1.5 1.5 0 0 1 44 14.1V17a1 1 0 0 1-1 1h-3.5M15.5 18h17M33 11.5l-3.4-4.6M17 11.5V9.2a1.5 1.5 0 0 1 3 0v2.3"/><circle cx="12" cy="18" r="3"/><circle cx="36" cy="18" r="3"/>"#),
+    ("VAN", r#"<path d="M8.5 18H5a1 1 0 0 1-1-1V6a2.5 2.5 0 0 1 2.5-2.5h21.3a2 2 0 0 1 1.5.68L38.5 10l4.3 1.1A1.5 1.5 0 0 1 44 12.6V17a1 1 0 0 1-1 1h-3.5M15.5 18h17M4 10h34.5M23 3.5V10"/><circle cx="12" cy="18" r="3"/><circle cx="36" cy="18" r="3"/>"#),
+];
+
+/// The icon of one of a property's options, where it has one: a car's body type, its side (the
+/// inside of a 48-by-24 SVG drawn in strokes, BODY_TYPES), which the pages' filters show over its
+/// name (pluribus-web's `Field::icon`); a property whose options have one keeps its boxes out of
+/// the row (`Property::pictured`). pluribus-web's properties.rs's until C13.
+pub fn option_icon(code: &str, option: &str) -> Option<&'static str> {
+    match code {
+        "vehicle_body_type" => BODY_TYPES.iter().find(|(of, _)| *of == option).map(|(_, icon)| *icon),
+        _ => None,
+    }
+}
+
+/// The options a property's filter offers (`Property::offered`).
+pub struct Offered<'a> {
+    /// Those under no other property's option: every one of a property that depends on none.
+    pub top: Vec<&'a AttributeOption>,
+    /// A dependent property's (a car's model's) under each option of its parent (a make) that has
+    /// any, in the parent's order.
+    pub groups: Vec<(&'a AttributeOption, Vec<&'a AttributeOption>)>,
+}
+
+impl Offered<'_> {
+    /// Whether there is none.
+    pub fn is_empty(&self) -> bool {
+        self.top.is_empty() && self.groups.is_empty()
+    }
+}
+
+/// One of the results page's row of filter dropdowns after Filtrat (`ParsedFilters::row`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RowFilter {
+    /// The town, by county.
+    City,
+    /// The kind of listing, one of those the category takes.
+    Type,
+    /// A property's filter: the one at this place in `ParsedFilters::properties`.
+    Property(usize),
+    /// The condition's boxes.
+    Condition,
+    /// The price.
+    Price,
+}
+
+impl<'a> Property<'a> {
+    /// The property among `all`, the query's (`ParsedFilters::properties`), whose options this
+    /// one's belong under: a car model's make. None for most, and for one whose parent the
+    /// category doesn't have.
+    pub fn parent<'p>(&self, all: &'p [Property<'a>]) -> Option<&'p Property<'a>> {
+        self.attribute.parent_attribute_id.and_then(|id| all.iter().find(|other| other.attribute.id == id))
+    }
+
+    /// How the filters show it: a pair of years as one year; a number as a range; a yes or no as a
+    /// box to tick; a multi-select's options, and a choice's few (CHECKBOX_LIMIT at most) where it
+    /// depends on no other property, as boxes; any other choice's as a dropdown (a make's, a
+    /// model's under their makes).
+    pub fn kind(&self, all: &[Property<'a>]) -> FieldKind {
+        if self.fits_to.is_some() {
+            return FieldKind::Year;
+        }
+        match self.attribute.data_type.as_str() {
+            "NUMBER" => FieldKind::Range,
+            "BOOLEAN" => FieldKind::Toggle,
+            data_type => {
+                let few = self.parent(all).is_none() && self.attribute.options.len() <= CHECKBOX_LIMIT;
+                if data_type == "MULTISELECT" || few { FieldKind::Checkboxes } else { FieldKind::Select }
+            }
+        }
+    }
+
+    /// Whether the query sets it: an option chosen, a bound, a box ticked, a year.
+    pub fn active(&self) -> bool {
+        !self.selected.is_empty() || self.min.is_some() || self.max.is_some() || self.checked || self.year.is_some()
+    }
+
+    /// The options its filter offers (`Offered`): of a property that depends on none, every one;
+    /// of one that depends on another among `all` (a model, on its make), those under none of the
+    /// other's options, and the rest under each of them, in the other's order; one under an option
+    /// the other hasn't, nowhere.
+    pub fn offered(&self, all: &[Property<'a>]) -> Offered<'a> {
+        let attribute: &'a FilterAttribute = self.attribute;
+        let parent = self.parent(all);
+        let top = attribute.options.iter().filter(|option| parent.is_none() || option.parent_id.is_none()).collect();
+        let groups = match parent {
+            Some(parent) => {
+                let parent: &'a FilterAttribute = parent.attribute;
+                parent
+                    .options
+                    .iter()
+                    .map(|of| (of, attribute.options.iter().filter(|option| option.parent_id == Some(of.id)).collect::<Vec<_>>()))
+                    .filter(|(_, options)| !options.is_empty())
+                    .collect()
+            }
+            None => Vec::new(),
+        };
+        Offered { top, groups }
+    }
+
+    /// Whether any of the options it offers has an icon over its name (`option_icon`: a car's body
+    /// types), whose boxes want room of their own.
+    pub fn pictured(&self, all: &[Property<'a>]) -> bool {
+        let offered = self.offered(all);
+        let mut options = offered.top.iter().chain(offered.groups.iter().flat_map(|(_, options)| options));
+        options.any(|option| option_icon(&self.attribute.code, &option.code).is_some())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -552,5 +828,107 @@ mod tests {
         assert_eq!(default_sort(true, true), Sort::Nearest);
         assert_eq!(default_sort(false, true), Sort::Relevance);
         assert_eq!(default_sort(false, false), Sort::Newest);
+    }
+
+    /// A category of these kinds of listing, under `parent`, whose listings say their condition or
+    /// not.
+    fn category(id: u128, parent: Option<u128>, slug: &str, kinds: &[&str], uses_condition: bool) -> Category {
+        Category {
+            id: Uuid::from_u128(id),
+            parent_id: parent.map(Uuid::from_u128),
+            name: slug.to_string(),
+            slug: slug.to_string(),
+            default_currency: "EUR".to_string(),
+            listing_types: kinds.iter().map(|kind| kind.to_string()).collect(),
+            uses_condition,
+        }
+    }
+
+    /// A filterable property, its options named as given, each under one of `parent`'s in turn.
+    fn property(id: u128, code: &str, data_type: &str, unit: Option<&str>, at_once: bool, options: &[&str], parent: Option<&FilterAttribute>) -> FilterAttribute {
+        let options = options.iter().enumerate().map(|(at, code)| AttributeOption {
+            id: Uuid::from_u128(id * 100 + at as u128),
+            code: code.to_string(),
+            label: code.to_string(),
+            parent_id: parent.map(|parent| parent.options[at % parent.options.len()].id),
+        });
+        FilterAttribute {
+            id: Uuid::from_u128(id),
+            code: code.to_string(),
+            name: code.to_string(),
+            data_type: data_type.to_string(),
+            unit: unit.map(str::to_string),
+            parent_attribute_id: parent.map(|parent| parent.id),
+            required: at_once,
+            show_in_card: false,
+            options: sqlx::types::Json(options.collect()),
+        }
+    }
+
+    /// The row the filters of `query` in `category` (by its slug) make beside `chips` chips, each by
+    /// its property's code or by what it is.
+    fn row(query: &str, category: Option<&str>, categories: &Categories, attributes: &[FilterAttribute], chips: usize) -> Vec<String> {
+        let category = category.map(|slug| categories.by_slug(slug).unwrap());
+        let filters = ParsedFilters::new(&Params::parse(Some(query)), category, categories, &[], attributes, None);
+        filters
+            .row(chips)
+            .into_iter()
+            .map(|filter| match filter {
+                RowFilter::Property(at) => filters.properties[at].attribute.code.clone(),
+                other => format!("{other:?}"),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_row_offers_the_filters_buyers_use_most_the_price_fourth() {
+        let categories = Categories::new(vec![
+            category(1, None, "automjete", &["SELL", "BUY", "RENT"], true),
+            category(2, Some(1), "makina", &["SELL", "BUY", "RENT"], true),
+            category(3, None, "prona", &["SELL", "RENT", "WANTED_RENT"], false),
+            category(4, Some(3), "apartamente", &["SELL", "RENT", "WANTED_RENT"], false),
+        ]);
+        let makes: Vec<String> = (0..12).map(|n| format!("MAKE_{n}")).collect();
+        let make = property(10, "vehicle_make", "SELECT", None, true, &makes.iter().map(String::as_str).collect::<Vec<_>>(), None);
+        let model = property(11, "vehicle_model", "SELECT", None, true, &["GOLF", "POLO", "A4"], Some(&make));
+        let cars = [
+            make,
+            model,
+            // Drawn over their names: the sheet's, never the row's.
+            property(12, "vehicle_body_type", "SELECT", None, false, &["SEDAN", "SUV"], None),
+            property(13, "vehicle_year", "NUMBER", None, true, &[], None),
+            property(14, "vehicle_customs", "SELECT", None, false, &["PAID", "UNPAID"], None),
+            // A range in a unit, and a box to tick: the sheet's.
+            property(15, "vehicle_mileage", "NUMBER", Some("km"), true, &[], None),
+            property(16, "vehicle_fuel", "SELECT", None, false, &["DIESEL", "PETROL", "HYBRID"], None),
+            property(17, "vehicle_engine", "NUMBER", Some("cm³"), false, &[], None),
+            property(18, "vehicle_emission", "SELECT", None, false, &["EURO5", "EURO6"], None),
+            property(19, "vehicle_no_accident", "BOOLEAN", None, false, &[], None),
+        ];
+        // The make, its models and the year first, those shown at once, then the fuel, one of
+        // PRIMARY; the price fourth; the rest, the customs, the condition and the kind, no room.
+        let filters = ParsedFilters::new(&Params::parse(None), categories.by_slug("makina"), &categories, &[], &cars, None);
+        let codes = |order: Vec<usize>| order.into_iter().map(|at| filters.properties[at].attribute.code.as_str()).collect::<Vec<_>>();
+        assert_eq!(codes(filters.sheet_order())[..6], ["vehicle_make", "vehicle_model", "vehicle_body_type", "vehicle_year", "vehicle_mileage", "vehicle_fuel"]);
+        assert_eq!(row("", Some("makina"), &categories, &cars, 0), ["vehicle_make", "vehicle_model", "vehicle_year", "Price", "vehicle_fuel"]);
+        // A filter on is a chip in place of its dropdown, the row five at most with the chips.
+        assert_eq!(row("vehicle_fuel=DIESEL", Some("makina"), &categories, &cars, 1), ["vehicle_make", "vehicle_model", "Price", "vehicle_year"]);
+        assert_eq!(row("price_max=9000", Some("makina"), &categories, &cars, 1), ["vehicle_make", "vehicle_model", "vehicle_year", "vehicle_fuel"]);
+        assert!(row("", Some("makina"), &categories, &cars, 5).is_empty());
+        // With nothing of its own, a main category has the condition, the price and the kind; a
+        // search across every category starts with the town.
+        assert_eq!(row("", Some("automjete"), &categories, &[], 0), ["Condition", "Price", "Type"]);
+        assert_eq!(row("q=golf", None, &categories, &[], 0), ["City", "Price", "Condition"]);
+        // In property the kind comes first, the price after a lone other.
+        let flats = [
+            property(20, "property_area", "NUMBER", Some("m²"), true, &[], None),
+            property(21, "property_features", "MULTISELECT", None, false, &["BALCONY", "LIFT"], None),
+        ];
+        assert_eq!(row("", Some("apartamente"), &categories, &flats, 0), ["Type", "Price", "property_features"]);
+        let flats = ParsedFilters::new(&Params::parse(None), categories.by_slug("apartamente"), &categories, &[], &flats, None);
+        assert_eq!(flats.shown_at_once(), [true, true], "two, all at once");
+        assert_eq!(flats.properties[1].kind(&flats.properties), FieldKind::Checkboxes);
+        assert!(!filters.properties[1].offered(&filters.properties).groups.is_empty(), "the models under their makes");
+        assert!(filters.properties[2].pictured(&filters.properties) && !filters.properties[0].pictured(&filters.properties));
     }
 }

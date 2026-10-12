@@ -31,8 +31,8 @@ use utoipa::{
 };
 
 use crate::{
-    ApiError, CardPage, ErrorBody, ErrorEnvelope, HealthDto, MeDto, NotificationPage, account, browse, devices, listing,
-    messages, notifications, own, reference, safety, saved, searches, signin,
+    ApiError, CardPage, CategoryNameDto, ErrorBody, ErrorEnvelope, HealthDto, MeDto, NotificationPage, account, browse,
+    devices, listing, messages, notifications, own, reference, safety, saved, searches, signin, suggestions,
 };
 
 /// What the document says of the API as a whole (`info.description`).
@@ -59,9 +59,9 @@ times are RFC 3339, with their offset.";
     nest((path = crate::PREFIX, api = Routes)),
     components(
         schemas(
-            ErrorEnvelope, ErrorBody, HealthDto, MeDto, CardPage, NotificationPage,
+            ErrorEnvelope, ErrorBody, HealthDto, MeDto, CardPage, NotificationPage, CategoryNameDto,
             kinds::Status, kinds::ListingType, kinds::Condition, kinds::PriceType, kinds::DataType,
-            kinds::NotificationKind, kinds::CarVerdict, kinds::ZoneVerdict, kinds::ErrorCode, kinds::Client,
+            kinds::NotificationKind, kinds::CarVerdict, kinds::ZoneVerdict, kinds::Activity, kinds::ErrorCode, kinds::Client,
             kinds::Platform, kinds::Channel, kinds::Language, kinds::Sort, kinds::Currency,
             account::RenameRequest, account::NoticesDto, account::LanguageRequest, account::ContactRequest,
             account::ContactCodeRequest, account::SessionDto, account::EndedDto, account::CloseRequest,
@@ -70,7 +70,9 @@ times are RFC 3339, with their offset.";
             reference::OptionDto, reference::ValidationDto, reference::Bound,
             browse::CardDto, browse::DetailDto, browse::PriceDto, browse::PhotoDto, browse::SellerKind,
             browse::ListingsDto, browse::CountDto, browse::HomeDto, browse::MainCategoryDto,
-            listing::ListingDto, listing::ListingPriceDto, listing::DropDto, listing::CarPriceDto,
+            suggestions::SuggestionsDto, suggestions::OptionSuggestionDto, suggestions::FilterDto,
+            suggestions::PlaceSuggestionDto, suggestions::PlaceKind,
+            listing::ListingDto, listing::ListingCategoryDto, listing::ListingPriceDto, listing::DropDto, listing::CarPriceDto,
             listing::AreaPriceDto, listing::LoanDto, listing::AttributeDto, listing::OptionDto,
             listing::ListingPhotoDto, listing::CopiesDto, listing::PlaceDto, listing::PointDto, listing::SellerDto,
             listing::ContactDto, listing::ContactKind, listing::Action, listing::ContactRevealedDto,
@@ -94,7 +96,7 @@ times are RFC 3339, with their offset.";
         (name = "account", description = "The signed-in user, and their account's settings as \"Cilësimet\" changes them."),
         (name = "devices", description = "The phone app's devices, which push notifications go to."),
         (name = "reference", description = "The reference data the app loads first: the categories, the towns, a category's properties; each name in both languages, each answer kept five minutes."),
-        (name = "browse", description = "The listings a query finds, in the pages' own vocabulary, and the front page's rows."),
+        (name = "browse", description = "The listings a query finds, in the pages' own vocabulary, the front page's rows, and what a search box suggests."),
         (name = "listing", description = "One listing as its page shows it, the listings like it, its page seen, and its seller's number revealed."),
         (name = "own", description = "A seller's own listings: photos uploaded, listings posted and edited, the seller's buttons, and the posting form's helpers."),
         (name = "notifications", description = "The notifications, and what the app's badges count."),
@@ -113,7 +115,8 @@ struct ApiDoc;
     crate::health, document, crate::me, account::rename, account::close, account::notices, account::set_notices,
     account::language, account::add_contact, account::verify_contact, account::remove_contact, account::sessions,
     account::end_other_sessions, devices::register, devices::forget, reference::categories, reference::cities,
-    reference::fields, browse::listings, own::create, browse::home, listing::show, own::update, own::delete,
+    reference::fields, browse::listings, own::create, browse::home, suggestions::suggestions, listing::show, own::update,
+    own::delete,
     listing::related, listing::seen, listing::contact, own::upload, own::mine, own::pause, own::resume, own::sell,
     own::reserve, own::unreserve, own::renew, own::zone, own::price_hint, notifications::list, notifications::seen,
     notifications::counts, signin::code, signin::verify, signin::sign_out, saved::keep, saved::let_go, saved::saved,
@@ -274,6 +277,7 @@ pub mod kinds {
             self,
             listing::{CarVerdict as Car, ZoneVerdict as Zone},
         },
+        format::Activity as Active,
         i18n::Lang,
     };
     use pluribus_db as db;
@@ -296,6 +300,9 @@ pub mod kinds {
 
     /// Every verdict on a property's price per square metre, in their order.
     pub(super) const ZONE_VERDICTS: [Zone; 4] = [Zone::Below, Zone::Same, Zone::Near, Zone::Above];
+
+    /// Every way of saying when someone was last on the site, in their order.
+    pub(super) const ACTIVITIES: [Active; 4] = [Active::Today, Active::Week, Active::Month, Active::Longer];
 
     /// Every kind of session, in their order.
     pub(super) const CLIENTS: [sign_in::Client; 3] = [sign_in::Client::Web, sign_in::Client::Ios, sign_in::Client::Android];
@@ -370,6 +377,10 @@ pub mod kinds {
         /// 200 € or more), same (the same, as both show rounded), near (within 200 €), or above (by
         /// 200 € or more).
         ZoneVerdict = spelt(&ZONE_VERDICTS);
+        /// When someone was last on the site, by Albania's clock: today, within the week (from
+        /// yesterday to six days ago), within the month (from a week to thirty days ago), or
+        /// longer ago.
+        Activity = spelt(&ACTIVITIES);
         /// Why a request failed, the same in every language, for the app to act on: unauthorized
         /// (401), forbidden (403), not_found (404), validation (422), rate_limited (429) or
         /// internal (500).
@@ -394,7 +405,10 @@ pub mod kinds {
 
 #[cfg(test)]
 mod tests {
-    use pluribus_core::domain::listing::{CarVerdict, ZoneVerdict};
+    use pluribus_core::{
+        domain::listing::{CarVerdict, ZoneVerdict},
+        format::Activity as Active,
+    };
     use pluribus_services::{sender::Channel, sign_in::Client};
 
     use super::kinds::*;
@@ -417,6 +431,13 @@ mod tests {
             ZoneVerdict::Above => 3,
         };
         assert_eq!(ZONE_VERDICTS.map(zone), [0, 1, 2, 3]);
+        let active = |active| match active {
+            Active::Today => 0,
+            Active::Week => 1,
+            Active::Month => 2,
+            Active::Longer => 3,
+        };
+        assert_eq!(ACTIVITIES.map(active), [0, 1, 2, 3]);
         let client = |client| match client {
             Client::Web => 0,
             Client::Ios => 1,

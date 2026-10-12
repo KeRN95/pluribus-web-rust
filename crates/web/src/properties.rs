@@ -72,28 +72,6 @@ const CAR_ORDER: [&str; 8] = [
 /// the title having it only to a tenth of a litre.
 pub const TITLE_CODES: [&str; 3] = ["vehicle_make", "vehicle_model", "vehicle_year"];
 
-/// A car's body types, each the car's side, facing right, its windows and its wheels, drawn in
-/// strokes in a box twice as wide as it is tall (48 by 24 units), every car on the same ground:
-/// the filters show them over the names. A body type added later has none until it is drawn.
-const BODY_TYPES: [(&str, &str); 7] = [
-    ("SEDAN", r#"<path d="M8.5 18H5a1 1 0 0 1-1-1v-3.1a1.5 1.5 0 0 1 1.3-1.49L13 11.5l4.1-4.24A2 2 0 0 1 18.5 6.6h11.3a2 2 0 0 1 1.4.58L36 11.5l6.8 1.13A1.5 1.5 0 0 1 44 14.1V17a1 1 0 0 1-1 1h-3.5M15.5 18h17M13 11.5h23M24.5 6.6v4.9"/><circle cx="12" cy="18" r="3"/><circle cx="36" cy="18" r="3"/>"#),
-    ("HATCHBACK", r#"<path d="M11 18H8.5a1 1 0 0 1-1-1v-5l2.9-4.6a2 2 0 0 1 1.7-.8h14.9a2 2 0 0 1 1.4.58L33.1 11.5l6.2 1.13A1.5 1.5 0 0 1 40.5 14.1V17a1 1 0 0 1-1 1h-.5M18 18h14M7.8 11.5h25.3M21 6.6v4.9"/><circle cx="14.5" cy="18" r="3"/><circle cx="35.5" cy="18" r="3"/>"#),
-    ("WAGON", r#"<path d="M8.5 18H5a1 1 0 0 1-1-1v-4.2l1.1-5.1A1.5 1.5 0 0 1 6.6 6.6h23.2a2 2 0 0 1 1.4.58L36 11.5l6.8 1.13A1.5 1.5 0 0 1 44 14.1V17a1 1 0 0 1-1 1h-3.5M15.5 18h17M4.3 11.5H36M14 6.6v4.9M25 6.6v4.9"/><circle cx="12" cy="18" r="3"/><circle cx="36" cy="18" r="3"/>"#),
-    ("SUV", r#"<path d="M8.6 17.5H5a1 1 0 0 1-1-1V9.9l.8-4.7A1.5 1.5 0 0 1 6.3 4h22.5a2 2 0 0 1 1.5.67L34.5 9.5l7.9 1.1A1.5 1.5 0 0 1 44 12.1v4.4a1 1 0 0 1-1 1h-3.6M16.4 17.5h15.2M4.1 9.5h30.4M23.5 4v5.5"/><circle cx="12.5" cy="17.5" r="3.5"/><circle cx="35.5" cy="17.5" r="3.5"/>"#),
-    ("COUPE", r#"<path d="M8.5 18H5a1 1 0 0 1-1-1v-3a1.5 1.5 0 0 1 1.2-1.47L9 11.9l7.6-3.9a4 4 0 0 1 1.8-.45h5.1a3 3 0 0 1 2 .76L30 12l12.8 1.1A1.5 1.5 0 0 1 44 14.6V17a1 1 0 0 1-1 1h-3.5M15.5 18h17M9 11.9 30 12"/><circle cx="12" cy="18" r="3"/><circle cx="36" cy="18" r="3"/>"#),
-    ("CONVERTIBLE", r#"<path d="M8.5 18H5a1 1 0 0 1-1-1v-3.1a1.5 1.5 0 0 1 1.3-1.49L13 11.5h20l9.8 1.13A1.5 1.5 0 0 1 44 14.1V17a1 1 0 0 1-1 1h-3.5M15.5 18h17M33 11.5l-3.4-4.6M17 11.5V9.2a1.5 1.5 0 0 1 3 0v2.3"/><circle cx="12" cy="18" r="3"/><circle cx="36" cy="18" r="3"/>"#),
-    ("VAN", r#"<path d="M8.5 18H5a1 1 0 0 1-1-1V6a2.5 2.5 0 0 1 2.5-2.5h21.3a2 2 0 0 1 1.5.68L38.5 10l4.3 1.1A1.5 1.5 0 0 1 44 12.6V17a1 1 0 0 1-1 1h-3.5M15.5 18h17M4 10h34.5M23 3.5V10"/><circle cx="12" cy="18" r="3"/><circle cx="36" cy="18" r="3"/>"#),
-];
-
-/// The icon of one of a property's options, where it has one: a car's body type, its side (the
-/// inside of a 48-by-24 SVG drawn in strokes, BODY_TYPES).
-pub fn option_icon(code: &str, option: &str) -> Option<&'static str> {
-    match code {
-        "vehicle_body_type" => BODY_TYPES.iter().find(|(of, _)| *of == option).map(|(_, icon)| *icon),
-        _ => None,
-    }
-}
-
 pub fn field_name(code: &str) -> String {
     format!("prop_{code}")
 }

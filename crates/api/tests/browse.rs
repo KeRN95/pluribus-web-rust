@@ -1,6 +1,7 @@
 //! Browsing through the API (crates/api/src/browse.rs), on the pages' sample listings
 //! (crates/web/tests/fixtures/listings.sql): `/listings` read in the pages' own query vocabulary,
-//! paged by its cursor, counted, narrowed by a category, a price, a property, a town and words, the
+//! paged by its cursor, counted (the count alone too, `count=precise`'s, with `count=only`),
+//! narrowed by a category, a price, a property, a town and words, the
 //! listings of an account the caller blocked left out; the cards it answers; `/home`'s rows, those
 //! recommended paged on through `/listings`; and the envelope for a category that doesn't exist and
 //! a cursor that doesn't read.
@@ -157,6 +158,52 @@ async fn a_category_a_price_a_property_and_a_town_narrow_the_listings_and_their_
     let distance = |at: usize| near["items"][at]["distance_m"].as_f64().unwrap();
     assert!(distance(0) < 1.0 && (20_000.0..50_000.0).contains(&distance(2)), "{near}");
     assert_eq!(listings(&pool, "", None).await["items"][0]["distance_m"], Value::Null);
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("../../web/tests/fixtures/listings.sql"))]
+async fn count_only_answers_the_precise_count_alone(pool: PgPool) {
+    // A thousand more in Të tjera, past what a count goes up to (1 000) and within a precise one's.
+    sqlx::query(
+        "INSERT INTO listings (seller_user_id, created_by_user_id, category_id, slug, title, description,
+                               price_amount, currency, status, published_at)
+         SELECT '11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111111',
+                '10000000-0000-0000-0000-000000000011', 'njoftim-' || g, 'Njoftim shtesë ' || g, '',
+                100, 'ALL', 'ACTIVE', now() - g * interval '1 minute'
+         FROM generate_series(1, 1000) g",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert_eq!(listings(&pool, "", None).await["count"], json!({"n": 1000, "more": true}));
+    assert_eq!(listings(&pool, "count=only", None).await, json!({"count": {"n": 1012, "more": false}}));
+    // The same count as a precise one's, whatever the query: words, a category, a town, a price, a
+    // property, a recommended list's seeds; nothing besides it.
+    for query in [
+        "q=golf",
+        "category=automjete",
+        "city=tirane&condition=USED",
+        "category=te-tjera&price_max=100&currency=ALL",
+        "category=makina&vehicle_transmission=AUTOMATIC",
+        "sipas=1001x10",
+    ] {
+        let precise = listings(&pool, &format!("{query}&count=precise"), None).await;
+        assert_eq!(listings(&pool, &format!("{query}&count=only"), None).await, json!({"count": precise["count"]}), "{query}");
+    }
+    // A signed-in buyer's leaves out the sellers they blocked, as their list does.
+    let buyer = new_user(&pool, "+355692223344", "Blerina").await;
+    let token = token_for(&pool, &buyer, "android").await;
+    sqlx::query("INSERT INTO user_blocks (blocker_user_id, blocked_user_id) VALUES ($1::uuid, $2::uuid)")
+        .bind(&buyer)
+        .bind(BESNIK)
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(listings(&pool, "count=only", Some(&token)).await, json!({"count": {"n": 1007, "more": false}}), "without Besnik's five");
+    let precise = listings(&pool, "category=prona&count=precise", Some(&token)).await;
+    assert_eq!(listings(&pool, "category=prona&count=only", Some(&token)).await, json!({"count": precise["count"]}));
+    // A cursor that doesn't read is refused still.
+    let refused = get(pool, "/api/v1/listings?after=garbage&count=only", None).await;
+    assert_eq!((refused.status, &refused.json()["error"]["code"]), (StatusCode::UNPROCESSABLE_ENTITY, &json!("validation")));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("../../web/tests/fixtures/listings.sql"))]

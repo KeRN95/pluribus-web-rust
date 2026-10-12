@@ -4,7 +4,10 @@
 //! and turned into the listing query, are pluribus-services' (filters.rs, `ParsedFilters`, whose
 //! fields a page's `Filters` reads as its own), which the JSON API reads too: its vocabulary
 //! (q, category, city, zone, lat, lng, radius, type, condition, price_min, price_max, currency,
-//! sort, after, and the properties' own) is described there.
+//! sort, after, and the properties' own) is described there. So is how the filters show each
+//! property, which the API's fields go by too, this file's until C13: its kind (`FieldKind`), the
+//! options it offers and their icons, which show at once (`ParsedFilters::shown_at_once`) and the
+//! row's dropdowns (`ParsedFilters::row`), which this file words and links.
 //!
 //! The pages' own: harta=1 (a category or search page with its map's dots, which its map fetches
 //! when it first opens), numri=1 (only the count, as JSON: browse.rs), the town a visitor picked
@@ -21,9 +24,12 @@ use rust_decimal::{
     prelude::{FromPrimitive, ToPrimitive},
 };
 
-use pluribus_services::filters::{CONDITIONS, CURRENCIES, MAX_RADIUS_KM, Params, ParsedFilters, Property, plain, year_param};
+use pluribus_services::filters::{
+    CONDITIONS, CURRENCIES, MAX_RADIUS_KM, Params, ParsedFilters, Property, RowFilter, option_icon, plain, year_param,
+};
 
-use super::properties;
+pub use pluribus_services::filters::FieldKind;
+
 use crate::{
     db::{AttributeOption, Categories, Category, City, FilterAttribute, Near, Sort},
     domain::listing::zoned,
@@ -58,31 +64,6 @@ fn sort_adjective(sort: Sort) -> &'static str {
 /// address names no place opens in (Params::remembering_town).
 pub const TOWN_COOKIE: &str = "qyteti";
 
-/// Properties the filters show at once wherever a category has them, besides those it requires or
-/// shows on its cards (Field::primary): what buyers mostly narrow by. The rest wait under "Më shumë
-/// filtra".
-/// How many filters the row has after Filtrat at most, the chips of those on and the dropdowns of
-/// those not on yet together (Filters::drops), as the canvas has five.
-const ROW_FILTERS: usize = 5;
-
-const PRIMARY: [&str; 10] = [
-    "vehicle_body_type",
-    "vehicle_transmission",
-    "vehicle_fuel",
-    "commercial_make",
-    "moto_make",
-    "machine_brand",
-    "electronics_brand",
-    "property_furnished",
-    "job_contract",
-    "job_place",
-];
-
-/// A category with at most this many filters shows them all; so does one that would leave at most
-/// FEW_MORE under "Më shumë filtra".
-const ALL_AT_ONCE: usize = 6;
-const FEW_MORE: usize = 2;
-
 /// The oldest year a year's dropdown offers: a vehicle's or a machine's, and a building's.
 const FIRST_YEAR: i32 = 1970;
 const FIRST_BUILT_YEAR: i32 = 1950;
@@ -90,10 +71,6 @@ const FIRST_BUILT_YEAR: i32 = 1950;
 /// Where a map's pin stands until the visitor sets another point: the middle of Tirana (Skanderbeg
 /// Square). On the map page it is the point the results are for; elsewhere a map only starts there.
 const TIRANA: (f64, f64) = (41.3275, 19.8187);
-
-/// Properties with at most this many options are offered as boxes, the colours too, longer lists
-/// as a dropdown.
-const CHECKBOX_LIMIT: usize = 8;
 
 /// The price's slider (price_range_controller.js, which works the same out): PRICE_STEPS positions
 /// on a logarithmic scale of PRICE_DECADES decades from 10 €, or a hundred times as many Lekë, the
@@ -231,8 +208,8 @@ pub struct Field {
     /// are bigger, and take a line of their own on every screen.
     pub icons: bool,
     /// Shown at once rather than under "Më shumë filtra": a property the category requires or
-    /// shows on its cards, one of PRIMARY, or the parent or dependent of one (a make and its
-    /// models). Filters::fields decides.
+    /// shows on its cards, one of those buyers narrow by most, or the parent or dependent of one (a
+    /// make and its models), as pluribus-services' `ParsedFilters::shown_at_once` decides.
     pub primary: bool,
     /// Set to something: the visitor filters by it.
     pub active: bool,
@@ -243,20 +220,10 @@ pub struct Field {
 }
 
 impl Field {
-    /// The icon over an option's name, where it has one (properties::option_icon).
+    /// The icon over an option's name, where it has one (pluribus-services' filters::option_icon).
     pub fn icon(&self, choice: &Choice) -> Option<&'static str> {
-        properties::option_icon(&self.name, &choice.value)
+        option_icon(&self.name, &choice.value)
     }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum FieldKind {
-    Select,
-    Checkboxes,
-    Range,
-    Toggle,
-    /// One year, the buyer's vehicle's, for a part's pair of years (FITS_YEAR_LABEL).
-    Year,
 }
 
 /// The filter a pair of years makes, "<x>_from_year" and "<x>_to_year" (a part's): the year of the
@@ -700,27 +667,17 @@ impl<'a> Filters<'a> {
         category_choices(self.categories, self.category.map(|c| c.slug.as_str()))
     }
 
-    /// Whether the kind of listing comes first among the filters: in Prona, where buying and
-    /// renting are two searches. Elsewhere nearly everything is for sale, and it waits under "Më
-    /// shumë filtra", or after the rest where nothing else does.
-    pub fn type_first(&self) -> bool {
-        self.category.is_some_and(|category| {
-            category.slug == "prona" || self.categories.ancestors(category).iter().any(|above| above.slug == "prona")
-        })
-    }
-
-    /// Whether the kind of listing is chosen, which opens "Më shumë filtra" where it waits.
+    /// Whether the kind of listing is chosen, which opens "Më shumë filtra" where it waits (in
+    /// Prona it comes first: pluribus-services' `ParsedFilters::type_first`).
     pub fn type_chosen(&self) -> bool {
         self.listing_type.is_some()
     }
 
-    /// Empty unless the category takes more than one kind of listing.
+    /// Empty unless the category takes more than one kind of listing (`types_offered`).
     pub fn type_choices(&self) -> Vec<Choice> {
-        let offered = self.category.map(|c| c.listing_types.as_slice()).unwrap_or_default();
-        if offered.len() < 2 {
-            return Vec::new();
-        }
-        offered
+        let Some(category) = self.category.filter(|_| self.types_offered()) else { return Vec::new() };
+        category
+            .listing_types
             .iter()
             .map(|code| Choice {
                 value: code.clone(),
@@ -730,9 +687,10 @@ impl<'a> Filters<'a> {
             .collect()
     }
 
-    /// Empty for categories whose listings have no condition, like property or jobs.
+    /// Empty for categories whose listings have no condition, like property or jobs
+    /// (`conditions_offered`).
     pub fn condition_choices(&self) -> Vec<Choice> {
-        if !self.category.is_none_or(|c| c.uses_condition) {
+        if !self.conditions_offered() {
             return Vec::new();
         }
         CONDITIONS
@@ -849,31 +807,18 @@ impl<'a> Filters<'a> {
         sort_adjective(self.sort)
     }
 
-    /// The category's filters, those shown at once first (Field::primary), each in its order: a
-    /// property the category requires or shows on its cards, one of PRIMARY, or the parent or
-    /// dependent of one, a car's make with its models. All at once in a category with few, or
-    /// where few would wait under "Më shumë filtra".
+    /// The category's filters in the sheet's order (pluribus-services' `ParsedFilters::sheet_order`),
+    /// those shown at once first (Field::primary, `shown_at_once`), each in its order: a property
+    /// the category requires or shows on its cards, one of those buyers narrow by most, or the
+    /// parent or dependent of one, a car's make with its models. All at once in a category with
+    /// few, or where few would wait under "Më shumë filtra".
     pub fn fields(&self) -> Vec<Field> {
-        let mut fields: Vec<Field> = self.properties.iter().map(|property| property.field(&self.properties)).collect();
-        for (field, property) in fields.iter_mut().zip(&self.properties) {
-            let attribute = property.attribute;
-            field.primary = attribute.required || attribute.show_in_card || PRIMARY.contains(&attribute.code.as_str());
-        }
-        for (i, property) in self.properties.iter().enumerate() {
-            let parent = property.attribute.parent_attribute_id.and_then(|id| self.properties.iter().position(|p| p.attribute.id == id));
-            if let Some(parent) = parent {
-                let either = fields[i].primary || fields[parent].primary;
-                fields[i].primary = either;
-                fields[parent].primary = either;
-            }
-        }
-        let waiting = fields.iter().filter(|field| !field.primary).count();
-        if fields.len() <= ALL_AT_ONCE || waiting <= FEW_MORE {
-            for field in &mut fields {
-                field.primary = true;
-            }
-        }
-        fields.sort_by_key(|field| !field.primary);
+        let primary = self.shown_at_once();
+        let mut fields: Vec<Field> = self
+            .sheet_order()
+            .into_iter()
+            .map(|at| Field { primary: primary[at], ..self.properties[at].field(&self.properties) })
+            .collect();
         // Small fields stand two to a line, among those of their kind: one left over, alone, takes
         // the whole line rather than half of it beside nothing.
         for run in fields.chunk_by_mut(|one, next| one.half == next.half && one.primary == next.primary) {
@@ -884,59 +829,35 @@ impl<'a> Filters<'a> {
         fields
     }
 
-    /// The row's filter dropdowns (Drop), as many as the row has room for beside the chips of the
-    /// filters on (ROW_FILTERS in all), of those buyers narrow by most that aren't on yet: on a
-    /// search across every category the town, where none is set; in Prona the kind of listing;
-    /// then the category's own filters in the form's order (`fields`, Filters::fields), its
-    /// dropdowns, its boxes and its years, not a car's body types (their icons want the sheet's
-    /// room), nor a range in a unit (kilometres, square metres), nor a box to tick; then the
-    /// condition, and elsewhere the kind of listing, where the category offers them. The price
-    /// stands fourth, or before the last of fewer (after a lone one), as the canvas has them:
-    /// "Marka, Modeli, Viti, Çmimi, Karburanti"; "Gjendja, Çmimi, Lloji i njoftimit"; "Qyteti,
-    /// Çmimi, Gjendja".
+    /// The row's filter dropdowns (Drop), those pluribus-services' `ParsedFilters::row` puts there
+    /// beside the `chips` chips of the filters on, in its order, as the canvas has them: "Marka,
+    /// Modeli, Viti, Çmimi, Karburanti"; "Gjendja, Çmimi, Lloji i njoftimit"; "Qyteti, Çmimi,
+    /// Gjendja". A property's is its field among `fields`, this page's (`fields`), in the sheet's
+    /// order.
     pub fn drops(&self, fields: &[Field], chips: usize) -> Vec<Drop> {
         let kept = |names: &[&str]| -> Vec<(String, String)> {
             self.pairs().into_iter().filter(|(name, _)| !names.contains(&name.as_str())).collect()
         };
-        let mut offered = Vec::new();
-        if self.category.is_none() && self.city.is_none() && self.near.is_none() {
-            let kept = kept(&["city", "zone", "lat", "lng", "radius"]);
-            offered.push(Drop { label: t("Qyteti").to_string(), kind: DropKind::City, kept });
-        }
-        let type_open = self.listing_type.is_none() && !self.type_choices().is_empty();
-        let type_drop = || Drop { label: t("Lloji i njoftimit").to_string(), kind: DropKind::Type, kept: kept(&["type"]) };
-        if type_open && self.type_first() {
-            offered.push(type_drop());
-        }
-        for field in fields {
-            let fits = match field.kind {
-                FieldKind::Select => !field.choices.is_empty() || !field.groups.is_empty(),
-                FieldKind::Checkboxes => !field.icons && !field.choices.is_empty(),
-                FieldKind::Range => field.unit.is_empty(),
-                FieldKind::Year => true,
-                FieldKind::Toggle => false,
-            };
-            if fits && !field.active {
-                let (min, max) = (format!("{}_min", field.name), format!("{}_max", field.name));
-                let kept = kept(&[field.name.as_str(), min.as_str(), max.as_str()]);
-                offered.push(Drop { label: field.label.clone(), kind: DropKind::Field(Box::new(field.clone())), kept });
-            }
-        }
-        if self.conditions.is_empty() && !self.condition_choices().is_empty() {
-            offered.push(Drop { label: t("Gjendja").to_string(), kind: DropKind::Condition, kept: kept(&["condition"]) });
-        }
-        if type_open && !self.type_first() {
-            offered.push(type_drop());
-        }
-        let room = ROW_FILTERS.saturating_sub(chips);
-        let price = self.price_min.is_none() && self.price_max.is_none() && room > 0;
-        offered.truncate(if price { room - 1 } else { room });
-        if price {
-            let kept = kept(&["price_min", "price_max", "currency"]);
-            let at = if offered.len() < 2 { offered.len() } else { (offered.len() - 1).min(3) };
-            offered.insert(at, Drop { label: t("Çmimi").to_string(), kind: DropKind::Price, kept });
-        }
-        offered
+        let order = self.sheet_order();
+        self.row(chips)
+            .into_iter()
+            .map(|filter| match filter {
+                RowFilter::City => {
+                    Drop { label: t("Qyteti").to_string(), kind: DropKind::City, kept: kept(&["city", "zone", "lat", "lng", "radius"]) }
+                }
+                RowFilter::Type => Drop { label: t("Lloji i njoftimit").to_string(), kind: DropKind::Type, kept: kept(&["type"]) },
+                RowFilter::Property(at) => {
+                    let field = &fields[order.iter().position(|of| *of == at).expect("a property of the sheet")];
+                    let (min, max) = (format!("{}_min", field.name), format!("{}_max", field.name));
+                    let kept = kept(&[field.name.as_str(), min.as_str(), max.as_str()]);
+                    Drop { label: field.label.clone(), kind: DropKind::Field(Box::new(field.clone())), kept }
+                }
+                RowFilter::Condition => Drop { label: t("Gjendja").to_string(), kind: DropKind::Condition, kept: kept(&["condition"]) },
+                RowFilter::Price => {
+                    Drop { label: t("Çmimi").to_string(), kind: DropKind::Price, kept: kept(&["price_min", "price_max", "currency"]) }
+                }
+            })
+            .collect()
     }
 }
 
@@ -947,7 +868,8 @@ trait PropertyExt {
 }
 
 impl PropertyExt for Property<'_> {
-    /// Its field in the form, its name, unit and options in the page's language.
+    /// Its field in the form, its name, unit and options in the page's language, of the kind, with
+    /// the options, pluribus-services' `Property` says (`kind`, `offered`, `pictured`).
     fn field(&self, all: &[Property]) -> Field {
         let attribute = self.attribute;
         let choice = |option: &AttributeOption| Choice {
@@ -955,10 +877,11 @@ impl PropertyExt for Property<'_> {
             label: t(&option.label).to_string(),
             selected: self.selected.iter().any(|s| s.id == option.id),
         };
+        let kind = self.kind(all);
         let mut field = Field {
             name: attribute.code.clone(),
             label: t(&attribute.name).to_string(),
-            kind: FieldKind::Select,
+            kind,
             choices: Vec::new(),
             groups: Vec::new(),
             depends_on: None,
@@ -969,23 +892,20 @@ impl PropertyExt for Property<'_> {
             half: true,
             icons: false,
             primary: true,
-            active: !self.selected.is_empty() || self.min.is_some() || self.max.is_some() || self.checked || self.year.is_some(),
+            active: self.active(),
             min_choices: Vec::new(),
             max_choices: Vec::new(),
         };
-        if self.fits_to.is_some() {
-            field.name = year_param(attribute);
-            field.label = t(FITS_YEAR_LABEL).to_string();
-            field.kind = FieldKind::Year;
-            field.min = self.year.map(plain).unwrap_or_default();
-            if let Some(steps) = range_steps(&attribute.code, attribute.unit.as_deref()) {
-                field.min_choices = step_choices(&steps, self.year);
+        match kind {
+            FieldKind::Year => {
+                field.name = year_param(attribute);
+                field.label = t(FITS_YEAR_LABEL).to_string();
+                field.min = self.year.map(plain).unwrap_or_default();
+                if let Some(steps) = range_steps(&attribute.code, attribute.unit.as_deref()) {
+                    field.min_choices = step_choices(&steps, self.year);
+                }
             }
-            return field;
-        }
-        match attribute.data_type.as_str() {
-            "NUMBER" => {
-                field.kind = FieldKind::Range;
+            FieldKind::Range => {
                 // Picked from dropdowns where the unit has steps, two of them a line's width.
                 if let Some(steps) = range_steps(&attribute.code, attribute.unit.as_deref()) {
                     field.min_choices = step_choices(&steps, self.min);
@@ -993,44 +913,26 @@ impl PropertyExt for Property<'_> {
                     field.half = false;
                 }
             }
-            "BOOLEAN" => field.kind = FieldKind::Toggle,
-            data_type => {
-                let parent = attribute
-                    .parent_attribute_id
-                    .and_then(|id| all.iter().find(|p| p.attribute.id == id));
-                field.choices = attribute
-                    .options
-                    .iter()
-                    .filter(|o| parent.is_none() || o.parent_id.is_none())
-                    .map(choice)
-                    .collect();
+            FieldKind::Toggle => {}
+            FieldKind::Select | FieldKind::Checkboxes => {
+                let offered = self.offered(all);
+                field.choices = offered.top.into_iter().map(choice).collect();
                 // Every make's models, so that picking another make in the form offers its own
                 // straight away; those of the makes not chosen start hidden.
-                if let Some(parent) = parent {
+                if let Some(parent) = self.parent(all) {
                     field.depends_on = Some(parent.attribute.code.clone());
-                    for parent_option in parent.attribute.options.iter() {
-                        let choices: Vec<Choice> = attribute
-                            .options
-                            .iter()
-                            .filter(|o| o.parent_id == Some(parent_option.id))
-                            .map(choice)
-                            .collect();
-                        if !choices.is_empty() {
-                            field.groups.push(OptionGroup {
-                                label: t(&parent_option.label).to_string(),
-                                parent: parent_option.code.clone(),
-                                hidden: !parent.selected.is_empty()
-                                    && !parent.selected.iter().any(|chosen| chosen.id == parent_option.id),
-                                choices,
-                            });
-                        }
+                    for (parent_option, options) in offered.groups {
+                        field.groups.push(OptionGroup {
+                            label: t(&parent_option.label).to_string(),
+                            parent: parent_option.code.clone(),
+                            hidden: !parent.selected.is_empty() && !parent.selected.iter().any(|chosen| chosen.id == parent_option.id),
+                            choices: options.into_iter().map(choice).collect(),
+                        });
                     }
                 }
-                let few = parent.is_none() && attribute.options.len() <= CHECKBOX_LIMIT;
-                if data_type == "MULTISELECT" || few {
-                    field.kind = FieldKind::Checkboxes;
+                if kind == FieldKind::Checkboxes {
                     field.choices.extend(field.groups.drain(..).flat_map(|group| group.choices));
-                    field.icons = field.choices.iter().any(|choice| field.icon(choice).is_some());
+                    field.icons = self.pictured(all);
                     field.half = field.choices.len() <= HALF_LIMIT && !field.icons;
                 }
             }

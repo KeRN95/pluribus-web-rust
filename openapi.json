@@ -133,6 +133,16 @@
         ],
         "type": "string"
       },
+      "Activity": {
+        "description": "When someone was last on the site, by Albania's clock: today, within the week (from yesterday to six days ago), within the month (from a week to thirty days ago), or longer ago.",
+        "enum": [
+          "today",
+          "week",
+          "month",
+          "longer"
+        ],
+        "type": "string"
+      },
       "AlertsBody": {
         "description": "What `PUT /searches/{id}/alerts` takes: whether the search tells of new listings.",
         "properties": {
@@ -320,6 +330,17 @@
               "10300"
             ],
             "type": "string"
+          },
+          "percent": {
+            "description": "Its price as a share of the median, both in euros, in whole percent, the half rounded up\n(domain::listing::car_percent): what the verdict weighs, unrounded; 93 for a price 7 % under\nit, 120 for one 20 % over.",
+            "examples": [
+              93
+            ],
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "text": {
             "description": "What such cars ask, in a sentence, in the language asked for: \"Volkswagen Golf 2014–2018 në\nshitje: shumica kërkojnë 9 500–11 400 €, mesatarja 10 300 €.\"",
@@ -588,6 +609,35 @@
           "listing_types",
           "uses_condition",
           "children"
+        ],
+        "type": "object"
+      },
+      "CategoryNameDto": {
+        "description": "A category by its slug, which `GET /listings` takes as `category`, and its name in Albanian and\nas an English page says it: one of those above a listing's (`ListingDto::category`), or one\nthe suggestions lead to.",
+        "properties": {
+          "name": {
+            "examples": [
+              "Automjete"
+            ],
+            "type": "string"
+          },
+          "name_en": {
+            "examples": [
+              "Vehicles"
+            ],
+            "type": "string"
+          },
+          "slug": {
+            "examples": [
+              "automjete"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "name_en"
         ],
         "type": "object"
       },
@@ -1333,6 +1383,21 @@
             "description": "Whether the category asks every listing for it.",
             "type": "boolean"
           },
+          "row": {
+            "description": "Whether its filter is one of the dropdowns of the category's results page's row after\nFiltrat, as the pages put them there with no filter on (pluribus-services'\n`ParsedFilters::row`): of those buyers narrow by most, its dropdowns, boxes and years, as\nmany as the row has room for. Never the posting form's.",
+            "type": "boolean"
+          },
+          "row_order": {
+            "description": "Its place in that row, from 0, where it is in it: the places the fields leave are the row's\nothers', the price's (fourth, or before the last of fewer, after a lone one) and, where the\ncategory offers them, the kind of listing's (first in property, else last) and the\ncondition's (Makina's: its make 0, its model 1, its year 2, the price 3 and its fuel 4;\nProna's: the kind 0, the price 1 and its features 2); null for the rest.",
+            "examples": [
+              4
+            ],
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
           "unit": {
             "description": "A number's unit, as the pages write it (\"km\", \"inç\"); none for most.",
             "examples": [
@@ -1423,6 +1488,28 @@
           "form"
         ],
         "type": "string"
+      },
+      "FilterDto": {
+        "description": "A filter as a query string's pair: a property's code and one of its options' codes.",
+        "properties": {
+          "code": {
+            "examples": [
+              "vehicle_make"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "examples": [
+              "VOLKSWAGEN"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "value"
+        ],
+        "type": "object"
       },
       "GoneDto": {
         "description": "A listing kept that no one can open any more (`db::GoneListing`): its seller took it down for a\nwhile or for good, it expired, or the reports or the moderators took it off.",
@@ -1595,6 +1682,43 @@
         ],
         "type": "object"
       },
+      "ListingCategoryDto": {
+        "description": "A listing's category (`ListingDto::category`): its slug, which `GET /listings` takes as\n`category`, its name in Albanian and as an English page says it, what its page is titled by,\nand those above it, the main one first, as its page's breadcrumb goes up through them.",
+        "properties": {
+          "name": {
+            "examples": [
+              "Makina"
+            ],
+            "type": "string"
+          },
+          "name_en": {
+            "examples": [
+              "Cars"
+            ],
+            "type": "string"
+          },
+          "path": {
+            "description": "The categories above it, the main one first (Automjete over Makina); none for a main one.",
+            "items": {
+              "$ref": "#/components/schemas/CategoryNameDto"
+            },
+            "type": "array"
+          },
+          "slug": {
+            "examples": [
+              "makina"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "name_en",
+          "path"
+        ],
+        "type": "object"
+      },
       "ListingDto": {
         "description": "`GET /listings/{no}`: a listing as its page shows it.",
         "properties": {
@@ -1633,6 +1757,10 @@
                 "type": "null"
               }
             ]
+          },
+          "category": {
+            "$ref": "#/components/schemas/ListingCategoryDto",
+            "description": "Its category, and the way up from it, as its page's breadcrumb goes."
           },
           "condition": {
             "oneOf": [
@@ -2553,6 +2681,34 @@
         ],
         "type": "object"
       },
+      "OptionSuggestionDto": {
+        "description": "A make, model or brand the words name (`SuggestionsDto::options`), a search by its filters in\nthe category most of its listings are in: \"Volkswagen Golf\" in Makina, `category=makina&\nvehicle_make=VOLKSWAGEN&vehicle_model=VOLKSWAGEN_GOLF`.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/CategoryNameDto"
+          },
+          "filters": {
+            "description": "The filters that find it there, each a property's code and an option's, as `GET /listings`\ntakes them: `vehicle_make=VOLKSWAGEN`, then `vehicle_model=VOLKSWAGEN_GOLF`.",
+            "items": {
+              "$ref": "#/components/schemas/FilterDto"
+            },
+            "type": "array"
+          },
+          "name": {
+            "description": "What it is called: a model after its make, \"Volkswagen Golf\"; a brand, \"Samsung\".",
+            "examples": [
+              "Volkswagen Golf"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "filters"
+        ],
+        "type": "object"
+      },
       "OtherDto": {
         "description": "The other side of a conversation.",
         "properties": {
@@ -2736,8 +2892,73 @@
               "string",
               "null"
             ]
+          },
+          "zone_listings": {
+            "description": "How many listings of its category its zone has on the site, those on sale at a price with\nan area, which the zone's average comes from (`area_price.zone_per_m2`), as its page's note\ncounts them (\"Mesatarja: 12 njoftime në shitje në Blloku\"); none outside a zone, or in one\nwith too few for an average.",
+            "examples": [
+              12
+            ],
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
           }
         },
+        "type": "object"
+      },
+      "PlaceKind": {
+        "description": "What a suggested place is: a town, or a zone of one.",
+        "enum": [
+          "city",
+          "zone"
+        ],
+        "type": "string"
+      },
+      "PlaceSuggestionDto": {
+        "description": "A place the words lead to (`SuggestionsDto::places`): a search there (`city`, and `q` where\nwords go with it), all of its listings without them.",
+        "properties": {
+          "city": {
+            "description": "The town's name: \"Durrës\".",
+            "examples": [
+              "Durrës"
+            ],
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PlaceKind",
+            "description": "A town; or a zone of one (`zone`), which the pages don't suggest yet."
+          },
+          "q": {
+            "description": "The words searched there: those typed before the town without the word that joins them to it\n(\"golf\" of \"golf në durr\"), or before that word after words joined to a place\n(\"apartamente\" of \"apartamente në\"); none for all of its listings (\"durr\").",
+            "examples": [
+              "golf"
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slug": {
+            "description": "What names the town in a filter: \"durres\" (`city=durres`).",
+            "examples": [
+              "durres"
+            ],
+            "type": "string"
+          },
+          "zone": {
+            "description": "A zone's name, for a zone, in the town (whose zones `GET /cities` has, with their slugs);\nnone for a town.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "city",
+          "slug"
+        ],
         "type": "object"
       },
       "Platform": {
@@ -3175,6 +3396,17 @@
       "SellerDto": {
         "description": "Who sells a listing, as its page's seller card says.",
         "properties": {
+          "active": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Activity",
+                "description": "When they were last on the site, by Albania's clock, by the days their card counts\n(format::Activity): \"today\" (\"Aktiv sot\"), within the \"week\", from yesterday to six days\nago (\"Aktiv dje\", \"Aktiv para 3 ditësh\"), within the \"month\", up to thirty days ago, or\n\"longer\" ago, the last two of which the card leaves unsaid; null for one never seen. A\nstore's, any of its people."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "active_today": {
             "description": "Whether they were on the site today, by Albania's clock: a store's, any of its people.",
             "type": "boolean"
@@ -3383,6 +3615,46 @@
         "required": [
           "slug",
           "name"
+        ],
+        "type": "object"
+      },
+      "SuggestionsDto": {
+        "description": "`GET /suggestions`: what the words typed suggest, in the pages' order: the first of `words`,\nthen it in each of `categories`, then `options`, `places`, and the rest of `words`; each a\nsearch the app runs through `GET /listings`.",
+        "properties": {
+          "categories": {
+            "description": "The categories the first of `words` is found in most, two at most, each a search for it\nthere (`q` and `category`), but one where a make, model or brand of that very name is among\n`options`, which finds it alone.",
+            "items": {
+              "$ref": "#/components/schemas/CategoryNameDto"
+            },
+            "type": "array"
+          },
+          "options": {
+            "description": "The makes, models and brands whose names have words starting with each word typed, the\nmost used first, two at most, each in the category most of its listings are in.",
+            "items": {
+              "$ref": "#/components/schemas/OptionSuggestionDto"
+            },
+            "type": "array"
+          },
+          "places": {
+            "description": "The towns the last word starts, a county's main town first, two at most; after words and the\nword that joins them to a place (\"apartamente në\"), the towns those words have the most\nlistings in, three at most, and nothing else.",
+            "items": {
+              "$ref": "#/components/schemas/PlaceSuggestionDto"
+            },
+            "type": "array"
+          },
+          "words": {
+            "description": "Searches for words (`q`), three at most: the last word finished as listings use it, the\nmost used first, after the words before it (\"golf\" for \"gol\"; one that names one of\n`places` left out, which its place searches), or for a whole word that seems misspelt the\nword it most likely misspells (\"mercedes\" for \"mercedez\"); the words as typed where the\nlast is finished (a space after it) or isn't a word of letters (\"golf 7\"). None for words\ntoo short (two letters in all), or after words joined to a place.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "words",
+          "categories",
+          "options",
+          "places"
         ],
         "type": "object"
       },
@@ -3756,7 +4028,7 @@
     },
     "/api/v1/categories/{slug}/fields": {
       "get": {
-        "description": "A category's properties, its own and those it takes from the categories above it, in its order, as its filters offer them or as its posting form asks for them (none for the form of a category that only groups others).",
+        "description": "A category's properties, its own and those it takes from the categories above it, in its order, as its filters offer them, each with its place in the row of dropdowns its results page opens with where it has one, or as its posting form asks for them (none for the form of a category that only groups others).",
         "operationId": "listCategoryFields",
         "parameters": [
           {
@@ -4418,7 +4690,7 @@
             }
           },
           {
-            "description": "`precise` counts up to 10 000 rather than 1 000, as a page asks once it shows",
+            "description": "`precise` counts up to 10 000 rather than 1 000, as a page asks once it shows; `only` counts so and answers the count alone, `{\"count\": CountDto}`, without `items` or `next`, as the filters' sheet's button asks for it",
             "example": "precise",
             "in": "query",
             "name": "count",
@@ -4447,7 +4719,7 @@
                 }
               }
             },
-            "description": "A page of the listings found, and how many there are"
+            "description": "A page of the listings found, and how many there are; with `count=only`, how many alone (`{\"count\": CountDto}`)"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -6533,6 +6805,51 @@
           "safety"
         ]
       }
+    },
+    "/api/v1/suggestions": {
+      "get": {
+        "description": "What a search box suggests as its words are typed, as the pages' suggestions under theirs: the words finished as listings use them, the categories the first of them is found in most, the makes, models and brands the words name, and the towns the last word starts; or, after words and a word that joins them to a place (\"apartamente në\"), the towns those words have the most listings in. Each a search the app runs through `GET /listings`; none for words too short.",
+        "operationId": "getSuggestions",
+        "parameters": [
+          {
+            "description": "The words as typed (their first 100 characters), a space after the last saying that it is finished",
+            "example": "gol",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionsDto"
+                }
+              }
+            },
+            "description": "What the words suggest",
+            "headers": {
+              "Cache-Control": {
+                "description": "`no-store`: never kept",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "What a search box suggests",
+        "tags": [
+          "browse"
+        ]
+      }
     }
   },
   "tags": [
@@ -6553,7 +6870,7 @@
       "name": "reference"
     },
     {
-      "description": "The listings a query finds, in the pages' own vocabulary, and the front page's rows.",
+      "description": "The listings a query finds, in the pages' own vocabulary, the front page's rows, and what a search box suggests.",
       "name": "browse"
     },
     {

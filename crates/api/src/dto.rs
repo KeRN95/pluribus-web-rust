@@ -1,14 +1,16 @@
 //! The shapes the API answers in, made from the database's rows and never the rows themselves, so
 //! that a column added or renamed changes no answer unless one of these says so: a page of
-//! anything, with where the next starts (`Page`), the health check's (`HealthDto`), and the
-//! signed-in user (`MeDto`). Times are RFC 3339 (`time::serde::rfc3339`), with their offset. Each
+//! anything, with where the next starts (`Page`), the health check's (`HealthDto`), the signed-in
+//! user (`MeDto`), and a category named in both languages, which a listing's and the suggestions'
+//! name (`CategoryNameDto`). Times are RFC 3339 (`time::serde::rfc3339`), with their offset. Each
 //! is a schema of the OpenAPI document (`ToSchema`, openapi.rs), its doc comments the schema's
 //! descriptions; a page there is one schema for each kind of item the API pages (`CardPage`,
 //! `NotificationPage`).
 
 use std::borrow::Cow;
 
-use pluribus_db::{AccountSettings, SessionUser};
+use pluribus_core::i18n;
+use pluribus_db::{AccountSettings, Category, SessionUser};
 use serde::Serialize;
 use time::OffsetDateTime;
 use utoipa::{
@@ -131,6 +133,33 @@ impl From<(&SessionUser, &AccountSettings)> for MeDto {
             preferred_language: account.preferred_language.clone(),
             since: account.created_at,
         }
+    }
+}
+
+/// A category by its slug, which `GET /listings` takes as `category`, and its name in Albanian and
+/// as an English page says it: one of those above a listing's (`ListingDto::category`), or one
+/// the suggestions lead to.
+#[derive(Debug, PartialEq, Serialize, ToSchema)]
+pub struct CategoryNameDto {
+    #[schema(examples("automjete"))]
+    pub slug: String,
+    #[schema(examples("Automjete"))]
+    pub name: String,
+    #[schema(examples("Vehicles"))]
+    pub name_en: String,
+}
+
+impl CategoryNameDto {
+    /// The category of this slug and name (the database's), its English the catalogue's (i18n/en/),
+    /// or the name itself where it has none, as an English page says it.
+    pub fn named(slug: &str, name: &str) -> Self {
+        Self { slug: slug.to_string(), name: name.to_string(), name_en: i18n::in_english(name).unwrap_or(name).to_string() }
+    }
+}
+
+impl From<&Category> for CategoryNameDto {
+    fn from(category: &Category) -> Self {
+        Self::named(&category.slug, &category.name)
     }
 }
 

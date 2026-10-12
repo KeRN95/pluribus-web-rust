@@ -1,8 +1,9 @@
 //! The reference data the app loads first (crates/api/src/reference.rs): the categories as their
 //! tree, the towns with their zones, and a category's properties as its filters offer them or its
 //! posting form asks for them, each as the pages load it, its names in both languages at once and
-//! the English an English page says; the answers kept five minutes; and a category the site hasn't,
-//! or a `for` that is neither, answered in the envelope.
+//! the English an English page says, the filters' places in the results page's row as the page's
+//! own row has them; the answers kept five minutes; and a category the site hasn't, or a `for`
+//! that is neither, answered in the envelope.
 
 mod common;
 
@@ -144,13 +145,41 @@ fn field<'a>(fields: &'a Value, code: &str) -> &'a Value {
     fields.as_array().unwrap().iter().find(|field| field["code"] == code).unwrap_or_else(|| panic!("no {code}"))
 }
 
-/// A field's own keys but its options and its place.
+/// A field's own keys but its options and its places (among the category's, and in its results
+/// page's row).
 fn shape(field: &Value) -> Value {
     let mut shape = field.clone();
     let object = shape.as_object_mut().unwrap();
     object.remove("options");
     object.remove("order");
+    object.remove("row");
+    object.remove("row_order");
     shape
+}
+
+/// The fields in the row of dropdowns, by their places in it: each its code and its place.
+fn row(fields: &Value) -> Vec<(&str, u64)> {
+    let mut row: Vec<(&str, u64)> = fields
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|field| field["row"] == true)
+        .map(|field| (field["code"].as_str().unwrap(), field["row_order"].as_u64().unwrap_or_else(|| panic!("{field}: no place"))))
+        .collect();
+    row.sort_by_key(|(_, place)| *place);
+    row
+}
+
+/// The names on a results page's row of filter dropdowns, in their order (filter_drop.html), as
+/// the pages' own tests read them (crates/web/tests/filters.rs).
+fn dropdown_names(page: &str) -> Vec<&str> {
+    let pill = r#"<summary class="button secondary round-button labelled filter-pill">"#;
+    page.match_indices(pill)
+        .map(|(at, _)| {
+            let name = &page[at + pill.len()..];
+            &name[..name.find("<svg").unwrap()]
+        })
+        .collect()
 }
 
 /// Checks that each field is in its place (`order`), and that each name, a field's and an
@@ -256,6 +285,40 @@ async fn a_categorys_filter_fields_are_what_its_filters_offer(pool: PgPool) {
     let vehicles = get(pool.clone(), "/api/v1/categories/automjete/fields?for=filters", None).await;
     let filters = pluribus_db::filter_attributes(&pool, "automjete").await.unwrap();
     assert_eq!(codes(&vehicles.json()), filters.iter().map(|attribute| attribute.code.as_str()).collect::<Vec<_>>());
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn a_categorys_filters_say_their_places_in_its_results_pages_row(pool: PgPool) {
+    // Makina's: its make, its model and its year, the price fourth, and its fuel; its body types
+    // (drawn) and its kilometres (a range in a unit) are the sheet's, and no other is in the row.
+    let cars = get(pool.clone(), "/api/v1/categories/makina/fields?for=filters", None).await.json();
+    assert_eq!(row(&cars), [("vehicle_make", 0), ("vehicle_model", 1), ("vehicle_year", 2), ("vehicle_fuel", 4)]);
+    for code in ["vehicle_body_type", "vehicle_mileage", "vehicle_transmission"] {
+        assert_eq!((&field(&cars, code)["row"], &field(&cars, code)["row_order"]), (&json!(false), &Value::Null), "{code}");
+    }
+    // Prona's: the kind of listing first, the price, then its features; its area, in square
+    // metres, the sheet's.
+    let property = get(pool.clone(), "/api/v1/categories/prona/fields?for=filters", None).await.json();
+    assert_eq!(row(&property), [("property_features", 2)]);
+    assert_eq!(field(&property, "property_area")["row"], json!(false));
+    // Each as the pages' own row has it, a field's name in its place, the price and the kind in
+    // the places the fields leave.
+    for (slug, fields, expected) in [
+        ("makina", &cars, vec!["Marka", "Modeli", "Viti", "Çmimi", "Karburanti"]),
+        ("prona", &property, vec!["Lloji i njoftimit", "Çmimi", "Lehtësitë"]),
+    ] {
+        let page = send(api(pool.clone()), request("GET", &format!("/c/{slug}"), None).body(Body::empty()).unwrap()).await.body;
+        let names = dropdown_names(&page);
+        assert_eq!(names, expected, "{slug}");
+        for (code, place) in row(fields) {
+            assert_eq!(field(fields, code)["label"], names[place as usize], "{slug}: {code}");
+        }
+    }
+    // A main category's row has none of its own filters, nor does a posting form's field ever.
+    let vehicles = get(pool.clone(), "/api/v1/categories/automjete/fields?for=filters", None).await.json();
+    assert!(row(&vehicles).is_empty(), "{vehicles}");
+    let form = get(pool, "/api/v1/categories/makina/fields?for=form", None).await.json();
+    assert!(form.as_array().unwrap().iter().all(|field| field["row"] == false && field["row_order"].is_null()), "{form}");
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

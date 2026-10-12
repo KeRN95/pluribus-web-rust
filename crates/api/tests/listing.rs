@@ -1,6 +1,7 @@
 //! One listing through the API (crates/api/src/listing.rs), on the pages' sample listings
 //! (crates/web/tests/fixtures/listings.sql): a car's, a property's and a plain thing's, each as its
-//! page shows it, as data; one off the site, for its seller and the moderators alone; the listings
+//! page shows it, as data, with its category and those above it; when its seller was last here;
+//! one off the site, for its seller and the moderators alone; the listings
 //! like it, a page at a time; its page seen, for the view counts; its seller's contact revealed and
 //! counted; a number no listing has; and the words it says, in the language asked for.
 
@@ -162,6 +163,12 @@ async fn a_cars_listing_carries_what_its_page_shows(pool: PgPool) {
             "slug": "volkswagen-golf-7-2016-nafte",
             "title": "Volkswagen Golf 1.6, 2016",
             "heading": "Volkswagen Golf 7, 2016, naftë",
+            "category": {
+                "slug": "makina",
+                "name": "Makina",
+                "name_en": "Cars",
+                "path": [{"slug": "automjete", "name": "Automjete", "name_en": "Vehicles"}],
+            },
             "deal": true,
             "kind": "SELL",
             "condition": "USED",
@@ -171,6 +178,8 @@ async fn a_cars_listing_carries_what_its_page_shows(pool: PgPool) {
             "car_price": {
                 "median": "10300",
                 "verdict": "near",
+                // 9 500 € of the median's 10 250 €: 92.7 %.
+                "percent": 93,
                 "text": "Volkswagen Golf 2014–2018 në shitje: shumica kërkojnë 9\u{a0}500–11\u{a0}400\u{a0}€, mesatarja 10\u{a0}300\u{a0}€.",
             },
             "area_price": null,
@@ -195,7 +204,7 @@ async fn a_cars_listing_carries_what_its_page_shows(pool: PgPool) {
                 "height": 1200,
                 "placeholder": "data:image/webp;base64,UklGRg==",
             }],
-            "place": {"city": "Tiranë", "zone": null, "point": {"lat": 41.328333, "lng": 19.818056}},
+            "place": {"city": "Tiranë", "zone": null, "point": {"lat": 41.328333, "lng": 19.818056}, "zone_listings": null},
             "seller": {
                 "kind": "user",
                 "user_id": ANA,
@@ -207,6 +216,7 @@ async fn a_cars_listing_carries_what_its_page_shows(pool: PgPool) {
                 "listings": 14,
                 "answers_within": null,
                 "active_today": false,
+                "active": null,
                 "suspended": false,
             },
             "contact": {"kinds": ["phone"], "revealed": false},
@@ -232,9 +242,11 @@ async fn a_cars_listing_carries_what_its_page_shows(pool: PgPool) {
     run(&pool, "UPDATE listings SET price_amount = 8000, price_normalized = 8000 WHERE public_no = 1001").await;
     let golf = listing(&pool, 1001, None).await;
     assert_eq!((&golf["seller"]["verified"], &golf["seller"]["active_today"]), (&json!(true), &json!(true)));
+    assert_eq!(golf["seller"]["active"], json!("today"));
     assert_eq!(golf["price"]["was"], json!("9500"));
     assert_eq!(golf["price"]["drop"], json!({"from": "9500", "to": "8000", "percent": 16}));
     assert_eq!((&golf["car_price"]["median"], &golf["car_price"]["verdict"]), (&json!("10300"), &json!("good")));
+    assert_eq!(golf["car_price"]["percent"], json!(78), "8 000 € of 10 250 €");
 
     // A store's car: its slug and its name, and which of its people posted it, whom a block from
     // the listing takes.
@@ -256,12 +268,17 @@ async fn a_propertys_listing_weighs_its_square_metre_against_its_zones(pool: PgP
         .unwrap();
     assert_eq!((&house["deal"], &house["car_price"]), (&json!(true), &Value::Null));
     assert_eq!(house["area_price"], json!({"per_m2": "925", "zone_per_m2": null, "verdict": null}));
-    assert_eq!(house["place"], json!({"city": "Vlorë", "zone": null, "point": {"lat": latitude, "lng": longitude}}));
+    assert_eq!(house["place"], json!({"city": "Vlorë", "zone": null, "point": {"lat": latitude, "lng": longitude}, "zone_listings": null}));
     assert_eq!(house["loan"], json!({"amount": "185000", "down_percent": 35}));
-    // A rent has no price by the square metre, nor a loan; its price is a month's.
+    // A rent has no price by the square metre, nor a loan; its price is a month's. A flat, under
+    // Prona.
     let flat = listing(&pool, 1003, None).await;
     assert_eq!((&flat["area_price"], &flat["loan"], &flat["price"]["per_month"]), (&Value::Null, &Value::Null, &json!(true)));
     assert_eq!(attribute(&flat, "property_area")["shown"], json!(["85\u{a0}m²"]));
+    assert_eq!(
+        flat["category"],
+        json!({"slug": "apartamente", "name": "Apartamente", "name_en": "Flats", "path": [{"slug": "prona", "name": "Prona", "name_en": "Property"}]})
+    );
 
     // Six flats on sale in Blloku, 100 m² each, at 100 000 €: the zone's average is 1 000 €/m².
     run(
@@ -290,6 +307,8 @@ async fn a_propertys_listing_weighs_its_square_metre_against_its_zones(pool: PgP
     let even = listing(&pool, 3001, None).await;
     assert_eq!(even["area_price"], json!({"per_m2": "1000", "zone_per_m2": "1000", "verdict": "same"}));
     assert_eq!((&even["place"]["city"], &even["place"]["zone"]), (&json!("Tiranë"), &json!("Blloku")));
+    // The six its average comes from, as the page's note counts them.
+    assert_eq!(even["place"]["zone_listings"], json!(6));
     // Against the average as it stands: 200 € a square metre under it, below; in lekë, the average
     // in lekë, 10 000 under it near; a starting price says too little to compare.
     run(&pool, "UPDATE listings SET price_amount = 80000 WHERE public_no = 3002").await;
@@ -310,7 +329,7 @@ async fn a_plain_things_listing_has_its_loan_but_no_map_nor_comparison(pool: PgP
     );
     assert_eq!((&phone["car_price"], &phone["area_price"]), (&Value::Null, &Value::Null));
     assert_eq!(phone["loan"], json!({"amount": "55000", "down_percent": 35}));
-    assert_eq!(phone["place"], json!({"city": "Tiranë", "zone": null, "point": null}), "a map for a car or a property alone");
+    assert_eq!(phone["place"], json!({"city": "Tiranë", "zone": null, "point": null, "zone_listings": null}), "a map for a car or a property alone");
     let brand = attribute(&phone, "electronics_brand");
     assert_eq!((&brand["shown"], &brand["options"]), (&json!(["Apple"]), &json!([{"code": "APPLE", "label": "Apple", "label_en": "Apple"}])));
     // A job's pay on request: no amount, a month's; nothing to borrow for. Something free neither.
@@ -319,6 +338,27 @@ async fn a_plain_things_listing_has_its_loan_but_no_map_nor_comparison(pool: PgP
     assert_eq!((&job["price"]["per_month"], &job["loan"], &job["condition"]), (&json!(true), &Value::Null, &Value::Null));
     let books = listing(&pool, 1011, None).await;
     assert_eq!((&books["price"]["type"], &books["price"]["amount"], &books["loan"]), (&json!("FREE"), &Value::Null, &Value::Null));
+    // In a main category, none above it.
+    run(&pool, "UPDATE listings SET category_id = '10000000-0000-0000-0000-000000000011' WHERE public_no = 1011").await;
+    let books = listing(&pool, 1011, None).await;
+    assert_eq!((&books["category"]["slug"], &books["category"]["path"]), (&json!("te-tjera"), &json!([])));
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("../../web/tests/fixtures/listings.sql"))]
+async fn a_sellers_last_visit_is_said_by_the_days_their_card_counts(pool: PgPool) {
+    // Never seen: none.
+    let golf = listing(&pool, 1001, None).await;
+    assert_eq!((&golf["seller"]["active"], &golf["seller"]["active_today"]), (&Value::Null, &json!(false)));
+    // Today, within the week, within the month, or longer ago, as their card counts the days
+    // (its "Aktiv sot", "Aktiv para 3 ditësh", and nothing past the week).
+    for (ago, active) in [("0 seconds", "today"), ("3 days", "week"), ("20 days", "month"), ("60 days", "longer")] {
+        run(&pool, &format!("UPDATE users SET last_seen_at = now() - interval '{ago}' WHERE id = '{ANA}'")).await;
+        let seller = listing(&pool, 1001, None).await["seller"].clone();
+        assert_eq!((&seller["active"], &seller["active_today"]), (&json!(active), &json!(active == "today")), "{ago}");
+    }
+    // A store's, by the latest of its people.
+    run(&pool, &format!("UPDATE users SET last_seen_at = now() - interval '3 days' WHERE id = '{DRITAN}'")).await;
+    assert_eq!(listing(&pool, 1002, None).await["seller"]["active"], json!("week"));
 }
 
 #[sqlx::test(migrator = "MIGRATOR", fixtures("../../web/tests/fixtures/listings.sql"))]

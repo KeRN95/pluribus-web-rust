@@ -253,6 +253,24 @@ pub struct CountDto {
     pub more: bool,
 }
 
+/// `GET /listings?count=only`: how many listings the query finds, alone, `{"count": {"n", "more"}}`,
+/// counted as `count=precise` counts them, without a page of them: what the filters' sheet says on
+/// its button as filters are picked ("Shfaq 12 njoftime"). In the OpenAPI document in words, on
+/// `count`, the route's answer being `ListingsDto`'s shape otherwise.
+#[derive(Debug, Serialize)]
+pub struct ListingCountDto {
+    pub count: CountDto,
+}
+
+/// What `GET /listings` answers: a page of the listings with how many there are, or with
+/// `count=only` how many alone.
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum ListingsAnswer {
+    Page(ListingsDto),
+    Count(ListingCountDto),
+}
+
 /// `GET /home`: the front page's rows, as the welcome page has them.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct HomeDto {
@@ -310,7 +328,8 @@ impl FromRequestParts<AppState> for Caller {
 /// pages' parser (pluribus-services' filters.rs) into the pages' listing query: the words (q)
 /// searched as the pages search them (db::text_search), the accounts the caller blocked left out;
 /// with how many it finds, up to db::COUNT_LIMIT, or with `count=precise` up to
-/// db::PRECISE_COUNT_LIMIT (as a page asks once it shows, its `numri=1`). A value that doesn't
+/// db::PRECISE_COUNT_LIMIT (as a page asks once it shows, its `numri=1`); with `count=only`, that
+/// count alone, no page (`ListingCountDto`), for the filters' sheet's button. A value that doesn't
 /// exist is ignored, as the pages ignore it, but a category (404) and an `after` that isn't a place
 /// in the query's order (422). With `sipas`, or an `after` that a recommended list's `next` gave,
 /// the listings recommended for those seeds, then every other one, newest first, as the welcome
@@ -337,12 +356,12 @@ impl FromRequestParts<AppState> for Caller {
         ("currency" = Option<kinds::Currency>, Query, description = "The prices' currency; the category's without one"),
         ("sort" = Option<kinds::Sort>, Query, description = "The order: without one, relevance with words, else nearest with a point, else newest"),
         ("after" = Option<String>, Query, description = "The last page's `next`, with the same query; or a recommended page's, which goes on with the listings recommended for its seeds"),
-        ("count" = Option<String>, Query, description = "`precise` counts up to 10 000 rather than 1 000, as a page asks once it shows", example = "precise"),
+        ("count" = Option<String>, Query, description = "`precise` counts up to 10 000 rather than 1 000, as a page asks once it shows; `only` counts so and answers the count alone, `{\"count\": CountDto}`, without `items` or `next`, as the filters' sheet's button asks for it", example = "precise"),
         ("sipas" = Option<String>, Query, description = "The seeds of a recommended list (`1002x24.1005x20`): the listings recommended for them first, then every other one, newest first, the other filters aside", example = "1002x24.1005x20"),
     ),
     security((), ("bearer" = [])),
     responses(
-        (status = 200, description = "A page of the listings found, and how many there are", body = ListingsDto),
+        (status = 200, description = "A page of the listings found, and how many there are; with `count=only`, how many alone (`{\"count\": CountDto}`)", body = ListingsDto),
         (status = 401, response = Unauthorized),
         (status = 404, response = NotFound),
         (status = 422, response = Validation),
@@ -354,23 +373,28 @@ pub async fn listings(
     caller: Caller,
     headers: HeaderMap,
     RawQuery(query): RawQuery,
-) -> Result<Json<ListingsDto>, ApiError> {
+) -> Result<Json<ListingsAnswer>, ApiError> {
     let params = Params::parse(query.as_deref());
     let origin = origin(&state.config, &headers);
+    let only = params.first("count") == Some("only");
     let limit = match params.first("count") {
-        Some("precise") => db::PRECISE_COUNT_LIMIT,
+        Some("precise" | "only") => db::PRECISE_COUNT_LIMIT,
         _ => db::COUNT_LIMIT,
     };
+    let count_alone = |count: i64| Json(ListingsAnswer::Count(ListingCountDto { count: counted(count, limit) }));
     if let Some(recommending) = recommending(&params)? {
-        let viewer = caller.user.as_ref().map(|user| user.id);
-        let ranked = state.recommended.ranked(&state.db, &recommending.seeds, viewer, &caller.hidden).await?;
         // Every listing comes once, those recommended first: the count is every listing's.
         let every = ListingFilter { hidden_accounts: caller.hidden.clone(), ..Default::default() };
+        if only {
+            return Ok(count_alone(db::listing_count_up_to(&state.db, &every, limit).await?));
+        }
+        let viewer = caller.user.as_ref().map(|user| user.id);
+        let ranked = state.recommended.ranked(&state.db, &recommending.seeds, viewer, &caller.hidden).await?;
         let ((cards, next), count) = tokio::try_join!(
             recommended_page(&state, &ranked, &recommending, &caller.hidden),
             db::listing_count_up_to(&state.db, &every, limit),
         )?;
-        return Ok(Json(ListingsDto { items: cards_of(&cards, &origin)?, next, count: counted(count, limit) }));
+        return Ok(Json(ListingsAnswer::Page(ListingsDto { items: cards_of(&cards, &origin)?, next, count: counted(count, limit) })));
     }
     let slug = params.first("category");
     let words = params.search_words();
@@ -395,10 +419,13 @@ pub async fn listings(
     }
     let mut filter = filters.listing_filter(search);
     filter.hidden_accounts = caller.hidden;
+    if only {
+        return Ok(count_alone(db::listing_count_up_to(&state.db, &filter, limit).await?));
+    }
     let (rows, count) =
         tokio::try_join!(db::listing_page(&state.db, &filter), db::listing_count_up_to(&state.db, &filter, limit))?;
     let (cards, next) = paged(rows, filter.sort);
-    Ok(Json(ListingsDto { items: cards_of(&cards, &origin)?, next, count: counted(count, limit) }))
+    Ok(Json(ListingsAnswer::Page(ListingsDto { items: cards_of(&cards, &origin)?, next, count: counted(count, limit) })))
 }
 
 /// `GET /home?seen=1005.1003&kept=1002`: the front page's rows in one call, as the welcome page

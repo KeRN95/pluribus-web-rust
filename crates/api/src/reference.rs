@@ -1,12 +1,14 @@
 //! The reference data the app loads before anything else, for anyone: the categories as their tree
 //! (`GET /categories`), the towns listings go into with their zones (`GET /cities`), and a
 //! category's properties, as its filters offer them or as its posting form asks for them
-//! (`GET /categories/{slug}/fields?for=filters|form`). Each comes from the very function the pages
-//! load it with (db::categories, db::cities, db::filter_attributes, db::form_attributes), so that
-//! the app offers what the site does; each name in both languages at once, the Albanian the
-//! database keeps and the English an English page says for it (`english`), so that the app changes
-//! language without asking again; and each answer may be kept five minutes (`Cached`), for it
-//! changes only with a migration. The shapes they answer in are here, beside their handlers.
+//! (`GET /categories/{slug}/fields?for=filters|form`), the filters' each with its place in the
+//! results page's row of dropdowns where it has one, by the pages' rule (pluribus-services'
+//! `ParsedFilters::row`). Each comes from the very function the pages load it with
+//! (db::categories, db::cities, db::filter_attributes, db::form_attributes), so that the app offers
+//! what the site does; each name in both languages at once, the Albanian the database keeps and the
+//! English an English page says for it (`english`), so that the app changes language without asking
+//! again; and each answer may be kept five minutes (`Cached`), for it changes only with a
+//! migration. The shapes they answer in are here, beside their handlers.
 
 use std::fmt::Display;
 
@@ -24,7 +26,10 @@ use pluribus_core::{
     i18n, t,
 };
 use pluribus_db::{self as db, AttributeOption, Categories, Category, City, FilterAttribute, FormAttribute, Zone};
-use pluribus_services::AppState;
+use pluribus_services::{
+    AppState,
+    filters::{Params, ParsedFilters, RowFilter},
+};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -278,6 +283,19 @@ pub struct FieldDto {
     /// Its place among the category's properties, from 0, in the category's order, which the
     /// answer is in too.
     pub order: usize,
+    /// Whether its filter is one of the dropdowns of the category's results page's row after
+    /// Filtrat, as the pages put them there with no filter on (pluribus-services'
+    /// `ParsedFilters::row`): of those buyers narrow by most, its dropdowns, boxes and years, as
+    /// many as the row has room for. Never the posting form's.
+    #[schema(required = false)]
+    pub row: bool,
+    /// Its place in that row, from 0, where it is in it: the places the fields leave are the row's
+    /// others', the price's (fourth, or before the last of fewer, after a lone one) and, where the
+    /// category offers them, the kind of listing's (first in property, else last) and the
+    /// condition's (Makina's: its make 0, its model 1, its year 2, the price 3 and its fuel 4;
+    /// Prona's: the kind 0, the price 1 and its features 2); null for the rest.
+    #[schema(examples(4))]
+    pub row_order: Option<usize>,
 }
 
 /// One of a property's options (`FieldDto::options`); in the OpenAPI document `FieldOptionDto`,
@@ -419,26 +437,44 @@ impl FieldDto {
                     options,
                     validation: property.validation,
                     order,
+                    row: false,
+                    row_order: None,
                 })
             })
             .collect()
+    }
+
+    /// The fields of a category's filters (`attributes`, db::filter_attributes's) each marked with
+    /// its place in the row of dropdowns its results page opens with, no filter on, where it has
+    /// one (pluribus-services' `ParsedFilters::row`, as the pages' `Filters::drops` has it).
+    fn mark_row(fields: &mut [Self], category: &Category, categories: &Categories, attributes: &[FilterAttribute]) {
+        let filters = ParsedFilters::new(&Params::parse(None), Some(category), categories, &[], attributes, None);
+        for (place, filter) in filters.row(0).into_iter().enumerate() {
+            let RowFilter::Property(at) = filter else { continue };
+            let code = &filters.properties[at].attribute.code;
+            if let Some(field) = fields.iter_mut().find(|field| field.code == *code) {
+                field.row = true;
+                field.row_order = Some(place);
+            }
+        }
     }
 }
 
 /// `GET /categories/{slug}/fields?for=filters|form`: a category's properties, its own and those it
 /// takes from the categories above it, in its order: as its filters offer them (`for=filters`,
-/// db::filter_attributes, as its page and a search in it have them), or as its posting form asks
-/// for them (`for=form`, db::form_attributes, as the form's properties frame has them: none for a
-/// category that only groups others, whose listings go into one under it). A `for` that is
-/// neither, or none, is a validation error on `for`; a category the site hasn't, or not any more,
-/// is not found.
+/// db::filter_attributes, as its page and a search in it have them), each with its place in the
+/// row of dropdowns its results page opens with where it has one (`FieldDto::mark_row`), or as its
+/// posting form asks for them (`for=form`, db::form_attributes, as the form's properties frame has
+/// them: none for a category that only groups others, whose listings go into one under it). A
+/// `for` that is neither, or none, is a validation error on `for`; a category the site hasn't, or
+/// not any more, is not found.
 #[utoipa::path(
     get,
     path = "/categories/{slug}/fields",
     tag = "reference",
     operation_id = "listCategoryFields",
     summary = "A category's properties",
-    description = "A category's properties, its own and those it takes from the categories above it, in its order, as its filters offer them or as its posting form asks for them (none for the form of a category that only groups others).",
+    description = "A category's properties, its own and those it takes from the categories above it, in its order, as its filters offer them, each with its place in the row of dropdowns its results page opens with where it has one, or as its posting form asks for them (none for the form of a category that only groups others).",
     params(
         ("slug" = String, Path, description = "The category's slug", example = "makina"),
         ("for" = FieldsFor, Query, description = "`filters`, those its filters offer, or `form`, those its posting form asks for"),
@@ -470,7 +506,9 @@ pub async fn fields(
     let fields = match fields_for {
         FieldsFor::Filters => {
             let attributes = db::filter_attributes(&state.db, &category.slug).await?;
-            FieldDto::all(&attributes.iter().map(Property::from).collect::<Vec<_>>())?
+            let mut fields = FieldDto::all(&attributes.iter().map(Property::from).collect::<Vec<_>>())?;
+            FieldDto::mark_row(&mut fields, category, &categories, &attributes);
+            fields
         }
         FieldsFor::Form if categories.has_children(category.id) => Vec::new(),
         FieldsFor::Form => {

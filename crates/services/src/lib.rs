@@ -19,7 +19,9 @@
 //! properties checked (properties.rs); the photos on their way in, checked, made into their copies
 //! and put in the store (photos.rs); the limits, the moderators' review, who it is posted as, the
 //! zone its words name and what cars of its model ask (posting.rs); and the places words name
-//! (places.rs), which search reads them by too.
+//! (places.rs), which search reads them by too. And what a search box suggests as its words are
+//! typed, which the pages' rows and the API's answer are made from alike since C13
+//! (suggestions.rs).
 
 pub mod ai;
 pub mod config;
@@ -40,6 +42,7 @@ pub mod recommended;
 pub mod searches;
 pub mod sender;
 pub mod sign_in;
+pub mod suggestions;
 pub mod views;
 
 use std::sync::Arc;

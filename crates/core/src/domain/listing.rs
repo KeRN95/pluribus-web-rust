@@ -11,10 +11,11 @@
 //! And what a listing's page works out from its price, which the pages (web/listings.rs,
 //! web/car_prices.rs) and the JSON API (api/listing.rs) share, moved out of web/listings.rs in step
 //! C5: a loan for it (`loan_amount`, LOAN_DOWN_PERCENT), by how much its price dropped
-//! (`price_drop`), a car's price against what cars of its model and year ask (`car_verdict`, and a
-//! clear bargain, `bargain`), a property's square metre (`area_price`) against its zone's average
-//! (`zone_price`, ZONE_MARGIN_EUR); and how its page is laid out, by its category and those above
-//! it (`lineage`: a car's, CARS, or a property's, MAPPED).
+//! (`price_drop`), a car's price against what cars of its model and year ask (`car_verdict`, the
+//! share it weighs, `car_percent`, and a clear bargain, `bargain`), a property's square metre
+//! (`area_price`) against its zone's average (`zone_price`, ZONE_MARGIN_EUR); and how its page is
+//! laid out, by its category and those above it (`lineage`: a car's, CARS, or a property's,
+//! MAPPED).
 
 use std::fmt;
 
@@ -456,15 +457,25 @@ impl CarVerdict {
 /// The verdict on a car's price against the median, both in euros: none under half of it, where a
 /// price says only that it is likely wrong (lekë typed as euros), or a lure; none without a median.
 pub fn car_verdict(price_eur: Decimal, median_eur: Decimal) -> Option<CarVerdict> {
-    if median_eur <= Decimal::ZERO {
-        return None;
-    }
-    match price_eur / median_eur {
+    match car_ratio(price_eur, median_eur)? {
         ratio if ratio < Decimal::new(50, 2) => None,
         ratio if ratio <= Decimal::new(85, 2) => Some(CarVerdict::Good),
         ratio if ratio < Decimal::new(115, 2) => Some(CarVerdict::Near),
         _ => Some(CarVerdict::Above),
     }
+}
+
+/// A car's price as a share of the median, both in euros, in whole percent, the half rounded up:
+/// what `car_verdict` weighs (93 for a price 7 % under it, 120 for one 20 % over); none without a
+/// median. The API's `car_price.percent`, beside the verdict, which goes by the share unrounded.
+pub fn car_percent(price_eur: Decimal, median_eur: Decimal) -> Option<i64> {
+    let percent = car_ratio(price_eur, median_eur)? * Decimal::ONE_HUNDRED;
+    percent.round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero).to_i64()
+}
+
+/// A car's price over the median, both in euros; none without a median.
+fn car_ratio(price_eur: Decimal, median_eur: Decimal) -> Option<Decimal> {
+    (median_eur > Decimal::ZERO).then(|| price_eur / median_eur)
 }
 
 /// A clear bargain, as a card marks one ("Çmim i mirë"; the API's `good_price`): a car whose price
@@ -892,6 +903,11 @@ mod tests {
         assert_eq!(verdict_at(11_499), Some(CarVerdict::Near));
         assert_eq!(verdict_at(11_500), Some(CarVerdict::Above));
         assert_eq!(car_verdict(Decimal::from(8_000), Decimal::ZERO), None, "no median");
+        // The share the verdict weighs, in whole percent, the half up.
+        let percent_at = |price: i64| car_percent(Decimal::from(price), median);
+        assert_eq!((percent_at(8_500), percent_at(8_549), percent_at(8_550), percent_at(12_000)), (Some(85), Some(85), Some(86), Some(120)));
+        assert_eq!(car_percent(Decimal::from(9_500), Decimal::from(10_250)), Some(93));
+        assert_eq!(car_percent(Decimal::from(8_000), Decimal::ZERO), None, "no median");
         // A clear bargain, as a card marks one: a good price, not lately dropped.
         let bargain_at = |price: i64, dropped| bargain(Some(Decimal::from(price)), Some(median), dropped);
         assert!(bargain_at(8_500, false) && bargain_at(5_000, false));

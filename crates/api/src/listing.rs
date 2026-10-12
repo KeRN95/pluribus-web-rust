@@ -20,7 +20,8 @@ use pluribus_core::{
         Condition, ListingType, PriceType, Status, UnknownKind,
         listing::{self as rules, CarVerdict, LOAN_DOWN_PERCENT, MAPPED, ZoneVerdict},
     },
-    format, i18n,
+    format::{self, Activity},
+    i18n,
 };
 use pluribus_db::{self as db, AttributeValue, ListingDetail, Photo, SellerContact, SessionUser};
 use pluribus_services::{
@@ -37,7 +38,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{
-    ApiError, CardPage, OptionalApiUser, Page,
+    ApiError, CardPage, CategoryNameDto, OptionalApiUser, Page,
     browse::{self, CardDto, Caller, SellerKind},
     openapi::{Internal, NotFound, Unauthorized, Validation, kinds},
     signin::ClientIp,
@@ -58,6 +59,9 @@ pub struct ListingDto {
     /// A car's title as its seller wrote it, where `title` was made: what its page heads its
     /// description with; none for the others.
     pub heading: Option<String>,
+    /// Its category, and the way up from it, as its page's breadcrumb goes.
+    #[schema(required = false)]
+    pub category: ListingCategoryDto,
     /// Whether its page is laid out as a car's or a property's (domain::listing::MAPPED): its
     /// photos a mosaic, its key facts in a row, where it is on a map (`place.point`).
     pub deal: bool,
@@ -114,6 +118,21 @@ pub struct ListingDto {
     pub views: Option<i64>,
 }
 
+/// A listing's category (`ListingDto::category`): its slug, which `GET /listings` takes as
+/// `category`, its name in Albanian and as an English page says it, what its page is titled by,
+/// and those above it, the main one first, as its page's breadcrumb goes up through them.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ListingCategoryDto {
+    #[schema(examples("makina"))]
+    pub slug: String,
+    #[schema(examples("Makina"))]
+    pub name: String,
+    #[schema(examples("Cars"))]
+    pub name_en: String,
+    /// The categories above it, the main one first (Automjete over Makina); none for a main one.
+    pub path: Vec<CategoryNameDto>,
+}
+
 /// A listing's price, as its page says it.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ListingPriceDto {
@@ -165,6 +184,11 @@ pub struct CarPriceDto {
     /// (its page then shows no bubble).
     #[schema(value_type = Option<kinds::CarVerdict>)]
     pub verdict: Option<CarVerdict>,
+    /// Its price as a share of the median, both in euros, in whole percent, the half rounded up
+    /// (domain::listing::car_percent): what the verdict weighs, unrounded; 93 for a price 7 % under
+    /// it, 120 for one 20 % over.
+    #[schema(examples(93))]
+    pub percent: Option<i64>,
     /// What such cars ask, in a sentence, in the language asked for: "Volkswagen Golf 2014–2018 në
     /// shitje: shumica kërkojnë 9 500–11 400 €, mesatarja 10 300 €."
     pub text: String,
@@ -302,6 +326,12 @@ pub struct PlaceDto {
     /// its own point, rounded to about a hundred metres as its form keeps it, or its town's; the
     /// map draws a circle round it.
     pub point: Option<PointDto>,
+    /// How many listings of its category its zone has on the site, those on sale at a price with
+    /// an area, which the zone's average comes from (`area_price.zone_per_m2`), as its page's note
+    /// counts them ("Mesatarja: 12 njoftime në shitje në Blloku"); none outside a zone, or in one
+    /// with too few for an average.
+    #[schema(examples(12))]
+    pub zone_listings: Option<i64>,
 }
 
 /// A point on the map.
@@ -342,6 +372,13 @@ pub struct SellerDto {
     pub answers_within: Option<String>,
     /// Whether they were on the site today, by Albania's clock: a store's, any of its people.
     pub active_today: bool,
+    /// When they were last on the site, by Albania's clock, by the days their card counts
+    /// (format::Activity): "today" ("Aktiv sot"), within the "week", from yesterday to six days
+    /// ago ("Aktiv dje", "Aktiv para 3 ditësh"), within the "month", up to thirty days ago, or
+    /// "longer" ago, the last two of which the card leaves unsaid; null for one never seen. A
+    /// store's, any of its people.
+    #[schema(value_type = Option<kinds::Activity>)]
+    pub active: Option<Activity>,
     /// Whether a moderator suspended their account or their store, which took the listing off the
     /// site: its seller and the moderators, who alone see it then, are told so.
     pub suspended: bool,
@@ -465,6 +502,15 @@ pub(crate) async fn listing_dto(state: &AppState, user: Option<&SessionUser>, he
     // A car's page (CARS) or a property's (MAPPED), by its category and those above it.
     let lineage = rules::lineage(&categories, &listing.category_slug);
     let deal = lineage.iter().any(|slug| MAPPED.contains(slug));
+    // Its category, and those above it, the main one first (none above one the site has taken
+    // off, which the active categories lack).
+    let above = categories.by_slug(&listing.category_slug).map(|category| categories.ancestors(category)).unwrap_or_default();
+    let category = ListingCategoryDto {
+        slug: listing.category_slug.clone(),
+        name: listing.category_name.clone(),
+        name_en: english(&listing.category_name),
+        path: above.into_iter().map(CategoryNameDto::from).collect(),
+    };
     let car_price = match lineage.contains(&rules::CARS) {
         true => db::car_price(&state.db, listing.id).await?,
         false => None,
@@ -481,6 +527,7 @@ pub(crate) async fn listing_dto(state: &AppState, user: Option<&SessionUser>, he
         Some(CarPriceDto {
             median: prices.median_amount.normalize(),
             verdict: rules::car_verdict(car.price_eur, car.prices.median_eur),
+            percent: rules::car_percent(car.price_eur, car.prices.median_eur),
             text: prices.text(),
         })
     });
@@ -501,7 +548,10 @@ pub(crate) async fn listing_dto(state: &AppState, user: Option<&SessionUser>, he
             (Some(lat), Some(lng)) if deal => Some(PointDto { lat, lng }),
             _ => None,
         },
+        zone_listings: listing.zone.as_ref().and(listing.zone_listings),
     };
+    // When its seller was last here, as their card counts the days.
+    let active = listing.seller_seen.map(|seen| Activity::of(seen, now));
     let seller = SellerDto {
         kind: if listing.seller_business_slug.is_some() { SellerKind::Business } else { SellerKind::User },
         user_id: listing.created_by_user_id,
@@ -512,9 +562,8 @@ pub(crate) async fn listing_dto(state: &AppState, user: Option<&SessionUser>, he
         since: listing.seller_since,
         listings: listing.seller_listings,
         answers_within: listing.seller_answers.map(|seconds| format::answers_within(seconds).to_string()),
-        active_today: listing
-            .seller_seen
-            .is_some_and(|seen| (format::tirana(now).date() - format::tirana(seen).date()).whole_days() <= 0),
+        active_today: active == Some(Activity::Today),
+        active,
         suspended: seller_suspended,
     };
     let contact = ContactDto {
@@ -532,6 +581,7 @@ pub(crate) async fn listing_dto(state: &AppState, user: Option<&SessionUser>, he
         slug: listing.slug.clone(),
         title: listing.title.clone(),
         heading: listing.heading.clone(),
+        category,
         deal,
         kind,
         condition,

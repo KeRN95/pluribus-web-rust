@@ -7,6 +7,7 @@
 //! (whatsapp_url, web/listings.rs's until C5, which the pages' reveal and the API's share).
 
 use rust_decimal::{Decimal, prelude::ToPrimitive};
+use serde::Serialize;
 use time::{Date, Duration, Month, OffsetDateTime, UtcOffset, macros::format_description};
 use uuid::Uuid;
 
@@ -256,12 +257,43 @@ pub fn answers_within(seconds: f64) -> &'static str {
 /// When someone was last on the site, within the week, by Albania's clock: "Aktiv sot", "Aktiv
 /// dje", "Aktiv para 3 ditësh"; None from a week on.
 pub fn last_active(seen: OffsetDateTime, now: OffsetDateTime) -> Option<String> {
-    match (tirana(now).date() - tirana(seen).date()).whole_days() {
+    match days_ago(seen, now) {
         ..=0 => Some(t("Aktiv sot").to_string()),
         1 => Some(t("Aktiv dje").to_string()),
         days @ 2..=6 => Some(t1("Aktiv para {} ditësh", days)),
         _ => None,
     }
+}
+
+/// When someone was last on the site, by Albania's clock, by the days `last_active` counts: today
+/// ("Aktiv sot"), within the week, from yesterday to six days ago ("Aktiv dje", "Aktiv para 3
+/// ditësh"), within the month, from a week to thirty days ago, or longer ago, the last two of which
+/// a seller's card leaves unsaid. The API's `seller.active`, as JSON by its name ("week").
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Activity {
+    Today,
+    Week,
+    Month,
+    Longer,
+}
+
+impl Activity {
+    /// Of someone last on the site at `seen`, as of `now`.
+    pub fn of(seen: OffsetDateTime, now: OffsetDateTime) -> Self {
+        match days_ago(seen, now) {
+            ..=0 => Self::Today,
+            1..=6 => Self::Week,
+            7..=30 => Self::Month,
+            _ => Self::Longer,
+        }
+    }
+}
+
+/// How many days before `now` `seen` is, by Albania's clock, by their dates: 0 the same day, 1 the
+/// day before.
+fn days_ago(seen: OffsetDateTime, now: OffsetDateTime) -> i64 {
+    (tirana(now).date() - tirana(seen).date()).whole_days()
 }
 
 /// What a seller's card and profile say of them beyond their name, when there is something to
@@ -768,6 +800,20 @@ mod tests {
         assert_eq!(last_active(datetime!(2026-10-09 21:30 UTC), now).as_deref(), Some("Aktiv dje"));
         assert_eq!(last_active(datetime!(2026-10-05 12:00 UTC), now).as_deref(), Some("Aktiv para 5 ditësh"));
         assert_eq!(last_active(datetime!(2026-10-03 12:00 UTC), now), None);
+        // The same days, as the API says them: today, the week, the month, or longer ago.
+        let activity = |seen| Activity::of(seen, now);
+        assert_eq!(
+            [
+                activity(datetime!(2026-10-10 08:00 UTC)),
+                activity(datetime!(2026-10-09 21:30 UTC)),
+                activity(datetime!(2026-10-04 12:00 UTC)),
+                activity(datetime!(2026-10-03 12:00 UTC)),
+                activity(datetime!(2026-09-10 12:00 UTC)),
+                activity(datetime!(2026-09-09 12:00 UTC)),
+            ],
+            [Activity::Today, Activity::Week, Activity::Week, Activity::Month, Activity::Month, Activity::Longer]
+        );
+        assert_eq!(serde_json::to_value(Activity::Week).unwrap(), "week");
         assert_eq!(
             seller_activity(Some(600.0), Some(datetime!(2026-10-10 08:00 UTC)), now).as_deref(),
             Some("Përgjigjet zakonisht brenda 1 ore ·\u{a0}Aktiv\u{a0}sot")
