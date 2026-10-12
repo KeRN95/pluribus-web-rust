@@ -1,6 +1,6 @@
 -- 305 sample listings for the development database, across every category, each with a
 -- cover photo and the properties its category defines. Generated with a fixed random seed. Load it
--- after the migrations, with or without tests/fixtures/listings.sql:
+-- after the migrations, with or without crates/web/tests/fixtures/listings.sql:
 --   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 < dev/sample_listings.sql
 -- Sellers are fictional, and so are their phone numbers (+355 69 000 0xxx). Photos are free under
 -- the Unsplash License (https://unsplash.com/license), served by Unsplash's image CDN; credits are

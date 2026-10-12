@@ -64,10 +64,10 @@ fi
 
 export CARGO_TARGET_DIR="$TARGET" SQLX_OFFLINE=true
 cargo build --release
-newest_source="$(find src templates migrations Cargo.toml Cargo.lock -type f -printf '%T@\n' | sort -n | tail -1)"
+newest_source="$(find src crates templates migrations Cargo.toml Cargo.lock -type f -printf '%T@\n' | sort -n | tail -1)"
 if [ "$(stat -c %Y "$BINARY")" -lt "${newest_source%.*}" ]; then
     echo "The binary is older than the sources: building again from clean."
-    cargo clean -p marketplace --release
+    cargo clean --release -p marketplace -p pluribus-core -p pluribus-db -p pluribus-services -p pluribus-web -p pluribus-api
     cargo build --release
 fi
 

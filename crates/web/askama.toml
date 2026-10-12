@@ -1,0 +1,4 @@
+# The templates are the repository's templates/, beside crates/ rather than inside this crate, so
+# that every `#[template(path = "...")]` names a file as it always has.
+[general]
+dirs = ["../../templates"]

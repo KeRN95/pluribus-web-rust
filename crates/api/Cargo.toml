@@ -1,0 +1,12 @@
+[package]
+name = "pluribus-api"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# The JSON API the phone app will call, under /api/v1: empty until Phase C fills it, and not
+# mounted yet. It shares the pages' state (pluribus-services' AppState) and never the pages
+# themselves (pluribus-web).
+[dependencies]
+pluribus-services.workspace = true
+axum.workspace = true

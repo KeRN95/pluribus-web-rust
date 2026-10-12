@@ -1,10 +1,38 @@
 [package]
 name = "marketplace"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# The binary, src/main.rs: the server, which serves the site's pages (pluribus-web) and rebuilds
+# now and then the figures they read (pluribus-db). The site itself is the crates under crates/,
+# one for each of its parts, each with its own tests (README, "Project layout").
+[dependencies]
+pluribus-db.workspace = true
+pluribus-web.workspace = true
+anyhow.workspace = true
+axum.workspace = true
+dotenvy.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[workspace]
+members = ["crates/*"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.97"
 
-[dependencies]
+# Every crate's dependencies, at one version and with one set of features for the whole
+# workspace; each crate names those it uses (`anyhow.workspace = true`).
+[workspace.dependencies]
+pluribus-core = { path = "crates/core" }
+pluribus-db = { path = "crates/db" }
+pluribus-services = { path = "crates/services" }
+pluribus-web = { path = "crates/web" }
 anyhow = "1.0.104"
 base64 = "0.22"
 askama = "0.14.0"
@@ -24,8 +52,8 @@ mozjpeg = { version = "0.10", default-features = false }
 mozjpeg-sys = { version = "2.2", default-features = false, features = ["unwinding"] }
 lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1", "tokio1-rustls-tls", "hostname"] }
 object_store = { version = "0.12", default-features = false, features = ["aws"] }
-# The site's scripts go minified (web::minified_js): Oxc parses one, shortens it (its comments
-# and white space, its local names) and writes it out again.
+# The site's scripts go minified (pluribus-web's minified_js): Oxc parses one, shortens it (its
+# comments and white space, its local names) and writes it out again.
 oxc_allocator = "0.153"
 oxc_codegen = "0.153"
 oxc_minifier = "0.153"
@@ -44,15 +72,14 @@ tower-http = { version = "0.7.1", features = ["fs", "trace", "compression-gzip",
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 uuid = { version = "1.26.1", features = ["serde"] }
-
-[dev-dependencies]
+# The request tests' (crates/web/tests).
 http-body-util = "0.1.5"
 tower = { version = "0.5.3", features = ["util"] }
 
 # A card's AVIF copy, which the tests make, takes rav1e many seconds unoptimised, with the crates it
 # works with, and with its checks: the tests' builds optimise every dependency, as the release
-# does, and leave rav1e's checks out. The site's own crate builds as before (media.rs keeps
-# rav1e's work out of it).
+# does, and leave rav1e's checks out. The site's own crates, the workspace's, build as before
+# (media.rs keeps rav1e's work out of them).
 [profile.dev.package."*"]
 opt-level = 3
 

@@ -1649,38 +1649,14 @@ name = "marketplace"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "askama",
  "axum",
- "base64 0.22.1",
  "dotenvy",
- "form_urlencoded",
- "futures-util",
- "http-body-util",
- "image",
- "lettre",
- "libwebp-sys",
- "mozjpeg",
- "mozjpeg-sys",
- "object_store",
- "oxc_allocator",
- "oxc_codegen",
- "oxc_minifier",
- "oxc_parser",
- "oxc_span",
- "rand 0.9.5",
- "reqwest",
- "rust_decimal",
- "serde",
- "serde_json",
- "sha2",
+ "pluribus-db",
+ "pluribus-web",
  "sqlx",
- "time",
  "tokio",
- "tower",
- "tower-http 0.7.1",
  "tracing",
  "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]
@@ -2500,6 +2476,102 @@ name = "plain"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
+
+[[package]]
+name = "pluribus-api"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "pluribus-services",
+]
+
+[[package]]
+name = "pluribus-core"
+version = "0.1.0"
+dependencies = [
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "time",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "pluribus-db"
+version = "0.1.0"
+dependencies = [
+ "pluribus-core",
+ "rand 0.9.5",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "pluribus-services"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "base64 0.22.1",
+ "futures-util",
+ "image",
+ "lettre",
+ "libwebp-sys",
+ "mozjpeg",
+ "mozjpeg-sys",
+ "object_store",
+ "pluribus-core",
+ "pluribus-db",
+ "rand 0.9.5",
+ "reqwest",
+ "rust_decimal",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "time",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "pluribus-web"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "askama",
+ "axum",
+ "base64 0.22.1",
+ "form_urlencoded",
+ "http-body-util",
+ "image",
+ "oxc_allocator",
+ "oxc_codegen",
+ "oxc_minifier",
+ "oxc_parser",
+ "oxc_span",
+ "pluribus-core",
+ "pluribus-db",
+ "pluribus-services",
+ "rand 0.9.5",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "time",
+ "tokio",
+ "tower",
+ "tower-http 0.7.1",
+ "tracing",
+ "uuid",
+]
 
 [[package]]
 name = "png"

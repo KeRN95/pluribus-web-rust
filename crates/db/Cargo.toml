@@ -1,0 +1,18 @@
+[package]
+name = "pluribus-db"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# Database access: the queries and the rows they read, the migrations (embedded once, `MIGRATOR`,
+# which the server runs as it starts and the tests name), the page size and the count limits.
+[dependencies]
+pluribus-core.workspace = true
+rand.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+time.workspace = true
+tokio.workspace = true
+uuid.workspace = true

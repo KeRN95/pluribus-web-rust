@@ -16,8 +16,10 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     tracing_subscriber::fmt()
         .with_env_filter(
+            // `pluribus` is every crate of the site's (pluribus_web, pluribus_db...), a log's
+            // target being the module a line comes from, matched by the start of its name.
             EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("marketplace=info,tower_http=info")),
+                .unwrap_or_else(|_| EnvFilter::new("marketplace=info,pluribus=info,tower_http=info")),
         )
         .init();
 
@@ -25,11 +27,11 @@ async fn main() -> anyhow::Result<()> {
     let options: PgConnectOptions = database_url.parse().context("DATABASE_URL is not a PostgreSQL address")?;
     let db = PgPoolOptions::new()
         .max_connections(10)
-        .connect_with(marketplace::db::plan_for_values(options))
+        .connect_with(pluribus_db::plan_for_values(options))
         .await
         .context("could not connect to PostgreSQL")?;
 
-    sqlx::migrate!().run(&db).await.context("could not run migrations")?;
+    pluribus_db::MIGRATOR.run(&db).await.context("could not run migrations")?;
 
     // Search fixes typos and finds words' other forms from the words listings use, and a
     // property's page compares its price per square metre with its zone's: figures over all the
@@ -41,21 +43,21 @@ async fn main() -> anyhow::Result<()> {
             let mut refresh = tokio::time::interval(REFRESH_EVERY);
             loop {
                 refresh.tick().await;
-                if let Err(error) = marketplace::db::refresh_search_words(&db).await {
+                if let Err(error) = pluribus_db::refresh_search_words(&db).await {
                     tracing::warn!(%error, "could not refresh the words search corrects typos from");
                 }
-                if let Err(error) = marketplace::db::refresh_zone_prices(&db).await {
+                if let Err(error) = pluribus_db::refresh_zone_prices(&db).await {
                     tracing::warn!(%error, "could not refresh what a square metre costs in each zone");
                 }
-                if let Err(error) = marketplace::db::refresh_car_prices(&db).await {
+                if let Err(error) = pluribus_db::refresh_car_prices(&db).await {
                     tracing::warn!(%error, "could not refresh what cars of each model ask");
                 }
-                if let Err(error) = marketplace::db::refresh_response_times(&db).await {
+                if let Err(error) = pluribus_db::refresh_response_times(&db).await {
                     tracing::warn!(%error, "could not refresh how quickly the sellers answer");
                 }
                 // Sign-in codes asked for over a day ago go, with the contacts and addresses (IPs)
                 // they were asked from, as the privacy page promises.
-                if let Err(error) = marketplace::db::forget_old_codes(&db).await {
+                if let Err(error) = pluribus_db::forget_old_codes(&db).await {
                     tracing::warn!(%error, "could not forget the old sign-in codes");
                 }
             }
@@ -70,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("listening on http://{addr}");
 
     // The connection's address is the visitor's IP for the sign-in limits (web/account.rs).
-    axum::serve(listener, marketplace::app(db).into_make_service_with_connect_info::<SocketAddr>())
+    axum::serve(listener, pluribus_web::app(db).into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(async {
             tokio::signal::ctrl_c().await.ok();
         })

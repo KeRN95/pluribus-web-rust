@@ -1,0 +1,17 @@
+[package]
+name = "pluribus-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# What the site's things are and how it says them, apart from the pages that show them and the
+# database that keeps them: the domain (its kinds, the categories and places, a listing's rules,
+# what a notification says, the rules about sending a message), the two languages (i18n, with the
+# English catalogue build.rs makes a table of) and the formatting. No sqlx, no axum.
+[dependencies]
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+time.workspace = true
+tokio.workspace = true
+uuid.workspace = true

@@ -15,22 +15,22 @@
 --   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v remove=1 -v only=elektronike < dev/generate_listings.sql
 --   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v count=20000 -v only=elektronike < dev/generate_listings.sql
 -- photos=1 makes nothing, but gives the listings there that have only a cover (from an earlier
--- version of this script, dev/sample_listings.sql or tests/fixtures/listings.sql) more of their
--- category's photos; listings people made on the site keep theirs:
+-- version of this script, dev/sample_listings.sql or crates/web/tests/fixtures/listings.sql) more
+-- of their category's photos; listings people made on the site keep theirs:
 --   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v photos=1 < dev/generate_listings.sql
 -- A property listing stands in the zone of its town its title names, where the town has zones
 -- (migrations/0019_zones.sql). zones=1 makes nothing, but moves the ones earlier versions of this
 -- script left in the town into their zones:
 --   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v zones=1 < dev/generate_listings.sql
 -- views=1 makes nothing, but gives a twentieth of the active listings it made views over the last
--- two weeks (listing_daily_stats), a few of them many, as the site counts them (src/views.rs), for
--- the welcome page's "Më të klikuarat"; runs add up:
+-- two weeks (listing_daily_stats), a few of them many, as the site counts them
+-- (crates/services/src/views.rs), for the welcome page's "Më të klikuarat"; runs add up:
 --   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v views=1 < dev/generate_listings.sql
 -- drops=1 makes nothing, but makes a twentieth of the active listings it made with a price, on
 -- sale, for rent or a service, 8 to 25% cheaper, as if their sellers had lowered them: the price
 -- history records it (its trigger), and their cards and pages say by how much (price_was! in
--- src/db/mod.rs); runs add up. Those who keep a listing hear only of the drops its seller makes on
--- the site (src/db/price_drops.rs):
+-- crates/db/src/lib.rs); runs add up. Those who keep a listing hear only of the drops its seller
+-- makes on the site (crates/db/src/price_drops.rs):
 --   docker compose exec -T db psql -U marketplace -v ON_ERROR_STOP=1 -v drops=1 < dev/generate_listings.sql
 --
 -- All of it is fictional: the sellers (dev|generated-…, …@example.test, phone numbers

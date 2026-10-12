@@ -1,7 +1,8 @@
 #!/bin/sh
-# The checks, from WSL (or Linux). Given words, only the tests whose names hold them, for while a
-# change is being made; without, what a commit needs: clippy over every target and every test,
-# side by side, each in a target directory of its own so that neither waits for the other's lock.
+# The checks, from WSL (or Linux), over every crate of the workspace. Given words, only the tests
+# whose names hold them, for while a change is being made; without, what a commit needs: clippy
+# over every target and every test, side by side, each in a target directory of its own so that
+# neither waits for the other's lock.
 #
 #   sh dev/check.sh                  clippy, and every test
 #   sh dev/check.sh heading sort     the tests with "heading" or "sort" in their names
@@ -17,15 +18,15 @@ THREADS="${TEST_THREADS:-8}"
 
 if [ "$#" -gt 0 ]; then
   for words in "$@"; do
-    CARGO_TARGET_DIR="$TESTS" cargo test -q "$words" -- --test-threads="$THREADS" || exit 1
+    CARGO_TARGET_DIR="$TESTS" cargo test -q --workspace "$words" -- --test-threads="$THREADS" || exit 1
   done
   exit 0
 fi
 
 LOG="$(mktemp -d)"
-CARGO_TARGET_DIR="$LINTS" cargo clippy -q --all-targets >"$LOG/clippy" 2>&1 &
+CARGO_TARGET_DIR="$LINTS" cargo clippy -q --all-targets --workspace >"$LOG/clippy" 2>&1 &
 CLIPPY=$!
-CARGO_TARGET_DIR="$TESTS" cargo test -q -- --test-threads="$THREADS" >"$LOG/tests" 2>&1
+CARGO_TARGET_DIR="$TESTS" cargo test -q --workspace -- --test-threads="$THREADS" >"$LOG/tests" 2>&1
 TESTED=$?
 wait "$CLIPPY"
 LINTED=$?
