@@ -47,8 +47,9 @@ impl FromRequestParts<AppState> for OptionalApiUser {
 }
 
 /// The bearer token the request carries: what follows the scheme in `Authorization`, when the
-/// scheme is Bearer (in any case, as RFC 7235 has schemes).
-fn bearer(headers: &HeaderMap) -> Option<&str> {
+/// scheme is Bearer (in any case, as RFC 7235 has schemes). browse.rs reads it too, for the
+/// accounts its session blocked.
+pub(crate) fn bearer(headers: &HeaderMap) -> Option<&str> {
     let (scheme, token) = headers.get(header::AUTHORIZATION)?.to_str().ok()?.trim().split_once(' ')?;
     let token = token.trim();
     (scheme.eq_ignore_ascii_case("bearer") && !token.is_empty()).then_some(token)

@@ -87,6 +87,10 @@ pub struct ListingCard {
     /// photo.
     pub seller_name: String,
     pub seller_since: OffsetDateTime,
+    /// Whether a business sells it (seller_business_id: one of its people posted it for it),
+    /// rather than a private seller: the API's card says which (pluribus-api's browse.rs).
+    #[sqlx(default)]
+    pub seller_business: bool,
     /// The category's card properties in order, as data, which a page words in its language
     /// ("2016", "148 000 km", "Naftë": web/listings.rs, CardDetailExt) and the API gives as it is:
     /// those the listing gives, but a date or a box left unticked, which a card doesn't show.
@@ -823,6 +827,7 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH RECURSIVE deal_categories AS
                          (SELECT u.display_name FROM users u WHERE u.id = l.seller_user_id), '') AS seller_name,
                 coalesce((SELECT b.created_at FROM businesses b WHERE b.id = l.seller_business_id),
                          (SELECT u.created_at FROM users u WHERE u.id = l.seller_user_id), l.created_at) AS seller_since,
+                l.seller_business_id IS NOT NULL AS seller_business,
                 l.sort_at,
                 -- Its card properties as data (CardDetail), which the pages word (web/listings.rs):
                 -- the number as text, every digit kept.

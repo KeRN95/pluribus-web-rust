@@ -11,6 +11,7 @@
 pub mod ai;
 pub mod config;
 pub mod expiry;
+pub mod filters;
 pub mod media;
 pub mod notices;
 pub mod promotions;

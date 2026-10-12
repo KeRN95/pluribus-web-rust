@@ -1,0 +1,10 @@
+# The JSON API's browsing (crates/api/src/browse.rs): what it says, in the language each request
+# asks for (crates/api/src/lang.rs). The cards it answers carry data, which the app words itself.
+
+# crates/api/src/browse.rs: a list's paging that doesn't read, under "after" or "sipas"
+
+Vazhdimi i listës nuk lexohet. Fillo përsëri nga faqja e parë.
+= Where the list goes on from can’t be read. Start again from the first page.
+
+Njoftimet nga të cilat vijnë rekomandimet nuk lexohen. Fillo përsëri nga faqja e parë.
+= The listings the recommendations come from can’t be read. Start again from the first page.

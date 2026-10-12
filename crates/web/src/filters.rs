@@ -1,49 +1,37 @@
-//! The filters of a browse page: read from the query string, turned into the listing query, and
-//! shown back as the filter form, removable chips and the URL of the next page.
+//! The filters of a browse page as the page shows them: the filter form, the chips that remove
+//! them, the row's dropdowns, the place's menu, the orders, and the URLs of the page with one
+//! filter more or less and of its next page. The filters themselves, read from the query string
+//! and turned into the listing query, are pluribus-services' (filters.rs, `ParsedFilters`, whose
+//! fields a page's `Filters` reads as its own), which the JSON API reads too: its vocabulary
+//! (q, category, city, zone, lat, lng, radius, type, condition, price_min, price_max, currency,
+//! sort, after, and the properties' own) is described there.
 //!
-//! Parameters: q, category (on /search and /harta; on a category page the path names it), city,
-//! zone (one of the town's zones, Plazh in Durrës: in property only, whose listings can say one),
-//! lat, lng and radius (a map pin, and how many km around it), type, condition (repeatable),
-//! price_min, price_max, currency, sort and after, harta=1 (a category or search page with its
-//! map's dots, which its map fetches when it first opens), numri=1 (only the count, as JSON:
-//! browse.rs), plus one per filterable property of the category, named by the property's code:
-//! option codes for SELECT and MULTISELECT properties (vehicle_fuel=DIESEL, repeatable),
-//! <code>_min and <code>_max for NUMBER properties, and <code>=1 for BOOLEAN ones. Values that
-//! don't exist are ignored, so an outdated or hand-edited URL still shows a page.
-//!
-//! Where to look is a place: a town (city), or a point on the map with a distance around it (lat,
-//! lng, radius); one or the other, as the pills under the browse row offer them, and the town a
-//! visitor picked stays theirs on the next pages (Params::remembering_town). In property, a zone
-//! of the town narrows it further; it goes with its town.
+//! The pages' own: harta=1 (a category or search page with its map's dots, which its map fetches
+//! when it first opens), numri=1 (only the count, as JSON: browse.rs), the town a visitor picked
+//! last (TOWN_COOKIE), which a page whose address names no place opens in, given to the parser as
+//! the town it remembers (Params::remembering_town), and the map page's pin, the middle of Tirana
+//! (TIRANA), which it looks around until the visitor sets another, given to the parser as its
+//! default pin. Where to look is a place, a town or a point on the map with a distance around it,
+//! one or the other, as the pills under the browse row offer them.
+
+use std::ops::Deref;
 
 use rust_decimal::{
     Decimal,
     prelude::{FromPrimitive, ToPrimitive},
 };
-use uuid::Uuid;
+
+pub use pluribus_services::filters::{Params, SEARCH_CHARS, parse_number};
+use pluribus_services::filters::{
+    CONDITIONS, CURRENCIES, DEFAULT_RADIUS_KM, MAX_RADIUS_KM, ParsedFilters, Property, plain, year_param,
+};
 
 use super::{post::zoned, properties};
 use crate::{
-    db::{
-        AttributeFilter, AttributeOption, Categories, Category, City, Cursor, FilterAttribute,
-        ListingFilter, Near, PriceRange, Sort, TextSearch, Zone,
-    },
+    db::{AttributeOption, Categories, Category, City, FilterAttribute, Near, Sort},
     format,
     i18n::{self, Lang, t, t1},
 };
-
-/// The most characters of search words a page takes. Searches are a few words; each one widened
-/// costs the database a lookup or two.
-pub const SEARCH_CHARS: usize = 100;
-
-const CONDITIONS: [&str; 4] = crate::domain::Condition::NAMES;
-const CURRENCIES: [&str; 2] = ["EUR", "ALL"];
-
-/// How far around the map pin to look, in whole kilometres, 1 to 50: in the map's form, what its
-/// circle covers at the map's zoom (map_controller.js).
-const MIN_RADIUS_KM: u32 = 1;
-const MAX_RADIUS_KM: u32 = 50;
-const DEFAULT_RADIUS_KM: u32 = 10;
 
 /// An order's name, as its button, its menu and the results' heading say it.
 fn sort_name(sort: Sort) -> &'static str {
@@ -65,16 +53,6 @@ fn sort_adjective(sort: Sort) -> &'static str {
         Sort::PriceLow => t("më të lira"),
         Sort::PriceHigh => t("më të shtrenjta"),
         Sort::Nearest => t("më afër"),
-    }
-}
-
-/// The order a page opens in: nearest first with a map pin (`near`), the best match first with
-/// words to search (`words`), the newest first otherwise.
-fn default_sort(near: bool, words: bool) -> Sort {
-    match (near, words) {
-        (true, _) => Sort::Nearest,
-        (false, true) => Sort::Relevance,
-        (false, false) => Sort::Newest,
     }
 }
 
@@ -129,42 +107,6 @@ const PRICE_DECADES: f64 = 5.0;
 /// more take a line of their own (Ngjyra's seven), as do boxes with icons, however few
 /// (Karroceria's). See Field::half.
 const HALF_LIMIT: usize = 5;
-
-/// The query string as name/value pairs, without empty values.
-pub struct Params(Vec<(String, String)>);
-
-impl Params {
-    pub fn parse(query: Option<&str>) -> Self {
-        let pairs = form_urlencoded::parse(query.unwrap_or_default().as_bytes())
-            .map(|(name, value)| (name.into_owned(), value.trim().to_string()))
-            .filter(|(_, value)| !value.is_empty())
-            .collect();
-        Self(pairs)
-    }
-
-    pub fn first(&self, name: &str) -> Option<&str> {
-        self.0.iter().find(|(n, _)| n == name).map(|(_, v)| v.as_str())
-    }
-
-    /// The search words (q), the first SEARCH_CHARS characters of them.
-    pub fn search_words(&self) -> Option<String> {
-        self.first("q").map(|q| q.chars().take(SEARCH_CHARS).collect())
-    }
-
-    /// The town a visitor picked last (TOWN_COOKIE), for an address that names no place: the page
-    /// opens in it, its pill and chip on, and the links from it name it.
-    pub fn remembering_town(mut self, town: Option<String>) -> Self {
-        let placeless = ["city", "lat", "lng"].into_iter().all(|name| self.first(name).is_none());
-        if let Some(town) = town.filter(|town| placeless && !town.is_empty()) {
-            self.0.push(("city".to_string(), town));
-        }
-        self
-    }
-
-    fn all<'p>(&'p self, name: &'p str) -> impl Iterator<Item = &'p str> {
-        self.0.iter().filter(move |(n, _)| n == name).map(|(_, v)| v.as_str())
-    }
-}
 
 /// An option of a dropdown, checkbox group or radio group.
 #[derive(Clone)]
@@ -323,56 +265,33 @@ pub enum FieldKind {
 /// buyer's vehicle, which the listing's years must include. Its parameter is "<x>_year".
 const FITS_YEAR_LABEL: &str = "Viti i automjetit";
 
-/// A browse page's filters, checked against the categories, cities and properties that exist.
+/// A browse page's filters: those its query string asks for, as pluribus-services reads them,
+/// checked against the categories, cities and properties that exist (`ParsedFilters`, whose
+/// fields read as this one's: `filters.q`, `filters.city`, and its `listing_filter`), and what the
+/// page shows of them.
 pub struct Filters<'a> {
+    parsed: ParsedFilters<'a>,
     path: String,
     /// On /search the category is one of the filters; on a category page it is the page.
     category_is_filter: bool,
-    categories: &'a Categories,
-    cities: &'a [City],
-    pub q: Option<String>,
-    pub category: Option<&'a Category>,
-    pub city: Option<&'a City>,
-    /// One of the town's zones, in property (Plazh in Durrës): listings there rather than anywhere
-    /// in the town.
-    pub zone: Option<&'a Zone>,
-    /// The map pin, with its radius: the one in the address, or on the map page without one there,
-    /// TIRANA.
-    pub near: Option<Near>,
-    /// Whether the pin came in the address (lat and lng). The map page's Tirana isn't written into
-    /// links.
-    pin_in_url: bool,
-    /// The radius picked for the map, in kilometres; it stays picked without a pin.
-    pub radius_km: u32,
     /// Whether the map's dots are asked for (harta=1): a category or search page's map fetches them
     /// when it first opens (map_points_url).
     pub map_points: bool,
-    pub listing_type: Option<String>,
-    pub conditions: Vec<&'static str>,
-    pub price_min: Option<Decimal>,
-    pub price_max: Option<Decimal>,
-    pub currency: &'static str,
-    properties: Vec<Property<'a>>,
-    pub sort: Sort,
-    pub after: Option<Cursor>,
 }
 
-/// One filterable property and what is chosen for it.
-struct Property<'a> {
-    attribute: &'a FilterAttribute,
-    selected: Vec<&'a AttributeOption>,
-    min: Option<Decimal>,
-    max: Option<Decimal>,
-    checked: bool,
-    /// For "<x>_from_year", the "<x>_to_year" it makes a pair with: the two filter as one year.
-    fits_to: Option<&'a FilterAttribute>,
-    year: Option<Decimal>,
+impl<'a> Deref for Filters<'a> {
+    type Target = ParsedFilters<'a>;
+
+    fn deref(&self) -> &ParsedFilters<'a> {
+        &self.parsed
+    }
 }
 
 impl<'a> Filters<'a> {
     /// `path` is where the page lives (and the form submits to); `category` is the page's
     /// category, or on /search the one the category parameter names; `attributes` are its
-    /// filterable properties.
+    /// filterable properties. The map page looks around its pin, or without one in its address
+    /// around TIRANA (the parser's default pin).
     pub fn new(
         params: &Params,
         path: String,
@@ -382,133 +301,12 @@ impl<'a> Filters<'a> {
         cities: &'a [City],
         attributes: &'a [FilterAttribute],
     ) -> Self {
-        let offered_types = category.map(|c| c.listing_types.as_slice()).unwrap_or_default();
-        let listing_type = params
-            .first("type")
-            .filter(|value| offered_types.len() > 1 && offered_types.iter().any(|t| t == value))
-            .map(str::to_string);
-
-        let conditions = if category.is_none_or(|c| c.uses_condition) {
-            CONDITIONS.into_iter().filter(|c| params.all("condition").any(|v| v == *c)).collect()
-        } else {
-            Vec::new()
-        };
-
-        let (price_min, price_max) = ordered(
-            params.first("price_min").and_then(parse_number),
-            params.first("price_max").and_then(parse_number),
-        );
-        let default_currency = category.map_or("ALL", |c| c.default_currency.as_str());
-        let currency = CURRENCIES
-            .into_iter()
-            .find(|c| params.first("currency") == Some(*c))
-            .or_else(|| CURRENCIES.into_iter().find(|c| *c == default_currency))
-            .unwrap_or("ALL");
-
-        // The closing year of a pair filters along with its opening one, not on its own.
-        let mut properties: Vec<Property> = attributes
-            .iter()
-            .filter(|attribute| !closes_year_pair(attribute, attributes))
-            .map(|attribute| Property::read(attribute, attributes, params))
-            .collect();
-        for i in 0..properties.len() {
-            let Some(parent_id) = properties[i].attribute.parent_attribute_id else { continue };
-            let chosen_parents: Vec<Uuid> = properties
-                .iter()
-                .find(|p| p.attribute.id == parent_id)
-                .map(|parent| parent.selected.iter().map(|o| o.id).collect())
-                .unwrap_or_default();
-            if chosen_parents.is_empty() {
-                continue;
-            }
-            // A Golf filters nothing once the make is BMW.
-            properties[i].selected.retain(|o| o.parent_id.is_some_and(|id| chosen_parents.contains(&id)));
-        }
-
-        let radius_km = params
-            .first("radius")
-            .and_then(|value| value.parse().ok())
-            .filter(|radius| (MIN_RADIUS_KM..=MAX_RADIUS_KM).contains(radius))
-            .unwrap_or(DEFAULT_RADIUS_KM);
-        let pin = match (
-            params.first("lat").and_then(|value| parse_coordinate(value, 90.0)),
-            params.first("lng").and_then(|value| parse_coordinate(value, 180.0)),
-        ) {
-            (Some(latitude), Some(longitude)) => Some((latitude, longitude)),
-            _ => None,
-        };
-        let near = pin
-            .or((path == "/harta").then_some(TIRANA))
-            .map(|(latitude, longitude)| Near { latitude, longitude, radius_m: f64::from(radius_km) * 1000.0 });
-
-        // With a pin, nearest first unless another order is picked; with words, the best match
-        // first; with neither, newest first. Each of the first two only where it can be.
-        let words = params.search_words();
-        let default_sort = default_sort(near.is_some(), words.is_some());
-        let sort = params
-            .first("sort")
-            .and_then(Sort::from_param)
-            .filter(|sort| *sort != Sort::Nearest || near.is_some())
-            .filter(|sort| *sort != Sort::Relevance || words.is_some())
-            .unwrap_or(default_sort);
-        let after = params.first("after").and_then(|value| Cursor::decode(sort, value));
-        // A town or a point, not both: a point in the address leaves out a town with it.
-        let city = params.first("city").filter(|_| pin.is_none()).and_then(|slug| cities.iter().find(|c| c.slug == slug));
-        // A zone of that town, where the category's listings can say one; its name alone could be
-        // another town's (Qendër is Tirana's, Durrës's and Vlora's).
-        let zone = city
-            .filter(|_| category.is_some_and(|category| zoned(categories, category)))
-            .and_then(|city| params.first("zone").and_then(|slug| city.zones.iter().find(|zone| zone.slug == slug)));
-
+        let default_pin = (path == "/harta").then_some(TIRANA);
         Self {
+            parsed: ParsedFilters::new(params, category, categories, cities, attributes, default_pin),
             path,
             category_is_filter,
-            categories,
-            cities,
-            q: params.search_words(),
-            category,
-            city,
-            zone,
-            near,
-            pin_in_url: pin.is_some(),
-            radius_km,
             map_points: params.first("harta") == Some("1"),
-            listing_type,
-            conditions,
-            price_min,
-            price_max,
-            currency,
-            properties,
-            sort,
-            after,
-        }
-    }
-
-    /// The listing query for these filters, with `search`, the search for the words (q) that
-    /// db::text_search made.
-    pub fn listing_filter(&self, search: Option<TextSearch>) -> ListingFilter {
-        let has_price = self.price_min.is_some() || self.price_max.is_some();
-        ListingFilter {
-            category_ids: self.category.map(|c| self.categories.subtree_ids(c.id)),
-            location_id: self.zone.map(|zone| zone.id).or(self.city.map(|c| c.id)),
-            near: self.near,
-            search,
-            listing_type: self.listing_type.clone(),
-            conditions: self.conditions.iter().map(|c| c.to_string()).collect(),
-            price: has_price.then(|| PriceRange {
-                min: self.price_min,
-                max: self.price_max,
-                currency: self.currency.to_string(),
-            }),
-            attributes: self.properties.iter().filter_map(Property::filter).collect(),
-            sort: self.sort,
-            after: self.after,
-            seller: None,
-            // The page adds the accounts the visitor blocked (safety.rs).
-            hidden_accounts: Vec::new(),
-            exclude: Vec::new(),
-            since: None,
-            matches: Default::default(),
         }
     }
 
@@ -576,11 +374,6 @@ impl<'a> Filters<'a> {
             push("sort", self.sort.param());
         }
         pairs
-    }
-
-    /// Nearest first with a map pin, the best match first with words, newest first otherwise.
-    fn default_sort(&self) -> Sort {
-        default_sort(self.near.is_some(), self.q.is_some())
     }
 
     /// This page's URL without the pairs `remove` matches.
@@ -1227,61 +1020,13 @@ impl<'a> Filters<'a> {
     }
 }
 
-impl<'a> Property<'a> {
-    /// `all` is the category's other filterable properties: a year pair's closing year is there.
-    fn read(attribute: &'a FilterAttribute, all: &'a [FilterAttribute], params: &Params) -> Self {
-        let code = attribute.code.as_str();
-        let (mut selected, mut min, mut max, mut checked) = (Vec::new(), None, None, false);
-        let fits_to = year_pair_end(attribute, all);
-        if fits_to.is_some() {
-            let year = params.first(&year_param(attribute)).and_then(parse_year);
-            return Self { attribute, selected, min, max, checked, fits_to, year };
-        }
-        match attribute.data_type.as_str() {
-            "SELECT" | "MULTISELECT" => {
-                selected = attribute.options.iter().filter(|o| params.all(code).any(|value| value == o.code)).collect();
-            }
-            "NUMBER" => {
-                (min, max) = ordered(
-                    params.first(&format!("{code}_min")).and_then(parse_number),
-                    params.first(&format!("{code}_max")).and_then(parse_number),
-                );
-            }
-            "BOOLEAN" => checked = params.first(code) == Some("1"),
-            _ => {}
-        }
-        Self { attribute, selected, min, max, checked, fits_to, year: None }
-    }
+/// A property's filter as the form shows it: `Property`'s own method in all but name, a trait
+/// because the type is pluribus-services'.
+trait PropertyExt {
+    fn field(&self, all: &[Property]) -> Field;
+}
 
-    fn filter(&self) -> Option<AttributeFilter> {
-        let attribute_id = self.attribute.id;
-        if let Some(to) = self.fits_to {
-            return self.year.map(|year| AttributeFilter::Fits { from_attribute_id: attribute_id, to_attribute_id: to.id, year });
-        }
-        let option_ids = || self.selected.iter().map(|o| o.id).collect();
-        match self.attribute.data_type.as_str() {
-            "SELECT" if !self.selected.is_empty() => {
-                Some(AttributeFilter::AnyOf { attribute_id, option_ids: option_ids() })
-            }
-            "MULTISELECT" if !self.selected.is_empty() => {
-                Some(AttributeFilter::AllOf { attribute_id, option_ids: option_ids() })
-            }
-            "NUMBER" if self.min.is_some() || self.max.is_some() => {
-                Some(AttributeFilter::Range { attribute_id, min: self.min, max: self.max })
-            }
-            "BOOLEAN" if self.checked => Some(AttributeFilter::IsTrue { attribute_id }),
-            _ => None,
-        }
-    }
-
-    fn param_names(&self) -> Vec<String> {
-        let code = &self.attribute.code;
-        if self.fits_to.is_some() {
-            return vec![year_param(self.attribute)];
-        }
-        vec![code.clone(), format!("{code}_min"), format!("{code}_max")]
-    }
-
+impl PropertyExt for Property<'_> {
     /// Its field in the form, its name, unit and options in the page's language.
     fn field(&self, all: &[Property]) -> Field {
         let attribute = self.attribute;
@@ -1374,26 +1119,6 @@ impl<'a> Property<'a> {
     }
 }
 
-/// For "<x>_from_year", the category's "<x>_to_year": the pair filters as one year.
-fn year_pair_end<'a>(attribute: &FilterAttribute, all: &'a [FilterAttribute]) -> Option<&'a FilterAttribute> {
-    let prefix = attribute.code.strip_suffix("_from_year")?;
-    let closing = format!("{prefix}_to_year");
-    all.iter().find(|other| other.code == closing)
-}
-
-/// "<x>_to_year", when the category has its "<x>_from_year".
-fn closes_year_pair(attribute: &FilterAttribute, all: &[FilterAttribute]) -> bool {
-    attribute
-        .code
-        .strip_suffix("_to_year")
-        .is_some_and(|prefix| all.iter().any(|other| other.code == format!("{prefix}_from_year")))
-}
-
-/// The pair's parameter, "<x>_year": "fits_year".
-fn year_param(opening: &FilterAttribute) -> String {
-    format!("{}_year", opening.code.strip_suffix("_from_year").unwrap_or(&opening.code))
-}
-
 /// The values a range's dropdowns offer, in the order they are offered, and whether they are years
 /// (shown as they are, the newest first) rather than amounts (grouped, the smallest first).
 struct Steps {
@@ -1457,12 +1182,6 @@ fn round_price(price: Decimal) -> Decimal {
     Decimal::from_f64((round * scale).round()).unwrap_or(price).normalize()
 }
 
-/// A year a vehicle could have been made in; anything else is ignored.
-fn parse_year(value: &str) -> Option<Decimal> {
-    let year: i32 = value.trim().parse().ok()?;
-    (1900..=2100).contains(&year).then(|| Decimal::from(year))
-}
-
 /// The cities by county, for a dropdown.
 pub fn city_groups(cities: &[City], selected: Option<&str>) -> Vec<ChoiceGroup> {
     let mut groups: Vec<ChoiceGroup> = Vec::new();
@@ -1507,55 +1226,6 @@ pub fn url(path: &str, pairs: impl IntoIterator<Item = (String, String)>) -> Str
     if query.is_empty() { path.to_string() } else { format!("{path}?{query}") }
 }
 
-/// A number as people type it, in Albanian's way or English's: "5000", "5 000"; "5.000" or
-/// "5,000", a mark before the last three digits (or one of several alike: "1.000.000") grouping
-/// thousands; "12,5" or "12.5", one before one, two or four digits (or after a lone "0") marking
-/// decimals, as the later of a dot and a comma does ("1.234,56", "1,234.56"). The URLs' own
-/// numbers (`plain`) read back as they were written.
-pub fn parse_number(text: &str) -> Option<Decimal> {
-    let kept: String = text.chars().filter(|c| c.is_ascii_digit() || matches!(c, ',' | '.' | '-')).collect();
-    let decimal = match (kept.rfind('.'), kept.rfind(',')) {
-        (Some(dot), Some(comma)) => Some(dot.max(comma)),
-        (Some(at), None) | (None, Some(at)) => {
-            let mark = kept.as_bytes()[at];
-            let once = kept.bytes().filter(|byte| *byte == mark).count() == 1;
-            let whole = kept[..at].trim_start_matches('-');
-            let thousands = kept.len() - at - 1 == 3 && !whole.is_empty() && whole != "0";
-            (once && !thousands).then_some(at)
-        }
-        (None, None) => None,
-    };
-    let number: String = kept
-        .char_indices()
-        .filter_map(|(at, c)| match c {
-            '.' | ',' if Some(at) == decimal => Some('.'),
-            '.' | ',' => None,
-            c => Some(c),
-        })
-        .collect();
-    let value: Decimal = number.parse().ok()?;
-    (value.abs() < Decimal::from(1_000_000_000_000_i64)).then_some(value)
-}
-
-/// A latitude (limit 90) or longitude (limit 180) in degrees.
-fn parse_coordinate(text: &str, limit: f64) -> Option<f64> {
-    let value: f64 = text.parse().ok()?;
-    (value.is_finite() && value.abs() <= limit).then_some(value)
-}
-
-/// Bounds typed the wrong way round are swapped.
-fn ordered(min: Option<Decimal>, max: Option<Decimal>) -> (Option<Decimal>, Option<Decimal>) {
-    match (min, max) {
-        (Some(min), Some(max)) if min > max => (Some(max), Some(min)),
-        bounds => bounds,
-    }
-}
-
-/// A number for a form field or a URL: "5000", "12.5".
-fn plain(value: Decimal) -> String {
-    value.normalize().to_string()
-}
-
 /// A price's place on the slider, 0 to PRICE_STEPS (see PRICE_STEPS).
 fn price_position(price: Decimal, currency: &str) -> u32 {
     let base = if currency == "ALL" { 1000.0 } else { 10.0 };
@@ -1582,26 +1252,6 @@ fn range_label(min: Option<Decimal>, max: Option<Decimal>, unit: Option<&str>, g
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn reads_numbers_the_way_people_type_them() {
-        assert_eq!(parse_number("5000"), Some(Decimal::from(5000)));
-        assert_eq!(parse_number("5 000"), Some(Decimal::from(5000)));
-        assert_eq!(parse_number("5.000 €"), Some(Decimal::from(5000)));
-        assert_eq!(parse_number("12,5"), Some(Decimal::new(125, 1)));
-        // English's way too, and a URL's own: a point marks decimals, a comma groups thousands.
-        assert_eq!(parse_number("12.5"), Some(Decimal::new(125, 1)));
-        assert_eq!(parse_number("9,500"), Some(Decimal::from(9500)));
-        assert_eq!(parse_number("1.000.000"), Some(Decimal::from(1_000_000)));
-        assert_eq!(parse_number("1,000,000"), Some(Decimal::from(1_000_000)));
-        assert_eq!(parse_number("1.234,56"), Some(Decimal::new(123_456, 2)));
-        assert_eq!(parse_number("1,234.56"), Some(Decimal::new(123_456, 2)));
-        assert_eq!(parse_number("0,125"), Some(Decimal::new(125, 3)));
-        assert_eq!(parse_number("6.1 inç"), Some(Decimal::new(61, 1)));
-        assert_eq!(parse_number("-1"), Some(Decimal::from(-1)));
-        assert_eq!(parse_number("abc"), None);
-        assert_eq!(parse_number("99999999999999999999"), None);
-    }
 
     #[test]
     fn labels_ranges() {
@@ -1634,31 +1284,5 @@ mod tests {
         let at = choices.iter().position(|choice| choice.selected).unwrap();
         assert_eq!((choices[at - 1].value.as_str(), choices[at].value.as_str()), ("100000", "123456"));
         assert_eq!(choices[at].label, "123\u{a0}456");
-    }
-
-    #[test]
-    fn a_remembered_town_counts_where_no_place_is_named() {
-        let town = || Some("durres".to_string());
-        assert_eq!(Params::parse(Some("vehicle_fuel=DIESEL")).remembering_town(town()).first("city"), Some("durres"));
-        assert_eq!(Params::parse(Some("city=vlore")).remembering_town(town()).first("city"), Some("vlore"));
-        assert_eq!(Params::parse(Some("lat=41.3&lng=19.8")).remembering_town(town()).first("city"), None);
-        assert_eq!(Params::parse(None).remembering_town(Some(String::new())).first("city"), None);
-    }
-
-    #[test]
-    fn drops_empty_parameters() {
-        let params = Params::parse(Some("q=&city=durres&vehicle_fuel=DIESEL&vehicle_fuel=HYBRID&sort="));
-        assert_eq!(params.first("q"), None);
-        assert_eq!(params.first("city"), Some("durres"));
-        assert_eq!(params.all("vehicle_fuel").collect::<Vec<_>>(), ["DIESEL", "HYBRID"]);
-        assert_eq!(params.first("sort"), None);
-    }
-
-    #[test]
-    fn takes_the_first_hundred_characters_of_the_search_words() {
-        let params = Params::parse(Some(&format!("q={}", "golf ".repeat(30))));
-        assert_eq!(params.search_words().map(|words| words.chars().count()), Some(SEARCH_CHARS));
-        assert_eq!(Params::parse(Some("q=shtëpi")).search_words().as_deref(), Some("shtëpi"));
-        assert_eq!(Params::parse(Some("q=")).search_words(), None);
     }
 }

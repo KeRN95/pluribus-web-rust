@@ -10,6 +10,7 @@
 //! the rail's path.
 
 mod auth;
+pub mod browse;
 mod dto;
 mod error;
 mod lang;
@@ -40,8 +41,10 @@ pub fn router(state: AppState) -> Router {
 }
 
 /// Every route of the API (README, "Routes", "API"): `GET /health`, for anyone, and `GET /me`,
-/// signed in (`ApiUser`); and the reference data the app loads first, for anyone (reference.rs):
-/// `GET /categories`, `GET /cities` and `GET /categories/{slug}/fields`.
+/// signed in (`ApiUser`); the reference data the app loads first, for anyone (reference.rs):
+/// `GET /categories`, `GET /cities` and `GET /categories/{slug}/fields`; and `GET /listings` and
+/// `GET /home`, for anyone, a signed-in caller's lists without the listings of the accounts they
+/// blocked (browse.rs).
 fn routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
@@ -49,6 +52,8 @@ fn routes() -> Router<AppState> {
         .route("/categories", get(reference::categories))
         .route("/cities", get(reference::cities))
         .route("/categories/{slug}/fields", get(reference::fields))
+        .route("/listings", get(browse::listings))
+        .route("/home", get(browse::home))
 }
 
 /// Routes in the API's frame, which `router` puts the API's own in, and the tests a probe of
