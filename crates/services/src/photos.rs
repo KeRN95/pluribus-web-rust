@@ -31,15 +31,18 @@ pub const UPLOAD_BODY_BYTES: usize = 64 * 1024 * 1024;
 pub const UPLOADS_KEPT: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// What is wrong with the photos sent, in the language now, if anything: more than MAX_PHOTOS with
-/// the `kept` a listing has already and keeps, or one over MAX_UPLOAD_BYTES.
+/// the `kept` a listing has already and keeps (`too_many`), or one over MAX_UPLOAD_BYTES.
 pub fn check(photos: &[Bytes], kept: usize) -> Option<String> {
-    if kept + photos.len() > MAX_PHOTOS {
-        Some(t1("Një njoftim mund të ketë deri në {} foto.", MAX_PHOTOS))
-    } else if photos.iter().any(|photo| photo.len() > MAX_UPLOAD_BYTES) {
-        Some(t1("Secila foto mund të jetë deri në {} MB.", MAX_UPLOAD_BYTES / 1024 / 1024))
-    } else {
-        None
-    }
+    too_many(kept + photos.len()).or_else(|| {
+        let too_big = photos.iter().any(|photo| photo.len() > MAX_UPLOAD_BYTES);
+        too_big.then(|| t1("Secila foto mund të jetë deri në {} MB.", MAX_UPLOAD_BYTES / 1024 / 1024))
+    })
+}
+
+/// What is said of `count` photos for one listing, more than MAX_PHOTOS, in the language now: a
+/// form's (`check`), or the uploads a listing names (pluribus-api's own.rs).
+pub fn too_many(count: usize) -> Option<String> {
+    (count > MAX_PHOTOS).then(|| t1("Një njoftim mund të ketë deri në {} foto.", MAX_PHOTOS))
 }
 
 /// What a request with photos says when its body couldn't be read whole, by the status its reading

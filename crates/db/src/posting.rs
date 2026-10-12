@@ -1,5 +1,7 @@
 //! Posting and editing listings, pausing and taking them down.
 
+use std::fmt;
+
 use super::*;
 use pluribus_core::domain::{ListingType, ReviewReason, Status, listing::RecentPosts};
 
@@ -192,18 +194,75 @@ pub const LISTING_DAYS: i32 = 60;
 /// days at most, so that renewing is no way to stay on top.
 pub const BUMP_DAYS: i32 = 7;
 
+/// The photos a new listing or an edit brings, their files in the store already: put there for this
+/// request, as the pages' form sends them with the listing (`Stored`, their rows as they go in); or
+/// uploaded before by the user (`Uploads`, the API's, photo_uploads.rs), by their ids, in their
+/// order, which move into the listing's photos keeping their ids (take_uploads).
+#[derive(Clone, Copy)]
+pub enum Photos<'a> {
+    Stored(&'a [NewPhoto]),
+    Uploads { ids: &'a [Uuid], user_id: Uuid },
+}
+
+/// Why a listing or an edit wasn't saved (`create_listing`, `update_listing`), nothing of it
+/// written: the database failed (`Database`), or a photo it names by its upload (`Photos::Uploads`)
+/// isn't there to take, another's, taken by a listing already, or forgotten (`UploadsGone`).
+#[derive(Debug)]
+pub enum NotSaved {
+    Database(sqlx::Error),
+    UploadsGone,
+}
+
+impl From<sqlx::Error> for NotSaved {
+    fn from(error: sqlx::Error) -> Self {
+        Self::Database(error)
+    }
+}
+
+impl fmt::Display for NotSaved {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Database(error) => error.fmt(f),
+            Self::UploadsGone => f.write_str("a photo upload named isn't there to take"),
+        }
+    }
+}
+
+impl std::error::Error for NotSaved {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Database(error) => Some(error),
+            Self::UploadsGone => None,
+        }
+    }
+}
+
+/// Adds `photos` to the listing, after those it has, the first it gets its cover where it has none
+/// (listing.rs's add_listing_photos, or photo_uploads.rs's take_uploads): inside the transaction
+/// that saves it or its edit.
+async fn add_photos(tx: &mut sqlx::PgConnection, listing_id: Uuid, photos: Photos<'_>) -> Result<(), NotSaved> {
+    match photos {
+        Photos::Stored(photos) => Ok(add_listing_photos(tx, listing_id, photos).await?),
+        Photos::Uploads { ids, user_id } => match take_uploads(tx, listing_id, user_id, ids).await? {
+            true => Ok(()),
+            false => Err(NotSaved::UploadsGone),
+        },
+    }
+}
+
 /// Saves a listing with the seller's contact, published at once or as a draft (`publish`), when it
 /// expires with it, its seller its poster or the store it is posted as (`business_id`), and returns
 /// its id and number. It stands at `point`, its seller's own on the map, or else at its place's
 /// (its town's, for a zone without one), with its properties and `photos` (their files already in
-/// the store): all in one transaction, so that a failure leaves nothing of it, neither a listing
-/// without its point or photos nor their rows without it.
+/// the store, put there for it or uploaded before): all in one transaction, so that a failure
+/// leaves nothing of it, neither a listing without its point or photos nor their rows without it,
+/// and an upload it names that isn't there to take fails it whole (`NotSaved::UploadsGone`).
 pub async fn create_listing(
     db: &PgPool,
     listing: &NewListing<'_>,
     point: Option<(f64, f64)>,
-    photos: &[NewPhoto],
-) -> sqlx::Result<(Uuid, i64)> {
+    photos: Photos<'_>,
+) -> Result<(Uuid, i64), NotSaved> {
     let mut tx = db.begin().await?;
     let row = sqlx::query!(
         "INSERT INTO listings (seller_user_id, seller_business_id, created_by_user_id, category_id, location_id, slug, title,
@@ -258,7 +317,7 @@ pub async fn create_listing(
     if let Some(point) = point {
         set_listing_point(&mut tx, row.id, point).await?;
     }
-    add_listing_photos(&mut tx, row.id, photos).await?;
+    add_photos(&mut tx, row.id, photos).await?;
     tx.commit().await?;
     Ok((row.id, row.public_no))
 }
@@ -308,19 +367,21 @@ pub async fn own_listing(db: &PgPool, public_no: i64, user_id: Uuid) -> sqlx::Re
 /// still up, or taken down for a while (PAUSED, which an edit leaves as it is); None when it isn't,
 /// and nothing changes. The number it shows stays, and its place in "newest first". It moves to
 /// `point`, its seller's own on the map; without one it keeps its point unless it moves to another
-/// town. Its photos `removed` go (only its own), those `added` (their files already in the store)
-/// follow the rest, and all of them take the `order` its form sent, if any (order_listing_photos).
-/// All in one transaction, so that a failure leaves the listing as it was; it returns the store's
-/// keys of the photos removed, whose files can go once it has gone through.
+/// town. Its photos `removed` go (only its own), those `added` (their files already in the store,
+/// put there for it or uploaded before) follow the rest, and all of them take the `order` its form
+/// sent, if any, each by its id or its key in the store (order_listing_photos; an upload by its id,
+/// which it keeps). All in one transaction, so that a failure leaves the listing as it was, an
+/// upload that isn't there to take too (`NotSaved::UploadsGone`); it returns the store's keys of
+/// the photos removed, whose files can go once it has gone through.
 pub async fn update_listing(
     db: &PgPool,
     public_no: i64,
     listing: &NewListing<'_>,
     point: Option<(f64, f64)>,
     removed: &[Uuid],
-    added: &[NewPhoto],
+    added: Photos<'_>,
     order: &[String],
-) -> sqlx::Result<Option<Vec<String>>> {
+) -> Result<Option<Vec<String>>, NotSaved> {
     let mut tx = db.begin().await?;
     let Some(id) = sqlx::query_scalar!(
         "UPDATE listings l
@@ -369,7 +430,7 @@ pub async fn update_listing(
         set_listing_point(&mut tx, id, point).await?;
     }
     let gone = remove_listing_photos(&mut tx, id, removed).await?;
-    add_listing_photos(&mut tx, id, added).await?;
+    add_photos(&mut tx, id, added).await?;
     if !order.is_empty() {
         order_listing_photos(&mut tx, id, order).await?;
     }
@@ -526,6 +587,10 @@ pub struct MyListing {
     pub price_type: String,
     /// When it expires, if it does (LISTING_DAYS).
     pub expires_at: Option<OffsetDateTime>,
+    /// When it went up; none for one that hasn't (waiting for a moderator, or for its code).
+    pub published_at: Option<OffsetDateTime>,
+    /// Why the moderators took it off, for its seller to read, where they did (REJECTED).
+    pub rejection_reason: Option<String>,
     pub stats: ListingStats,
 }
 
@@ -556,9 +621,6 @@ impl std::iter::Sum for ListingStats {
     }
 }
 
-/// The user's own listings, or with `store` that store's, whoever of its people posted them (the
-/// caller checks the user posts for it); newest first, deleted ones left out, each with what it
-/// drew.
 /// Each listing's first photo's card-sized copy, by its number, for "Njoftimet e mia"'s rows; none
 /// for a listing without one.
 pub async fn first_photos(db: &PgPool, numbers: &[i64]) -> sqlx::Result<HashMap<i64, String>> {
@@ -581,10 +643,14 @@ pub async fn first_photos(db: &PgPool, numbers: &[i64]) -> sqlx::Result<HashMap<
     Ok(rows.into_iter().collect())
 }
 
+/// The user's own listings, or with `store` that store's, whoever of its people posted them (the
+/// caller checks the user posts for it); newest first, deleted ones left out, each with what it
+/// drew: "Njoftimet e mia", and the API's `GET /me/listings`.
 pub async fn my_listings(db: &PgPool, user_id: Uuid, store: Option<Uuid>) -> sqlx::Result<Vec<MyListing>> {
     let rows = sqlx::query!(
         r#"SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS "title!", l.status, l.listing_type,
-                  l.price_amount, l.currency::text AS "currency!", l.price_type, l.expires_at,
+                  l.price_amount, l.currency::text AS "currency!", l.price_type, l.expires_at, l.published_at,
+                  l.rejection_reason,
                   coalesce(seen.views, 0)::bigint AS "views!", coalesce(seen.views_week, 0)::bigint AS "views_week!",
                   coalesce(seen.contacts, 0)::bigint AS "contacts!",
                   coalesce(seen.contacts_week, 0)::bigint AS "contacts_week!",
@@ -624,6 +690,8 @@ pub async fn my_listings(db: &PgPool, user_id: Uuid, store: Option<Uuid>) -> sql
             currency: row.currency,
             price_type: row.price_type,
             expires_at: row.expires_at,
+            published_at: row.published_at,
+            rejection_reason: row.rejection_reason,
             stats: ListingStats {
                 views: row.views,
                 views_week: row.views_week,
@@ -688,8 +756,8 @@ mod tests {
         }
     }
 
-    /// A photo as the store keeps it (web/photos.rs); one `width` 0 wide is one the database
-    /// refuses (listing_media's CHECK).
+    /// A photo as the store keeps it (pluribus-services' photos.rs); one `width` 0 wide is one the
+    /// database refuses (listing_media's CHECK).
     fn photo(name: &str, width: i32) -> NewPhoto {
         NewPhoto {
             storage_key: format!("photos/{name}.webp"),
@@ -736,25 +804,25 @@ mod tests {
     /// its photos nor its history; the same listing with photos it takes goes in with all of them
     /// and its point.
     #[sqlx::test(migrator = "crate::MIGRATOR")]
-    async fn a_listing_saves_whole_or_not_at_all(db: PgPool) -> sqlx::Result<()> {
+    async fn a_listing_saves_whole_or_not_at_all(db: PgPool) -> Result<(), NotSaved> {
         let setting = setting(&db).await?;
         let properties = [ListingProperty { attribute_id: setting.year, value: PropertyValue::Number(Decimal::from(2016)) }];
         let point = Some((41.331, 19.816));
 
         // A place that isn't one.
         let nowhere = golf(&setting, Uuid::nil(), &properties);
-        assert!(create_listing(&db, &nowhere, point, &[photo("a", 800)]).await.is_err());
+        assert!(create_listing(&db, &nowhere, point, Photos::Stored(&[photo("a", 800)])).await.is_err());
         nothing_left(&db).await?;
 
         // A photo the database refuses, after the listing, its contact, its properties, its point
         // and the first photo went in.
         let golf = golf(&setting, setting.tirane, &properties);
-        let error = create_listing(&db, &golf, point, &[photo("a", 800), photo("b", 0)]).await.unwrap_err();
+        let error = create_listing(&db, &golf, point, Photos::Stored(&[photo("a", 800), photo("b", 0)])).await.unwrap_err();
         assert!(error.to_string().contains("listing_media"), "{error}");
         nothing_left(&db).await?;
 
         // With photos it takes, all of it.
-        let (id, _) = create_listing(&db, &golf, point, &[photo("a", 800), photo("b", 640)]).await?;
+        let (id, _) = create_listing(&db, &golf, point, Photos::Stored(&[photo("a", 800), photo("b", 640)])).await?;
         let saved: (f64, f64, String) = sqlx::query_as(
             "SELECT l.latitude::float8, l.longitude::float8,
                     (SELECT m.storage_key FROM listing_media m WHERE m.listing_id = l.id AND m.is_cover)
@@ -775,40 +843,91 @@ mod tests {
     /// photo it takes changes all of them, and gives back the key of the photo taken out, for its
     /// files to go. Someone else's edit changes nothing.
     #[sqlx::test(migrator = "crate::MIGRATOR")]
-    async fn an_edit_saves_whole_or_not_at_all(db: PgPool) -> sqlx::Result<()> {
+    async fn an_edit_saves_whole_or_not_at_all(db: PgPool) -> Result<(), NotSaved> {
         let setting = setting(&db).await?;
         let properties = [ListingProperty { attribute_id: setting.year, value: PropertyValue::Number(Decimal::from(2016)) }];
         let golf = golf(&setting, setting.tirane, &properties);
-        let (id, public_no) = create_listing(&db, &golf, Some((41.331, 19.816)), &[photo("a", 800), photo("b", 640)]).await?;
+        let (id, public_no) = create_listing(&db, &golf, Some((41.331, 19.816)), Photos::Stored(&[photo("a", 800), photo("b", 640)])).await?;
         let first: Uuid = sqlx::query_scalar("SELECT id FROM listing_media WHERE storage_key = 'photos/a.webp'").fetch_one(&db).await?;
         let edited = NewListing { title: "Volkswagen Golf 7, 2016, i rregulluar", ..golf };
-        let state = || {
-            sqlx::query_as::<_, (String, f64, f64, Vec<String>)>(
-                "SELECT l.title, l.latitude::float8, l.longitude::float8,
-                        array(SELECT m.storage_key FROM listing_media m WHERE m.listing_id = l.id ORDER BY m.sort_order)
-                 FROM listings l WHERE l.id = $1",
-            )
-            .bind(id)
-            .fetch_one(&db)
-        };
-        let before = state().await?;
+        let before = media_of(&db, id).await?;
 
-        let refused = update_listing(&db, public_no, &edited, Some((41.35, 19.85)), &[first], &[photo("c", 0)], &[]).await;
+        let refused = update_listing(&db, public_no, &edited, Some((41.35, 19.85)), &[first], Photos::Stored(&[photo("c", 0)]), &[]).await;
         assert!(refused.unwrap_err().to_string().contains("listing_media"));
-        assert_eq!(state().await?, before);
+        assert_eq!(media_of(&db, id).await?, before);
 
         let stranger = NewListing { user_id: Uuid::from_u128(9), ..edited };
-        assert_eq!(update_listing(&db, public_no, &stranger, None, &[first], &[], &[]).await?, None);
-        assert_eq!(state().await?, before);
+        assert_eq!(update_listing(&db, public_no, &stranger, None, &[first], Photos::Stored(&[]), &[]).await?, None);
+        assert_eq!(media_of(&db, id).await?, before);
 
         // In the order the form sent: the new photo first, by its key.
         let order = ["photos/c.webp".to_string()];
-        let gone = update_listing(&db, public_no, &edited, Some((41.35, 19.85)), &[first], &[photo("c", 640)], &order).await?;
+        let gone = update_listing(&db, public_no, &edited, Some((41.35, 19.85)), &[first], Photos::Stored(&[photo("c", 640)]), &order).await?;
         assert_eq!(gone, Some(vec!["photos/a.webp".to_string()]));
-        let after = state().await?;
+        let after = media_of(&db, id).await?;
         assert_eq!(after.0, edited.title);
         assert_eq!((after.1, after.2), (41.35, 19.85));
         assert_eq!(after.3, ["photos/c.webp", "photos/b.webp"]);
+        Ok(())
+    }
+
+    /// A listing's title, its point and its photos' keys in their order.
+    async fn media_of(db: &PgPool, id: Uuid) -> sqlx::Result<(String, f64, f64, Vec<String>)> {
+        sqlx::query_as(
+            "SELECT l.title, l.latitude::float8, l.longitude::float8,
+                    array(SELECT m.storage_key FROM listing_media m WHERE m.listing_id = l.id ORDER BY m.sort_order)
+             FROM listings l WHERE l.id = $1",
+        )
+        .bind(id)
+        .fetch_one(db)
+        .await
+    }
+
+    /// A listing takes the photos its seller uploaded before (photo_uploads), in the order named,
+    /// each keeping its id, the first its cover, and they wait no more; one naming an upload that
+    /// isn't theirs to take leaves nothing of it, and the uploads waiting as they were. An edit takes
+    /// them likewise, put in its order by their ids.
+    #[sqlx::test(migrator = "crate::MIGRATOR")]
+    async fn a_listing_takes_its_uploads_whole_or_not_at_all(db: PgPool) -> Result<(), NotSaved> {
+        let setting = setting(&db).await?;
+        let properties = [ListingProperty { attribute_id: setting.year, value: PropertyValue::Number(Decimal::from(2016)) }];
+        let golf = golf(&setting, setting.tirane, &properties);
+        let ids = add_photo_uploads(&db, setting.user, &[photo("a", 800), photo("b", 640)]).await?;
+        let waiting = || sqlx::query_scalar::<_, i64>("SELECT count(*) FROM photo_uploads").fetch_one(&db);
+
+        // Another's upload, or none at all, among them.
+        let other: Uuid = sqlx::query_scalar("INSERT INTO users (auth_subject, display_name) VALUES ('posting-tests-2', 'Besa') RETURNING id")
+            .fetch_one(&db)
+            .await?;
+        let theirs = add_photo_uploads(&db, other, &[photo("z", 800)]).await?;
+        for wrong in [theirs[0], Uuid::nil()] {
+            let named = [ids[0], wrong];
+            let refused = create_listing(&db, &golf, None, Photos::Uploads { ids: &named, user_id: setting.user }).await;
+            assert!(matches!(refused, Err(NotSaved::UploadsGone)), "{refused:?}");
+            nothing_left(&db).await?;
+            assert_eq!(waiting().await?, 3);
+        }
+
+        // Its own, the second first, each named once however often.
+        let named = [ids[1], ids[0], ids[1]];
+        let (id, public_no) = create_listing(&db, &golf, None, Photos::Uploads { ids: &named, user_id: setting.user }).await?;
+        let photos: Vec<(Uuid, String, bool)> =
+            sqlx::query_as("SELECT id, storage_key, is_cover FROM listing_media WHERE listing_id = $1 ORDER BY sort_order")
+                .bind(id)
+                .fetch_all(&db)
+                .await?;
+        assert_eq!(photos, [(ids[1], "photos/b.webp".to_string(), true), (ids[0], "photos/a.webp".to_string(), false)]);
+        assert_eq!(waiting().await?, 1, "the other's alone");
+
+        // An edit: one out, a new upload in, first by its id.
+        let new = add_photo_uploads(&db, setting.user, &[photo("c", 800)]).await?;
+        let order = [new[0].to_string(), ids[0].to_string()];
+        let added = Photos::Uploads { ids: &new, user_id: setting.user };
+        let gone = update_listing(&db, public_no, &golf, None, &[ids[1]], added, &order).await?;
+        assert_eq!(gone, Some(vec!["photos/b.webp".to_string()]));
+        assert_eq!(media_of(&db, id).await?.3, ["photos/c.webp", "photos/a.webp"]);
+        let cover: Uuid = sqlx::query_scalar("SELECT id FROM listing_media WHERE listing_id = $1 AND is_cover").bind(id).fetch_one(&db).await?;
+        assert_eq!(cover, new[0]);
         Ok(())
     }
 }

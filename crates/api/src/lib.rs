@@ -18,6 +18,7 @@ mod lang;
 pub mod listing;
 pub mod messages;
 pub mod notifications;
+pub mod own;
 pub mod reference;
 pub mod safety;
 pub mod saved;
@@ -26,12 +27,12 @@ pub mod signin;
 
 use axum::{
     Json, Router,
-    extract::{FromRequest, OriginalUri, Request, State},
+    extract::{DefaultBodyLimit, FromRequest, OriginalUri, Request, State},
     middleware,
     routing::{delete, get, post, put},
 };
 use pluribus_db as db;
-use pluribus_services::AppState;
+use pluribus_services::{AppState, photos};
 use serde::de::DeserializeOwned;
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 
@@ -68,7 +69,11 @@ pub fn router(state: AppState) -> Router {
 /// `POST /conversations/{id}/block` and `/unblock`; and the account's settings, signed in
 /// (account.rs): `PATCH /me` and `DELETE /me`, `GET` and `PUT /me/notices`, `PUT /me/language`,
 /// `POST /me/contacts`, `POST /me/contacts/verify`, `DELETE /me/contacts/{kind}`,
-/// `GET /me/sessions` and `DELETE /me/sessions/others`.
+/// `GET /me/sessions` and `DELETE /me/sessions/others`. And a seller's own listings, signed in
+/// (own.rs): `POST /photos` (the body up to photos::UPLOAD_BODY_BYTES, this route's alone),
+/// `POST /listings`, `PUT` and `DELETE /listings/{no}`, `POST /listings/{no}/pause`, `/resume`,
+/// `/sell`, `/reserve`, `/unreserve` and `/renew`, `GET /me/listings`, `POST /listings/zone` and
+/// `GET /listings/price-hint`.
 fn routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
@@ -83,12 +88,22 @@ fn routes() -> Router<AppState> {
         .route("/categories", get(reference::categories))
         .route("/cities", get(reference::cities))
         .route("/categories/{slug}/fields", get(reference::fields))
-        .route("/listings", get(browse::listings))
+        .route("/listings", get(browse::listings).post(own::create))
         .route("/home", get(browse::home))
-        .route("/listings/{no}", get(listing::show))
+        .route("/listings/{no}", get(listing::show).put(own::update).delete(own::delete))
         .route("/listings/{no}/related", get(listing::related))
         .route("/listings/{no}/seen", post(listing::seen))
         .route("/listings/{no}/contact", post(listing::contact))
+        .route("/photos", post(own::upload).layer(DefaultBodyLimit::max(photos::UPLOAD_BODY_BYTES)))
+        .route("/me/listings", get(own::mine))
+        .route("/listings/{no}/pause", post(own::pause))
+        .route("/listings/{no}/resume", post(own::resume))
+        .route("/listings/{no}/sell", post(own::sell))
+        .route("/listings/{no}/reserve", post(own::reserve))
+        .route("/listings/{no}/unreserve", post(own::unreserve))
+        .route("/listings/{no}/renew", post(own::renew))
+        .route("/listings/zone", post(own::zone))
+        .route("/listings/price-hint", get(own::price_hint))
         .route("/notifications", get(notifications::list))
         .route("/notifications/seen", post(notifications::seen))
         .route("/counts", get(notifications::counts))

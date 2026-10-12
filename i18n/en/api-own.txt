@@ -1,0 +1,22 @@
+# The JSON API's own listings (crates/api/src/own.rs): what it says, in the language each request
+# asks for (crates/api/src/lang.rs), besides what the pages' posting form says alike (a listing's
+# problems, its properties', its photos' and its store's, posting.txt).
+
+# crates/api/src/own.rs: photos uploaded, under "body" or "photos"
+
+Dërgo fotot si multipart/form-data, në fushën „photos“.
+= Send the photos as multipart/form-data, in the field “photos”.
+
+Dërgo të paktën një foto, në fushën „photos“.
+= Send at least one photo, in the field “photos”.
+
+Ke shumë foto që presin një njoftim. Publiko njoftimin, ose provo përsëri nesër.
+= You have too many photos waiting for a listing. Post the listing, or try again tomorrow.
+
+# crates/api/src/own.rs: a listing's photos, under "photo_ids" or "cover"
+
+Disa nga fotot nuk janë më: ngarkoji përsëri.
+= Some of the photos are gone: upload them again.
+
+Kopertina duhet të jetë një nga fotot e njoftimit.
+= The cover must be one of the listing’s photos.

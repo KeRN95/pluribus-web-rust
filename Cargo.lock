@@ -2487,6 +2487,7 @@ dependencies = [
  "anyhow",
  "axum",
  "http-body-util",
+ "image",
  "pluribus-core",
  "pluribus-db",
  "pluribus-services",

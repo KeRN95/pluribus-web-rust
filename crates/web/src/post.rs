@@ -35,7 +35,7 @@ use super::{
 };
 use crate::{
     AppState,
-    db::{self, Categories, Category, City, FormAttribute, ListingAction, MyListing, OwnListing, OwnPhoto, SessionUser},
+    db::{self, Categories, Category, City, FormAttribute, ListingAction, MyListing, OwnListing, OwnPhoto, Photos, SessionUser},
     domain::{
         Condition, ListingType, PriceType, ReviewReason, Status,
         listing::{self, Checked, FieldErrors, ListingInput, distance_km, mapped},
@@ -553,12 +553,10 @@ async fn posting_stores(state: &AppState, user: Option<&SessionUser>) -> Result<
     Ok(posting::stores_posting_for(&state.db, user.id).await?)
 }
 
-/// The properties of the category the form names, if it is one listings go into.
+/// The properties of the category the form names, if it is one listings go into
+/// (posting::form_attributes_of, which the API's listings take too).
 async fn attributes_for(state: &AppState, categories: &Categories, slug: &str) -> Result<Vec<FormAttribute>> {
-    match categories.by_slug(slug).filter(|category| !categories.has_children(category.id)) {
-        Some(category) => Ok(db::form_attributes(&state.db, category.id).await?),
-        None => Ok(Vec::new()),
-    }
+    Ok(posting::form_attributes_of(&state.db, categories, slug).await?)
 }
 
 /// Publishes a listing at once, signed in or not: without signing in, under the account of the
@@ -679,7 +677,7 @@ pub async fn create_listing(
     // in one transaction (db::create_listing); should that fail, the files go again, and nothing
     // is left of it.
     let stored = store_photos(&state.media, processed).await?;
-    let (listing_id, public_no) = match db::create_listing(&state.db, &listing, checked.point, &stored).await {
+    let (listing_id, public_no) = match db::create_listing(&state.db, &listing, checked.point, Photos::Stored(&stored)).await {
         Ok(created) => created,
         Err(error) => {
             unstore(&state.media, &stored).await;
@@ -852,7 +850,7 @@ pub async fn update_listing(
             _ => None,
         })
         .collect();
-    let gone = match db::update_listing(&state.db, public_no, &changed, checked.point, &removed, &stored, &order).await {
+    let gone = match db::update_listing(&state.db, public_no, &changed, checked.point, &removed, Photos::Stored(&stored), &order).await {
         Ok(Some(gone)) => gone,
         Ok(None) => {
             unstore(&state.media, &stored).await;

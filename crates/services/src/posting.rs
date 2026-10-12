@@ -18,7 +18,7 @@ use pluribus_core::{
     },
     i18n::{t, t1},
 };
-use pluribus_db::{self as db, ListingProperty, MyStore, NewListing, SessionUser};
+use pluribus_db::{self as db, Categories, FormAttribute, ListingProperty, MyStore, NewListing, SessionUser};
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -119,6 +119,15 @@ impl<'a> Poster<'a> {
 /// The stores `user` may post for (domain::Role::posts), which "Posto si" offers.
 pub async fn stores_posting_for(db: &PgPool, user: Uuid) -> sqlx::Result<Vec<MyStore>> {
     Ok(db::my_stores(db, user).await?.into_iter().filter(MyStore::posts).collect())
+}
+
+/// The properties a listing in the category `slug` names is asked for, its posting form's
+/// (db::form_attributes): none for a category the site hasn't, or one that only groups others.
+pub async fn form_attributes_of(db: &PgPool, categories: &Categories, slug: &str) -> sqlx::Result<Vec<FormAttribute>> {
+    match categories.by_slug(slug).filter(|category| !categories.has_children(category.id)) {
+        Some(category) => db::form_attributes(db, category.id).await,
+        None => Ok(Vec::new()),
+    }
 }
 
 /// A listing that checks out, as the database saves it, posted as `poster`, published at once or

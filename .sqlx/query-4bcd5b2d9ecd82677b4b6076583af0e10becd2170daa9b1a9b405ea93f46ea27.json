@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH so_far AS (\n             SELECT coalesce(max(sort_order), -1) AS last, coalesce(bool_or(is_cover), false) AS has_cover\n             FROM listing_media WHERE listing_id = $1\n         ), taken AS (\n             DELETE FROM photo_uploads WHERE id = ANY($2) AND user_id = $3\n             RETURNING id, storage_key, public_url, middle_url, thumbnail_url, jpeg_url, placeholder, size_bytes,\n                       width_px, height_px, sha256\n         )\n         INSERT INTO listing_media (id, listing_id, media_type, status, storage_key, public_url, middle_url,\n                                    thumbnail_url, jpeg_url, placeholder, mime_type, size_bytes, width_px,\n                                    height_px, sha256, sort_order, is_cover)\n         SELECT t.id, $1, 'IMAGE', 'READY', t.storage_key, t.public_url, t.middle_url, t.thumbnail_url, t.jpeg_url,\n                t.placeholder, 'image/webp', t.size_bytes, t.width_px, t.height_px, t.sha256,\n                s.last + o.place::int, NOT s.has_cover AND o.place = 1\n         FROM taken t\n         JOIN unnest($2::uuid[]) WITH ORDINALITY AS o(id, place) ON o.id = t.id\n         CROSS JOIN so_far s\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4bcd5b2d9ecd82677b4b6076583af0e10becd2170daa9b1a9b405ea93f46ea27"
+}

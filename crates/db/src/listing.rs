@@ -254,9 +254,10 @@ pub async fn listing_photos(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Vec<P
     .await
 }
 
-/// A photo stored for a listing (media.rs): its key in the store, the addresses of its copies (the
-/// full WebP, the middle one if any, the card's, the JPEG), its tiny copy, and what the full one
-/// weighs.
+/// A photo stored for a listing (pluribus-services' photos::store, media.rs): its key in the store,
+/// the addresses of its copies (the full WebP, the middle one if any, the card's, the JPEG), its
+/// tiny copy, what the full one weighs and the SHA-256 of what was sent; what listing_media keeps of
+/// it, and photo_uploads while it waits for its listing (photo_uploads.rs).
 pub struct NewPhoto {
     pub storage_key: String,
     pub url: String,

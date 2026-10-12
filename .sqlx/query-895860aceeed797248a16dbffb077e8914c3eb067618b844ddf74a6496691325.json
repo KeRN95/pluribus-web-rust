@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO photo_uploads (user_id, storage_key, public_url, middle_url, thumbnail_url, jpeg_url, placeholder,\n                                        size_bytes, width_px, height_px, sha256)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\n             RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Int4",
+        "Int4",
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "895860aceeed797248a16dbffb077e8914c3eb067618b844ddf74a6496691325"
+}

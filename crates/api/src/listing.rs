@@ -22,12 +22,13 @@ use pluribus_core::{
     },
     format, i18n,
 };
-use pluribus_db::{self as db, AttributeValue, ListingDetail, Photo, SellerContact};
+use pluribus_db::{self as db, AttributeValue, ListingDetail, Photo, SellerContact, SessionUser};
 use pluribus_services::{
     AppState,
     filters::Params,
     listings::{CarPrices, owns, shown, visitor},
-    media::{CARD_AVIF, CARD_COPIES_EDITION, CARD_COPY, MINI_AVIF, MINI_COPY, SMALL_AVIF, SMALL_COPY},
+    media::{CARD_AVIF, CARD_COPY, MINI_AVIF, MINI_COPY, SMALL_AVIF, SMALL_COPY},
+    photos::card_copy,
 };
 use rust_decimal::Decimal;
 use serde::Serialize;
@@ -369,24 +370,32 @@ pub struct ContactRevealedDto {
     pub whatsapp_url: Option<String>,
 }
 
-/// `GET /listings/{no}`: the listing numbered `no`, as its page shows it (`ListingDto`), to whom its
-/// page shows (domain::Status::shown_to): anyone while it is on the site (active, reserved or
-/// sold); whatever it is, its seller (`own`: a private seller's own, or a store's people who post
-/// for it) and a moderator (MODERATORS in the settings). For anyone else, or for a number no
-/// listing has, not found; a bearer token no good session has, 401.
+/// `GET /listings/{no}`: the listing numbered `no`, as its page shows it (`ListingDto`, `listing_dto`),
+/// to whom its page shows; for a number no listing has, not found; a bearer token no good session
+/// has, 401.
 pub async fn show(
     State(state): State<AppState>,
     OptionalApiUser(user): OptionalApiUser,
     headers: HeaderMap,
     Path(no): Path<String>,
 ) -> Result<Json<ListingDto>, ApiError> {
-    let listing = found(&state, &no).await?;
+    let no: i64 = no.parse().map_err(|_| ApiError::NotFound)?;
+    Ok(Json(listing_dto(&state, user.as_ref(), &headers, no).await?))
+}
+
+/// The listing numbered `no`, as its page shows it to `user`, to whom its page shows
+/// (domain::Status::shown_to): anyone while it is on the site (active, reserved or sold); whatever
+/// it is, its seller (`own`: a private seller's own, or a store's people who post for it) and a
+/// moderator (MODERATORS in the settings); for anyone else, or a number no listing has, not found.
+/// `GET /listings/{no}`'s, and what own.rs answers a listing posted or edited with.
+pub(crate) async fn listing_dto(state: &AppState, user: Option<&SessionUser>, headers: &HeaderMap, no: i64) -> Result<ListingDto, ApiError> {
+    let listing = db::listing_by_public_no(&state.db, no).await?.ok_or(ApiError::NotFound)?;
     let status: Status = kind_of(&listing, &listing.status)?;
-    let own = match &user {
+    let own = match user {
         Some(user) => owns(&state.db, user.id, &listing).await?,
         None => false,
     };
-    let moderator = user.as_ref().is_some_and(|user| state.config.moderators.include(user));
+    let moderator = user.is_some_and(|user| state.config.moderators.include(user));
     if !status.shown_to(own, moderator, false) {
         return Err(ApiError::NotFound);
     }
@@ -412,7 +421,7 @@ pub async fn show(
     // for its reports.
     let seller_suspended = status == Status::Suspended && db::seller_suspended(&state.db, listing.public_no).await?;
 
-    let origin = browse::origin(&state.config, &headers);
+    let origin = browse::origin(&state.config, headers);
     let now = OffsetDateTime::now_utc();
     let expires_soon = status.up() && listing.expires_at.is_some_and(|at| format::expires_soon(at, now).is_some());
     let car_price = car_price.and_then(|car| {
@@ -466,7 +475,7 @@ pub async fn show(
             .collect(),
         revealed: false,
     };
-    Ok(Json(ListingDto {
+    Ok(ListingDto {
         no: listing.public_no,
         slug: listing.slug.clone(),
         title: listing.title.clone(),
@@ -507,7 +516,7 @@ pub async fn show(
         published_at: listing.published_at,
         expires_at: listing.expires_at,
         views: (views > 0).then_some(views),
-    }))
+    })
 }
 
 /// `GET /listings/{no}/related?after=8`: the listings like it, `db::RELATED` at a time from the
@@ -609,8 +618,9 @@ fn city(listing: &ListingDetail) -> Option<String> {
 }
 
 /// What its seller can do to a listing in `status`, of `kind`, which expires within a week or
-/// not, by domain::Status's rules: the buttons its page and "Njoftimet e mia" show them.
-fn actions(status: Status, kind: ListingType, expires_soon: bool) -> Vec<Action> {
+/// not, by domain::Status's rules: the buttons its page and "Njoftimet e mia" show them (own.rs's
+/// `GET /me/listings` too).
+pub(crate) fn actions(status: Status, kind: ListingType, expires_soon: bool) -> Vec<Action> {
     [
         (Action::Edit, status.editable()),
         (Action::Pause, status.pausable()),
@@ -661,34 +671,40 @@ impl AttributeDto {
 }
 
 impl ListingPhotoDto {
-    /// `photo`, the cover if `cover`, its copies' addresses absolute from `origin`: a WebP photo's
-    /// as its own and its card's names give them (the small, mini and AVIF ones are the card's
-    /// name with their own endings, and the query of the rules the cards' copies are made by,
-    /// media::CARD_COPIES_EDITION, as pluribus-web's photos.rs names them), a photo kept before
-    /// WebP its card-sized JPEG and itself.
+    /// `photo`, the cover if `cover`, its copies' addresses absolute from `origin` (`CopiesDto::new`).
     fn new(photo: &Photo, cover: bool, origin: &str) -> Self {
-        let at = |url: &str| browse::absolute(origin, url);
-        let webp = photo.webp_url.as_deref();
-        let name = webp.and(photo.card_url.strip_suffix(CARD_COPY));
-        let copy = |ending: &str| name.map(|name| at(&format!("{name}{ending}?{CARD_COPIES_EDITION}")));
         let side = |side: Option<i32>| side.and_then(|side| u32::try_from(side).ok()).filter(|side| *side > 0);
         Self {
             id: photo.id,
             cover,
-            copies: CopiesDto {
-                card: copy(CARD_COPY).unwrap_or_else(|| at(&photo.card_url)),
-                small: copy(SMALL_COPY),
-                mini: copy(MINI_COPY),
-                middle: photo.middle_url.as_deref().map(at),
-                full: at(webp.unwrap_or(&photo.url)),
-                jpeg: at(&photo.url),
-                card_avif: copy(CARD_AVIF),
-                small_avif: copy(SMALL_AVIF),
-                mini_avif: copy(MINI_AVIF),
-            },
+            copies: CopiesDto::new(&photo.card_url, photo.webp_url.as_deref(), photo.middle_url.as_deref(), &photo.url, origin),
             width: side(photo.width_px),
             height: side(photo.height_px),
             placeholder: photo.placeholder.clone(),
+        }
+    }
+}
+
+impl CopiesDto {
+    /// A photo's copies, each address absolute from `origin`: a WebP photo's (`webp`, its full copy)
+    /// as its own and its card's names give them, the small, mini and AVIF ones the card's name
+    /// with their own endings and the query of the rules the cards' copies are made by
+    /// (pluribus-services' photos::card_copy, as the pages name them); a photo kept before WebP its
+    /// card-sized JPEG (`card`) and itself (`jpeg`). A listing's photos' (`ListingPhotoDto`), and
+    /// an upload's (own.rs).
+    pub(crate) fn new(card: &str, webp: Option<&str>, middle: Option<&str>, jpeg: &str, origin: &str) -> Self {
+        let at = |url: &str| browse::absolute(origin, url);
+        let copy = |ending: &str| webp.and(card_copy(card, ending)).map(|url| at(&url));
+        Self {
+            card: copy(CARD_COPY).unwrap_or_else(|| at(card)),
+            small: copy(SMALL_COPY),
+            mini: copy(MINI_COPY),
+            middle: middle.map(at),
+            full: at(webp.unwrap_or(jpeg)),
+            jpeg: at(jpeg),
+            card_avif: copy(CARD_AVIF),
+            small_avif: copy(SMALL_AVIF),
+            mini_avif: copy(MINI_AVIF),
         }
     }
 }

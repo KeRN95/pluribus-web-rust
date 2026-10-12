@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM photo_uploads WHERE created_at < now() - make_interval(secs => $1) RETURNING storage_key",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "storage_key",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7d0ba4d39d284f9ceeafb9f0e2bc5d162bd969af0968b63ab3430968e272d2d2"
+}
