@@ -116,7 +116,7 @@ mod tests {
     /// Each writer keeps in a notification's payload what its title says: said from the payload
     /// (domain::notices), the title is the one it kept, whole (the column keeps its first 180
     /// characters), and an invitation's body too; read back as /lajmerimet reads them.
-    #[sqlx::test(fixtures("../../tests/fixtures/listings.sql"))]
+    #[sqlx::test(migrator = "crate::db::MIGRATOR", fixtures("../../tests/fixtures/listings.sql"))]
     async fn each_writer_keeps_what_its_notifications_title_says(pool: PgPool) -> sqlx::Result<()> {
         let golf: Uuid = sqlx::query_scalar("SELECT id FROM listings WHERE public_no = 1001").fetch_one(&pool).await?;
         // Besnik keeps Ana's Golf, whose price she lowers (posting.rs, update_listing): a price

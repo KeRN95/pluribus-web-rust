@@ -29,7 +29,7 @@ use crate::{
     AppState,
     db::{
         self, Categories, Category, City, FormAttribute, ListingAction, ListingProperty, MyListing, NewListing,
-        OwnListing, OwnPhoto, SessionUser,
+        NewPhoto, OwnListing, OwnPhoto, SessionUser,
     },
     domain::{
         Condition, ListingType, PriceType, ReviewReason, Status,
@@ -37,7 +37,7 @@ use crate::{
     },
     format::{self, Contact},
     i18n::{t, t1, t2},
-    media::MAX_PHOTOS,
+    media::{MAX_PHOTOS, Media},
 };
 
 /// Where web/messages.rs, web/filters.rs and web/named.rs have called them, now that a listing's
@@ -742,12 +742,11 @@ pub async fn create_listing(
         }
         (None, None, _) => unreachable!("without a contact, the form went back with an error"),
     };
-    let stored = photos::store(&state.media, processed).await?;
     let slug = format::slug(checked.title);
     // On a site with moderators, what waits for them first (db::review): one with a photo
     // another seller's listing has, the very same file; and, posted without signing in, the
     // first listing of an account made with it, its contact confirmed by no code.
-    let hashes: Vec<Vec<u8>> = stored.iter().map(|photo| photo.sha256.clone()).collect();
+    let hashes: Vec<Vec<u8>> = processed.iter().map(|photo| photo.sha256.to_vec()).collect();
     let review = if state.moderators.is_empty() {
         None
     } else if db::photos_elsewhere(&state.db, &hashes, poster.business_id.unwrap_or(poster.id)).await? {
@@ -757,14 +756,19 @@ pub async fn create_listing(
     } else {
         None
     };
-    let point = checked.point;
     let mut listing = checked.listing(&poster, &slug, &properties, !waits);
     listing.review = review;
-    let (listing_id, public_no) = db::create_listing(&state.db, &listing).await?;
-    if let Some((latitude, longitude)) = point {
-        db::set_listing_point(&state.db, listing_id, latitude, longitude).await?;
-    }
-    db::add_listing_photos(&state.db, listing_id, &stored).await?;
+    // The photos' files go into the store first, then the listing, with its point and its photos,
+    // in one transaction (db::create_listing); should that fail, the files go again, and nothing
+    // is left of it.
+    let stored = photos::store(&state.media, processed).await?;
+    let (listing_id, public_no) = match db::create_listing(&state.db, &listing, checked.point, &stored).await {
+        Ok(created) => created,
+        Err(error) => {
+            unstore(&state.media, &stored).await;
+            return Err(error.into());
+        }
+    };
     let to = format!("/listing/{public_no}-{slug}");
     if user.is_some() {
         // Its page says it is up, once, with ways to share it (listings.rs, just_published).
@@ -910,18 +914,12 @@ pub async fn update_listing(
         return form_again(page);
     };
     let slug = format::slug(checked.title);
-    let point = checked.point;
     let changed = checked.listing(&Poster::of(&user), &slug, &properties, true);
-    if !db::update_listing(&state.db, public_no, &changed).await? {
-        return not_found().await;
-    }
-    if let Some((latitude, longitude)) = point {
-        db::set_listing_point(&state.db, listing.id, latitude, longitude).await?;
-    }
-    let gone = db::remove_listing_photos(&state.db, listing.id, &removed).await?;
-    photos::delete(&state.media, &gone).await;
+    // The new photos' files go into the store first, then the edit, with its point and its photos
+    // taken out, added and put in order, in one transaction (db::update_listing); should that fail,
+    // or the listing no longer be theirs to edit, the new files go again and the listing stays as
+    // it was.
     let stored = photos::store(&state.media, processed).await?;
-    db::add_listing_photos(&state.db, listing.id, &stored).await?;
     // In the order the form arranged: a saved photo by its id (one of the listing's, not taken
     // out), a new one by its place among those sent, the first the cover.
     let order: Vec<String> = order
@@ -935,10 +933,27 @@ pub async fn update_listing(
             _ => None,
         })
         .collect();
-    if !order.is_empty() {
-        db::order_listing_photos(&state.db, listing.id, &order).await?;
-    }
+    let gone = match db::update_listing(&state.db, public_no, &changed, checked.point, &removed, &stored, &order).await {
+        Ok(Some(gone)) => gone,
+        Ok(None) => {
+            unstore(&state.media, &stored).await;
+            return not_found().await;
+        }
+        Err(error) => {
+            unstore(&state.media, &stored).await;
+            return Err(error.into());
+        }
+    };
+    // The files of the photos taken out, now that the listing names them no more.
+    photos::delete(&state.media, &gone).await;
     Ok(Redirect::to(&format!("/listing/{public_no}-{slug}")).into_response())
+}
+
+/// Takes the files of photos just put in the store out again, when the listing or the edit they
+/// came with wasn't saved, so that nothing is left of it.
+async fn unstore(media: &Media, stored: &[NewPhoto]) {
+    let keys: Vec<String> = stored.iter().map(|photo| photo.storage_key.clone()).collect();
+    photos::delete(media, &keys).await;
 }
 
 #[derive(Template)]

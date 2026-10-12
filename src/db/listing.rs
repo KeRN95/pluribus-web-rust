@@ -247,11 +247,11 @@ pub struct NewPhoto {
 }
 
 /// Adds photos after the listing's others, in order; the first photo a listing gets is its cover.
-pub async fn add_listing_photos(db: &PgPool, listing_id: Uuid, photos: &[NewPhoto]) -> sqlx::Result<()> {
+/// Inside the transaction that saves the listing or its edit (posting.rs).
+pub(super) async fn add_listing_photos(tx: &mut sqlx::PgConnection, listing_id: Uuid, photos: &[NewPhoto]) -> sqlx::Result<()> {
     if photos.is_empty() {
         return Ok(());
     }
-    let mut tx = db.begin().await?;
     let last = sqlx::query!(
         r#"SELECT coalesce(max(sort_order), -1) AS "last!", coalesce(bool_or(is_cover), false) AS "has_cover!"
            FROM listing_media WHERE listing_id = $1"#,
@@ -282,15 +282,15 @@ pub async fn add_listing_photos(db: &PgPool, listing_id: Uuid, photos: &[NewPhot
         .execute(&mut *tx)
         .await?;
     }
-    tx.commit().await
+    Ok(())
 }
 
 /// Puts the listing's photos in the order its edit form sent: each by its id, or a photo just
 /// added by its key in the store (it has no id the form knew); the first is the cover. Photos
 /// the order leaves out follow, as they were. The cover changes in two steps, the old one let go
-/// first, as only one may be (ux_listing_media_one_cover).
-pub async fn order_listing_photos(db: &PgPool, listing_id: Uuid, order: &[String]) -> sqlx::Result<()> {
-    let mut tx = db.begin().await?;
+/// first, as only one may be (ux_listing_media_one_cover). Inside the edit's transaction
+/// (posting.rs).
+pub(super) async fn order_listing_photos(tx: &mut sqlx::PgConnection, listing_id: Uuid, order: &[String]) -> sqlx::Result<()> {
     sqlx::query(
         "WITH wanted AS (SELECT token, place FROM unnest($2::text[]) WITH ORDINALITY AS o(token, place)),
               ranked AS (
@@ -312,17 +312,18 @@ pub async fn order_listing_photos(db: &PgPool, listing_id: Uuid, order: &[String
         .bind(listing_id)
         .execute(&mut *tx)
         .await?;
-    tx.commit().await
+    Ok(())
 }
 
 /// Puts the listing at a point of its seller's own on the map, more exactly than its town's (the
-/// form's map, map_pin_controller.js; post.rs rounds it to about a hundred metres).
-pub async fn set_listing_point(db: &PgPool, listing_id: Uuid, latitude: f64, longitude: f64) -> sqlx::Result<()> {
+/// form's map, map_pin_controller.js; domain::listing rounds it to about a hundred metres). Inside
+/// the transaction that saves the listing or its edit (posting.rs).
+pub(super) async fn set_listing_point(tx: &mut sqlx::PgConnection, listing_id: Uuid, (latitude, longitude): (f64, f64)) -> sqlx::Result<()> {
     sqlx::query("UPDATE listings SET latitude = $2::numeric(9, 6), longitude = $3::numeric(9, 6) WHERE id = $1")
         .bind(listing_id)
         .bind(latitude)
         .bind(longitude)
-        .execute(db)
+        .execute(&mut *tx)
         .await?;
     Ok(())
 }
@@ -369,13 +370,13 @@ pub async fn own_listing_photos(db: &PgPool, listing_id: Uuid) -> sqlx::Result<V
     .await
 }
 
-/// Removes some of the listing's photos; returns their keys in the store, to delete the files.
-/// When the cover goes, the first photo left takes its place.
-pub async fn remove_listing_photos(db: &PgPool, listing_id: Uuid, ids: &[Uuid]) -> sqlx::Result<Vec<String>> {
+/// Removes some of the listing's photos; returns their keys in the store, to delete the files once
+/// the edit's transaction (posting.rs), which this is part of, has gone through. When the cover
+/// goes, the first photo left takes its place.
+pub(super) async fn remove_listing_photos(tx: &mut sqlx::PgConnection, listing_id: Uuid, ids: &[Uuid]) -> sqlx::Result<Vec<String>> {
     if ids.is_empty() {
         return Ok(Vec::new());
     }
-    let mut tx = db.begin().await?;
     let keys = sqlx::query_scalar!(
         "DELETE FROM listing_media WHERE listing_id = $1 AND id = ANY($2) RETURNING storage_key",
         listing_id,
@@ -391,7 +392,6 @@ pub async fn remove_listing_photos(db: &PgPool, listing_id: Uuid, ids: &[Uuid]) 
     )
     .execute(&mut *tx)
     .await?;
-    tx.commit().await?;
     Ok(keys)
 }
 

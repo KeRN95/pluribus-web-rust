@@ -109,6 +109,12 @@ pub use promotions::*;
 pub use car_prices::*;
 pub use recommended::*;
 
+/// The migrations, embedded once for the database tests inside `src/`, which name it
+/// (`#[sqlx::test(migrator = "crate::db::MIGRATOR")]`): a plain `#[sqlx::test]` reads and embeds
+/// them all again for its test alone, as the request tests' own MIGRATOR saves them from.
+#[cfg(test)]
+pub(crate) static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
+
 #[cfg(test)]
 mod tests {
     use sqlx::ConnectOptions;
@@ -116,7 +122,7 @@ mod tests {
     use super::*;
 
     /// A connection opened as the site opens its own plans every query for its values.
-    #[sqlx::test]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn the_sites_connections_plan_queries_for_their_values(pool: PgPool) -> sqlx::Result<()> {
         let mut connection = plan_for_values((*pool.connect_options()).clone()).connect().await?;
         let mode: String = sqlx::query_scalar("SHOW plan_cache_mode").fetch_one(&mut connection).await?;
