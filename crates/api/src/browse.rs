@@ -485,7 +485,7 @@ async fn recommended_page(
 /// A page of `rows`, which hold up to PAGE_SIZE + 1 listings, the one past the page saying only
 /// that another follows; and where the next starts, the cursor after its last listing in `sort`
 /// (db::Cursor), when one does.
-fn paged(mut rows: Vec<ListingCard>, sort: Sort) -> (Vec<ListingCard>, Option<String>) {
+pub(crate) fn paged(mut rows: Vec<ListingCard>, sort: Sort) -> (Vec<ListingCard>, Option<String>) {
     let more = rows.len() > db::PAGE_SIZE as usize;
     rows.truncate(db::PAGE_SIZE as usize);
     let next = rows.last().filter(|_| more).map(|last| Cursor::after(sort, last).encode());
@@ -500,7 +500,7 @@ fn counted(count: i64, limit: i64) -> CountDto {
 
 /// 422 on a list's paging that doesn't read: its `after`, or the seeds of a recommended one
 /// (`sipas`).
-fn unreadable(field: &'static str) -> ApiError {
+pub(crate) fn unreadable(field: &'static str) -> ApiError {
     let message = match field {
         "sipas" => t("Njoftimet nga të cilat vijnë rekomandimet nuk lexohen. Fillo përsëri nga faqja e parë."),
         _ => t("Vazhdimi i listës nuk lexohet. Fillo përsëri nga faqja e parë."),
@@ -532,7 +532,7 @@ fn without_hidden(cards: &mut Vec<ListingCard>, hidden: &[Uuid]) {
 }
 
 /// The cards of `cards`, their photos' addresses absolute from `origin`.
-fn cards_of(cards: &[ListingCard], origin: &str) -> Result<Vec<CardDto>, ApiError> {
+pub(crate) fn cards_of(cards: &[ListingCard], origin: &str) -> Result<Vec<CardDto>, ApiError> {
     cards.iter().map(|card| CardDto::new(card, origin)).collect::<anyhow::Result<_>>().map_err(ApiError::from)
 }
 
@@ -635,7 +635,7 @@ fn bargain(price_eur: Option<Decimal>, median_eur: Option<Decimal>) -> bool {
 /// request came, the host it named (Host; not X-Forwarded-Host, which a caller may set to
 /// anything), over https when the proxy in front says so (X-Forwarded-Proto), as the pages make
 /// their own addresses absolute (pluribus-web's seo::origin).
-fn origin(config: &Config, headers: &HeaderMap) -> String {
+pub(crate) fn origin(config: &Config, headers: &HeaderMap) -> String {
     if let Some(url) = config.public_url.clone() {
         return url;
     }

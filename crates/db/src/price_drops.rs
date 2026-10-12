@@ -73,6 +73,8 @@ pub struct PriceDrop {
     pub was: Decimal,
     pub price: Decimal,
     pub currency: String,
+    /// When it dropped: its notification's, which the JSON API gives (pluribus-api's saved.rs).
+    pub at: OffsetDateTime,
 }
 
 /// The price drops the user hasn't seen yet, the latest first: of listings still on the site, which
@@ -81,7 +83,7 @@ pub async fn price_drops(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<PriceDr
     sqlx::query_as(
         "SELECT n.id AS notice, l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title,
                 (n.payload->>'was')::numeric AS was, (n.payload->>'price')::numeric AS price,
-                n.payload->>'currency' AS currency
+                n.payload->>'currency' AS currency, n.created_at AS at
          FROM notifications n
          JOIN listings l ON l.id = (n.payload->>'listing_id')::uuid
          JOIN saved_listings k ON k.user_id = n.user_id AND k.listing_id = l.id

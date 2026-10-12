@@ -1,0 +1,12 @@
+# The JSON API's listings kept, saved searches, reports and blocks (crates/api/src/saved.rs,
+# searches.rs, safety.rs): what they say, in the language each request asks for
+# (crates/api/src/lang.rs), besides what the pages say alike (a full list of searches, account.txt;
+# a report's reasons, its checks and its day's limit, listing.txt).
+
+# crates/api/src/searches.rs: a search to keep, under "path" or "query"
+
+Ruhet vetëm faqja e një kategorie (/c/…) ose një kërkim (/search).
+= Only a category’s page (/c/…) or a search (/search) can be saved.
+
+Kjo kategori nuk ekziston.
+= This category doesn’t exist.

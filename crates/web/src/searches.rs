@@ -5,7 +5,9 @@
 //! notification (SAVED_SEARCH), which puts the dot on the heart that leads to the listings kept
 //! (heart_controller.js), and by e-mail where its saver has an address. Each search keeps its page
 //! and its filters as the page itself writes them (Filters::search_address), so that the same
-//! search saved twice is one, and its listings are found as its page finds them (replay).
+//! search saved twice is one, and its listings are found as its page finds them: its page made
+//! again from them (pluribus-services' searches.rs, `replay`, which the JSON API's saved searches
+//! share; this file's until C7).
 
 use std::time::Duration;
 
@@ -16,6 +18,7 @@ use axum::{
     http::HeaderMap,
     response::{IntoResponse, Redirect, Response},
 };
+use pluribus_services::searches::{is_search_page, replay};
 use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -23,13 +26,13 @@ use uuid::Uuid;
 use super::{
     Result,
     account::{current_user, redirect_with_cookies},
-    filters::{Filters, Params},
+    filters::Filters,
     listings::ListingCardExt,
     not_found, render, saved,
 };
 use crate::{
     AppState,
-    db::{self, Categories, City, ListingFilter, NewSearch, SavedSearch, Sort},
+    db::{self, NewSearch, SavedSearch, Sort},
     domain::notices::{NEW_MOST, new_listings},
     format::Contact,
     i18n::{self, Lang, t1, t2},
@@ -42,55 +45,6 @@ pub const ALERT_GAP: Duration = Duration::from_secs(3 * 60 * 60);
 pub const ALERT_CHECK_EVERY: Duration = Duration::from_secs(15 * 60);
 /// How many of the new listings an alert's e-mail names.
 const ALERT_LISTINGS: usize = 3;
-
-/// A search page as its path and query make it, as browse.rs makes it (the town a cookie
-/// remembers aside, which a saved search has written in): what a saved search keeps of it, and
-/// its listing query.
-struct Replayed {
-    path: String,
-    query: String,
-    name: String,
-    category_id: Option<Uuid>,
-    words: Option<String>,
-    filter: ListingFilter,
-}
-
-/// The page at `path` (/search, /c/<slug>) with the filters of `query`; None for a path that is
-/// neither or a category that doesn't exist.
-async fn replay(db: &PgPool, categories: &Categories, cities: &[City], path: &str, query: &str) -> sqlx::Result<Option<Replayed>> {
-    let page_slug = match path {
-        "/search" => None,
-        _ => match path.strip_prefix("/c/") {
-            Some(slug) => Some(slug),
-            None => return Ok(None),
-        },
-    };
-    let params = Params::parse(Some(query));
-    let slug = page_slug.or(params.first("category"));
-    let category = match slug {
-        Some(slug) => match categories.by_slug(slug) {
-            Some(category) => Some(category),
-            None => return Ok(None),
-        },
-        None => None,
-    };
-    let attributes = match slug {
-        Some(slug) => db::filter_attributes(db, slug).await?,
-        None => Vec::new(),
-    };
-    let words = params.search_words();
-    let search = db::text_search(db, words.as_deref()).await?;
-    let filters = Filters::new(&params, path.to_string(), category, page_slug.is_none(), categories, cities, &attributes);
-    let (path, query) = filters.search_address();
-    Ok(Some(Replayed {
-        path,
-        query,
-        name: filters.search_name(),
-        category_id: category.map(|category| category.id),
-        words: filters.q.clone(),
-        filter: filters.listing_filter(search),
-    }))
-}
 
 /// A search's address, its path and its query.
 fn address(path: &str, query: &str) -> String {
@@ -110,7 +64,7 @@ pub struct SaveForm {
 /// writes it, and goes back to it; someone not signed in signs in first and comes back to it.
 pub async fn save(State(state): State<AppState>, headers: HeaderMap, Form(form): Form<SaveForm>) -> Result<Response> {
     let (path, query) = form.adresa.split_once('?').unwrap_or((form.adresa.as_str(), ""));
-    if path != "/search" && !path.starts_with("/c/") {
+    if !is_search_page(path) {
         return not_found().await;
     }
     let Some(user) = current_user(&state, &headers).await? else {
@@ -120,18 +74,31 @@ pub async fn save(State(state): State<AppState>, headers: HeaderMap, Form(form):
     let Some(page) = replay(&state.db, &categories, &cities, path, query).await? else {
         return not_found().await;
     };
+    // Its address and its name as the page's own filters write them, which its save button looks
+    // for it by (browse.rs); the API's, from the same page made again, say the same.
+    let filters = Filters::new(
+        &page.params,
+        page.path.clone(),
+        page.category,
+        page.category_is_filter,
+        &categories,
+        &cities,
+        &page.attributes,
+    );
+    let (path, query) = filters.search_address();
+    let name = filters.search_name();
     let search = NewSearch {
-        name: &page.name,
-        category_id: page.category_id,
-        words: page.words.as_deref(),
-        path: &page.path,
-        query: &page.query,
+        name: &name,
+        category_id: page.category_id(),
+        words: filters.q.as_deref(),
+        path: &path,
+        query: &query,
     };
     if db::save_search(&state.db, user.id, &search).await?.is_none() {
         // As many as one keeps: their page says so.
         return Ok(Redirect::to("/kerkimet-e-ruajtura?plot=1").into_response());
     }
-    Ok(Redirect::to(&address(&page.path, &page.query)).into_response())
+    Ok(Redirect::to(&address(&path, &query)).into_response())
 }
 
 /// POST /kerkimet/{id}/fshi: lets the search go, from its page ("Kërkimi u ruajt", tapped again)
@@ -229,10 +196,7 @@ pub async fn page(State(state): State<AppState>, headers: HeaderMap, RawQuery(qu
     let mut rows = Vec::with_capacity(searches.len());
     for search in searches {
         let new = match replay(&state.db, &categories, &cities, &search.path, &search.query).await? {
-            Some(mut page) => {
-                page.filter.since = Some(search.seen_since);
-                Some(db::listing_count_up_to(&state.db, &page.filter, NEW_MOST).await?)
-            }
+            Some(page) => Some(page.new_since(&state.db, search.seen_since).await?),
             None => None,
         };
         rows.push(SearchRow { search, new });
@@ -259,16 +223,18 @@ pub async fn send_search_alerts(db: &PgPool, senders: &sender::Senders, origin: 
     let (categories, cities) = tokio::try_join!(db::categories(db), db::cities(db))?;
     let mut sent = 0;
     for search in due {
-        let Some(mut page) = replay(db, &categories, &cities, &search.path, &search.query).await? else {
+        let Some(page) = replay(db, &categories, &cities, &search.path, &search.query).await? else {
             continue;
         };
-        page.filter.since = Some(search.since);
-        page.filter.sort = Sort::Newest;
-        let count = db::listing_count_up_to(db, &page.filter, NEW_MOST).await?;
+        // One filter for the count and the newest, which the second's plan takes from the first's.
+        let mut filter = page.listing_filter();
+        filter.since = Some(search.since);
+        filter.sort = Sort::Newest;
+        let count = db::listing_count_up_to(db, &filter, NEW_MOST).await?;
         if count == 0 {
             continue;
         }
-        let newest = db::listing_page(db, &page.filter).await?;
+        let newest = db::listing_page(db, &filter).await?;
         let url = format!("{origin}/kerkimet/{}", search.id);
         // The notification keeps its title in Albanian (web/notifications.rs words it for its
         // reader), as the WhatsApp template's texts are; the e-mail is in its recipient's language.

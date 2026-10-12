@@ -16,13 +16,16 @@ mod error;
 mod lang;
 pub mod notifications;
 pub mod reference;
+pub mod safety;
+pub mod saved;
+pub mod searches;
 pub mod signin;
 
 use axum::{
     Json, Router,
     extract::{FromRequest, OriginalUri, Request, State},
     middleware,
-    routing::{get, post},
+    routing::{delete, get, post, put},
 };
 use pluribus_db as db;
 use pluribus_services::AppState;
@@ -48,8 +51,13 @@ pub fn router(state: AppState) -> Router {
 /// `GET /home`, for anyone, a signed-in caller's lists without the listings of the accounts they
 /// blocked (browse.rs); the user's notifications, `GET /notifications` and
 /// `POST /notifications/seen`, and what the app's badges count, `GET /counts`, signed in
-/// (notifications.rs); and signing in by a code (signin.rs): `POST /auth/code` and
-/// `POST /auth/verify`, for anyone, and `POST /auth/sign-out`, signed in.
+/// (notifications.rs); signing in by a code (signin.rs): `POST /auth/code` and
+/// `POST /auth/verify`, for anyone, and `POST /auth/sign-out`, signed in; the listings a user
+/// keeps, signed in (saved.rs): `PUT` and `DELETE /listings/{no}/saved`, `GET /saved` and
+/// `POST /saved/seen`; their saved searches, signed in (searches.rs): `GET` and `POST /searches`,
+/// `DELETE /searches/{id}`, `PUT /searches/{id}/alerts` and `GET /searches/{id}/listings`; and
+/// trust and safety (safety.rs): `GET /report/reasons`, for anyone, `POST /listings/{no}/report`
+/// and `PUT` and `DELETE /sellers/{user_id}/blocked`, signed in.
 fn routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
@@ -65,6 +73,16 @@ fn routes() -> Router<AppState> {
         .route("/auth/code", post(signin::code))
         .route("/auth/verify", post(signin::verify))
         .route("/auth/sign-out", post(signin::sign_out))
+        .route("/listings/{no}/saved", put(saved::keep).delete(saved::let_go))
+        .route("/saved", get(saved::saved))
+        .route("/saved/seen", post(saved::seen))
+        .route("/searches", get(searches::list).post(searches::save))
+        .route("/searches/{id}", delete(searches::delete))
+        .route("/searches/{id}/alerts", put(searches::alerts))
+        .route("/searches/{id}/listings", get(searches::listings))
+        .route("/report/reasons", get(safety::reasons))
+        .route("/listings/{no}/report", post(safety::report))
+        .route("/sellers/{user_id}/blocked", put(safety::block).delete(safety::unblock))
 }
 
 /// Routes in the API's frame, which `router` puts the API's own in, and the tests a probe of

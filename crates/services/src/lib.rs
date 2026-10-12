@@ -5,9 +5,10 @@
 //! the site's address for what goes out on its own among them (config.rs: `Config`,
 //! `Config::site_origin`); photos and their store (media.rs), sending codes, notices and alerts
 //! (sender.rs), the AI that fills in the listing form (ai.rs), the euro rate (rates.rs), the views
-//! (views.rs), the recommendations (recommended.rs), and the work that runs on its own, which
-//! `pluribus_web::state` starts: the notices of unread messages (notices.rs), the listings' expiry
-//! (expiry.rs) and the promotions in time (promotions.rs).
+//! (views.rs), the recommendations (recommended.rs), a saved search's page made again from what it
+//! keeps (searches.rs), and the work that runs on its own, which `pluribus_web::state` starts: the
+//! notices of unread messages (notices.rs), the listings' expiry (expiry.rs) and the promotions in
+//! time (promotions.rs).
 
 pub mod ai;
 pub mod config;
@@ -18,6 +19,7 @@ pub mod notices;
 pub mod promotions;
 pub mod rates;
 pub mod recommended;
+pub mod searches;
 pub mod sender;
 pub mod sign_in;
 pub mod views;

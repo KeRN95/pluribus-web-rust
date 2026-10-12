@@ -19,6 +19,10 @@ pub struct SavedSearch {
     /// Since when its new listings count: when it was last opened from /kerkimet-e-ruajtura, or
     /// saved.
     pub seen_since: OffsetDateTime,
+    /// When it was saved, and when it was last opened (none until it is), which the JSON API gives
+    /// (pluribus-api's searches.rs).
+    pub created_at: OffsetDateTime,
+    pub last_seen_at: Option<OffsetDateTime>,
 }
 
 /// The search of this page and query that the user keeps, if they keep it.
@@ -88,7 +92,7 @@ pub async fn delete_search(db: &PgPool, user_id: Uuid, id: Uuid) -> sqlx::Result
 pub async fn saved_searches(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<SavedSearch>> {
     sqlx::query_as(
         "SELECT id, name, filters ->> 'path' AS path, filters ->> 'query' AS query, alerts_enabled,
-                coalesce(last_seen_at, created_at) AS seen_since
+                coalesce(last_seen_at, created_at) AS seen_since, created_at, last_seen_at
          FROM saved_searches
          WHERE user_id = $1
          ORDER BY created_at DESC, id DESC
