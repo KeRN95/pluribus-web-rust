@@ -39,9 +39,10 @@
 
 use pluribus_services::places::{Word, read_town, read_zone, words};
 
-use super::{filters::url, post::zoned};
+use super::filters::url;
 use crate::{
     db::{Categories, Category, City, Zone},
+    domain::listing::zoned,
     format,
 };
 

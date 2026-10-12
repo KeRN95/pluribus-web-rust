@@ -20,13 +20,14 @@ use uuid::Uuid;
 use super::{
     Result,
     account::{self, ClientIp, SignInPage, current_user, redirect_with_cookies, session_hash},
-    photos, render,
+    render,
 };
 use crate::{
     AppState,
     db::{self, SessionUser},
     format::{self, Contact},
     i18n::t,
+    media,
 };
 
 #[derive(Template)]
@@ -167,12 +168,12 @@ pub struct NameForm {
 }
 
 /// POST /llogaria/emri: the name the account shows by, tidied as a new account's is
-/// (account::display_name).
+/// (sign_in::display_name).
 pub async fn rename(State(state): State<AppState>, headers: HeaderMap, Form(form): Form<NameForm>) -> Result<Response> {
     let Some(user) = current_user(&state, &headers).await? else {
         return Ok(Redirect::to("/llogaria").into_response());
     };
-    let Some(name) = account::display_name(&form.emri) else {
+    let Some(name) = sign_in::display_name(&form.emri) else {
         let mut page = settings_page(&state, &user, None).await?;
         page.name = form.emri;
         page.name_error = Some(t("Shkruaj emrin që do të shohin të tjerët."));
@@ -338,7 +339,7 @@ pub async fn close(State(state): State<AppState>, headers: HeaderMap, Form(form)
     }
     let stores = db::stores_owned(&state.db, user.id).await? > 0;
     let photos = db::delete_account(&state.db, user.id).await?;
-    photos::delete(&state.media, &photos).await;
+    media::delete_photos(&state.media, &photos).await;
     tracing::info!(user = %user.id, photos = photos.len(), "an account closed itself");
     let mut response = render(ClosedPage { stores })?;
     response.headers_mut().append(axum::http::header::SET_COOKIE, account::forget_session(&headers));

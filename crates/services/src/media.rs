@@ -363,7 +363,8 @@ impl Media {
 }
 
 /// Deletes the files of photos taken off a listing, every copy, those of photos kept before WebP
-/// included (pluribus-web's photos::delete, and the expiry's, for the drafts it forgets); a
+/// included (the pages' and the API's, an edit's photos taken out and a closed account's, which
+/// pluribus-web gave on as photos::delete until C12; and the expiry's, for what it forgets); a
 /// store's logo or cover (`stores/`) is one file. A file left behind only takes space, so a
 /// failure is logged rather than shown.
 pub async fn delete_photos(media: &Media, keys: &[String]) {

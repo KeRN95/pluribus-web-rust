@@ -42,13 +42,12 @@ use crate::{
 use crate::domain::listing::LOAN_DOWN_PERCENT;
 
 // The categories whose listings' pages show where they are on a map and are laid out as a car's:
-// domain::listing's, the posting rules' own, which this file kept a copy of until C5 (post.rs's
-// test still names it here).
-pub(super) use crate::domain::listing::MAPPED;
+// domain::listing's, the posting rules' own, which this file kept a copy of until C5.
+use crate::domain::listing::MAPPED;
 
 // A text percent-encoded for an address (format::percent_encoded, this file's until C5): the share
-// link of a listing just posted, and stores.rs's invitations, which take it from here.
-pub(super) use crate::format::percent_encoded;
+// link of a listing just posted.
+use crate::format::percent_encoded;
 
 /// How wide a listing's photos show, for the browser to pick a copy of each (Photo::webp_srcset):
 /// for every listing but a car's or a property's, whose photo stands at the left of its page from

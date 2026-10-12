@@ -84,8 +84,9 @@ pub struct ListingInput {
     pub description: String,
     /// The kind of price chosen; `price_of` makes none, or one the form doesn't offer, a fixed one.
     pub price_type: Option<PriceType>,
-    /// The price typed, read as a number where it is one: web/filters.rs's `parse_number` reads it
-    /// as people type numbers, in Albanian's way or English's.
+    /// The price typed, read as a number where it is one: pluribus-services' `filters::parse_number`
+    /// (which web/filters.rs gave on until C12) reads it as people type numbers, in Albanian's way
+    /// or English's.
     pub price: Option<Decimal>,
     /// The currency's code, as sent ("EUR", "ALL").
     pub currency: String,

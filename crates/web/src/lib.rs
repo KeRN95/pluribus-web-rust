@@ -397,12 +397,6 @@ pub fn type_trial() -> bool {
     request_config().is_some_and(|config| config.type_trial)
 }
 
-/// The saved searches' alerts due now, sent by `senders` with links that start with `origin`,
-/// which the tests send: pluribus-services' (searches.rs) since D2, which moved them there for the
-/// jobs to send every 15 minutes, one server at a time (jobs.rs; `start_search_alerts` here, from
-/// `state`, until then).
-pub use pluribus_services::searches::send_search_alerts;
-
 /// How long browsers keep a file whose address changes whenever the file does: a year, without
 /// asking again.
 const KEEP: &str = "public, max-age=31536000, immutable";

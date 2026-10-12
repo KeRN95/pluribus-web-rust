@@ -14,6 +14,7 @@ use axum::{
     http::{HeaderMap, HeaderValue, header},
     response::{IntoResponse, Redirect, Response},
 };
+use pluribus_services::filters::Params;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -21,7 +22,7 @@ use super::{
     Result,
     account::current_user,
     cookie,
-    filters::{Chip, Drop, DropKind, Field, FieldKind, Filters, Params, PriceChoice, TOWN_COOKIE},
+    filters::{Chip, Drop, DropKind, Field, FieldKind, Filters, PriceChoice, TOWN_COOKIE},
     icons, is_next_page_request,
     listings::{ListingCardExt, MapPointExt, Slide},
     named, not_found, render, safety,
@@ -325,7 +326,7 @@ pub fn frame(frame_id: String, page: &ListingPage) -> Result<Response> {
 /// The main categories in the welcome page's order (MAIN_ON_WELCOME's first, then the others as
 /// the database sorts them), by their slugs and names, for the menu on every page (base.html),
 /// whose frame has no database to ask: the categories come with the migrations, and a test keeps
-/// these theirs (the_menu_leads_everywhere, tests/web.rs).
+/// these theirs (the_menu_leads_everywhere, crates/web/tests/design.rs).
 const MENU_CATEGORIES: [(&str, &str); 11] = [
     ("automjete", "Automjete"),
     ("prona", "Prona"),

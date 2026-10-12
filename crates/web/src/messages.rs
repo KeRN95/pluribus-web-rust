@@ -24,21 +24,18 @@ use uuid::Uuid;
 use super::{
     Result,
     account::{cookie_header, current_user, redirect_with_cookies},
-    not_found,
-    post::link_count,
-    render, render_stream, saved,
+    not_found, render, render_stream, saved,
 };
 use crate::{
     AppState,
     db::{self, Conversation, InboxEntry, Message, MessageTarget, SessionUser},
-    domain::messaging::{self, Outgoing, Writing},
+    domain::{
+        listing::link_count,
+        messaging::{self, Outgoing, Writing},
+    },
     format,
     i18n::{english, t},
 };
-
-/// A message's length, in characters (domain::messaging), which the box to write in holds to
-/// (conversation.html).
-pub use crate::domain::messaging::MAX_CHARS;
 
 /// The conversations the inbox shows, the latest first.
 const INBOX_MOST: i64 = 200;

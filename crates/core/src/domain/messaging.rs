@@ -77,9 +77,10 @@ pub struct SentLately {
 /// A message about to go, as the limits see it.
 #[derive(Debug, Clone, Copy)]
 pub struct Outgoing<'a> {
-    /// What it says, as it is sent: without space around it (web/messages.rs's `tidy`).
+    /// What it says, as it is sent: without space around it (`tidy`, web/messages.rs's until C11).
     pub body: &'a str,
-    /// How many links it holds, as a listing's text counts them (web/post.rs's `link_count`).
+    /// How many links it holds, as a listing's text counts them (domain::listing's `link_count`,
+    /// which web/post.rs gave on until C12).
     pub links: usize,
     /// While the other side hasn't answered yet, how many messages in a row its sender's side sent
     /// (none, for the first); None once the other side has answered.

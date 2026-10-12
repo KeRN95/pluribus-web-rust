@@ -18,10 +18,11 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
+use pluribus_services::properties;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use super::{Result, account::current_user, filters::Choice, not_found, promotions::OnPromotionExt, properties, render, safety::reason_label};
+use super::{Result, account::current_user, filters::Choice, not_found, promotions::OnPromotionExt, render, safety::reason_label};
 use crate::{
     AppState,
     db::{self, Approval, Decision, MergeTarget, PendingOption, ReportedListing, SessionUser},

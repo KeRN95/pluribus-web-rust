@@ -20,7 +20,6 @@ use uuid::Uuid;
 use super::{
     Result,
     account::{SignInPage, current_user},
-    listings::percent_encoded,
     not_found,
     photos::Submission,
     render, saved,
@@ -29,7 +28,7 @@ use crate::{
     AppState,
     db::{self, City, ImageChange, SessionUser, StoreFields, StoreImage},
     domain::Role,
-    format::{self, Contact},
+    format::{self, Contact, percent_encoded},
     i18n::{self, Lang, in_lang, t, t1, t2},
     media,
 };

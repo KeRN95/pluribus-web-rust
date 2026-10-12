@@ -482,10 +482,6 @@ pub enum ListingAction {
     Delete,
 }
 
-/// The kinds of listing that can be sold or reserved (ListingType::SELLABLE), as the database
-/// spells them, for web/listings.rs, which still compares a listing's kind with these.
-pub const SELLABLE_KINDS: [&str; 2] = ListingType::names(ListingType::SELLABLE);
-
 impl ListingAction {
     /// Whether it applies to a listing in `status`, by the rules "Njoftimet e mia" offers its
     /// buttons by (Status's): pausing one that can be paused, putting back up one that can be,

@@ -3,7 +3,8 @@
 //! page's filters, written and named as its page writes and names it, listed, its alerts off and
 //! on, let go, another user's not found and a path that isn't a search's refused; its listings
 //! paged without a gap or a repeat, the first page opening it; one search more than the most
-//! refused; and a search kept from the app the very one its page keeps, for every kind of filter.
+//! refused; and a search kept from the app the very one its page keeps, for every kind of filter,
+//! named by what its page's chips say.
 
 mod common;
 
@@ -350,6 +351,24 @@ async fn a_search_kept_from_the_app_is_the_one_its_page_keeps(pool: PgPool) {
     let (pages, app) = (shown(searches(&pool, &page_token).await), shown(searches(&pool, &app_token).await));
     assert_eq!(app.len(), searches_kept.len());
     assert_eq!(app, pages);
+    // Each named by what its page's chips say: pluribus-web's filters.rs words the chips, and
+    // pluribus-services' `searches::name`, which both saves name a search by, the name, so every
+    // chip of the page is in it, in its order, after the words and the page's category (all of
+    // them but in a name cut short).
+    for (name, path, query) in &app {
+        let (name, path, query) = (name.as_str().unwrap(), path.as_str().unwrap(), query.as_str().unwrap());
+        let page = get(pool.clone(), &format!("{path}?{query}"), None).await;
+        assert_eq!(page.status, StatusCode::OK, "{path}?{query}");
+        let chips: Vec<&str> = page
+            .body
+            .split(r#"class="filter-chip""#)
+            .skip(1)
+            .map(|chip| chip.split_once('>').and_then(|(_, label)| label.split_once("<svg")).expect("a chip's label").0)
+            .collect();
+        if !name.ends_with('…') {
+            assert!(name.ends_with(&chips.join(" · ")), "{name}: {chips:?}");
+        }
+    }
     // What they say, the latest kept first.
     let names: Vec<&str> = app.iter().map(|(name, _, _)| name.as_str().unwrap()).collect();
     assert!(names[0].starts_with("„fjalë fjalë") && names[0].ends_with('…') && names[0].chars().count() == 120, "{}", names[0]);

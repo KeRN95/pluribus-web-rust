@@ -18,18 +18,20 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
 };
 use pluribus_services::{
+    filters::parse_number,
     photos::{check as check_photos, process as process_photos, store as store_photos, unstore},
     posting::{self, Poster, listing_to_save, message},
     push,
+    sign_in::display_name,
 };
 use serde::Deserialize;
 
 use super::{
     Result,
-    account::{self, ClientIp, MIN_FORM_SECONDS, SignInPage, cookie_header, current_user, display_name, now, redirect_with_cookies},
-    filters::{self, Choice, ChoiceGroup, parse_number},
+    account::{self, ClientIp, MIN_FORM_SECONDS, SignInPage, cookie_header, current_user, now, redirect_with_cookies},
+    filters::{self, Choice, ChoiceGroup},
     not_found,
-    photos::{self, Submission},
+    photos::Submission,
     promotions::OnPromotionExt,
     properties::{self, PropertyField},
     render, saved,
@@ -39,17 +41,12 @@ use crate::{
     db::{self, Categories, Category, City, FormAttribute, ListingAction, MyListing, OwnListing, OwnPhoto, Photos, SessionUser},
     domain::{
         Condition, ListingType, PriceType, ReviewReason, Status,
-        listing::{self, Checked, FieldErrors, ListingInput, distance_km, mapped},
+        listing::{self, Checked, FieldErrors, ListingInput, distance_km, mapped, zoned},
     },
     format::{self, Contact},
     i18n::{t, t1, t2},
-    media::MAX_PHOTOS,
+    media::{self, MAX_PHOTOS},
 };
-
-/// Where web/messages.rs, web/filters.rs and web/named.rs have called them, now that a listing's
-/// rules are in domain::listing.
-pub use crate::domain::listing::link_count;
-pub(super) use crate::domain::listing::zoned;
 
 /// The kinds of price the form offers (listing::PRICE_TYPES, in its order), each with its label,
 /// which the form shows in the page's language (t).
@@ -865,7 +862,7 @@ pub async fn update_listing(
     // The files of the photos taken out, now that the listing names them no more; and the phones of
     // those it told of a lower price, now that it went through (push.rs), which the page doesn't
     // wait on.
-    photos::delete(&state.media, &updated.gone).await;
+    media::delete_photos(&state.media, &updated.gone).await;
     push::after_price_drops(&state, updated.drops);
     Ok(Redirect::to(&format!("/listing/{public_no}-{slug}")).into_response())
 }
@@ -1151,12 +1148,10 @@ mod tests {
     use super::*;
     use crate::domain::listing::FieldError;
 
-    /// The form offers the kinds of price the rules take, in their order, and lays out as a car's
-    /// or a property's page the listings whose form has a map.
+    /// The form offers the kinds of price the rules take, in their order.
     #[test]
     fn the_form_offers_what_the_listing_rules_take() {
         assert_eq!(PRICE_TYPES.map(|(code, _)| code), PriceType::names(listing::PRICE_TYPES));
-        assert_eq!(crate::web::listings::MAPPED, listing::MAPPED);
     }
 
     /// Each problem the rules find is said as the form said it before they had codes.

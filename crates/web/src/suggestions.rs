@@ -8,14 +8,10 @@ use axum::{
     extract::{RawQuery, State},
     response::Response,
 };
-use pluribus_services::places::PLACE_WORDS;
+use pluribus_services::{filters::SEARCH_CHARS, places::PLACE_WORDS};
 use sqlx::PgPool;
 
-use super::{
-    Result,
-    filters::{SEARCH_CHARS, url},
-    render,
-};
+use super::{Result, filters::url, render};
 use crate::{
     AppState,
     db::{self, City, ListingFilter},

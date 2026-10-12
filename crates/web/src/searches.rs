@@ -6,10 +6,13 @@
 //! server at a time: jobs.rs): a search with listings new since its last alert hears of them, at
 //! most once in ALERT_GAP, as a notification (SAVED_SEARCH), which puts the dot on the heart that
 //! leads to the listings kept (heart_controller.js), and by e-mail where its saver has an address.
-//! Each search keeps its page and its filters as the page itself writes them
-//! (Filters::search_address), so that the same search saved twice is one, and its listings are
-//! found as its page finds them: its page made again from them (pluribus-services' searches.rs,
-//! `replay`, which the JSON API's saved searches and the alerts share; this file's until C7).
+//! Each search keeps its page and its filters as the page itself writes them, and is named by what
+//! its filters' chips say, both by pluribus-services' searches.rs (`address` and `name`, since C12;
+//! the pages wrote and named theirs by copies of their own until then): the JSON API keeps and
+//! names the app's searches by them too, and the page's save button looks its search up by
+//! `address` (Filters::search_address). So the same search saved twice is one, and its listings are
+//! found as its page finds them: its page made again from them (`replay`, which the JSON API's
+//! saved searches and the alerts share; this file's until C7).
 
 use askama::Template;
 use axum::{
@@ -25,7 +28,6 @@ use uuid::Uuid;
 use super::{
     Result,
     account::{current_user, redirect_with_cookies},
-    filters::Filters,
     not_found, render, saved,
 };
 use crate::{
@@ -62,23 +64,14 @@ pub async fn save(State(state): State<AppState>, headers: HeaderMap, Form(form):
     let Some(page) = replay(&state.db, &categories, &cities, path, query).await? else {
         return not_found().await;
     };
-    // Its address and its name as the page's own filters write them, which its save button looks
-    // for it by (browse.rs); the API's, from the same page made again, say the same.
-    let filters = Filters::new(
-        &page.params,
-        page.path.clone(),
-        page.category,
-        page.category_is_filter,
-        &categories,
-        &cities,
-        &page.attributes,
-    );
-    let (path, query) = filters.search_address();
-    let name = filters.search_name();
+    // Its address and its name as pluribus-services writes them for the pages and the API alike,
+    // the address the one its save button looks for it by (browse.rs, Filters::search_address).
+    let (path, query) = page.address();
+    let (name, words) = (page.name(), page.words());
     let search = NewSearch {
         name: &name,
         category_id: page.category_id(),
-        words: filters.q.as_deref(),
+        words: words.as_deref(),
         path: &path,
         query: &query,
     };

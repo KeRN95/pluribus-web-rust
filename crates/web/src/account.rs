@@ -41,10 +41,6 @@ use crate::{
     sender::{Channel, Senders},
 };
 
-/// A name as typed for an account, tidied (pluribus-services' sign_in.rs), as the posting form and
-/// "Cilësimet" tidy one too.
-pub use pluribus_services::sign_in::display_name;
-
 /// A person takes longer than this to type a phone number or fill in a listing; most bots don't.
 pub const MIN_FORM_SECONDS: i64 = 3;
 

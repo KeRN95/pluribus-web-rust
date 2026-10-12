@@ -67,7 +67,7 @@
       {%- endif %}
       <div class="composer-row">
         <label class="visually-hidden" for="message-body">{{ crate::i18n::t1("Mesazhi për {}", other_name) }}</label>
-        <textarea id="message-body" name="body" rows="1" maxlength="{{ crate::web::messages::MAX_CHARS }}" required
+        <textarea id="message-body" name="body" rows="1" maxlength="{{ crate::domain::messaging::MAX_CHARS }}" required
           placeholder="{{ crate::t("Shkruaj një mesazh…") }}" data-conversation-target="body"
           data-action="input->conversation#grow keydown->conversation#key">{{ body }}</textarea>
         <button type="submit" class="button composer-send" aria-label="{{ crate::t("Dërgo") }}" title="{{ crate::t("Dërgo") }}">

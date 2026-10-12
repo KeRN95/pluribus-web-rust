@@ -4,7 +4,10 @@
 //! chips that remove them and the next page's address) and so does the JSON API's `/listings`
 //! (pluribus-api's browse.rs), with one meaning: what a query asks for is the same listings
 //! wherever it is asked. Saved searches keep their queries in this vocabulary (pluribus-web's
-//! searches.rs), and the phone app sends it, so its names and what they mean stay as they are.
+//! searches.rs), and the phone app sends it, so its names and what they mean stay as they are. The
+//! filters read are written back as a query string's pairs in one fixed order
+//! (`ParsedFilters::query_pairs`), which the pages' links and a saved search's address
+//! (searches.rs) are made of.
 //!
 //! Parameters: q, category (on /search and /harta, and the API's /listings; on a category page the
 //! path names it), city, zone (one of the town's zones, Plazh in Durrës: in property only, whose
@@ -285,6 +288,78 @@ impl<'a> ParsedFilters<'a> {
     /// the best match first with words, newest first otherwise.
     pub fn default_sort(&self) -> Sort {
         default_sort(self.near.is_some(), self.q.is_some())
+    }
+
+    /// The filters as a query string's pairs, in the pages' fixed order, without the order and a
+    /// page's cursor: the words, the category where it is one of the filters (`category_is_filter`:
+    /// on /search, not on a category's page, whose path names it), the town and its zone, or the
+    /// pin and its radius (a default pin isn't written down, but a distance picked for it is), the
+    /// kind of listing, the conditions, the price and its currency, then each property's (a part's
+    /// vehicle's year, the options chosen, a number's bounds, a box ticked); nothing that doesn't
+    /// exist or isn't on, so that the same filters asked for in another order write the same
+    /// pairs. What the pages' links are made of (pluribus-web's `Filters`, which adds the order
+    /// where it isn't the one they open in; until C12 written there), and a saved search's address
+    /// (searches.rs, `address`).
+    pub fn query_pairs(&self, category_is_filter: bool) -> Vec<(String, String)> {
+        let mut pairs = Vec::new();
+        let mut push = |name: &str, value: &str| pairs.push((name.to_string(), value.to_string()));
+        if let Some(q) = &self.q {
+            push("q", q);
+        }
+        if let (true, Some(category)) = (category_is_filter, self.category) {
+            push("category", &category.slug);
+        }
+        if let Some(city) = self.city {
+            push("city", &city.slug);
+        }
+        if let Some(zone) = self.zone {
+            push("zone", &zone.slug);
+        }
+        match self.near {
+            Some(near) if self.pin_in_url => {
+                // Five decimals is about a metre.
+                push("lat", &format!("{:.5}", near.latitude));
+                push("lng", &format!("{:.5}", near.longitude));
+                push("radius", &self.radius_km.to_string());
+            }
+            // The map's starting pin isn't written down, but a distance picked for it is.
+            Some(_) if self.radius_km != DEFAULT_RADIUS_KM => push("radius", &self.radius_km.to_string()),
+            _ => {}
+        }
+        if let Some(listing_type) = &self.listing_type {
+            push("type", listing_type);
+        }
+        for condition in &self.conditions {
+            push("condition", condition);
+        }
+        if let Some(min) = self.price_min {
+            push("price_min", &plain(min));
+        }
+        if let Some(max) = self.price_max {
+            push("price_max", &plain(max));
+        }
+        if self.price_min.is_some() || self.price_max.is_some() {
+            push("currency", self.currency);
+        }
+        for property in &self.properties {
+            let code = &property.attribute.code;
+            if let (Some(_), Some(year)) = (property.fits_to, property.year) {
+                push(&year_param(property.attribute), &plain(year));
+            }
+            for option in &property.selected {
+                push(code, &option.code);
+            }
+            if let Some(min) = property.min {
+                push(&format!("{code}_min"), &plain(min));
+            }
+            if let Some(max) = property.max {
+                push(&format!("{code}_max"), &plain(max));
+            }
+            if property.checked {
+                push(code, "1");
+            }
+        }
+        pairs
     }
 }
 

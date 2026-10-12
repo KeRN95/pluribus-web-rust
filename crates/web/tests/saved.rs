@@ -104,7 +104,7 @@ async fn a_saved_search_counts_and_tells_of_its_new_listings(pool: PgPool) {
     let ana = new_seller(&pool, "+355691112233").await;
     let search = "/c/telefona?city=tirane";
     let senders = Senders::none();
-    let alerts = || pluribus_web::send_search_alerts(&pool, &senders, "https://pluribus.example");
+    let alerts = || pluribus_services::searches::send_search_alerts(&pool, &senders, "https://pluribus.example");
     let unseen = |pool: PgPool, session: String| async move {
         let answer: Value = serde_json::from_str(&get_with_cookie(pool, "/te-ruajturat/numrat", &session).await.body).unwrap();
         answer["searches"].as_i64().unwrap()

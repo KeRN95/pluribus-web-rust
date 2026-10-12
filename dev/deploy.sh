@@ -4,7 +4,7 @@
 # does it. The server applies new migrations as it starts.
 #
 #   dev/deploy.sh             build, keep the running binary as the previous one, restart, check
-#   dev/deploy.sh --rollback  restart the previous binary
+#   dev/deploy.sh --rollback  restart the previous binary, if it can run against the database
 #
 # Before building it stops on a migration git doesn't know yet: the build would embed it and the
 # server apply it, and a migration changed after being applied stops the server (its checksum).
@@ -13,6 +13,9 @@
 # the files' times) is redone from clean. The new binary starts only once the old one has let go
 # of the port (`port_taken`), and if it doesn't answer /healthz, the previous one goes back, the
 # end of the log saying why: a deploy that goes back has failed, whatever /healthz says after it.
+# Unless the previous one can't run against the database (`fits_database`), which has run a
+# migration it lacks, the new one's: it would stop as it starts, leaving nothing on the port, so
+# the script says so and leaves the port to the new one, whose log ends what it printed.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -63,8 +66,38 @@ start() {
     return 1
 }
 
+# Whether the binary $1 can run against the database: whether it has the migration the database
+# ran last, as the database ran it. One that lacks it stops as it starts ("migration 44 was
+# previously applied but is missing"), so that going back to it leaves nothing on the port, as on
+# 2026-10-09, when a new binary had migrated the database and then failed. sqlx keeps each
+# migration's checksum in the binary beside its text, and the database keeps it in
+# _sqlx_migrations: the database is asked through psql in the container that publishes
+# DATABASE_URL's port (compose.yaml's db; WSL has no psql), and the binary searched for the
+# checksum's bytes with python3. Where either can't be done, it is taken to fit, as it was before
+# this check (C12). Says why when it doesn't fit.
+fits_database() {
+    local url pattern user port db container newest version checksum description found=0
+    url="${DATABASE_URL:-$(sed -n 's/^DATABASE_URL=//p' .env 2>/dev/null | tr -d '\r')}"
+    pattern='^postgres(ql)?://([^:@/]+)(:[^@/]*)?@[^:/?]+(:([0-9]+))?/([^?]+)'
+    [[ "$url" =~ $pattern ]] || return 0
+    user="${BASH_REMATCH[2]}" port="${BASH_REMATCH[5]:-5432}" db="${BASH_REMATCH[6]}"
+    container="$(docker ps -q --filter "publish=$port" 2>/dev/null | head -n 1)" || return 0
+    [ -n "$container" ] || return 0
+    newest="$(docker exec "$container" psql -U "$user" -d "$db" -At -c \
+        "SELECT version, encode(checksum, 'hex'), description FROM _sqlx_migrations ORDER BY version DESC LIMIT 1" 2>/dev/null)" ||
+        return 0
+    IFS='|' read -r version checksum description <<< "$newest"
+    [ -n "$checksum" ] || return 0
+    python3 -c 'import sys; sys.exit(0 if bytes.fromhex(sys.argv[2]) in open(sys.argv[1], "rb").read() else 3)' \
+        "$1" "$checksum" 2>/dev/null || found=$?
+    [ "$found" -eq 3 ] || return 0
+    echo "$1 lacks migration $version ($description), which the database has run: it would stop as it starts (\"migration $version was previously applied but is missing\")." >&2
+    return 1
+}
+
 if [ "${1:-}" = "--rollback" ]; then
     [ -x "$KEEP/previous" ] || { echo "No previous binary in $KEEP." >&2; exit 1; }
+    fits_database "$KEEP/previous" || { echo "So it doesn't go back; the one running stays." >&2; exit 1; }
     put "$KEEP/previous" "$KEEP/marketplace"
     start "$KEEP/marketplace" && echo "Rolled back: the previous binary is on http://$ADDR." && exit 0
     echo "The previous binary doesn't answer either; see $LOG." >&2
@@ -96,10 +129,18 @@ if start "$KEEP/marketplace"; then
     echo "Deployed on http://$ADDR."
     exit 0
 fi
-echo "The new binary doesn't answer /healthz; the previous one goes back. The end of $LOG:" >&2
+echo "The new binary doesn't answer /healthz. The end of $LOG:" >&2
 tail -n 5 "$LOG" >&2
 if [ -x "$KEEP/previous" ]; then
-    put "$KEEP/previous" "$KEEP/marketplace"
-    start "$KEEP/marketplace" || true
+    # The previous one goes back only if it can run against the database, which the new one may
+    # have migrated before it failed; otherwise the port is left to the new one, running still if
+    # it is (a long migration, say), its log the last word rather than the previous one's refusal.
+    if fits_database "$KEEP/previous"; then
+        echo "The previous one goes back." >&2
+        put "$KEEP/previous" "$KEEP/marketplace"
+        start "$KEEP/marketplace" || { echo "It doesn't answer either. The end of $LOG:" >&2; tail -n 5 "$LOG" >&2; }
+    else
+        echo "So it doesn't go back: :$PORT is left to the new one, whose log ends above, to come up once it has started, or to be fixed and deployed again." >&2
+    fi
 fi
 exit 1

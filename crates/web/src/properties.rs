@@ -11,23 +11,17 @@ use axum::{
     extract::{RawQuery, State},
     response::Response,
 };
-use pluribus_services::properties;
-
-use super::{
-    Result,
-    filters::{Choice, Params},
-    render,
+use pluribus_services::{
+    filters::Params,
+    properties::{self, OTHER},
 };
+
+use super::{Result, filters::Choice, render};
 use crate::{
     AppState,
     db::{self, FormAttribute, ListingProperty},
     i18n::t,
 };
-
-/// "Tjetër"'s value, what a name typed for it must be and what is said when it isn't
-/// (pluribus-services' properties.rs), which the AI's fill (ai_fill.rs) and the moderators' page
-/// (moderation.rs) take from here.
-pub use pluribus_services::properties::{NAME_PROBLEM, OTHER, plausible_name};
 
 /// A select's options grouped under the option of the property they depend on: car models under
 /// their make. `parent` is the make's code, which listing_form_controller.js narrows by.

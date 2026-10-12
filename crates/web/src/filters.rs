@@ -21,16 +21,14 @@ use rust_decimal::{
     prelude::{FromPrimitive, ToPrimitive},
 };
 
-pub use pluribus_services::filters::{Params, SEARCH_CHARS, parse_number};
-use pluribus_services::filters::{
-    CONDITIONS, CURRENCIES, DEFAULT_RADIUS_KM, MAX_RADIUS_KM, ParsedFilters, Property, plain, year_param,
-};
+use pluribus_services::filters::{CONDITIONS, CURRENCIES, MAX_RADIUS_KM, Params, ParsedFilters, Property, plain, year_param};
 
-use super::{post::zoned, properties};
+use super::properties;
 use crate::{
     db::{AttributeOption, Categories, Category, City, FilterAttribute, Near, Sort},
+    domain::listing::zoned,
     format,
-    i18n::{self, Lang, t, t1},
+    i18n::{t, t1},
 };
 
 /// An order's name, as its button, its menu and the results' heading say it.
@@ -310,68 +308,13 @@ impl<'a> Filters<'a> {
         }
     }
 
-    /// The filters as query-string pairs in a fixed order, without the page cursor.
+    /// The filters as query-string pairs in a fixed order, without the page cursor: those the
+    /// parser writes back (pluribus-services' `ParsedFilters::query_pairs`), then the order, where
+    /// it isn't the one the page opens in.
     fn pairs(&self) -> Vec<(String, String)> {
-        let mut pairs = Vec::new();
-        let mut push = |name: &str, value: &str| pairs.push((name.to_string(), value.to_string()));
-        if let Some(q) = &self.q {
-            push("q", q);
-        }
-        if let (true, Some(category)) = (self.category_is_filter, self.category) {
-            push("category", &category.slug);
-        }
-        if let Some(city) = self.city {
-            push("city", &city.slug);
-        }
-        if let Some(zone) = self.zone {
-            push("zone", &zone.slug);
-        }
-        match self.near {
-            Some(near) if self.pin_in_url => {
-                // Five decimals is about a metre.
-                push("lat", &format!("{:.5}", near.latitude));
-                push("lng", &format!("{:.5}", near.longitude));
-                push("radius", &self.radius_km.to_string());
-            }
-            // The map's starting pin isn't written down, but a distance picked for it is.
-            Some(_) if self.radius_km != DEFAULT_RADIUS_KM => push("radius", &self.radius_km.to_string()),
-            _ => {}
-        }
-        if let Some(listing_type) = &self.listing_type {
-            push("type", listing_type);
-        }
-        for condition in &self.conditions {
-            push("condition", condition);
-        }
-        if let Some(min) = self.price_min {
-            push("price_min", &plain(min));
-        }
-        if let Some(max) = self.price_max {
-            push("price_max", &plain(max));
-        }
-        if self.price_min.is_some() || self.price_max.is_some() {
-            push("currency", self.currency);
-        }
-        for property in &self.properties {
-            let code = &property.attribute.code;
-            if let (Some(_), Some(year)) = (property.fits_to, property.year) {
-                push(&year_param(property.attribute), &plain(year));
-            }
-            for option in &property.selected {
-                push(code, &option.code);
-            }
-            if let Some(min) = property.min {
-                push(&format!("{code}_min"), &plain(min));
-            }
-            if let Some(max) = property.max {
-                push(&format!("{code}_max"), &plain(max));
-            }
-            if property.checked {
-                push(code, "1");
-            }
-        }
+        let mut pairs = self.query_pairs(self.category_is_filter);
         if self.sort != self.default_sort() {
-            push("sort", self.sort.param());
+            pairs.push(("sort".to_string(), self.sort.param().to_string()));
         }
         pairs
     }
@@ -387,37 +330,14 @@ impl<'a> Filters<'a> {
         url(&self.path, pairs)
     }
 
-    /// What a saved search keeps of this page (searches.rs): its path, and its filters as a query
-    /// string in their fixed order (pairs), the town a cookie remembered among them, without the
-    /// order, which its page sets when it is opened.
+    /// What a saved search keeps of this page, as "Ruaj kërkimin" keeps it (pluribus-services'
+    /// `searches::address`, which the pages' save and the API's keep a search by; this file's own
+    /// until C12): its path, and its filters as a query string in their fixed order, the town a
+    /// cookie remembered among them, without the order, which its page sets when it is opened. The
+    /// page's save button looks its search up by it (browse.rs). Its name is pluribus-services'
+    /// too (`searches::name`), which says what the page's chips say.
     pub fn search_address(&self) -> (String, String) {
-        let pairs = self.pairs().into_iter().filter(|(name, _)| name != "sort");
-        (self.path.clone(), form_urlencoded::Serializer::new(String::new()).extend_pairs(pairs).finish())
-    }
-
-    /// The name a saved search shows by: its words, its page's category and what each filter's
-    /// chip says, "„golf“ · Makina · Tiranë · Naftë", or "Të gjitha njoftimet" for none. It is
-    /// kept in the database (searches.rs), so it is in Albanian whatever the page's language: the
-    /// chips as an Albanian page words them.
-    pub fn search_name(&self) -> String {
-        i18n::LANG.sync_scope(Lang::Sq, || {
-            let mut parts = Vec::new();
-            if let Some(q) = &self.q {
-                parts.push(format!("„{q}“"));
-            }
-            if let (false, Some(category)) = (self.category_is_filter, self.category) {
-                parts.push(category.name.clone());
-            }
-            parts.extend(self.chips().into_iter().map(|chip| chip.label));
-            if parts.is_empty() {
-                return "Të gjitha njoftimet".to_string();
-            }
-            let name = parts.join(" · ");
-            match name.char_indices().nth(119) {
-                Some((cut, _)) => format!("{}…", name[..cut].trim_end()),
-                None => name,
-            }
-        })
+        pluribus_services::searches::address(&self.path, &self.parsed, self.category_is_filter)
     }
 
     /// Another category's page, keeping the search words, the city and the map pin; the zone too,

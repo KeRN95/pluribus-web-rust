@@ -21,10 +21,6 @@ use crate::{
     },
 };
 
-/// Deletes the files of photos taken off a listing, every copy, or a store's picture's one: the
-/// work media.rs does for the expiry too (media::delete_photos).
-pub use media::delete_photos as delete;
-
 /// How long browsers may keep an AVIF copy's WebP twin, which stands in for it until it is made
 /// (serve): a few minutes, so that they take the AVIF one once it is there.
 const STAND_IN: &str = "public, max-age=300";
