@@ -1,24 +1,23 @@
-//! Photos on the way in and out: the posting form, which brings them (Submission), their checks,
-//! keeping them (media.rs does the decoding and the store), and serving them from /media/....
-
-use std::collections::HashMap;
+//! Photos on the way in and out: the posting form, which brings them (Submission), and serving
+//! them from /media/..., with the copies a page offers the browser (srcset). Their checks, their
+//! copies and the store they go into are pluribus-services' (photos.rs, media.rs), which the JSON
+//! API's uploads go through too.
 
 use axum::{
     Form,
     body::Bytes,
     extract::{FromRequest, Multipart, Path, Request, State, multipart::MultipartError},
-    http::{HeaderValue, StatusCode, header},
+    http::{HeaderValue, header},
     response::{IntoResponse, Response},
 };
+use pluribus_services::photos::{card_copy, unread};
 
 use super::{Result, not_found};
 use crate::{
     AppState,
-    db::NewPhoto,
-    i18n::{t, t1},
     media::{
-        self, CARD_AVIF, CARD_COPY, CARD_SIDE, COPIES, FULL_SIDE, MAX_PHOTOS, MAX_UPLOAD_BYTES, MIDDLE_SIDE, MINI_AVIF,
-        MINI_COPY, MINI_SIDE, Media, Processed, SMALL_AVIF, SMALL_COPY, SMALL_SIDE,
+        self, CARD_AVIF, CARD_COPY, CARD_SIDE, FULL_SIDE, MIDDLE_SIDE, MINI_AVIF, MINI_COPY, MINI_SIDE, SMALL_AVIF, SMALL_COPY,
+        SMALL_SIDE,
     },
 };
 
@@ -77,96 +76,11 @@ impl<S: Send + Sync> FromRequest<S> for Submission {
     }
 }
 
-/// A form too big to take (more than the routes allow, see web/mod.rs), or cut short.
+/// A form too big to take (more than the routes allow, see web/mod.rs), or cut short, said as
+/// pluribus-services' photos::unread says it.
 fn refused(error: MultipartError) -> Response {
     let status = error.status();
-    let message = match status {
-        StatusCode::PAYLOAD_TOO_LARGE => t("Fotot janë shumë të mëdha. Zgjidh më pak, ose më të vogla."),
-        _ => t("Formulari nuk arriti i plotë. Provo përsëri."),
-    };
-    (status, message).into_response()
-}
-
-/// How many, and how big: `kept` is how many the listing has already and keeps.
-pub fn check(photos: &[Bytes], kept: usize, errors: &mut HashMap<String, String>) {
-    let message = if kept + photos.len() > MAX_PHOTOS {
-        Some(t1("Një njoftim mund të ketë deri në {} foto.", MAX_PHOTOS))
-    } else if photos.iter().any(|photo| photo.len() > MAX_UPLOAD_BYTES) {
-        Some(t1("Secila foto mund të jetë deri në {} MB.", MAX_UPLOAD_BYTES / 1024 / 1024))
-    } else {
-        None
-    };
-    if let Some(message) = message {
-        errors.entry("photos".to_string()).or_insert(message);
-    }
-}
-
-/// How many of a form's photos are made at once (process): their AVIF copies take most of a second
-/// each, so eight would take seven one after the other. Each holds a decoded photo, so not more.
-const AT_ONCE: usize = 4;
-
-/// Decodes and resizes them all, off the async threads, a few at once (AT_ONCE, or fewer on fewer
-/// cores), in their order. Err with the message for the form when one isn't a photo the site can
-/// read.
-pub async fn process(photos: Vec<Bytes>) -> Result<std::result::Result<Vec<Processed>, &'static str>> {
-    let processed = tokio::task::spawn_blocking(move || {
-        let threads = std::thread::available_parallelism().map_or(1, usize::from).clamp(1, AT_ONCE);
-        let each = photos.len().div_ceil(threads).max(1);
-        std::thread::scope(|scope| {
-            let groups: Vec<_> = photos
-                .chunks(each)
-                .map(|group| scope.spawn(move || group.iter().map(|photo| media::process(photo)).collect::<Vec<_>>()))
-                .collect();
-            groups
-                .into_iter()
-                .flat_map(|group| group.join().expect("making a photo's copies doesn't panic"))
-                .collect::<std::result::Result<Vec<_>, _>>()
-        })
-    })
-    .await?;
-    Ok(processed.map_err(|_| t("Një nga fotot nuk u lexua. Zgjidh foto JPG, PNG ose WebP.")))
-}
-
-/// Puts each one's files in the store, under a new name, and says where they are served.
-pub async fn store(media: &Media, processed: Vec<Processed>) -> Result<Vec<NewPhoto>> {
-    let mut stored = Vec::with_capacity(processed.len());
-    for photo in processed {
-        let name = format!("photos/{:032x}", rand::random::<u128>());
-        let [full_key, middle_key, card_key, small_key, mini_key, card_avif_key, small_avif_key, mini_avif_key, jpeg_key] =
-            COPIES.map(|copy| format!("{name}{copy}"));
-        let size_bytes = photo.full.len() as i64;
-        let middle_url = photo.middle.is_some().then(|| media.url(&middle_key));
-        let middle = async {
-            match photo.middle {
-                Some(bytes) => media.put(&middle_key, bytes).await,
-                None => Ok(()),
-            }
-        };
-        tokio::try_join!(
-            media.put(&full_key, photo.full),
-            middle,
-            media.put(&card_key, photo.card),
-            media.put(&small_key, photo.small),
-            media.put(&mini_key, photo.mini),
-            media.put(&card_avif_key, photo.card_avif),
-            media.put(&small_avif_key, photo.small_avif),
-            media.put(&mini_avif_key, photo.mini_avif),
-            media.put(&jpeg_key, photo.jpeg),
-        )?;
-        stored.push(NewPhoto {
-            url: media.url(&full_key),
-            middle_url,
-            card_url: media.url(&card_key),
-            jpeg_url: media.url(&jpeg_key),
-            placeholder: photo.placeholder,
-            storage_key: full_key,
-            size_bytes,
-            width: photo.width as i32,
-            height: photo.height as i32,
-            sha256: photo.sha256.to_vec(),
-        });
-    }
-    Ok(stored)
+    (status, unread(status)).into_response()
 }
 
 /// A WebP photo's copies as a page names them in a srcset (`srcset`, `avif_srcset`): the card's
@@ -216,20 +130,12 @@ fn smaller(size: (u32, u32), than: (u32, u32)) -> bool {
     size.0.max(size.1) < than.0.max(than.1)
 }
 
-/// The address of one of the cards' copies as a page names it: with the query of the rules the
-/// copies are made by (media::CARD_COPIES_EDITION), since they were made again on 2026-10-09
-/// under the names they had, which browsers keep for a year (media::CACHE_FOR_A_YEAR), and so a
-/// browser that kept the old ones fetches the new. The server serves a photo by its path,
-/// whatever the query.
-fn card_copy_url(name: &str, ending: &str) -> String {
-    format!("{name}{ending}?{}", media::CARD_COPIES_EDITION)
-}
-
-/// The mini copy's address, from a photo's card copy's: a thumbnail in the filmstrip under the
+/// The mini copy's address, from a photo's card copy's (pluribus-services' photos::card_copy, with
+/// the query of the rules the cards' copies are made by): a thumbnail in the filmstrip under the
 /// photos on a listing's page (listing.html, Photo::thumb). None for a photo kept before WebP,
 /// whose card copy stands in.
 pub fn mini_url(card: &str) -> Option<String> {
-    card.strip_suffix(CARD_COPY).map(|name| card_copy_url(name, MINI_COPY))
+    card_copy(card, MINI_COPY)
 }
 
 /// A WebP photo's copies for a srcset, the mini one, the small one, the card's, the middle one and
@@ -240,8 +146,8 @@ pub fn srcset(copies: &Copies, by: Measure) -> String {
     let mut listed = Vec::with_capacity(5);
     for (ending, side) in [(MINI_COPY, MINI_SIDE), (SMALL_COPY, SMALL_SIDE), (CARD_COPY, CARD_SIDE)] {
         let size = media::cover_size(copies.width, copies.height, side);
-        if let Some(name) = copies.card.strip_suffix(CARD_COPY).filter(|_| smaller(size, full)) {
-            listed.push((card_copy_url(name, ending), size));
+        if let Some(url) = card_copy(copies.card, ending).filter(|_| smaller(size, full)) {
+            listed.push((url, size));
         }
     }
     if let Some(middle) = copies.middle {
@@ -257,17 +163,17 @@ pub fn srcset(copies: &Copies, by: Measure) -> String {
 /// denser than the card's copy serves; those no bigger than the card's AVIF copy are left out.
 /// None for a photo kept before WebP, or from elsewhere.
 pub fn avif_srcset(copies: &Copies, by: Measure) -> Option<String> {
-    let name = copies.card.strip_suffix(CARD_COPY)?;
+    let card_avif = card_copy(copies.card, CARD_AVIF)?;
     let full = (copies.width, copies.height);
     let card = media::cover_size(copies.width, copies.height, CARD_SIDE);
     let mut listed = Vec::with_capacity(5);
     for (ending, side) in [(MINI_AVIF, MINI_SIDE), (SMALL_AVIF, SMALL_SIDE)] {
         let size = media::cover_size(copies.width, copies.height, side);
-        if smaller(size, card) {
-            listed.push((card_copy_url(name, ending), size));
+        if let Some(url) = card_copy(copies.card, ending).filter(|_| smaller(size, card)) {
+            listed.push((url, size));
         }
     }
-    listed.push((card_copy_url(name, CARD_AVIF), card));
+    listed.push((card_avif, card));
     if smaller(card, full) {
         if let Some(middle) = copies.middle {
             listed.push((middle.to_string(), media::fit_size(copies.width, copies.height, MIDDLE_SIDE)));

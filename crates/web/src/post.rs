@@ -1,5 +1,8 @@
 //! Posting and editing listings: the form, the limits that keep one account from flooding the site,
-//! and what the listing's rules (domain::listing) find wrong, said in the page's language.
+//! and what the listing's rules (domain::listing) find wrong, said in the page's language. What the
+//! JSON API's listings share with the form is pluribus-services' since C9: the properties' checks
+//! (properties.rs), the photos' (photos.rs), and posting.rs's limits, review, poster, listing as the
+//! database saves it, zone named by its words and the form's words for each problem.
 
 use std::{
     collections::HashMap,
@@ -14,13 +17,17 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
+use pluribus_services::{
+    photos::{check as check_photos, process as process_photos, store as store_photos, unstore},
+    posting::{self, Poster, listing_to_save, message},
+};
 use serde::Deserialize;
 
 use super::{
     Result,
     account::{self, ClientIp, MIN_FORM_SECONDS, SignInPage, cookie_header, current_user, display_name, now, redirect_with_cookies},
     filters::{self, Choice, ChoiceGroup, parse_number},
-    named, not_found,
+    not_found,
     photos::{self, Submission},
     promotions::OnPromotionExt,
     properties::{self, PropertyField},
@@ -28,17 +35,14 @@ use super::{
 };
 use crate::{
     AppState,
-    db::{
-        self, Categories, Category, City, FormAttribute, ListingAction, ListingProperty, MyListing, NewListing,
-        NewPhoto, OwnListing, OwnPhoto, SessionUser,
-    },
+    db::{self, Categories, Category, City, FormAttribute, ListingAction, MyListing, OwnListing, OwnPhoto, SessionUser},
     domain::{
         Condition, ListingType, PriceType, ReviewReason, Status,
-        listing::{self, Checked, FieldError, FieldErrors, ListingInput, MAX_DESCRIPTION_CHARS, MAX_TITLE_CHARS, POSTS_PER_DAY, distance_km, mapped},
+        listing::{self, Checked, FieldErrors, ListingInput, distance_km, mapped},
     },
     format::{self, Contact},
     i18n::{t, t1, t2},
-    media::{MAX_PHOTOS, Media},
+    media::MAX_PHOTOS,
 };
 
 /// Where web/messages.rs, web/filters.rs and web/named.rs have called them, now that a listing's
@@ -430,16 +434,13 @@ pub struct ZoneWords {
 }
 
 /// POST /shto/zona: the zone a new listing's title or description names, with its town, as JSON
-/// ({"city": "tirane", "zone": "blloku"}), or {} for none (named::zone_in), which the form picks
-/// while the seller hasn't (listing_form_controller.js): in the town chosen, or, with none chosen,
-/// in a town the words name too ("Blloku, Tiranë"). The title first: a description may name the
-/// places nearby too. As much of the words as the form takes, and no more.
+/// ({"city": "tirane", "zone": "blloku"}), or {} for none (pluribus-services' posting::zone_named,
+/// which the API guesses by too), which the form picks while the seller hasn't
+/// (listing_form_controller.js): in the town chosen, or, with none chosen, in a town the words
+/// name too ("Blloku, Tiranë"). The title first: a description may name the places nearby too.
 pub async fn guess_zone(State(state): State<AppState>, Form(words): Form<ZoneWords>) -> Result<Response> {
     let cities = db::cities(&state.db).await?;
-    let town = cities.iter().find(|city| city.slug == words.city);
-    let title: String = words.title.chars().take(MAX_TITLE_CHARS).collect();
-    let description: String = words.description.chars().take(MAX_DESCRIPTION_CHARS).collect();
-    let found = [title, description].iter().find_map(|text| named::zone_in(text, town, &cities));
+    let found = posting::zone_named(&cities, &words.title, &words.description, &words.city);
     let body = match found {
         Some((city, zone)) => serde_json::json!({ "city": city.slug, "zone": zone.slug }),
         None => serde_json::json!({}),
@@ -476,9 +477,6 @@ fn form_again(page: ListingFormPage) -> Result<Response> {
     Ok((StatusCode::UNPROCESSABLE_ENTITY, render(page)?).into_response())
 }
 
-/// The photos sent with a form that is otherwise right, decoded and resized; None when the form
-/// goes back with errors. Browsers can't keep chosen files when it does, so the form says to pick
-/// them again.
 /// The photos sent, checked and made into their copies, when nothing else is wrong; with an
 /// error, none, and unless the browser holds them (`kept`, photos_controller.js), word to pick them
 /// again, since a form sent back can't hold files.
@@ -489,7 +487,7 @@ async fn read_photos(
 ) -> Result<Option<Vec<crate::media::Processed>>> {
     let mut processed = Vec::new();
     if errors.is_empty() && !photos.is_empty() {
-        match photos::process(photos.to_vec()).await? {
+        match process_photos(photos.to_vec()).await? {
             Ok(done) => processed = done,
             Err(message) => fail(errors, "photos", message),
         }
@@ -509,87 +507,10 @@ fn fail(errors: &mut HashMap<String, String>, field: &str, message: &str) {
 }
 
 /// What a listing's rules found wrong, each field's first, said in the page's language
-/// (`message`).
+/// (pluribus-services' posting::message, the form's words, which the API says too).
 fn add_errors(errors: &mut HashMap<String, String>, found: FieldErrors) {
     for (field, error) in found {
         errors.entry(field.to_string()).or_insert_with(|| message(error));
-    }
-}
-
-/// What the form says of a problem a listing's rules found (listing::FieldError), in the page's
-/// language.
-fn message(error: FieldError) -> String {
-    match error {
-        FieldError::NoCategory => t("Zgjidh kategorinë.").to_string(),
-        FieldError::GroupCategory => t("Zgjidh nënkategorinë, p.sh. Makina te Automjete.").to_string(),
-        FieldError::NoListingType => t("Zgjidh llojin e njoftimit.").to_string(),
-        FieldError::TitleLength { .. } => t("Titulli duhet të ketë 5 deri në 120 shkronja.").to_string(),
-        FieldError::TitleLinks { .. } => t("Titulli nuk mund të ketë lidhje.").to_string(),
-        FieldError::DescriptionLength { .. } => t("Përshkrimi duhet të ketë 10 deri në 5000 shkronja.").to_string(),
-        FieldError::DescriptionLinks { .. } => t("Përshkrimi mund të ketë deri në 2 lidhje.").to_string(),
-        FieldError::NoPrice => t("Shkruaj çmimin, ose zgjidh „Falas“ ose „Me marrëveshje“.").to_string(),
-        FieldError::NoCity => t("Zgjidh qytetin.").to_string(),
-        FieldError::ZoneElsewhere => t("Zgjidh një zonë të qytetit.").to_string(),
-        FieldError::NameLength { .. } => t("Emri mund të ketë deri në 60 shkronja.").to_string(),
-        FieldError::PointFar { .. } => t("Pika në hartë është larg qytetit që zgjodhe: vendose te qyteti, ose hiqe.").to_string(),
-        FieldError::PointUnread => t("Pika në hartë nuk u lexua: vendose përsëri.").to_string(),
-        FieldError::TooManyToday => t1("Ke publikuar {} njoftime sot. Mund të publikosh të tjera nesër.", POSTS_PER_DAY),
-        FieldError::SameTitleToday => t("Ke publikuar tashmë një njoftim me këtë titull sot.").to_string(),
-    }
-}
-
-/// Who a listing is posted as: the account, the contact buyers get, and the store it is posted
-/// for, if any.
-struct Poster<'a> {
-    id: uuid::Uuid,
-    phone: Option<&'a str>,
-    email: Option<&'a str>,
-    business_id: Option<uuid::Uuid>,
-}
-
-impl<'a> Poster<'a> {
-    fn of(user: &'a SessionUser) -> Self {
-        let phone = user.phone.as_deref();
-        Self { id: user.id, phone, email: if phone.is_none() { user.email.as_deref() } else { None }, business_id: None }
-    }
-
-    /// Posting for a store: buyers get its public number, or the poster's contact when it has none.
-    fn for_store(user: &'a SessionUser, store: &'a db::MyStore) -> Self {
-        match store.public_phone.as_deref() {
-            Some(phone) => Self { id: user.id, phone: Some(phone), email: None, business_id: Some(store.id) },
-            None => Self { business_id: Some(store.id), ..Self::of(user) },
-        }
-    }
-}
-
-/// A listing that checks out, as the database saves it, posted as `poster`: a function rather than
-/// a method of `Checked`, which is pluribus-core's.
-fn listing_to_save<'a>(
-    checked: &Checked<'a>,
-    poster: &Poster<'a>,
-    slug: &'a str,
-    properties: &'a [ListingProperty],
-    publish: bool,
-) -> NewListing<'a> {
-    NewListing {
-        user_id: poster.id,
-        category_id: checked.category.id,
-        location_id: checked.zone.map_or(checked.city.id, |zone| zone.id),
-        title: checked.title,
-        slug,
-        description: checked.description,
-        listing_type: checked.listing_type.as_str(),
-        condition: checked.condition.map(Condition::as_str),
-        price_amount: checked.price.amount,
-        currency: checked.price.currency,
-        price_type: checked.price.price_type.as_str(),
-        contact_name: (!checked.name.is_empty()).then_some(checked.name),
-        phone: poster.phone,
-        email: poster.email,
-        properties,
-        publish,
-        review: None,
-        business_id: poster.business_id,
     }
 }
 
@@ -623,12 +544,13 @@ pub async fn new_listing(State(state): State<AppState>, headers: HeaderMap) -> R
     render(page)
 }
 
-/// The stores this poster may post for (Role::posts); none for someone not signed in.
+/// The stores this poster may post for (Role::posts, posting::stores_posting_for); none for someone
+/// not signed in.
 async fn posting_stores(state: &AppState, user: Option<&SessionUser>) -> Result<Vec<db::MyStore>> {
     let Some(user) = user else {
         return Ok(Vec::new());
     };
-    Ok(db::my_stores(&state.db, user.id).await?.into_iter().filter(db::MyStore::posts).collect())
+    Ok(posting::stores_posting_for(&state.db, user.id).await?)
 }
 
 /// The properties of the category the form names, if it is one listings go into.
@@ -656,7 +578,9 @@ pub async fn create_listing(
     let input = form.input();
     let checked = check(&form, &input, &categories, &cities, &mut errors);
     let properties = properties::check(&attributes, &form.properties, &mut errors);
-    photos::check(&photos, 0, &mut errors);
+    if let Some(message) = check_photos(&photos, 0) {
+        fail(&mut errors, "photos", &message);
+    }
     // "Posto si": a store the poster may post for, or their own.
     let stores = posting_stores(&state, user.as_ref()).await?;
     let store = match form.si.as_str() {
@@ -694,11 +618,12 @@ pub async fn create_listing(
         fail(&mut errors, "contact", t("Kjo llogari është pezulluar."));
     }
 
-    // Limits per account: a few listings a day, and the same one only once (listing::daily_limit).
+    // Limits per account: a few listings a day, and the same one only once (posting::may_post).
     let account_id = user.as_ref().map(|user| user.id).or(existing.as_ref().map(|account| account.id));
-    if let (true, Some(account_id)) = (errors.is_empty(), account_id) {
-        let recent = db::recent_posts(&state.db, account_id, form.title.trim()).await?;
-        add_errors(&mut errors, listing::daily_limit(&recent).into_iter().collect());
+    if let (true, Some(account_id)) = (errors.is_empty(), account_id)
+        && let Err(refused) = posting::may_post(&state.db, account_id, &form.title).await?
+    {
+        add_errors(&mut errors, vec![(refused.field, refused.error)]);
     }
     // And per network without signing in, since no code stands in a script's way.
     if user.is_none() && errors.is_empty() && !unsigned_post_allowed(ip.as_deref()) {
@@ -743,25 +668,17 @@ pub async fn create_listing(
         (None, None, _) => unreachable!("without a contact, the form went back with an error"),
     };
     let slug = format::slug(checked.title);
-    // On a site with moderators, what waits for them first (db::review): one with a photo
-    // another seller's listing has, the very same file; and, posted without signing in, the
+    // On a site with moderators, what waits for them first (posting::review_for): one with a
+    // photo another seller's listing has, the very same file; and, posted without signing in, the
     // first listing of an account made with it, its contact confirmed by no code.
     let hashes: Vec<Vec<u8>> = processed.iter().map(|photo| photo.sha256.to_vec()).collect();
-    let review = if state.moderators.is_empty() {
-        None
-    } else if db::photos_elsewhere(&state.db, &hashes, poster.business_id.unwrap_or(poster.id)).await? {
-        Some(ReviewReason::DuplicatePhotos)
-    } else if user.is_none() && existing.is_none() {
-        Some(ReviewReason::NewAccount)
-    } else {
-        None
-    };
+    let review = posting::review_for(&state, &hashes, poster.seller(), user.is_none() && existing.is_none()).await?;
     let mut listing = listing_to_save(&checked, &poster, &slug, &properties, !waits);
     listing.review = review;
     // The photos' files go into the store first, then the listing, with its point and its photos,
     // in one transaction (db::create_listing); should that fail, the files go again, and nothing
     // is left of it.
-    let stored = photos::store(&state.media, processed).await?;
+    let stored = store_photos(&state.media, processed).await?;
     let (listing_id, public_no) = match db::create_listing(&state.db, &listing, checked.point, &stored).await {
         Ok(created) => created,
         Err(error) => {
@@ -902,7 +819,9 @@ pub async fn update_listing(
     let properties = properties::check(&attributes, &form.properties, &mut errors);
     let listing_photos = db::own_listing_photos(&state.db, listing.id).await?;
     let removed: Vec<uuid::Uuid> = removed.into_iter().filter(|id| listing_photos.iter().any(|photo| photo.id == *id)).collect();
-    photos::check(&photos, listing_photos.len() - removed.len(), &mut errors);
+    if let Some(message) = check_photos(&photos, listing_photos.len() - removed.len()) {
+        fail(&mut errors, "photos", &message);
+    }
     let kept = form.photos_kept;
     let order = form.photo_order.clone();
     let processed = read_photos(&photos, kept, &mut errors).await?;
@@ -919,7 +838,7 @@ pub async fn update_listing(
     // taken out, added and put in order, in one transaction (db::update_listing); should that fail,
     // or the listing no longer be theirs to edit, the new files go again and the listing stays as
     // it was.
-    let stored = photos::store(&state.media, processed).await?;
+    let stored = store_photos(&state.media, processed).await?;
     // In the order the form arranged: a saved photo by its id (one of the listing's, not taken
     // out), a new one by its place among those sent, the first the cover.
     let order: Vec<String> = order
@@ -947,13 +866,6 @@ pub async fn update_listing(
     // The files of the photos taken out, now that the listing names them no more.
     photos::delete(&state.media, &gone).await;
     Ok(Redirect::to(&format!("/listing/{public_no}-{slug}")).into_response())
-}
-
-/// Takes the files of photos just put in the store out again, when the listing or the edit they
-/// came with wasn't saved, so that nothing is left of it.
-async fn unstore(media: &Media, stored: &[NewPhoto]) {
-    let keys: Vec<String> = stored.iter().map(|photo| photo.storage_key.clone()).collect();
-    photos::delete(media, &keys).await;
 }
 
 #[derive(Template)]
@@ -1235,6 +1147,7 @@ pub fn this_week(count: impl std::borrow::Borrow<i64>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::listing::FieldError;
 
     /// The form offers the kinds of price the rules take, in their order, and lays out as a car's
     /// or a property's page the listings whose form has a map.

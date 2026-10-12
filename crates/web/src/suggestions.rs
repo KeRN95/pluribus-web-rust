@@ -8,6 +8,7 @@ use axum::{
     extract::{RawQuery, State},
     response::Response,
 };
+use pluribus_services::places::PLACE_WORDS;
 use sqlx::PgPool;
 
 use super::{
@@ -28,13 +29,10 @@ const COMPLETIONS: i64 = 3;
 const CATEGORIES: i64 = 2;
 const OPTIONS: i64 = 2;
 const TOWNS: usize = 2;
-/// The towns offered after words joined to a place ("apartamente në").
+/// The towns offered after words joined to a place ("apartamente në": one of PLACE_WORDS,
+/// pluribus-services' places.rs, this file's until C9, which a town's row leaves the last of out of
+/// its search, since its filter says where).
 const PLACE_TOWNS: i64 = 3;
-
-/// The words that join what is searched to a place, folded ("në" and "ne" alike): "apartamente në
-/// Tiranë", "makina te Durrësi", "shtëpi afër Vlorës". A town's row leaves the last of them out of
-/// its search, since its filter says where; so does a search that names the town (named.rs).
-pub const PLACE_WORDS: [&str; 8] = ["ne", "te", "tek", "nga", "per", "prane", "afer", "rreth"];
 
 /// A row of suggestions: what it searches for, and after it, quieter, where; what it says in the
 /// page's language, but the words searched.

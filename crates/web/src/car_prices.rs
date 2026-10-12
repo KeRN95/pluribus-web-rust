@@ -4,7 +4,8 @@
 //! One verdict for all three (domain::listing::car_verdict, which the API gives too): compared
 //! with the median of the cars of its model two years either side, the price being in euros on
 //! both sides; and what such cars ask, as the pages and the API say it (pluribus-services'
-//! listings::CarPrices). Both were this file's until C5.
+//! listings::CarPrices). Both were this file's until C5; the hint's working out is
+//! pluribus-services' posting::price_hint since C9, which the API's hint is too.
 
 use axum::{
     Json,
@@ -12,7 +13,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use pluribus_services::listings::CarPrices;
+use pluribus_services::{listings::CarPrices, posting};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 use serde_json::json;
@@ -21,7 +22,6 @@ use super::Result;
 use crate::{
     AppState, db,
     domain::listing::{CarVerdict, car_verdict},
-    i18n::{t, t1},
 };
 
 /// A car's page's bubble under the price, and its card.
@@ -68,26 +68,11 @@ pub struct HintQuery {
 
 /// GET /shto/cmimi?model=VOLKSWAGEN_GOLF&year=2016&currency=EUR&price=9500: what cars of that
 /// model and year ask, in words, and how the price typed compares, as the car's page will say it
-/// ({"text", "verdict"}); 204 with too few cars to say.
+/// ({"text", "verdict"}, posting::price_hint's text and what it says of the price); 204 with too
+/// few cars to say.
 pub async fn hint(State(state): State<AppState>, Query(query): Query<HintQuery>) -> Result<Response> {
-    let currency = if query.currency == "ALL" { "ALL" } else { "EUR" };
-    let (Some(year), false) = (query.year, query.model.is_empty()) else {
-        return Ok(StatusCode::NO_CONTENT.into_response());
-    };
-    let (prices, rate) = tokio::try_join!(db::model_prices(&state.db, &query.model, year), db::eur_rate(&state.db, currency))?;
-    let (Some(prices), Some(rate)) = (prices, rate.filter(|rate| *rate > Decimal::ZERO)) else {
-        return Ok(StatusCode::NO_CONTENT.into_response());
-    };
-    let Some(shown) = CarPrices::new(&prices, currency, Some(rate)) else {
-        return Ok(StatusCode::NO_CONTENT.into_response());
-    };
-    // The price typed, its thousands' spaces or dots aside ("9 500", "9.500"): a comma before the
-    // last two digits at most is its cents'.
-    let digits: String = query.price.chars().filter(|c| c.is_ascii_digit() || *c == ',').collect();
-    let price = digits.replace(',', ".").parse::<Decimal>().ok().filter(|price| *price > Decimal::ZERO);
-    let said = price.map(|price| match car_verdict(price * rate, prices.median_eur) {
-        Some(verdict) => t1("Te faqja e makinës, çmimi yt del „{}“.", verdict.words()),
-        None => t("Çmimi yt është shumë nën mesataren: a është i saktë, dhe në monedhën e duhur?").to_string(),
-    });
-    Ok(Json(json!({ "text": shown.text(), "verdict": said })).into_response())
+    match posting::price_hint(&state.db, &query.model, query.year, &query.currency, &query.price).await? {
+        Some(hint) => Ok(Json(json!({ "text": hint.text, "verdict": hint.said })).into_response()),
+        None => Ok(StatusCode::NO_CONTENT.into_response()),
+    }
 }

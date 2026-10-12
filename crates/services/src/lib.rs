@@ -13,6 +13,12 @@
 //! rebuilt (jobs.rs, `refresh`), the notices of unread messages (notices.rs), the saved searches'
 //! alerts (searches.rs), the listings' expiry (expiry.rs), the promotions in time (promotions.rs),
 //! the euro rate (rates.rs) and the photos' missing copies (media.rs).
+//!
+//! And posting a listing, which the pages' form and the API share since C9: a category's
+//! properties checked (properties.rs); the photos on their way in, checked, made into their copies
+//! and put in the store (photos.rs); the limits, the moderators' review, who it is posted as, the
+//! zone its words name and what cars of its model ask (posting.rs); and the places words name
+//! (places.rs), which search reads them by too.
 
 pub mod ai;
 pub mod config;
@@ -22,7 +28,11 @@ pub mod jobs;
 pub mod listings;
 pub mod media;
 pub mod notices;
+pub mod photos;
+pub mod places;
+pub mod posting;
 pub mod promotions;
+pub mod properties;
 pub mod rates;
 pub mod recommended;
 pub mod searches;
