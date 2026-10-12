@@ -92,6 +92,9 @@ pub struct AttributeValue {
     /// their order; and the English of each, where its label_i18n has one.
     pub labels: Vec<String>,
     pub labels_en: Vec<Option<String>>,
+    /// Their codes, in the same order (VOLKSWAGEN, ABS), as the filters and the form name them:
+    /// the API gives them with their labels (api/listing.rs).
+    pub codes: Vec<String>,
     pub multi: bool,
     /// One of the category's key facts: shown on its cards too (show_in_card), and its icon lit
     /// among the listing's details, in a small round pill of its own.
@@ -100,6 +103,9 @@ pub struct AttributeValue {
 
 #[derive(Debug)]
 pub struct Photo {
+    /// Its row's id (listing_media), by which an edit's form orders and removes it, and the API
+    /// names it.
+    pub id: Uuid,
     /// The full photo as every browser and link preview shows it: a photo kept as WebP (since
     /// migration 0025) has a JPEG copy for them; others are a JPEG already, or from elsewhere.
     pub url: String,
@@ -194,13 +200,15 @@ pub async fn listing_attributes(
     sqlx::query_as!(
         AttributeValue,
         r#"SELECT code AS "code!", label AS "label!", value_number, unit, value_bool, value_date, value_text,
-                  labels AS "labels!", labels_en AS "labels_en!: Vec<Option<String>>", multi AS "multi!", key AS "key!"
+                  labels AS "labels!", labels_en AS "labels_en!: Vec<Option<String>>", codes AS "codes!",
+                  multi AS "multi!", key AS "key!"
            FROM (
                SELECT a.code, coalesce(eca.label, a.name) AS label,
                       trim_scale(v.value_number) AS value_number, a.unit::text AS unit, v.value_boolean AS value_bool,
                       v.value_date, v.value_text,
                       CASE WHEN o.id IS NULL THEN '{}' ELSE ARRAY[o.label::text] END AS labels,
                       CASE WHEN o.id IS NULL THEN '{}' ELSE ARRAY[o.label_i18n ->> 'en'] END AS labels_en,
+                      CASE WHEN o.id IS NULL THEN '{}' ELSE ARRAY[o.value_code::text] END AS codes,
                       false AS multi, eca.show_in_card AS key,
                       eca.sort_order
                FROM listing_attribute_values v
@@ -212,6 +220,7 @@ pub async fn listing_attributes(
                UNION ALL
                SELECT a.code, coalesce(eca.label, a.name), NULL, NULL, NULL, NULL, NULL,
                       array_agg(o.label::text ORDER BY o.sort_order), array_agg(o.label_i18n ->> 'en' ORDER BY o.sort_order),
+                      array_agg(o.value_code::text ORDER BY o.sort_order),
                       true, eca.show_in_card, eca.sort_order
                FROM listing_attribute_options lo
                JOIN attributes a ON a.id = lo.attribute_id
@@ -232,7 +241,7 @@ pub async fn listing_attributes(
 pub async fn listing_photos(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Vec<Photo>> {
     sqlx::query_as!(
         Photo,
-        r#"SELECT coalesce(jpeg_url, public_url, thumbnail_url) AS "url!", coalesce(thumbnail_url, public_url) AS "card_url!",
+        r#"SELECT id, coalesce(jpeg_url, public_url, thumbnail_url) AS "url!", coalesce(thumbnail_url, public_url) AS "card_url!",
                   CASE WHEN mime_type = 'image/webp' THEN public_url END AS "webp_url?", middle_url, placeholder,
                   width_px, height_px
            FROM listing_media

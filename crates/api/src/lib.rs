@@ -14,6 +14,7 @@ pub mod browse;
 mod dto;
 mod error;
 mod lang;
+pub mod listing;
 pub mod notifications;
 pub mod reference;
 pub mod safety;
@@ -49,10 +50,12 @@ pub fn router(state: AppState) -> Router {
 /// signed in (`ApiUser`); the reference data the app loads first, for anyone (reference.rs):
 /// `GET /categories`, `GET /cities` and `GET /categories/{slug}/fields`; `GET /listings` and
 /// `GET /home`, for anyone, a signed-in caller's lists without the listings of the accounts they
-/// blocked (browse.rs); the user's notifications, `GET /notifications` and
-/// `POST /notifications/seen`, and what the app's badges count, `GET /counts`, signed in
-/// (notifications.rs); signing in by a code (signin.rs): `POST /auth/code` and
-/// `POST /auth/verify`, for anyone, and `POST /auth/sign-out`, signed in; the listings a user
+/// blocked (browse.rs); one listing (listing.rs), for anyone, its seller and the moderators seeing
+/// it off the site too: `GET /listings/{no}`, `GET /listings/{no}/related`,
+/// `POST /listings/{no}/seen` and `POST /listings/{no}/contact`; the user's notifications,
+/// `GET /notifications` and `POST /notifications/seen`, and what the app's badges count,
+/// `GET /counts`, signed in (notifications.rs); signing in by a code (signin.rs): `POST /auth/code`
+/// and `POST /auth/verify`, for anyone, and `POST /auth/sign-out`, signed in; the listings a user
 /// keeps, signed in (saved.rs): `PUT` and `DELETE /listings/{no}/saved`, `GET /saved` and
 /// `POST /saved/seen`; their saved searches, signed in (searches.rs): `GET` and `POST /searches`,
 /// `DELETE /searches/{id}`, `PUT /searches/{id}/alerts` and `GET /searches/{id}/listings`; and
@@ -67,6 +70,10 @@ fn routes() -> Router<AppState> {
         .route("/categories/{slug}/fields", get(reference::fields))
         .route("/listings", get(browse::listings))
         .route("/home", get(browse::home))
+        .route("/listings/{no}", get(listing::show))
+        .route("/listings/{no}/related", get(listing::related))
+        .route("/listings/{no}/seen", post(listing::seen))
+        .route("/listings/{no}/contact", post(listing::contact))
         .route("/notifications", get(notifications::list))
         .route("/notifications/seen", post(notifications::seen))
         .route("/counts", get(notifications::counts))

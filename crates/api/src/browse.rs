@@ -142,19 +142,11 @@ pub struct DetailDto {
 impl From<&CardDetail> for DetailDto {
     fn from(detail: &CardDetail) -> Self {
         let english = |words: &str| i18n::in_english(words).unwrap_or(words).to_string();
-        // The units are kept in the plural ("muaj", "vite"); one is singular in English.
-        let unit_en = |unit: &str| {
-            let english = i18n::in_english(unit).unwrap_or(unit);
-            match detail.number == Some(Decimal::ONE) {
-                true => english.strip_suffix('s').filter(|one| one.len() > 1).unwrap_or(english).to_string(),
-                false => english.to_string(),
-            }
-        };
         Self {
             code: detail.code.clone(),
             number: detail.number,
             unit: detail.unit.clone(),
-            unit_en: detail.unit.as_deref().map(unit_en),
+            unit_en: detail.unit.as_deref().map(|unit| unit_en(unit, detail.number)),
             label: detail.label.clone(),
             label_en: detail.label.as_deref().map(english),
             text: detail.text.clone(),
@@ -162,6 +154,17 @@ impl From<&CardDetail> for DetailDto {
             name: detail.name.clone(),
             name_en: detail.name.as_deref().map(english),
         }
+    }
+}
+
+/// A number's unit as an English page says it after `number` (format::attribute_number): the
+/// catalogue's English, singular after a 1 ("month"), the units being kept in the plural ("muaj",
+/// "vite"). A card's properties' (`DetailDto`) and a listing's (listing.rs).
+pub(crate) fn unit_en(unit: &str, number: Option<Decimal>) -> String {
+    let english = i18n::in_english(unit).unwrap_or(unit);
+    match number == Some(Decimal::ONE) {
+        true => english.strip_suffix('s').filter(|one| one.len() > 1).unwrap_or(english).to_string(),
+        false => english.to_string(),
     }
 }
 
@@ -625,7 +628,8 @@ fn place(card: &ListingCard) -> Option<String> {
 /// with: PUBLIC_URL in the settings of the state answering the request (`config`), or as the
 /// request came, the host it named (Host; not X-Forwarded-Host, which a caller may set to
 /// anything), over https when the proxy in front says so (X-Forwarded-Proto), as the pages make
-/// their own addresses absolute (pluribus-web's seo::origin).
+/// their own addresses absolute (pluribus-web's seo::origin). A listing's page's photos and
+/// address (listing.rs) are made absolute with it too.
 pub(crate) fn origin(config: &Config, headers: &HeaderMap) -> String {
     if let Some(url) = config.public_url.clone() {
         return url;
@@ -637,7 +641,7 @@ pub(crate) fn origin(config: &Config, headers: &HeaderMap) -> String {
 
 /// `url` as an absolute address: a path on this site, or one absolute already (a photo on a CDN,
 /// MEDIA_URL's).
-fn absolute(origin: &str, url: &str) -> String {
+pub(crate) fn absolute(origin: &str, url: &str) -> String {
     if url.starts_with("http://") || url.starts_with("https://") {
         url.to_string()
     } else {

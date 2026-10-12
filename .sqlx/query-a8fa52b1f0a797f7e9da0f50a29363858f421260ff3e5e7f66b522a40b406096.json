@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, coalesce(jpeg_url, public_url, thumbnail_url) AS \"url!\", coalesce(thumbnail_url, public_url) AS \"card_url!\",\n                  CASE WHEN mime_type = 'image/webp' THEN public_url END AS \"webp_url?\", middle_url, placeholder,\n                  width_px, height_px\n           FROM listing_media\n           WHERE listing_id = $1 AND status = 'READY' AND media_type = 'IMAGE'\n             AND coalesce(public_url, thumbnail_url) IS NOT NULL\n           ORDER BY is_cover DESC, sort_order",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "url!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "card_url!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "webp_url?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "middle_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "placeholder",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "width_px",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "height_px",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "a8fa52b1f0a797f7e9da0f50a29363858f421260ff3e5e7f66b522a40b406096"
+}

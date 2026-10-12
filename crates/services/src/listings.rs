@@ -125,6 +125,7 @@ mod tests {
             value_text: None,
             labels: Vec::new(),
             labels_en: Vec::new(),
+            codes: Vec::new(),
             multi: false,
             key: false,
         }
