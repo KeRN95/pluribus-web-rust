@@ -1,6 +1,7 @@
-# The JSON API's account settings (crates/api/src/account.rs): what it says, in the language each
-# request asks for (crates/api/src/lang.rs), where the pages' own words (account.txt) don't say it:
-# a name, a contact taken or kept, the word that closes the account it says as "Cilësimet" does.
+# The JSON API's account settings (crates/api/src/account.rs) and the phone app's devices
+# (devices.rs): what they say, in the language each request asks for (crates/api/src/lang.rs),
+# where the pages' own words (account.txt) don't say it: a name, a contact taken or kept, the word
+# that closes the account it says as "Cilësimet" does; a device's platform and token.
 
 # crates/api/src/account.rs: a language the site doesn't speak, under "lang"
 
@@ -17,3 +18,13 @@ Llogaria jote duhet të ketë të paktën një numër ose email, që të hysh me
 
 Shkruaj FSHI, që të dimë se e do vërtet.
 = Type DELETE so we know you mean it.
+
+# crates/api/src/devices.rs: a device's platform that is neither the app's, under "platform"
+
+Duhet të jetë „ios“ ose „android“.
+= Must be “ios” or “android”.
+
+# crates/api/src/devices.rs: a device's token empty or too long, under "token" (TOKEN_MOST)
+
+Tokeni i pajisjes duhet të ketë 1 deri në {} shenja.
+= The device’s token needs 1 to {} characters.

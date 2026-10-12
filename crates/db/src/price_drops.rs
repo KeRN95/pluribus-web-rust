@@ -13,14 +13,28 @@ pub async fn price_was(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Option<Dec
         .await
 }
 
-/// After its seller changed the listing (posting.rs, update_listing), in the same transaction:
-/// when the change lowered its price (price_was!), everyone who keeps it gets a notification, with
-/// what it was and what it is, in place of one about it they haven't seen yet, whose higher "was"
-/// it keeps, the price they last saw; not its own seller, nor those who turned price drop alerts
-/// off (notification_preferences.price_drop_alerts). Its payload has the listing's title too,
-/// which the notification's says (domain::notices).
-pub async fn notify_price_drop(tx: &mut sqlx::PgConnection, listing_id: Uuid) -> sqlx::Result<()> {
-    sqlx::query(concat!(
+/// A notification of a price drop that `notify_price_drop` wrote: whose it is, the language kept
+/// on their account (users.preferred_language: "sq", "en"), the listing's number, and what the
+/// notification keeps (its payload, which its title is said from, domain::notices). What their
+/// phones are told by once the edit's transaction is through (pluribus-services' push.rs,
+/// `after_price_drops`), never inside it.
+#[derive(Debug, sqlx::FromRow)]
+pub struct PriceDropTold {
+    pub user_id: Uuid,
+    pub public_no: i64,
+    pub payload: Json<serde_json::Value>,
+    pub language: String,
+}
+
+/// After its seller changed the listing (posting.rs, update_listing_with_drops), in the same
+/// transaction: when the change lowered its price (price_was!), everyone who keeps it gets a
+/// notification, with what it was and what it is, in place of one about it they haven't seen yet,
+/// whose higher "was" it keeps, the price they last saw; not its own seller, nor those who turned
+/// price drop alerts off (notification_preferences.price_drop_alerts). Its payload has the
+/// listing's title too, which the notification's says (domain::notices). Returns those it told
+/// (`PriceDropTold`), none for a change that lowered no price.
+pub async fn notify_price_drop(tx: &mut sqlx::PgConnection, listing_id: Uuid) -> sqlx::Result<Vec<PriceDropTold>> {
+    sqlx::query_as(concat!(
         "WITH dropped AS (
              SELECT l.id, l.public_no, coalesce(l.generated_title, l.title) AS title, l.price_amount,
                     l.currency::text AS currency, l.created_by_user_id, ",
@@ -48,17 +62,23 @@ pub async fn notify_price_drop(tx: &mut sqlx::PgConnection, listing_id: Uuid) ->
              USING keepers k
              WHERE n.user_id = k.user_id AND n.notification_type = 'PRICE_DROP' AND n.read_at IS NULL
                AND n.payload->>'listing_id' = k.id::text
+         ),
+         told AS (
+             INSERT INTO notifications (user_id, notification_type, title, payload)
+             SELECT k.user_id, 'PRICE_DROP', left('Çmimi ra: ' || k.title, 180),
+                    jsonb_build_object('listing_id', k.id, 'public_no', k.public_no, 'title', k.title, 'was', k.was,
+                                       'price', k.price_amount, 'currency', k.currency)
+             FROM keepers k
+             RETURNING user_id, payload
          )
-         INSERT INTO notifications (user_id, notification_type, title, payload)
-         SELECT k.user_id, 'PRICE_DROP', left('Çmimi ra: ' || k.title, 180),
-                jsonb_build_object('listing_id', k.id, 'public_no', k.public_no, 'title', k.title, 'was', k.was,
-                                   'price', k.price_amount, 'currency', k.currency)
-         FROM keepers k"
+         SELECT t.user_id, d.public_no, t.payload, u.preferred_language AS language
+         FROM told t
+         CROSS JOIN dropped d
+         JOIN users u ON u.id = t.user_id"
     ))
     .bind(listing_id)
-    .execute(&mut *tx)
-    .await?;
-    Ok(())
+    .fetch_all(&mut *tx)
+    .await
 }
 
 /// A listing the user keeps whose price dropped, which they haven't seen yet on /te-ruajturat:

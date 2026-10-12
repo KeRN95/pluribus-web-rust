@@ -13,6 +13,7 @@
 use std::time::Duration;
 
 use pluribus_core::{
+    domain::NotificationKind,
     format::{self, Contact},
     i18n::{self, Lang, t1, t2},
 };
@@ -49,6 +50,7 @@ pub async fn run(db: &PgPool, senders: &Senders, origin: &str) -> sqlx::Result<(
         });
         let whatsapp = AlertTemplate::Expiry { title: listing.title.clone(), what: "skadoi".into() };
         tell(senders, listing, Alert { subject, body, whatsapp, unsubscribe }).await;
+        crate::push::tell_expiry(db, senders, NotificationKind::Expired, listing).await;
     }
     let warned = db::warn_expiring(db, WARN_DAYS).await?;
     for listing in &warned {
@@ -67,6 +69,7 @@ pub async fn run(db: &PgPool, senders: &Senders, origin: &str) -> sqlx::Result<(
         let date = format::date(listing.expires_at);
         let whatsapp = AlertTemplate::Expiry { title: listing.title.clone(), what: format!("skadon më {date}") };
         tell(senders, listing, Alert { subject, body, whatsapp, unsubscribe }).await;
+        crate::push::tell_expiry(db, senders, NotificationKind::Expiring, listing).await;
     }
     Ok((warned.len(), expired.len()))
 }

@@ -2550,6 +2550,7 @@ dependencies = [
  "pluribus-db",
  "rand 0.9.5",
  "reqwest",
+ "ring",
  "rust_decimal",
  "serde_json",
  "sha2",

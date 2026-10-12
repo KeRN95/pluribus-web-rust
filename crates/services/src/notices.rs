@@ -58,6 +58,8 @@ pub async fn send_due(db: &PgPool, senders: &Senders, origin: &str) -> sqlx::Res
         let title: String = i18n::LANG.sync_scope(Lang::Sq, || notice.title()).chars().take(TITLE).collect();
         db::record_notice(db, due.user_id, due.conversation_id, &title, &notice.excerpt, &notice.writer, notice.listing.as_deref()).await?;
         sent += 1;
+        // Their phones hear of it by push too, whichever channel reaches them (push.rs).
+        crate::push::tell_notice(db, senders, due.user_id, &due.language, due.conversation_id, &notice).await;
         let contact = match (due.email, due.phone) {
             (Some(email), _) if due.email_ok => Contact::Email(email),
             (_, Some(phone)) => Contact::Phone(phone),

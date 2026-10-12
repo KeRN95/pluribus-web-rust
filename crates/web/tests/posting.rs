@@ -1623,3 +1623,62 @@ async fn a_seller_sees_what_each_listing_drew(pool: PgPool) {
     assert!(his.contains(r#"<dd class="my-stat-week">+50 këtë javë</dd>"#));
     assert!(his.contains(r#"<dd class="my-stat-week">Asnjë këtë javë</dd>"#));
 }
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn a_price_lowered_on_the_edit_page_reaches_the_phone_of_whoever_keeps_the_listing(pool: PgPool) {
+    use axum::{Form, Json, extract::State, routing::post};
+    use pluribus_services::push::{Push, ServiceAccount};
+
+    // Firebase as the test stands it in, on a port of its own (pluribus-services' push.rs): Google's
+    // token endpoint, and FCM's messages:send for the throwaway service account's project, which
+    // keeps what it is sent.
+    let sent: Arc<Mutex<Vec<Value>>> = Arc::default();
+    let firebase = Router::new()
+        .route("/token", post(|Form(_): Form<Vec<(String, String)>>| async { Json(json!({"access_token": "token-1", "expires_in": 3599})) }))
+        .route(
+            "/v1/projects/pluribus-test/messages:send",
+            post(|State(sent): State<Arc<Mutex<Vec<Value>>>>, Json(request): Json<Value>| async move {
+                sent.lock().unwrap().push(request["message"].clone());
+                Json(json!({"name": "projects/pluribus-test/messages/0:1"}))
+            }),
+        )
+        .with_state(sent.clone());
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    tokio::spawn(async move { axum::serve(listener, firebase).await.unwrap() });
+    let mut account = ServiceAccount::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../services/tests/fixtures/fcm-test-key.json")).unwrap();
+    account.token_uri = format!("http://{address}/token");
+    let push = Push::new(account, &format!("http://{address}")).unwrap();
+    let app = pluribus_web::router(AppState { senders: Arc::new(Senders::none().with_push(push)), ..state(pool.clone()) });
+
+    // Ana's phone for sale; Besnik keeps it, the app on his phone.
+    let ana = new_seller(&pool, "+355691112233").await;
+    let no = post_listing(&pool, &ana).await;
+    let besnik = new_seller(&pool, "+355691112244").await;
+    let besnik: uuid::Uuid = account_of(&besnik).parse().unwrap();
+    sqlx::query("INSERT INTO saved_listings (user_id, listing_id) SELECT $1, id FROM listings WHERE public_no = $2::bigint")
+        .bind(besnik)
+        .bind(&no)
+        .execute(&pool)
+        .await
+        .unwrap();
+    pluribus_db::save_device_token(&pool, besnik, "ANDROID", "phone-besnik").await.unwrap();
+    // She lowers it from 32 000 to 29 000 lekë on its edit page: once the edit has gone through,
+    // his phone hears of it, as his notification says it, a tap opening the listing.
+    let started = started();
+    let edited = send_to(app, form_request(&format!("/listing/{no}/ndrysho"), &listing_fields(("price", "29 000"), &started), Some(&ana))).await;
+    assert!(edited.location.is_some(), "{}", edited.body);
+    for _ in 0..250 {
+        if !sent.lock().unwrap().is_empty() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    let sent = sent.lock().unwrap().clone();
+    assert_eq!(sent.len(), 1, "{sent:#?}");
+    let title: String = sqlx::query_scalar("SELECT title FROM notifications WHERE notification_type = 'PRICE_DROP'").fetch_one(&pool).await.unwrap();
+    assert!(title.starts_with("Çmimi ra: Samsung Galaxy S21"), "{title}");
+    assert_eq!(sent[0]["token"], "phone-besnik");
+    assert_eq!(sent[0]["notification"], json!({ "title": title }));
+    assert_eq!(sent[0]["data"], json!({ "kind": "PRICE_DROP", "listing_no": no }));
+}

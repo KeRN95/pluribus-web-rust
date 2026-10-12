@@ -372,7 +372,8 @@ pub async fn own_listing(db: &PgPool, public_no: i64, user_id: Uuid) -> sqlx::Re
 /// sent, if any, each by its id or its key in the store (order_listing_photos; an upload by its id,
 /// which it keeps). All in one transaction, so that a failure leaves the listing as it was, an
 /// upload that isn't there to take too (`NotSaved::UploadsGone`); it returns the store's keys of
-/// the photos removed, whose files can go once it has gone through.
+/// the photos removed, whose files can go once it has gone through. Those it told of a lower
+/// price, by a notification each, `update_listing_with_drops` returns as well.
 pub async fn update_listing(
     db: &PgPool,
     public_no: i64,
@@ -382,6 +383,31 @@ pub async fn update_listing(
     added: Photos<'_>,
     order: &[String],
 ) -> Result<Option<Vec<String>>, NotSaved> {
+    let updated = update_listing_with_drops(db, public_no, listing, point, removed, added, order).await?;
+    Ok(updated.map(|updated| updated.gone))
+}
+
+/// What an edit saved (`update_listing_with_drops`) leaves to do once its transaction has gone
+/// through: the files of the photos it took out, by their keys in the store, which can go; and
+/// those it told that the listing's price dropped (notify_price_drop), whose phones can hear of it
+/// too (pluribus-services' push.rs, `after_price_drops`).
+#[derive(Debug)]
+pub struct ListingUpdated {
+    pub gone: Vec<String>,
+    pub drops: Vec<PriceDropTold>,
+}
+
+/// `update_listing`, which returns what it leaves to do whole (`ListingUpdated`): the photos'
+/// files that can go, and those told that the price dropped.
+pub async fn update_listing_with_drops(
+    db: &PgPool,
+    public_no: i64,
+    listing: &NewListing<'_>,
+    point: Option<(f64, f64)>,
+    removed: &[Uuid],
+    added: Photos<'_>,
+    order: &[String],
+) -> Result<Option<ListingUpdated>, NotSaved> {
     let mut tx = db.begin().await?;
     let Some(id) = sqlx::query_scalar!(
         "UPDATE listings l
@@ -425,7 +451,7 @@ pub async fn update_listing(
     )
         .execute(&mut *tx)
         .await?;
-    notify_price_drop(&mut tx, id).await?;
+    let drops = notify_price_drop(&mut tx, id).await?;
     if let Some(point) = point {
         set_listing_point(&mut tx, id, point).await?;
     }
@@ -435,7 +461,7 @@ pub async fn update_listing(
         order_listing_photos(&mut tx, id, order).await?;
     }
     tx.commit().await?;
-    Ok(Some(gone))
+    Ok(Some(ListingUpdated { gone, drops }))
 }
 
 /// What a seller can do to their own listing, besides editing it.

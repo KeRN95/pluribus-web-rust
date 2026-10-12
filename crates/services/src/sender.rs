@@ -13,7 +13,8 @@
 //! whose template isn't set up. An e-mail is in its recipient's language (i18n.rs): the code's
 //! in the language of the page that asked for it, the rest in the one kept on their account
 //! (the callers' `i18n::in_lang`); a WhatsApp template's texts stay Albanian, as Meta approved
-//! them.
+//! them. Push notifications to the phone app go with them (push.rs, `Senders::push`, with
+//! FCM_SERVICE_ACCOUNT): beside an e-mail or a WhatsApp message, never in place of one.
 
 use std::{sync::Mutex, time::Duration};
 
@@ -31,7 +32,7 @@ use pluribus_core::{
 };
 use serde_json::{Value, json};
 
-use crate::config::Config;
+use crate::{config::Config, push::Push};
 
 /// How a code reaches its contact.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -373,10 +374,14 @@ const GRAPH_API: &str = "https://graph.facebook.com";
 /// The channels codes, notices and alerts go out by, made once as the server starts and carried
 /// by the application's state (`AppState::senders`): those the settings set up (`from_config`);
 /// none (`none`), every message going to the log, as in development; or the tests' stand-in,
-/// which sends nothing and keeps what it is given (`recording`, `sent`).
+/// which sends nothing and keeps what it is given (`recording`, `sent`). With them, push
+/// notifications to the phone app, where they are set up (`push`).
 pub struct Senders {
     email: Option<Email>,
     whatsapp: Option<WhatsApp>,
+    /// Push notifications to the phone app (push.rs): with FCM_SERVICE_ACCOUNT, or the tests'
+    /// stand-in for Firebase (`with_push`).
+    push: Option<Push>,
     /// The stand-in's: every message it was given, in order (`recording`); None for real
     /// channels.
     kept: Option<Mutex<Vec<Sent>>>,
@@ -400,7 +405,8 @@ impl Senders {
     /// The channels the settings set up (config.rs): e-mail with SMTP_HOST, SMTP_USERNAME,
     /// SMTP_PASSWORD and EMAIL_FROM (on SMTP_PORT), WhatsApp with WHATSAPP_TOKEN,
     /// WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_TEMPLATE (in WHATSAPP_LANGUAGE, through
-    /// WHATSAPP_API_VERSION, with the notices' and the alerts' templates those settings name). A
+    /// WHATSAPP_API_VERSION, with the notices' and the alerts' templates those settings name), and
+    /// push with FCM_SERVICE_ACCOUNT (`Push::from_config`, whose log says so without it). A
     /// channel set up only in part, or wrongly, is left off, with the reason in the log.
     pub fn from_config(config: &Config) -> Self {
         let email = match (&config.smtp_host, &config.smtp_username, &config.smtp_password, &config.email_from) {
@@ -425,19 +431,29 @@ impl Senders {
                 None
             }
         };
-        Self { email, whatsapp, kept: None }
+        Self { email, whatsapp, push: Push::from_config(config), kept: None }
     }
 
     /// No channel: every code, notice and alert goes to the log, as when the settings set none up.
     pub fn none() -> Self {
-        Self { email: None, whatsapp: None, kept: None }
+        Self { email: None, whatsapp: None, push: None, kept: None }
     }
 
     /// The tests' stand-in: nothing goes out, and every message it is given is kept (`sent`),
     /// answered as though its contact's channel were set up (`Channel::Email` for an address,
     /// `Channel::WhatsApp` for a number).
     pub fn recording() -> Self {
-        Self { email: None, whatsapp: None, kept: Some(Mutex::default()) }
+        Self { email: None, whatsapp: None, push: None, kept: Some(Mutex::default()) }
+    }
+
+    /// The same, with push notifications by `push`: the tests', to their stand-in for Firebase.
+    pub fn with_push(self, push: Push) -> Self {
+        Self { push: Some(push), ..self }
+    }
+
+    /// Push notifications to the phone app, where they are set up (push.rs).
+    pub fn push(&self) -> Option<&Push> {
+        self.push.as_ref()
     }
 
     /// What the stand-in kept, in the order it was given; nothing for real channels.

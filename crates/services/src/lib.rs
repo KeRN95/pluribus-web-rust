@@ -4,7 +4,8 @@
 //! code and the session); the site's settings, read once as the server starts,
 //! the site's address for what goes out on its own among them (config.rs: `Config`,
 //! `Config::site_origin`); photos and their store (media.rs), sending codes, notices and alerts
-//! (sender.rs), the AI that fills in the listing form (ai.rs), the euro rate (rates.rs), the views
+//! (sender.rs), and the notices to the phone app by push beside them (push.rs, which the senders
+//! carry), the AI that fills in the listing form (ai.rs), the euro rate (rates.rs), the views
 //! (views.rs), the recommendations (recommended.rs), a saved search's page made again from what it
 //! keeps (searches.rs), what a listing's page works out from its rows, which the API says alike
 //! (listings.rs), and the work that runs on its own, which the binary starts once, each job under
@@ -33,6 +34,7 @@ pub mod places;
 pub mod posting;
 pub mod promotions;
 pub mod properties;
+pub mod push;
 pub mod rates;
 pub mod recommended;
 pub mod searches;
@@ -55,7 +57,8 @@ pub struct AppState {
     /// The site's settings, read once as the server started (config.rs), or the tests' own.
     pub config: Arc<Config>,
     /// How sign-in codes, notices and alerts go out (sender.rs): by the channels the settings set
-    /// up, or by the tests' stand-in, which keeps them.
+    /// up, or by the tests' stand-in, which keeps them; and push notifications to the phone app
+    /// with them, where those are set up (`Senders::push`, push.rs).
     pub senders: Arc<Senders>,
     /// Where listing photos are kept.
     pub media: Media,

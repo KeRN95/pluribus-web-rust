@@ -12,6 +12,7 @@
 pub mod account;
 mod auth;
 pub mod browse;
+pub mod devices;
 mod dto;
 mod error;
 mod lang;
@@ -69,7 +70,9 @@ pub fn router(state: AppState) -> Router {
 /// `POST /conversations/{id}/block` and `/unblock`; and the account's settings, signed in
 /// (account.rs): `PATCH /me` and `DELETE /me`, `GET` and `PUT /me/notices`, `PUT /me/language`,
 /// `POST /me/contacts`, `POST /me/contacts/verify`, `DELETE /me/contacts/{kind}`,
-/// `GET /me/sessions` and `DELETE /me/sessions/others`. And a seller's own listings, signed in
+/// `GET /me/sessions` and `DELETE /me/sessions/others`; and the phone app's devices, which push
+/// notifications go to, signed in (devices.rs): `PUT /me/devices` and
+/// `DELETE /me/devices/{token}`. And a seller's own listings, signed in
 /// (own.rs): `POST /photos` (the body up to photos::UPLOAD_BODY_BYTES, this route's alone),
 /// `POST /listings`, `PUT` and `DELETE /listings/{no}`, `POST /listings/{no}/pause`, `/resume`,
 /// `/sell`, `/reserve`, `/unreserve` and `/renew`, `GET /me/listings`, `POST /listings/zone` and
@@ -85,6 +88,8 @@ fn routes() -> Router<AppState> {
         .route("/me/contacts/{kind}", delete(account::remove_contact))
         .route("/me/sessions", get(account::sessions))
         .route("/me/sessions/others", delete(account::end_other_sessions))
+        .route("/me/devices", put(devices::register))
+        .route("/me/devices/{token}", delete(devices::forget))
         .route("/categories", get(reference::categories))
         .route("/cities", get(reference::cities))
         .route("/categories/{slug}/fields", get(reference::fields))

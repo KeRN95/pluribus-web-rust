@@ -20,6 +20,7 @@ use axum::{
 use pluribus_services::{
     photos::{check as check_photos, process as process_photos, store as store_photos, unstore},
     posting::{self, Poster, listing_to_save, message},
+    push,
 };
 use serde::Deserialize;
 
@@ -833,9 +834,9 @@ pub async fn update_listing(
     let slug = format::slug(checked.title);
     let changed = listing_to_save(&checked, &Poster::of(&user), &slug, &properties, true);
     // The new photos' files go into the store first, then the edit, with its point and its photos
-    // taken out, added and put in order, in one transaction (db::update_listing); should that fail,
-    // or the listing no longer be theirs to edit, the new files go again and the listing stays as
-    // it was.
+    // taken out, added and put in order, in one transaction (db::update_listing_with_drops);
+    // should that fail, or the listing no longer be theirs to edit, the new files go again and the
+    // listing stays as it was.
     let stored = store_photos(&state.media, processed).await?;
     // In the order the form arranged: a saved photo by its id (one of the listing's, not taken
     // out), a new one by its place among those sent, the first the cover.
@@ -850,8 +851,8 @@ pub async fn update_listing(
             _ => None,
         })
         .collect();
-    let gone = match db::update_listing(&state.db, public_no, &changed, checked.point, &removed, Photos::Stored(&stored), &order).await {
-        Ok(Some(gone)) => gone,
+    let updated = match db::update_listing_with_drops(&state.db, public_no, &changed, checked.point, &removed, Photos::Stored(&stored), &order).await {
+        Ok(Some(updated)) => updated,
         Ok(None) => {
             unstore(&state.media, &stored).await;
             return not_found().await;
@@ -861,8 +862,11 @@ pub async fn update_listing(
             return Err(error.into());
         }
     };
-    // The files of the photos taken out, now that the listing names them no more.
-    photos::delete(&state.media, &gone).await;
+    // The files of the photos taken out, now that the listing names them no more; and the phones of
+    // those it told of a lower price, now that it went through (push.rs), which the page doesn't
+    // wait on.
+    photos::delete(&state.media, &updated.gone).await;
+    push::after_price_drops(&state, updated.drops);
     Ok(Redirect::to(&format!("/listing/{public_no}-{slug}")).into_response())
 }
 

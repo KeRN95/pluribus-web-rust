@@ -88,6 +88,7 @@ mod review;
 mod promotions;
 mod car_prices;
 mod recommended;
+mod device_tokens;
 
 pub use account::*;
 pub use categories::*;
@@ -113,6 +114,7 @@ pub use review::*;
 pub use promotions::*;
 pub use car_prices::*;
 pub use recommended::*;
+pub use device_tokens::*;
 
 /// The migrations (the repository's migrations/, two levels above this crate), embedded once: the
 /// server runs them as it starts (main.rs), and every database test names them, here

@@ -33,6 +33,8 @@ pub const DEFAULT_MEDIA_URL: &str = "/media";
 pub const DEFAULT_ANTHROPIC_MODEL: &str = "claude-haiku-4-5-20251001";
 /// Anthropic's API, unless ANTHROPIC_BASE_URL names another (the tests' stand-in).
 pub const DEFAULT_ANTHROPIC_URL: &str = "https://api.anthropic.com";
+/// Firebase Cloud Messaging's API, unless FCM_BASE_URL names another (the tests' stand-in).
+pub const DEFAULT_FCM_URL: &str = "https://fcm.googleapis.com";
 
 /// Every setting of README's "Configuration", typed: `Option` where leaving one out turns
 /// something off, its default where it has one. Its `Debug` hides the secrets.
@@ -87,6 +89,11 @@ pub struct Config {
     pub anthropic_api_key: Option<String>,
     pub anthropic_model: String,
     pub anthropic_base_url: String,
+    /// FCM_SERVICE_ACCOUNT, the path to a Firebase service account's key file, which turns push
+    /// notifications to the phone app on (push.rs); FCM_BASE_URL, where Firebase Cloud Messaging's
+    /// API is.
+    pub fcm_service_account: Option<String>,
+    pub fcm_base_url: String,
     /// MODERATORS: the phone numbers and e-mail addresses, comma-separated, of those who moderate;
     /// what isn't one is left out.
     pub moderators: Moderators,
@@ -144,6 +151,8 @@ impl Config {
             anthropic_api_key: setting("ANTHROPIC_API_KEY"),
             anthropic_model: or("ANTHROPIC_MODEL", DEFAULT_ANTHROPIC_MODEL),
             anthropic_base_url: or("ANTHROPIC_BASE_URL", DEFAULT_ANTHROPIC_URL),
+            fcm_service_account: setting("FCM_SERVICE_ACCOUNT"),
+            fcm_base_url: or("FCM_BASE_URL", DEFAULT_FCM_URL).trim_end_matches('/').to_string(),
             moderators: Moderators::new(lookup("MODERATORS").unwrap_or_default().split(',')),
             contact_email: setting("CONTACT_EMAIL"),
             operator: setting("OPERATOR"),
@@ -181,6 +190,8 @@ impl Config {
             anthropic_api_key: None,
             anthropic_model: DEFAULT_ANTHROPIC_MODEL.to_string(),
             anthropic_base_url: DEFAULT_ANTHROPIC_URL.to_string(),
+            fcm_service_account: None,
+            fcm_base_url: DEFAULT_FCM_URL.to_string(),
             moderators: Moderators::default(),
             contact_email: None,
             operator: None,
@@ -237,6 +248,8 @@ impl fmt::Debug for Config {
             anthropic_api_key,
             anthropic_model,
             anthropic_base_url,
+            fcm_service_account,
+            fcm_base_url,
             moderators,
             contact_email,
             operator,
@@ -270,6 +283,8 @@ impl fmt::Debug for Config {
             .field("anthropic_api_key", &hidden(anthropic_api_key))
             .field("anthropic_model", anthropic_model)
             .field("anthropic_base_url", anthropic_base_url)
+            .field("fcm_service_account", fcm_service_account)
+            .field("fcm_base_url", fcm_base_url)
             .field("moderators", moderators)
             .field("contact_email", contact_email)
             .field("operator", operator)
@@ -298,6 +313,7 @@ mod tests {
         assert_eq!((config.s3_region.as_str(), config.media_url.as_str()), ("auto", "/media"));
         assert_eq!(config.anthropic_model, "claude-haiku-4-5-20251001");
         assert_eq!(config.anthropic_base_url, "https://api.anthropic.com");
+        assert_eq!((config.fcm_service_account.as_deref(), config.fcm_base_url.as_str()), (None, "https://fcm.googleapis.com"));
         assert!(config.moderators.is_empty() && !config.sign_in_codes_on_screen && !config.type_trial);
         assert_eq!(config.site_origin(), "http://127.0.0.1:3000");
     }
@@ -332,6 +348,8 @@ mod tests {
             ("ANTHROPIC_API_KEY", "ai-secret-5"),
             ("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
             ("ANTHROPIC_BASE_URL", "http://127.0.0.1:9999"),
+            ("FCM_SERVICE_ACCOUNT", " /etc/pluribus/firebase.json "),
+            ("FCM_BASE_URL", "http://127.0.0.1:9998/"),
             ("MODERATORS", "069 123 4567, Ana@Example.com, jo"),
             ("CONTACT_EMAIL", " info@pluribus.al "),
             ("OPERATOR", "Pluribus sh.p.k."),
@@ -364,6 +382,8 @@ mod tests {
             anthropic_api_key: Some("ai-secret-5".into()),
             anthropic_model: "claude-sonnet-4-5".into(),
             anthropic_base_url: "http://127.0.0.1:9999".into(),
+            fcm_service_account: Some("/etc/pluribus/firebase.json".into()),
+            fcm_base_url: "http://127.0.0.1:9998".into(),
             moderators: Moderators::new(["+355691234567", "ana@example.com"]),
             contact_email: Some("info@pluribus.al".into()),
             operator: Some("Pluribus sh.p.k.".into()),
@@ -386,6 +406,8 @@ mod tests {
             ("SMTP_PORT", "smtp"),
             ("WHATSAPP_LANGUAGE", ""),
             ("MEDIA_URL", " "),
+            ("FCM_SERVICE_ACCOUNT", " "),
+            ("FCM_BASE_URL", ""),
             ("SIGN_IN_CODES_ON_SCREEN", "TRUE"),
             ("TYPE_TRIAL", "yes"),
             ("MODERATORS", ""),

@@ -8,9 +8,11 @@
 //! and its category's properties' (properties::check, each problem under `properties.<code>`),
 //! within the day's limits (posting::may_post), waiting for a moderator where the pages' would
 //! (posting::review_for), and saved in one transaction that takes its uploads, or nothing of it
-//! (db::create_listing, db::update_listing, `Photos::Uploads`). The seller's listings as "Njoftimet e
-//! mia" shows them (`GET /me/listings`); pausing, putting back, selling, reserving, taking the
-//! reservation off, renewing and deleting one, the seller's buttons, by domain::Status's rules
+//! (db::create_listing, db::update_listing_with_drops, `Photos::Uploads`), an edit that lowers the
+//! price telling the phones of those who keep the listing once it is through (push.rs,
+//! `after_price_drops`, since D3). The seller's listings as "Njoftimet e mia" shows them
+//! (`GET /me/listings`); pausing, putting back, selling, reserving, taking the reservation off,
+//! renewing and deleting one, the seller's buttons, by domain::Status's rules
 //! (db::change_own_listing, db::renew_listing); and the posting form's helpers, the zone a listing's
 //! words name (`POST /listings/zone`) and what cars of a model ask (`GET /listings/price-hint`). The
 //! shapes they answer in are here, beside their handlers.
@@ -48,6 +50,7 @@ use pluribus_services::{
     photos,
     posting::{self, Poster},
     properties::{self, OTHER},
+    push,
 };
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -417,8 +420,10 @@ pub async fn create(
 /// they post for), while it is up or paused, as the pages' edit form makes one: its fields checked
 /// as a new listing's are (not its day's limits, nor a moderator's review, as on the pages), photos
 /// taken out (`removed`), uploads added (`photo_ids`), all of them in `order`, the cover first; the
-/// files of those taken out deleted once it has gone through. The listing as `GET /listings/{no}`
-/// gives it; not found for a listing that isn't the caller's to edit, or isn't up or paused.
+/// files of those taken out deleted once it has gone through, and those who keep it told by push of
+/// a price it lowered (push::after_price_drops, in the background). The listing as
+/// `GET /listings/{no}` gives it; not found for a listing that isn't the caller's to edit, or isn't
+/// up or paused.
 pub async fn update(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -450,12 +455,14 @@ pub async fn update(
     let changed = posting::listing_to_save(&checked, &Poster::of(&user), &slug, &properties, true);
     let order: Vec<String> = ordered(&shown, body.cover, &edit.order).iter().map(Uuid::to_string).collect();
     let added = Photos::Uploads { ids: &added, user_id: user.id };
-    let gone = db::update_listing(&state.db, no, &changed, checked.point, &removed, added, &order)
+    let updated = db::update_listing_with_drops(&state.db, no, &changed, checked.point, &removed, added, &order)
         .await
         .map_err(not_saved)?
         .ok_or(ApiError::NotFound)?;
-    // The files of the photos taken out, now that the listing names them no more.
-    media::delete_photos(&state.media, &gone).await;
+    // The files of the photos taken out, now that the listing names them no more; and the phones of
+    // those it told of a lower price, now that it went through, which the answer doesn't wait on.
+    media::delete_photos(&state.media, &updated.gone).await;
+    push::after_price_drops(&state, updated.drops);
     Ok(Json(listing_dto(&state, Some(&user), &headers, no).await?))
 }
 
