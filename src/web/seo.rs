@@ -15,7 +15,7 @@ use axum::{
 use time::macros::format_description;
 
 use super::{Result, not_found};
-use crate::{AppState, db};
+use crate::{AppState, db, format};
 
 /// What a page says about itself in its head (meta.html).
 pub struct PageMeta {
@@ -199,7 +199,7 @@ pub async fn sitemap(State(state): State<AppState>, headers: HeaderMap, Path(nam
         let day = format_description!("[year]-[month]-[day]");
         for listing in db::active_listings_numbered(&state.db, from, from + LISTINGS_PER_SITEMAP).await? {
             let changed = listing.updated_at.format(&day).ok();
-            urls.push((format!("{origin}/listing/{}-{}", listing.public_no, listing.slug), changed));
+            urls.push((format!("{origin}{}", format::listing_path(listing.public_no, &listing.slug)), changed));
         }
     } else {
         return not_found().await;

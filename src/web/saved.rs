@@ -131,7 +131,7 @@ impl SavedPage {
 
 impl db::PriceDrop {
     pub fn url(&self) -> String {
-        format!("/listing/{}-{}", self.public_no, self.slug)
+        format::listing_path(self.public_no, &self.slug)
     }
 
     /// What it was and what it is, as the site writes prices: ("10 000 €", "9 500 €").

@@ -91,7 +91,7 @@ impl ReportPage {
         Self {
             public_no: target.public_no,
             title: target.title.clone(),
-            url: format!("/listing/{}-{}", target.public_no, target.slug),
+            url: format::listing_path(target.public_no, &target.slug),
             photo: target.photo.clone(),
             price: format::price_parts(target.price_amount, &target.currency, &target.price_type, &target.listing_type).0,
             town: target.town.clone(),

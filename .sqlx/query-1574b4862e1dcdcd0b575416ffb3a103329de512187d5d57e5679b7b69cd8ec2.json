@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE listings\n           SET status = CASE WHEN review_reason = 'DUPLICATE_PHOTOS' THEN 'PENDING_REVIEW' ELSE 'ACTIVE' END,\n               published_at = CASE WHEN review_reason = 'DUPLICATE_PHOTOS' THEN NULL ELSE now() END,\n               expires_at = CASE WHEN review_reason = 'DUPLICATE_PHOTOS' THEN NULL ELSE now() + make_interval(days => $3) END,\n               review_reason = CASE WHEN review_reason = 'DUPLICATE_PHOTOS' THEN review_reason END\n           WHERE id = $1 AND created_by_user_id = $2\n             AND (status = 'DRAFT' OR (status = 'PENDING_REVIEW' AND review_reason = 'NEW_ACCOUNT'))\n           RETURNING public_no, slug",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "public_no",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "slug",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "1574b4862e1dcdcd0b575416ffb3a103329de512187d5d57e5679b7b69cd8ec2"
+}

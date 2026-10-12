@@ -1,6 +1,7 @@
 //! One listing: its page, its photos and properties, and the contact it reveals.
 
 use super::*;
+use crate::format;
 
 #[derive(Debug)]
 pub struct ListingDetail {
@@ -42,8 +43,14 @@ pub struct ListingDetail {
     pub published_at: Option<OffsetDateTime>,
     /// When it expires, if it does (posting.rs, LISTING_DAYS).
     pub expires_at: Option<OffsetDateTime>,
-    /// The seller: a business's name, or the private seller's, with their profile's address.
+    /// The seller: a business's name, or the private seller's.
     pub seller_name: String,
+    /// Whose page theirs is: a store's, by its slug, or else the private seller's account (a
+    /// listing has the one or the other).
+    pub seller_business_slug: Option<String>,
+    pub seller_user_id: Option<Uuid>,
+    /// Their page's address, made from those two once the row is read (format::seller_path): the
+    /// query leaves it empty.
     pub seller_url: String,
     /// A store's logo (stores.rs), which its card shows in place of the initial.
     pub seller_logo: Option<String>,
@@ -105,7 +112,7 @@ pub async fn listing_by_public_no(
     db: &PgPool,
     public_no: i64,
 ) -> sqlx::Result<Option<ListingDetail>> {
-    sqlx::query_as!(
+    let listing = sqlx::query_as!(
         ListingDetail,
         r#"SELECT l.id, l.public_no, l.slug, coalesce(l.generated_title, l.title) AS "title!",
                   CASE WHEN l.generated_title IS NOT NULL THEN l.title END AS heading,
@@ -124,7 +131,7 @@ pub async fn listing_by_public_no(
                   (SELECT r.eur_rate FROM exchange_rates r WHERE r.currency = l.currency) AS "eur_rate?",
                   l.published_at, l.expires_at,
                   coalesce(b.display_name, u.display_name) AS "seller_name!",
-                  CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || u.id END AS "seller_url!",
+                  b.slug AS "seller_business_slug?", l.seller_user_id, '' AS "seller_url!",
                   b.logo_url AS "seller_logo?",
                   coalesce(b.created_at, u.created_at) AS "seller_since!",
                   (SELECT count(*) FROM listings o
@@ -157,7 +164,11 @@ pub async fn listing_by_public_no(
         public_no
     )
     .fetch_optional(db)
-    .await
+    .await?;
+    Ok(listing.map(|mut listing| {
+        listing.seller_url = format::seller_path(listing.seller_business_slug.as_deref(), listing.seller_user_id);
+        listing
+    }))
 }
 
 /// Property labels and display values, single values and multi-select lists alike, in the order

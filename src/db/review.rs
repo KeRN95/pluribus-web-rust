@@ -34,13 +34,18 @@ pub struct PendingListing {
     pub title: String,
     pub photo: Option<String>,
     pub seller_name: String,
-    pub seller_url: String,
+    /// Whose page its seller's is: a store's, by its slug, or else the private seller's account
+    /// (format::seller_path).
+    pub seller_business_slug: Option<String>,
+    pub seller_user_id: Option<Uuid>,
     /// The account that posted it, which a moderator may suspend.
     pub created_by_user_id: Uuid,
     pub reason: String,
     pub created_at: OffsetDateTime,
-    /// The other sellers' listings with one of its photos, by number and address.
-    pub twins: Vec<String>,
+    /// The other sellers' listings with one of its photos, by number, the lowest first, and their
+    /// slugs in the same order, for their addresses (format::listing_path).
+    pub twin_numbers: Vec<i64>,
+    pub twin_slugs: Vec<String>,
 }
 
 /// The listings waiting for a moderator, the oldest first; at most 100.
@@ -51,18 +56,22 @@ pub async fn pending_listings(db: &PgPool) -> sqlx::Result<Vec<PendingListing>> 
                  WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'
                  ORDER BY m.is_cover DESC, m.sort_order LIMIT 1) AS photo,
                 coalesce(b.display_name, u.display_name, '') AS seller_name,
-                CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || l.seller_user_id END AS seller_url,
+                b.slug AS seller_business_slug, l.seller_user_id,
                 l.created_by_user_id, coalesce(l.review_reason, '') AS reason, l.created_at,
-                coalesce((SELECT array_agg(DISTINCT '/listing/' || o.public_no || '-' || o.slug)
-                          FROM listing_media m
-                          JOIN listing_media om ON om.sha256 = m.sha256 AND om.listing_id <> m.listing_id
-                          JOIN listings o ON o.id = om.listing_id AND o.published_at IS NOT NULL AND o.status <> 'DELETED'
-                          WHERE m.listing_id = l.id AND m.sha256 IS NOT NULL
-                            AND coalesce(o.seller_business_id, o.seller_user_id) <> coalesce(l.seller_business_id, l.seller_user_id)),
-                         '{}') AS twins
+                coalesce(twins.numbers, '{}') AS twin_numbers, coalesce(twins.slugs, '{}') AS twin_slugs
          FROM listings l
          LEFT JOIN users u ON u.id = l.seller_user_id
          LEFT JOIN businesses b ON b.id = l.seller_business_id
+         CROSS JOIN LATERAL (
+             SELECT array_agg(twin.public_no ORDER BY twin.public_no) AS numbers,
+                    array_agg(twin.slug ORDER BY twin.public_no) AS slugs
+             FROM (SELECT DISTINCT o.public_no, o.slug
+                   FROM listing_media m
+                   JOIN listing_media om ON om.sha256 = m.sha256 AND om.listing_id <> m.listing_id
+                   JOIN listings o ON o.id = om.listing_id AND o.published_at IS NOT NULL AND o.status <> 'DELETED'
+                   WHERE m.listing_id = l.id AND m.sha256 IS NOT NULL
+                     AND coalesce(o.seller_business_id, o.seller_user_id) <> coalesce(l.seller_business_id, l.seller_user_id)) twin
+         ) twins
          WHERE l.status = 'PENDING_REVIEW'
          ORDER BY l.created_at
          LIMIT 100",

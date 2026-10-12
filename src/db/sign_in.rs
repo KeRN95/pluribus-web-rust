@@ -239,9 +239,9 @@ pub async fn poster_account(db: &PgPool, phone: Option<&str>, email: Option<&str
 /// Publishes a listing posted before signing in, once its seller confirmed their contact: a draft,
 /// or a new account's first listing waiting for a moderator only for that (review.rs,
 /// NEW_ACCOUNT); a draft with a photo another seller's listing has goes on to wait for them
-/// (DUPLICATE_PHOTOS). Returns its address.
-pub async fn publish_draft(db: &PgPool, listing_id: Uuid, user_id: Uuid) -> sqlx::Result<Option<String>> {
-    sqlx::query_scalar!(
+/// (DUPLICATE_PHOTOS). Returns its number and slug, for its address (format::listing_path).
+pub async fn publish_draft(db: &PgPool, listing_id: Uuid, user_id: Uuid) -> sqlx::Result<Option<(i64, String)>> {
+    let published = sqlx::query!(
         r#"UPDATE listings
            SET status = CASE WHEN review_reason = 'DUPLICATE_PHOTOS' THEN 'PENDING_REVIEW' ELSE 'ACTIVE' END,
                published_at = CASE WHEN review_reason = 'DUPLICATE_PHOTOS' THEN NULL ELSE now() END,
@@ -249,13 +249,14 @@ pub async fn publish_draft(db: &PgPool, listing_id: Uuid, user_id: Uuid) -> sqlx
                review_reason = CASE WHEN review_reason = 'DUPLICATE_PHOTOS' THEN review_reason END
            WHERE id = $1 AND created_by_user_id = $2
              AND (status = 'DRAFT' OR (status = 'PENDING_REVIEW' AND review_reason = 'NEW_ACCOUNT'))
-           RETURNING '/listing/' || public_no || '-' || slug AS "url!""#,
+           RETURNING public_no, slug"#,
         listing_id,
         user_id,
         super::LISTING_DAYS,
     )
     .fetch_optional(db)
-    .await
+    .await?;
+    Ok(published.map(|listing| (listing.public_no, listing.slug)))
 }
 
 pub async fn create_session(db: &PgPool, token_hash: &[u8], user_id: Uuid, days: i32) -> sqlx::Result<()> {

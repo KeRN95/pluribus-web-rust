@@ -79,7 +79,12 @@ pub const SUSPENSIONS: [(&str, &str); 4] = [
 /// A listing waiting for a moderator, as /moderim shows it.
 impl db::PendingListing {
     pub fn url(&self) -> String {
-        format!("/listing/{}-{}", self.public_no, self.slug)
+        format::listing_path(self.public_no, &self.slug)
+    }
+
+    /// Its seller's page.
+    pub fn seller_url(&self) -> String {
+        format::seller_path(self.seller_business_slug.as_deref(), self.seller_user_id)
     }
 
     /// Why it waits (ReviewReason).
@@ -92,12 +97,10 @@ impl db::PendingListing {
 
     /// The other sellers' listings with one of its photos: each address, and its number ("nr. 1001").
     pub fn twins_shown(&self) -> Vec<(String, String)> {
-        self.twins
+        self.twin_numbers
             .iter()
-            .map(|url| {
-                let no = url.trim_start_matches("/listing/").split('-').next().unwrap_or_default();
-                (url.clone(), format!("nr. {no}"))
-            })
+            .zip(&self.twin_slugs)
+            .map(|(no, slug)| (format::listing_path(*no, slug), format!("nr. {no}")))
             .collect()
     }
 
@@ -130,7 +133,12 @@ impl db::SuspendedUser {
 /// A reported listing, as /moderim shows it.
 impl ReportedListing {
     pub fn url(&self) -> String {
-        format!("/listing/{}-{}", self.public_no, self.slug)
+        format::listing_path(self.public_no, &self.slug)
+    }
+
+    /// Its seller's page.
+    pub fn seller_url(&self) -> String {
+        format::seller_path(self.seller_business_slug.as_deref(), self.seller_user_id)
     }
 
     /// Taken off the site by its reports, until a moderator decides.

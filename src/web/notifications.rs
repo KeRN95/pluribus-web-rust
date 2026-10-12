@@ -61,7 +61,7 @@ struct Row {
 
 impl Row {
     fn new(notification: db::Notification, now: OffsetDateTime) -> Self {
-        let listing = notification.public_no.zip(notification.slug.as_ref()).map(|(no, slug)| format!("/listing/{no}-{slug}"));
+        let listing = notification.public_no.zip(notification.slug.as_ref()).map(|(no, slug)| format::listing_path(no, slug));
         let (icon, href) = match notification.kind.as_str() {
             "PRICE_DROP" => (icons::PRICE_TAG, listing),
             "SAVED_SEARCH" => (

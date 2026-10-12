@@ -74,6 +74,11 @@ impl db::BlockedSeller {
     pub fn initial(&self) -> String {
         format::initial(&self.name)
     }
+
+    /// Where their name leads: their store's page, or else their own.
+    pub fn url(&self) -> String {
+        format::seller_path(self.business_slug.as_deref(), Some(self.id))
+    }
 }
 
 /// The page for this user, the fields as their account has them.

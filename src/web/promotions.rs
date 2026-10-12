@@ -41,7 +41,7 @@ impl db::PromotionProduct {
 
 impl db::OnPromotion {
     pub fn url(&self) -> String {
-        format!("/listing/{}-{}", self.public_no, self.slug)
+        format::listing_path(self.public_no, &self.slug)
     }
 
     /// The day it ends: "17.10.2026".

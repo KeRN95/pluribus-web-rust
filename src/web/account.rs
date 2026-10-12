@@ -28,7 +28,7 @@ use super::{Result, cookie, render, saved, settings};
 use crate::{
     AppState,
     db::{self, CodeCheck, CodePurpose, SessionUser},
-    format::Contact,
+    format::{self, Contact},
     i18n::{Lang, t, t1},
     sender::{self, Channel},
 };
@@ -413,7 +413,9 @@ pub async fn check_code(
             let session = cookie_header(&headers, SESSION_COOKIE, &token, i64::from(SESSION_DAYS) * 86_400);
             let login = cookie_header(&headers, LOGIN_COOKIE, "", 0);
             let published = match purpose.listing_id {
-                Some(listing) => db::publish_draft(&state.db, listing, account.id).await?,
+                Some(listing) => {
+                    db::publish_draft(&state.db, listing, account.id).await?.map(|(no, slug)| format::listing_path(no, &slug))
+                }
                 None => None,
             };
             // A heart tapped before signing in (saved.rs): the listing is kept now, and the page it

@@ -133,7 +133,10 @@ pub struct ReportedListing {
     /// SUSPENDED when the reports took it off the site.
     pub status: String,
     pub seller_name: String,
-    pub seller_url: String,
+    /// Whose page its seller's is: a store's, by its slug, or else the private seller's account
+    /// (format::seller_path).
+    pub seller_business_slug: Option<String>,
+    pub seller_user_id: Option<Uuid>,
     /// The account that posted it, which a moderator may suspend.
     pub created_by_user_id: Uuid,
     /// How many people report it.
@@ -152,7 +155,7 @@ pub async fn reported_listings(db: &PgPool) -> sqlx::Result<Vec<ReportedListing>
     sqlx::query_as(
         "SELECT l.public_no, l.slug, coalesce(l.generated_title, l.title) AS title, l.status,
                 coalesce(b.display_name, u.display_name, '') AS seller_name,
-                CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || l.seller_user_id END AS seller_url,
+                b.slug AS seller_business_slug, l.seller_user_id,
                 l.created_by_user_id, r.reporters, reasons.codes AS reason_codes, reasons.counts AS reason_counts, r.notes, r.last_reported
          FROM (SELECT listing_id, count(DISTINCT reporter_user_id) AS reporters, max(created_at) AS last_reported,
                       coalesce(array_agg(details ORDER BY created_at DESC) FILTER (WHERE details IS NOT NULL), '{}') AS notes
@@ -333,17 +336,18 @@ pub async fn blocked_for_session(db: &PgPool, token_hash: &[u8]) -> sqlx::Result
 pub struct BlockedSeller {
     pub id: Uuid,
     pub name: String,
-    pub url: String,
+    /// That business's slug: their name leads to its page rather than their own
+    /// (format::seller_path).
+    pub business_slug: Option<String>,
 }
 
 /// Those the user blocked, on a listing's page or in a conversation, the last first.
 pub async fn blocked_sellers(db: &PgPool, user: Uuid) -> sqlx::Result<Vec<BlockedSeller>> {
     sqlx::query_as(
-        "SELECT u.id, coalesce(b.display_name, u.display_name) AS name,
-                CASE WHEN b.id IS NOT NULL THEN '/biznes/' || b.slug ELSE '/perdorues/' || u.id END AS url
+        "SELECT u.id, coalesce(b.display_name, u.display_name) AS name, b.slug AS business_slug
          FROM user_blocks k
          JOIN users u ON u.id = k.blocked_user_id
-         LEFT JOIN LATERAL (SELECT b.id, b.display_name, b.slug
+         LEFT JOIN LATERAL (SELECT b.display_name, b.slug
                             FROM business_members m JOIN businesses b ON b.id = m.business_id
                             WHERE m.user_id = u.id
                             ORDER BY m.role = 'OWNER' DESC

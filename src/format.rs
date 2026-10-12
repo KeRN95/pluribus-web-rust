@@ -1,8 +1,11 @@
 //! Display formatting with Albanian conventions: "9 500 €", "60 000 Lekë", "04.10.2026"; in
-//! English (i18n.rs), its words, a decimal point, and dates as "4 Oct 2026".
+//! English (i18n.rs), its words, a decimal point, and dates as "4 Oct 2026". And the site's
+//! addresses, made from the parts the database gives rather than in its queries: a listing's
+//! (listing_path) and a seller's page (seller_path).
 
 use rust_decimal::{Decimal, prelude::ToPrimitive};
 use time::{Date, Duration, Month, OffsetDateTime, UtcOffset, macros::format_description};
+use uuid::Uuid;
 
 use crate::i18n::{english, t, t1, t2};
 
@@ -395,6 +398,23 @@ pub fn slug(title: &str) -> String {
     if slug.is_empty() { "njoftim".to_string() } else { slug }
 }
 
+/// A listing's address, /listing/1042-vw-golf-7: its number finds it, and its slug, which follows
+/// its title, only reads well (web/listings.rs sends an old slug on to the current one).
+pub fn listing_path(public_no: i64, slug: &str) -> String {
+    format!("/listing/{public_no}-{slug}")
+}
+
+/// A seller's page: a store's, by its slug (/biznes/auto-durresi), or else a private seller's, by
+/// their account (/perdorues/<id>). A listing has the one or the other (listings' CHECK); with
+/// neither, the address is empty.
+pub fn seller_path(store_slug: Option<&str>, user_id: Option<Uuid>) -> String {
+    match (store_slug, user_id) {
+        (Some(slug), _) => format!("/biznes/{slug}"),
+        (None, Some(id)) => format!("/perdorues/{id}"),
+        (None, None) => String::new(),
+    }
+}
+
 /// Text as search compares it, in lower case and without accents: "Durrës" becomes "durres", as
 /// the search index keeps it.
 pub fn fold(text: &str) -> String {
@@ -460,6 +480,23 @@ mod tests {
         assert_eq!(slug("Shtëpi 2+1 në Durrës!"), "shtepi-2-1-ne-durres");
         assert_eq!(slug("  Çanta lëkure  "), "canta-lekure");
         assert_eq!(slug("!!!"), "njoftim");
+    }
+
+    #[test]
+    fn makes_listing_addresses() {
+        assert_eq!(listing_path(1042, "vw-golf-7"), "/listing/1042-vw-golf-7");
+        // As posting gives one its slug, from its title.
+        assert_eq!(listing_path(7, &slug("Shtëpi 2+1 në Durrës!")), "/listing/7-shtepi-2-1-ne-durres");
+    }
+
+    #[test]
+    fn makes_seller_addresses() {
+        let ana = Uuid::from_u128(0x1111_1111_1111_4111_8111_1111_1111_1111);
+        assert_eq!(seller_path(None, Some(ana)), "/perdorues/11111111-1111-4111-8111-111111111111");
+        assert_eq!(seller_path(Some("auto-durresi"), None), "/biznes/auto-durresi");
+        // One of a store's people, someone blocked (db::BlockedSeller): the store's page.
+        assert_eq!(seller_path(Some("auto-durresi"), Some(ana)), "/biznes/auto-durresi");
+        assert_eq!(seller_path(None, None), "");
     }
 
     fn amount(value: &str) -> Option<Decimal> {

@@ -143,7 +143,7 @@
   <ul class="blocked-sellers">
     {%- for seller in blocked %}
     <li class="blocked-seller">
-      <a href="{{ seller.url }}"><span class="avatar" aria-hidden="true">{{ seller.initial() }}</span><span class="blocked-seller-name">{{ seller.name }}</span></a>
+      <a href="{{ seller.url() }}"><span class="avatar" aria-hidden="true">{{ seller.initial() }}</span><span class="blocked-seller-name">{{ seller.name }}</span></a>
       <form method="post" action="/llogaria/zhblloko/{{ seller.id }}">
         <button type="submit" class="button secondary small">{{ crate::t("Zhblloko") }}</button>
       </form>
