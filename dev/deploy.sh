@@ -10,8 +10,9 @@
 # server apply it, and a migration changed after being applied stops the server (its checksum).
 # Commit it, or run with ALLOW_NEW_MIGRATIONS=1. A build that says it is done while the binary is
 # older than the sources (a target directory another checkout shares, which cargo then trusts by
-# the files' times) is redone from clean. If the new binary doesn't answer /healthz, the previous
-# one goes back.
+# the files' times) is redone from clean. The new binary starts only once the old one has let go
+# of the port (`port_taken`), and if it doesn't answer /healthz, the previous one goes back, the
+# end of the log saying why: a deploy that goes back has failed, whatever /healthz says after it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -31,12 +32,28 @@ put() { cp "$1" "$2.new" && mv -f "$2.new" "$2"; }
 # The process listening on the port, if any.
 listening() { ss -ltnp "sport = :$PORT" | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2; }
 
+# Whether the port is still taken: a socket listening on it, whoever holds it. A server that is
+# exiting keeps its socket until its last thread has gone, and `ss -p` stops naming it once its
+# main thread has (its state "Zl"): waiting for the name alone, a deploy started the new binary
+# into "Address already in use" and went back to the previous one, five times in four days, D2's
+# on 2026-10-12 (D2b), the new jobs then never running on :3000.
+port_taken() { ss -ltn "sport = :$PORT" | grep -q LISTEN; }
+
 start() {
     local pid
     pid="$(listening || true)"
     if [ -n "$pid" ]; then
-        kill "$pid"
-        for _ in $(seq 50); do [ -z "$(listening || true)" ] && break; sleep 0.2; done
+        kill "$pid" 2>/dev/null || true
+    fi
+    # Up to 20 s for the port to be let go of; then the old server is killed outright, and 5 s more.
+    for _ in $(seq 100); do port_taken || break; sleep 0.2; done
+    if port_taken && [ -n "$pid" ]; then
+        kill -9 "$pid" 2>/dev/null || true
+        for _ in $(seq 25); do port_taken || break; sleep 0.2; done
+    fi
+    if port_taken; then
+        echo "Port $PORT is still taken; not starting $1." >&2
+        return 1
     fi
     setsid nohup "$1" >> "$LOG" 2>&1 < /dev/null &
     for _ in $(seq 100); do
@@ -79,7 +96,8 @@ if start "$KEEP/marketplace"; then
     echo "Deployed on http://$ADDR."
     exit 0
 fi
-echo "The new binary doesn't answer /healthz; the previous one goes back. See $LOG." >&2
+echo "The new binary doesn't answer /healthz; the previous one goes back. The end of $LOG:" >&2
+tail -n 5 "$LOG" >&2
 if [ -x "$KEEP/previous" ]; then
     put "$KEEP/previous" "$KEEP/marketplace"
     start "$KEEP/marketplace" || true

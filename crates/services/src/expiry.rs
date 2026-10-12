@@ -8,7 +8,9 @@
 //! page, keeps it up LISTING_DAYS more, at the top of "newest first" again once a week at most:
 //! db::renew_listing). The e-mail is in the language kept on the seller's account
 //! (users.preferred_language); the notifications' titles, kept in Albanian, web/notifications.rs
-//! words for whoever reads them, and a WhatsApp template's texts stay Albanian.
+//! words for whoever reads them, and a WhatsApp template's texts stay Albanian. Each look forgets
+//! too, with their files, the listings posted signed out that their code never put up, and the
+//! photos uploaded before their listing that none took within a day (`tick`).
 
 use std::time::Duration;
 
@@ -113,11 +115,13 @@ async fn tell(senders: &Senders, listing: &ExpiryNotice, alert: Alert) {
 }
 
 /// One look for listings to expire or warn of (`run`), their sellers told by `senders` with links
-/// that start with `origin` (the state's, `Config::site_origin`), and for listings posted without
+/// that start with `origin` (the state's, `Config::site_origin`); for listings posted without
 /// signing in that their code never put up, which go with their photos in `media`
-/// (db::forget_drafts); a failure of either in the log, and the other done all the same. What the
-/// jobs run every CHECK_EVERY, as the server starts and from then on, in the process that holds
-/// the expiry's lock (jobs.rs, `start_all`; `start` here, from `pluribus_web::state`, until D2).
+/// (db::forget_drafts); and for photos the phone app uploaded before their listing (C9) that no
+/// listing took within photos::UPLOADS_KEPT, a day, which go with their files (db::forget_uploads,
+/// here since D2b). Each failure in the log, and the others done all the same. What the jobs run
+/// every CHECK_EVERY, as the server starts and from then on, in the process that holds the
+/// expiry's lock (jobs.rs, `start_all`; `start` here, from `pluribus_web::state`, until D2).
 pub async fn tick(db: &PgPool, media: &Media, senders: &Senders, origin: &str) {
     if let Err(error) = run(db, senders, origin).await {
         tracing::warn!(%error, "could not expire the listings whose time is up");
@@ -125,5 +129,49 @@ pub async fn tick(db: &PgPool, media: &Media, senders: &Senders, origin: &str) {
     match db::forget_drafts(db).await {
         Ok(files) => crate::media::delete_photos(media, &files).await,
         Err(error) => tracing::warn!(%error, "could not forget the listings their code never put up"),
+    }
+    match db::forget_uploads(db, crate::photos::UPLOADS_KEPT).await {
+        Ok(files) => crate::media::delete_photos(media, &files).await,
+        Err(error) => tracing::warn!(%error, "could not forget the photos no listing took"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+
+    use super::*;
+
+    /// Ana, one of the fixtures' people (crates/web/tests/fixtures/listings.sql).
+    const ANA: Uuid = Uuid::from_u128(0x1111_1111_1111_4111_8111_1111_1111_1111);
+
+    /// A photo uploaded before its listing that no listing took within photos::UPLOADS_KEPT goes at
+    /// the next look, every file of it with it; one uploaded since stays, its files too.
+    #[sqlx::test(migrator = "pluribus_db::MIGRATOR", fixtures("../../web/tests/fixtures/listings.sql"))]
+    async fn a_look_forgets_the_uploads_no_listing_took(db: PgPool) {
+        let media = Media::in_memory();
+        let files = ["photos/old.webp", "photos/old-card.webp", "photos/old.jpg", "photos/new.webp", "photos/new-card.webp"];
+        for key in files {
+            media.put(key, b"webp".to_vec()).await.unwrap();
+        }
+        // One uploaded a minute longer ago than uploads are kept, the other a minute less.
+        sqlx::query(
+            "INSERT INTO photo_uploads (user_id, storage_key, created_at)
+             VALUES ($1, 'photos/old.webp', now() - make_interval(secs => $2 + 60)),
+                    ($1, 'photos/new.webp', now() - make_interval(secs => $2 - 60))",
+        )
+        .bind(ANA)
+        .bind(crate::photos::UPLOADS_KEPT.as_secs_f64())
+        .execute(&db)
+        .await
+        .unwrap();
+
+        tick(&db, &media, &Senders::none(), "https://pluribus.example").await;
+        let left: Vec<String> = sqlx::query_scalar("SELECT storage_key FROM photo_uploads").fetch_all(&db).await.unwrap();
+        assert_eq!(left, ["photos/new.webp"]);
+        for key in files {
+            let kept = media.get(key).await.unwrap().is_some();
+            assert_eq!(kept, key.starts_with("photos/new"), "{key}");
+        }
     }
 }

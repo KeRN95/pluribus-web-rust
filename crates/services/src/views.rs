@@ -195,11 +195,14 @@ impl Views {
         }
     }
 
-    /// Starts the task that reads every row of the most seen (warm), then every FLUSH_EVERY (or the
-    /// `every` given) writes the views gathered, and reads again the rows pages asked for lately.
-    pub fn flush_now_and_then(&self, db: PgPool) {
+    /// The views' task: reads every row of the most seen (warm), then every FLUSH_EVERY (or the
+    /// `every` given) writes the views gathered, and reads again the rows pages asked for lately. Run
+    /// in each server, unlocked (jobs.rs, `start_all`), until `Jobs::stop` ends it, or the jobs are
+    /// dropped (it started a task of its own, which nothing ended, until D2b), so that nothing of
+    /// the jobs holds the pool once they have stopped.
+    pub fn flush_now_and_then(&self, db: PgPool) -> impl Future<Output = ()> + Send + 'static {
         let views = self.clone();
-        tokio::spawn(async move {
+        async move {
             views.warm(&db).await;
             let mut tick = tokio::time::interval(views.0.every);
             tick.tick().await;
@@ -210,6 +213,6 @@ impl Views {
                 }
                 views.read_again(&db).await;
             }
-        });
+        }
     }
 }

@@ -10,14 +10,17 @@
 //! PostgreSQL advisory lock of its own (`Job::key`, the keys below; README, "pluribus-services"),
 //! which a process takes before it runs the job (`run_locked`) and keeps, on a connection of its
 //! own, for as long as it runs it. Another process finds the lock taken, says so once and runs
-//! nothing, asking again at each interval, so that it takes the job over within one once the first
-//! stops: cleanly (`Jobs::stop`, which lets go of every lock), or not (the database lets go of a
-//! session's locks as its connection ends). Two servers thus never send a notice or an alert twice,
-//! nor expire, re-price or rebuild at the same time; and a binary built on the library and run
-//! beside the server runs none of them unless it starts them. What is a process's own runs in each,
-//! unlocked: the views gathered in its memory, written every minute (views.rs), whose counts add
-//! up whichever server writes them; the recommendations it keeps (recommended.rs) have no task.
-//! README, "Before production", says what else a server keeps in its memory alone.
+//! nothing, asking again every half minute at most (`looks_every`), so that it takes the job over
+//! within that once the first stops: cleanly (`Jobs::stop`, which lets go of every lock), or not
+//! (the database lets go of a session's locks as its connection ends). Two servers thus never send
+//! a notice or an alert twice, nor expire, re-price or rebuild at the same time; and a binary built
+//! on the library and run beside the server runs none of them unless it starts them. Until D2b a
+//! process asked again only at the job's own interval, which left a job nobody's for up to a
+//! quarter of an hour (six hours for the euro rate) after the server that held it went. What is a
+//! process's own runs in each, unlocked: the views gathered in its memory, written every minute
+//! (views.rs), whose counts add up whichever server writes them; the recommendations it keeps
+//! (recommended.rs) have no task. README, "Before production", says what else a server keeps in
+//! its memory alone.
 
 use std::{future::Future, pin::pin, time::Duration};
 
@@ -77,6 +80,18 @@ const ANSWER_WITHIN: Duration = Duration::from_secs(10);
 /// answer doesn't hold a server's stop up, and lets go of them itself as their connections end.
 const STOP_WITHIN: Duration = Duration::from_secs(10);
 
+/// How often, at most, a process that finds a job's lock taken asks for it again (`looks_every`):
+/// every half minute, so that once the server holding it goes (a deploy, a server or a one-off
+/// binary run beside it for a while), the job is another's within half a minute rather than at
+/// the end of its own interval, a quarter of an hour, six hours for the euro rate (until D2b).
+pub const LOOK_EVERY: Duration = Duration::from_secs(30);
+
+/// How often a process waiting for the lock of a job that runs `every` asks for it again:
+/// LOOK_EVERY, or the job's own interval where that is shorter.
+pub fn looks_every(every: Duration) -> Duration {
+    every.min(LOOK_EVERY)
+}
+
 /// Starts every job, once per process, from the state the server serves (`pluribus_web::state`):
 /// the senders the notices and alerts go by, the address their links start with (the settings',
 /// `Config::site_origin`), the photo store; the locked ones each under its lock (`run_locked`, the
@@ -88,7 +103,7 @@ pub fn start_all(state: &AppState) -> Jobs {
     let db = &state.db;
     let origin = state.config.site_origin();
     jobs.spawn(db, REFRESH, each(db.clone(), |db| async move { refresh(&db).await }));
-    state.views.flush_now_and_then(db.clone());
+    jobs.own.spawn(state.views.flush_now_and_then(db.clone()));
     jobs.spawn_once(db, PHOTO_COPIES, {
         let media = state.media.clone();
         async move { media.fill_in_copies().await }
@@ -159,11 +174,14 @@ pub struct Jobs {
     /// Says `true` to every job once they are to stop; dropped, it tells them so too.
     stop: watch::Sender<bool>,
     running: Vec<JoinHandle<()>>,
+    /// What is the process's own, which no lock holds (the views' writing): ended outright by
+    /// `stop`, or as the jobs are dropped.
+    own: JoinSet<()>,
 }
 
 impl Jobs {
     fn new() -> Self {
-        Self { stop: watch::Sender::new(false), running: Vec::new() }
+        Self { stop: watch::Sender::new(false), running: Vec::new(), own: JoinSet::new() }
     }
 
     /// What a job waits on for its end: `stop`, or the jobs dropped.
@@ -194,11 +212,13 @@ impl Jobs {
 
     /// Ends every job: a round under way is dropped, as a server's stop always dropped it, and each
     /// lock this process holds is let go of (pg_advisory_unlock), so that another server takes its
-    /// job over at its next look. Waits for them up to STOP_WITHIN.
+    /// job over at its next look; and the process's own, the views' writing, whose views not yet
+    /// written are lost, as they always were at a stop. Waits for them up to STOP_WITHIN.
     pub async fn stop(self) {
-        let Self { stop, running } = self;
+        let Self { stop, running, mut own } = self;
         stop.send_replace(true);
         let ended = async {
+            own.shutdown().await;
             for job in running {
                 // A job whose task panicked has said so (the panic's message), and holds nothing.
                 let _ = job.await;
@@ -212,15 +232,16 @@ impl Jobs {
 
 /// Runs `round` every `job.every` for as long as this process holds the job's lock, the first time
 /// as soon as it takes it, until `shutdown` comes, when it lets go of the lock. Where another
-/// process holds it, this one runs nothing: it says so once, at info, and asks again at each
-/// interval (a failure to ask is in the log, and asked again likewise). The lock is held on a
-/// connection of its own, out of the pool (`take`), which must answer before each round: one that
-/// doesn't has ended, and the lock with it, which another process may have taken since, so this
-/// one asks for it again at once. Each round runs as a task of its own, so that one that panics is
-/// logged and the next comes at its time (until D2 a panic ended its job until the server's
-/// restart); one under way when `shutdown` comes is dropped, as a server's stop always dropped it,
-/// before the lock is let go of. A round that fails says so itself, in its own module's words
-/// (notices.rs, expiry.rs...), as the jobs always did.
+/// process holds it, this one runs nothing: it says so once, at info, and asks again every half
+/// minute at most (`looks_every`; at the job's own interval until D2b), as it does after a failure
+/// to ask, which is in the log. The lock is held on a connection of its own, out of the pool
+/// (`take`), which must answer before each round: one that doesn't has ended, and the lock with
+/// it, which another process may have taken since, so this one asks for it again at once. Each
+/// round runs as a task of its own, so that one that panics is logged and the next comes at its
+/// time (until D2 a panic ended its job until the server's restart); one under way when
+/// `shutdown` comes is dropped, as a server's stop always dropped it, before the lock is let go
+/// of. A round that fails says so itself, in its own module's words (notices.rs, expiry.rs...), as
+/// the jobs always did.
 pub async fn run_locked<F, R>(db: &PgPool, job: Job, shutdown: impl Future<Output = ()>, mut round: F)
 where
     F: FnMut() -> R,
@@ -279,7 +300,7 @@ where
             }
             Ok(None) => {
                 if !waiting {
-                    tracing::info!(job = job.name, every = ?job.every, "another process runs this job: this one asks for it again at each interval");
+                    tracing::info!(job = job.name, asks_every = ?looks_every(job.every), "another process runs this job: this one asks for it again meanwhile");
                 }
                 waiting = true;
             }
@@ -287,7 +308,7 @@ where
         }
         tokio::select! {
             () = &mut shutdown => return,
-            () = tokio::time::sleep(job.every) => {}
+            () = tokio::time::sleep(looks_every(job.every)) => {}
         }
     }
 }
@@ -387,6 +408,14 @@ mod tests {
     };
 
     use super::*;
+    use crate::{
+        Moderators,
+        config::Config,
+        media::Media,
+        recommended::Recommended,
+        sender::Senders,
+        views::{self, Views},
+    };
 
     /// The tests' job, every 20 ms, under a key no job of the site's has.
     const TEST: Job = Job { key: SITE | 0xFF, name: "test", every: Duration::from_millis(20) };
@@ -473,20 +502,29 @@ mod tests {
         second_process.stop().await;
     }
 
-    /// What the tests' own subscriber keeps of the log: each line at warn or above, its fields as
-    /// `name=value`, the message among them.
-    #[derive(Clone, Default)]
-    struct Logged(Arc<Mutex<Vec<String>>>);
+    /// What the tests' own subscriber keeps of the log: each line at `level` or above, from every
+    /// module or from those whose names start with `target`, its fields as `name=value`, the message
+    /// among them.
+    #[derive(Clone)]
+    struct Logged {
+        level: Level,
+        target: Option<&'static str>,
+        lines: Arc<Mutex<Vec<String>>>,
+    }
 
     impl Logged {
+        fn new(level: Level, target: Option<&'static str>) -> Self {
+            Self { level, target, lines: Arc::default() }
+        }
+
         fn lines(&self) -> Vec<String> {
-            self.0.lock().unwrap().clone()
+            self.lines.lock().unwrap().clone()
         }
     }
 
     impl Subscriber for Logged {
         fn enabled(&self, metadata: &Metadata<'_>) -> bool {
-            *metadata.level() <= Level::WARN
+            *metadata.level() <= self.level && self.target.is_none_or(|target| metadata.target().starts_with(target))
         }
 
         fn new_span(&self, _: &Attributes<'_>) -> Id {
@@ -500,7 +538,7 @@ mod tests {
         fn event(&self, event: &Event<'_>) {
             let mut line = String::new();
             event.record(&mut |field: &Field, value: &dyn Debug| line.push_str(&format!("{}={value:?} ", field.name())));
-            self.0.lock().unwrap().push(line);
+            self.lines.lock().unwrap().push(line);
         }
 
         fn enter(&self, _: &Id) {}
@@ -513,7 +551,7 @@ mod tests {
     /// at its time.
     #[sqlx::test(migrations = false)]
     async fn a_round_that_fails_is_logged_and_the_next_comes(db: PgPool) {
-        let logged = Logged::default();
+        let logged = Logged::new(Level::WARN, None);
         let _logging = tracing::subscriber::set_default(logged.clone());
         let rounds = Arc::new(AtomicUsize::new(0));
         let mut process = Jobs::new();
@@ -578,5 +616,99 @@ mod tests {
         run_once_locked(&db, ONCE, std::future::pending(), count(runs.clone())).await;
         assert_eq!(runs.load(SeqCst), 1, "done once no other process is doing it");
         assert_eq!(holder(&db).await, None, "and its lock let go of");
+    }
+
+    /// A process waiting for a job's lock asks for it again every half minute, or at the job's own
+    /// interval where that is shorter: a job of a quarter of an hour's, or the euro rate's six
+    /// hours, is another's within half a minute of its holder going.
+    #[test]
+    fn a_process_waiting_for_a_lock_asks_again_within_half_a_minute() {
+        for job in [REFRESH, NOTICES, SEARCH_ALERTS, EXPIRY, PROMOTIONS, RATES] {
+            assert_eq!(looks_every(job.every), Duration::from_secs(30), "{}", job.name);
+        }
+        assert_eq!(looks_every(TEST.every), TEST.every);
+    }
+
+    /// The site's locks granted in the test's database: each job's number (its key's low half) and
+    /// the backend (its pid) that holds it, by number.
+    async fn site_locks(db: &PgPool) -> Vec<(i64, i32)> {
+        sqlx::query_as(
+            "SELECT objid::bigint, pid FROM pg_locks
+             WHERE locktype = 'advisory' AND granted AND objsubid = 1 AND classid::bigint = $1
+               AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
+             ORDER BY objid",
+        )
+        .bind(SITE >> 32)
+        .fetch_all(db)
+        .await
+        .expect("pg_locks")
+    }
+
+    /// The jobs as the server starts them (`start_all`, over a state made as pluribus_web::state
+    /// makes one, on the fixtures): within a few seconds each periodic job holds its lock, on a
+    /// connection of its own, but the euro rate's, which another process holds here (so that no test
+    /// reads the bank's page), and which its job leaves to it; the photos' missing copies made, and
+    /// their lock let go of; every lock lasting through the jobs' first round (the expiry's takes a
+    /// listing whose time is up off the site); and `Jobs::stop` letting go of all of them. D2's own
+    /// tests ran `run_locked` alone; a look at the deployed site, which held none of these locks
+    /// (D2b: its deploy had gone back to the binary before D2), had nothing to hold it to.
+    #[sqlx::test(migrator = "pluribus_db::MIGRATOR", fixtures("../../web/tests/fixtures/listings.sql"))]
+    async fn the_jobs_hold_their_locks_as_the_server_starts_them(db: PgPool) {
+        // Ana's Golf, one of the fixtures', its time up.
+        const GOLF: i64 = 1001;
+        let logged = Logged::new(Level::DEBUG, Some("pluribus_services::jobs"));
+        let _logging = tracing::subscriber::set_default(logged.clone());
+        sqlx::query("UPDATE listings SET expires_at = now() - interval '1 minute' WHERE public_no = $1")
+            .bind(GOLF)
+            .execute(&db)
+            .await
+            .unwrap();
+        // Another process running the euro rate: its lock, taken by hand.
+        let mut other = db.acquire().await.unwrap().detach();
+        let taken: bool = sqlx::query_scalar("SELECT pg_try_advisory_lock($1)").bind(RATES.key).fetch_one(&mut other).await.unwrap();
+        assert!(taken);
+        let other_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()").fetch_one(&mut other).await.unwrap();
+
+        let config = Arc::new(Config::for_tests());
+        let state = AppState {
+            db: db.clone(),
+            media: Media::from_config(&config),
+            config,
+            senders: Arc::new(Senders::none()),
+            moderators: Moderators::default(),
+            ai: None,
+            views: Views::buffered(views::FLUSH_EVERY),
+            recommended: Recommended::kept(),
+        };
+        let jobs = start_all(&state);
+        let numbers = |locks: &[(i64, i32)]| locks.iter().map(|(job, _)| *job).collect::<Vec<_>>();
+        assert!(until(async || numbers(&site_locks(&db).await) == [1, 2, 3, 4, 5, 6]).await, "{:?}", site_locks(&db).await);
+        let held = site_locks(&db).await;
+        let mut holders: Vec<i32> = held.iter().filter(|(job, _)| *job != 6).map(|(_, pid)| *pid).collect();
+        holders.sort_unstable();
+        holders.dedup();
+        assert_eq!(holders.len(), 5, "each job on a connection of its own: {held:?}");
+        assert!(!holders.contains(&other_pid), "{held:?}");
+        assert_eq!(held.last(), Some(&(6, other_pid)), "the euro rate's lock stays the other process's");
+
+        // Each job's first round ran under its lock, and the locks are still held after it.
+        let status = async || {
+            sqlx::query_scalar::<_, String>("SELECT status FROM listings WHERE public_no = $1").bind(GOLF).fetch_one(&db).await.unwrap()
+        };
+        assert!(until(async || status().await == "EXPIRED").await, "the expiry's first round");
+        assert_eq!(site_locks(&db).await, held, "the locks last through the first round");
+        let lines = logged.lines();
+        for name in ["refresh", "notices", "search alerts", "expiry", "promotions"] {
+            let took = format!("job={name:?}");
+            assert!(lines.iter().any(|line| line.contains("this process runs the job") && line.contains(&took)), "{name}: {lines:?}");
+        }
+        assert!(lines.iter().any(|line| line.contains("another process runs this job") && line.contains("job=\"rates\"")), "{lines:?}");
+        assert!(lines.iter().any(|line| line.contains("let go of the job") && line.contains("job=\"photo copies\"")), "{lines:?}");
+
+        jobs.stop().await;
+        assert_eq!(site_locks(&db).await, [(6, other_pid)], "the jobs stopped hold nothing");
+        let unlocked: bool = sqlx::query_scalar("SELECT pg_advisory_unlock($1)").bind(RATES.key).fetch_one(&mut other).await.unwrap();
+        assert!(unlocked);
+        other.close().await.unwrap();
     }
 }
