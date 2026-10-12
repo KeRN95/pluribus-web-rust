@@ -5,8 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 
 # The binary, src/main.rs: the server, which reads the settings once (pluribus-services' config),
-# serves the site's pages (pluribus-web) and, beside them under /api/v1, its JSON API
-# (pluribus-api), over one state, and rebuilds now and then the figures they read (pluribus-db).
+# migrates the database (pluribus-db), serves the site's pages (pluribus-web) and, beside them
+# under /api/v1, its JSON API (pluribus-api), over one state, and starts once the work that runs
+# on its own, the figures they read rebuilt among it, each job under a lock of its own in the
+# database (pluribus-services' jobs).
 # The site itself is the crates under crates/, one for each of its parts, each with its own tests
 # (README, "Project layout").
 [dependencies]

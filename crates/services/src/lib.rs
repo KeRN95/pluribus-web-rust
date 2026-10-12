@@ -7,14 +7,18 @@
 //! (sender.rs), the AI that fills in the listing form (ai.rs), the euro rate (rates.rs), the views
 //! (views.rs), the recommendations (recommended.rs), a saved search's page made again from what it
 //! keeps (searches.rs), what a listing's page works out from its rows, which the API says alike
-//! (listings.rs), and the work that runs on its own, which `pluribus_web::state` starts: the
-//! notices of unread messages (notices.rs), the listings' expiry (expiry.rs) and the promotions in
-//! time (promotions.rs).
+//! (listings.rs), and the work that runs on its own, which the binary starts once, each job under
+//! a lock of its own in the database, so that a second server runs none of them twice (jobs.rs,
+//! `start_all`, since D2; `pluribus_web::state` started it until then): the figures the pages read
+//! rebuilt (jobs.rs, `refresh`), the notices of unread messages (notices.rs), the saved searches'
+//! alerts (searches.rs), the listings' expiry (expiry.rs), the promotions in time (promotions.rs),
+//! the euro rate (rates.rs) and the photos' missing copies (media.rs).
 
 pub mod ai;
 pub mod config;
 pub mod expiry;
 pub mod filters;
+pub mod jobs;
 pub mod listings;
 pub mod media;
 pub mod notices;

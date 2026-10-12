@@ -1,8 +1,9 @@
 //! Notices of messages someone hasn't read, so that a seller hears a buyer wrote with the site
-//! closed. Every minute (CHECK_EVERY) the server looks for messages from the other side of a
-//! conversation that their reader hasn't read NOTICE_AFTER after they came (db::due_notices), and
-//! tells them by e-mail, or by WhatsApp with its notice template (sender.rs), about the latest
-//! with a link to answer it: at most once per conversation in NOTICE_GAP, and only of messages
+//! closed. Every minute (CHECK_EVERY) the server, one at a time however many share the database
+//! (jobs.rs, which runs `tick`), looks for messages from the other side of a conversation that
+//! their reader hasn't read NOTICE_AFTER after they came (db::due_notices), and tells them by
+//! e-mail, or by WhatsApp with its notice template (sender.rs), about the latest with a link to
+//! answer it: at most once per conversation in NOTICE_GAP, and only of messages
 //! newer than the last notice about it. Someone who turned them off in "Cilësimet"
 //! (notification_preferences.message_alerts) hears nothing, nor by e-mail someone who turned
 //! e-mail off. Each notice is a notification (NEW_MESSAGE), recorded before it goes out, so that a
@@ -12,7 +13,7 @@
 //! web/notifications.rs words for whoever reads it, and its payload has who wrote and about which
 //! listing, from which domain::notices says it in either language.
 
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use pluribus_core::{
     format::Contact,
@@ -80,19 +81,14 @@ fn excerpt(body: &str) -> String {
     }
 }
 
-/// Looks for notices due every CHECK_EVERY, from now on, in the background, and sends them by
-/// `senders` with links that start with `origin` (the state's, `pluribus_web::state`).
-pub fn start(db: PgPool, senders: Arc<Senders>, origin: String) {
-    tokio::spawn(async move {
-        let mut every = tokio::time::interval(CHECK_EVERY);
-        every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-        loop {
-            every.tick().await;
-            if let Err(error) = send_due(&db, &senders, &origin).await {
-                tracing::warn!(%error, "could not send the message notices");
-            }
-        }
-    });
+/// One look for the notices due, sent by `senders` with links that start with `origin` (the
+/// state's, `Config::site_origin`), a failure in the log: what the jobs run every CHECK_EVERY, as
+/// the server starts and from then on, in the process that holds the notices' lock (jobs.rs,
+/// `start_all`; `start` here, from `pluribus_web::state`, until D2).
+pub async fn tick(db: &PgPool, senders: &Senders, origin: &str) {
+    if let Err(error) = send_due(db, senders, origin).await {
+        tracing::warn!(%error, "could not send the message notices");
+    }
 }
 
 #[cfg(test)]

@@ -1,11 +1,11 @@
 //! The site's pages, the HTTP layer: routes, error handling and response helpers shared by the page
 //! handlers, the handlers themselves (one module for each part of the site), and the application
-//! as `main` serves it (`state`, which starts the work that runs on its own, and `router`, the
-//! pages over it, beside which `main` nests the JSON API, pluribus-api) and the tests build it
-//! (`app_with`, `app_with_ai`, and `state_with`, the API's tests' state). The templates are the
-//! repository's templates/ (askama.toml), compiled in; the stylesheets and scripts, and every file
-//! under /static, are read at run time from static/ in the directory the server runs in, the
-//! repository's root.
+//! as `main` serves it (`state`, over which `main` starts the work that runs on its own, and
+//! `router`, the pages over it, beside which `main` nests the JSON API, pluribus-api) and the
+//! tests build it (`app_with`, `app_with_ai`, and `state_with`, the API's tests' state). The
+//! templates are the repository's templates/ (askama.toml), compiled in; the stylesheets and
+//! scripts, and every file under /static, are read at run time from static/ in the directory the
+//! server runs in, the repository's root.
 
 mod account;
 mod ai_fill;
@@ -82,16 +82,19 @@ use pluribus_db as db;
 use pluribus_services::{ai, media, recommended, sender, views};
 
 /// The application's state, as `main` serves the pages (`router`) and the JSON API (pluribus-api)
-/// over it, side by side, so that the work that runs on its own runs once, started here; from the
-/// settings `main` read as it started (`config`, pluribus-services' config.rs), which the state
-/// keeps: photos in the store they name (the small and AVIF copies of those kept before there were
-/// any made meanwhile), the channels they set up (`Senders::from_config`), their moderators, the AI
-/// if they have a key for it, the views written every minute, the notices of unread messages and
-/// the saved searches' alerts sent as they fall due, the listings whose time is up expired, the
-/// promotions looked after, and the Bank of Albania's euro rate read and taken (pluribus-services'
-/// notices.rs, expiry.rs, promotions.rs and rates.rs, and searches.rs here), the jobs that send
-/// given the channels and the site's address (`Config::site_origin`) as they start. Until the API
-/// (C1) this was `app()`, which made the pages' router of it too.
+/// over it, side by side; from the settings `main` read as it started (`config`, pluribus-services'
+/// config.rs), which the state keeps: photos in the store they name, the channels they set up
+/// (`Senders::from_config`), their moderators, the AI if they have a key for it, the views gathered
+/// to be written every minute, and each visitor's recommendations kept. It starts nothing: the
+/// work that runs on its own `main` starts once over it (pluribus-services' jobs.rs, `start_all`,
+/// since D2), each job but the views' under a lock of its own in the database, so that a second
+/// server runs none of them twice: the views written, the small and AVIF copies of the photos kept
+/// before there were any made, the notices of unread messages and the saved searches' alerts sent
+/// as they fall due, by the state's channels with links to the site's address
+/// (`Config::site_origin`), the listings whose time is up expired, the promotions looked after, the
+/// Bank of Albania's euro rate read and taken, and the figures the pages read rebuilt; this started
+/// all but the figures until then. Until the API (C1) this was `app()`, which made the pages'
+/// router of it too.
 pub fn state(db: PgPool, config: Config) -> AppState {
     let config = Arc::new(config);
     let ai = Ai::from_config(&config);
@@ -100,15 +103,7 @@ pub fn state(db: PgPool, config: Config) -> AppState {
     }
     let senders = Arc::new(Senders::from_config(&config));
     let views = Views::buffered(views::FLUSH_EVERY);
-    views.flush_now_and_then(db.clone());
     let media = Media::from_config(&config);
-    media.fill_in_copies();
-    let origin = config.site_origin();
-    pluribus_services::notices::start(db.clone(), senders.clone(), origin.clone());
-    start_search_alerts(db.clone(), senders.clone(), origin.clone());
-    pluribus_services::expiry::start(db.clone(), media.clone(), senders.clone(), origin);
-    pluribus_services::promotions::start(db.clone());
-    pluribus_services::rates::start(db.clone());
     let recommended = Recommended::kept();
     let moderators = config.moderators.clone();
     AppState { db, config, senders, media, moderators, ai, views, recommended }
@@ -402,14 +397,11 @@ pub fn type_trial() -> bool {
     request_config().is_some_and(|config| config.type_trial)
 }
 
-/// The saved searches' alerts (searches.rs): sent by `senders` as they fall due, their links
-/// starting with `origin`, every 15 minutes from now on, in the background; and those due now,
-/// which the tests send.
-pub fn start_search_alerts(db: sqlx::PgPool, senders: Arc<Senders>, origin: String) {
-    searches::start_alerts(db, senders, origin);
-}
-
-pub use searches::send_search_alerts;
+/// The saved searches' alerts due now, sent by `senders` with links that start with `origin`,
+/// which the tests send: pluribus-services' (searches.rs) since D2, which moved them there for the
+/// jobs to send every 15 minutes, one server at a time (jobs.rs; `start_search_alerts` here, from
+/// `state`, until then).
+pub use pluribus_services::searches::send_search_alerts;
 
 /// How long browsers keep a file whose address changes whenever the file does: a year, without
 /// asking again.

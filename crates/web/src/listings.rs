@@ -146,7 +146,6 @@ pub trait ListingCardExt {
     fn compares(&self) -> bool;
     fn views_display(&self) -> Option<String>;
     fn status_label(&self) -> Option<&'static str>;
-    fn price_display(&self) -> String;
     fn price_main(&self) -> String;
     fn price_note(&self) -> String;
     fn price_note_parts(&self) -> (String, String);
@@ -241,10 +240,6 @@ impl ListingCardExt for ListingCard {
     fn status_label(&self) -> Option<&'static str> {
         let kind = ListingType::parse(&self.listing_type).unwrap_or(ListingType::Sell);
         Status::parse(&self.status)?.card_label(kind)
-    }
-
-    fn price_display(&self) -> String {
-        format::price(self.price_amount, &self.currency, &self.price_type, &self.listing_type)
     }
 
     /// The price itself; what follows it, a size down on the card, is price_note.

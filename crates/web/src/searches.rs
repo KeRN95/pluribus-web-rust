@@ -1,15 +1,15 @@
 //! Saved searches: a category or search page, with its filters, kept by a signed-in visitor with
 //! "Ruaj kërkimin" (browse.html), to open again from /kerkimet-e-ruajtura, which says how many
-//! listings came since it was last opened; and their alerts, every ALERT_CHECK_EVERY: a search
-//! with listings new since its last alert hears of them, at most once in ALERT_GAP, as a
-//! notification (SAVED_SEARCH), which puts the dot on the heart that leads to the listings kept
-//! (heart_controller.js), and by e-mail where its saver has an address. Each search keeps its page
-//! and its filters as the page itself writes them (Filters::search_address), so that the same
-//! search saved twice is one, and its listings are found as its page finds them: its page made
-//! again from them (pluribus-services' searches.rs, `replay`, which the JSON API's saved searches
-//! share; this file's until C7).
-
-use std::time::Duration;
+//! listings came since it was last opened; and their alerts turned on or off. The alerts
+//! themselves, every ALERT_CHECK_EVERY, go out from pluribus-services (its searches.rs,
+//! `send_search_alerts`, this file's until D2, which moved them there for the jobs to send, one
+//! server at a time: jobs.rs): a search with listings new since its last alert hears of them, at
+//! most once in ALERT_GAP, as a notification (SAVED_SEARCH), which puts the dot on the heart that
+//! leads to the listings kept (heart_controller.js), and by e-mail where its saver has an address.
+//! Each search keeps its page and its filters as the page itself writes them
+//! (Filters::search_address), so that the same search saved twice is one, and its listings are
+//! found as its page finds them: its page made again from them (pluribus-services' searches.rs,
+//! `replay`, which the JSON API's saved searches and the alerts share; this file's until C7).
 
 use askama::Template;
 use axum::{
@@ -20,31 +20,19 @@ use axum::{
 };
 use pluribus_services::searches::{is_search_page, replay};
 use serde::Deserialize;
-use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::{
     Result,
     account::{current_user, redirect_with_cookies},
     filters::Filters,
-    listings::ListingCardExt,
     not_found, render, saved,
 };
 use crate::{
     AppState,
-    db::{self, NewSearch, SavedSearch, Sort},
-    domain::notices::{NEW_MOST, new_listings},
-    format::Contact,
-    i18n::{self, Lang, t1, t2},
-    sender,
+    db::{self, NewSearch, SavedSearch},
+    domain::notices::new_listings,
 };
-
-/// At most one alert per search in this long, however many listings come.
-pub const ALERT_GAP: Duration = Duration::from_secs(3 * 60 * 60);
-/// How often the server looks for alerts due.
-pub const ALERT_CHECK_EVERY: Duration = Duration::from_secs(15 * 60);
-/// How many of the new listings an alert's e-mail names.
-const ALERT_LISTINGS: usize = 3;
 
 /// A search's address, its path and its query.
 fn address(path: &str, query: &str) -> String {
@@ -211,90 +199,4 @@ pub async fn seen(State(state): State<AppState>, headers: HeaderMap) -> Result<R
         db::search_alerts_seen(&state.db, user.id).await?;
     }
     Ok(axum::http::StatusCode::NO_CONTENT.into_response())
-}
-
-/// Sends the alerts due now by `senders`; returns how many went out. Their links start with
-/// `origin` (`Config::site_origin`), and lead through /kerkimet/{id}, which opens the search.
-pub async fn send_search_alerts(db: &PgPool, senders: &sender::Senders, origin: &str) -> sqlx::Result<usize> {
-    let due = db::due_search_alerts(db, ALERT_GAP).await?;
-    if due.is_empty() {
-        return Ok(0);
-    }
-    let (categories, cities) = tokio::try_join!(db::categories(db), db::cities(db))?;
-    let mut sent = 0;
-    for search in due {
-        let Some(page) = replay(db, &categories, &cities, &search.path, &search.query).await? else {
-            continue;
-        };
-        // One filter for the count and the newest, which the second's plan takes from the first's.
-        let mut filter = page.listing_filter();
-        filter.since = Some(search.since);
-        filter.sort = Sort::Newest;
-        let count = db::listing_count_up_to(db, &filter, NEW_MOST).await?;
-        if count == 0 {
-            continue;
-        }
-        let newest = db::listing_page(db, &filter).await?;
-        let url = format!("{origin}/kerkimet/{}", search.id);
-        // The notification keeps its title in Albanian (web/notifications.rs words it for its
-        // reader), as the WhatsApp template's texts are; the e-mail is in its recipient's language.
-        let title = i18n::LANG.sync_scope(Lang::Sq, || format!("{}: {}", new_listings(count), search.name));
-        db::record_search_alert(db, search.user_id, search.id, &title, count, &url).await?;
-        sent += 1;
-        let contact = match (search.email, search.phone) {
-            (Some(email), _) if search.email_ok => Contact::Email(email),
-            (_, Some(phone)) => Contact::Phone(phone),
-            _ => continue,
-        };
-        // An e-mail carries the link that stops this search's alerts (web/unsubscribe.rs).
-        let unsubscribe = match &contact {
-            Contact::Email(_) => Some(format!("{origin}/ndalo/{}/kerkimi-{}", db::notice_token(db, search.user_id).await?, search.id)),
-            Contact::Phone(_) => None,
-        };
-        let (subject, body) = i18n::LANG.sync_scope(Lang::from_code(&search.language).unwrap_or_default(), || {
-            let mut body = format!("{}\n\n", t2("Te kërkimi yt „{}“ në Pluribus ka {}:", &search.name, new_listings(count)));
-            for card in newest.iter().take(ALERT_LISTINGS) {
-                body.push_str(&format!("    {} · {}\n", card.title, card.price_display()));
-            }
-            body.push_str(&format!(
-                "\n{}\n\n{}\n",
-                t1("Shihi të gjitha: {}", &url),
-                t1(
-                    "Për një kërkim nuk të vjen më shumë se një email në tri orë. Për t'i ndalur, hap „Kërkimet e ruajtura“: {}",
-                    format!("{origin}/kerkimet-e-ruajtura")
-                ),
-            ));
-            if let Some(link) = &unsubscribe {
-                body.push_str(&format!("{}\n", t1("Për të ndalur vetëm këtë, me një klik: {}", link)));
-            }
-            (format!("{}: {}", new_listings(count), search.name), body)
-        });
-        let new = i18n::LANG.sync_scope(Lang::Sq, || new_listings(count));
-        let alert = sender::Alert {
-            subject,
-            body,
-            whatsapp: sender::AlertTemplate::Search { new, name: search.name.clone(), id: search.id.to_string() },
-            unsubscribe,
-        };
-        match senders.send_alert(&contact, &alert).await {
-            Ok(channel) => tracing::debug!(?channel, to = %contact.masked(), "saved search alert sent"),
-            Err(error) => tracing::warn!(%error, to = %contact.masked(), "saved search alert not sent"),
-        }
-    }
-    Ok(sent)
-}
-
-/// Looks for the alerts due every ALERT_CHECK_EVERY, from now on, in the background, and sends
-/// them by `senders` with links that start with `origin` (the state's, `web::state`).
-pub fn start_alerts(db: PgPool, senders: std::sync::Arc<sender::Senders>, origin: String) {
-    tokio::spawn(async move {
-        let mut every = tokio::time::interval(ALERT_CHECK_EVERY);
-        every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-        loop {
-            every.tick().await;
-            if let Err(error) = send_search_alerts(&db, &senders, &origin).await {
-                tracing::warn!(%error, "could not send the saved searches' alerts");
-            }
-        }
-    });
 }

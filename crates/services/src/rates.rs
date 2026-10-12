@@ -1,8 +1,9 @@
 //! The euro rate. Listings are priced in lekë and in euros, and every price is kept in euros too
 //! (price_normalized, price_in_eur), which the price filters and orders go by, at the rate in
 //! exchange_rates: a round 100 lekë a euro until this took the real one. Every RATE_CHECK_EVERY the
-//! server reads the Bank of Albania's official rate off its page (it publishes one each working
-//! day, around noon, with no feed to read it from), takes it when it has moved db::RATE_STEP or
+//! server (one at a time however many share the database: jobs.rs, which runs `check`) reads the
+//! Bank of Albania's official rate off its page (it publishes one each working day, around noon,
+//! with no feed to read it from), takes it when it has moved db::RATE_STEP or
 //! more from the one prices are worked out at (db::take_euro_rate), and then works out again the
 //! euro prices of the listings priced in lekë, db::REPRICE_BATCH a time with a pause between, so
 //! that the pages' own queries go between them; a pass the server stopped in the middle of goes on
@@ -76,8 +77,11 @@ pub async fn reprice(db: &PgPool) -> sqlx::Result<u64> {
     Ok(rewritten)
 }
 
-/// Reads the official rate and takes it if it moved far enough, then re-prices if that is due.
-async fn check(db: &PgPool) {
+/// Reads the official rate and takes it if it moved far enough, then re-prices if that is due;
+/// each failure in the log. What the jobs run every RATE_CHECK_EVERY, as the server starts and
+/// from then on, in the process that holds the rate's lock (jobs.rs, `start_all`; `start` here,
+/// from `pluribus_web::state`, until D2), so that two servers never re-price at once.
+pub async fn check(db: &PgPool) {
     match fetch_page().await {
         Ok(page) => match parse_euro_rate(&page) {
             Some((day, lek_per_eur)) => match db::take_euro_rate(db, lek_per_eur, day).await {
@@ -92,18 +96,6 @@ async fn check(db: &PgPool) {
     if let Err(error) = reprice(db).await {
         tracing::warn!(%error, "could not work the euro prices out again");
     }
-}
-
-/// Reads the rate every RATE_CHECK_EVERY, from now on, in the background.
-pub fn start(db: PgPool) {
-    tokio::spawn(async move {
-        let mut every = tokio::time::interval(RATE_CHECK_EVERY);
-        every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-        loop {
-            every.tick().await;
-            check(&db).await;
-        }
-    });
 }
 
 #[cfg(test)]

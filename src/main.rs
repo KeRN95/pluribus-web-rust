@@ -1,16 +1,9 @@
-use std::{net::SocketAddr, time::Duration};
+use std::net::SocketAddr;
 
 use anyhow::Context;
-use pluribus_services::config::Config;
+use pluribus_services::{config::Config, jobs};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use tracing_subscriber::EnvFilter;
-
-/// How often the words search corrects typos from (db::refresh_search_words), what a square metre
-/// costs in each zone (db::refresh_zone_prices) and how quickly each seller answers
-/// (db::refresh_response_times) are rebuilt, and the sign-in codes over a day old forgotten
-/// (db::forget_old_codes). The words take a couple of seconds for 100 000 listings,
-/// and searches go on meanwhile.
-const REFRESH_EVERY: Duration = Duration::from_secs(15 * 60);
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -37,46 +30,21 @@ async fn main() -> anyhow::Result<()> {
 
     pluribus_db::MIGRATOR.run(&db).await.context("could not run migrations")?;
 
-    // Search fixes typos and finds words' other forms from the words listings use, and a
-    // property's page compares its price per square metre with its zone's: figures over all the
-    // listings, rebuilt now and then every REFRESH_EVERY, so that they follow the listings posted
-    // meanwhile. Old sign-in codes go at the same pace.
-    tokio::spawn({
-        let db = db.clone();
-        async move {
-            let mut refresh = tokio::time::interval(REFRESH_EVERY);
-            loop {
-                refresh.tick().await;
-                if let Err(error) = pluribus_db::refresh_search_words(&db).await {
-                    tracing::warn!(%error, "could not refresh the words search corrects typos from");
-                }
-                if let Err(error) = pluribus_db::refresh_zone_prices(&db).await {
-                    tracing::warn!(%error, "could not refresh what a square metre costs in each zone");
-                }
-                if let Err(error) = pluribus_db::refresh_car_prices(&db).await {
-                    tracing::warn!(%error, "could not refresh what cars of each model ask");
-                }
-                if let Err(error) = pluribus_db::refresh_response_times(&db).await {
-                    tracing::warn!(%error, "could not refresh how quickly the sellers answer");
-                }
-                // Sign-in codes asked for over a day ago go, with the contacts and addresses (IPs)
-                // they were asked from, as the privacy page promises.
-                if let Err(error) = pluribus_db::forget_old_codes(&db).await {
-                    tracing::warn!(%error, "could not forget the old sign-in codes");
-                }
-            }
-        }
-    });
-
     let addr = config.bind_addr;
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("listening on http://{addr}");
 
     // The pages and, beside them under /api/v1, the JSON API, over one state, which keeps the
-    // settings and whose work that runs on its own is started once (pluribus_web::state). Nested
-    // after the pages' layers are on, the API has none of them, only its own
-    // (pluribus_api::router).
+    // settings (pluribus_web::state). Nested after the pages' layers are on, the API has none of
+    // them, only its own (pluribus_api::router).
     let state = pluribus_web::state(db, config);
+    // The work that runs on its own, started once, here, over the state: the figures the pages
+    // read rebuilt and the old sign-in codes forgotten (this file's own loop until D2), the
+    // notices, the alerts, the expiry, the promotions, the euro rate and the photos' missing
+    // copies, each under a lock of its own in the database, so that a second server, or a binary
+    // run beside this one, runs none of them twice; and the views this process gathers, its own
+    // (pluribus-services' jobs.rs).
+    let jobs = jobs::start_all(&state);
     let app = pluribus_web::router(state.clone()).nest(pluribus_api::PREFIX, pluribus_api::router(state));
     // The connection's address is the visitor's IP for the sign-in limits (web/account.rs).
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
@@ -84,5 +52,9 @@ async fn main() -> anyhow::Result<()> {
             tokio::signal::ctrl_c().await.ok();
         })
         .await?;
+    // Stopped cleanly, once the requests under way are answered: the jobs let go of their locks,
+    // so that another server takes them over at its next look rather than once the database sees
+    // this one's connections gone.
+    jobs.stop().await;
     Ok(())
 }

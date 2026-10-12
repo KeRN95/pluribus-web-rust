@@ -1,6 +1,6 @@
 //! A saved search's page, made again from what the search keeps of it (`saved_searches.filters`:
 //! the page's path and its filters' query string), as the pages make that page: what the pages
-//! (pluribus-web's searches.rs: the counts on /kerkimet-e-ruajtura, the alerts) and the JSON API
+//! (pluribus-web's searches.rs: the counts on /kerkimet-e-ruajtura), the alerts and the JSON API
 //! (pluribus-api's searches.rs: its saved searches, their counts and their listings) share, moved
 //! out of pluribus-web's searches.rs in C7. `replay` reads the page at a path (a search across every
 //! category, /search, or a category's page, /c/<slug>) with a query's filters, through the browse
@@ -13,19 +13,34 @@
 //! own (pluribus-web's filters.rs, `Filters::search_address` and `Filters::search_name`, which the
 //! save button of a page looks for its search by), which these follow word for word; the API's
 //! tests hold the two to each other (crates/api/tests/searches.rs).
+//!
+//! And the saved searches' alerts (`send_search_alerts`), pluribus-web's searches.rs's until D2,
+//! which moved them here, beside `replay`, which they find a search's new listings by, for the jobs
+//! to send, one server at a time (jobs.rs runs `tick_alerts` every ALERT_CHECK_EVERY): a search
+//! with listings new since its last alert hears of them, at most once in ALERT_GAP, as a
+//! notification (SAVED_SEARCH), which puts the dot on the heart that leads to the listings kept,
+//! and by e-mail where its saver has an address, naming ALERT_LISTINGS of them, with the link that
+//! stops that search's alerts alone, or by WhatsApp with its template (WHATSAPP_SEARCH_TEMPLATE);
+//! the e-mail in its recipient's language, the notification's title and the template's texts in
+//! Albanian.
+
+use std::time::Duration;
 
 use pluribus_core::{
-    domain::notices::NEW_MOST,
-    format,
-    i18n::{self, Lang, t, t1},
+    domain::notices::{NEW_MOST, new_listings},
+    format::{self, Contact},
+    i18n::{self, Lang, t, t1, t2},
 };
-use pluribus_db::{self as db, Categories, Category, City, FilterAttribute, ListingFilter, TextSearch};
+use pluribus_db::{self as db, Categories, Category, City, FilterAttribute, ListingFilter, Sort, TextSearch};
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::filters::{Params, ParsedFilters, plain, year_param};
+use crate::{
+    filters::{Params, ParsedFilters, plain, year_param},
+    sender::{Alert, AlertTemplate, Senders},
+};
 
 /// A search across every category: one of the two pages a saved search can be of.
 pub const SEARCH_PAGE: &str = "/search";
@@ -40,6 +55,13 @@ const NAME_CHARS: usize = 120;
 /// What the filter of a part's vehicle's year is called, as its chip says it (pluribus-web's
 /// filters.rs, FITS_YEAR_LABEL).
 const FITS_YEAR_LABEL: &str = "Viti i automjetit";
+
+/// At most one alert per search in this long, however many listings come.
+pub const ALERT_GAP: Duration = Duration::from_secs(3 * 60 * 60);
+/// How often the server looks for alerts due.
+pub const ALERT_CHECK_EVERY: Duration = Duration::from_secs(15 * 60);
+/// How many of the new listings an alert's e-mail names.
+const ALERT_LISTINGS: usize = 3;
 
 /// Whether a saved search can be of the page at `path`: a search, or a category's page.
 pub fn is_search_page(path: &str) -> bool {
@@ -296,6 +318,90 @@ fn range_label(min: Option<Decimal>, max: Option<Decimal>, unit: Option<&str>, g
         (None, Some(max)) => t1("deri {}", with_unit(max)),
         (None, None) => return None,
     })
+}
+
+/// Sends the alerts due now by `senders`; returns how many went out. Their links start with
+/// `origin` (`Config::site_origin`), and lead through /kerkimet/{id}, which opens the search.
+pub async fn send_search_alerts(db: &PgPool, senders: &Senders, origin: &str) -> sqlx::Result<usize> {
+    let due = db::due_search_alerts(db, ALERT_GAP).await?;
+    if due.is_empty() {
+        return Ok(0);
+    }
+    let (categories, cities) = tokio::try_join!(db::categories(db), db::cities(db))?;
+    let mut sent = 0;
+    for search in due {
+        let Some(page) = replay(db, &categories, &cities, &search.path, &search.query).await? else {
+            continue;
+        };
+        // One filter for the count and the newest, which the second's plan takes from the first's.
+        let mut filter = page.listing_filter();
+        filter.since = Some(search.since);
+        filter.sort = Sort::Newest;
+        let count = db::listing_count_up_to(db, &filter, NEW_MOST).await?;
+        if count == 0 {
+            continue;
+        }
+        let newest = db::listing_page(db, &filter).await?;
+        let url = format!("{origin}/kerkimet/{}", search.id);
+        // The notification keeps its title in Albanian (web/notifications.rs words it for its
+        // reader), as the WhatsApp template's texts are; the e-mail is in its recipient's language.
+        let title = i18n::LANG.sync_scope(Lang::Sq, || format!("{}: {}", new_listings(count), search.name));
+        db::record_search_alert(db, search.user_id, search.id, &title, count, &url).await?;
+        sent += 1;
+        let contact = match (search.email, search.phone) {
+            (Some(email), _) if search.email_ok => Contact::Email(email),
+            (_, Some(phone)) => Contact::Phone(phone),
+            _ => continue,
+        };
+        // An e-mail carries the link that stops this search's alerts (web/unsubscribe.rs).
+        let unsubscribe = match &contact {
+            Contact::Email(_) => Some(format!("{origin}/ndalo/{}/kerkimi-{}", db::notice_token(db, search.user_id).await?, search.id)),
+            Contact::Phone(_) => None,
+        };
+        let (subject, body) = i18n::LANG.sync_scope(Lang::from_code(&search.language).unwrap_or_default(), || {
+            let mut body = format!("{}\n\n", t2("Te kërkimi yt „{}“ në Pluribus ka {}:", &search.name, new_listings(count)));
+            for card in newest.iter().take(ALERT_LISTINGS) {
+                // Its price in full, its month or "(i diskutueshëm)" after it (pluribus-web's
+                // `ListingCardExt::price_display` said it so, for these alone, until D2).
+                let price = format::price(card.price_amount, &card.currency, &card.price_type, &card.listing_type);
+                body.push_str(&format!("    {} · {}\n", card.title, price));
+            }
+            body.push_str(&format!(
+                "\n{}\n\n{}\n",
+                t1("Shihi të gjitha: {}", &url),
+                t1(
+                    "Për një kërkim nuk të vjen më shumë se një email në tri orë. Për t'i ndalur, hap „Kërkimet e ruajtura“: {}",
+                    format!("{origin}/kerkimet-e-ruajtura")
+                ),
+            ));
+            if let Some(link) = &unsubscribe {
+                body.push_str(&format!("{}\n", t1("Për të ndalur vetëm këtë, me një klik: {}", link)));
+            }
+            (format!("{}: {}", new_listings(count), search.name), body)
+        });
+        let new = i18n::LANG.sync_scope(Lang::Sq, || new_listings(count));
+        let alert = Alert {
+            subject,
+            body,
+            whatsapp: AlertTemplate::Search { new, name: search.name.clone(), id: search.id.to_string() },
+            unsubscribe,
+        };
+        match senders.send_alert(&contact, &alert).await {
+            Ok(channel) => tracing::debug!(?channel, to = %contact.masked(), "saved search alert sent"),
+            Err(error) => tracing::warn!(%error, to = %contact.masked(), "saved search alert not sent"),
+        }
+    }
+    Ok(sent)
+}
+
+/// One look for the alerts due, sent by `senders` with links that start with `origin` (the
+/// state's, `Config::site_origin`), a failure in the log: what the jobs run every
+/// ALERT_CHECK_EVERY, as the server starts and from then on, in the process that holds the
+/// alerts' lock (jobs.rs, `start_all`; pluribus-web's `start_alerts`, from its `state`, until D2).
+pub async fn tick_alerts(db: &PgPool, senders: &Senders, origin: &str) {
+    if let Err(error) = send_search_alerts(db, senders, origin).await {
+        tracing::warn!(%error, "could not send the saved searches' alerts");
+    }
 }
 
 #[cfg(test)]

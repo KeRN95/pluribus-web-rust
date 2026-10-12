@@ -1,7 +1,8 @@
 //! Listings expire LISTING_DAYS after they are published, renewed or put back up (db/posting.rs),
-//! so that the site doesn't fill with things long gone. Every CHECK_EVERY the server takes off the
-//! site those whose time is up (EXPIRED), and tells their sellers WARN_DAYS before and when it
-//! happens: a notification each (EXPIRING, EXPIRED), and an e-mail where the seller signs in with
+//! so that the site doesn't fill with things long gone. Every CHECK_EVERY the server (one at a
+//! time however many share the database: jobs.rs, which runs `tick`) takes off the site those
+//! whose time is up (EXPIRED), and tells their sellers WARN_DAYS before and when it happens: a
+//! notification each (EXPIRING, EXPIRED), and an e-mail where the seller signs in with
 //! an address, or a WhatsApp message by its template where they sign in with a number
 //! (WHATSAPP_EXPIRY_TEMPLATE), with the way to keep it ("Rifresko", on "Njoftimet e mia" and the listing's own
 //! page, keeps it up LISTING_DAYS more, at the top of "newest first" again once a week at most:
@@ -9,7 +10,7 @@
 //! (users.preferred_language); the notifications' titles, kept in Albanian, web/notifications.rs
 //! words for whoever reads them, and a WhatsApp template's texts stay Albanian.
 
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use pluribus_core::{
     format::{self, Contact},
@@ -18,7 +19,10 @@ use pluribus_core::{
 use pluribus_db::{self as db, ExpiryNotice, LISTING_DAYS};
 use sqlx::PgPool;
 
-use crate::sender::{Alert, AlertTemplate, Senders};
+use crate::{
+    media::Media,
+    sender::{Alert, AlertTemplate, Senders},
+};
 
 /// How many days before a listing expires its seller hears of it.
 pub const WARN_DAYS: i32 = 3;
@@ -105,23 +109,18 @@ async fn tell(senders: &Senders, listing: &ExpiryNotice, alert: Alert) {
     }
 }
 
-/// Looks for listings to expire or warn of every CHECK_EVERY, from now on, in the background,
-/// their sellers told by `senders` with links that start with `origin` (the state's,
-/// `pluribus_web::state`); and for listings posted without signing in that their code never put
-/// up, which go with their photos (db::forget_drafts).
-pub fn start(db: PgPool, media: crate::media::Media, senders: Arc<Senders>, origin: String) {
-    tokio::spawn(async move {
-        let mut every = tokio::time::interval(CHECK_EVERY);
-        every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-        loop {
-            every.tick().await;
-            if let Err(error) = run(&db, &senders, &origin).await {
-                tracing::warn!(%error, "could not expire the listings whose time is up");
-            }
-            match db::forget_drafts(&db).await {
-                Ok(files) => crate::media::delete_photos(&media, &files).await,
-                Err(error) => tracing::warn!(%error, "could not forget the listings their code never put up"),
-            }
-        }
-    });
+/// One look for listings to expire or warn of (`run`), their sellers told by `senders` with links
+/// that start with `origin` (the state's, `Config::site_origin`), and for listings posted without
+/// signing in that their code never put up, which go with their photos in `media`
+/// (db::forget_drafts); a failure of either in the log, and the other done all the same. What the
+/// jobs run every CHECK_EVERY, as the server starts and from then on, in the process that holds
+/// the expiry's lock (jobs.rs, `start_all`; `start` here, from `pluribus_web::state`, until D2).
+pub async fn tick(db: &PgPool, media: &Media, senders: &Senders, origin: &str) {
+    if let Err(error) = run(db, senders, origin).await {
+        tracing::warn!(%error, "could not expire the listings whose time is up");
+    }
+    match db::forget_drafts(db).await {
+        Ok(files) => crate::media::delete_photos(media, &files).await,
+        Err(error) => tracing::warn!(%error, "could not forget the listings their code never put up"),
+    }
 }

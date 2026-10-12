@@ -20,9 +20,9 @@
 //! Photos kept before there were small, mini or AVIF copies get theirs from their WebP ones, and
 //! those kept before the cards' copies were made as they are now (CARD_COPIES_EDITION: sized by
 //! their longer side, 600 × 400 for a 3:2 photo, which a card stretched; or heavier than
-//! AVIF_BUDGET) get theirs made again: all of them in the background as the server starts
-//! (Media::fill_in_copies); before then a WebP one asked for is made as it is (Media::make_copy),
-//! and an AVIF one's WebP twin stands in (web/photos.rs, serve).
+//! AVIF_BUDGET) get theirs made again: all of them in the background as the server starts, by one
+//! server at a time (Media::fill_in_copies, jobs.rs); before then a WebP one asked for is made as
+//! it is (Media::make_copy), and an AVIF one's WebP twin stands in (web/photos.rs, serve).
 //!
 //! The site serves the files itself, from /media/..., so they work wherever the site does; or a CDN
 //! does, from the address MEDIA_URL gives (README, "Photos"). Each is stored with its type and a
@@ -348,18 +348,17 @@ impl Media {
         Ok((made, false))
     }
 
-    /// make_missing_copies in the background, which the pages needn't wait for: until then, the
-    /// first to ask for a small WebP copy has it made, and an AVIF one's WebP twin stands in for it
-    /// (web/photos.rs, serve).
-    pub fn fill_in_copies(&self) {
-        let media = self.clone();
-        tokio::spawn(async move {
-            match media.make_missing_copies().await {
-                Ok(0) => {}
-                Ok(made) => tracing::info!(made, "made the copies of the photos kept before there were any of their kind"),
-                Err(error) => tracing::warn!(%error, "could not make the copies photos lack"),
-            }
-        });
+    /// make_missing_copies, what it made or its failure in the log: run in the background as a
+    /// server starts, which the pages needn't wait for, by one server at a time, which leaves them
+    /// to another making them already (jobs.rs, PHOTO_COPIES; this spawned its own task, from
+    /// `pluribus_web::state`, until D2): until then, the first to ask for a small WebP copy has it
+    /// made, and an AVIF one's WebP twin stands in for it (web/photos.rs, serve).
+    pub async fn fill_in_copies(&self) {
+        match self.make_missing_copies().await {
+            Ok(0) => {}
+            Ok(made) => tracing::info!(made, "made the copies of the photos kept before there were any of their kind"),
+            Err(error) => tracing::warn!(%error, "could not make the copies photos lack"),
+        }
     }
 }
 

@@ -5,8 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 
 # What the site does besides answering a page: the photos and their store, sending codes and
-# notices, the AI, the euro rate, the views, the recommendations, the jobs that run on their own
-# (the notices of unread messages, the expiry, the promotions), the application's state
+# notices, the AI, the euro rate, the views, the recommendations, the jobs that run on their own,
+# each in one process at a time under a lock of its own in the database (jobs.rs: the figures'
+# refresh, the notices of unread messages, the saved searches' alerts, the expiry, the
+# promotions, the euro rate, the photos' missing copies), the application's state
 # (`AppState`, `Moderators`), which the pages and the API share, and how what signs someone in is
 # kept (`hash`), which they share too; and a browse query's filters, which the pages and the API
 # read alike (filters.rs, which reads a query string with form_urlencoded).
