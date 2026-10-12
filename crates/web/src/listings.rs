@@ -1,6 +1,6 @@
 //! A listing's page, its phone number reveal, and its views.
 
-use std::{borrow::Cow, cmp::Ordering};
+use std::cmp::Ordering;
 
 use askama::Template;
 use axum::{
@@ -25,9 +25,9 @@ use super::{
 };
 use crate::{
     AppState,
-    db::{self, ListingCard, ListingDetail, MapPoint, Photo, SellerContact},
+    db::{self, AttributeValue, CardDetail, ListingCard, ListingDetail, MapPoint, Photo, SellerContact},
     format,
-    i18n::{t, t_value, t1, t2},
+    i18n::{LANG, Lang, t, t_value, t1, t2},
     media::{CARD_SIDE, FULL_SIDE},
 };
 
@@ -393,13 +393,33 @@ impl ListingCardExt for ListingCard {
     /// What follows the city on the details line: the distance from the map pin, when there is
     /// one, then the category's card properties. Without the city, one more property goes in
     /// first, so the line still says something new: "Apple · 128 GB" rather than "Vlorë · 128 GB".
-    /// The properties as the database words them, in the language now (i18n::t_value).
+    /// The properties in the language now (CardDetailExt::shown).
     fn details_line(&self) -> String {
         let distance = self.distance_m.map(format::distance);
-        let spare = self.spare_detail.as_deref().filter(|_| self.city_known).map(|spare| t_value(spare).into_owned());
-        let details = self.details.iter().map(|detail| t_value(detail).into_owned());
+        let spare = self.spare_detail.as_ref().filter(|_| self.city_known).and_then(CardDetailExt::shown);
+        let details = self.details.iter().filter_map(CardDetailExt::shown);
         let parts: Vec<String> = distance.into_iter().chain(spare).chain(details).collect();
         parts.join(" · ")
+    }
+}
+
+/// What a card says of one of its properties: `CardDetail`'s own method in all but name, a trait
+/// because the type is pluribus-db's.
+pub trait CardDetailExt {
+    fn shown(&self) -> Option<String>;
+}
+
+impl CardDetailExt for CardDetail {
+    /// Its value in the language now: a choice's label, a text someone typed and the name of a box
+    /// ticked as the database words them (i18n::t_value, which says them in English), a number
+    /// with its unit (format::attribute_number: "148 000 km").
+    fn shown(&self) -> Option<String> {
+        let ticked = self.name.as_deref().filter(|_| self.flag == Some(true));
+        match (self.label.as_deref().or(self.text.as_deref()).or(ticked), self.number) {
+            (Some(words), _) => Some(t_value(words).into_owned()),
+            (None, Some(number)) => Some(format::attribute_number(number, self.unit.as_deref())),
+            (None, None) => None,
+        }
     }
 }
 
@@ -911,16 +931,15 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     };
     // A car's title says its make, model and year: its details leave them out.
     let titled = listing.heading.is_some();
-    let detail_of = |attribute: &db::AttributeValue| {
+    let detail_of = |attribute: &AttributeValue| {
         let look = icons::look(&slugs, &attribute.code);
         Detail {
             icon: look.map(|look| look.icon),
             named: look.is_none_or(|look| look.reads == Reads::Named),
             multi: attribute.multi,
             key: attribute.key,
-            place: false,
             label: attribute.label.clone(),
-            values: attribute.shown.clone(),
+            values: DetailValue::of(attribute),
         }
     };
     // A car's page (Makina) and a property's (MAPPED) have their key facts in a row under the title,
@@ -954,12 +973,11 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     if let Some(zone) = &listing.zone {
         let zone = Detail {
             label: "Zona".to_string(),
-            values: vec![zone.clone()],
+            values: vec![DetailValue::as_is(zone)],
             icon: Some(icons::PIN),
             named: false,
             multi: false,
             key: true,
-            place: true,
         };
         details.insert(0, zone);
     }
@@ -1053,7 +1071,7 @@ pub struct ZonePrice {
 /// each with a check.
 pub struct Detail {
     pub label: String,
-    pub values: Vec<String>,
+    pub values: Vec<DetailValue>,
     pub icon: Option<&'static str>,
     /// Whether its name goes before its values: where it has no icon, or they don't read alone
     /// beside it ("Kati 6", icons::Reads).
@@ -1062,22 +1080,68 @@ pub struct Detail {
     /// One of the category's key facts, which its cards show too (show_in_card; a property's
     /// zone as well): its icon lit among the details, in a small round pill of its own.
     pub key: bool,
-    /// Its value is a place's name (a property's zone), which stays as it is in every language.
-    pub place: bool,
 }
 
 impl Detail {
     /// Whether its name goes before `value`: where it's named, unless the value says it, as
     /// "6 GB RAM" does RAM, or is it, as a box ticked is ("Pa aksident", db::listing_attributes).
-    /// Both as the database words them: the page says them in its language (crate::t, shown).
-    pub fn named_before(&self, value: &str) -> bool {
-        self.named && value != self.label && !value.split_whitespace().any(|word| word.eq_ignore_ascii_case(&self.label))
+    /// Both in Albanian, as the database words them: the page says them in its language (crate::t,
+    /// shown).
+    pub fn named_before(&self, value: &DetailValue) -> bool {
+        let value = &value.albanian;
+        self.named && *value != self.label && !value.split_whitespace().any(|word| word.eq_ignore_ascii_case(&self.label))
     }
 
-    /// `value` as the page shows it, in the language now: a choice's label, "Jo", a number and its
-    /// unit, a date (i18n::t_value); a place's name as it is.
-    pub fn shown<'a>(&self, value: &'a str) -> Cow<'a, str> {
-        if self.place { Cow::Borrowed(value) } else { t_value(value) }
+    /// `value` as the page shows it, in the language now (DetailValue).
+    pub fn shown<'a>(&self, value: &'a DetailValue) -> &'a str {
+        &value.shown
+    }
+}
+
+/// One of a detail's values: as the page shows it, in its language, and in Albanian, which the
+/// detail's name is weighed against (Detail::named_before).
+pub struct DetailValue {
+    pub shown: String,
+    pub albanian: String,
+}
+
+impl DetailValue {
+    /// A property's values (AttributeValueExt::shown), each in the language now and in Albanian.
+    fn of(attribute: &AttributeValue) -> Vec<Self> {
+        let albanian = LANG.sync_scope(Lang::Sq, || attribute.shown());
+        attribute.shown().into_iter().zip(albanian).map(|(shown, albanian)| Self { shown, albanian }).collect()
+    }
+
+    /// A place's name (a property's zone), which stays as it is in every language.
+    fn as_is(name: &str) -> Self {
+        Self { shown: name.to_string(), albanian: name.to_string() }
+    }
+}
+
+/// What a listing's page says of one of its properties: `AttributeValue`'s own method in all but
+/// name, a trait because the type is pluribus-db's.
+pub trait AttributeValueExt {
+    fn shown(&self) -> Vec<String>;
+}
+
+impl AttributeValueExt for AttributeValue {
+    /// Its values in the language now, a multi-select's each: a choice's label, a text someone
+    /// typed and the name of a box ticked as the database words them (i18n::t_value, which says
+    /// them in English), a number with its unit (format::attribute_number: "148 000 km"), a box
+    /// left unticked "Jo", a date (format::day).
+    fn shown(&self) -> Vec<String> {
+        if !self.labels.is_empty() {
+            return self.labels.iter().map(|label| t_value(label).into_owned()).collect();
+        }
+        let shown = match (&self.value_text, self.value_number, self.value_bool, self.value_date) {
+            (Some(text), ..) => t_value(text).into_owned(),
+            (None, Some(number), ..) => format::attribute_number(number, self.unit.as_deref()),
+            (None, None, Some(true), _) => t_value(&self.label).into_owned(),
+            (None, None, Some(false), _) => t("Jo").to_string(),
+            (None, None, None, Some(date)) => format::day(date),
+            (None, None, None, None) => return Vec::new(),
+        };
+        vec![shown]
     }
 }
 

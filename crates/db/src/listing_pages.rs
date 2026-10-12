@@ -7,6 +7,7 @@ use std::{
     sync::atomic::{AtomicU8, Ordering},
 };
 
+use serde::Serialize;
 use sqlx::PgConnection;
 
 use super::*;
@@ -86,12 +87,16 @@ pub struct ListingCard {
     /// photo.
     pub seller_name: String,
     pub seller_since: OffsetDateTime,
-    /// The category's card properties in order, e.g. ["2016", "148 000 km", "Naftë"].
-    pub details: Vec<String>,
+    /// The category's card properties in order, as data, which a page words in its language
+    /// ("2016", "148 000 km", "Naftë": web/listings.rs, CardDetailExt) and the API gives as it is:
+    /// those the listing gives, but a date or a box left unticked, which a card doesn't show.
+    #[sqlx(json)]
+    pub details: Vec<CardDetail>,
     /// The first property the listing page shows that the card doesn't and the title doesn't
     /// mention, e.g. a phone's brand: what the card shows instead of the city when the search is
     /// in that city already. Only a chosen option: a bare number ("2003") says nothing on a card.
-    pub spare_detail: Option<String>,
+    #[sqlx(json(nullable))]
+    pub spare_detail: Option<CardDetail>,
     pub sort_at: OffsetDateTime,
     /// Set when the search is limited to the listing's own city, which the card then leaves out.
     #[sqlx(skip)]
@@ -128,6 +133,38 @@ pub struct ListingCard {
     /// euros (car_model_prices): a clear bargain says so on its card (web/car_prices.rs).
     #[sqlx(default)]
     pub model_median: Option<Decimal>,
+}
+
+/// One of a card's properties as the database has it (CARD_COLUMNS): which property, and its value,
+/// one of a number (with its property's unit), a choice's label, a text someone typed, or a box
+/// ticked (with the property's name, which a card shows for it). The words are Albanian, as the
+/// database keeps them; a choice's English comes too where its label_i18n has one.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct CardDetail {
+    /// The property's code: "vehicle_mileage".
+    pub code: String,
+    /// The database keeps it with six decimals (numeric(20,6)); here without the zeros they add:
+    /// 148000, 6.1.
+    #[serde(default, deserialize_with = "without_trailing_zeros", skip_serializing_if = "Option::is_none")]
+    pub number: Option<Decimal>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label_en: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flag: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+}
+
+/// A number the query gives as text, every digit kept ("148000.000000"), without the zeros at its
+/// end: as JSON's number, it would come through a float.
+fn without_trailing_zeros<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Option<Decimal>, D::Error> {
+    Ok(Option::<Decimal>::deserialize(deserializer)?.map(|number| number.normalize()))
 }
 
 /// How much of a description a card carries, in characters.
@@ -787,23 +824,28 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH RECURSIVE deal_categories AS
                 coalesce((SELECT b.created_at FROM businesses b WHERE b.id = l.seller_business_id),
                          (SELECT u.created_at FROM users u WHERE u.id = l.seller_user_id), l.created_at) AS seller_since,
                 l.sort_at,
+                -- Its card properties as data (CardDetail), which the pages word (web/listings.rs):
+                -- the number as text, every digit kept.
                 coalesce(
-                    (SELECT array_agg(card.value ORDER BY card.sort_order)
-                                FILTER (WHERE card.value IS NOT NULL)
+                    (SELECT json_agg(card.detail ORDER BY card.sort_order)
+                                FILTER (WHERE card.shown)
                      FROM (SELECT ca.sort_order,
-                                  coalesce(o.label, format_attribute_number(v.value_number, a.unit),
-                                           v.value_text, CASE WHEN v.value_boolean THEN a.name END) AS value
+                                  json_build_object('code', a.code, 'number', v.value_number::text, 'unit', a.unit,
+                                                    'label', o.label, 'label_en', o.label_i18n ->> 'en',
+                                                    'text', v.value_text, 'flag', v.value_boolean,
+                                                    'name', CASE WHEN v.value_boolean THEN a.name END) AS detail,
+                                  -- A choice, a number, a text or a box ticked; not a date, nor a box
+                                  -- left unticked, which a card doesn't show.
+                                  coalesce(v.value_boolean, v.value_date IS NULL) AS shown
                            FROM listing_attribute_values v
                            JOIN card_attributes ca
                              ON ca.category_id = l.category_id AND ca.attribute_id = v.attribute_id
                            JOIN attributes a ON a.id = v.attribute_id
                            LEFT JOIN attribute_options o ON o.id = v.value_option_id
                            WHERE v.listing_id = l.id) card),
-                    '{}') AS details,
-                (SELECT spare.value
-                 FROM (SELECT sa.sort_order,
-                              coalesce(o.label, format_attribute_number(v.value_number, a.unit),
-                                       v.value_text, CASE WHEN v.value_boolean THEN a.name END) AS value
+                    '[]') AS details,
+                (SELECT json_build_object('code', spare.code, 'label', spare.label, 'label_en', spare.label_en)
+                 FROM (SELECT sa.sort_order, a.code, o.label, o.label_i18n ->> 'en' AS label_en
                        FROM listing_attribute_values v
                        JOIN spare_attributes sa
                          ON sa.category_id = l.category_id AND sa.attribute_id = v.attribute_id
@@ -811,8 +853,8 @@ pub(super) const CARD_COLUMNS: &str = concat!("WITH RECURSIVE deal_categories AS
                        LEFT JOIN attribute_options o ON o.id = v.value_option_id
                        WHERE v.listing_id = l.id AND v.value_option_id IS NOT NULL) spare
                  -- Not what the title says already (\"Volkswagen\" in \"Volkswagen Golf 7\").
-                 WHERE spare.value IS NOT NULL
-                   AND strpos(lower(coalesce(l.generated_title, l.title)), lower(spare.value)) = 0
+                 WHERE spare.label IS NOT NULL
+                   AND strpos(lower(coalesce(l.generated_title, l.title)), lower(spare.label)) = 0
                  ORDER BY spare.sort_order
                  LIMIT 1) AS spare_detail,
                 left(btrim(regexp_replace(coalesce(l.description, ''), '\\s+', ' ', 'g')), 401) AS description,
@@ -1543,5 +1585,112 @@ fn push_conditions(query: &mut QueryBuilder<'_, Postgres>, filter: &ListingFilte
                     .push(")");
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use pluribus_core::format;
+
+    use super::*;
+
+    /// A property's number reads as format_attribute_number (migration 0003), which worded the
+    /// cards and the listing page in the queries until 2026-10-12, wrote it: the function itself
+    /// asked for numbers of every kind, as the database keeps them (numeric(20,6)), and
+    /// format::attribute_number, which the pages word it with now, giving the same.
+    #[sqlx::test(migrator = "crate::MIGRATOR")]
+    async fn a_property_number_reads_as_the_database_function_wrote_it(pool: PgPool) -> sqlx::Result<()> {
+        let cases = [
+            ("0", None),
+            ("0", Some("km")),
+            ("1", Some("copë")),
+            ("12.5", Some("km")),
+            ("999", Some("km")),
+            ("1000", Some("km")),
+            ("148000", Some("km")),
+            ("1234567.89", Some("m²")),
+            ("6.1", Some("inç")),
+            ("2016", None),
+            ("1234567.89", None),
+            ("12.5", None),
+            ("5", Some("vite")),
+            ("2", Some("muaj")),
+            ("0.000001", Some("mm")),
+            ("99999999999999.999999", Some("km")),
+            ("-1", None),
+            ("-12.5", None),
+            ("-1234.5", Some("km")),
+            ("-0.5", Some("km")),
+            ("-99999999999999.999999", None),
+        ];
+        for (number, unit) in cases {
+            let (value, said): (Decimal, String) =
+                sqlx::query_as("SELECT n, format_attribute_number(n, $2) FROM (SELECT $1::numeric(20,6) AS n) number")
+                    .bind(Decimal::from_str(number).unwrap())
+                    .bind(unit)
+                    .fetch_one(&pool)
+                    .await?;
+            assert_eq!(format::attribute_number(value, unit), said, "{number} {unit:?}");
+        }
+        // A date, as to_char's 'DD.MM.YYYY' said it.
+        for day in ["2026-10-04", "1999-12-31", "2028-02-29"] {
+            let (value, said): (time::Date, String) =
+                sqlx::query_as("SELECT d, to_char(d, 'DD.MM.YYYY') FROM (SELECT $1::date AS d) day").bind(day).fetch_one(&pool).await?;
+            assert_eq!(format::day(value), said, "{day}");
+        }
+        Ok(())
+    }
+
+    /// A card's properties come as data, in its category's order: a number without the zeros of
+    /// its six decimals, with its unit; a choice's label with its English, where it has one; a box
+    /// ticked with its name, and none for a box left unticked; and the spare property (the first
+    /// its page shows and its card doesn't, which its title doesn't name) as a choice.
+    #[sqlx::test(migrator = "crate::MIGRATOR", fixtures("../../web/tests/fixtures/listings.sql"))]
+    async fn a_cards_properties_come_as_data(pool: PgPool) -> sqlx::Result<()> {
+        let detail = |code: &str| CardDetail {
+            code: code.to_string(),
+            number: None,
+            unit: None,
+            label: None,
+            label_en: None,
+            text: None,
+            flag: None,
+            name: None,
+        };
+        let golf = cards_by_numbers(&pool, &[1001]).await?.remove(0);
+        assert_eq!(
+            golf.details,
+            [
+                CardDetail { number: Some(Decimal::from(2016)), ..detail("vehicle_year") },
+                CardDetail { number: Some(Decimal::from(148_000)), unit: Some("km".to_string()), ..detail("vehicle_mileage") },
+                CardDetail { label: Some("Naftë".to_string()), label_en: Some("Diesel".to_string()), ..detail("vehicle_fuel") },
+            ]
+        );
+        assert_eq!(golf.details[1].number.map(|number| number.to_string()).as_deref(), Some("148000"));
+        assert_eq!(golf.spare_detail, Some(CardDetail { label: Some("Hatchback".to_string()), ..detail("vehicle_body_type") }));
+
+        // A box on the cards: ticked on the iPhone, its name; left unticked on the laptop, nothing.
+        sqlx::query(
+            "UPDATE category_attributes SET show_in_card = true
+             WHERE attribute_id = (SELECT id FROM attributes WHERE code = 'electronics_warranty')",
+        )
+        .execute(&pool)
+        .await?;
+        sqlx::query(
+            "INSERT INTO listing_attribute_values (listing_id, attribute_id, data_type, value_boolean)
+             SELECT l.id, a.id, a.data_type, l.public_no = 1005
+             FROM listings l, attributes a
+             WHERE l.public_no IN (1005, 1006) AND a.code = 'electronics_warranty'",
+        )
+        .execute(&pool)
+        .await?;
+        let cards = cards_by_numbers(&pool, &[1005, 1006]).await?;
+        let warranty = |card: &ListingCard| card.details.iter().find(|detail| detail.code == "electronics_warranty").cloned();
+        assert_eq!(warranty(&cards[0]), Some(CardDetail { flag: Some(true), name: Some("Me garanci".to_string()), ..detail("electronics_warranty") }));
+        assert_eq!(warranty(&cards[1]), None);
+        assert!(cards[1].details.iter().any(|detail| detail.label.as_deref() == Some("512 GB")), "{:?}", cards[1].details);
+        Ok(())
     }
 }

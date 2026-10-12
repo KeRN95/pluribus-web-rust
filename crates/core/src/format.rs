@@ -1,7 +1,9 @@
-//! Display formatting with Albanian conventions: "9 500 €", "60 000 Lekë", "04.10.2026"; in
-//! English (i18n.rs), its words, a decimal point, and dates as "4 Oct 2026". And the site's
-//! addresses, made from the parts the database gives rather than in its queries: a listing's
-//! (listing_path) and a seller's page (seller_path).
+//! Display formatting with Albanian conventions: "9 500 €", "60 000 Lekë", "148 000 km",
+//! "04.10.2026"; in English (i18n.rs), its words, a decimal point, and dates as "4 Oct 2026". A
+//! property's value comes from the database as data, its number and its date said here
+//! (attribute_number, day) rather than in the queries. And the site's addresses, made from the
+//! parts the database gives rather than in its queries: a listing's (listing_path) and a seller's
+//! page (seller_path).
 
 use rust_decimal::{Decimal, prelude::ToPrimitive};
 use time::{Date, Duration, Month, OffsetDateTime, UtcOffset, macros::format_description};
@@ -130,6 +132,46 @@ pub fn distance(meters: f64) -> String {
     }
 }
 
+/// A property's number as a page shows it, as format_attribute_number (migration 0003), which the
+/// queries said it with until 2026-10-12, words it: with a unit, its thousands apart by no-break
+/// spaces, its decimals after a comma, as many as it has, and the unit after a no-break space
+/// ("148 000 km", "6,1 inç", "1 234 567,89 m²"; the whole part's sign goes with a whole part of
+/// none, "0,5 km" for -0.5, as it went there); without one, a year or a count, as it is but for its
+/// comma ("2016", "12,5"). In English, a decimal point, as a price has, and the unit's English,
+/// singular for one ("6.1 in", "1 month", "2 months"), as i18n::t_value said it from the words.
+pub fn attribute_number(value: Decimal, unit: Option<&str>) -> String {
+    let point = if english() { "." } else { "," };
+    // Its digits as Postgres writes a number without the zeros its scale adds (trim_scale).
+    let Some(unit) = unit else {
+        return value.normalize().to_string().replace('.', point);
+    };
+    // The whole part, towards zero, without the sign of a zero (trunc).
+    let whole = value.trunc().normalize().to_string();
+    let (sign, digits) = whole.split_at(usize::from(whole.starts_with('-')));
+    let mut said = sign.to_string();
+    for (at, digit) in digits.chars().enumerate() {
+        if at > 0 && (digits.len() - at) % 3 == 0 {
+            said.push(NBSP);
+        }
+        said.push(digit);
+    }
+    if value != value.trunc()
+        && let Some((_, decimals)) = value.abs().normalize().to_string().split_once('.')
+    {
+        said.push_str(point);
+        said.push_str(decimals);
+    }
+    let unit = match english() {
+        false => unit,
+        // The units are kept in the plural ("muaj", "vite"); one is singular in English.
+        true => match (said.as_str(), t(unit)) {
+            ("1", english) => english.strip_suffix('s').filter(|one| one.len() > 1).unwrap_or(english),
+            (_, english) => english,
+        },
+    };
+    format!("{said}{NBSP}{unit}")
+}
+
 /// How a listing type reads in filters.
 pub fn listing_type(code: &str) -> &str {
     match code {
@@ -172,9 +214,15 @@ pub fn condition(code: &str) -> &str {
 
 /// A date by Albania's clock: "04.10.2026"; in English "4 Oct 2026".
 pub fn date(value: OffsetDateTime) -> String {
+    day(tirana(value).date())
+}
+
+/// A day: "04.10.2026" (a property's date, as to_char's 'DD.MM.YYYY' said it in the query until
+/// 2026-10-12); in English "4 Oct 2026".
+pub fn day(value: Date) -> String {
     match english() {
-        true => tirana(value).format(format_description!("[day padding:none] [month repr:short] [year]")),
-        false => tirana(value).format(format_description!("[day].[month].[year]")),
+        true => value.format(format_description!("[day padding:none] [month repr:short] [year]")),
+        false => value.format(format_description!("[day].[month].[year]")),
     }
     .unwrap_or_default()
 }
@@ -438,6 +486,7 @@ pub fn fold(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::i18n::{LANG, Lang, t_value};
     use std::str::FromStr;
 
     #[test]
@@ -504,6 +553,10 @@ mod tests {
         Some(Decimal::from_str(value).unwrap())
     }
 
+    fn n(value: &str) -> Decimal {
+        Decimal::from_str(value).unwrap()
+    }
+
     #[test]
     fn formats_prices() {
         assert_eq!(price(amount("9500.00"), "EUR", "FIXED", "SELL"), "9\u{a0}500\u{a0}€");
@@ -555,6 +608,68 @@ mod tests {
         assert_eq!(distance(960.0), "1,0\u{a0}km");
         assert_eq!(distance(2_430.0), "2,4\u{a0}km");
         assert_eq!(distance(18_400.0), "18\u{a0}km");
+    }
+
+    #[test]
+    fn says_a_property_number_as_the_database_did() {
+        // As the database keeps them (numeric(20,6)), the zeros of their scale left out
+        // (pluribus-db's test asks the database function itself for these and more).
+        assert_eq!(attribute_number(n("148000.000000"), Some("km")), "148\u{a0}000\u{a0}km");
+        assert_eq!(attribute_number(n("6.100000"), Some("inç")), "6,1\u{a0}inç");
+        assert_eq!(attribute_number(n("1234567.89"), Some("m²")), "1\u{a0}234\u{a0}567,89\u{a0}m²");
+        assert_eq!(attribute_number(n("999"), Some("km")), "999\u{a0}km");
+        assert_eq!(attribute_number(n("1000"), Some("km")), "1\u{a0}000\u{a0}km");
+        assert_eq!(attribute_number(n("0.000001"), Some("mm")), "0,000001\u{a0}mm");
+        // Without a unit, as it is but for the comma: no thousands apart.
+        assert_eq!(attribute_number(n("2016.000000"), None), "2016");
+        assert_eq!(attribute_number(n("1234567.890000"), None), "1234567,89");
+        // Below zero, the sign before the whole part, which a zero has none of.
+        assert_eq!(attribute_number(n("-1234.5"), Some("km")), "-1\u{a0}234,5\u{a0}km");
+        assert_eq!(attribute_number(n("-0.5"), Some("km")), "0,5\u{a0}km");
+        assert_eq!(attribute_number(n("-12.5"), None), "-12,5");
+        assert_eq!(attribute_number(n("-0.000000"), None), "0");
+        assert_eq!(attribute_number(n("-0.000000"), Some("km")), "0\u{a0}km");
+    }
+
+    #[test]
+    fn says_a_property_number_the_english_way() {
+        LANG.sync_scope(Lang::En, || {
+            // A decimal point; the thousands apart as in Albanian, as a price's are.
+            assert_eq!(attribute_number(n("148000.000000"), Some("km")), "148\u{a0}000\u{a0}km");
+            assert_eq!(attribute_number(n("6.1"), Some("inç")), "6.1\u{a0}in");
+            assert_eq!(attribute_number(n("1234.5"), Some("m²")), "1\u{a0}234.5\u{a0}m²");
+            assert_eq!(attribute_number(n("1234567.89"), None), "1234567.89");
+            // The unit's English, singular for one.
+            assert_eq!(attribute_number(n("2"), Some("muaj")), "2\u{a0}months");
+            assert_eq!(attribute_number(n("1.000000"), Some("muaj")), "1\u{a0}month");
+            assert_eq!(attribute_number(n("1"), Some("copë")), "1\u{a0}pc");
+            assert_eq!(attribute_number(n("1"), Some("inç")), "1\u{a0}in");
+            assert_eq!(attribute_number(n("1.5"), Some("vite")), "1.5\u{a0}years");
+            // What the pages said until 2026-10-12, the Albanian words said again in English
+            // (i18n::t_value), for every unit the properties have and numbers of every kind.
+            let units = [
+                None, Some("%"), Some("HP"), Some("cm"), Some("cm³"), Some("copë"), Some("inç"), Some("kW"), Some("kg"), Some("km"),
+                Some("m"), Some("mm"), Some("muaj"), Some("m²"), Some("orë"), Some("shkrepje"), Some("ton"), Some("vite"),
+            ];
+            let numbers = ["0", "1", "1.000000", "2", "12.5", "999", "1000", "148000", "1234567.89", "6.1", "-1", "-1234.5", "-0.5", "0.000001"];
+            for unit in units {
+                for number in numbers {
+                    let albanian = LANG.sync_scope(Lang::Sq, || attribute_number(n(number), unit));
+                    assert_eq!(attribute_number(n(number), unit), t_value(&albanian), "{number} {unit:?}");
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn says_a_day() {
+        assert_eq!(day(time::macros::date!(2026 - 10 - 04)), "04.10.2026");
+        assert_eq!(day(time::macros::date!(2026 - 12 - 25)), "25.12.2026");
+        LANG.sync_scope(Lang::En, || {
+            assert_eq!(day(time::macros::date!(2026 - 10 - 04)), "4 Oct 2026");
+            // As i18n::t_value said the Albanian date in English.
+            assert_eq!(day(time::macros::date!(2026 - 12 - 25)), t_value("25.12.2026"));
+        });
     }
 
     #[test]

@@ -2,6 +2,7 @@
 
 use super::*;
 use pluribus_core::format;
+use time::Date;
 
 #[derive(Debug)]
 pub struct ListingDetail {
@@ -74,12 +75,23 @@ pub struct ListingDetail {
     pub contact_verified: bool,
 }
 
+/// One of a listing's properties as the database has it, which its page words in its language
+/// (web/listings.rs, AttributeValueExt) and the API gives as it is.
 #[derive(Debug)]
 pub struct AttributeValue {
     pub code: String,
     pub label: String,
-    /// Its value as the page shows it; a multi-select's options, each on its own.
-    pub shown: Vec<String>,
+    /// Its value, one of: a number, without the zeros the database's six decimals add, with its
+    /// property's unit; a box, ticked or not; a date; a text someone typed; or the options chosen.
+    pub value_number: Option<Decimal>,
+    pub unit: Option<String>,
+    pub value_bool: Option<bool>,
+    pub value_date: Option<Date>,
+    pub value_text: Option<String>,
+    /// The options chosen, as the database words them: a choice's one, a multi-select's each, in
+    /// their order; and the English of each, where its label_i18n has one.
+    pub labels: Vec<String>,
+    pub labels_en: Vec<Option<String>>,
     pub multi: bool,
     /// One of the category's key facts: shown on its cards too (show_in_card), and its icon lit
     /// among the listing's details, in a small round pill of its own.
@@ -171,9 +183,9 @@ pub async fn listing_by_public_no(
     }))
 }
 
-/// Property labels and display values, single values and multi-select lists alike, in the order
-/// the listing's category defines; a box ticked shows its name ("Me garanci"). Only properties the
-/// category shows in details are included.
+/// Property labels and values, single values and multi-select lists alike, in the order the
+/// listing's category defines, each value as data (its page words it: a box ticked shows its name,
+/// "Me garanci"). Only properties the category shows in details are included.
 pub async fn listing_attributes(
     db: &PgPool,
     listing_id: Uuid,
@@ -181,12 +193,14 @@ pub async fn listing_attributes(
 ) -> sqlx::Result<Vec<AttributeValue>> {
     sqlx::query_as!(
         AttributeValue,
-        r#"SELECT code AS "code!", label AS "label!", shown AS "shown!", multi AS "multi!", key AS "key!"
+        r#"SELECT code AS "code!", label AS "label!", value_number, unit, value_bool, value_date, value_text,
+                  labels AS "labels!", labels_en AS "labels_en!: Vec<Option<String>>", multi AS "multi!", key AS "key!"
            FROM (
                SELECT a.code, coalesce(eca.label, a.name) AS label,
-                      ARRAY[coalesce(o.label, v.value_text, format_attribute_number(v.value_number, a.unit),
-                                     CASE v.value_boolean WHEN true THEN coalesce(eca.label, a.name) WHEN false THEN 'Jo' END,
-                                     to_char(v.value_date, 'DD.MM.YYYY'))] AS shown,
+                      trim_scale(v.value_number) AS value_number, a.unit::text AS unit, v.value_boolean AS value_bool,
+                      v.value_date, v.value_text,
+                      CASE WHEN o.id IS NULL THEN '{}' ELSE ARRAY[o.label::text] END AS labels,
+                      CASE WHEN o.id IS NULL THEN '{}' ELSE ARRAY[o.label_i18n ->> 'en'] END AS labels_en,
                       false AS multi, eca.show_in_card AS key,
                       eca.sort_order
                FROM listing_attribute_values v
@@ -196,8 +210,9 @@ pub async fn listing_attributes(
                LEFT JOIN attribute_options o ON o.id = v.value_option_id
                WHERE v.listing_id = $1
                UNION ALL
-               SELECT a.code, coalesce(eca.label, a.name), array_agg(o.label ORDER BY o.sort_order), true,
-                      eca.show_in_card, eca.sort_order
+               SELECT a.code, coalesce(eca.label, a.name), NULL, NULL, NULL, NULL, NULL,
+                      array_agg(o.label::text ORDER BY o.sort_order), array_agg(o.label_i18n ->> 'en' ORDER BY o.sort_order),
+                      true, eca.show_in_card, eca.sort_order
                FROM listing_attribute_options lo
                JOIN attributes a ON a.id = lo.attribute_id
                JOIN effective_category_attributes eca
