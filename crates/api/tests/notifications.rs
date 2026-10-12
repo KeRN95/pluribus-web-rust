@@ -168,7 +168,7 @@ async fn minutes_pass(pool: &PgPool, minutes: i32) {
 /// Besnik writes to Ana about her Golf (1001): the conversation's id.
 async fn besnik_writes(pool: &PgPool) -> Uuid {
     let target = pluribus_db::message_target(pool, 1001, id(BESNIK)).await.unwrap().expect("her Golf");
-    pluribus_db::start_conversation(pool, &target, id(BESNIK), "A është ende në shitje?").await.unwrap()
+    pluribus_db::start_conversation(pool, &target, id(BESNIK), "A është ende në shitje?").await.unwrap().conversation_id
 }
 
 /// Ana keeps Besnik's laptop, whose price he lowers (as posting.rs does, in one transaction with

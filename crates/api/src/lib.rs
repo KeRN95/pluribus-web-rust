@@ -15,6 +15,7 @@ mod dto;
 mod error;
 mod lang;
 pub mod listing;
+pub mod messages;
 pub mod notifications;
 pub mod reference;
 pub mod safety;
@@ -58,9 +59,12 @@ pub fn router(state: AppState) -> Router {
 /// and `POST /auth/verify`, for anyone, and `POST /auth/sign-out`, signed in; the listings a user
 /// keeps, signed in (saved.rs): `PUT` and `DELETE /listings/{no}/saved`, `GET /saved` and
 /// `POST /saved/seen`; their saved searches, signed in (searches.rs): `GET` and `POST /searches`,
-/// `DELETE /searches/{id}`, `PUT /searches/{id}/alerts` and `GET /searches/{id}/listings`; and
-/// trust and safety (safety.rs): `GET /report/reasons`, for anyone, `POST /listings/{no}/report`
-/// and `PUT` and `DELETE /sellers/{user_id}/blocked`, signed in.
+/// `DELETE /searches/{id}`, `PUT /searches/{id}/alerts` and `GET /searches/{id}/listings`; trust
+/// and safety (safety.rs): `GET /report/reasons`, for anyone, `POST /listings/{no}/report` and
+/// `PUT` and `DELETE /sellers/{user_id}/blocked`, signed in; and the messages, signed in
+/// (messages.rs): `GET /conversations`, `GET /conversations/{id}`, `POST /listings/{no}/messages`,
+/// `POST /conversations/{id}/messages`, `POST /conversations/{id}/read`, and
+/// `POST /conversations/{id}/block` and `/unblock`.
 fn routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
@@ -90,6 +94,13 @@ fn routes() -> Router<AppState> {
         .route("/report/reasons", get(safety::reasons))
         .route("/listings/{no}/report", post(safety::report))
         .route("/sellers/{user_id}/blocked", put(safety::block).delete(safety::unblock))
+        .route("/conversations", get(messages::inbox))
+        .route("/conversations/{id}", get(messages::conversation))
+        .route("/listings/{no}/messages", post(messages::start))
+        .route("/conversations/{id}/messages", post(messages::reply))
+        .route("/conversations/{id}/read", post(messages::read))
+        .route("/conversations/{id}/block", post(messages::block))
+        .route("/conversations/{id}/unblock", post(messages::unblock))
 }
 
 /// Routes in the API's frame, which `router` puts the API's own in, and the tests a probe of

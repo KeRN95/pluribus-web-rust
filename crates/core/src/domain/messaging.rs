@@ -1,13 +1,22 @@
-//! The rules about sending a message, apart from the pages that send one (web/messages.rs) and the
-//! database that keeps it (db/messages.rs): who may write at all (`Writing`), how long a message
-//! may be, and how much one account may send, which keeps spam down: in a minute and in a day; to
-//! new sellers in an hour and in a day; and until the other side answers, three messages in a row
-//! at most and no links, which is what spam and scams mostly send. `refuse` says why a message
-//! can't go as a code, with the figures its words need (`Refusal`), which the page says in its
-//! language: nothing here reads the database or knows a page.
+//! The rules about sending a message, apart from the edges that send one (the pages,
+//! web/messages.rs, and the JSON API, api/messages.rs) and the database that keeps it
+//! (db/messages.rs): who may write at all (`Writing`), how long a message may be, and how much one
+//! account may send, which keeps spam down: in a minute and in a day; to new sellers in an hour
+//! and in a day; and until the other side answers, three messages in a row at most and no links,
+//! which is what spam and scams mostly send. `refuse` says why a message can't go as a code, with
+//! the figures its words need (`Refusal`), which the API gives as it is (`Refusal::code`) and both
+//! edges say in the language now (`Refusal::reason`). And what both edges say of a message alike:
+//! what it is as it goes (`tidy`), its start as the inbox shows it (`preview`), and what a
+//! conversation says of its listing once it is no longer simply up (`listing_label`). Nothing here
+//! reads the database or knows a page.
+
+use super::{ListingType, Status};
+use crate::i18n::{t, t1};
 
 /// A message's length, in characters.
 pub const MAX_CHARS: usize = 1000;
+/// How much of a message the inbox shows, in characters, on one line (`preview`).
+pub const PREVIEW_CHARS: usize = 90;
 /// Messages one account sends: in a minute, which only a script outpaces, and in a day.
 pub const PER_MINUTE: i64 = 8;
 pub const PER_DAY: i64 = 200;
@@ -110,6 +119,47 @@ pub enum Refusal {
     NewSellersToday { most: i64 },
 }
 
+impl Refusal {
+    /// Its code, the same in every language, as the JSON API gives it (snake_case, as its error
+    /// codes are): "blocked", "blocked_by", "closed", "empty", "too_long", "too_many_in_a_row",
+    /// "links_before_answer", "too_fast", "too_many_today", "new_sellers_this_hour",
+    /// "new_sellers_today".
+    pub fn code(self) -> &'static str {
+        match self {
+            Refusal::Blocked => "blocked",
+            Refusal::BlockedBy => "blocked_by",
+            Refusal::Closed => "closed",
+            Refusal::Empty => "empty",
+            Refusal::TooLong { .. } => "too_long",
+            Refusal::TooManyInARow { .. } => "too_many_in_a_row",
+            Refusal::LinksBeforeAnswer => "links_before_answer",
+            Refusal::TooFast { .. } => "too_fast",
+            Refusal::TooManyToday { .. } => "too_many_today",
+            Refusal::NewSellersThisHour { .. } => "new_sellers_this_hour",
+            Refusal::NewSellersToday { .. } => "new_sellers_today",
+        }
+    }
+
+    /// What it says, in the language now, naming the other side (`other`, their name as given)
+    /// where it does: the words the pages have always said it in (web/messages.rs's `reason` until
+    /// C11), which the JSON API says too.
+    pub fn reason(self, other: &str) -> String {
+        match self {
+            Refusal::Blocked => t("E ke bllokuar këtë përdorues. Zhbllokoje për t'i shkruar.").to_string(),
+            Refusal::BlockedBy => t1("{} nuk pranon mesazhe nga ti.", other),
+            Refusal::Closed => t("Ky njoftim nuk pranon mesazhe tani.").to_string(),
+            Refusal::Empty => t("Shkruaj mesazhin.").to_string(),
+            Refusal::TooLong { most } => t1("Mesazhi mund të ketë deri në {} shkronja.", most),
+            Refusal::TooManyInARow { .. } => t1("Prit që {} të të përgjigjet para se të shkruash më shumë.", other),
+            Refusal::LinksBeforeAnswer => t1("Lidhjet mund t'i dërgosh pasi {} të të përgjigjet.", other),
+            Refusal::TooFast { .. } => t("Po dërgon shumë shpejt. Prit një minutë dhe provo përsëri.").to_string(),
+            Refusal::TooManyToday { .. } => t("Ke dërguar shumë mesazhe sot. Provo përsëri nesër.").to_string(),
+            Refusal::NewSellersThisHour { most } => t1("U ke shkruar {} shitësve këtë orë. Prit pak para se t'i shkruash një tjetri.", most),
+            Refusal::NewSellersToday { most } => t1("U ke shkruar {} shitësve sot. Mund t'u shkruash të tjerëve nesër.", most),
+        }
+    }
+}
+
 /// Why this message can't go, if it can't: who may write first (`writing`), then what it says, then
 /// how much its sender sent lately (`sent`).
 pub fn refuse(writing: Writing, message: &Outgoing<'_>, sent: &SentLately) -> Option<Refusal> {
@@ -142,6 +192,31 @@ pub fn refuse(writing: Writing, message: &Outgoing<'_>, sent: &SentLately) -> Op
     } else {
         None
     }
+}
+
+/// A message as it is sent and kept, whichever edge it came from: its line breaks the same
+/// everywhere, without space around it (`Outgoing::body`).
+pub fn tidy(body: &str) -> String {
+    body.replace("\r\n", "\n").trim().to_string()
+}
+
+/// The start of a message as the inbox shows it, on one line: its white space a single space
+/// each, and past PREVIEW_CHARS characters, the first PREVIEW_CHARS - 1 and an ellipsis.
+pub fn preview(body: &str) -> String {
+    let text = body.split_whitespace().collect::<Vec<_>>().join(" ");
+    match text.chars().count() > PREVIEW_CHARS {
+        true => format!("{}…", text.chars().take(PREVIEW_CHARS - 1).collect::<String>()),
+        false => text,
+    }
+}
+
+/// What a conversation says of its listing once it is no longer simply up, from the status and
+/// the kind its row spells (Status::conversation_label: "Rezervuar", "Shitur" or "Dhënë me qira",
+/// "Jo më në faqe"), in the language now; nothing while it is up. A status the schema doesn't
+/// allow counts as off the site, and a kind it doesn't as one on sale.
+pub fn listing_label(status: Option<&str>, kind: Option<&str>) -> Option<&'static str> {
+    let kind = kind.and_then(ListingType::parse).unwrap_or(ListingType::Sell);
+    Status::parse(status?).unwrap_or(Status::Deleted).conversation_label(kind)
 }
 
 #[cfg(test)]
@@ -243,5 +318,68 @@ mod tests {
         // The day's messages before the sellers.
         let flooded = SentLately { last_day: PER_DAY, ..hour };
         assert_eq!(refuse(Writing::Open, &first("Përshëndetje"), &flooded), Some(Refusal::TooManyToday { most: 200 }));
+    }
+
+    #[test]
+    fn each_refusal_says_why_in_the_pages_words_under_a_code_of_its_own() {
+        let said = |refusal: Refusal| refusal.reason("Ana");
+        assert_eq!(said(Refusal::Blocked), "E ke bllokuar këtë përdorues. Zhbllokoje për t'i shkruar.");
+        assert_eq!(said(Refusal::BlockedBy), "Ana nuk pranon mesazhe nga ti.");
+        assert_eq!(said(Refusal::Closed), "Ky njoftim nuk pranon mesazhe tani.");
+        assert_eq!(said(Refusal::Empty), "Shkruaj mesazhin.");
+        assert_eq!(said(Refusal::TooLong { most: MAX_CHARS }), "Mesazhi mund të ketë deri në 1000 shkronja.");
+        assert_eq!(said(Refusal::TooManyInARow { most: 3 }), "Prit që Ana të të përgjigjet para se të shkruash më shumë.");
+        assert_eq!(said(Refusal::LinksBeforeAnswer), "Lidhjet mund t'i dërgosh pasi Ana të të përgjigjet.");
+        assert_eq!(said(Refusal::TooFast { most: 8 }), "Po dërgon shumë shpejt. Prit një minutë dhe provo përsëri.");
+        assert_eq!(said(Refusal::TooManyToday { most: 200 }), "Ke dërguar shumë mesazhe sot. Provo përsëri nesër.");
+        assert_eq!(
+            said(Refusal::NewSellersThisHour { most: 5 }),
+            "U ke shkruar 5 shitësve këtë orë. Prit pak para se t'i shkruash një tjetri."
+        );
+        assert_eq!(said(Refusal::NewSellersToday { most: 15 }), "U ke shkruar 15 shitësve sot. Mund t'u shkruash të tjerëve nesër.");
+        // In English, as an English page says them.
+        let english = crate::i18n::LANG.sync_scope(crate::i18n::Lang::En, || said(Refusal::BlockedBy));
+        assert_eq!(english, "Ana doesn’t accept messages from you.");
+        // Each code its own.
+        let every = [
+            Refusal::Blocked,
+            Refusal::BlockedBy,
+            Refusal::Closed,
+            Refusal::Empty,
+            Refusal::TooLong { most: MAX_CHARS },
+            Refusal::TooManyInARow { most: UNANSWERED },
+            Refusal::LinksBeforeAnswer,
+            Refusal::TooFast { most: PER_MINUTE },
+            Refusal::TooManyToday { most: PER_DAY },
+            Refusal::NewSellersThisHour { most: NEW_PER_HOUR },
+            Refusal::NewSellersToday { most: NEW_PER_DAY },
+        ];
+        let mut codes: Vec<&str> = every.iter().map(|refusal| refusal.code()).collect();
+        codes.sort_unstable();
+        codes.dedup();
+        assert_eq!(codes.len(), every.len(), "{codes:?}");
+        assert_eq!(Refusal::TooManyInARow { most: 3 }.code(), "too_many_in_a_row");
+    }
+
+    #[test]
+    fn messages_go_without_space_around_them_and_the_inbox_shows_their_start_on_one_line() {
+        assert_eq!(tidy("  Përshëndetje!\r\nA është ende?  \n"), "Përshëndetje!\nA është ende?");
+        assert_eq!(preview("Përshëndetje!\nA është\tende?"), "Përshëndetje! A është ende?");
+        let long = "a".repeat(PREVIEW_CHARS + 1);
+        assert_eq!(preview(&long), format!("{}…", "a".repeat(PREVIEW_CHARS - 1)));
+        assert_eq!(preview(&"ë".repeat(PREVIEW_CHARS)), "ë".repeat(PREVIEW_CHARS), "as long as it may be, in characters");
+    }
+
+    #[test]
+    fn a_conversation_says_what_became_of_its_listing_once_it_is_no_longer_up() {
+        assert_eq!(listing_label(Some("ACTIVE"), Some("SELL")), None);
+        assert_eq!(listing_label(Some("RESERVED"), Some("SELL")), Some("Rezervuar"));
+        assert_eq!(listing_label(Some("SOLD"), Some("SELL")), Some("Shitur"));
+        assert_eq!(listing_label(Some("SOLD"), Some("RENT")), Some("Dhënë me qira"));
+        assert_eq!(listing_label(Some("PAUSED"), None), Some("Jo më në faqe"));
+        // What the schema doesn't allow: off the site, and on sale.
+        assert_eq!(listing_label(Some("GONE"), Some("SWAP")), Some("Jo më në faqe"));
+        assert_eq!(listing_label(Some("SOLD"), Some("SWAP")), Some("Shitur"));
+        assert_eq!(listing_label(None, Some("SELL")), None, "no listing, nothing to say of it");
     }
 }

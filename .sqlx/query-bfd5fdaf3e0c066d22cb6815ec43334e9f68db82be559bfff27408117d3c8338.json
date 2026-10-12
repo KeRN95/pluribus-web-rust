@@ -1,0 +1,143 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id, l.public_no AS \"public_no?\", l.slug AS \"slug?\",\n                  coalesce(l.generated_title, l.title) AS title, l.status AS \"listing_status?\",\n                  l.price_amount AS \"price_amount?\", l.currency::text AS currency, l.price_type AS \"price_type?\",\n                  l.listing_type AS \"listing_type?\",\n                  (SELECT coalesce(m.thumbnail_url, m.public_url)\n                   FROM listing_media m\n                   WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'\n                   ORDER BY m.is_cover DESC, m.sort_order\n                   LIMIT 1) AS photo,\n                  coalesce(l.status IN ('ACTIVE', 'RESERVED') AND coalesce(lc.allow_messages, true), false) AS \"open!\",\n                  CASE WHEN c.buyer_user_id = $2 THEN seller.user_id ELSE c.buyer_user_id END AS \"other_id!\",\n                  CASE WHEN c.buyer_user_id = $2 THEN coalesce(b.display_name, su.display_name)\n                       ELSE bu.display_name END AS \"other_name!\",\n                  CASE WHEN c.buyer_user_id = $2 THEN b.id END AS \"other_store_id?\",\n                  CASE WHEN c.buyer_user_id = $2 THEN b.slug END AS \"other_store_slug?\",\n                  CASE WHEN c.buyer_user_id <> $2 THEN b.display_name END AS store,\n                  CASE WHEN c.buyer_user_id <> $2 THEN b.slug END AS \"store_slug?\",\n                  EXISTS (SELECT 1 FROM messages m\n                          WHERE m.conversation_id = c.id\n                            AND CASE WHEN c.buyer_user_id = $2 THEN m.sender_user_id <> c.buyer_user_id\n                                     ELSE m.sender_user_id = c.buyer_user_id END) AS \"answered!\",\n                  (SELECT count(*) FROM messages m\n                   WHERE m.conversation_id = c.id\n                     AND CASE WHEN c.buyer_user_id = $2 THEN m.sender_user_id = c.buyer_user_id\n                              ELSE m.sender_user_id <> c.buyer_user_id END\n                     AND m.created_at > coalesce((SELECT max(o.created_at) FROM messages o\n                                                  WHERE o.conversation_id = c.id\n                                                    AND CASE WHEN c.buyer_user_id = $2 THEN o.sender_user_id <> c.buyer_user_id\n                                                             ELSE o.sender_user_id = c.buyer_user_id END),\n                                                 '-infinity')) AS \"in_a_row!\",\n                  CASE WHEN c.buyer_user_id = $2 THEN blocks.by_buyer ELSE blocks.by_seller END AS \"blocked!\",\n                  CASE WHEN c.buyer_user_id = $2 THEN blocks.by_seller ELSE blocks.by_buyer END AS \"blocked_by!\"\n           FROM conversations c\n           JOIN users bu ON bu.id = c.buyer_user_id\n           JOIN LATERAL (SELECT p.user_id FROM conversation_participants p\n                         WHERE p.conversation_id = c.id AND p.user_id <> c.buyer_user_id\n                         ORDER BY p.joined_at\n                         LIMIT 1) seller ON true\n           JOIN users su ON su.id = seller.user_id\n           CROSS JOIN LATERAL (\n               SELECT EXISTS (SELECT 1 FROM user_blocks k\n                              JOIN conversation_participants p ON p.conversation_id = c.id AND p.user_id = k.blocked_user_id\n                              WHERE k.blocker_user_id = c.buyer_user_id) AS by_buyer,\n                      EXISTS (SELECT 1 FROM user_blocks k\n                              JOIN conversation_participants p ON p.conversation_id = c.id AND p.user_id = k.blocker_user_id\n                              WHERE k.blocked_user_id = c.buyer_user_id) AS by_seller\n           ) blocks\n           LEFT JOIN listings l ON l.id = c.listing_id\n           LEFT JOIN listing_contacts lc ON lc.listing_id = l.id\n           LEFT JOIN businesses b ON b.id = c.seller_business_id\n           WHERE c.id = $1\n             AND (c.buyer_user_id = $2 OR c.seller_user_id = $2\n                  OR EXISTS (SELECT 1 FROM business_members bm WHERE bm.business_id = c.seller_business_id AND bm.user_id = $2))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "public_no?",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "slug?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "listing_status?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "price_amount?",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 6,
+        "name": "currency",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "price_type?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "listing_type?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "photo",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "open!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 11,
+        "name": "other_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 12,
+        "name": "other_name!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 13,
+        "name": "other_store_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 14,
+        "name": "other_store_slug?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 15,
+        "name": "store",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 16,
+        "name": "store_slug?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 17,
+        "name": "answered!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 18,
+        "name": "in_a_row!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 19,
+        "name": "blocked!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 20,
+        "name": "blocked_by!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      false,
+      true,
+      null,
+      false,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "bfd5fdaf3e0c066d22cb6815ec43334e9f68db82be559bfff27408117d3c8338"
+}

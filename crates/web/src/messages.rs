@@ -5,9 +5,10 @@
 //! which takes a code sent to a phone number or an e-mail address (account.rs); to a few new
 //! sellers an hour and a day; until the other side answers, three messages at most and no links,
 //! which is what spam and scams mostly send; and anyone can block whoever writes to them. Those
-//! rules are domain::messaging's, whose refusals, codes, this module words in the page's language
-//! (`reason`). A store's conversations are its people's, each of whom sees and answers them
-//! (db/messages.rs).
+//! rules are domain::messaging's, whose refusals, codes, it words in the page's language too
+//! (`Refusal::reason`), as the JSON API says them (api/messages.rs), with what a message is as it
+//! goes (`messaging::tidy`) and as the inbox shows it (`messaging::preview`). A store's
+//! conversations are its people's, each of whom sees and answers them (db/messages.rs).
 
 use askama::Template;
 use axum::{
@@ -30,12 +31,9 @@ use super::{
 use crate::{
     AppState,
     db::{self, Conversation, InboxEntry, Message, MessageTarget, SessionUser},
-    domain::{
-        ListingType, Status,
-        messaging::{self, Outgoing, Refusal, Writing},
-    },
+    domain::messaging::{self, Outgoing, Writing},
     format,
-    i18n::{english, t, t1},
+    i18n::{english, t},
 };
 
 /// A message's length, in characters (domain::messaging), which the box to write in holds to
@@ -58,14 +56,6 @@ pub struct ListingHead {
     /// What became of it, once it is no longer simply up: reserved, sold ("Dhënë me qira" for a
     /// rental) or off the site, so that neither side writes on about a thing gone.
     pub status: Option<&'static str>,
-}
-
-/// What a conversation's head says of its listing's status (`status`, of a listing of kind
-/// `kind`): nothing while it is up (Status::conversation_label). A status the schema doesn't
-/// allow would count as off the site, and a kind it doesn't as one on sale.
-fn listing_status(status: Option<&str>, kind: Option<&str>) -> Option<&'static str> {
-    let kind = kind.and_then(ListingType::parse).unwrap_or(ListingType::Sell);
-    Status::parse(status?).unwrap_or(Status::Deleted).conversation_label(kind)
 }
 
 /// A conversation's page, or the page that starts one about a listing.
@@ -123,7 +113,8 @@ impl ConversationPage {
                 conversation.price_type.as_deref().unwrap_or("FIXED"),
                 conversation.listing_type.as_deref().unwrap_or("SELL"),
             ),
-            status: listing_status(conversation.listing_status.as_deref(), conversation.listing_type.as_deref()),
+            // Nothing while it is up (messaging::listing_label).
+            status: messaging::listing_label(conversation.listing_status.as_deref(), conversation.listing_type.as_deref()),
         });
         Self {
             listing,
@@ -232,10 +223,9 @@ impl InboxEntryExt for InboxEntry {
         self.last_message_at.map_or_else(String::new, |sent| when_latest(sent, OffsetDateTime::now_utc()))
     }
 
-    /// The start of its latest message, on one line.
+    /// The start of its latest message, on one line (messaging::preview).
     fn preview(&self) -> String {
-        let text = self.last_body.as_deref().unwrap_or_default().split_whitespace().collect::<Vec<_>>().join(" ");
-        if text.chars().count() > 90 { format!("{}…", text.chars().take(89).collect::<String>()) } else { text }
+        messaging::preview(self.last_body.as_deref().unwrap_or_default())
     }
 }
 
@@ -245,33 +235,12 @@ pub struct MessageForm {
     body: String,
 }
 
-/// The message as sent: its line breaks the same everywhere, without space around it.
-fn tidy(body: &str) -> String {
-    body.replace("\r\n", "\n").trim().to_string()
-}
-
 /// Why this message can't go, if it can't (messaging::refuse, given what its sender sent lately),
-/// in the page's language: `other` is the other side's name, which some of the reasons say.
+/// in the page's language (`Refusal::reason`): `other` is the other side's name, which some of the
+/// reasons say.
 async fn refusal(state: &AppState, user: &SessionUser, writing: Writing, message: Outgoing<'_>, other: &str) -> Result<Option<String>> {
     let sent = db::sent_lately(&state.db, user.id).await?;
-    Ok(messaging::refuse(writing, &message, &sent).map(|refusal| reason(refusal, other)))
-}
-
-/// What a refusal says, in the page's language, naming the other side (`other`) where it does.
-fn reason(refusal: Refusal, other: &str) -> String {
-    match refusal {
-        Refusal::Blocked => t("E ke bllokuar këtë përdorues. Zhbllokoje për t'i shkruar.").to_string(),
-        Refusal::BlockedBy => t1("{} nuk pranon mesazhe nga ti.", other),
-        Refusal::Closed => t("Ky njoftim nuk pranon mesazhe tani.").to_string(),
-        Refusal::Empty => t("Shkruaj mesazhin.").to_string(),
-        Refusal::TooLong { most } => t1("Mesazhi mund të ketë deri në {} shkronja.", most),
-        Refusal::TooManyInARow { .. } => t1("Prit që {} të të përgjigjet para se të shkruash më shumë.", other),
-        Refusal::LinksBeforeAnswer => t1("Lidhjet mund t'i dërgosh pasi {} të të përgjigjet.", other),
-        Refusal::TooFast { .. } => t("Po dërgon shumë shpejt. Prit një minutë dhe provo përsëri.").to_string(),
-        Refusal::TooManyToday { .. } => t("Ke dërguar shumë mesazhe sot. Provo përsëri nesër.").to_string(),
-        Refusal::NewSellersThisHour { most } => t1("U ke shkruar {} shitësve këtë orë. Prit pak para se t'i shkruash një tjetri.", most),
-        Refusal::NewSellersToday { most } => t1("U ke shkruar {} shitësve sot. Mund t'u shkruash të tjerëve nesër.", most),
-    }
+    Ok(messaging::refuse(writing, &message, &sent).map(|refusal| refusal.reason(other)))
 }
 
 /// Someone not signed in: to sign in first, and back to `page` once they have
@@ -326,12 +295,12 @@ pub async fn start(
     }
     let (blocked, blocked_by) = db::blocks_with_seller(&state.db, user.id, &target).await?;
     let writing = Writing::of(target.open, blocked, blocked_by);
-    let body = tidy(&form.body);
+    let body = messaging::tidy(&form.body);
     let message = Outgoing { body: &body, links: link_count(&body), unanswered: Some(0), new_seller: true };
     if let Some(error) = refusal(&state, &user, writing, message, &target.seller_name).await? {
         return unprocessable(ConversationPage::start(&target, writing, Some(error), body));
     }
-    let id = db::start_conversation(&state.db, &target, user.id, &body).await?;
+    let id = db::start_conversation(&state.db, &target, user.id, &body).await?.conversation_id;
     Ok(Redirect::to(&format!("/mesazhet/{id}")).into_response())
 }
 
@@ -399,7 +368,7 @@ async fn send_into(state: &AppState, user: &SessionUser, id: Uuid, form: Message
     let Some(conversation) = db::conversation(&state.db, id, user.id).await? else {
         return not_found().await;
     };
-    let body = tidy(&form.body);
+    let body = messaging::tidy(&form.body);
     let writing = Writing::of(true, conversation.blocked, conversation.blocked_by);
     let unanswered = (!conversation.answered).then_some(conversation.in_a_row);
     let message = Outgoing { body: &body, links: link_count(&body), unanswered, new_seller: false };
@@ -519,29 +488,5 @@ mod tests {
         // 299 days before the 5th of December, the 8th 300.
         assert_eq!(when_latest(datetime!(2026-02-09 12:00 UTC), now), "09.02");
         assert_eq!(when_latest(datetime!(2026-02-08 12:00 UTC), now), "08.02.2026");
-    }
-
-    #[test]
-    fn messages_go_without_space_around_them() {
-        assert_eq!(tidy("  Përshëndetje!\r\nA është ende?  \n"), "Përshëndetje!\nA është ende?");
-    }
-
-    #[test]
-    fn each_refusal_says_why_in_the_pages_words() {
-        let said = |refusal| reason(refusal, "Ana");
-        assert_eq!(said(Refusal::Blocked), "E ke bllokuar këtë përdorues. Zhbllokoje për t'i shkruar.");
-        assert_eq!(said(Refusal::BlockedBy), "Ana nuk pranon mesazhe nga ti.");
-        assert_eq!(said(Refusal::Closed), "Ky njoftim nuk pranon mesazhe tani.");
-        assert_eq!(said(Refusal::Empty), "Shkruaj mesazhin.");
-        assert_eq!(said(Refusal::TooLong { most: MAX_CHARS }), "Mesazhi mund të ketë deri në 1000 shkronja.");
-        assert_eq!(said(Refusal::TooManyInARow { most: 3 }), "Prit që Ana të të përgjigjet para se të shkruash më shumë.");
-        assert_eq!(said(Refusal::LinksBeforeAnswer), "Lidhjet mund t'i dërgosh pasi Ana të të përgjigjet.");
-        assert_eq!(said(Refusal::TooFast { most: 8 }), "Po dërgon shumë shpejt. Prit një minutë dhe provo përsëri.");
-        assert_eq!(said(Refusal::TooManyToday { most: 200 }), "Ke dërguar shumë mesazhe sot. Provo përsëri nesër.");
-        assert_eq!(
-            said(Refusal::NewSellersThisHour { most: 5 }),
-            "U ke shkruar 5 shitësve këtë orë. Prit pak para se t'i shkruash një tjetri."
-        );
-        assert_eq!(said(Refusal::NewSellersToday { most: 15 }), "U ke shkruar 15 shitësve sot. Mund t'u shkruash të tjerëve nesër.");
     }
 }

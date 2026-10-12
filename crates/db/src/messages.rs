@@ -163,9 +163,19 @@ pub async fn set_conversation_blocked(db: &PgPool, conversation_id: Uuid, user: 
     Ok(())
 }
 
+/// A message just written: the conversation it went into, its id, and when it was sent, as
+/// `Message` has them (the JSON API answers with it).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Sent {
+    pub conversation_id: Uuid,
+    pub id: Uuid,
+    pub created_at: OffsetDateTime,
+}
+
 /// Starts the buyer's conversation about the listing with its first message, both sides taking
-/// part, or adds the message to the one they have (one per buyer and listing); returns its id.
-pub async fn start_conversation(db: &PgPool, target: &MessageTarget, buyer_id: Uuid, body: &str) -> sqlx::Result<Uuid> {
+/// part, or adds the message to the one they have (one per buyer and listing); gives back the
+/// message, with the conversation's id.
+pub async fn start_conversation(db: &PgPool, target: &MessageTarget, buyer_id: Uuid, body: &str) -> sqlx::Result<Sent> {
     let mut tx = db.begin().await?;
     let id = sqlx::query_scalar!(
         "INSERT INTO conversations (listing_id, buyer_user_id, seller_user_id, seller_business_id)
@@ -188,21 +198,22 @@ pub async fn start_conversation(db: &PgPool, target: &MessageTarget, buyer_id: U
     )
     .execute(&mut *tx)
     .await?;
-    write(&mut tx, id, buyer_id, body).await?;
+    let sent = write(&mut tx, id, buyer_id, body).await?;
     tx.commit().await?;
-    Ok(id)
+    Ok(sent)
 }
 
-/// Writes a message in a conversation its sender may see (`conversation`).
-pub async fn send_message(db: &PgPool, conversation_id: Uuid, sender_id: Uuid, body: &str) -> sqlx::Result<()> {
+/// Writes a message in a conversation its sender may see (`conversation`); gives it back.
+pub async fn send_message(db: &PgPool, conversation_id: Uuid, sender_id: Uuid, body: &str) -> sqlx::Result<Sent> {
     let mut tx = db.begin().await?;
-    write(&mut tx, conversation_id, sender_id, body).await?;
-    tx.commit().await
+    let sent = write(&mut tx, conversation_id, sender_id, body).await?;
+    tx.commit().await?;
+    Ok(sent)
 }
 
 /// The message, the conversation moved to the top of both inboxes, and everything in it read by
 /// its sender, who just wrote in it: one of a store's people takes part from their first.
-async fn write(tx: &mut sqlx::Transaction<'_, Postgres>, conversation_id: Uuid, sender_id: Uuid, body: &str) -> sqlx::Result<()> {
+async fn write(tx: &mut sqlx::Transaction<'_, Postgres>, conversation_id: Uuid, sender_id: Uuid, body: &str) -> sqlx::Result<Sent> {
     sqlx::query!(
         "INSERT INTO conversation_participants (conversation_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
         conversation_id,
@@ -210,26 +221,27 @@ async fn write(tx: &mut sqlx::Transaction<'_, Postgres>, conversation_id: Uuid, 
     )
     .execute(&mut **tx)
     .await?;
-    let sent_at = sqlx::query_scalar!(
-        "INSERT INTO messages (conversation_id, sender_user_id, body) VALUES ($1, $2, $3) RETURNING created_at",
+    let message = sqlx::query!(
+        "INSERT INTO messages (conversation_id, sender_user_id, body) VALUES ($1, $2, $3) RETURNING id, created_at",
         conversation_id,
         sender_id,
         body,
     )
     .fetch_one(&mut **tx)
     .await?;
-    sqlx::query!("UPDATE conversations SET last_message_at = $2 WHERE id = $1", conversation_id, sent_at)
+    let sent = Sent { conversation_id, id: message.id, created_at: message.created_at };
+    sqlx::query!("UPDATE conversations SET last_message_at = $2 WHERE id = $1", conversation_id, sent.created_at)
         .execute(&mut **tx)
         .await?;
     sqlx::query!(
         "UPDATE conversation_participants SET last_read_at = $3 WHERE conversation_id = $1 AND user_id = $2",
         conversation_id,
         sender_id,
-        sent_at,
+        sent.created_at,
     )
     .execute(&mut **tx)
     .await?;
-    Ok(())
+    Ok(sent)
 }
 
 /// A conversation as one of its two sides sees it.
@@ -246,12 +258,20 @@ pub struct Conversation {
     pub price_type: Option<String>,
     pub listing_type: Option<String>,
     pub photo: Option<String>,
+    /// Whether the listing takes new conversations now, as `MessageTarget::open` has it: up, its
+    /// messages not turned off; false once it is gone for good. One started goes on whatever it
+    /// says (`Writing::of(true, …)`, as the pages have it).
+    pub open: bool,
     /// The other side: the seller, as the buyer sees them (a business's name), or the buyer; by
     /// their account, the seller who answered first.
     pub other_id: Uuid,
     pub other_name: String,
-    /// For one of a store's people, the store whose conversation it is.
+    /// For the buyer of a store's listing, the store the other side is: its id and its address.
+    pub other_store_id: Option<Uuid>,
+    pub other_store_slug: Option<String>,
+    /// For one of a store's people, the store whose conversation it is: its name and its address.
     pub store: Option<String>,
+    pub store_slug: Option<String>,
     /// Whether the other side has written in it yet, and how many messages the user's side sent
     /// since they last did: the limits until an answer comes (web/messages.rs).
     pub answered: bool,
@@ -276,10 +296,14 @@ pub async fn conversation(db: &PgPool, id: Uuid, user_id: Uuid) -> sqlx::Result<
                    WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'
                    ORDER BY m.is_cover DESC, m.sort_order
                    LIMIT 1) AS photo,
+                  coalesce(l.status IN ('ACTIVE', 'RESERVED') AND coalesce(lc.allow_messages, true), false) AS "open!",
                   CASE WHEN c.buyer_user_id = $2 THEN seller.user_id ELSE c.buyer_user_id END AS "other_id!",
                   CASE WHEN c.buyer_user_id = $2 THEN coalesce(b.display_name, su.display_name)
                        ELSE bu.display_name END AS "other_name!",
+                  CASE WHEN c.buyer_user_id = $2 THEN b.id END AS "other_store_id?",
+                  CASE WHEN c.buyer_user_id = $2 THEN b.slug END AS "other_store_slug?",
                   CASE WHEN c.buyer_user_id <> $2 THEN b.display_name END AS store,
+                  CASE WHEN c.buyer_user_id <> $2 THEN b.slug END AS "store_slug?",
                   EXISTS (SELECT 1 FROM messages m
                           WHERE m.conversation_id = c.id
                             AND CASE WHEN c.buyer_user_id = $2 THEN m.sender_user_id <> c.buyer_user_id
@@ -311,6 +335,7 @@ pub async fn conversation(db: &PgPool, id: Uuid, user_id: Uuid) -> sqlx::Result<
                               WHERE k.blocked_user_id = c.buyer_user_id) AS by_seller
            ) blocks
            LEFT JOIN listings l ON l.id = c.listing_id
+           LEFT JOIN listing_contacts lc ON lc.listing_id = l.id
            LEFT JOIN businesses b ON b.id = c.seller_business_id
            WHERE c.id = $1
              AND (c.buyer_user_id = $2 OR c.seller_user_id = $2
@@ -418,11 +443,25 @@ pub async fn mark_read(db: &PgPool, conversation_id: Uuid, user_id: Uuid, upto: 
 #[derive(Debug)]
 pub struct InboxEntry {
     pub id: Uuid,
+    /// The listing it is about: its number, title, status and kind (as the database spells them)
+    /// and its cover's card-sized copy; None once it is gone for good.
+    pub public_no: Option<i64>,
     pub listing_title: Option<String>,
+    pub listing_status: Option<String>,
+    pub listing_type: Option<String>,
     pub photo: Option<String>,
+    /// The other side, as `Conversation` has them: their account (the buyer, or for the buyer the
+    /// seller who answered first) and their name; for the buyer of a store's listing, the store
+    /// they are, its id and its address.
+    pub other_id: Uuid,
     pub other_name: String,
-    /// For one of a store's people, the store whose conversation it is.
+    pub other_store_id: Option<Uuid>,
+    pub other_store_slug: Option<String>,
+    /// For one of a store's people, the store whose conversation it is: its name and its address.
     pub store: Option<String>,
+    pub store_slug: Option<String>,
+    /// Whether the user's side blocked the other, as `Conversation::blocked` has it.
+    pub blocked: bool,
     /// Its latest message: what it says, whether the user sent it (or which colleague did, on a
     /// store's side), and when it was sent (that message's created_at, as Message has it).
     pub last_body: Option<String>,
@@ -438,15 +477,28 @@ pub struct InboxEntry {
 pub async fn inbox(db: &PgPool, user_id: Uuid, limit: i64) -> sqlx::Result<Vec<InboxEntry>> {
     sqlx::query_as!(
         InboxEntry,
-        r#"SELECT c.id, coalesce(l.generated_title, l.title) AS listing_title,
+        r#"SELECT c.id, l.public_no AS "public_no?", coalesce(l.generated_title, l.title) AS listing_title,
+                  l.status AS "listing_status?", l.listing_type AS "listing_type?",
                   (SELECT coalesce(m.thumbnail_url, m.public_url)
                    FROM listing_media m
                    WHERE m.listing_id = l.id AND m.status = 'READY' AND m.media_type = 'IMAGE'
                    ORDER BY m.is_cover DESC, m.sort_order
                    LIMIT 1) AS photo,
+                  CASE WHEN c.buyer_user_id = $1 THEN seller.user_id ELSE c.buyer_user_id END AS "other_id!",
                   CASE WHEN c.buyer_user_id = $1 THEN coalesce(b.display_name, su.display_name)
                        ELSE bu.display_name END AS "other_name!",
+                  CASE WHEN c.buyer_user_id = $1 THEN b.id END AS "other_store_id?",
+                  CASE WHEN c.buyer_user_id = $1 THEN b.slug END AS "other_store_slug?",
                   CASE WHEN c.buyer_user_id <> $1 THEN b.display_name END AS store,
+                  CASE WHEN c.buyer_user_id <> $1 THEN b.slug END AS "store_slug?",
+                  CASE WHEN c.buyer_user_id = $1
+                       THEN EXISTS (SELECT 1 FROM user_blocks k
+                                    JOIN conversation_participants p ON p.conversation_id = c.id AND p.user_id = k.blocked_user_id
+                                    WHERE k.blocker_user_id = c.buyer_user_id)
+                       ELSE EXISTS (SELECT 1 FROM user_blocks k
+                                    JOIN conversation_participants p ON p.conversation_id = c.id AND p.user_id = k.blocker_user_id
+                                    WHERE k.blocked_user_id = c.buyer_user_id)
+                  END AS "blocked!",
                   last.body AS "last_body?", coalesce(last.sender_user_id = $1, false) AS "last_mine!",
                   CASE WHEN c.buyer_user_id <> $1 AND last.sender_user_id <> c.buyer_user_id AND last.sender_user_id <> $1
                        THEN last.author END AS "last_author?",
