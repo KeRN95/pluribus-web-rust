@@ -9,7 +9,8 @@
 //! channel that fails doesn't make it go again every minute; without a channel set up, it goes to
 //! the log, as sign-in codes do. The e-mail is in the language kept on the reader's account
 //! (users.preferred_language); the notification's title is kept in Albanian, which
-//! web/notifications.rs words for whoever reads it.
+//! web/notifications.rs words for whoever reads it, and its payload has who wrote and about which
+//! listing, from which domain::notices says it in either language.
 
 use std::time::Duration;
 
@@ -54,7 +55,7 @@ pub async fn send_due(db: &PgPool, origin: &str) -> sqlx::Result<usize> {
             unsubscribe,
         };
         let title: String = i18n::LANG.sync_scope(Lang::Sq, || notice.title()).chars().take(TITLE).collect();
-        db::record_notice(db, due.user_id, due.conversation_id, &title, &notice.excerpt).await?;
+        db::record_notice(db, due.user_id, due.conversation_id, &title, &notice.excerpt, &notice.writer, notice.listing.as_deref()).await?;
         sent += 1;
         let contact = match (due.email, due.phone) {
             (Some(email), _) if due.email_ok => Contact::Email(email),

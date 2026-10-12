@@ -372,25 +372,16 @@ pub async fn update_store(State(state): State<AppState>, headers: HeaderMap, Pat
     Ok(Redirect::to(&format!("/biznes/{slug}")).into_response())
 }
 
-/// A role's name, as the pages say it, in their language.
+/// A role's name, as the pages say it, in their language (Role::label, which an invitation's
+/// notification says too, domain::notices); a text that is no role's, the least role's.
 pub fn role_name(role: &str) -> &'static str {
-    match role {
-        "OWNER" => t("Pronar"),
-        "ADMIN" => t("Administrator"),
-        "EDITOR" => t("Poston njoftime"),
-        _ => t("Vetëm mesazhet"),
-    }
+    Role::parse(role).unwrap_or(Role::Viewer).label()
 }
 
 /// What a role lets someone do, as the invitation form and the invitation say it, in their
-/// language.
+/// language (Role::does); a text that is no role's, what the least role does.
 pub fn role_does(role: &str) -> &'static str {
-    match role {
-        "OWNER" => t("Gjithçka, edhe njerëzit e dyqanit."),
-        "ADMIN" => t("Ndryshon dyqanin dhe njerëzit e tij, poston njoftime dhe u përgjigjet mesazheve."),
-        "EDITOR" => t("Poston dhe ndryshon njoftimet e dyqanit, dhe u përgjigjet mesazheve."),
-        _ => t("U përgjigjet mesazheve të dyqanit."),
-    }
+    Role::parse(role).unwrap_or(Role::Viewer).does()
 }
 
 /// The roles someone of `role` gives, and so takes back: an owner any of db::GIVEN_ROLES, an admin

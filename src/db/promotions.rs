@@ -89,7 +89,8 @@ pub enum Granted {
 
 /// A moderator gives the listing numbered `public_no` the promotion `code`: what it does is done
 /// at once, its seller hears of it (a notification, PROMOTED, to whoever keeps the listing: TOLD,
-/// db/expiry.rs), and the moderators' record keeps who gave it.
+/// db/expiry.rs; its payload the listing, its title and the promotion's name, which the
+/// notification's title says, domain::notices), and the moderators' record keeps who gave it.
 pub async fn grant_promotion(db: &PgPool, public_no: i64, code: &str, moderator: Uuid) -> sqlx::Result<Granted> {
     let mut tx = db.begin().await?;
     keep_updated_at(&mut tx).await?;
@@ -160,7 +161,8 @@ pub async fn grant_promotion(db: &PgPool, public_no: i64, code: &str, moderator:
     if let Some(keeper) = keeper {
         sqlx::query(
             "INSERT INTO notifications (user_id, notification_type, title, payload)
-             VALUES ($1, 'PROMOTED', left($2 || ': ' || $3, 180), jsonb_build_object('listing_id', $4::uuid, 'public_no', $5::bigint))",
+             VALUES ($1, 'PROMOTED', left($2 || ': ' || $3, 180),
+                     jsonb_build_object('listing_id', $4::uuid, 'public_no', $5::bigint, 'title', $3::text, 'product', $2::text))",
         )
         .bind(keeper)
         .bind(&name)

@@ -383,7 +383,8 @@ pub enum Invited {
 }
 
 /// Asks the contact into the store with the role, `by` one of its owner or admins; an account that
-/// signs in with that contact has a notification of it (STORE_INVITE) saying `title` and `body`.
+/// signs in with that contact has a notification of it (STORE_INVITE) saying `title` and `body`,
+/// its payload the invitation, the store's name and the role, which they say (domain::notices).
 pub async fn invite(db: &PgPool, store_id: Uuid, contact: &Contact, role: &str, by: Uuid, title: &str, body: &str) -> sqlx::Result<Invited> {
     let (phone, email) = match contact {
         Contact::Phone(phone) => (Some(phone.as_str()), None),
@@ -421,7 +422,9 @@ pub async fn invite(db: &PgPool, store_id: Uuid, contact: &Contact, role: &str, 
     .await?;
     sqlx::query(
         "INSERT INTO notifications (user_id, notification_type, title, body, payload)
-         SELECT u.id, 'STORE_INVITE', $3, $4, jsonb_build_object('invitation', $5::uuid::text)
+         SELECT u.id, 'STORE_INVITE', $3, $4,
+                jsonb_build_object('invitation', $5::uuid::text,
+                                   'store', (SELECT b.display_name FROM businesses b WHERE b.id = $6), 'role', $7::text)
          FROM users u
          WHERE u.status = 'ACTIVE' AND (u.phone_e164 = $1::text::e164_phone OR u.email = $2::text::citext)",
     )
@@ -430,6 +433,8 @@ pub async fn invite(db: &PgPool, store_id: Uuid, contact: &Contact, role: &str, 
     .bind(title)
     .bind(body)
     .bind(id)
+    .bind(store_id)
+    .bind(role)
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;

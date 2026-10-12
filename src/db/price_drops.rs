@@ -17,7 +17,8 @@ pub async fn price_was(db: &PgPool, listing_id: Uuid) -> sqlx::Result<Option<Dec
 /// when the change lowered its price (price_was!), everyone who keeps it gets a notification, with
 /// what it was and what it is, in place of one about it they haven't seen yet, whose higher "was"
 /// it keeps, the price they last saw; not its own seller, nor those who turned price drop alerts
-/// off (notification_preferences.price_drop_alerts).
+/// off (notification_preferences.price_drop_alerts). Its payload has the listing's title too,
+/// which the notification's says (domain::notices).
 pub(super) async fn notify_price_drop(tx: &mut sqlx::PgConnection, listing_id: Uuid) -> sqlx::Result<()> {
     sqlx::query(concat!(
         "WITH dropped AS (
@@ -50,7 +51,7 @@ pub(super) async fn notify_price_drop(tx: &mut sqlx::PgConnection, listing_id: U
          )
          INSERT INTO notifications (user_id, notification_type, title, payload)
          SELECT k.user_id, 'PRICE_DROP', left('Çmimi ra: ' || k.title, 180),
-                jsonb_build_object('listing_id', k.id, 'public_no', k.public_no, 'was', k.was,
+                jsonb_build_object('listing_id', k.id, 'public_no', k.public_no, 'title', k.title, 'was', k.was,
                                    'price', k.price_amount, 'currency', k.currency)
          FROM keepers k"
     ))

@@ -51,8 +51,9 @@ pub struct ExpiryNotice {
 }
 
 /// Takes the listings up or reserved whose time is up off the site (EXPIRED, the status history
-/// saying why), each with a notification to its seller (EXPIRED, to whom TOLD says); returns
-/// those with someone to tell.
+/// saying why), each with a notification to its seller (EXPIRED, to whom TOLD says; its payload
+/// the listing and its title, which the notification's says, domain::notices); returns those with
+/// someone to tell.
 pub async fn expire_listings(db: &PgPool) -> sqlx::Result<Vec<ExpiryNotice>> {
     let mut tx = db.begin().await?;
     sqlx::query("SELECT set_config('app.status_reason', 'Skadoi', true)").execute(&mut *tx).await?;
@@ -65,7 +66,7 @@ pub async fn expire_listings(db: &PgPool) -> sqlx::Result<Vec<ExpiryNotice>> {
          told AS (
              INSERT INTO notifications (user_id, notification_type, title, payload)
              SELECT g.user_id, 'EXPIRED', left('Njoftimi skadoi: ' || g.title, 180),
-                    jsonb_build_object('listing_id', g.id, 'public_no', g.public_no)
+                    jsonb_build_object('listing_id', g.id, 'public_no', g.public_no, 'title', g.title)
              FROM gone g
              WHERE g.user_id IS NOT NULL
          )
@@ -84,8 +85,9 @@ pub async fn expire_listings(db: &PgPool) -> sqlx::Result<Vec<ExpiryNotice>> {
 
 /// The listings up or reserved that expire within `days`, whose sellers haven't heard of this
 /// expiry yet (a renewal is a new one; a store's owner, told once its poster has left, hears of
-/// it even if the poster did): a notification to each seller (EXPIRING, with when; to whom TOLD
-/// says), and the listings; at most 500 a time.
+/// it even if the poster did): a notification to each seller (EXPIRING, with when, and the
+/// listing's title, which the notification's says; to whom TOLD says), and the listings; at most
+/// 500 a time.
 pub async fn warn_expiring(db: &PgPool, days: i32) -> sqlx::Result<Vec<ExpiryNotice>> {
     sqlx::query_as(&format!(
         "WITH due AS (
@@ -106,7 +108,7 @@ pub async fn warn_expiring(db: &PgPool, days: i32) -> sqlx::Result<Vec<ExpiryNot
          told AS (
              INSERT INTO notifications (user_id, notification_type, title, payload)
              SELECT d.user_id, 'EXPIRING', left('Njoftimi skadon së shpejti: ' || d.title, 180),
-                    jsonb_build_object('listing_id', d.id, 'public_no', d.public_no, 'expires_at', d.expires_at)
+                    jsonb_build_object('listing_id', d.id, 'public_no', d.public_no, 'title', d.title, 'expires_at', d.expires_at)
              FROM due d
          )
          SELECT d.id AS listing_id, d.user_id, d.public_no, d.title, d.expires_at,

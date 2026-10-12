@@ -369,6 +369,27 @@ impl Role {
     pub fn manages(self) -> bool {
         matches!(self, Self::Owner | Self::Admin)
     }
+
+    /// What the role is called, as the store's pages and an invitation say it, in the language now.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Owner => t("Pronar"),
+            Self::Admin => t("Administrator"),
+            Self::Editor => t("Poston njoftime"),
+            Self::Viewer => t("Vetëm mesazhet"),
+        }
+    }
+
+    /// What the role lets one of the store's people do, as the invitation form and an invitation
+    /// say it, in the language now.
+    pub fn does(self) -> &'static str {
+        match self {
+            Self::Owner => t("Gjithçka, edhe njerëzit e dyqanit."),
+            Self::Admin => t("Ndryshon dyqanin dhe njerëzit e tij, poston njoftime dhe u përgjigjet mesazheve."),
+            Self::Editor => t("Poston dhe ndryshon njoftimet e dyqanit, dhe u përgjigjet mesazheve."),
+            Self::Viewer => t("U përgjigjet mesazheve të dyqanit."),
+        }
+    }
 }
 
 impl NotificationKind {

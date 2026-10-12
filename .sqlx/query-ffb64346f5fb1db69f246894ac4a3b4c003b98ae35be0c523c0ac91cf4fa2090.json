@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO notifications (user_id, notification_type, title, body, payload)\n         VALUES ($1, 'NEW_MESSAGE', $2, $3,\n                 jsonb_build_object('conversation', $4::text, 'writer', $5::text, 'listing', $6::text))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ffb64346f5fb1db69f246894ac4a3b4c003b98ae35be0c523c0ac91cf4fa2090"
+}

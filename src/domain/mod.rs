@@ -3,8 +3,10 @@
 //! its condition; a store's roles; why a listing waits for review; a property's data type), and a
 //! notification's kind, as Rust enums (kinds.rs), with the rules about where a listing stands that
 //! "Njoftimet e mia", the listings kept, the conversations and the seller's buttons share
-//! (`Status`'s methods).
+//! (`Status`'s methods); and what a notification says, from what its payload keeps (notices.rs,
+//! `domain::notices::title`).
 
 pub mod kinds;
+pub mod notices;
 
 pub use kinds::*;

@@ -29,6 +29,7 @@ use super::{
 use crate::{
     AppState,
     db::{self, Categories, City, ListingFilter, NewSearch, SavedSearch, Sort},
+    domain::notices::{NEW_MOST, new_listings},
     format::Contact,
     i18n::{self, Lang, t1, t2},
     sender,
@@ -38,8 +39,6 @@ use crate::{
 pub const ALERT_GAP: Duration = Duration::from_secs(3 * 60 * 60);
 /// How often the server looks for alerts due.
 pub const ALERT_CHECK_EVERY: Duration = Duration::from_secs(15 * 60);
-/// New listings are counted up to this many; past it, "99+".
-const NEW_MOST: i64 = 99;
 /// How many of the new listings an alert's e-mail names.
 const ALERT_LISTINGS: usize = 3;
 
@@ -97,17 +96,6 @@ fn address(path: &str, query: &str) -> String {
     match query.is_empty() {
         true => path.to_string(),
         false => format!("{path}?{query}"),
-    }
-}
-
-/// "1 njoftim i ri", "12 njoftime të reja", "99+ njoftime të reja", in the language now: a page's,
-/// or an alert's e-mail's, its recipient's; Albanian for the notification it keeps and for its
-/// WhatsApp template.
-pub fn new_listings(count: i64) -> String {
-    match count {
-        1 => i18n::t("1 njoftim i ri").to_string(),
-        count if count > NEW_MOST => t1("{}+ njoftime të reja", NEW_MOST),
-        count => t1("{} njoftime të reja", count),
     }
 }
 

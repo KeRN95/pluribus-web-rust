@@ -95,15 +95,27 @@ pub async fn due_notices(db: &PgPool, after: std::time::Duration, gap: std::time
 }
 
 /// Records a notice sent to `user_id` about a conversation (notifications, NEW_MESSAGE): what it
-/// said, and the conversation, which the next look for notices goes by.
-pub async fn record_notice(db: &PgPool, user_id: Uuid, conversation_id: Uuid, title: &str, body: &str) -> sqlx::Result<()> {
+/// said; the conversation, which the next look for notices goes by; and who wrote, about which
+/// listing (`writer`, `listing`: None once it is gone), which its title says (domain::notices).
+pub async fn record_notice(
+    db: &PgPool,
+    user_id: Uuid,
+    conversation_id: Uuid,
+    title: &str,
+    body: &str,
+    writer: &str,
+    listing: Option<&str>,
+) -> sqlx::Result<()> {
     sqlx::query!(
         "INSERT INTO notifications (user_id, notification_type, title, body, payload)
-         VALUES ($1, 'NEW_MESSAGE', $2, $3, jsonb_build_object('conversation', $4::text))",
+         VALUES ($1, 'NEW_MESSAGE', $2, $3,
+                 jsonb_build_object('conversation', $4::text, 'writer', $5::text, 'listing', $6::text))",
         user_id,
         title,
         body,
         conversation_id.to_string(),
+        writer,
+        listing,
     )
     .execute(db)
     .await

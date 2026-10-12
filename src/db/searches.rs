@@ -203,8 +203,9 @@ pub async fn due_search_alerts(db: &PgPool, gap: std::time::Duration) -> sqlx::R
     .await
 }
 
-/// Records an alert of a search's new listings: a notification (SAVED_SEARCH, with the search,
-/// how many and where to see them), and when it went out, which the next one counts from.
+/// Records an alert of a search's new listings: a notification (SAVED_SEARCH, with the search and
+/// its name, how many and where to see them: what its title says, domain::notices), and when it
+/// went out, which the next one counts from.
 pub async fn record_search_alert(
     db: &PgPool,
     user_id: Uuid,
@@ -216,7 +217,9 @@ pub async fn record_search_alert(
     let mut tx = db.begin().await?;
     sqlx::query(
         "INSERT INTO notifications (user_id, notification_type, title, payload)
-         VALUES ($1, 'SAVED_SEARCH', left($2, 180), jsonb_build_object('search', $3::text, 'count', $4::bigint, 'url', $5::text))",
+         VALUES ($1, 'SAVED_SEARCH', left($2, 180),
+                 jsonb_build_object('search', $3::text, 'count', $4::bigint, 'url', $5::text,
+                                    'name', (SELECT s.name FROM saved_searches s WHERE s.id = $3::text::uuid)))",
     )
     .bind(user_id)
     .bind(title)
