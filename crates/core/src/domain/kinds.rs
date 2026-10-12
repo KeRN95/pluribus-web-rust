@@ -4,7 +4,8 @@
 //! (`Status::parse(&row.status)`), and a query is given `as_str()`, so the SQL and the queries
 //! checked against .sqlx stay as they were. The rules about where a listing stands are `Status`'s
 //! methods, which "Njoftimet e mia" (web/post.rs), the listings kept (web/saved.rs), the
-//! conversations (web/messages.rs) and the seller's actions (db/posting.rs) share.
+//! conversations (web/messages.rs), the seller's actions (db/posting.rs), a listing's page
+//! (web/listings.rs) and the API's (api/listing.rs) share.
 //!
 //! The schema's CHECKs stay the database's own guard; the tests below read the migrations and hold
 //! each enum to the CHECK that defines its column, so that a migration adding a value fails the
@@ -15,7 +16,10 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{format, i18n::t};
+use crate::{
+    format,
+    i18n::{t, t1},
+};
 
 /// A text that is none of a kind's values (`FromStr`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -339,6 +343,107 @@ impl Status {
             Self::Draft | Self::PendingReview | Self::Active | Self::Paused | Self::Sold | Self::Deleted => None,
         }
     }
+
+    /// Active, and of a kind that can be handed over (ListingType::sellable): its seller can say
+    /// someone is taking it ("Rezervo"), as db::ListingAction::Reserve does.
+    pub fn reservable(self, kind: ListingType) -> bool {
+        self == Self::Active && kind.sellable()
+    }
+
+    /// Reserved, of a kind that can be handed over: its seller can take the reservation off ("Hiq
+    /// rezervimin"), as db::ListingAction::Unreserve does.
+    pub fn unreservable(self, kind: ListingType) -> bool {
+        self == Self::Reserved && kind.sellable()
+    }
+
+    /// Not deleted yet: its seller can delete it ("Fshi"), as db::ListingAction::Delete does.
+    pub fn deletable(self) -> bool {
+        self != Self::Deleted
+    }
+
+    /// Whether a listing's page shows to someone: to anyone while it is on the site; whatever it
+    /// is, to its seller (`own`) and to the moderators; and while it waits for a moderator, to
+    /// whoever just posted it (`posted_it`: web/post.rs's cookie says so, signed in or not). For
+    /// anyone else there is nothing there, as for a listing that never was.
+    pub fn shown_to(self, own: bool, moderator: bool, posted_it: bool) -> bool {
+        self.on_site() || own || moderator || (self == Self::PendingReview && posted_it)
+    }
+
+    /// What a listing's page says of where it stands, in the badge after its category's path, once
+    /// it isn't simply up: reserved, sold (by its kind, format::sold), down for a while, expired,
+    /// off the site until a moderator decides ("Në shqyrtim") or taken off by them ("Hequr"); none
+    /// while it is active or waits for a moderator, which its note says (`page_note`).
+    pub fn page_label(self, kind: ListingType) -> Option<&'static str> {
+        match self {
+            Self::Reserved => Some(t("Rezervuar")),
+            Self::Sold => Some(format::sold(kind.as_str())),
+            Self::Paused => Some(t("Çaktivizuar")),
+            Self::Expired => Some(t("Skaduar")),
+            Self::Suspended => Some(t("Në shqyrtim")),
+            Self::Rejected => Some(t("Hequr")),
+            Self::Draft | Self::PendingReview | Self::Active | Self::Deleted => None,
+        }
+    }
+
+    /// What a card says over its photo of a listing on the site that is no longer simply up, as
+    /// the listings kept (/te-ruajturat) show them: reserved, or sold (by its kind); none for any
+    /// other, which no card shows.
+    pub fn card_label(self, kind: ListingType) -> Option<&'static str> {
+        match self {
+            Self::Reserved => Some(t("Rezervuar")),
+            Self::Sold => Some(format::sold(kind.as_str())),
+            Self::Draft
+            | Self::PendingReview
+            | Self::Active
+            | Self::Paused
+            | Self::Expired
+            | Self::Rejected
+            | Self::Suspended
+            | Self::Deleted => None,
+        }
+    }
+
+    /// What a listing's page says over it to those who see it while nobody else does, or nobody
+    /// yet (`shown_to`), in the language now: that it waits for a moderator (to whoever posted it,
+    /// `posted_it`, that nobody else sees it yet, usually for a few hours; to a moderator, that it
+    /// waits for them); that it is off the site with its seller's account or store, which a
+    /// moderator suspended (`seller_suspended`: db::seller_suspended), or for its reports; that the
+    /// moderators took it off, to its seller (`own`) with the reason they gave (`reason`), if any;
+    /// that its seller took it down for a while, or that it expired, to its seller with the button
+    /// that puts it back. None for one on the site, a draft or one deleted.
+    pub fn page_note(self, own: bool, posted_it: bool, seller_suspended: bool, reason: Option<&str>) -> Option<String> {
+        match self {
+            Self::PendingReview if posted_it => {
+                Some(t("Njoftimi yt pret miratimin e një moderatori: askush tjetër nuk e sheh ende. Zakonisht brenda pak orësh.").to_string())
+            }
+            Self::PendingReview => Some(t("Ky njoftim pret miratimin e moderatorëve.").to_string()),
+            Self::Suspended if seller_suspended => Some(t("Ky njoftim nuk shfaqet në faqe: llogaria e shitësit është pezulluar.").to_string()),
+            Self::Suspended => Some(t("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë.").to_string()),
+            Self::Rejected => Some(match reason.filter(|_| own) {
+                Some(reason) => t1("Moderatorët e hoqën këtë njoftim nga faqja: {}.", reason),
+                None => t("Moderatorët e hoqën këtë njoftim nga faqja.").to_string(),
+            }),
+            Self::Paused if own => Some(t("E ke çaktivizuar këtë njoftim: askush tjetër nuk e sheh. „Aktivizo“ e kthen në faqe aty ku ishte.").to_string()),
+            Self::Paused => Some(t("Shitësi e ka çaktivizuar këtë njoftim: askush tjetër nuk e sheh.").to_string()),
+            Self::Expired if own => Some(t("Ky njoftim skadoi: askush tjetër nuk e sheh. „Rifresko“ e kthen në faqe për 60 ditë të tjera.").to_string()),
+            Self::Expired => Some(t("Ky njoftim skadoi: askush tjetër nuk e sheh.").to_string()),
+            Self::Draft | Self::Active | Self::Reserved | Self::Sold | Self::Deleted => None,
+        }
+    }
+
+    /// Whether its offer is still to be had, as schema.org says it to Google (a listing's page's
+    /// Offer, web/listings.rs): in stock while active, sold out once sold, limited while reserved,
+    /// and out of stock otherwise.
+    pub fn availability(self) -> &'static str {
+        match self {
+            Self::Active => "InStock",
+            Self::Sold => "SoldOut",
+            Self::Reserved => "LimitedAvailability",
+            Self::Draft | Self::PendingReview | Self::Paused | Self::Expired | Self::Rejected | Self::Suspended | Self::Deleted => {
+                "OutOfStock"
+            }
+        }
+    }
 }
 
 impl ListingType {
@@ -349,6 +454,32 @@ impl ListingType {
     /// One of SELLABLE.
     pub fn sellable(self) -> bool {
         Self::SELLABLE.contains(&self)
+    }
+
+    /// Whether its price is a month's: a rent's, a rent wanted, or a job's pay ("/muaj").
+    pub fn monthly(self) -> bool {
+        matches!(self, Self::Rent | Self::WantedRent | Self::Job)
+    }
+}
+
+impl PriceType {
+    /// A price of its own, an amount: fixed, negotiable, or one it starts from ("nga 925 €"); not
+    /// a free one, nor one agreed with the seller. Only such a price can be borrowed for, worked
+    /// out by the square metre, or given to Google (listing.rs, web/listings.rs).
+    pub fn priced(self) -> bool {
+        matches!(self, Self::Fixed | Self::Negotiable | Self::From)
+    }
+}
+
+impl Condition {
+    /// Its state as schema.org says it to Google (a listing's page's Offer, web/listings.rs): new,
+    /// for parts as damaged, and like new or used as used.
+    pub fn item_condition(self) -> &'static str {
+        match self {
+            Self::New => "NewCondition",
+            Self::ForParts => "DamagedCondition",
+            Self::LikeNew | Self::Used => "UsedCondition",
+        }
     }
 }
 
@@ -533,6 +664,106 @@ mod tests {
         }
         assert_eq!(parse(""), None);
         assert!("NOTHING".parse::<K>().is_err());
+    }
+
+    #[test]
+    fn a_listings_page_shows_to_whom_its_status_lets_it() {
+        for status in Status::ALL {
+            // On the site, to anyone; off it, to its seller and the moderators alone.
+            assert_eq!(status.shown_to(false, false, false), status.on_site(), "{status}");
+            assert!(status.shown_to(true, false, false) && status.shown_to(false, true, false), "{status}");
+            // Waiting for a moderator, to whoever just posted it too.
+            assert_eq!(status.shown_to(false, false, true), status.on_site() || status == Status::PendingReview, "{status}");
+        }
+    }
+
+    #[test]
+    fn a_listing_says_where_it_stands_on_its_page_and_its_card() {
+        use ListingType::{Rent, Sell};
+        let said = |label: fn(Status, ListingType) -> Option<&'static str>, kind| {
+            Status::ALL.iter().filter_map(|status| label(*status, kind).map(|label| (status.as_str(), label))).collect::<Vec<_>>()
+        };
+        assert_eq!(
+            said(Status::page_label, Sell),
+            [
+                ("PAUSED", "Çaktivizuar"),
+                ("RESERVED", "Rezervuar"),
+                ("SOLD", "Shitur"),
+                ("EXPIRED", "Skaduar"),
+                ("REJECTED", "Hequr"),
+                ("SUSPENDED", "Në shqyrtim")
+            ]
+        );
+        assert_eq!(Status::Sold.page_label(Rent), Some("Dhënë me qira"));
+        assert_eq!(said(Status::card_label, Rent), [("RESERVED", "Rezervuar"), ("SOLD", "Dhënë me qira")]);
+        crate::i18n::LANG.sync_scope(crate::i18n::Lang::En, || {
+            assert_eq!(Status::Paused.page_label(Sell), Some("Paused"));
+            assert_eq!(Status::Sold.card_label(Sell), Some("Sold"));
+        });
+    }
+
+    #[test]
+    fn a_listings_page_says_why_nobody_else_sees_it() {
+        let note = |status: Status, own, posted_it, suspended, reason| status.page_note(own, posted_it, suspended, reason);
+        for status in [Status::Draft, Status::Active, Status::Reserved, Status::Sold, Status::Deleted] {
+            assert_eq!(note(status, true, true, true, Some("Arsye")), None, "{status}");
+        }
+        assert!(note(Status::PendingReview, true, true, false, None).unwrap().starts_with("Njoftimi yt pret miratimin e një moderatori"));
+        assert_eq!(note(Status::PendingReview, false, false, false, None).as_deref(), Some("Ky njoftim pret miratimin e moderatorëve."));
+        assert!(note(Status::Suspended, false, false, true, None).unwrap().ends_with("llogaria e shitësit është pezulluar."));
+        assert!(note(Status::Suspended, true, true, false, None).unwrap().contains("disa njerëz e raportuan"));
+        // The moderators' reason to its seller alone.
+        let reason = Some("Foto e huaj");
+        assert_eq!(note(Status::Rejected, true, true, false, reason).as_deref(), Some("Moderatorët e hoqën këtë njoftim nga faqja: Foto e huaj."));
+        assert_eq!(note(Status::Rejected, false, false, false, reason).as_deref(), Some("Moderatorët e hoqën këtë njoftim nga faqja."));
+        assert_eq!(note(Status::Rejected, true, true, false, None).as_deref(), Some("Moderatorët e hoqën këtë njoftim nga faqja."));
+        // Its seller is told how to put it back.
+        assert!(note(Status::Paused, true, true, false, None).unwrap().contains("„Aktivizo“"));
+        assert_eq!(note(Status::Paused, false, false, false, None).as_deref(), Some("Shitësi e ka çaktivizuar këtë njoftim: askush tjetër nuk e sheh."));
+        assert!(note(Status::Expired, true, true, false, None).unwrap().contains("„Rifresko“"));
+        assert_eq!(note(Status::Expired, false, false, false, None).as_deref(), Some("Ky njoftim skadoi: askush tjetër nuk e sheh."));
+        crate::i18n::LANG.sync_scope(crate::i18n::Lang::En, || {
+            assert_eq!(note(Status::Expired, false, false, false, None).as_deref(), Some("This listing has expired: nobody else can see it."));
+            assert_eq!(
+                note(Status::Rejected, true, true, false, reason).as_deref(),
+                Some("The moderators removed this listing from the site: Foto e huaj.")
+            );
+        });
+    }
+
+    #[test]
+    fn a_sellers_actions_go_by_where_the_listing_stands() {
+        use ListingType::{Rent, Sell, Service};
+        assert!(Status::Active.reservable(Sell) && Status::Active.reservable(Rent));
+        assert!(!Status::Active.reservable(Service), "nothing to hand over");
+        assert!(!Status::Reserved.reservable(Sell) && Status::Reserved.unreservable(Sell));
+        assert!(!Status::Active.unreservable(Sell) && !Status::Reserved.unreservable(Service));
+        assert!(Status::ALL.iter().all(|status| status.deletable() == (*status != Status::Deleted)));
+        // Selling as reserving: up, and of a kind that can be handed over.
+        for status in Status::ALL {
+            for kind in ListingType::ALL {
+                assert_eq!(status.sellable(kind), status.reservable(kind) || status.unreservable(kind), "{status} {kind}");
+            }
+        }
+    }
+
+    #[test]
+    fn google_reads_an_offers_availability_and_condition_from_its_kinds() {
+        let availability: Vec<_> = Status::ALL.iter().map(|status| status.availability()).collect();
+        assert_eq!(
+            availability,
+            ["OutOfStock", "OutOfStock", "InStock", "OutOfStock", "LimitedAvailability", "SoldOut", "OutOfStock", "OutOfStock", "OutOfStock", "OutOfStock"]
+        );
+        let conditions: Vec<_> = Condition::ALL.iter().map(|condition| condition.item_condition()).collect();
+        assert_eq!(conditions, ["NewCondition", "UsedCondition", "UsedCondition", "DamagedCondition"]);
+    }
+
+    #[test]
+    fn a_price_of_its_own_and_a_months_are_told_by_their_kinds() {
+        let priced: Vec<_> = PriceType::ALL.into_iter().filter(|kind| kind.priced()).collect();
+        assert_eq!(priced, [PriceType::Fixed, PriceType::Negotiable, PriceType::From]);
+        let monthly: Vec<_> = ListingType::ALL.into_iter().filter(|kind| kind.monthly()).collect();
+        assert_eq!(monthly, [ListingType::Rent, ListingType::WantedRent, ListingType::Job]);
     }
 
     #[test]

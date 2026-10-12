@@ -1,4 +1,8 @@
-//! A listing's page, its phone number reveal, and its views.
+//! A listing's page, its phone number reveal, and its views. Where a listing stands is
+//! domain::Status's to say (its badge, its note, who may see it, what Google is told), and what
+//! its price works out to (a loan, a drop, a car's verdict, a property's square metre) is
+//! domain::listing's, which the JSON API shares (api/listing.rs); since C5, when they moved out of
+//! here, this file words them for the page.
 
 use std::cmp::Ordering;
 
@@ -8,7 +12,8 @@ use axum::{
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Redirect, Response},
 };
-use rust_decimal::{Decimal, RoundingStrategy, prelude::ToPrimitive};
+use pluribus_services::listings::{owns, visitor};
+use rust_decimal::Decimal;
 
 use super::{
     Result,
@@ -26,10 +31,24 @@ use super::{
 use crate::{
     AppState,
     db::{self, AttributeValue, CardDetail, ListingCard, ListingDetail, MapPoint, Photo, SellerContact},
+    domain::{Condition, ListingType, PriceType, Status, listing as rules},
     format,
-    i18n::{LANG, Lang, t, t_value, t1, t2},
+    i18n::{LANG, Lang, t, t_value, t1},
     media::{CARD_SIDE, FULL_SIDE},
 };
+
+// The down payment the loan calculator takes for given (loan_calculator.html, which reads it
+// here): domain::listing's, as the API gives it.
+use crate::domain::listing::LOAN_DOWN_PERCENT;
+
+// The categories whose listings' pages show where they are on a map and are laid out as a car's:
+// domain::listing's, the posting rules' own, which this file kept a copy of until C5 (post.rs's
+// test still names it here).
+pub(super) use crate::domain::listing::MAPPED;
+
+// A text percent-encoded for an address (format::percent_encoded, this file's until C5): the share
+// link of a listing just posted, and stores.rs's invitations, which take it from here.
+pub(super) use crate::format::percent_encoded;
 
 /// How wide a listing's photos show, for the browser to pick a copy of each (Photo::webp_srcset):
 /// for every listing but a car's or a property's, whose photo stands at the left of its page from
@@ -44,12 +63,6 @@ pub const SPLIT_GALLERY_SIZES: &str =
 /// listing.css); the page's 760 px column under 960.
 pub const CAR_GALLERY_SIZES: &str = "(min-width: 1080px) 635px, (min-width: 960px) calc((100vw - 128px) * .6667), (min-width: 880px) 760px, (min-width: 720px) calc(100vw - 120px), calc(100vw - 2rem)";
 
-/// The down payment the loan calculator takes for given, as a percentage of the price
-/// (loan_calculator.html, loan_controller.js): what Albania's banks ask for a used car, which
-/// they finance 60 to 65% of (Intesa Sanpaolo 65%, Tirana Bank 60%, in 2026; a new car 70 to
-/// 75%, a lease 80%). The loan is the rest of the price.
-pub const LOAN_DOWN_PERCENT: u32 = 35;
-
 /// A car's key facts, in a row under its title (listing.html, .key-facts), in this order: the
 /// year, the mileage, the gearbox and the fuel, as FINN has them. They leave the details.
 const CAR_FACTS: [&str; 4] = ["vehicle_year", "vehicle_mileage", "vehicle_transmission", "vehicle_fuel"];
@@ -57,10 +70,6 @@ const CAR_FACTS: [&str; 4] = ["vehicle_year", "vehicle_mileage", "vehicle_transm
 /// A property's key facts, as the canvas has them: its rooms, its area, its floor and whether it is
 /// furnished.
 const PROPERTY_FACTS: [&str; 4] = ["property_rooms", "property_area", "property_floor", "property_furnished"];
-
-/// The categories whose listings' pages show where they are on a map, under the seller: property
-/// (Prona and those under it) and cars (Makina), which buyers go to see.
-pub(super) const MAPPED: [&str; 2] = ["prona", "makina"];
 
 /// Where a property or a car is, on the map under its seller (listing_map_controller.js): its
 /// point, which is its place's (its town's, for a zone without one of its own), so a circle round
@@ -120,16 +129,10 @@ impl PhotoExt for Photo {
     }
 }
 
-/// What a loan for it would be, where its page offers the loan calculator: something on sale at
-/// a set price, a negotiable one or one from which, of more than 500 €, or 50 000 Lekë.
-fn loan_amount(listing_type: &str, price_type: &str, currency: &str, price_amount: Option<Decimal>) -> Option<Decimal> {
-    let priced = matches!(price_type, "FIXED" | "NEGOTIABLE" | "FROM");
-    let enough = match currency {
-        "EUR" => Decimal::from(500),
-        "ALL" => Decimal::from(50_000),
-        _ => return None,
-    };
-    price_amount.filter(|amount| priced && listing_type == "SELL" && *amount > enough)
+/// A row's kind of listing and kind of price, as it spells them: None for a spelling the schema
+/// doesn't know (its CHECKs allow none), which then has no loan, no square metre and no drop.
+fn kinds(listing_type: &str, price_type: &str) -> Option<(ListingType, PriceType)> {
+    ListingType::parse(listing_type).zip(PriceType::parse(price_type))
 }
 
 /// What the pages say of a listing's card, and the stand-in a tap shows: `ListingCard`'s own
@@ -167,10 +170,13 @@ impl ListingCardExt for ListingCard {
         format!("/listing/{}-{}", self.public_no, self.slug)
     }
 
-    /// Whether its page offers the loan calculator, a button at the price's line's end, which the
-    /// stand-in a tap shows keeps a place for (data-loan, application.js).
+    /// Whether its page offers the loan calculator (domain::listing::loan_amount), a button at the
+    /// price's line's end, which the stand-in a tap shows keeps a place for (data-loan,
+    /// application.js).
     fn loan(&self) -> bool {
-        loan_amount(&self.listing_type, &self.price_type, &self.currency, self.price_amount).is_some()
+        kinds(&self.listing_type, &self.price_type)
+            .and_then(|(kind, price_type)| rules::loan_amount(kind, price_type, &self.currency, self.price_amount))
+            .is_some()
     }
 
     /// Whether its page has a circle after the loan calculator's that weighs its price: what a
@@ -215,10 +221,11 @@ impl ListingCardExt for ListingCard {
     }
 
     fn compares(&self) -> bool {
-        let priced = matches!(self.price_type.as_str(), "FIXED" | "NEGOTIABLE" | "FROM");
-        let area = self.listing_type == "SELL" && priced && self.price_amount.is_some() && self.area_m2.is_some_and(|area| area > Decimal::ZERO);
+        let area = kinds(&self.listing_type, &self.price_type)
+            .and_then(|(kind, price_type)| rules::area_price(kind, price_type, self.price_amount, self.area_m2))
+            .is_some();
         let car = match (self.price_normalized, self.model_median) {
-            (Some(price), Some(median)) => price > Decimal::ZERO && car_prices::verdict(price, median).is_some(),
+            (Some(price), Some(median)) => price > Decimal::ZERO && rules::car_verdict(price, median).is_some(),
             _ => false,
         };
         area || car
@@ -230,13 +237,10 @@ impl ListingCardExt for ListingCard {
     }
 
     /// Over the photo of a kept listing that is no longer simply up (/te-ruajturat alone lists
-    /// them): "Rezervuar", or "Shitur" ("Dhënë me qira" for a rental).
+    /// them): "Rezervuar", or "Shitur" ("Dhënë me qira" for a rental; Status::card_label).
     fn status_label(&self) -> Option<&'static str> {
-        match self.status.as_str() {
-            "RESERVED" => Some(t("Rezervuar")),
-            "SOLD" => Some(format::sold(&self.listing_type)),
-            _ => None,
-        }
+        let kind = ListingType::parse(&self.listing_type).unwrap_or(ListingType::Sell);
+        Status::parse(&self.status)?.card_label(kind)
     }
 
     fn price_display(&self) -> String {
@@ -279,10 +283,11 @@ impl ListingCardExt for ListingCard {
         }
     }
 
-    /// Whether its page offers a message to its seller (contact_bar.html: a listing up or reserved),
-    /// for the stand-in's contact bar (data-closed when it doesn't).
+    /// Whether its page offers a message to its seller (contact_bar.html: a listing up, active or
+    /// reserved, Status::up), for the stand-in's contact bar (data-closed when it doesn't); a card
+    /// read without its status (sqlx's default, empty) is offered it too.
     fn messages(&self) -> bool {
-        matches!(self.status.as_str(), "ACTIVE" | "RESERVED" | "")
+        self.status.is_empty() || Status::parse(&self.status).is_some_and(Status::up)
     }
 
     /// What the list's card shows of its description: all of it, or, when it is longer than
@@ -296,15 +301,11 @@ impl ListingCardExt for ListingCard {
         format!("{}…", at_word.trim_end_matches([',', '.', ';', ':', '-']))
     }
 
-    /// A clear bargain: a car whose price is well under what cars of its model and year ask
-    /// (car_prices::verdict), as its page says; not one whose price dropped lately, whose pill
-    /// says enough.
+    /// A clear bargain: a car whose price is well under what cars of its model and year ask, as its
+    /// page says; not one whose price dropped lately, whose pill says enough
+    /// (domain::listing::bargain, the API's `good_price`).
     fn bargain(&self) -> bool {
-        let good = match (self.price_normalized, self.model_median) {
-            (Some(price), Some(median)) => car_prices::verdict(price, median) == Some(car_prices::Verdict::Good),
-            _ => false,
-        };
-        good && self.price_drop().is_none()
+        rules::bargain(self.price_normalized, self.model_median, self.price_drop().is_some())
     }
 
     /// By how much its price dropped lately, and from what (price_drop), for the badge beside it.
@@ -440,15 +441,12 @@ impl MapPointExt for MapPoint {
     }
 }
 
-/// How far a property's price per square metre may be from its zone's average, in euros, and still
-/// count as about it (yellow): further under it, it is cheap for the zone (green), further over it,
-/// dear (red).
-const ZONE_MARGIN_EUR: i64 = 200;
-
 /// What the pages say of a listing's page: `ListingDetail`'s own methods in all but name, a trait
 /// because the type is pluribus-db's (each method's doc is on its body, below).
 pub trait ListingDetailExt {
     fn url(&self) -> String;
+    fn status(&self) -> Status;
+    fn kind(&self) -> Option<ListingType>;
     fn price_main(&self) -> String;
     fn price_negotiable(&self) -> String;
     fn price_note(&self) -> String;
@@ -478,6 +476,19 @@ impl ListingDetailExt for ListingDetail {
         format!("/listing/{}-{}", self.public_no, self.slug)
     }
 
+    /// Where it stands. The schema's CHECK allows no status Status lacks (its test holds it to the
+    /// migrations); one would count as deleted here: no badge, and its page for nobody but its
+    /// seller and the moderators.
+    fn status(&self) -> Status {
+        Status::parse(&self.status).unwrap_or(Status::Deleted)
+    }
+
+    /// Its kind, likewise: one ListingType lacked couldn't be sold, and would be said as one on
+    /// sale.
+    fn kind(&self) -> Option<ListingType> {
+        ListingType::parse(&self.listing_type)
+    }
+
     /// The price itself; what follows it, smaller on the page, is price_note.
     fn price_main(&self) -> String {
         format::price_parts(self.price_amount, &self.currency, &self.price_type, &self.listing_type).0
@@ -497,17 +508,15 @@ impl ListingDetailExt for ListingDetail {
     }
 
     /// A property on sale with a price and an area: what a square metre of it costs, in its own
-    /// currency and to the whole euro or lek, with what it was worked out from, for the bubble
-    /// under the price and the card it opens. Rents, wanted ads and "price on request" have none.
+    /// currency and to the whole euro or lek (domain::listing::area_price), with what it was worked
+    /// out from, for the bubble under the price and the card it opens. Rents, wanted ads and "price
+    /// on request" have none.
     fn area_price(&self) -> Option<AreaPrice> {
-        let priced = matches!(self.price_type.as_str(), "FIXED" | "NEGOTIABLE" | "FROM");
+        let (kind, price_type) = kinds(&self.listing_type, &self.price_type)?;
+        let per_area = rules::area_price(kind, price_type, self.price_amount, self.area_m2)?;
         let (amount, area) = (self.price_amount?, self.area_m2?);
-        if self.listing_type != "SELL" || !priced || area <= Decimal::ZERO {
-            return None;
-        }
-        let per_area = (amount / area).round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero);
         // A starting price says so before each: "nga 925 €/m²".
-        let from = |text: String| if self.price_type == "FROM" { t1("nga {}", text) } else { text };
+        let from = |text: String| if price_type == PriceType::From { t1("nga {}", text) } else { text };
         Some(AreaPrice {
             per_area: from(format!("{}/m²", format::money(per_area, &self.currency))),
             price: from(format::money(amount, &self.currency)),
@@ -518,27 +527,17 @@ impl ListingDetailExt for ListingDetail {
     }
 
     /// How `per_area`, the price per square metre as the bubble shows it, compares with what one
-    /// costs in the listing's zone on average, where its zone has an average: within
-    /// ZONE_MARGIN_EUR of it either way is about the same. The two are compared rounded, as the card
-    /// shows them, so that its figures add up. A starting price ("nga") says too little to compare.
+    /// costs in the listing's zone on average, where its zone has an average
+    /// (domain::listing::zone_price: within ZONE_MARGIN_EUR of it either way is about the same, the
+    /// two compared rounded, as the card shows them, so that its figures add up; a starting price,
+    /// "nga", says too little to compare), as the card words it.
     fn zone_price(&self, per_area: Decimal) -> Option<ZonePrice> {
         let zone = self.zone.as_ref()?;
         let (average_eur, listings) = (self.zone_average_eur?, self.zone_listings?);
-        let rate = self.eur_rate.filter(|rate| *rate > Decimal::ZERO)?;
-        if self.price_type == "FROM" {
-            return None;
-        }
-        let average = (average_eur / rate).round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero);
-        let difference = per_area - average;
-        let margin = Decimal::from(ZONE_MARGIN_EUR);
-        let (tone, verdict) = match difference * rate {
-            eur if eur <= -margin => ("price-below", t("Nën mesataren")),
-            eur if eur >= margin => ("price-above", t("Mbi mesataren")),
-            _ if difference.is_zero() => ("price-near", t("Njësoj si mesatarja")),
-            _ => ("price-near", t("Afër mesatares")),
-        };
-        let gap = format::money(difference.abs(), &self.currency);
-        let difference = match difference.cmp(&Decimal::ZERO) {
+        let price_type = PriceType::parse(&self.price_type)?;
+        let compared = rules::zone_price(per_area, price_type, average_eur, self.eur_rate)?;
+        let gap = format::money(compared.difference.abs(), &self.currency);
+        let difference = match compared.difference.cmp(&Decimal::ZERO) {
             Ordering::Less => Some(t1("{}/m² më lirë", gap)),
             Ordering::Greater => Some(t1("{}/m² më shtrenjtë", gap)),
             Ordering::Equal => None,
@@ -546,19 +545,20 @@ impl ListingDetailExt for ListingDetail {
         Some(ZonePrice {
             zone: zone.clone(),
             category: t(&self.category_name).to_string(),
-            average: format!("{}/m²", format::money(average, &self.currency)),
+            average: format!("{}/m²", format::money(compared.average, &self.currency)),
             listings: format::listing_count(listings, i64::MAX),
-            tone,
-            verdict,
+            tone: compared.verdict.tone(),
+            verdict: compared.verdict.words(),
             difference,
         })
     }
 
-    /// The price a loan calculator starts from: only for things on sale with a price of their own
-    /// (not rents, wanted ads or "price on request") that cost enough to borrow for, more than
-    /// 500 € or, about the same, 50 000 Lekë.
+    /// The price a loan calculator starts from (domain::listing::loan_amount): only for things on
+    /// sale with a price of their own (not rents, wanted ads or "price on request") that cost
+    /// enough to borrow for, more than 500 € or, about the same, 50 000 Lekë.
     fn loan_amount(&self) -> Option<Decimal> {
-        loan_amount(&self.listing_type, &self.price_type, &self.currency, self.price_amount)
+        let (kind, price_type) = kinds(&self.listing_type, &self.price_type)?;
+        rules::loan_amount(kind, price_type, &self.currency, self.price_amount)
     }
 
     fn currency_symbol(&self) -> &str {
@@ -569,9 +569,9 @@ impl ListingDetailExt for ListingDetail {
         format::initial(&self.seller_name)
     }
 
-    /// A business sells it, not a private seller: its seller's profile is a business's.
+    /// A business sells it, not a private seller: its seller's page is a store's, by its slug.
     fn seller_is_business(&self) -> bool {
-        self.seller_url.starts_with("/biznes/")
+        self.seller_business_slug.is_some()
     }
 
     /// Under the seller's name (seller_card.html), since when they are on the site, as the canvas
@@ -614,38 +614,29 @@ impl ListingDetailExt for ListingDetail {
         self.condition.as_deref().map(format::condition)
     }
 
+    /// Its badge after its category's path, once it isn't simply up (Status::page_label):
+    /// "Rezervuar", "Shitur" ("Dhënë me qira" for a rental), "Çaktivizuar", "Skaduar", "Në
+    /// shqyrtim", "Hequr".
     fn status_label(&self) -> Option<&'static str> {
-        match self.status.as_str() {
-            "RESERVED" => Some(t("Rezervuar")),
-            "SOLD" => Some(format::sold(&self.listing_type)),
-            "PAUSED" => Some(t("Çaktivizuar")),
-            "EXPIRED" => Some(t("Skaduar")),
-            "SUSPENDED" => Some(t("Në shqyrtim")),
-            "REJECTED" => Some(t("Hequr")),
-            _ => None,
-        }
+        self.status().page_label(self.kind().unwrap_or(ListingType::Sell))
     }
 
-    /// The tone its badge takes (.badge.warn, .badge.danger in listing.css), as the canvas has
-    /// them: a reservation in the warm yellow, a listing expired or taken off in red's tint; the
-    /// rest grey.
+    /// The tone its badge takes (.badge.warn, .badge.danger in listing.css; Status::tone), as the
+    /// canvas has them: a reservation in the warm yellow, a listing expired or taken off in red's
+    /// tint; the rest grey.
     fn status_tone(&self) -> Option<&'static str> {
-        match self.status.as_str() {
-            "RESERVED" => Some("warn"),
-            "EXPIRED" | "SUSPENDED" | "REJECTED" => Some("danger"),
-            _ => None,
-        }
+        self.status().tone()
     }
 
-    /// On the site for anyone with its link: not taken off it by its reports or the moderators,
-    /// nor down for a while by its seller, nor expired (expiry.rs).
+    /// On the site for anyone with its link (Status::on_site): not taken off it by its reports or
+    /// the moderators, nor down for a while by its seller, nor expired (expiry.rs).
     fn on_site(&self) -> bool {
-        matches!(self.status.as_str(), "ACTIVE" | "RESERVED" | "SOLD")
+        self.status().on_site()
     }
 
-    /// Of a kind that can be sold or reserved (db::SELLABLE_KINDS): one on sale or for rent.
+    /// Of a kind that can be sold or reserved (ListingType::sellable): one on sale or for rent.
     fn sellable(&self) -> bool {
-        db::SELLABLE_KINDS.contains(&self.listing_type.as_str())
+        self.kind().is_some_and(ListingType::sellable)
     }
 
     /// Its seller's button that says it is sold: "U shit", or "U dha me qira" for a rental.
@@ -653,17 +644,19 @@ impl ListingDetailExt for ListingDetail {
         format::sell_action(&self.listing_type)
     }
 
-    /// Up or reserved and expiring within a week: "Skadon pas 3 ditësh", by its seller's buttons.
+    /// Up or reserved (Status::up) and expiring within a week: "Skadon pas 3 ditësh", by its
+    /// seller's buttons.
     fn expires_soon(&self) -> Option<String> {
-        match self.status.as_str() {
-            "ACTIVE" | "RESERVED" => format::expires_soon(self.expires_at?, time::OffsetDateTime::now_utc()),
-            _ => None,
+        if !self.status().up() {
+            return None;
         }
+        format::expires_soon(self.expires_at?, time::OffsetDateTime::now_utc())
     }
 
-    /// Expired, or expiring within a week: its seller's "Rifresko" keeps it up db::LISTING_DAYS more.
+    /// Expired, or expiring within a week (Status::renewable): its seller's "Rifresko" keeps it up
+    /// db::LISTING_DAYS more.
     fn renewable(&self) -> bool {
-        self.status == "EXPIRED" || self.expires_soon().is_some()
+        self.status().renewable(self.expires_soon().is_some())
     }
 }
 
@@ -767,39 +760,30 @@ fn listing_meta(origin: &str, listing: &ListingDetail, photos: &[Photo]) -> Page
     if let Some(photo) = photos.first() {
         meta = meta.with_image(origin, &photo.url, listing.title.clone());
     }
-    meta.noindex = !matches!(listing.status.as_str(), "ACTIVE" | "RESERVED");
-    let priced = matches!(listing.price_type.as_str(), "FIXED" | "NEGOTIABLE" | "FROM");
+    // Up, for search engines to list (Status::up): not one sold, nor one off the site.
+    let status = listing.status();
+    meta.noindex = !status.up();
+    let priced = PriceType::parse(&listing.price_type).is_some_and(PriceType::priced);
     let Some(amount) = listing.price_amount.filter(|_| priced) else {
         return meta;
     };
     let amount = amount.normalize().to_string();
     meta.price = Some((amount.clone(), listing.currency.clone()));
-    if listing.listing_type == "SELL" {
+    if listing.kind() == Some(ListingType::Sell) {
         meta.kind = "product";
-        let availability = match listing.status.as_str() {
-            "ACTIVE" => "InStock",
-            "SOLD" => "SoldOut",
-            "RESERVED" => "LimitedAvailability",
-            _ => "OutOfStock",
-        };
         let mut offer = serde_json::json!({
             "@type": "Offer",
             "price": amount,
             "priceCurrency": listing.currency,
-            "availability": format!("https://schema.org/{availability}"),
+            "availability": format!("https://schema.org/{}", status.availability()),
             "url": url,
             "seller": {
                 "@type": if listing.seller_is_business() { "Organization" } else { "Person" },
                 "name": listing.seller_name,
             },
         });
-        if let Some(condition) = listing.condition.as_deref() {
-            let condition = match condition {
-                "NEW" => "NewCondition",
-                "FOR_PARTS" => "DamagedCondition",
-                _ => "UsedCondition",
-            };
-            offer["itemCondition"] = format!("https://schema.org/{condition}").into();
+        if let Some(condition) = listing.condition.as_deref().and_then(Condition::parse) {
+            offer["itemCondition"] = format!("https://schema.org/{}", condition.item_condition()).into();
         }
         let product = serde_json::json!({
             "@context": "https://schema.org",
@@ -816,12 +800,10 @@ fn listing_meta(origin: &str, listing: &ListingDetail, photos: &[Photo]) -> Page
     meta
 }
 
-/// By how much a price dropped from `was` (db's price_was!), in whole percent, at least 1, and
-/// `was` as the site writes a price: (7, "10 000 €").
+/// By how much a price dropped from `was` (db's price_was!), in whole percent, at least 1
+/// (domain::listing::price_drop), and `was` as the site writes a price: (7, "10 000 €").
 pub fn price_drop(was: Option<Decimal>, price: Option<Decimal>, currency: &str) -> Option<(i64, String)> {
-    let (was, price) = (was?, price?);
-    let percent = ((was - price) / was * Decimal::ONE_HUNDRED).round().to_i64()?;
-    Some((percent.max(1), format::money(was, currency)))
+    rules::price_drop(was, price).map(|drop| (drop.percent, format::money(drop.from, currency)))
 }
 
 /// URLs look like /listing/1042-vw-golf-7: the number identifies the listing, and the slug is
@@ -836,17 +818,17 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     // One its reports or the moderators took off the site is for its seller and the moderators.
     let user = current_user(&state, &headers).await?;
     // Its seller's: a private seller's, or a store's people who post (manages_listing).
-    let own = match (&user, listing.seller_business_id) {
-        (None, _) => false,
-        (Some(user), None) => user.id == listing.created_by_user_id,
-        (Some(user), Some(store)) => db::posts_for(&state.db, store, user.id).await?,
+    let own = match &user {
+        Some(user) => owns(&state.db, user.id, &listing).await?,
+        None => false,
     };
     let moderator = user.as_ref().is_some_and(|user| state.moderators.include(user));
     // Posted just now (post.rs): whoever did, signed in or not, sees it while it waits for a
-    // moderator.
+    // moderator (Status::shown_to).
     let just_posted = cookie(&headers, POSTED_COOKIE).is_some_and(|no| no == listing.public_no.to_string());
-    let waiting = listing.status == "PENDING_REVIEW";
-    if !listing.on_site() && !own && !moderator && !(waiting && just_posted) {
+    let status = listing.status();
+    let waiting = status == Status::PendingReview;
+    if !status.shown_to(own, moderator, just_posted) {
         return not_found().await;
     }
     let canonical = format!("{}-{}", listing.public_no, listing.slug);
@@ -873,6 +855,9 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let price_drop = price_drop(price_was, listing.price_amount, &listing.currency);
     let views = (views > 0).then(|| format::number(Decimal::from(views)));
     let category = categories.by_slug(&listing.category_slug);
+    // Its category and those above it, the nearest first, whose own icon a property can take, and
+    // by which its page is laid out (a car's, a property's).
+    let slugs = rules::lineage(&categories, &listing.category_slug);
     // Its category and the one above it as pills, as a category page's head has them, and the one
     // above that, where there is one, for the round button before them.
     let pill = |category: &db::Category| Subcategory {
@@ -885,14 +870,6 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let category_pill = match category {
         Some(category) => pill(category),
         None => Subcategory { name: listing.category_name.clone(), url: format!("/c/{}", listing.category_slug), icon: None },
-    };
-    // Its category and those above it, the nearest first, whose own icon a property can take.
-    let slugs: Vec<&str> = match category {
-        Some(category) => std::iter::once(category)
-            .chain(categories.ancestors(category).into_iter().rev())
-            .map(|category| category.slug.as_str())
-            .collect(),
-        None => vec![listing.category_slug.as_str()],
     };
     let reveal = contact.map(|contact| match contact {
         SellerContact::Phone(_) => Reveal::Phone,
@@ -908,27 +885,11 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     let blocked = hidden.contains(&listing.created_by_user_id);
     let related_next = related_next(&mut related, listing.public_no, 0);
     safety::without_hidden(&mut related, &hidden);
-    let hidden_note = match listing.status.as_str() {
-        "PENDING_REVIEW" if own || just_posted => {
-            Some(t("Njoftimi yt pret miratimin e një moderatori: askush tjetër nuk e sheh ende. Zakonisht brenda pak orësh.").to_string())
-        }
-        "PENDING_REVIEW" => Some(t("Ky njoftim pret miratimin e moderatorëve.").to_string()),
-        // Off the site with its seller's account or store, which a moderator suspended
-        // (db::suspend_user), or for its reports.
-        "SUSPENDED" if db::seller_suspended(&state.db, listing.public_no).await? => {
-            Some(t("Ky njoftim nuk shfaqet në faqe: llogaria e shitësit është pezulluar.").to_string())
-        }
-        "SUSPENDED" => Some(t("Ky njoftim nuk shfaqet në faqe: disa njerëz e raportuan, dhe moderatorët do ta shqyrtojnë.").to_string()),
-        "REJECTED" => Some(match listing.rejection_reason.as_deref().filter(|_| own) {
-            Some(reason) => t1("Moderatorët e hoqën këtë njoftim nga faqja: {}.", reason),
-            None => t("Moderatorët e hoqën këtë njoftim nga faqja.").to_string(),
-        }),
-        "PAUSED" if own => Some(t("E ke çaktivizuar këtë njoftim: askush tjetër nuk e sheh. „Aktivizo“ e kthen në faqe aty ku ishte.").to_string()),
-        "PAUSED" => Some(t("Shitësi e ka çaktivizuar këtë njoftim: askush tjetër nuk e sheh.").to_string()),
-        "EXPIRED" if own => Some(t("Ky njoftim skadoi: askush tjetër nuk e sheh. „Rifresko“ e kthen në faqe për 60 ditë të tjera.").to_string()),
-        "EXPIRED" => Some(t("Ky njoftim skadoi: askush tjetër nuk e sheh.").to_string()),
-        _ => None,
-    };
+    // Why nobody else sees it, or nobody yet, to those who do (Status::page_note): off the site with
+    // its seller's account or store, which a moderator suspended (db::suspend_user), rather than for
+    // its reports; the moderators' reason to its seller.
+    let seller_suspended = status == Status::Suspended && db::seller_suspended(&state.db, listing.public_no).await?;
+    let hidden_note = status.page_note(own, own || just_posted, seller_suspended, listing.rejection_reason.as_deref());
     // A car's title says its make, model and year: its details leave them out.
     let titled = listing.heading.is_some();
     let detail_of = |attribute: &AttributeValue| {
@@ -942,10 +903,11 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
             values: DetailValue::of(attribute),
         }
     };
-    // A car's page (Makina) and a property's (MAPPED) have their key facts in a row under the title,
-    // which leave the details, and their options under their own names after the grid of the
-    // others (listing.html); and their photos a mosaic, and where it is, on a map under the seller.
-    let car_page = slugs.contains(&"makina");
+    // A car's page (Makina, CARS) and a property's (MAPPED) have their key facts in a row under the
+    // title, which leave the details, and their options under their own names after the grid of
+    // the others (listing.html); and their photos a mosaic, and where it is, on a map under the
+    // seller.
+    let car_page = slugs.contains(&rules::CARS);
     let deal_page = slugs.iter().any(|slug| MAPPED.contains(slug));
     let fact_codes: &[&str] = if car_page {
         &CAR_FACTS
@@ -991,7 +953,7 @@ pub async fn show(State(state): State<AppState>, headers: HeaderMap, Path(key): 
     };
     // Said once: the cookie that says so (post.rs) goes with this answer.
     let posted = !own && just_posted && !waiting;
-    let just_published = own && just_posted && listing.status == "ACTIVE";
+    let just_published = own && just_posted && status == Status::Active;
     let whatsapp_share = format!("https://wa.me/?text={}", percent_encoded(&format!("{} {}{}", listing.title, seo::origin(&headers), listing.url())));
     let page = ListingPage::related(related, related_next);
     let meta = listing_meta(&seo::origin(&headers), &listing, &photos);
@@ -1128,20 +1090,10 @@ impl AttributeValueExt for AttributeValue {
     /// Its values in the language now, a multi-select's each: a choice's label, a text someone
     /// typed and the name of a box ticked as the database words them (i18n::t_value, which says
     /// them in English), a number with its unit (format::attribute_number: "148 000 km"), a box
-    /// left unticked "Jo", a date (format::day).
+    /// left unticked "Jo", a date (format::day); as the API words them too (pluribus-services'
+    /// listings::shown, this method's body until C5).
     fn shown(&self) -> Vec<String> {
-        if !self.labels.is_empty() {
-            return self.labels.iter().map(|label| t_value(label).into_owned()).collect();
-        }
-        let shown = match (&self.value_text, self.value_number, self.value_bool, self.value_date) {
-            (Some(text), ..) => t_value(text).into_owned(),
-            (None, Some(number), ..) => format::attribute_number(number, self.unit.as_deref()),
-            (None, None, Some(true), _) => t_value(&self.label).into_owned(),
-            (None, None, Some(false), _) => t("Jo").to_string(),
-            (None, None, None, Some(date)) => format::day(date),
-            (None, None, None, None) => return Vec::new(),
-        };
-        vec![shown]
+        pluribus_services::listings::shown(self)
     }
 }
 
@@ -1180,40 +1132,16 @@ struct PhoneStream {
     /// What the copy button copies: the number as a phone dials it, or the address.
     copy: String,
     /// For a number WhatsApp can reach, the address that opens a chat with it, a first message
-    /// naming the listing already typed (whatsapp_url).
+    /// naming the listing already typed (format::whatsapp_url).
     whatsapp: Option<String>,
-}
-
-/// The address that opens a WhatsApp chat with `phone` (E.164), its first message typed in
-/// ("Përshëndetje! Ju shkruaj për njoftimin „…“ në Pluribus: <its address>"), so that a seller
-/// with many listings knows which one; the buyer can change it before sending. In the buyer's
-/// language: they write it. None for an Albanian landline (+355 but not 6x, the mobiles), which
-/// has no WhatsApp; a number abroad may.
-pub fn whatsapp_url(phone: &str, title: &str, url: &str) -> Option<String> {
-    let digits = phone.strip_prefix('+')?;
-    if digits.starts_with("355") && !digits[3..].starts_with('6') {
-        return None;
-    }
-    let text = t2("Përshëndetje! Ju shkruaj për njoftimin „{}“ në Pluribus: {}", title, url);
-    Some(format!("https://wa.me/{digits}?text={}", percent_encoded(&text)))
-}
-
-/// `text` percent-encoded byte by byte, all but the characters a URL never needs to escape: a
-/// space is %20 rather than a form's "+", which WhatsApp would show as it is.
-pub(super) fn percent_encoded(text: &str) -> String {
-    text.bytes()
-        .map(|byte| match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (byte as char).to_string(),
-            _ => format!("%{byte:02X}"),
-        })
-        .collect()
 }
 
 /// POST /listing/{public_no}/pare: the listing's page was shown to a visitor (application.js says
 /// so as Turbo shows it, so that a page fetched ahead under the pointer, and never opened, doesn't
 /// count, nor do bots that run no scripts), for "Më të klikuarat" (views.rs). Its seller seeing it
 /// doesn't count either: their page doesn't ask. Visitors are told apart by their address and
-/// browser, and whatever says it is a bot is left out.
+/// browser, and whatever says it is a bot is left out (pluribus-services' listings::visitor, which
+/// the API's counts by too).
 pub async fn seen(
     State(state): State<AppState>,
     Path(public_no): Path<i64>,
@@ -1221,13 +1149,9 @@ pub async fn seen(
     headers: HeaderMap,
 ) -> Result<StatusCode> {
     let agent = headers.get(header::USER_AGENT).and_then(|value| value.to_str().ok()).unwrap_or_default();
-    let lower = agent.to_ascii_lowercase();
-    if agent.is_empty() || ["bot", "spider", "crawl", "slurp"].iter().any(|word| lower.contains(word)) {
-        return Ok(StatusCode::NO_CONTENT);
+    if let Some(visitor) = visitor(ip.as_deref(), agent) {
+        state.views.record(&state.db, public_no, &visitor).await?;
     }
-    let visitor = format!("{}
-{agent}", ip.unwrap_or_default());
-    state.views.record(&state.db, public_no, &visitor).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -1291,28 +1215,10 @@ pub async fn reveal_phone(
     let url = format!("{}/listing/{public_no}-{}", seo::origin(&headers), revealed.slug);
     let (reveal, href, display, copy, whatsapp) = match revealed.contact {
         SellerContact::Phone(phone) => {
-            let whatsapp = whatsapp_url(&phone, &revealed.title, &url);
+            let whatsapp = format::whatsapp_url(&phone, &revealed.title, &url);
             (Reveal::Phone, format!("tel:{phone}"), format::phone(&phone), phone, whatsapp)
         }
         SellerContact::Email(email) => (Reveal::Email, format!("mailto:{email}"), email.clone(), email, None),
     };
     render_stream(PhoneStream { reveal, href, display, copy, whatsapp })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::whatsapp_url;
-
-    #[test]
-    fn whatsapp_reaches_mobiles_and_numbers_abroad_but_not_albanian_landlines() {
-        let url = whatsapp_url("+355691234567", "Golf 7", "https://pluribus.al/listing/1-golf-7").unwrap();
-        assert_eq!(
-            url,
-            "https://wa.me/355691234567?text=P%C3%ABrsh%C3%ABndetje%21%20Ju%20shkruaj%20p%C3%ABr%20njoftimin%20\
-             %E2%80%9EGolf%207%E2%80%9C%20n%C3%AB%20Pluribus%3A%20https%3A%2F%2Fpluribus.al%2Flisting%2F1-golf-7"
-        );
-        assert!(whatsapp_url("+393331234567", "Golf", "/listing/1").is_some_and(|url| url.starts_with("https://wa.me/393331234567?")));
-        assert_eq!(whatsapp_url("+35542234567", "Golf", "/listing/1"), None);
-        assert_eq!(whatsapp_url("0691234567", "Golf", "/listing/1"), None);
-    }
 }

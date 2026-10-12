@@ -3,7 +3,8 @@
 //! property's value comes from the database as data, its number and its date said here
 //! (attribute_number, day) rather than in the queries. And the site's addresses, made from the
 //! parts the database gives rather than in its queries: a listing's (listing_path) and a seller's
-//! page (seller_path).
+//! page (seller_path); and WhatsApp's that opens a chat with a seller about a listing
+//! (whatsapp_url, web/listings.rs's until C5, which the pages' reveal and the API's share).
 
 use rust_decimal::{Decimal, prelude::ToPrimitive};
 use time::{Date, Duration, Month, OffsetDateTime, UtcOffset, macros::format_description};
@@ -464,6 +465,32 @@ pub fn seller_path(store_slug: Option<&str>, user_id: Option<Uuid>) -> String {
     }
 }
 
+/// The address that opens a WhatsApp chat with `phone` (E.164), its first message typed in
+/// ("Përshëndetje! Ju shkruaj për njoftimin „…“ në Pluribus: <its address>", `url`), so that a
+/// seller with many listings knows which one; the buyer can change it before sending. In the
+/// buyer's language: they write it. None for an Albanian landline (+355 but not 6x, the mobiles),
+/// which has no WhatsApp; a number abroad may. The pages' reveal (web/listings.rs) and the API's
+/// (api/listing.rs) give it beside a number.
+pub fn whatsapp_url(phone: &str, title: &str, url: &str) -> Option<String> {
+    let digits = phone.strip_prefix('+')?;
+    if digits.starts_with("355") && !digits[3..].starts_with('6') {
+        return None;
+    }
+    let text = t2("Përshëndetje! Ju shkruaj për njoftimin „{}“ në Pluribus: {}", title, url);
+    Some(format!("https://wa.me/{digits}?text={}", percent_encoded(&text)))
+}
+
+/// `text` percent-encoded byte by byte, all but the characters a URL never needs to escape: a
+/// space is %20 rather than a form's "+", which WhatsApp would show as it is.
+pub fn percent_encoded(text: &str) -> String {
+    text.bytes()
+        .map(|byte| match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (byte as char).to_string(),
+            _ => format!("%{byte:02X}"),
+        })
+        .collect()
+}
+
 /// Text as search compares it, in lower case and without accents: "Durrës" becomes "durres", as
 /// the search index keeps it.
 pub fn fold(text: &str) -> String {
@@ -537,6 +564,24 @@ mod tests {
         assert_eq!(listing_path(1042, "vw-golf-7"), "/listing/1042-vw-golf-7");
         // As posting gives one its slug, from its title.
         assert_eq!(listing_path(7, &slug("Shtëpi 2+1 në Durrës!")), "/listing/7-shtepi-2-1-ne-durres");
+    }
+
+    #[test]
+    fn whatsapp_reaches_mobiles_and_numbers_abroad_but_not_albanian_landlines() {
+        let url = whatsapp_url("+355691234567", "Golf 7", "https://pluribus.al/listing/1-golf-7").unwrap();
+        assert_eq!(
+            url,
+            "https://wa.me/355691234567?text=P%C3%ABrsh%C3%ABndetje%21%20Ju%20shkruaj%20p%C3%ABr%20njoftimin%20\
+             %E2%80%9EGolf%207%E2%80%9C%20n%C3%AB%20Pluribus%3A%20https%3A%2F%2Fpluribus.al%2Flisting%2F1-golf-7"
+        );
+        assert!(whatsapp_url("+393331234567", "Golf", "/listing/1").is_some_and(|url| url.starts_with("https://wa.me/393331234567?")));
+        assert_eq!(whatsapp_url("+35542234567", "Golf", "/listing/1"), None);
+        assert_eq!(whatsapp_url("0691234567", "Golf", "/listing/1"), None);
+        // In the buyer's language, which they write it in.
+        LANG.sync_scope(Lang::En, || {
+            assert!(whatsapp_url("+355691234567", "Golf", "/listing/1").unwrap().contains("text=Hello%21%20I%E2%80%99m%20writing"));
+        });
+        assert_eq!(percent_encoded("a b+c/ë~"), "a%20b%2Bc%2F%C3%AB~");
     }
 
     #[test]

@@ -17,7 +17,7 @@ use axum::{
     http::{HeaderMap, header, request::Parts},
 };
 use pluribus_core::{
-    domain::{Condition, ListingType, PriceType, Status, UnknownKind},
+    domain::{Condition, ListingType, PriceType, Status, UnknownKind, listing},
     i18n::{self, t},
 };
 use pluribus_db::{self as db, CardDetail, Cursor, ListingCard, ListingFilter, SessionUser, Sort};
@@ -556,7 +556,7 @@ impl CardDto {
                 currency: card.currency.clone(),
                 kind: kind_of(card, &card.price_type)?,
                 was: card.price_was.map(|was| was.normalize()),
-                per_month: matches!(kind, ListingType::Rent | ListingType::WantedRent | ListingType::Job),
+                per_month: kind.monthly(),
             },
             photo: photo(card, origin),
             place: place(card),
@@ -564,8 +564,13 @@ impl CardDto {
             details: card.details.iter().map(DetailDto::from).collect(),
             promoted: card.featured,
             highlighted: card.highlighted,
-            // Not one whose price dropped lately, whose drop says enough.
-            good_price: bargain(card.price_normalized, card.model_median) && (card.price_was.is_none() || card.price_amount.is_none()),
+            // As the cards mark one (domain::listing::bargain): not one whose price dropped lately,
+            // whose drop says enough.
+            good_price: listing::bargain(
+                card.price_normalized,
+                card.model_median,
+                listing::price_drop(card.price_was, card.price_amount).is_some(),
+            ),
             seller_kind: if card.seller_business { SellerKind::Business } else { SellerKind::User },
             views: card.views,
             distance_m: card.distance_m,
@@ -616,20 +621,6 @@ fn place(card: &ListingCard) -> Option<String> {
     }
 }
 
-/// A clear bargain, as the cards mark one (pluribus-web's ListingCardExt::bargain): a car whose
-/// price in euros is 15 % or more under what cars of its model and year ask (`median_eur`, which a
-/// card has for a car on sale at a price), and no less than half of it, which says only that the
-/// price is likely wrong or a lure (pluribus-web's car_prices::verdict, Verdict::Good).
-fn bargain(price_eur: Option<Decimal>, median_eur: Option<Decimal>) -> bool {
-    match (price_eur, median_eur) {
-        (Some(price), Some(median)) if median > Decimal::ZERO => {
-            let ratio = price / median;
-            ratio >= Decimal::new(50, 2) && ratio <= Decimal::new(85, 2)
-        }
-        _ => false,
-    }
-}
-
 /// The site's address, which a photo's address on the site itself (/media/...) is made absolute
 /// with: PUBLIC_URL in the settings of the state answering the request (`config`), or as the
 /// request came, the host it named (Host; not X-Forwarded-Host, which a caller may set to
@@ -657,17 +648,6 @@ fn absolute(origin: &str, url: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn a_bargain_is_15_percent_or_more_under_the_median_and_at_least_half_of_it() {
-        let at = |price: i64, median: i64| bargain(Some(Decimal::from(price)), Some(Decimal::from(median)));
-        assert!(at(8_500, 10_000), "85 %");
-        assert!(at(5_000, 10_000), "half");
-        assert!(!at(8_600, 10_000), "86 %");
-        assert!(!at(4_900, 10_000), "under half: likely wrong");
-        assert!(!at(8_000, 0), "no median");
-        assert!(!bargain(Some(Decimal::from(8_000)), None), "a car without one, or not a car");
-    }
 
     #[test]
     fn a_details_english_is_the_catalogues_as_the_english_pages_say_it() {

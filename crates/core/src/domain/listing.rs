@@ -7,12 +7,22 @@
 //! comes back as codes by field (`FieldErrors`), which web/post.rs says in the page's language.
 //! Reading what people typed stays there too (a number as they type it, the form's fields), and so
 //! does the check that a person sent the form, which the sign-in form shares.
+//!
+//! And what a listing's page works out from its price, which the pages (web/listings.rs,
+//! web/car_prices.rs) and the JSON API (api/listing.rs) share, moved out of web/listings.rs in step
+//! C5: a loan for it (`loan_amount`, LOAN_DOWN_PERCENT), by how much its price dropped
+//! (`price_drop`), a car's price against what cars of its model and year ask (`car_verdict`, and a
+//! clear bargain, `bargain`), a property's square metre (`area_price`) against its zone's average
+//! (`zone_price`, ZONE_MARGIN_EUR); and how its page is laid out, by its category and those above
+//! it (`lineage`: a car's, CARS, or a property's, MAPPED).
 
 use std::fmt;
 
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy, prelude::ToPrimitive};
+use serde::Serialize;
 
 use super::{Categories, Category, City, Condition, ListingType, PriceType, Zone};
+use crate::i18n::t;
 
 /// At most this many listings a day from one account (`daily_limit`).
 pub const POSTS_PER_DAY: i64 = 5;
@@ -41,11 +51,26 @@ const PRICE_LIMIT: i64 = 1_000_000_000_000;
 /// subcategories': property.
 const ZONED: &str = "prona";
 
+/// The cars' category (Makina): a car's page has its key facts under its title, and its price
+/// against what cars of its model and year ask (web/listings.rs, api/listing.rs).
+pub const CARS: &str = "makina";
+
 /// The categories whose listings' pages show where they are on a map, and whose form can put them
-/// there more exactly than their town's point: property and cars, and those under them.
-/// web/listings.rs lays their pages out by a copy of its own (its MAPPED), which a test in
-/// web/post.rs holds to this one.
-pub const MAPPED: [&str; 2] = ["prona", "makina"];
+/// there more exactly than their town's point: property and cars, and those under them. Their
+/// pages are laid out as a car's (web/listings.rs; `deal` in the API's answers), by this list
+/// since C5, where web/listings.rs kept a copy of it.
+pub const MAPPED: [&str; 2] = [ZONED, CARS];
+
+/// The down payment a listing's loan calculator takes for given, as a percentage of the price
+/// (loan_calculator.html, loan_controller.js; the API's `loan`): what Albania's banks ask for a
+/// used car, which they finance 60 to 65% of (Intesa Sanpaolo 65%, Tirana Bank 60%, in 2026; a
+/// new car 70 to 75%, a lease 80%). The loan is the rest of the price.
+pub const LOAN_DOWN_PERCENT: u32 = 35;
+
+/// How far a property's price per square metre may be from its zone's average, in euros, and still
+/// count as about it (yellow): further under it, it is cheap for the zone (green), further over it,
+/// dear (red).
+pub const ZONE_MARGIN_EUR: i64 = 200;
 
 /// A listing as a form sends it, its fields read into the domain's terms but not judged yet: what
 /// `check` judges. The texts are as typed; a choice that isn't one of its kind's values is none.
@@ -347,6 +372,192 @@ fn rounded(point: (f64, f64)) -> (f64, f64) {
     ((point.0 * 1000.0).round() / 1000.0, (point.1 * 1000.0).round() / 1000.0)
 }
 
+/// A category's slug and those of the categories above it, the nearest first (its own alone where
+/// `categories`, the active ones, lack it): what a listing's page is laid out by, a car's (CARS)
+/// or a property's (MAPPED), and whose icons its details take (web/icons.rs).
+pub fn lineage<'a>(categories: &'a Categories, slug: &'a str) -> Vec<&'a str> {
+    match categories.by_slug(slug) {
+        Some(category) => std::iter::once(category)
+            .chain(categories.ancestors(category).into_iter().rev())
+            .map(|category| category.slug.as_str())
+            .collect(),
+        None => vec![slug],
+    }
+}
+
+/// What a loan for a listing would be on, where its page offers the loan calculator: something on
+/// sale at a price of its own (PriceType::priced) that costs enough to borrow for, more than 500 €
+/// or, about the same, 50 000 lekë; none for a rent, a wanted ad, a price on request or a free one,
+/// nor in another currency.
+pub fn loan_amount(kind: ListingType, price_type: PriceType, currency: &str, amount: Option<Decimal>) -> Option<Decimal> {
+    let enough = match currency {
+        "EUR" => Decimal::from(500),
+        "ALL" => Decimal::from(50_000),
+        _ => return None,
+    };
+    amount.filter(|amount| price_type.priced() && kind == ListingType::Sell && *amount > enough)
+}
+
+/// A price lowered lately: what it was (db's price_was!: the lowest of the 30 days before it last
+/// changed, when that change made it 1 % lower or more), what it is, and by how much, in whole
+/// percent, at least 1, as the pill beside a price says it ("−7%").
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PriceDrop {
+    pub from: Decimal,
+    pub to: Decimal,
+    pub percent: i64,
+}
+
+/// By how much a price dropped from `was`, where it did: none without a `was` (db's price_was!
+/// gives one only for a drop), or without a price.
+pub fn price_drop(was: Option<Decimal>, price: Option<Decimal>) -> Option<PriceDrop> {
+    let (from, to) = (was?, price?);
+    let percent = ((from - to).checked_div(from)? * Decimal::ONE_HUNDRED).round().to_i64()?;
+    Some(PriceDrop { from, to, percent: percent.max(1) })
+}
+
+/// How a car's price compares with what cars of its model and year ask (db's car_model_prices: the
+/// median of those two years either side), both in euros: what a car's page says in the bubble
+/// under its price (web/car_prices.rs, car_price.html), the cards' clear bargain (`bargain`), the
+/// listing form's hint on a price typed, and the API's `verdict`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CarVerdict {
+    /// 15 % or more under the median: green.
+    Good,
+    /// Within 15 % of it: yellow.
+    Near,
+    /// 15 % or more over it: red.
+    Above,
+}
+
+impl CarVerdict {
+    /// What a car's page says of it, in the language now: "Çmim i mirë", "Rreth mesatares", "Mbi
+    /// mesataren".
+    pub fn words(self) -> &'static str {
+        match self {
+            Self::Good => t("Çmim i mirë"),
+            Self::Near => t("Rreth mesatares"),
+            Self::Above => t("Mbi mesataren"),
+        }
+    }
+
+    /// The bubble's colour, as a property's square metre has them (listing.css; ZoneVerdict::tone).
+    pub fn tone(self) -> &'static str {
+        match self {
+            Self::Good => "price-below",
+            Self::Near => "price-near",
+            Self::Above => "price-above",
+        }
+    }
+}
+
+/// The verdict on a car's price against the median, both in euros: none under half of it, where a
+/// price says only that it is likely wrong (lekë typed as euros), or a lure; none without a median.
+pub fn car_verdict(price_eur: Decimal, median_eur: Decimal) -> Option<CarVerdict> {
+    if median_eur <= Decimal::ZERO {
+        return None;
+    }
+    match price_eur / median_eur {
+        ratio if ratio < Decimal::new(50, 2) => None,
+        ratio if ratio <= Decimal::new(85, 2) => Some(CarVerdict::Good),
+        ratio if ratio < Decimal::new(115, 2) => Some(CarVerdict::Near),
+        _ => Some(CarVerdict::Above),
+    }
+}
+
+/// A clear bargain, as a card marks one ("Çmim i mirë"; the API's `good_price`): a car whose price
+/// in euros is well under what cars of its model and year ask (`car_verdict`, Good: a card has the
+/// median, `median_eur`, for a car on sale at a price alone), unless its price dropped lately
+/// (`dropped`), whose pill says enough.
+pub fn bargain(price_eur: Option<Decimal>, median_eur: Option<Decimal>, dropped: bool) -> bool {
+    match (price_eur, median_eur) {
+        (Some(price), Some(median)) => !dropped && car_verdict(price, median) == Some(CarVerdict::Good),
+        _ => false,
+    }
+}
+
+/// What a square metre of a property on sale costs: its price over its area, in its own currency,
+/// to the whole euro or lek; only for one on sale at a price of its own (PriceType::priced) with an
+/// area. Rents, wanted ads and "price on request" have none.
+pub fn area_price(kind: ListingType, price_type: PriceType, amount: Option<Decimal>, area: Option<Decimal>) -> Option<Decimal> {
+    let (amount, area) = (amount?, area?);
+    if kind != ListingType::Sell || !price_type.priced() || area <= Decimal::ZERO {
+        return None;
+    }
+    Some((amount / area).round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero))
+}
+
+/// How a property's price per square metre compares with what one costs in its zone on average
+/// (`zone_price`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ZoneVerdict {
+    /// ZONE_MARGIN_EUR or more under it: green.
+    Below,
+    /// The very same, as both show rounded: yellow.
+    Same,
+    /// Less than ZONE_MARGIN_EUR from it either way: yellow.
+    Near,
+    /// ZONE_MARGIN_EUR or more over it: red.
+    Above,
+}
+
+impl ZoneVerdict {
+    /// What the page's card says of it, in the language now.
+    pub fn words(self) -> &'static str {
+        match self {
+            Self::Below => t("Nën mesataren"),
+            Self::Same => t("Njësoj si mesatarja"),
+            Self::Near => t("Afër mesatares"),
+            Self::Above => t("Mbi mesataren"),
+        }
+    }
+
+    /// The bubble's colour (listing.css), as a car's price has them (CarVerdict::tone).
+    pub fn tone(self) -> &'static str {
+        match self {
+            Self::Below => "price-below",
+            Self::Same | Self::Near => "price-near",
+            Self::Above => "price-above",
+        }
+    }
+}
+
+/// A property's price per square metre against its zone's average.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ZonePrice {
+    /// The zone's average in the listing's currency, rounded as the price per square metre is.
+    pub average: Decimal,
+    /// The price per square metre less that average, in the listing's currency: below zero under
+    /// it.
+    pub difference: Decimal,
+    pub verdict: ZoneVerdict,
+}
+
+/// `per_area`, a property's price per square metre as `area_price` gives it, against what one costs
+/// in its zone on average among the zone's sales in its category (`average_eur`, in euros: db's
+/// zone_area_prices), at the rate of the listing's currency (`eur_rate`, euros a unit of it):
+/// within ZONE_MARGIN_EUR of it either way is about the same. The two are compared rounded, as a
+/// page shows them, so that its figures add up. None without a rate, and for a starting price
+/// ("nga"), which says too little to compare.
+pub fn zone_price(per_area: Decimal, price_type: PriceType, average_eur: Decimal, eur_rate: Option<Decimal>) -> Option<ZonePrice> {
+    let rate = eur_rate.filter(|rate| *rate > Decimal::ZERO)?;
+    if price_type == PriceType::From {
+        return None;
+    }
+    let average = (average_eur / rate).round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero);
+    let difference = per_area - average;
+    let margin = Decimal::from(ZONE_MARGIN_EUR);
+    let verdict = match difference * rate {
+        eur if eur <= -margin => ZoneVerdict::Below,
+        eur if eur >= margin => ZoneVerdict::Above,
+        _ if difference.is_zero() => ZoneVerdict::Same,
+        _ => ZoneVerdict::Near,
+    };
+    Some(ZonePrice { average, difference, verdict })
+}
+
 #[cfg(test)]
 mod tests {
     use uuid::Uuid;
@@ -630,5 +841,98 @@ mod tests {
         assert_eq!(daily_limit(&recent(0, false)), None);
         assert_eq!(daily_limit(&recent(POSTS_PER_DAY - 1, true)), Some(("title", FieldError::SameTitleToday)));
         assert_eq!(daily_limit(&recent(POSTS_PER_DAY, true)), Some(("form", FieldError::TooManyToday)));
+    }
+
+    #[test]
+    fn a_page_is_laid_out_by_its_category_and_those_above_it() {
+        let categories = categories();
+        assert_eq!(lineage(&categories, "makina"), ["makina", "automjete"]);
+        assert_eq!(lineage(&categories, "apartamente"), ["apartamente", "prona"]);
+        assert_eq!(lineage(&categories, "telefona"), ["telefona"]);
+        // One the active categories lack, alone.
+        assert_eq!(lineage(&categories, "anije"), ["anije"]);
+        assert_eq!(MAPPED, ["prona", CARS]);
+    }
+
+    #[test]
+    fn things_on_sale_at_a_price_of_their_own_offer_a_loan() {
+        let loan = |kind, price_type, currency, amount: i64| loan_amount(kind, price_type, currency, Some(Decimal::from(amount)));
+        assert_eq!(loan(ListingType::Sell, PriceType::Fixed, "EUR", 9_500), Some(Decimal::from(9_500)));
+        assert_eq!(loan(ListingType::Sell, PriceType::From, "ALL", 50_001), Some(Decimal::from(50_001)));
+        // Too little to borrow for.
+        assert_eq!(loan(ListingType::Sell, PriceType::Negotiable, "EUR", 500), None);
+        assert_eq!(loan(ListingType::Sell, PriceType::Fixed, "ALL", 50_000), None);
+        // Not on sale, no price of its own, another currency, or no price.
+        assert_eq!(loan(ListingType::Rent, PriceType::Fixed, "EUR", 9_500), None);
+        assert_eq!(loan(ListingType::Sell, PriceType::OnRequest, "EUR", 9_500), None);
+        assert_eq!(loan(ListingType::Sell, PriceType::Fixed, "USD", 9_500), None);
+        assert_eq!(loan_amount(ListingType::Sell, PriceType::Fixed, "EUR", None), None);
+    }
+
+    #[test]
+    fn a_price_drops_by_whole_percent_one_at_least() {
+        let dropped = |was: i64, price: i64| price_drop(Some(Decimal::from(was)), Some(Decimal::from(price)));
+        assert_eq!(dropped(10_000, 9_300), Some(PriceDrop { from: Decimal::from(10_000), to: Decimal::from(9_300), percent: 7 }));
+        // A drop db's price_was! counts is 1 % or more, which rounding mustn't make none.
+        assert_eq!(dropped(10_000, 9_950).map(|drop| drop.percent), Some(1));
+        assert_eq!(price_drop(None, Some(Decimal::from(9_000))), None);
+        assert_eq!(price_drop(Some(Decimal::from(9_000)), None), None);
+        assert_eq!(dropped(0, 0), None, "nothing to divide by");
+    }
+
+    #[test]
+    fn a_cars_price_is_good_well_under_the_median_and_says_nothing_far_under_it() {
+        let median = Decimal::from(10_000);
+        let verdict_at = |price: i64| car_verdict(Decimal::from(price), median);
+        assert_eq!(verdict_at(4_999), None);
+        assert_eq!(verdict_at(5_000), Some(CarVerdict::Good));
+        assert_eq!(verdict_at(8_500), Some(CarVerdict::Good));
+        assert_eq!(verdict_at(8_501), Some(CarVerdict::Near));
+        assert_eq!(verdict_at(11_499), Some(CarVerdict::Near));
+        assert_eq!(verdict_at(11_500), Some(CarVerdict::Above));
+        assert_eq!(car_verdict(Decimal::from(8_000), Decimal::ZERO), None, "no median");
+        // A clear bargain, as a card marks one: a good price, not lately dropped.
+        let bargain_at = |price: i64, dropped| bargain(Some(Decimal::from(price)), Some(median), dropped);
+        assert!(bargain_at(8_500, false) && bargain_at(5_000, false));
+        assert!(!bargain_at(8_600, false) && !bargain_at(4_900, false), "86 %, or under half: likely wrong");
+        assert!(!bargain_at(8_000, true), "its drop says enough");
+        assert!(!bargain(Some(Decimal::from(8_000)), None, false), "a car without a median, or not a car");
+        // Said on its page in the language now; in JSON by its name.
+        assert_eq!((CarVerdict::Near.words(), CarVerdict::Good.tone()), ("Rreth mesatares", "price-below"));
+        assert_eq!(serde_json::to_value(CarVerdict::Above).unwrap(), "above");
+    }
+
+    #[test]
+    fn a_propertys_square_metre_is_weighed_against_its_zones() {
+        let per_area = |kind, price_type, amount: i64, area: i64| {
+            area_price(kind, price_type, Some(Decimal::from(amount)), Some(Decimal::from(area)))
+        };
+        assert_eq!(per_area(ListingType::Sell, PriceType::Fixed, 185_000, 200), Some(Decimal::from(925)));
+        // To the whole euro, a half up.
+        assert_eq!(per_area(ListingType::Sell, PriceType::From, 1_001, 2), Some(Decimal::from(501)));
+        assert_eq!(per_area(ListingType::Rent, PriceType::Fixed, 450, 85), None);
+        assert_eq!(per_area(ListingType::Sell, PriceType::OnRequest, 450, 85), None);
+        assert_eq!(per_area(ListingType::Sell, PriceType::Fixed, 450, 0), None);
+        assert_eq!(area_price(ListingType::Sell, PriceType::Fixed, None, Some(Decimal::from(85))), None);
+
+        // A zone's average of 1 000 €: 200 € under it or more, green; over it, red; between, yellow.
+        let eur = Some(Decimal::ONE);
+        let against = |per_area: i64| {
+            zone_price(Decimal::from(per_area), PriceType::Fixed, Decimal::from(1_000), eur).map(|zone| (zone.difference, zone.verdict))
+        };
+        assert_eq!(against(800), Some((Decimal::from(-200), ZoneVerdict::Below)));
+        assert_eq!(against(890), Some((Decimal::from(-110), ZoneVerdict::Near)));
+        assert_eq!(against(1_000), Some((Decimal::ZERO, ZoneVerdict::Same)));
+        assert_eq!(against(1_200), Some((Decimal::from(200), ZoneVerdict::Above)));
+        // In lekë, at the rate (a lek a hundredth of a euro): the average 100 000 lekë, and 15 000
+        // under it is 150 € under it, about it.
+        let lek = zone_price(Decimal::from(85_000), PriceType::Fixed, Decimal::from(1_000), Some(Decimal::new(1, 2))).unwrap();
+        assert_eq!((lek.average, lek.verdict), (Decimal::from(100_000), ZoneVerdict::Near));
+        // A starting price, or no rate, is weighed against nothing.
+        assert_eq!(zone_price(Decimal::from(800), PriceType::From, Decimal::from(1_000), eur), None);
+        assert_eq!(zone_price(Decimal::from(800), PriceType::Fixed, Decimal::from(1_000), None), None);
+        assert_eq!(zone_price(Decimal::from(800), PriceType::Fixed, Decimal::from(1_000), Some(Decimal::ZERO)), None);
+        assert_eq!((ZoneVerdict::Same.words(), ZoneVerdict::Same.tone()), ("Njësoj si mesatarja", "price-near"));
+        assert_eq!(serde_json::to_value(ZoneVerdict::Below).unwrap(), "below");
     }
 }
