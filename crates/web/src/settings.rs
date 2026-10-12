@@ -13,6 +13,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
+use pluribus_services::sign_in::{self, NotJoining};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -190,7 +191,8 @@ pub struct ContactForm {
 /// POST /llogaria/kontakti: a phone number or an e-mail address to add to the account, or to take
 /// the place of the one of its kind: a code goes to it (account::send_code_and_ask, its limits as
 /// signing in has them), and the code page, once it comes back, puts it on the account
-/// (contact_confirmed). Not one the account has already, nor another account's.
+/// (contact_confirmed). Not one the account has already, nor another account's (sign_in::may_join,
+/// which the API's `POST /me/contacts` asks too).
 pub async fn add_contact(
     State(state): State<AppState>,
     ClientIp(ip): ClientIp,
@@ -212,15 +214,12 @@ pub async fn add_contact(
     let Some(contact) = Contact::parse(&form.kontakti) else {
         return refuse(t("Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i.")).await;
     };
-    let own = match &contact {
-        Contact::Phone(phone) => user.phone.as_deref() == Some(phone.as_str()),
-        Contact::Email(email) => user.email.as_deref().is_some_and(|own| own.eq_ignore_ascii_case(email)),
-    };
-    if own {
-        return refuse(t("Ky është tashmë i llogarisë sate.")).await;
-    }
-    if db::account_by_contact(&state.db, contact.phone(), contact.email()).await?.is_some_and(|other| other.id != user.id) {
-        return refuse(t("Ky është i një llogarie tjetër: hyr me të për ta përdorur.")).await;
+    if let Err(not) = sign_in::may_join(&state, &user, &contact).await? {
+        return refuse(match not {
+            NotJoining::Own => t("Ky është tashmë i llogarisë sate."),
+            NotJoining::Taken => t("Ky është i një llogarie tjetër: hyr me të për ta përdorur."),
+        })
+        .await;
     }
     if let Some(limit) = account::code_limit(&state, &contact, ip.as_deref()).await? {
         return refuse(limit).await;
@@ -234,17 +233,17 @@ pub async fn add_contact(
 
 /// The code a contact being added was sent came back right (account::check_code): the contact
 /// joins the account if that account is still the one signed in here, verified as signing in
-/// verifies one; then back to the settings. The code is used up either way.
+/// verifies one (sign_in::join, as the API's `POST /me/contacts/verify` puts one on); then back to
+/// the settings. The code is used up either way.
 pub async fn contact_confirmed(state: &AppState, headers: &HeaderMap, owner: Uuid, contact: &str) -> Result<Response> {
     let forget = account::forget_login(headers);
     let user = current_user(state, headers).await?.filter(|user| user.id == owner);
     let (Some(user), Some(contact)) = (user, Contact::parse(contact)) else {
         return Ok(redirect_with_cookies("/llogaria", vec![forget]));
     };
-    if !db::set_contact(&state.db, user.id, &contact).await? {
+    if !sign_in::join(state, user.id, &contact).await? {
         return Ok(redirect_with_cookies("/llogaria/cilesimet?u=zene", vec![forget]));
     }
-    db::verify_contact(&state.db, user.id, contact.phone(), contact.email()).await?;
     Ok(redirect_with_cookies("/llogaria/cilesimet?u=kontakti", vec![forget]))
 }
 

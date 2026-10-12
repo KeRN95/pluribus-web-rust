@@ -1,0 +1,19 @@
+# The JSON API's account settings (crates/api/src/account.rs): what it says, in the language each
+# request asks for (crates/api/src/lang.rs), where the pages' own words (account.txt) don't say it:
+# a name, a contact taken or kept, the word that closes the account it says as "Cilësimet" does.
+
+# crates/api/src/account.rs: a language the site doesn't speak, under "lang"
+
+Duhet të jetë „sq“ ose „en“.
+= Must be “sq” or “en”.
+
+# crates/api/src/account.rs: the last contact, which signing in needs, under "kind"
+
+Llogaria jote duhet të ketë të paktën një numër ose email, që të hysh me të.
+= Your account needs at least one number or email to sign in with.
+
+# crates/api/src/account.rs: closing the account without the word that says it is meant, under
+# "confirm" (FSHI, in English DELETE, as the page's box asks for it)
+
+Shkruaj FSHI, që të dimë se e do vërtet.
+= Type DELETE so we know you mean it.

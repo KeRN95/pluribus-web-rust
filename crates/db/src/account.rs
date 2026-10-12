@@ -1,6 +1,7 @@
-//! The account's own settings ("Cilësimet", web/settings.rs): its name, its phone number and its
-//! e-mail address, what it hears of, the devices signed in to it, and closing it, as README's
-//! "Users are anonymised, not deleted" has it.
+//! The account's own settings ("Cilësimet", web/settings.rs, and the API's /me routes,
+//! crates/api/src/account.rs): its name, its phone number and its e-mail address, what it hears
+//! of, the devices signed in to it, and closing it, as README's "Users are anonymised, not
+//! deleted" has it.
 
 use pluribus_core::format::Contact;
 
@@ -241,15 +242,49 @@ pub async fn session_count(db: &PgPool, user_id: Uuid) -> sqlx::Result<i64> {
         .await
 }
 
-/// Signs the account out everywhere but on this device (`keep`, its session's hash): how many
-/// sessions ended.
+/// A device signed in to the account, one of its sessions still good (`devices`), as migration 0043
+/// has them: what signed it in (`client`: `web`, the pages, or the phone app, `ios` or `android`),
+/// the phone's name as the app gave it, when, when it was last used (moved by `session_user` once
+/// ten minutes old; none until a request used it), and whether it is the one asking.
+#[derive(Debug)]
+pub struct Device {
+    pub client: String,
+    pub device_name: Option<String>,
+    pub created_at: OffsetDateTime,
+    pub last_used_at: Option<OffsetDateTime>,
+    pub current: bool,
+}
+
+/// The devices signed in to the account, the API's `/me/sessions`: its sessions still good, as
+/// `session_count` counts them, the one asking (`here`, its session's hash) first, then the latest
+/// used first.
+pub async fn devices(db: &PgPool, user_id: Uuid, here: &[u8]) -> sqlx::Result<Vec<Device>> {
+    sqlx::query_as!(
+        Device,
+        r#"SELECT client, device_name, created_at, last_used_at, token_hash = $2 AS "current!"
+           FROM sessions
+           WHERE user_id = $1 AND expires_at > now()
+           ORDER BY token_hash = $2 DESC, coalesce(last_used_at, created_at) DESC, created_at DESC"#,
+        user_id,
+        here,
+    )
+    .fetch_all(db)
+    .await
+}
+
+/// Signs the account out everywhere but on this device (`keep`, its session's hash), the pages'
+/// sessions and the phone app's alike, and forgets those that had ended already: how many devices
+/// were signed out, its sessions that were still good.
 pub async fn end_other_sessions(db: &PgPool, user_id: Uuid, keep: &[u8]) -> sqlx::Result<u64> {
-    let ended = sqlx::query("DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2")
-        .bind(user_id)
-        .bind(keep)
-        .execute(db)
-        .await?;
-    Ok(ended.rows_affected())
+    let ended: i64 = sqlx::query_scalar(
+        "WITH ended AS (DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2 RETURNING expires_at)
+         SELECT count(*) FROM ended WHERE expires_at > now()",
+    )
+    .bind(user_id)
+    .bind(keep)
+    .fetch_one(db)
+    .await?;
+    Ok(ended.unsigned_abs())
 }
 
 /// The name a closed account shows by, in the conversations the other side keeps.

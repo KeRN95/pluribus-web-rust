@@ -134,8 +134,9 @@ pub async fn sign_out(State(state): State<AppState>, ApiUser(_): ApiUser, header
 
 /// What the core refused, in the envelope, said in the request's language: the limits on asking
 /// as the pages say them, with the seconds to wait (`retry_after`); a code the channel refused
-/// (`validation` on `contact`); and what checking one refuses.
-fn refused(refused: Refused) -> ApiError {
+/// (`validation` on `contact`); and what checking one refuses. account.rs says so too, for the
+/// codes that add a contact to the account (`/me/contacts`).
+pub(crate) fn refused(refused: Refused) -> ApiError {
     match refused {
         Refused::TooSoon { retry_after } => ApiError::RateLimited
             .said(t("Të dërguam një kod pak më parë. Prit një minutë para se të kërkosh një tjetër."))
@@ -161,8 +162,8 @@ fn refused(refused: Refused) -> ApiError {
     }
 }
 
-/// How a code went, as the app reads it.
-fn channel(via: Channel) -> &'static str {
+/// How a code went, as the app reads it (here, and in account.rs).
+pub(crate) fn channel(via: Channel) -> &'static str {
     match via {
         Channel::WhatsApp => "whatsapp",
         Channel::Email => "email",

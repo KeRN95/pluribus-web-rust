@@ -9,6 +9,7 @@
 //! the check on forms from other sites, nor their security headers, nor the signed-in cookie, nor
 //! the rail's path.
 
+pub mod account;
 mod auth;
 pub mod browse;
 mod dto;
@@ -61,14 +62,24 @@ pub fn router(state: AppState) -> Router {
 /// `POST /saved/seen`; their saved searches, signed in (searches.rs): `GET` and `POST /searches`,
 /// `DELETE /searches/{id}`, `PUT /searches/{id}/alerts` and `GET /searches/{id}/listings`; trust
 /// and safety (safety.rs): `GET /report/reasons`, for anyone, `POST /listings/{no}/report` and
-/// `PUT` and `DELETE /sellers/{user_id}/blocked`, signed in; and the messages, signed in
+/// `PUT` and `DELETE /sellers/{user_id}/blocked`, signed in; the messages, signed in
 /// (messages.rs): `GET /conversations`, `GET /conversations/{id}`, `POST /listings/{no}/messages`,
 /// `POST /conversations/{id}/messages`, `POST /conversations/{id}/read`, and
-/// `POST /conversations/{id}/block` and `/unblock`.
+/// `POST /conversations/{id}/block` and `/unblock`; and the account's settings, signed in
+/// (account.rs): `PATCH /me` and `DELETE /me`, `GET` and `PUT /me/notices`, `PUT /me/language`,
+/// `POST /me/contacts`, `POST /me/contacts/verify`, `DELETE /me/contacts/{kind}`,
+/// `GET /me/sessions` and `DELETE /me/sessions/others`.
 fn routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
-        .route("/me", get(me))
+        .route("/me", get(me).patch(account::rename).delete(account::close))
+        .route("/me/notices", get(account::notices).put(account::set_notices))
+        .route("/me/language", put(account::language))
+        .route("/me/contacts", post(account::add_contact))
+        .route("/me/contacts/verify", post(account::verify_contact))
+        .route("/me/contacts/{kind}", delete(account::remove_contact))
+        .route("/me/sessions", get(account::sessions))
+        .route("/me/sessions/others", delete(account::end_other_sessions))
         .route("/categories", get(reference::categories))
         .route("/cities", get(reference::cities))
         .route("/categories/{slug}/fields", get(reference::fields))

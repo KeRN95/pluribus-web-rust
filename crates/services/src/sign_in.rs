@@ -8,7 +8,9 @@
 //! cap what a bot can spend. What is refused is a code (`Refused`), which each edge says in its own
 //! words: the pages (pluribus-web's account.rs) on their forms, as they always said it, with their
 //! cookies, their redirects, the listing posted before signing in and the one kept; the API
-//! (pluribus-api's signin.rs) in its envelope.
+//! (pluribus-api's signin.rs) in its envelope. A code also adds a contact to the account signed in,
+//! or puts it in place of the one of its kind (the pages' "Cilësimet", the API's `/me/contacts`):
+//! which contacts may join it (`may_join`), and the contact a code proved joining it (`join`).
 
 use std::net::IpAddr;
 
@@ -98,6 +100,15 @@ pub enum Refused {
     Suspended,
 }
 
+/// Why a contact can't join the account signed in, before any code goes to it (`may_join`): the
+/// account has it already (`Own`), or another account has it (`Taken`), whose owner signs in with
+/// it. Each edge says it in its own words, as the page has always said it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NotJoining {
+    Own,
+    Taken,
+}
+
 /// A code that went out: the id it waits under, which it comes back with, and the channel it went
 /// by; in test mode (`Config::sign_in_codes_on_screen`) the code itself too, for the page that
 /// asks for it to show, and the API to give.
@@ -110,7 +121,7 @@ pub struct Requested {
 
 /// What a code typed back right proved: that its contact is the typer's; and what it was asked
 /// for, a new account's name, a listing to put up once it came back, or an account the contact
-/// joins (the pages' "Cilësimet").
+/// joins (the pages' "Cilësimet", the API's `/me/contacts`; `join`).
 #[derive(Debug)]
 pub struct Proved {
     pub contact: Contact,
@@ -259,8 +270,9 @@ pub async fn admit(state: &AppState, proved: &Proved, lang: Option<Lang>, client
 }
 
 /// A code typed back, checked (`check`) and, right, signing its contact's account in (`admit`),
-/// as the API signs in. A code that adds its contact to the account signed in on the pages
-/// ("Cilësimet") signs no one in: here it is as good as none (`NoSuchCode`), used up.
+/// as the API signs in. A code that adds its contact to the account signed in (the pages'
+/// "Cilësimet", the API's `/me/contacts`) signs no one in: here it is as good as none
+/// (`NoSuchCode`), used up.
 pub async fn complete(
     state: &AppState,
     code_id: Uuid,
@@ -282,6 +294,39 @@ pub async fn complete(
 /// Ends the session whose token this is, the pages' cookie's or the app's.
 pub async fn sign_out(state: &AppState, token: &str) -> sqlx::Result<()> {
     db::delete_session(&state.db, &hash(token)).await
+}
+
+/// Whether a contact may join `user`'s account, beside the one of the other kind or in place of the
+/// one of its kind, by a code sent to it (the pages' "Cilësimet", the API's `POST /me/contacts`,
+/// each asking `limit` after this, then sending the code with `CodePurpose::adds_to`): not one the
+/// account has already (`NotJoining::Own`; an e-mail address in any case), nor one another account
+/// has (`NotJoining::Taken`).
+pub async fn may_join(state: &AppState, user: &SessionUser, contact: &Contact) -> sqlx::Result<Result<(), NotJoining>> {
+    let own = match contact {
+        Contact::Phone(phone) => user.phone.as_deref() == Some(phone.as_str()),
+        Contact::Email(email) => user.email.as_deref().is_some_and(|own| own.eq_ignore_ascii_case(email)),
+    };
+    if own {
+        return Ok(Err(NotJoining::Own));
+    }
+    let holder = db::account_by_contact(&state.db, contact.phone(), contact.email()).await?;
+    Ok(match holder {
+        Some(other) if other.id != user.id => Err(NotJoining::Taken),
+        _ => Ok(()),
+    })
+}
+
+/// The contact a code proved joins the account the code was asked for (`CodePurpose::adds_to`), as
+/// the pages' code page and the API's `POST /me/contacts/verify` put it on: in place of the one of
+/// its kind, and on the account's listings that showed that one (`db::set_contact`), verified as
+/// signing in verifies one (`db::verify_contact`). False, and nothing changed, when another account
+/// has had it since the code was asked for.
+pub async fn join(state: &AppState, user_id: Uuid, contact: &Contact) -> sqlx::Result<bool> {
+    if !db::set_contact(&state.db, user_id, contact).await? {
+        return Ok(false);
+    }
+    db::verify_contact(&state.db, user_id, contact.phone(), contact.email()).await?;
+    Ok(true)
 }
 
 #[cfg(test)]
