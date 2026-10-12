@@ -23,7 +23,7 @@ use super::{
     listings::percent_encoded,
     not_found,
     photos::Submission,
-    render, saved, site_origin,
+    render, saved,
 };
 use crate::{
     AppState,
@@ -31,7 +31,7 @@ use crate::{
     domain::Role,
     format::{self, Contact},
     i18n::{self, Lang, in_lang, t, t1, t2},
-    media, sender,
+    media,
 };
 
 #[derive(Template)]
@@ -500,7 +500,7 @@ async fn people_page(
     done: Option<&'static str>,
 ) -> Result<PeoplePage> {
     let (members, invitations) = tokio::try_join!(db::members(&state.db, store.id), db::store_invitations(&state.db, store.id))?;
-    Ok(PeoplePage { store, me, role, members, invitations, origin: site_origin(), contact, invite_role, error, done })
+    Ok(PeoplePage { store, me, role, members, invitations, origin: state.config.site_origin(), contact, invite_role, error, done })
 }
 
 /// GET /dyqani/{slug}/njerezit: the store's people, for its owner and admins.
@@ -557,9 +557,9 @@ pub async fn invite(State(state): State<AppState>, headers: HeaderMap, Path(slug
         let (subject, text) = i18n::LANG.sync_scope(lang, || {
             let invites = t1("{} të fton në dyqan", &store.display_name);
             let role = t2("Si „{}“: {}", role_name(&form.roli), role_does(&form.roli));
-            (invites, format!("{role}\n\n{}\n{}/ftesa/{id}", t("Për ta pranuar, hyr në Pluribus me këtë email:"), site_origin()))
+            (invites, format!("{role}\n\n{}\n{}/ftesa/{id}", t("Për ta pranuar, hyr në Pluribus me këtë email:"), state.config.site_origin()))
         });
-        if let Err(error) = sender::senders().send_text(&contact, &subject, &text).await {
+        if let Err(error) = state.senders.send_text(&contact, &subject, &text).await {
             tracing::warn!(%error, to = %contact.masked(), "store invitation not sent");
         }
     }

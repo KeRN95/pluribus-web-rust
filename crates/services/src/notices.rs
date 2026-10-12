@@ -12,7 +12,7 @@
 //! web/notifications.rs words for whoever reads it, and its payload has who wrote and about which
 //! listing, from which domain::notices says it in either language.
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use pluribus_core::{
     format::Contact,
@@ -21,7 +21,7 @@ use pluribus_core::{
 use pluribus_db as db;
 use sqlx::PgPool;
 
-use crate::sender::{self, Notice};
+use crate::sender::{Notice, Senders};
 
 /// How long after a message came, unread, its reader hears of it: long enough that someone with
 /// the conversation open (which reads what it shows) or about to answer hears nothing.
@@ -35,9 +35,9 @@ const EXCERPT: usize = 300;
 /// The notification's title is at most this long (notifications.title).
 const TITLE: usize = 180;
 
-/// Sends the notices due now; returns how many went out. Their links start with `origin`, the
-/// site's address (site_origin).
-pub async fn send_due(db: &PgPool, origin: &str) -> sqlx::Result<usize> {
+/// Sends the notices due now by `senders`; returns how many went out. Their links start with
+/// `origin`, the site's address (`Config::site_origin`).
+pub async fn send_due(db: &PgPool, senders: &Senders, origin: &str) -> sqlx::Result<usize> {
     let due = db::due_notices(db, NOTICE_AFTER, NOTICE_GAP).await?;
     let mut sent = 0;
     for due in due {
@@ -63,7 +63,7 @@ pub async fn send_due(db: &PgPool, origin: &str) -> sqlx::Result<usize> {
             _ => continue,
         };
         let lang = Lang::from_code(&due.language).unwrap_or_default();
-        match i18n::in_lang(lang, sender::senders().send_notice(&contact, &notice)).await {
+        match i18n::in_lang(lang, senders.send_notice(&contact, &notice)).await {
             Ok(channel) => tracing::debug!(?channel, to = %contact.masked(), "message notice sent"),
             Err(error) => tracing::warn!(%error, to = %contact.masked(), "message notice not sent"),
         }
@@ -80,15 +80,15 @@ fn excerpt(body: &str) -> String {
     }
 }
 
-/// Looks for notices due every CHECK_EVERY, from now on, in the background.
-pub fn start(db: PgPool) {
+/// Looks for notices due every CHECK_EVERY, from now on, in the background, and sends them by
+/// `senders` with links that start with `origin` (the state's, `pluribus_web::state`).
+pub fn start(db: PgPool, senders: Arc<Senders>, origin: String) {
     tokio::spawn(async move {
-        let origin = crate::site_origin();
         let mut every = tokio::time::interval(CHECK_EVERY);
         every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
             every.tick().await;
-            if let Err(error) = send_due(&db, &origin).await {
+            if let Err(error) = send_due(&db, &senders, &origin).await {
                 tracing::warn!(%error, "could not send the message notices");
             }
         }

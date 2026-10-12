@@ -71,7 +71,7 @@ struct PromotePage {
     products: Vec<db::PromotionProduct>,
     /// The listing it is for, when a seller's page led here ("Promovoje", njoftimi=1234).
     number: Option<i64>,
-    /// CONTACT_EMAIL in .env, when it is set.
+    /// CONTACT_EMAIL in the settings, when it is set.
     email: Option<String>,
 }
 
@@ -104,6 +104,6 @@ pub async fn page(State(state): State<AppState>, headers: HeaderMap, Query(query
         seo::canonical(&origin, "/promovo", None),
     );
     let number = query.njoftimi.and_then(|number| number.trim().parse::<i64>().ok()).filter(|number| *number > 0);
-    let email = std::env::var("CONTACT_EMAIL").ok().map(|email| email.trim().to_string()).filter(|email| !email.is_empty());
+    let email = state.config.contact_email.clone();
     render(PromotePage { meta, products, number, email })
 }

@@ -1654,6 +1654,7 @@ dependencies = [
  "dotenvy",
  "pluribus-api",
  "pluribus-db",
+ "pluribus-services",
  "pluribus-web",
  "sqlx",
  "tokio",

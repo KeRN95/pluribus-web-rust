@@ -5,13 +5,13 @@
 //! (how_it_works_en.html...), which its Albanian one includes.
 
 use askama::Template;
-use axum::{http::HeaderMap, response::Response};
+use axum::{extract::State, http::HeaderMap, response::Response};
 
 use super::{
     Result, render,
     seo::{self, PageMeta},
 };
-use crate::i18n::t;
+use crate::{AppState, i18n::t};
 
 /// The pages, their paths and names, as the footer links them and the sitemap lists them.
 pub const PAGES: [(&str, &str); 5] = [
@@ -30,13 +30,6 @@ const PRIVACY_UPDATED: (u8, &str, u16) = (11, "tetor", 2026);
 /// Such a date as the page says it: "10 tetor 2026", in English "10 October 2026".
 fn said((day, month, year): (u8, &str, u16)) -> String {
     format!("{day} {} {year}", t(month))
-}
-
-/// A setting from .env, when it is set: CONTACT_EMAIL, the address the contact and privacy pages
-/// give; OPERATOR, who runs the site (a person's name, or a company's), whom the privacy page names
-/// as the one responsible for the data.
-fn setting(name: &str) -> Option<String> {
-    std::env::var(name).ok().map(|value| value.trim().to_string()).filter(|value| !value.is_empty())
 }
 
 /// A page's metadata: its title for the previews (og:title) in Albanian, as the apps that fetch
@@ -105,12 +98,14 @@ pub async fn terms(headers: HeaderMap) -> Result<Response> {
 struct Privacy {
     meta: PageMeta,
     updated: String,
-    /// Who runs the site (OPERATOR), and the address to write to (CONTACT_EMAIL), when they are set.
+    /// Who runs the site (OPERATOR, a person's name or a company's), whom it names as the one
+    /// responsible for the data, and the address to write to (CONTACT_EMAIL), when the settings
+    /// set them.
     operator: Option<String>,
     email: Option<String>,
 }
 
-pub async fn privacy(headers: HeaderMap) -> Result<Response> {
+pub async fn privacy(State(state): State<AppState>, headers: HeaderMap) -> Result<Response> {
     render(Privacy {
         meta: meta(
             &headers,
@@ -119,8 +114,8 @@ pub async fn privacy(headers: HeaderMap) -> Result<Response> {
             t("Cilat të dhëna mban Pluribus, pse, kush tjetër i merr, sa kohë, dhe si i sheh, i ndryshon ose i fshin."),
         ),
         updated: said(PRIVACY_UPDATED),
-        operator: setting("OPERATOR"),
-        email: setting("CONTACT_EMAIL"),
+        operator: state.config.operator.clone(),
+        email: state.config.contact_email.clone(),
     })
 }
 
@@ -128,13 +123,13 @@ pub async fn privacy(headers: HeaderMap) -> Result<Response> {
 #[template(path = "contact.html")]
 struct Contact {
     meta: PageMeta,
-    /// CONTACT_EMAIL in .env, when it is set.
+    /// CONTACT_EMAIL in the settings, when it is set.
     email: Option<String>,
 }
 
-pub async fn contact(headers: HeaderMap) -> Result<Response> {
+pub async fn contact(State(state): State<AppState>, headers: HeaderMap) -> Result<Response> {
     render(Contact {
         meta: meta(&headers, "/kontakt", "Kontakt", t("Si i shkruan Pluribus: për llogarinë, për një njoftim, për një ide.")),
-        email: setting("CONTACT_EMAIL"),
+        email: state.config.contact_email.clone(),
     })
 }

@@ -1,6 +1,7 @@
 //! Claude, Anthropic's AI, through its Messages API. Here it fills in the listing form from what a
 //! seller wrote and the photos they added (web/ai_fill.rs). ANTHROPIC_API_KEY in .env turns it on;
-//! without it the form has no AI.
+//! without it the form has no AI. The model and the API's address are settings too, with their
+//! defaults (config.rs: DEFAULT_ANTHROPIC_MODEL, Haiku, and DEFAULT_ANTHROPIC_URL).
 
 use std::{
     sync::Arc,
@@ -11,9 +12,8 @@ use anyhow::{Context, bail};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
 
-/// Haiku: quick and cheap, and it reads listings and photos well. ANTHROPIC_MODEL names another.
-const DEFAULT_MODEL: &str = "claude-haiku-4-5-20251001";
-const DEFAULT_URL: &str = "https://api.anthropic.com";
+use crate::config::Config;
+
 /// An answer takes a few seconds; past this the seller fills the form in themselves.
 const TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -49,14 +49,11 @@ impl Ai {
         }))
     }
 
-    /// From .env: ANTHROPIC_API_KEY, and ANTHROPIC_MODEL and ANTHROPIC_BASE_URL when they are set.
+    /// From the settings (config.rs): ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL and ANTHROPIC_MODEL.
     /// None without a key.
-    pub fn from_env() -> Option<Self> {
-        let setting = |name: &str| std::env::var(name).ok().map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
-        let key = setting("ANTHROPIC_API_KEY")?;
-        let url = setting("ANTHROPIC_BASE_URL").unwrap_or_else(|| DEFAULT_URL.to_string());
-        let model = setting("ANTHROPIC_MODEL").unwrap_or_else(|| DEFAULT_MODEL.to_string());
-        Some(Self::new(&key, &url, &model))
+    pub fn from_config(config: &Config) -> Option<Self> {
+        let key = config.anthropic_api_key.as_deref()?;
+        Some(Self::new(key, &config.anthropic_base_url, &config.anthropic_model))
     }
 
     /// Asks the AI to call `tool` once about `text` and the JPEG `photos`, following `instructions`,

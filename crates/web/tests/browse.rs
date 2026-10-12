@@ -112,8 +112,9 @@ async fn welcome_page_asks_for_words_and_offers_the_categories(pool: PgPool) {
     let cars = get(pool.clone(), "/c/automjete").await.body;
     for (page, posting) in [(&body, true), (&cars, false)] {
         assert!(!page.contains("post-button"));
-        // The typeface panel ("Ff") stands there only while TYPE_TRIAL is on (.env).
-        let trial = std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true");
+        // The typeface panel ("Ff") stands there only while TYPE_TRIAL is on (the settings, off in
+        // the tests' own: site.rs turns it on).
+        let trial = Config::for_tests().type_trial;
         assert_eq!(page.contains(r#"<details class="type-menu" data-controller="dropdown type-trial""#), trial);
         let bar = &page[page.find(r#"<header class="site-header">"#).unwrap()..page.find("</header>").unwrap()];
         assert_eq!(bar.contains(r#"<a class="icon-button header-post" href="/shto""#), posting, "{bar}");

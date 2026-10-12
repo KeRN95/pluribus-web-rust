@@ -151,7 +151,7 @@ async fn an_emails_link_stops_its_kind_without_signing_in(pool: PgPool) {
     let buyer = new_seller(&pool, "+355691112233").await;
     write(&pool, "/listing/1001/mesazh", "A është ende në shitje?", &buyer).await;
     minutes_pass(&pool, 4).await;
-    assert_eq!(pluribus_services::notices::send_due(&pool, "https://pluribus.example").await.unwrap(), 1);
+    assert_eq!(pluribus_services::notices::send_due(&pool, &Senders::none(), "https://pluribus.example").await.unwrap(), 1);
     let tokens: Vec<(String, String)> = sqlx::query_as("SELECT id::text, notice_token FROM users WHERE notice_token IS NOT NULL").fetch_all(&pool).await.unwrap();
     assert_eq!(tokens.len(), 1);
     let (whose, token) = &tokens[0];
@@ -268,9 +268,9 @@ async fn the_notifications_page_lists_every_kind_and_reads_them_once_shown(pool:
         .unwrap();
     let thread = write(&pool, &format!("/listing/{no}/mesazh"), "A është ende në shitje?", &buyer).await.location.unwrap();
     minutes_pass(&pool, 4).await;
-    assert_eq!(pluribus_services::notices::send_due(&pool, "https://pluribus.example").await.unwrap(), 1);
+    assert_eq!(pluribus_services::notices::send_due(&pool, &Senders::none(), "https://pluribus.example").await.unwrap(), 1);
     sqlx::query("UPDATE listings SET expires_at = now() + interval '2 days' WHERE public_no = $1::bigint").bind(&no).execute(&pool).await.unwrap();
-    assert_eq!(pluribus_services::expiry::run(&pool, "https://pluribus.example").await.unwrap(), (1, 0));
+    assert_eq!(pluribus_services::expiry::run(&pool, &Senders::none(), "https://pluribus.example").await.unwrap(), (1, 0));
 
     // The buyer's: the search's alert, then the price drop, both new, each leading to what it is
     // about; nothing about listings of his own.
@@ -318,7 +318,7 @@ async fn the_notifications_page_lists_every_kind_and_reads_them_once_shown(pool:
     // Her phone expires after the page was made: not read with it, as when the browser shows its
     // copy again.
     sqlx::query("UPDATE listings SET expires_at = now() - interval '1 minute' WHERE public_no = $1::bigint").bind(&no).execute(&pool).await.unwrap();
-    assert_eq!(pluribus_services::expiry::run(&pool, "https://pluribus.example").await.unwrap(), (0, 1));
+    assert_eq!(pluribus_services::expiry::run(&pool, &Senders::none(), "https://pluribus.example").await.unwrap(), (0, 1));
     saw(&page, &ana).await;
     assert_eq!(counts(&ana).await, (1, 1));
     assert!(get_with_cookie(pool.clone(), "/njoftimet-e-mia", &ana).await.body.contains(r#"<a href="/lajmerimet">Lajmërimet · 1 e re</a>"#));
@@ -330,7 +330,7 @@ async fn the_notifications_page_lists_every_kind_and_reads_them_once_shown(pool:
     // Another message left unread an hour on brings another notice; reading the conversation reads it.
     write(&pool, &thread, "Mund ta shoh nesër?", &buyer).await;
     minutes_pass(&pool, 70).await;
-    assert_eq!(pluribus_services::notices::send_due(&pool, "https://pluribus.example").await.unwrap(), 1);
+    assert_eq!(pluribus_services::notices::send_due(&pool, &Senders::none(), "https://pluribus.example").await.unwrap(), 1);
     assert_eq!(counts(&ana).await, (1, 0));
     let conversation = get_with_cookie(pool.clone(), &thread, &ana).await.body;
     let last = message_ids(&conversation).pop().unwrap();
@@ -611,4 +611,49 @@ async fn the_scripts_can_tell_whether_someone_is_signed_in(pool: PgPool) {
     assert_eq!(get(pool.clone(), "/").await.cookie("llogari"), None);
     // Not on a static file, which browsers keep.
     assert_eq!(with("session=abc", "/static/css/base.css").await.cookie("llogari"), None);
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn the_code_goes_out_by_the_senders_and_the_settings_the_state_is_given(pool: PgPool) {
+    // The state's senders here are the tests' stand-in, which keeps what it is given rather than
+    // sending it: the code it kept for the number is the very one that signs in, none written into
+    // the database by hand, and the code page says it went by WhatsApp, the stand-in's channel for
+    // a number. The code itself shows nowhere on the page outside test mode.
+    let senders = std::sync::Arc::new(Senders::recording());
+    let app = |config: Config| {
+        pluribus_web::router(AppState { senders: senders.clone(), config: std::sync::Arc::new(config), ..state(pool.clone()) })
+    };
+    let code_page = |login: &str| Request::get("/hyr/kodi").header(header::COOKIE, login).body(Body::empty()).unwrap();
+    let sent = send_to(app(Config::for_tests()), form_request("/hyr", &[("contact", "069 123 4567"), ("started", &started())], None)).await;
+    assert_eq!(sent.location.as_deref(), Some("/hyr/kodi"), "{}", sent.body);
+    let login = format!("login={}", sent.cookie("login").unwrap());
+    let kept = senders.sent();
+    let [Sent::Code { to, code }] = &kept[..] else { panic!("{kept:?}") };
+    assert_eq!(to.as_str(), "+355691234567");
+    let page = send_to(app(Config::for_tests()), code_page(&login)).await.body;
+    assert!(page.contains("Të dërguam një kod me 6 shifra në WhatsApp te <strong>+355 69 *** **67</strong>"), "{page}");
+    assert!(!page.contains(code.as_str()), "{page}");
+    let signed = send_to(app(Config::for_tests()), form_request("/hyr/kodi", &[("code", code.as_str())], Some(&login))).await;
+    assert_eq!(signed.location.as_deref(), Some("/njoftimet-e-mia"), "{}", signed.body);
+    assert!(signed.cookie("session").is_some_and(|session| !session.is_empty()));
+
+    // In test mode (SIGN_IN_CODES_ON_SCREEN, a setting), the code page shows the code that went
+    // out, and fills it in.
+    let on_screen = || app(Config { sign_in_codes_on_screen: true, ..Config::for_tests() });
+    let sent = send_to(on_screen(), form_request("/hyr", &[("contact", "ana@example.com"), ("started", &started())], None)).await;
+    let login = format!("login={}", sent.cookie("login").unwrap());
+    let Some(Sent::Code { to, code }) = senders.sent().pop() else { panic!("{:?}", senders.sent()) };
+    assert_eq!(to.as_str(), "ana@example.com");
+    let page = send_to(on_screen(), code_page(&login)).await.body;
+    assert!(page.contains("Të dërguam një kod me 6 shifra me email te"), "{page}");
+    assert!(page.contains(&format!("Versioni provë: kodi është <strong>{code}</strong>")), "{page}");
+    assert!(page.contains(&format!(r#"class="code-input" autofocus value="{code}">"#)), "{page}");
+
+    // The tests' own state sends by no channel: the code goes to the log alone, the page names no
+    // channel, and the stand-in, another state's, kept nothing of it.
+    let sent = post_form(pool.clone(), "/hyr", &[("contact", "069 765 4321"), ("started", &started())], None).await;
+    let login = format!("login={}", sent.cookie("login").unwrap());
+    let page = get_with_cookie(pool.clone(), "/hyr/kodi", &login).await.body;
+    assert!(page.contains("Të dërguam një kod me 6 shifra te <strong>"), "{page}");
+    assert_eq!(senders.sent().len(), 2);
 }

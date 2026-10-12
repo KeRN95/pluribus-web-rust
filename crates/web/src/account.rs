@@ -32,7 +32,7 @@ use crate::{
     db::{self, CodeCheck, CodePurpose, SessionUser},
     format::{self, Contact},
     i18n::{Lang, t, t1},
-    sender::{self, Channel},
+    sender::{Channel, Senders},
 };
 
 /// A code works for ten minutes and for five guesses: a million possible codes, five guesses.
@@ -146,23 +146,20 @@ pub async fn current_user(state: &AppState, headers: &HeaderMap) -> Result<Optio
     Ok(db::session_user(&state.db, &hash(&token)).await?)
 }
 
-/// Test mode (SIGN_IN_CODES_ON_SCREEN=true in .env): the code page shows the code and fills it
-/// in, for trying the site before an SMS or e-mail provider is connected. Anyone can then sign in
-/// as any number, so it is off unless switched on, and never for a public site.
-fn codes_on_screen() -> bool {
-    std::env::var("SIGN_IN_CODES_ON_SCREEN").is_ok_and(|value| value == "true")
-}
-
-/// The codes waiting to be shown in test mode, by login code id; only the hash is in the database.
+/// The codes waiting to be shown in test mode (SIGN_IN_CODES_ON_SCREEN=true in the settings,
+/// `Config::sign_in_codes_on_screen`), by login code id; only the hash is in the database. Test
+/// mode is for trying the site before an SMS or e-mail provider is connected: the code page shows
+/// the code and fills it in, so anyone can sign in as any number; it is off unless switched on,
+/// and never for a public site.
 fn shown_codes() -> &'static Mutex<HashMap<Uuid, String>> {
     static CODES: OnceLock<Mutex<HashMap<Uuid, String>>> = OnceLock::new();
     CODES.get_or_init(Default::default)
 }
 
-/// "në WhatsApp", "me email" or nothing: how the code page says the code went out, in the page's
-/// language (sign_in_code.html puts it in its sentence).
-fn sent_via(contact: &Contact) -> &'static str {
-    match sender::senders().channel(contact) {
+/// "në WhatsApp", "me email" or nothing: how the code page says the code went out by `senders`
+/// (the state's), in the page's language (sign_in_code.html puts it in its sentence).
+fn sent_via(senders: &Senders, contact: &Contact) -> &'static str {
+    match senders.channel(contact) {
         Channel::WhatsApp => t("në WhatsApp"),
         Channel::Email => t("me email"),
         Channel::Log => "",
@@ -223,10 +220,11 @@ pub async fn code_limit(state: &AppState, contact: &Contact, ip: Option<&str>) -
     Ok(None)
 }
 
-/// Sends a code to the contact (sender.rs: e-mail, or WhatsApp for a phone) and goes to the page
-/// that asks for it. Which code is waiting stays in a cookie rather than the URL, so the contact
-/// never shows there. If the code can't go out, the message for the visitor instead, in the page's
-/// language.
+/// Sends a code to the contact by the state's senders (sender.rs: e-mail, or WhatsApp for a
+/// phone) and goes to the page that asks for it, which shows the code too in test mode (the
+/// state's settings, `sign_in_codes_on_screen`). Which code is waiting stays in a cookie rather
+/// than the URL, so the contact never shows there. If the code can't go out, the message for the
+/// visitor instead, in the page's language.
 pub async fn send_code_and_ask(
     state: &AppState,
     headers: &HeaderMap,
@@ -244,12 +242,12 @@ pub async fn send_code_and_ask(
         purpose,
     )
     .await?;
-    if let Err(error) = sender::senders().send(contact, &code).await {
+    if let Err(error) = state.senders.send(contact, &code).await {
         tracing::error!(%error, to = %contact.masked(), "the sign-in code couldn't be sent");
         db::delete_login_code(&state.db, id).await?;
         return Ok(Err(t("Nuk arritëm ta dërgojmë kodin. Kontrollo numrin ose email-in dhe provo përsëri pas pak.")));
     }
-    if codes_on_screen() {
+    if state.config.sign_in_codes_on_screen {
         shown_codes().lock().unwrap().insert(id, code);
     }
     let login = cookie_header(headers, LOGIN_COOKIE, &id.to_string(), i64::from(CODE_MINUTES) * 60);
@@ -347,7 +345,7 @@ pub async fn code_page(State(state): State<AppState>, headers: HeaderMap) -> Res
         return Ok(Redirect::to("/llogaria").into_response());
     };
     let test_code = pending_id(&headers).and_then(|id| shown_codes().lock().unwrap().get(&id).cloned());
-    render(CodePage { sent_to: contact.masked(), sent_via: sent_via(&contact), error: None, gone: false, publishes, reviewed, adds, test_code })
+    render(CodePage { sent_to: contact.masked(), sent_via: sent_via(&state.senders, &contact), error: None, gone: false, publishes, reviewed, adds, test_code })
 }
 
 #[derive(Deserialize)]
@@ -423,7 +421,7 @@ pub async fn check_code(
             Ok(redirect_with_cookies(&to, [vec![session, login], done].concat()))
         }
         CodeCheck::Wrong(left) => unprocessable(CodePage {
-            sent_via: Contact::parse(&pending.contact).map_or("", |contact| sent_via(&contact)),
+            sent_via: Contact::parse(&pending.contact).map_or("", |contact| sent_via(&state.senders, &contact)),
             sent_to,
             error: Some(if left == 1 {
                 t("Kodi nuk është i saktë. Të ka mbetur edhe një provë.").to_string()

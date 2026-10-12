@@ -1,7 +1,11 @@
 //! Sending sign-in codes: to an e-mail address by SMTP, which every e-mail service offers (Amazon
 //! SES, Postmark, Brevo...), and to a phone number by WhatsApp, through Meta's WhatsApp Cloud API
-//! and an authentication template. Each is set up in .env (see .env.example); a channel that isn't
-//! writes its codes to the server's log instead, which is how development runs. The same channels
+//! and an authentication template. Each is set up in .env (see .env.example), which the settings
+//! are read from once as the server starts (config.rs), and the channels made from them then
+//! (`Senders::from_config`), which the application's state carries (`AppState::senders`); a
+//! channel that isn't set up writes its codes to the server's log instead, which is how
+//! development runs, and the tests give the state a stand-in that keeps what it would have sent
+//! (`Senders::recording`). The same channels
 //! carry the notices of messages someone hasn't read (notices.rs), the alerts of saved searches
 //! (web/searches.rs) and the warnings of listings about to expire or expired (expiry.rs): by
 //! e-mail, or by WhatsApp with a utility template of each one's own (WHATSAPP_NOTICE_TEMPLATE,
@@ -11,7 +15,7 @@
 //! (the callers' `i18n::in_lang`); a WhatsApp template's texts stay Albanian, as Meta approved
 //! them.
 
-use std::{sync::OnceLock, time::Duration};
+use std::{sync::Mutex, time::Duration};
 
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
@@ -26,6 +30,8 @@ use pluribus_core::{
     i18n::{t, t1, t2},
 };
 use serde_json::{Value, json};
+
+use crate::config::Config;
 
 /// How a code reaches its contact.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -361,47 +367,57 @@ fn code_email(code: &str) -> (String, String) {
     )
 }
 
-/// The channels set up in the environment.
+/// Where Meta's Graph API is, of which WhatsApp's Cloud API is a part.
+const GRAPH_API: &str = "https://graph.facebook.com";
+
+/// The channels codes, notices and alerts go out by, made once as the server starts and carried
+/// by the application's state (`AppState::senders`): those the settings set up (`from_config`);
+/// none (`none`), every message going to the log, as in development; or the tests' stand-in,
+/// which sends nothing and keeps what it is given (`recording`, `sent`).
 pub struct Senders {
-    pub email: Option<Email>,
-    pub whatsapp: Option<WhatsApp>,
+    email: Option<Email>,
+    whatsapp: Option<WhatsApp>,
+    /// The stand-in's: every message it was given, in order (`recording`); None for real
+    /// channels.
+    kept: Option<Mutex<Vec<Sent>>>,
 }
 
-fn env(name: &str) -> Option<String> {
-    std::env::var(name).ok().map(|value| value.trim().to_string()).filter(|value| !value.is_empty())
+/// A message the tests' stand-in kept rather than sent (`Senders::recording`): what was handed to
+/// the senders, and for whom.
+#[derive(Debug, Clone)]
+pub enum Sent {
+    /// A sign-in code.
+    Code { to: Contact, code: String },
+    /// An e-mail of plain text: an invitation into a store.
+    Text { to: Contact, subject: String, body: String },
+    /// A notice of unread messages.
+    Notice { to: Contact, notice: Notice },
+    /// An alert: a saved search's new listings, or a listing about to expire or expired.
+    Alert { to: Contact, alert: Alert },
 }
 
 impl Senders {
-    /// E-mail needs SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD and EMAIL_FROM (SMTP_PORT is 587
-    /// unless set); WhatsApp needs WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_TEMPLATE
-    /// (WHATSAPP_LANGUAGE is "sq", WHATSAPP_API_VERSION "v21.0" unless set). A channel set up only
-    /// in part is left off, with the reason in the log.
-    pub fn from_env() -> Self {
-        let email = match (env("SMTP_HOST"), env("SMTP_USERNAME"), env("SMTP_PASSWORD"), env("EMAIL_FROM")) {
-            (Some(host), Some(username), Some(password), Some(from)) => {
-                let port = env("SMTP_PORT").and_then(|port| port.parse().ok()).unwrap_or(587);
-                Email::new(&host, port, &username, &password, &from)
-                    .inspect_err(|error| tracing::error!(%error, "e-mail sign-in codes are off"))
-                    .ok()
-            }
+    /// The channels the settings set up (config.rs): e-mail with SMTP_HOST, SMTP_USERNAME,
+    /// SMTP_PASSWORD and EMAIL_FROM (on SMTP_PORT), WhatsApp with WHATSAPP_TOKEN,
+    /// WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_TEMPLATE (in WHATSAPP_LANGUAGE, through
+    /// WHATSAPP_API_VERSION, with the notices' and the alerts' templates those settings name). A
+    /// channel set up only in part, or wrongly, is left off, with the reason in the log.
+    pub fn from_config(config: &Config) -> Self {
+        let email = match (&config.smtp_host, &config.smtp_username, &config.smtp_password, &config.email_from) {
+            (Some(host), Some(username), Some(password), Some(from)) => Email::new(host, config.smtp_port, username, password, from)
+                .inspect_err(|error| tracing::error!(%error, "e-mail sign-in codes are off"))
+                .ok(),
             (None, None, None, None) => None,
             _ => {
                 tracing::error!("e-mail sign-in codes are off: SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD and EMAIL_FROM go together");
                 None
             }
         };
-        let whatsapp = match (env("WHATSAPP_TOKEN"), env("WHATSAPP_PHONE_NUMBER_ID"), env("WHATSAPP_TEMPLATE")) {
+        let whatsapp = match (&config.whatsapp_token, &config.whatsapp_phone_number_id, &config.whatsapp_template) {
             (Some(token), Some(phone_number_id), Some(template)) => Some(
-                WhatsApp::new(
-                    "https://graph.facebook.com",
-                    &env("WHATSAPP_API_VERSION").unwrap_or_else(|| "v21.0".to_string()),
-                    &phone_number_id,
-                    &token,
-                    &template,
-                    &env("WHATSAPP_LANGUAGE").unwrap_or_else(|| "sq".to_string()),
-                )
-                .with_notices(env("WHATSAPP_NOTICE_TEMPLATE"))
-                .with_alerts(env("WHATSAPP_SEARCH_TEMPLATE"), env("WHATSAPP_EXPIRY_TEMPLATE")),
+                WhatsApp::new(GRAPH_API, &config.whatsapp_api_version, phone_number_id, token, template, &config.whatsapp_language)
+                    .with_notices(config.whatsapp_notice_template.clone())
+                    .with_alerts(config.whatsapp_search_template.clone(), config.whatsapp_expiry_template.clone()),
             ),
             (None, None, None) => None,
             _ => {
@@ -409,10 +425,37 @@ impl Senders {
                 None
             }
         };
-        Self { email, whatsapp }
+        Self { email, whatsapp, kept: None }
+    }
+
+    /// No channel: every code, notice and alert goes to the log, as when the settings set none up.
+    pub fn none() -> Self {
+        Self { email: None, whatsapp: None, kept: None }
+    }
+
+    /// The tests' stand-in: nothing goes out, and every message it is given is kept (`sent`),
+    /// answered as though its contact's channel were set up (`Channel::Email` for an address,
+    /// `Channel::WhatsApp` for a number).
+    pub fn recording() -> Self {
+        Self { email: None, whatsapp: None, kept: Some(Mutex::default()) }
+    }
+
+    /// What the stand-in kept, in the order it was given; nothing for real channels.
+    pub fn sent(&self) -> Vec<Sent> {
+        self.kept.as_ref().map(|kept| kept.lock().unwrap().clone()).unwrap_or_default()
+    }
+
+    /// The stand-in keeps `message` and says by which channel it went; real channels, None, send
+    /// it themselves.
+    fn keep(&self, contact: &Contact, message: impl FnOnce() -> Sent) -> Option<Channel> {
+        self.kept.as_ref()?.lock().unwrap().push(message());
+        Some(stand_in_channel(contact))
     }
 
     pub fn channel(&self, contact: &Contact) -> Channel {
+        if self.kept.is_some() {
+            return stand_in_channel(contact);
+        }
         match contact {
             Contact::Email(_) if self.email.is_some() => Channel::Email,
             Contact::Phone(_) if self.whatsapp.is_some() => Channel::WhatsApp,
@@ -421,6 +464,9 @@ impl Senders {
     }
 
     pub async fn send(&self, contact: &Contact, code: &str) -> Result<Channel, String> {
+        if let Some(channel) = self.keep(contact, || Sent::Code { to: contact.clone(), code: code.to_string() }) {
+            return Ok(channel);
+        }
         match (contact, &self.email, &self.whatsapp) {
             (Contact::Email(address), Some(email), _) => email.send(address, code).await.map(|_| Channel::Email),
             (Contact::Phone(phone), _, Some(whatsapp)) => whatsapp.send(phone, code).await.map(|_| Channel::WhatsApp),
@@ -435,6 +481,10 @@ impl Senders {
     /// (an invitation into a store); a phone number, which has no WhatsApp template for these, or
     /// a channel not set up, goes to the log.
     pub async fn send_text(&self, contact: &Contact, subject: &str, body: &str) -> Result<Channel, String> {
+        let text = || Sent::Text { to: contact.clone(), subject: subject.to_string(), body: body.to_string() };
+        if let Some(channel) = self.keep(contact, text) {
+            return Ok(channel);
+        }
         match (contact, &self.email) {
             (Contact::Email(address), Some(email)) => email.send_text(address, subject, body).await.map(|_| Channel::Email),
             _ => {
@@ -447,6 +497,9 @@ impl Senders {
     /// Sends an alert to `contact`: by e-mail, or by WhatsApp where its kind's template is set up;
     /// otherwise it goes to the log.
     pub async fn send_alert(&self, contact: &Contact, alert: &Alert) -> Result<Channel, String> {
+        if let Some(channel) = self.keep(contact, || Sent::Alert { to: contact.clone(), alert: alert.clone() }) {
+            return Ok(channel);
+        }
         match (contact, &self.email, &self.whatsapp) {
             (Contact::Email(address), Some(email), _) => email.send_alert(address, alert).await.map(|_| Channel::Email),
             // The guard sends it, where its template is set up.
@@ -461,6 +514,9 @@ impl Senders {
     /// Sends a notice of unread messages to `contact`: by e-mail, or by WhatsApp where its notice
     /// template is set up; otherwise it goes to the log.
     pub async fn send_notice(&self, contact: &Contact, notice: &Notice) -> Result<Channel, String> {
+        if let Some(channel) = self.keep(contact, || Sent::Notice { to: contact.clone(), notice: notice.clone() }) {
+            return Ok(channel);
+        }
         match (contact, &self.email, &self.whatsapp) {
             (Contact::Email(address), Some(email), _) => email.send_notice(address, notice).await.map(|_| Channel::Email),
             // The guard sends it, where the notice template is set up.
@@ -473,10 +529,12 @@ impl Senders {
     }
 }
 
-/// The senders, set up from the environment the first time a code goes out.
-pub fn senders() -> &'static Senders {
-    static SENDERS: OnceLock<Senders> = OnceLock::new();
-    SENDERS.get_or_init(Senders::from_env)
+/// The channel the tests' stand-in answers a message by: its contact's own, as though set up.
+fn stand_in_channel(contact: &Contact) -> Channel {
+    match contact {
+        Contact::Email(_) => Channel::Email,
+        Contact::Phone(_) => Channel::WhatsApp,
+    }
 }
 
 #[cfg(test)]
@@ -639,10 +697,45 @@ mod tests {
     }
 
     #[test]
-    fn channels_follow_what_is_set_up() {
-        let email = Email::new("smtp.example.com", 587, "user", "password", "kodi@example.com").unwrap();
-        let senders = Senders { email: Some(email), whatsapp: None };
-        assert_eq!(senders.channel(&Contact::Email("ana@example.com".into())), Channel::Email);
-        assert_eq!(senders.channel(&Contact::Phone("+355691234567".into())), Channel::Log);
+    fn channels_follow_what_the_settings_set_up() {
+        let (ana, besa) = (Contact::Email("ana@example.com".into()), Contact::Phone("+355691234567".into()));
+        let email = Config {
+            smtp_host: Some("smtp.example.com".into()),
+            smtp_username: Some("user".into()),
+            smtp_password: Some("password".into()),
+            email_from: Some("kodi@example.com".into()),
+            ..Config::for_tests()
+        };
+        let senders = Senders::from_config(&email);
+        assert_eq!((senders.channel(&ana), senders.channel(&besa)), (Channel::Email, Channel::Log));
+        // A channel set up in part is off, and the log says why; WhatsApp takes its three.
+        let whatsapp = Config {
+            email_from: None,
+            whatsapp_token: Some("secret".into()),
+            whatsapp_phone_number_id: Some("123".into()),
+            whatsapp_template: Some("kodi_hyrjes".into()),
+            ..email
+        };
+        let senders = Senders::from_config(&whatsapp);
+        assert_eq!((senders.channel(&ana), senders.channel(&besa)), (Channel::Log, Channel::WhatsApp));
+        let none = Senders::none();
+        assert_eq!((none.channel(&ana), none.channel(&besa)), (Channel::Log, Channel::Log));
+        assert!(none.sent().is_empty());
+    }
+
+    #[tokio::test]
+    async fn the_tests_stand_in_keeps_what_it_is_given_and_sends_nothing() {
+        let (ana, besa) = (Contact::Email("ana@example.com".into()), Contact::Phone("+355691234567".into()));
+        let senders = Senders::recording();
+        assert_eq!((senders.channel(&ana), senders.channel(&besa)), (Channel::Email, Channel::WhatsApp));
+        assert_eq!(senders.send(&besa, "482910").await, Ok(Channel::WhatsApp));
+        assert_eq!(senders.send_notice(&ana, &notice(2)).await, Ok(Channel::Email));
+        assert_eq!(senders.send_text(&ana, "Ftesë", "Hyr në Pluribus").await, Ok(Channel::Email));
+        let sent = senders.sent();
+        assert!(
+            matches!(&sent[..], [Sent::Code { to, code }, Sent::Notice { notice, .. }, Sent::Text { subject, .. }]
+                if *to == besa && code == "482910" && notice.unread == 2 && subject == "Ftesë"),
+            "{sent:?}"
+        );
     }
 }

@@ -16,7 +16,7 @@ use pluribus_db::{
     Granted, Invited, NewSearch, expire_listings, grant_promotion, invite, notifications, notify_price_drop,
     record_search_alert, save_search, warn_expiring,
 };
-use pluribus_services::sender::Notice;
+use pluribus_services::sender::{Notice, Senders};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -87,7 +87,7 @@ async fn each_writer_keeps_what_its_notifications_title_says(pool: PgPool) -> sq
     .bind(BESNIK)
     .execute(&pool)
     .await?;
-    assert_eq!(pluribus_services::notices::send_due(&pool, "https://pluribus.example").await?, 1);
+    assert_eq!(pluribus_services::notices::send_due(&pool, &Senders::none(), "https://pluribus.example").await?, 1);
 
     // Her sofa's time is up, and her iPhone's two days off (expiry.rs).
     sqlx::query("UPDATE listings SET expires_at = now() - interval '1 minute' WHERE public_no = 1007").execute(&pool).await?;

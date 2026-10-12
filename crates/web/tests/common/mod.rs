@@ -1,10 +1,11 @@
 //! What the request tests share. Each file in tests/ is a crate of its own, and takes this in with
 //! `mod common;`: the app as the tests run it, with its photos kept in memory and a moderator of
-//! its own; the migrations, embedded once in pluribus-db (`MIGRATOR`); requests sent through the
-//! full router, and what they answer; the sessions and the sellers they come from; the listing
-//! form's fields; and the readers of a page's cards and frames. Each test gets a fresh database
-//! with the migrations applied, plus the fixtures named in its attribute (tests/fixtures). The
-//! tests run from the repository's root, as the server does (`at_the_root`).
+//! its own, over the tests' state (`state`, which a test gives settings or senders of its own);
+//! the migrations, embedded once in pluribus-db (`MIGRATOR`); requests sent through the full
+//! router, and what they answer; the sessions and the sellers they come from; the listing form's
+//! fields; and the readers of a page's cards and frames. Each test gets a fresh database with the
+//! migrations applied, plus the fixtures named in its attribute (tests/fixtures). The tests run
+//! from the repository's root, as the server does (`at_the_root`).
 
 // Each file uses some of what is here, none all of it: what one leaves unused is no warning there.
 #![allow(dead_code)]
@@ -23,13 +24,31 @@ use tower::ServiceExt;
 /// Cargo.toml, which there isn't.
 pub use pluribus_db::MIGRATOR;
 
-/// The tests' moderator (MODERATORS in .env): whoever signs in with this number.
+/// The state and what a test changes in it: the settings (`Config::for_tests`, with a setting of
+/// its own), and the senders (`Senders::none`, as the tests' state has; `Senders::recording`, which
+/// keeps what it is given, each a `Sent`). A file that takes none of them in gets no warning.
+#[allow(unused_imports)]
+pub use pluribus_services::{
+    AppState,
+    config::Config,
+    sender::{Senders, Sent},
+};
+
+/// The tests' moderator (MODERATORS in the settings): whoever signs in with this number.
 pub const MODERATOR: &str = "+355690000099";
 
 /// The app, with photos kept in memory, one store for all the tests: their photos' names never
 /// collide, and a photo posted in one request is there for the next. MODERATOR moderates.
 pub fn app(pool: PgPool) -> Router {
-    pluribus_web::app_with(pool, media(), Moderators::new([MODERATOR]))
+    pluribus_web::router(state(pool))
+}
+
+/// The tests' state, which `app` serves: photos in `media`, MODERATOR, no AI, the tests' settings
+/// and no channel to send by (`pluribus_web::state_with`). A test that wants other settings, or
+/// senders of its own, puts them in it and serves that (`pluribus_web::router(AppState { senders,
+/// ..state(pool) })`).
+pub fn state(pool: PgPool) -> AppState {
+    pluribus_web::state_with(pool, media(), Moderators::new([MODERATOR]), None)
 }
 
 /// The tests' photo store, which every app they build is given: the tests run from the
@@ -110,12 +129,18 @@ pub async fn get(pool: PgPool, uri: &str) -> TestResponse {
 
 /// Posts a form, as a browser would, with the cookie given ("name=value") if any.
 pub async fn post_form(pool: PgPool, uri: &str, fields: &[(&str, &str)], cookie: Option<&str>) -> TestResponse {
+    send(pool, form_request(uri, fields, cookie)).await
+}
+
+/// A form as a browser posts it, with the cookie given ("name=value") if any, for an app of a
+/// test's own (`send_to`).
+pub fn form_request(uri: &str, fields: &[(&str, &str)], cookie: Option<&str>) -> Request<Body> {
     let body = form_urlencoded::Serializer::new(String::new()).extend_pairs(fields).finish();
     let mut request = Request::post(uri).header(header::CONTENT_TYPE, "application/x-www-form-urlencoded");
     if let Some(cookie) = cookie {
         request = request.header(header::COOKIE, cookie);
     }
-    send(pool, request.body(Body::from(body)).unwrap()).await
+    request.body(Body::from(body)).unwrap()
 }
 
 /// The listing form as the browser sends it with photos: multipart, the photos as files.

@@ -397,14 +397,11 @@ fn from_the_site(uri: &str) -> Request<Body> {
         .unwrap()
 }
 
-/// The address the site's links start with (web/seo.rs): PUBLIC_URL when .env sets it, or the one
-/// a request from_the_site came to.
+/// The address the site's links start with (web/seo.rs): PUBLIC_URL when the settings give one,
+/// or the one a request from_the_site came to, the tests' settings giving none
+/// (`settings_reach_the_pages_they_change` gives one).
 fn site() -> String {
-    std::env::var("PUBLIC_URL")
-        .ok()
-        .map(|url| url.trim().trim_end_matches('/').to_string())
-        .filter(|url| !url.is_empty())
-        .unwrap_or_else(|| "https://pluribus.test".to_string())
+    Config::for_tests().public_url.unwrap_or_else(|| "https://pluribus.test".to_string())
 }
 
 /// What the page's meta tag with this property (Open Graph's) or name says.
@@ -695,7 +692,7 @@ async fn a_readers_language_words_what_the_site_kept_for_them(pool: PgPool) {
     let buyer = new_seller(&pool, "+355691112233").await;
     write(&pool, "/listing/1001/mesazh", "A është ende në shitje?", &buyer).await;
     minutes_pass(&pool, 4).await;
-    assert_eq!(pluribus_services::notices::send_due(&pool, "https://pluribus.example").await.unwrap(), 1);
+    assert_eq!(pluribus_services::notices::send_due(&pool, &Senders::none(), "https://pluribus.example").await.unwrap(), 1);
     let title: String = sqlx::query_scalar("SELECT title FROM notifications WHERE notification_type = 'NEW_MESSAGE' AND payload ? 'conversation'")
         .fetch_one(&pool)
         .await
@@ -759,4 +756,49 @@ async fn search_engines_find_the_listings_and_the_categories_by_the_sitemaps(poo
     let mercedes = format!("<url><loc>{site}/listing/1002-mercedes-benz-c-220-2018-automatike</loc><lastmod>{changed}</lastmod></url>");
     assert!(listings.contains(&mercedes), "{listings}");
     assert_eq!(get(pool, "/sitemaps/te-tjera.xml").await.status, StatusCode::NOT_FOUND);
+}
+
+#[sqlx::test(migrator = "MIGRATOR", fixtures("listings"))]
+async fn settings_reach_the_pages_they_change(pool: PgPool) {
+    // The settings are read once, as the server starts, into the state (pluribus-services'
+    // config.rs); the pages take them from the state they are answered over, the templates and the
+    // site's address from the request's own (web::request_config). These turn on the typefaces'
+    // trial, give the site's address and who runs it, and the address to write to.
+    let config = Config {
+        type_trial: true,
+        public_url: Some("https://pluribus.al".into()),
+        contact_email: Some("info@pluribus.al".into()),
+        operator: Some("Pluribus sh.p.k.".into()),
+        ..Config::for_tests()
+    };
+    let config = std::sync::Arc::new(config);
+    let set = || pluribus_web::router(AppState { config: config.clone(), ..state(pool.clone()) });
+    let home = send_to(set(), from_the_site("/")).await;
+    // The top bar's typeface panel, and the policy letting Google Fonts and unpkg's icons in.
+    assert!(home.body.contains(r#"<details class="type-menu" data-controller="dropdown type-trial""#));
+    let policy = home.headers[header::CONTENT_SECURITY_POLICY].to_str().unwrap();
+    assert!(policy.contains("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;"), "{policy}");
+    assert!(policy.contains("font-src 'self' https://fonts.gstatic.com;") && policy.contains("connect-src 'self' https://unpkg.com;"), "{policy}");
+    // The site's address, whatever the request came to.
+    let contact = send_to(set(), from_the_site("/kontakt")).await.body;
+    assert!(contact.contains(r#"<link rel="canonical" href="https://pluribus.al/kontakt">"#), "{contact}");
+    assert!(contact.contains(r#"Na shkruaj te <a href="mailto:info@pluribus.al">info@pluribus.al</a>."#), "{contact}");
+    let privacy = send_to(set(), from_the_site("/privatesia")).await.body;
+    assert!(privacy.contains("Pluribus e drejton Pluribus sh.p.k., që vendos si mbahen të dhënat e tua"), "{privacy}");
+    let promote = send_to(set(), from_the_site("/promovo")).await.body;
+    assert!(promote.contains(r#"<a href="mailto:info@pluribus.al?subject="#), "{promote}");
+    let robots = send_to(set(), from_the_site("/robots.txt")).await.body;
+    assert!(robots.contains("Sitemap: https://pluribus.al/sitemap.xml"), "{robots}");
+
+    // The tests' own settings have none of it: the policy as the site's always is, the address the
+    // request came to, and no address to write to.
+    let home = send(pool.clone(), from_the_site("/")).await;
+    assert!(!home.body.contains("type-menu"));
+    let policy = home.headers[header::CONTENT_SECURITY_POLICY].to_str().unwrap();
+    assert!(!policy.contains("googleapis") && !policy.contains("unpkg"), "{policy}");
+    assert!(policy.contains("style-src 'self' 'unsafe-inline'; img-src"), "{policy}");
+    let contact = send(pool.clone(), from_the_site("/kontakt")).await.body;
+    assert!(contact.contains(r#"<link rel="canonical" href="https://pluribus.test/kontakt">"#), "{contact}");
+    assert!(!contact.contains("mailto:"), "{contact}");
+    assert!(!send(pool, from_the_site("/privatesia")).await.body.contains("Pluribus e drejton"));
 }

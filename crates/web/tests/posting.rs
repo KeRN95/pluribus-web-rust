@@ -1170,7 +1170,8 @@ async fn listings_expire_unless_their_sellers_renew_them(pool: PgPool) {
     let url = format!("/listing/{no}-samsung-galaxy-s21-128-gb");
     let renew = format!("/listing/{no}/rifresko");
     let renew_form = format!(r#"<form method="post" action="{renew}">"#);
-    let run = || pluribus_services::expiry::run(&pool, "https://pluribus.example");
+    let senders = Senders::none();
+    let run = || pluribus_services::expiry::run(&pool, &senders, "https://pluribus.example");
     // Runs a statement on the listing ($1, its number).
     let set = |pool: PgPool, sql: &'static str| {
         let no = no.clone();

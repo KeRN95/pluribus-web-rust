@@ -382,7 +382,8 @@ async fn a_stores_people_share_its_conversations(pool: PgPool) {
     // Left unread a while, Dan's next message is news to those who took part, Besa who posted it
     // and Ana who answered, not to Carla; and the store's answer to Dan, under its name, while a
     // colleague's answer tells nobody on the store's side.
-    let due = || pluribus_services::notices::send_due(&pool, "https://pluribus.example");
+    let senders = Senders::none();
+    let due = || pluribus_services::notices::send_due(&pool, &senders, "https://pluribus.example");
     write(&pool, &thread, "Sa është çmimi i fundit?", &dan).await;
     minutes_pass(&pool, 4).await;
     due().await.unwrap();
@@ -433,7 +434,8 @@ async fn a_stores_listing_tells_its_expiry_to_whoever_still_keeps_it(pool: PgPoo
         .execute(&pool)
         .await
         .unwrap();
-    let run = || pluribus_services::expiry::run(&pool, "https://pluribus.example");
+    let senders = Senders::none();
+    let run = || pluribus_services::expiry::run(&pool, &senders, "https://pluribus.example");
     let told = |pool: PgPool| async move {
         sqlx::query_as::<_, (String, String)>(
             "SELECT user_id::text, notification_type FROM notifications

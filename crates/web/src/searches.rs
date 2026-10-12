@@ -249,9 +249,9 @@ pub async fn seen(State(state): State<AppState>, headers: HeaderMap) -> Result<R
     Ok(axum::http::StatusCode::NO_CONTENT.into_response())
 }
 
-/// Sends the alerts due now; returns how many went out. Their links start with `origin`
-/// (site_origin), and lead through /kerkimet/{id}, which opens the search.
-pub async fn send_search_alerts(db: &PgPool, origin: &str) -> sqlx::Result<usize> {
+/// Sends the alerts due now by `senders`; returns how many went out. Their links start with
+/// `origin` (`Config::site_origin`), and lead through /kerkimet/{id}, which opens the search.
+pub async fn send_search_alerts(db: &PgPool, senders: &sender::Senders, origin: &str) -> sqlx::Result<usize> {
     let due = db::due_search_alerts(db, ALERT_GAP).await?;
     if due.is_empty() {
         return Ok(0);
@@ -310,7 +310,7 @@ pub async fn send_search_alerts(db: &PgPool, origin: &str) -> sqlx::Result<usize
             whatsapp: sender::AlertTemplate::Search { new, name: search.name.clone(), id: search.id.to_string() },
             unsubscribe,
         };
-        match sender::senders().send_alert(&contact, &alert).await {
+        match senders.send_alert(&contact, &alert).await {
             Ok(channel) => tracing::debug!(?channel, to = %contact.masked(), "saved search alert sent"),
             Err(error) => tracing::warn!(%error, to = %contact.masked(), "saved search alert not sent"),
         }
@@ -318,15 +318,15 @@ pub async fn send_search_alerts(db: &PgPool, origin: &str) -> sqlx::Result<usize
     Ok(sent)
 }
 
-/// Looks for the alerts due every ALERT_CHECK_EVERY, from now on, in the background.
-pub fn start_alerts(db: PgPool) {
+/// Looks for the alerts due every ALERT_CHECK_EVERY, from now on, in the background, and sends
+/// them by `senders` with links that start with `origin` (the state's, `web::state`).
+pub fn start_alerts(db: PgPool, senders: std::sync::Arc<sender::Senders>, origin: String) {
     tokio::spawn(async move {
-        let origin = super::site_origin();
         let mut every = tokio::time::interval(ALERT_CHECK_EVERY);
         every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
             every.tick().await;
-            if let Err(error) = send_search_alerts(&db, &origin).await {
+            if let Err(error) = send_search_alerts(&db, &senders, &origin).await {
                 tracing::warn!(%error, "could not send the saved searches' alerts");
             }
         }

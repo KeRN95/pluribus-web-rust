@@ -75,11 +75,11 @@ pub const SITE_IMAGE: &str = "/static/img/pluribus.png";
 const LISTINGS_PER_SITEMAP: i64 = 50_000;
 
 /// The site's address, which every address the previews and sitemaps give starts with:
-/// PUBLIC_URL in .env, or as the request came: the host it named (Host; not X-Forwarded-Host,
-/// which a visitor may set to anything), over https when the proxy in front says so
-/// (X-Forwarded-Proto), as the tunnel does.
+/// PUBLIC_URL in the settings of the state answering the request (`web::request_config`), or as
+/// the request came: the host it named (Host; not X-Forwarded-Host, which a visitor may set to
+/// anything), over https when the proxy in front says so (X-Forwarded-Proto), as the tunnel does.
 pub fn origin(headers: &HeaderMap) -> String {
-    if let Some(url) = pluribus_services::public_url() {
+    if let Some(url) = super::request_config().and_then(|config| config.public_url.clone()) {
         return url;
     }
     let host = headers.get(header::HOST).and_then(|value| value.to_str().ok()).unwrap_or("127.0.0.1:3000");

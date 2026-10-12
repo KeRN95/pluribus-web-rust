@@ -38,7 +38,7 @@ use std::{
     collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
     path::{Path, PathBuf},
-    sync::{LazyLock, Mutex, OnceLock},
+    sync::{Arc, LazyLock, Mutex, OnceLock},
     time::SystemTime,
 };
 
@@ -58,7 +58,9 @@ use oxc_codegen::{Codegen, CodegenOptions, CommentOptions, LegalComment};
 use oxc_minifier::{Minifier, MinifierOptions};
 use oxc_parser::Parser;
 use oxc_span::SourceType;
-use pluribus_services::{AppState, Moderators, ai::Ai, media::Media, recommended::Recommended, views::Views};
+use pluribus_services::{
+    AppState, Moderators, ai::Ai, config::Config, media::Media, recommended::Recommended, sender::Senders, views::Views,
+};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use tower_http::{
@@ -78,33 +80,38 @@ use crate as web;
 use pluribus_core::{domain, format, i18n, t, t1, t2, t3};
 use pluribus_db as db;
 use pluribus_services::{ai, media, recommended, sender, views};
-// The site's address for what goes out on its own (searches.rs's alerts, stores.rs's invitations).
-use pluribus_services::site_origin;
 
 /// The application's state, as `main` serves the pages (`router`) and the JSON API (pluribus-api)
-/// over it, side by side, so that the work that runs on its own runs once, started here: photos in
-/// the store .env names (the small and AVIF copies of those kept before there were any made
-/// meanwhile), its moderators, the AI if .env has a key for it, the views written every minute, the
-/// notices of unread messages and the saved searches' alerts sent as they fall due, the listings
-/// whose time is up expired, the promotions looked after, and the Bank of Albania's euro rate read
-/// and taken (pluribus-services' notices.rs, expiry.rs, promotions.rs and rates.rs, and
-/// searches.rs here). Until the API (C1) this was `app()`, which made the pages' router of it too.
-pub fn state(db: PgPool) -> AppState {
-    let ai = Ai::from_env();
+/// over it, side by side, so that the work that runs on its own runs once, started here; from the
+/// settings `main` read as it started (`config`, pluribus-services' config.rs), which the state
+/// keeps: photos in the store they name (the small and AVIF copies of those kept before there were
+/// any made meanwhile), the channels they set up (`Senders::from_config`), their moderators, the AI
+/// if they have a key for it, the views written every minute, the notices of unread messages and
+/// the saved searches' alerts sent as they fall due, the listings whose time is up expired, the
+/// promotions looked after, and the Bank of Albania's euro rate read and taken (pluribus-services'
+/// notices.rs, expiry.rs, promotions.rs and rates.rs, and searches.rs here), the jobs that send
+/// given the channels and the site's address (`Config::site_origin`) as they start. Until the API
+/// (C1) this was `app()`, which made the pages' router of it too.
+pub fn state(db: PgPool, config: Config) -> AppState {
+    let config = Arc::new(config);
+    let ai = Ai::from_config(&config);
     if ai.is_none() {
         tracing::info!("ANTHROPIC_API_KEY isn't set: the listing form has no AI to fill it in");
     }
+    let senders = Arc::new(Senders::from_config(&config));
     let views = Views::buffered(views::FLUSH_EVERY);
     views.flush_now_and_then(db.clone());
-    let media = Media::from_env();
+    let media = Media::from_config(&config);
     media.fill_in_copies();
-    pluribus_services::notices::start(db.clone());
-    start_search_alerts(db.clone());
-    pluribus_services::expiry::start(db.clone(), media.clone());
+    let origin = config.site_origin();
+    pluribus_services::notices::start(db.clone(), senders.clone(), origin.clone());
+    start_search_alerts(db.clone(), senders.clone(), origin.clone());
+    pluribus_services::expiry::start(db.clone(), media.clone(), senders.clone(), origin);
     pluribus_services::promotions::start(db.clone());
     pluribus_services::rates::start(db.clone());
     let recommended = Recommended::kept();
-    AppState { db, media, moderators: Moderators::from_env(), ai, views, recommended }
+    let moderators = config.moderators.clone();
+    AppState { db, config, senders, media, moderators, ai, views, recommended }
 }
 
 /// The pages with photos kept in `media` and these moderators: the integration tests keep their
@@ -119,12 +126,19 @@ pub fn app_with_ai(db: PgPool, media: Media, moderators: Moderators, ai: Option<
 }
 
 /// The state the tests build their apps on: the pages' (`app_with`, `app_with_ai`), and the API's,
-/// whose tests nest it beside the pages over this state as `main` does over `state`. Photos kept in
-/// `media`, these moderators and this AI; views written as they come, no visitor's recommendations
-/// kept, and none of the work that runs on its own started.
+/// whose tests nest it beside the pages over this state as `main` does over `state`. The tests'
+/// settings (`Config::for_tests`: no channel, no public address, no test mode, no typefaces
+/// tried), with these moderators; no channel to send by (`Senders::none`: every code, notice and
+/// alert to the log); photos kept in `media`, and this AI; views written as they come, no visitor's
+/// recommendations kept, and none of the work that runs on its own started. A test that wants
+/// other settings, or senders of its own (`Senders::recording`, which keeps what it is given), puts
+/// them in the state this gives before it makes its app (`AppState { senders, ..state_with(...) }`,
+/// then `router`).
 pub fn state_with(db: PgPool, media: Media, moderators: Moderators, ai: Option<Ai>) -> AppState {
     let (views, recommended) = (Views::immediate(), Recommended::immediate());
-    AppState { db, media, moderators, ai, views, recommended }
+    let config = Arc::new(Config { moderators: moderators.clone(), ..Config::for_tests() });
+    let senders = Arc::new(Senders::none());
+    AppState { db, config, senders, media, moderators, ai, views, recommended }
 }
 
 /// The posting and edit forms carry photos: MAX_PHOTOS of them, which phones shrink before sending
@@ -132,12 +146,16 @@ pub fn state_with(db: PgPool, media: Media, moderators: Moderators, ai: Option<A
 const FORM_WITH_PHOTOS_BYTES: usize = 64 * 1024 * 1024;
 
 /// The pages, every route of "Routes" but the API's, with their layers (the language, the check
-/// on forms from other sites, the security headers, the signed-in cookie, the rail's path,
-/// compression and the log) and their 404 page for any other address but the API's. `main` nests
-/// the JSON API beside them once this is made (pluribus-api, at /api/v1), so that none of these
-/// layers apply to it: a layer covers only the routes made before it.
+/// on forms from other sites, the security headers, the signed-in cookie, the rail's path, the
+/// state's settings, compression and the log) and their 404 page for any other address but the
+/// API's. `main` nests the JSON API beside them once this is made (pluribus-api, at /api/v1), so
+/// that none of these layers apply to it: a layer covers only the routes made before it. The
+/// Content-Security-Policy is made here once, from the state's settings
+/// (`content_security_policy`).
 pub fn router(state: AppState) -> Router {
     let with_photos = || DefaultBodyLimit::max(FORM_WITH_PHOTOS_BYTES);
+    let policy = content_security_policy(state.config.type_trial);
+    let config = state.config.clone();
     Router::new()
         .route("/", get(browse::home))
         .route("/c/{slug}", get(browse::category))
@@ -245,10 +263,11 @@ pub fn router(state: AppState) -> Router {
         .fallback(not_found)
         .layer(middleware::from_fn(same_site_posts))
         .layer(middleware::from_fn(cache_headers))
-        .layer(middleware::from_fn(security_headers))
+        .layer(middleware::from_fn_with_state(policy, security_headers))
         .layer(middleware::from_fn(account::signed_in_cookie))
         .layer(middleware::from_fn(language::language))
         .layer(middleware::from_fn(rail::keep_path))
+        .layer(middleware::from_fn_with_state(config, keep_config))
         // WOFF2 fonts are Brotli-compressed already; compressing them again only costs time.
         .layer(CompressionLayer::new().compress_when(
             DefaultPredicate::new().and(NotForContentType::const_new("font/")),
@@ -304,12 +323,12 @@ async fn cache_headers(request: Request, next: Next) -> Response {
 /// microphone, payments or USB for any page, and the visitor's location for the site's own alone
 /// ("Afër meje", "Vendndodhja ime"); and a window of its own, which a page of another site it
 /// opens (a share) can't reach back into. HTTPS-only (Strict-Transport-Security) is for whatever
-/// serves the site over HTTPS to say.
-async fn security_headers(request: Request, next: Next) -> Response {
+/// serves the site over HTTPS to say. The policy is the one `router` made from the settings.
+async fn security_headers(State(policy): State<HeaderValue>, request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
     let headers = response.headers_mut();
     for (name, value) in [
-        (header::CONTENT_SECURITY_POLICY, content_security_policy().clone()),
+        (header::CONTENT_SECURITY_POLICY, policy),
         (header::X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff")),
         (header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY")),
         (header::REFERRER_POLICY, HeaderValue::from_static("strict-origin-when-cross-origin")),
@@ -334,41 +353,60 @@ async fn security_headers(request: Request, next: Next) -> Response {
 /// form's previews). Requests go to the site alone. No plugins, no `<base>` elsewhere, no form
 /// sent to another site, and no other site framing a page (`frame-ancestors`). A script added to a
 /// page later needs its hash here, or a file of its own under /static/js. While typefaces are
-/// being tried (type_trial), Google Fonts' stylesheets and files are let in too, and the icon
-/// libraries' files from unpkg.
-fn content_security_policy() -> &'static HeaderValue {
-    static POLICY: OnceLock<HeaderValue> = OnceLock::new();
-    POLICY.get_or_init(|| {
-        let hash = |script: &str| format!("'sha256-{}'", BASE64.encode(Sha256::digest(script)));
-        let (styles, fonts, icons) = if type_trial() {
-            (" https://fonts.googleapis.com", " https://fonts.gstatic.com", " https://unpkg.com")
-        } else {
-            ("", "", "")
-        };
-        let policy = format!(
-            "default-src 'self'; script-src 'self' {} {}; style-src 'self' 'unsafe-inline'{styles}; \
-             img-src 'self' https: data: blob:; font-src 'self'{fonts}; connect-src 'self'{icons}; object-src 'none'; \
-             base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
-            hash(THEME_SCRIPT),
-            hash(import_map()),
-        );
-        HeaderValue::from_str(&policy).expect("the policy is plain ASCII")
-    })
+/// being tried (`type_trial`, TYPE_TRIAL in the settings), Google Fonts' stylesheets and files are
+/// let in too, and the icon libraries' files from unpkg. Made once for each router (`router`), from
+/// its state's settings.
+fn content_security_policy(type_trial: bool) -> HeaderValue {
+    let hash = |script: &str| format!("'sha256-{}'", BASE64.encode(Sha256::digest(script)));
+    let (styles, fonts, icons) = if type_trial {
+        (" https://fonts.googleapis.com", " https://fonts.gstatic.com", " https://unpkg.com")
+    } else {
+        ("", "", "")
+    };
+    let policy = format!(
+        "default-src 'self'; script-src 'self' {} {}; style-src 'self' 'unsafe-inline'{styles}; \
+         img-src 'self' https: data: blob:; font-src 'self'{fonts}; connect-src 'self'{icons}; object-src 'none'; \
+         base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+        hash(THEME_SCRIPT),
+        hash(import_map()),
+    );
+    HeaderValue::from_str(&policy).expect("the policy is plain ASCII")
 }
 
-/// Trying typefaces and icons (TYPE_TRIAL=true in .env): the top bar has a button, "Aa", whose
-/// panel picks the headings' and the text's typeface from a list, the site's own and Google
+tokio::task_local! {
+    /// The settings of the state the request is answered over (`AppState::config`), for what reads
+    /// them without the state at hand: the templates, which ask whether typefaces are being tried
+    /// (`type_trial`, base.html), and the site's address the pages' links start with
+    /// (`seo::origin`), which the handlers work out from the request's headers alone. Kept around
+    /// every page by `keep_config`, one of `router`'s layers.
+    static CONFIG: Arc<Config>;
+}
+
+/// Keeps the state's settings for the request while its page is made (`CONFIG`).
+async fn keep_config(State(config): State<Arc<Config>>, request: Request, next: Next) -> Response {
+    CONFIG.scope(config, next.run(request)).await
+}
+
+/// The settings of the state answering the request being made; None outside a request, where
+/// whatever reads them goes by its default.
+pub(crate) fn request_config() -> Option<Arc<Config>> {
+    CONFIG.try_with(Arc::clone).ok()
+}
+
+/// Trying typefaces and icons (TYPE_TRIAL=true in the settings): the top bar has a button, "Ff",
+/// whose panel picks the headings' and the text's typeface from a list, the site's own and Google
 /// Fonts', and their weights, and an icon library in place of the site's own drawings (base.html,
 /// type_trial_controller.js), for the visitor's own browser alone. Only while the site's look is
-/// being settled.
+/// being settled. The templates ask, from the request's settings (`request_config`).
 pub fn type_trial() -> bool {
-    std::env::var("TYPE_TRIAL").is_ok_and(|value| value == "true")
+    request_config().is_some_and(|config| config.type_trial)
 }
 
-/// The saved searches' alerts (searches.rs): sent as they fall due, every 15 minutes from now
-/// on, in the background; and those due now, which the tests send.
-pub fn start_search_alerts(db: sqlx::PgPool) {
-    searches::start_alerts(db);
+/// The saved searches' alerts (searches.rs): sent by `senders` as they fall due, their links
+/// starting with `origin`, every 15 minutes from now on, in the background; and those due now,
+/// which the tests send.
+pub fn start_search_alerts(db: sqlx::PgPool, senders: Arc<Senders>, origin: String) {
+    searches::start_alerts(db, senders, origin);
 }
 
 pub use searches::send_search_alerts;
@@ -784,7 +822,33 @@ async fn health(State(state): State<AppState>) -> Result<&'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{minified, minified_js};
+    use base64::Engine;
+    use sha2::{Digest, Sha256};
+
+    use super::{BASE64, THEME_SCRIPT, content_security_policy, import_map, minified, minified_js};
+
+    #[test]
+    fn the_policy_is_the_sites_and_lets_the_typefaces_in_only_while_they_are_tried() {
+        // The header as it has always been, the two scripts in the page by their hashes; with
+        // TYPE_TRIAL in the settings, Google Fonts' stylesheets and files and unpkg's icons too.
+        let hash = |script: &str| format!("'sha256-{}'", BASE64.encode(Sha256::digest(script)));
+        let scripts = format!("{} {}", hash(THEME_SCRIPT), hash(import_map()));
+        assert_eq!(
+            content_security_policy(false),
+            format!(
+                "default-src 'self'; script-src 'self' {scripts}; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; \
+                 font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+            )
+        );
+        assert_eq!(
+            content_security_policy(true),
+            format!(
+                "default-src 'self'; script-src 'self' {scripts}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; \
+                 img-src 'self' https: data: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://unpkg.com; \
+                 object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+            )
+        );
+    }
 
     #[test]
     fn a_script_goes_minified() {

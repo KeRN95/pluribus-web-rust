@@ -9,7 +9,7 @@
 //! (users.preferred_language); the notifications' titles, kept in Albanian, web/notifications.rs
 //! words for whoever reads them, and a WhatsApp template's texts stay Albanian.
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use pluribus_core::{
     format::{self, Contact},
@@ -18,16 +18,17 @@ use pluribus_core::{
 use pluribus_db::{self as db, ExpiryNotice, LISTING_DAYS};
 use sqlx::PgPool;
 
-use crate::sender::{self, Alert, AlertTemplate};
+use crate::sender::{Alert, AlertTemplate, Senders};
 
 /// How many days before a listing expires its seller hears of it.
 pub const WARN_DAYS: i32 = 3;
 /// How often the server looks for listings to expire or warn of.
 pub const CHECK_EVERY: Duration = Duration::from_secs(15 * 60);
 
-/// Expires the listings whose time is up and warns of those WARN_DAYS from it; returns how many of
-/// each (warned, expired). The e-mails' links start with `origin` (site_origin).
-pub async fn run(db: &PgPool, origin: &str) -> sqlx::Result<(usize, usize)> {
+/// Expires the listings whose time is up and warns of those WARN_DAYS from it, their sellers told
+/// by `senders`; returns how many of each (warned, expired). The e-mails' links start with
+/// `origin` (`Config::site_origin`).
+pub async fn run(db: &PgPool, senders: &Senders, origin: &str) -> sqlx::Result<(usize, usize)> {
     // Expired first, so that one whose time is up isn't warned of as well.
     let expired = db::expire_listings(db).await?;
     for listing in &expired {
@@ -43,7 +44,7 @@ pub async fn run(db: &PgPool, origin: &str) -> sqlx::Result<(usize, usize)> {
             (subject, body)
         });
         let whatsapp = AlertTemplate::Expiry { title: listing.title.clone(), what: "skadoi".into() };
-        tell(listing, Alert { subject, body, whatsapp, unsubscribe }).await;
+        tell(senders, listing, Alert { subject, body, whatsapp, unsubscribe }).await;
     }
     let warned = db::warn_expiring(db, WARN_DAYS).await?;
     for listing in &warned {
@@ -61,7 +62,7 @@ pub async fn run(db: &PgPool, origin: &str) -> sqlx::Result<(usize, usize)> {
         });
         let date = format::date(listing.expires_at);
         let whatsapp = AlertTemplate::Expiry { title: listing.title.clone(), what: format!("skadon më {date}") };
-        tell(listing, Alert { subject, body, whatsapp, unsubscribe }).await;
+        tell(senders, listing, Alert { subject, body, whatsapp, unsubscribe }).await;
     }
     Ok((warned.len(), expired.len()))
 }
@@ -92,29 +93,29 @@ fn in_their_language<R>(listing: &ExpiryNotice, say: impl FnOnce() -> R) -> R {
 /// The alert to the listing's seller: by e-mail where they sign in with an address and allow
 /// e-mail, by WhatsApp where they sign in with a number and its template is set up; else the log
 /// has it (sender.rs).
-async fn tell(listing: &ExpiryNotice, alert: Alert) {
+async fn tell(senders: &Senders, listing: &ExpiryNotice, alert: Alert) {
     let contact = match (&listing.email, &listing.phone) {
         (Some(email), _) if listing.email_ok => Contact::Email(email.clone()),
         (_, Some(phone)) => Contact::Phone(phone.clone()),
         _ => return,
     };
-    match sender::senders().send_alert(&contact, &alert).await {
+    match senders.send_alert(&contact, &alert).await {
         Ok(channel) => tracing::debug!(?channel, listing = listing.public_no, "expiry notice sent"),
         Err(error) => tracing::warn!(%error, listing = listing.public_no, "expiry notice not sent"),
     }
 }
 
-/// Looks for listings to expire or warn of every CHECK_EVERY, from now on, in the background;
-/// and for listings posted without signing in that their code never put up, which go with their
-/// photos (db::forget_drafts).
-pub fn start(db: PgPool, media: crate::media::Media) {
+/// Looks for listings to expire or warn of every CHECK_EVERY, from now on, in the background,
+/// their sellers told by `senders` with links that start with `origin` (the state's,
+/// `pluribus_web::state`); and for listings posted without signing in that their code never put
+/// up, which go with their photos (db::forget_drafts).
+pub fn start(db: PgPool, media: crate::media::Media, senders: Arc<Senders>, origin: String) {
     tokio::spawn(async move {
-        let origin = crate::site_origin();
         let mut every = tokio::time::interval(CHECK_EVERY);
         every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
             every.tick().await;
-            if let Err(error) = run(&db, &origin).await {
+            if let Err(error) = run(&db, &senders, &origin).await {
                 tracing::warn!(%error, "could not expire the listings whose time is up");
             }
             match db::forget_drafts(&db).await {

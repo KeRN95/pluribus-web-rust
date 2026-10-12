@@ -115,7 +115,8 @@ async fn writing_to_a_seller_takes_signing_in_first(pool: PgPool) {
 async fn a_message_left_unread_brings_a_notice_at_most_once_an_hour(pool: PgPool) {
     let ana = session_for(&pool, ANA_ID).await;
     let buyer = new_seller(&pool, "+355691112233").await;
-    let due = || pluribus_services::notices::send_due(&pool, "https://pluribus.example");
+    let senders = Senders::none();
+    let due = || pluribus_services::notices::send_due(&pool, &senders, "https://pluribus.example");
     let thread = write(&pool, "/listing/1001/mesazh", "A është ende në shitje?", &buyer).await.location.unwrap();
     let conversation = thread.trim_start_matches("/mesazhet/").to_string();
 

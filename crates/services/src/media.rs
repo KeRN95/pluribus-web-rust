@@ -46,6 +46,8 @@ use object_store::{
 };
 use sha2::{Digest, Sha256};
 
+use crate::config::Config;
+
 /// Photos per listing.
 pub const MAX_PHOTOS: usize = 8;
 /// One photo as sent. Phones send them smaller: photos_controller.js shrinks them first.
@@ -136,21 +138,20 @@ pub struct Media {
 }
 
 impl Media {
-    /// The S3 store named in the environment: S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID and
-    /// S3_SECRET_ACCESS_KEY, S3_REGION if the service wants one ("auto" for R2). Without them,
+    /// The S3 store the settings name (config.rs): S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID and
+    /// S3_SECRET_ACCESS_KEY, in S3_REGION if the service wants one ("auto" for R2). Without them,
     /// photos are kept in memory, which is enough for the tests; the server then says so. Pages
     /// give the photos' addresses under MEDIA_URL, a CDN's, when it is set, else under /media.
-    pub fn from_env() -> Self {
-        let env = |name: &str| std::env::var(name).ok().map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
+    pub fn from_config(config: &Config) -> Self {
         let store: Arc<dyn ObjectStore> =
-            match (env("S3_ENDPOINT"), env("S3_BUCKET"), env("S3_ACCESS_KEY_ID"), env("S3_SECRET_ACCESS_KEY")) {
+            match (&config.s3_endpoint, &config.s3_bucket, &config.s3_access_key_id, &config.s3_secret_access_key) {
                 (Some(endpoint), Some(bucket), Some(key_id), Some(secret)) => {
                     let store = AmazonS3Builder::new()
                         .with_endpoint(endpoint)
                         .with_bucket_name(bucket)
                         .with_access_key_id(key_id)
                         .with_secret_access_key(secret)
-                        .with_region(env("S3_REGION").unwrap_or_else(|| "auto".to_string()))
+                        .with_region(&config.s3_region)
                         .with_allow_http(true)
                         .with_virtual_hosted_style_request(false)
                         .build();
@@ -167,8 +168,7 @@ impl Media {
                     Arc::new(InMemory::new())
                 }
             };
-        let base = env("MEDIA_URL").map_or_else(|| "/media".to_string(), |url| url.trim_end_matches('/').to_string());
-        Self { store, base: base.into() }
+        Self { store, base: config.media_url.as_str().into() }
     }
 
     pub fn in_memory() -> Self {
