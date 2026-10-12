@@ -1,10 +1,13 @@
 //! Why a request failed, answered in one envelope whatever went wrong:
 //! `{"error": {"code": "unauthorized", "message": "Hyr në llogari për të vazhduar."}}`, and for what
 //! was sent wrong, each field's message under the request's own name for it,
-//! `{"error": {"code": "validation", "message": "…", "fields": {"body": "…"}}}`. The code is for the
+//! `{"error": {"code": "validation", "message": "…", "fields": {"body": "…"}}}`; for a request that
+//! came too soon, where that is known, in how many seconds to try again,
+//! `{"error": {"code": "rate_limited", "message": "…", "retry_after": 42}}`. The code is for the
 //! app to act on, the same in every language; the messages are for a person to read, in the
-//! language the request asks for (lang.rs), from the catalogue (i18n/en/api.txt). An error's
-//! details stay in the log, never in the answer.
+//! language the request asks for (lang.rs), from the catalogue (i18n/en/api.txt), each code's own,
+//! or one of a refusal's own where it says more (`ApiError::said`: a sign-in code that expired, an
+//! account suspended). An error's details stay in the log, never in the answer.
 
 use std::collections::BTreeMap;
 
@@ -23,6 +26,9 @@ pub enum ApiError {
     /// No bearer token where the route needs one, or one no good session has (wrong, expired, or
     /// its account closed or suspended): 401, with `WWW-Authenticate: Bearer`.
     Unauthorized,
+    /// Who is asking is known, and may not: a suspended account whose sign-in code came back right
+    /// (signin.rs): 403.
+    Forbidden,
     /// Nothing there, or nothing the caller may see (what isn't theirs answers so, as on the
     /// pages): 404.
     NotFound,
@@ -34,6 +40,11 @@ pub enum ApiError {
     /// Anything else that ends a request, a database's error among them: logged in full,
     /// answered without its details: 500.
     Internal(anyhow::Error),
+    /// One of the errors above, its code and status, said in words of its own rather than its
+    /// code's (`said`), in the request's language: what a refusal says, a sign-in code that
+    /// expired, an account suspended; and, for one that came too soon, in how many seconds to try
+    /// again, where that is known (`retry_after`), in the envelope and in a `Retry-After` header.
+    Said { error: Box<ApiError>, message: String, retry_after: Option<u64> },
 }
 
 /// What a failed request answers: its error, the envelope's one member.
@@ -45,13 +56,17 @@ pub struct ErrorEnvelope {
 /// An error as the envelope gives it.
 #[derive(Debug, Serialize)]
 pub struct ErrorBody {
-    /// `unauthorized`, `not_found`, `validation`, `rate_limited` or `internal`.
+    /// `unauthorized`, `forbidden`, `not_found`, `validation`, `rate_limited` or `internal`.
     pub code: &'static str,
     /// What went wrong, in the request's language.
     pub message: String,
     /// A validation error's fields, each with its message; on other errors, none (left out).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fields: Option<BTreeMap<&'static str, String>>,
+    /// For a request that came too soon, in how many seconds to try again, where that is known
+    /// (`Retry-After` says it too); otherwise none (left out).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub retry_after: Option<u64>,
 }
 
 impl ApiError {
@@ -59,10 +74,12 @@ impl ApiError {
     pub fn code(&self) -> &'static str {
         match self {
             Self::Unauthorized => "unauthorized",
+            Self::Forbidden => "forbidden",
             Self::NotFound => "not_found",
             Self::Validation(_) => "validation",
             Self::RateLimited => "rate_limited",
             Self::Internal(_) => "internal",
+            Self::Said { error, .. } => error.code(),
         }
     }
 
@@ -70,23 +87,60 @@ impl ApiError {
     pub fn status(&self) -> StatusCode {
         match self {
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
+            Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Validation(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::RateLimited => StatusCode::TOO_MANY_REQUESTS,
             Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Said { error, .. } => error.status(),
         }
     }
 
-    /// The envelope, its message in the language now.
-    pub fn envelope(&self) -> ErrorEnvelope {
+    /// The error said in `message`, already in the request's language, rather than in its code's
+    /// words: a sign-in code's `ApiError::NotFound` saying that it expired.
+    pub fn said(self, message: impl Into<String>) -> Self {
+        match self {
+            Self::Said { error, retry_after, .. } => Self::Said { error, message: message.into(), retry_after },
+            error => Self::Said { error: Box::new(error), message: message.into(), retry_after: None },
+        }
+    }
+
+    /// The error with in how many seconds to try again: `ApiError::RateLimited.retry_after(42)`.
+    pub fn retry_after(self, seconds: u64) -> Self {
+        match self {
+            Self::Said { error, message, .. } => Self::Said { error, message, retry_after: Some(seconds) },
+            error => {
+                let message = error.message();
+                Self::Said { error: Box::new(error), message, retry_after: Some(seconds) }
+            }
+        }
+    }
+
+    /// The error itself, under the words it is said in.
+    fn plain(&self) -> &Self {
+        match self {
+            Self::Said { error, .. } => error.plain(),
+            error => error,
+        }
+    }
+
+    /// What the error says, in the language now: its own words, or its code's.
+    fn message(&self) -> String {
         let message = match self {
             Self::Unauthorized => t("Hyr në llogari për të vazhduar."),
+            Self::Forbidden => t("Nuk të lejohet ta bësh këtë."),
             Self::NotFound => t("Ajo që kërkove nuk u gjet."),
             Self::Validation(_) => t("Disa fusha nuk janë në rregull."),
             Self::RateLimited => t("Shumë kërkesa njëra pas tjetrës. Provo përsëri pas pak."),
             Self::Internal(_) => t("Diçka shkoi keq. Provo përsëri."),
+            Self::Said { message, .. } => message.as_str(),
         };
-        let fields = match self {
+        message.to_string()
+    }
+
+    /// The envelope, its message in the language now.
+    pub fn envelope(&self) -> ErrorEnvelope {
+        let fields = match self.plain() {
             Self::Validation(fields) => {
                 let mut first = BTreeMap::new();
                 for (field, message) in fields {
@@ -96,19 +150,29 @@ impl ApiError {
             }
             _ => None,
         };
-        ErrorEnvelope { error: ErrorBody { code: self.code(), message: message.to_string(), fields } }
+        let retry_after = match self {
+            Self::Said { retry_after, .. } => *retry_after,
+            _ => None,
+        };
+        ErrorEnvelope { error: ErrorBody { code: self.code(), message: self.message(), fields, retry_after } }
     }
 }
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        if let Self::Internal(error) = &self {
+        if let Self::Internal(error) = self.plain() {
             tracing::error!(error = ?error, "API request failed");
         }
-        let mut response = (self.status(), Json(self.envelope())).into_response();
-        if matches!(self, Self::Unauthorized) {
+        let envelope = self.envelope();
+        let retry_after = envelope.error.retry_after;
+        let mut response = (self.status(), Json(envelope)).into_response();
+        if matches!(self.plain(), Self::Unauthorized) {
             // RFC 6750: a 401 names the scheme that would sign the request in.
             response.headers_mut().insert(header::WWW_AUTHENTICATE, HeaderValue::from_static("Bearer"));
+        }
+        if let Some(seconds) = retry_after {
+            // RFC 9110: when to try again, as the envelope says it, for clients that read headers.
+            response.headers_mut().insert(header::RETRY_AFTER, HeaderValue::from(seconds));
         }
         response
     }
@@ -153,6 +217,7 @@ mod tests {
     fn each_error_has_its_code_and_status_and_only_validation_its_fields() {
         let errors = [
             (ApiError::Unauthorized, "unauthorized", 401),
+            (ApiError::Forbidden, "forbidden", 403),
             (ApiError::NotFound, "not_found", 404),
             (ApiError::Validation(vec![("title", "a".into()), ("price", "b".into()), ("title", "c".into())]), "validation", 422),
             (ApiError::RateLimited, "rate_limited", 429),
@@ -169,8 +234,42 @@ mod tests {
                 }
                 _ => assert!(envelope.error.fields.is_none(), "{code}"),
             }
+            assert_eq!(envelope.error.retry_after, None, "{code}");
             // An error's details stay in the log.
             assert!(!envelope.error.message.contains("10.0.0.5"));
         }
+    }
+
+    #[test]
+    fn an_error_said_in_its_own_words_keeps_its_code_status_and_fields_and_may_say_when_to_try_again() {
+        let gone = ApiError::NotFound.said("Kodi skadoi.");
+        let envelope = gone.envelope();
+        assert_eq!((envelope.error.code, gone.status().as_u16(), envelope.error.message.as_str()), ("not_found", 404, "Kodi skadoi."));
+        assert_eq!((envelope.error.fields, envelope.error.retry_after), (None, None));
+
+        let wrong = ApiError::Validation(vec![("code", "Gabim.".into())]).said("Gabim.");
+        let envelope = wrong.envelope();
+        assert_eq!((envelope.error.code, envelope.error.message.as_str()), ("validation", "Gabim."));
+        assert_eq!(envelope.error.fields.unwrap().get("code").map(String::as_str), Some("Gabim."));
+
+        // Either way round: the words and the wait kept both.
+        for soon in [ApiError::RateLimited.said("Prit.").retry_after(42), ApiError::RateLimited.retry_after(42).said("Prit.")] {
+            let envelope = soon.envelope();
+            assert_eq!((envelope.error.code, soon.status().as_u16()), ("rate_limited", 429));
+            assert_eq!((envelope.error.message.as_str(), envelope.error.retry_after), ("Prit.", Some(42)));
+            let response = soon.into_response();
+            assert_eq!(response.headers().get(header::RETRY_AFTER).unwrap(), "42");
+        }
+        // A wait alone keeps the code's own words.
+        let envelope = ApiError::RateLimited.retry_after(5).envelope();
+        assert_eq!(envelope.error.message, "Shumë kërkesa njëra pas tjetrës. Provo përsëri pas pak.");
+
+        // A 401 in words of its own still names the scheme; a 403 doesn't.
+        let response = ApiError::Unauthorized.said("Hyr.").into_response();
+        assert_eq!(response.headers().get(header::WWW_AUTHENTICATE).unwrap(), "Bearer");
+        let response = ApiError::Forbidden.said("Kjo llogari është pezulluar.").into_response();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        assert!(response.headers().get(header::WWW_AUTHENTICATE).is_none());
+        assert!(response.headers().get(header::RETRY_AFTER).is_none());
     }
 }

@@ -1,6 +1,7 @@
 //! What the site does besides answering a page, which its pages (pluribus-web) and its JSON API
 //! (pluribus-api) share: the application's state (`AppState`), who moderates (`Moderators`), how
-//! what signs someone in is kept (`hash`); the site's settings, read once as the server starts,
+//! what signs someone in is kept (`hash`), and signing in with a code (sign_in.rs, its limits, the
+//! code and the session); the site's settings, read once as the server starts,
 //! the site's address for what goes out on its own among them (config.rs: `Config`,
 //! `Config::site_origin`); photos and their store (media.rs), sending codes, notices and alerts
 //! (sender.rs), the AI that fills in the listing form (ai.rs), the euro rate (rates.rs), the views
@@ -18,6 +19,7 @@ pub mod promotions;
 pub mod rates;
 pub mod recommended;
 pub mod sender;
+pub mod sign_in;
 pub mod views;
 
 use std::sync::Arc;
@@ -81,8 +83,9 @@ impl Moderators {
 
 /// SHA-256, as the database keeps what signs someone in (migration 0007), so that a copy of it
 /// signs no one in: a session's token (`sessions.token_hash`), the pages' cookie or the phone
-/// app's bearer token, and a sign-in code with its contact (`login_codes.code_hash`). The pages
-/// (pluribus-web's account.rs) and the API (pluribus-api's auth.rs) hash alike with it.
+/// app's bearer token, and a sign-in code with its contact (`login_codes.code_hash`). Signing in
+/// (sign_in.rs), the pages (pluribus-web's account.rs) and the API (pluribus-api's auth.rs) hash
+/// alike with it.
 pub fn hash(value: &str) -> Vec<u8> {
     Sha256::digest(value.as_bytes()).to_vec()
 }

@@ -16,6 +16,7 @@ mod error;
 mod lang;
 pub mod notifications;
 pub mod reference;
+pub mod signin;
 
 use axum::{
     Json, Router,
@@ -43,11 +44,12 @@ pub fn router(state: AppState) -> Router {
 
 /// Every route of the API (README, "Routes", "API"): `GET /health`, for anyone, and `GET /me`,
 /// signed in (`ApiUser`); the reference data the app loads first, for anyone (reference.rs):
-/// `GET /categories`, `GET /cities` and `GET /categories/{slug}/fields`; and `GET /listings` and
+/// `GET /categories`, `GET /cities` and `GET /categories/{slug}/fields`; `GET /listings` and
 /// `GET /home`, for anyone, a signed-in caller's lists without the listings of the accounts they
-/// blocked (browse.rs); and the user's notifications, `GET /notifications` and
+/// blocked (browse.rs); the user's notifications, `GET /notifications` and
 /// `POST /notifications/seen`, and what the app's badges count, `GET /counts`, signed in
-/// (notifications.rs).
+/// (notifications.rs); and signing in by a code (signin.rs): `POST /auth/code` and
+/// `POST /auth/verify`, for anyone, and `POST /auth/sign-out`, signed in.
 fn routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
@@ -60,6 +62,9 @@ fn routes() -> Router<AppState> {
         .route("/notifications", get(notifications::list))
         .route("/notifications/seen", post(notifications::seen))
         .route("/counts", get(notifications::counts))
+        .route("/auth/code", post(signin::code))
+        .route("/auth/verify", post(signin::verify))
+        .route("/auth/sign-out", post(signin::sign_out))
 }
 
 /// Routes in the API's frame, which `router` puts the API's own in, and the tests a probe of

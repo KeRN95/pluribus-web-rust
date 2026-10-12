@@ -1,12 +1,16 @@
-//! Signing in without a password: a phone number or an e-mail address, a six-digit code sent
-//! there, and a session cookie once the code comes back. Every listing is tied to a contact its
-//! seller proved is theirs, and the limits below keep one person or one network from asking for
-//! codes, or guessing them, by the thousand.
+//! Signing in without a password, on the pages: a phone number or an e-mail address, a six-digit
+//! code sent there, and a session cookie once the code comes back. Every listing is tied to a
+//! contact its seller proved is theirs. What signing in is apart from the pages, the limits that
+//! keep one person or one network from asking for codes, or guessing them, by the thousand, the
+//! code, its check and the session, is pluribus-services' sign_in.rs, which the JSON API signs in
+//! by too; here are the pages' forms, their cookies and redirects, the listing posted before
+//! signing in put up and the one kept, and what the core refuses said on them, as they always
+//! said it.
 
 use std::{
     collections::HashMap,
     convert::Infallible,
-    net::{IpAddr, SocketAddr},
+    net::SocketAddr,
     sync::{Mutex, OnceLock},
 };
 
@@ -18,10 +22,12 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Redirect, Response},
 };
-// Codes and session tokens are kept as their SHA-256, as the API's bearer tokens are
-// (pluribus-api's auth.rs): one function for both.
-use pluribus_services::hash;
-use rand::Rng;
+// Session tokens are kept as their SHA-256, as the API's bearer tokens are (pluribus-api's
+// auth.rs) and the codes are (sign_in.rs): one function for all.
+use pluribus_services::{
+    hash,
+    sign_in::{self, CODE_ATTEMPTS, CODE_MINUTES, Client, Refused, Requested, WEB_SESSION_DAYS},
+};
 use serde::Deserialize;
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -29,38 +35,29 @@ use uuid::Uuid;
 use super::{Result, cookie, render, saved, settings};
 use crate::{
     AppState,
-    db::{self, CodeCheck, CodePurpose, SessionUser},
+    db::{self, CodePurpose, SessionUser},
     format::{self, Contact},
     i18n::{Lang, t, t1},
     sender::{Channel, Senders},
 };
 
-/// A code works for ten minutes and for five guesses: a million possible codes, five guesses.
-const CODE_MINUTES: i32 = 10;
-const CODE_ATTEMPTS: i16 = 5;
-/// One code a minute for a contact, five an hour; twenty an hour from one network. SMS cost
-/// money, so these also cap what a bot can spend.
-const CODE_INTERVAL_SECONDS: f64 = 60.0;
-const CODES_PER_CONTACT_HOUR: i64 = 5;
-const CODES_PER_IP_HOUR: i64 = 20;
+/// A name as typed for an account, tidied (pluribus-services' sign_in.rs), as the posting form and
+/// "Cilësimet" tidy one too.
+pub use pluribus_services::sign_in::display_name;
+
 /// A person takes longer than this to type a phone number or fill in a listing; most bots don't.
 pub const MIN_FORM_SECONDS: i64 = 3;
-const SESSION_DAYS: i32 = 30;
 
 const SESSION_COOKIE: &str = "session";
 const LOGIN_COOKIE: &str = "login";
-
-fn code_hash(contact: &str, code: &str) -> Vec<u8> {
-    hash(&format!("{contact}:{code}"))
-}
 
 pub fn now() -> i64 {
     OffsetDateTime::now_utc().unix_timestamp()
 }
 
-/// The visitor's IP address, for the limits. Behind a proxy on this machine (ngrok's agent, a
-/// reverse proxy) it is the last address the proxy added to X-Forwarded-For; a direct visitor
-/// could write anything in that header, so for them it is the connection's own address.
+/// The visitor's IP address, for the limits: the connection's own, or behind a proxy on this
+/// machine (cloudflared's tunnel, a reverse proxy) the last address it added to X-Forwarded-For,
+/// as pluribus-services' `sign_in::client_ip` reads it, which the API reads it by too.
 pub struct ClientIp(pub Option<String>);
 
 impl<S: Send + Sync> FromRequestParts<S> for ClientIp {
@@ -68,16 +65,8 @@ impl<S: Send + Sync> FromRequestParts<S> for ClientIp {
 
     async fn from_request_parts(parts: &mut Parts, _: &S) -> std::result::Result<Self, Infallible> {
         let peer = parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|info| info.0.ip());
-        let forwarded = || {
-            let header = parts.headers.get("x-forwarded-for")?.to_str().ok()?;
-            header.rsplit(',').next()?.trim().parse::<IpAddr>().ok()
-        };
-        let ip = match peer {
-            Some(ip) if ip.is_loopback() => forwarded().or(Some(ip)),
-            Some(ip) => Some(ip),
-            None => forwarded(),
-        };
-        Ok(ClientIp(ip.map(|ip| ip.to_string())))
+        let forwarded = parts.headers.get("x-forwarded-for").and_then(|value| value.to_str().ok());
+        Ok(ClientIp(sign_in::client_ip(peer, forwarded)))
     }
 }
 
@@ -125,7 +114,7 @@ pub async fn signed_in_cookie(request: Request, next: Next) -> Response {
     let page = !request.uri().path().starts_with("/static/");
     let mut response = next.run(request).await;
     if session != marked && page {
-        let (value, max_age) = if session { ("1", i64::from(SESSION_DAYS) * 86_400) } else { ("", 0) };
+        let (value, max_age) = if session { ("1", i64::from(WEB_SESSION_DAYS) * 86_400) } else { ("", 0) };
         let secure = if https { "; Secure" } else { "" };
         let cookie = format!("{SIGNED_IN_COOKIE}={value}; Path=/; Max-Age={max_age}; SameSite=Lax{secure}");
         response.headers_mut().append(header::SET_COOKIE, HeaderValue::from_str(&cookie).expect("ASCII"));
@@ -201,30 +190,26 @@ fn unprocessable(page: impl Template) -> Result<Response> {
     Ok((StatusCode::UNPROCESSABLE_ENTITY, render(page)?).into_response())
 }
 
-/// A name as typed for an account: spaces tidied, at most 60 letters; None if empty.
-pub fn display_name(typed: &str) -> Option<String> {
-    let name = typed.split_whitespace().collect::<Vec<_>>().join(" ");
-    (!name.is_empty()).then(|| name.chars().take(60).collect())
-}
-
-/// Why no code can go to this contact now, if one can't: one a minute and a few an hour. In the
-/// page's language, as its callers show it.
+/// Why no code can go to this contact now, if one can't: one a minute and a few an hour
+/// (`sign_in::limit`). In the page's language, as its callers show it.
 pub async fn code_limit(state: &AppState, contact: &Contact, ip: Option<&str>) -> Result<Option<&'static str>> {
-    let requests = db::code_requests(&state.db, contact.as_str(), ip).await?;
-    if requests.seconds_since_last.is_some_and(|seconds| seconds < CODE_INTERVAL_SECONDS) {
-        return Ok(Some(t("Të dërguam një kod pak më parë. Prit një minutë para se të kërkosh një tjetër.")));
-    }
-    if requests.for_contact >= CODES_PER_CONTACT_HOUR || requests.from_ip >= CODES_PER_IP_HOUR {
-        return Ok(Some(t("Shumë kërkesa për kode. Provo përsëri pas një ore.")));
-    }
-    Ok(None)
+    Ok(sign_in::limit(state, contact, ip).await?.map(not_sent))
 }
 
-/// Sends a code to the contact by the state's senders (sender.rs: e-mail, or WhatsApp for a
-/// phone) and goes to the page that asks for it, which shows the code too in test mode (the
-/// state's settings, `sign_in_codes_on_screen`). Which code is waiting stays in a cookie rather
-/// than the URL, so the contact never shows there. If the code can't go out, the message for the
-/// visitor instead, in the page's language.
+/// Why no code went out (`sign_in::limit`, `sign_in::send`), in the page's language, as the pages
+/// have always said it.
+fn not_sent(refused: Refused) -> &'static str {
+    match refused {
+        Refused::TooSoon { .. } => t("Të dërguam një kod pak më parë. Prit një minutë para se të kërkosh një tjetër."),
+        Refused::TooManyCodes { .. } => t("Shumë kërkesa për kode. Provo përsëri pas një ore."),
+        // The channel refused it (`NotSent`): sending a code refuses nothing else.
+        _ => t("Nuk arritëm ta dërgojmë kodin. Kontrollo numrin ose email-in dhe provo përsëri pas pak."),
+    }
+}
+
+/// Sends a code to the contact by the state's senders (`sign_in::send`: e-mail, or WhatsApp for a
+/// phone), its limits seen to by the caller, and goes to the page that asks for it (`ask_for`). If
+/// the code can't go out, the message for the visitor instead, in the page's language.
 pub async fn send_code_and_ask(
     state: &AppState,
     headers: &HeaderMap,
@@ -232,26 +217,18 @@ pub async fn send_code_and_ask(
     ip: Option<&str>,
     purpose: &CodePurpose,
 ) -> Result<std::result::Result<Response, &'static str>> {
-    let code = format!("{:06}", rand::rng().random_range(0..1_000_000));
-    let id = db::create_login_code(
-        &state.db,
-        contact.as_str(),
-        &code_hash(contact.as_str(), &code),
-        ip,
-        CODE_MINUTES,
-        purpose,
-    )
-    .await?;
-    if let Err(error) = state.senders.send(contact, &code).await {
-        tracing::error!(%error, to = %contact.masked(), "the sign-in code couldn't be sent");
-        db::delete_login_code(&state.db, id).await?;
-        return Ok(Err(t("Nuk arritëm ta dërgojmë kodin. Kontrollo numrin ose email-in dhe provo përsëri pas pak.")));
+    Ok(sign_in::send(state, contact, ip, purpose).await?.map(|requested| ask_for(headers, requested)).map_err(not_sent))
+}
+
+/// The page that asks for a code sent, which shows the code too in test mode (the state's
+/// settings, `sign_in_codes_on_screen`). Which code is waiting stays in a cookie rather than the
+/// URL, so the contact never shows there.
+fn ask_for(headers: &HeaderMap, requested: Requested) -> Response {
+    if let Some(code) = requested.shown {
+        shown_codes().lock().unwrap().insert(requested.code_id, code);
     }
-    if state.config.sign_in_codes_on_screen {
-        shown_codes().lock().unwrap().insert(id, code);
-    }
-    let login = cookie_header(headers, LOGIN_COOKIE, &id.to_string(), i64::from(CODE_MINUTES) * 60);
-    Ok(Ok(redirect_with_cookies("/hyr/kodi", vec![login])))
+    let login = cookie_header(headers, LOGIN_COOKIE, &requested.code_id.to_string(), i64::from(CODE_MINUTES) * 60);
+    redirect_with_cookies("/hyr/kodi", vec![login])
 }
 
 /// "Llogaria", the button beside the theme toggle: creating an account (or signing in to one),
@@ -285,13 +262,9 @@ pub async fn request_code(
     let Some(contact) = Contact::parse(&form.contact) else {
         return again(t("Shkruaj një numër celulari (p.sh. 069 123 4567) ose një adresë email-i."));
     };
-    if let Some(limit) = code_limit(&state, &contact, ip.as_deref()).await? {
-        return again(limit);
-    }
-    let purpose = CodePurpose { display_name: display_name(&form.name), ..Default::default() };
-    match send_code_and_ask(&state, &headers, &contact, ip.as_deref(), &purpose).await? {
-        Ok(response) => Ok(response),
-        Err(message) => again(message),
+    match sign_in::request(&state, &contact, ip.as_deref(), Some(form.name.as_str())).await? {
+        Ok(requested) => Ok(ask_for(&headers, requested)),
+        Err(refused) => again(not_sent(refused)),
     }
 }
 
@@ -354,9 +327,10 @@ pub struct CodeForm {
     code: String,
 }
 
-/// The code typed back: the contact is confirmed, so its account is (created earlier, PENDING,
-/// it becomes active), the visitor is signed in, and a listing posted before signing in goes live;
-/// or, for a contact being added to the account signed in, it joins it (settings.rs).
+/// The code typed back, checked (`sign_in::check`): the contact is confirmed, so its account is
+/// (created earlier, PENDING, it becomes active), the visitor is signed in (`sign_in::admit`), and
+/// a listing posted before signing in goes live; or, for a contact being added to the account
+/// signed in, it joins it (settings.rs).
 pub async fn check_code(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -369,78 +343,62 @@ pub async fn check_code(
         return unprocessable(CodePage::gone(String::new(), false));
     };
     let sent_to = Contact::parse(&pending.contact).map(|contact| contact.masked()).unwrap_or_default();
-    let typed: String = form.code.chars().filter(char::is_ascii_digit).collect();
-    match db::check_login_code(&state.db, id, &code_hash(&pending.contact, &typed), CODE_ATTEMPTS).await? {
-        CodeCheck::Signed { contact, purpose } => {
-            shown_codes().lock().unwrap().remove(&id);
-            if let Some(owner) = purpose.adds_to {
-                return settings::contact_confirmed(&state, &headers, owner, &contact).await;
-            }
-            let (phone, email) = match Contact::parse(&contact) {
-                Some(Contact::Phone(phone)) => (Some(phone), None),
-                Some(Contact::Email(email)) => (None, Some(email)),
-                None => return Ok(Redirect::to("/llogaria").into_response()),
-            };
-            let name = purpose.display_name.as_deref();
-            let account = db::account_for_contact(&state.db, phone.as_deref(), email.as_deref(), name).await?;
-            if account.status == "SUSPENDED" {
-                return unprocessable(CodePage {
-                    sent_to,
-                    sent_via: "",
-                    error: Some(t("Kjo llogari është pezulluar.").to_string()),
-                    gone: true,
-                    publishes: false,
-                    reviewed: false,
-                    adds: false,
-                    test_code: None,
-                });
-            }
-            db::confirm_account(&state.db, account.id, name).await?;
-            // The code came to this number or address, so it is theirs: listings showing it, and
-            // their profile, say it is verified.
-            db::verify_contact(&state.db, account.id, phone.as_deref(), email.as_deref()).await?;
-            let token: String = rand::rng().random::<[u8; 32]>().iter().map(|byte| format!("{byte:02x}")).collect();
-            db::create_session(&state.db, &hash(&token), account.id, SESSION_DAYS, "web", None).await?;
-            // A language chosen before signing in is the account's now, for its e-mails too
-            // (language.rs).
-            if let Some(lang) = cookie(&headers, super::language::LANG_COOKIE).and_then(|code| Lang::from_code(&code)) {
-                db::set_preferred_language(&state.db, account.id, lang.code()).await?;
-            }
-            let session = cookie_header(&headers, SESSION_COOKIE, &token, i64::from(SESSION_DAYS) * 86_400);
-            let login = cookie_header(&headers, LOGIN_COOKIE, "", 0);
-            let published = match purpose.listing_id {
-                Some(listing) => {
-                    db::publish_draft(&state.db, listing, account.id).await?.map(|(no, slug)| format::listing_path(no, &slug))
-                }
-                None => None,
-            };
-            // A heart tapped before signing in (saved.rs): the listing is kept now, and the page it
-            // was tapped on is where the visitor goes back to.
-            let (back, done) = saved::after_sign_in(&state, &headers, account.id).await?;
-            let to = published.or(back).unwrap_or_else(|| "/njoftimet-e-mia".to_string());
-            Ok(redirect_with_cookies(&to, [vec![session, login], done].concat()))
+    let proved = match sign_in::check(&state, id, &form.code).await? {
+        Ok(proved) => proved,
+        Err(Refused::WrongCode { attempts_left }) if attempts_left > 0 => {
+            return unprocessable(CodePage {
+                sent_via: Contact::parse(&pending.contact).map_or("", |contact| sent_via(&state.senders, &contact)),
+                sent_to,
+                error: Some(if attempts_left == 1 {
+                    t("Kodi nuk është i saktë. Të ka mbetur edhe një provë.").to_string()
+                } else {
+                    t1("Kodi nuk është i saktë. Të kanë mbetur {} prova.", attempts_left)
+                }),
+                gone: false,
+                publishes: pending.publishes,
+                reviewed: pending.reviewed,
+                adds: pending.adds,
+                test_code: None,
+            });
         }
-        CodeCheck::Wrong(left) => unprocessable(CodePage {
-            sent_via: Contact::parse(&pending.contact).map_or("", |contact| sent_via(&state.senders, &contact)),
-            sent_to,
-            error: Some(if left == 1 {
-                t("Kodi nuk është i saktë. Të ka mbetur edhe një provë.").to_string()
-            } else {
-                t1("Kodi nuk është i saktë. Të kanë mbetur {} prova.", left)
-            }),
-            gone: false,
-            publishes: pending.publishes,
-            reviewed: pending.reviewed,
-            adds: pending.adds,
-            test_code: None,
-        }),
-        CodeCheck::Gone => unprocessable(CodePage::gone(sent_to, pending.adds)),
+        // Used up by that last guess, tried too often, expired or used: a new code is needed.
+        Err(_) => return unprocessable(CodePage::gone(sent_to, pending.adds)),
+    };
+    shown_codes().lock().unwrap().remove(&id);
+    if let Some(owner) = proved.purpose.adds_to {
+        return settings::contact_confirmed(&state, &headers, owner, proved.contact.as_str()).await;
     }
+    // A language chosen before signing in is the account's now, for its e-mails too (language.rs).
+    let lang = cookie(&headers, super::language::LANG_COOKIE).and_then(|code| Lang::from_code(&code));
+    // Its account suspended (`Refused::Suspended`) is all that admitting refuses.
+    let Ok(signed) = sign_in::admit(&state, &proved, lang, Client::Web, None).await? else {
+        return unprocessable(CodePage {
+            sent_to,
+            sent_via: "",
+            error: Some(t("Kjo llogari është pezulluar.").to_string()),
+            gone: true,
+            publishes: false,
+            reviewed: false,
+            adds: false,
+            test_code: None,
+        });
+    };
+    let session = cookie_header(&headers, SESSION_COOKIE, &signed.token, i64::from(WEB_SESSION_DAYS) * 86_400);
+    let login = cookie_header(&headers, LOGIN_COOKIE, "", 0);
+    let published = match signed.listing {
+        Some(listing) => db::publish_draft(&state.db, listing, signed.user.id).await?.map(|(no, slug)| format::listing_path(no, &slug)),
+        None => None,
+    };
+    // A heart tapped before signing in (saved.rs): the listing is kept now, and the page it was
+    // tapped on is where the visitor goes back to.
+    let (back, done) = saved::after_sign_in(&state, &headers, signed.user.id).await?;
+    let to = published.or(back).unwrap_or_else(|| "/njoftimet-e-mia".to_string());
+    Ok(redirect_with_cookies(&to, [vec![session, login], done].concat()))
 }
 
 pub async fn sign_out(State(state): State<AppState>, headers: HeaderMap) -> Result<Response> {
     if let Some(token) = cookie(&headers, SESSION_COOKIE) {
-        db::delete_session(&state.db, &hash(&token)).await?;
+        sign_in::sign_out(&state, &token).await?;
     }
     Ok(redirect_with_cookies("/", vec![cookie_header(&headers, SESSION_COOKIE, "", 0)]))
 }

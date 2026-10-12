@@ -1,0 +1,22 @@
+# The JSON API's signing in (crates/api/src/signin.rs): what it says, in the language each request
+# asks for (crates/api/src/lang.rs), where the pages' own words (account.txt) don't say it: the
+# limits, a wrong code and an account suspended it says as the pages do.
+
+# crates/api/src/signin.rs: why no code went out, or why one signed no one in
+
+Shumë kërkesa për kode. Provo përsëri më vonë.
+= Too many requests for codes. Try again later.
+
+Ky kod skadoi ose u përdor. Kërko një kod të ri.
+= This code has expired or been used. Ask for a new one.
+
+Kodi nuk është i saktë, dhe kjo ishte prova e fundit. Kërko një kod të ri.
+= That code isn’t right, and that was the last try. Ask for a new one.
+
+Kodi u provua shumë herë. Kërko një kod të ri.
+= The code was tried too many times. Ask for a new one.
+
+# crates/api/src/signin.rs: a client the API doesn't know, under "client"
+
+Duhet të jetë „ios“, „android“ ose „web“.
+= Must be “ios”, “android” or “web”.

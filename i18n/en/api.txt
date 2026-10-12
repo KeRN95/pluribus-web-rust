@@ -7,6 +7,9 @@
 Hyr në llogari për të vazhduar.
 = Sign in to continue.
 
+Nuk të lejohet ta bësh këtë.
+= You’re not allowed to do that.
+
 Ajo që kërkove nuk u gjet.
 = What you asked for wasn’t found.
 

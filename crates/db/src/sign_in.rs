@@ -2,26 +2,37 @@
 
 use super::*;
 
-/// How many sign-in codes a contact and a network (client IP) asked for in the last hour, and how
-/// many seconds ago the contact's latest one went out.
+/// What the limits on sign-in codes go by (pluribus-services' sign_in.rs): how many seconds ago
+/// the contact's latest code went out; and, where the contact asked for `per_contact` codes within
+/// the last hour, or its network (client IP) for `per_ip`, in how many seconds it may ask again:
+/// when the latest `per_contact` (or `per_ip`) of them, the earliest of those first, is an hour
+/// old, fewer than that being left in the hour.
 pub struct CodeRequests {
-    pub for_contact: i64,
-    pub from_ip: i64,
     pub seconds_since_last: Option<f64>,
+    /// None while the contact asked for fewer than `per_contact` within the hour.
+    pub contact_waits: Option<f64>,
+    /// None while the network asked for fewer than `per_ip` within the hour, or isn't known.
+    pub network_waits: Option<f64>,
 }
 
-pub async fn code_requests(db: &PgPool, contact: &str, ip: Option<&str>) -> sqlx::Result<CodeRequests> {
+pub async fn code_requests(db: &PgPool, contact: &str, ip: Option<&str>, per_contact: i64, per_ip: i64) -> sqlx::Result<CodeRequests> {
+    // The `per_contact`-th latest code of the hour (`per_ip`-th): once it is an hour old, the hour
+    // holds fewer than that many, whatever came before it.
     sqlx::query_as!(
         CodeRequests,
         r#"SELECT
-               (SELECT count(*) FROM login_codes
-                WHERE contact = $1 AND created_at > now() - interval '1 hour') AS "for_contact!",
-               (SELECT count(*) FROM login_codes
-                WHERE client_ip = $2::text::inet AND created_at > now() - interval '1 hour') AS "from_ip!",
                (SELECT extract(epoch FROM now() - max(created_at))::float8 FROM login_codes
-                WHERE contact = $1) AS seconds_since_last"#,
+                WHERE contact = $1) AS seconds_since_last,
+               (SELECT extract(epoch FROM created_at + interval '1 hour' - now())::float8 FROM login_codes
+                WHERE contact = $1 AND created_at > now() - interval '1 hour'
+                ORDER BY created_at DESC OFFSET $3::int8 - 1 LIMIT 1) AS contact_waits,
+               (SELECT extract(epoch FROM created_at + interval '1 hour' - now())::float8 FROM login_codes
+                WHERE client_ip = $2::text::inet AND created_at > now() - interval '1 hour'
+                ORDER BY created_at DESC OFFSET $4::int8 - 1 LIMIT 1) AS network_waits"#,
         contact,
         ip,
+        per_contact,
+        per_ip,
     )
     .fetch_one(db)
     .await
@@ -101,14 +112,18 @@ pub async fn pending_login_code(db: &PgPool, id: Uuid, max_attempts: i16) -> sql
 pub enum CodeCheck {
     /// Right: the code is used up, and the contact it went to is proven.
     Signed { contact: String, purpose: CodePurpose },
-    /// Wrong, with this many tries left.
+    /// Wrong, with this many tries left: none when this was its last, and then it is used up.
     Wrong(i16),
-    /// Expired, used, or tried too often: a new code is needed.
+    /// Tried as many times as it may be before this: a new code is needed.
+    TriedOut,
+    /// None waits under that id: never asked for, used, or expired. A new code is needed.
     Gone,
 }
 
-/// Checks a typed code. The row is locked, so two guesses at once can't both count as the last.
-pub async fn check_login_code(db: &PgPool, id: Uuid, code_hash: &[u8], max_attempts: i16) -> sqlx::Result<CodeCheck> {
+/// Checks a typed code, given as `hashed`, its hash for the contact the code went to, which only
+/// the row knows (a code is kept hashed with its contact, pluribus-services' sign_in.rs). The row is
+/// locked, so two guesses at once can't both count as the last.
+pub async fn check_login_code(db: &PgPool, id: Uuid, hashed: impl FnOnce(&str) -> Vec<u8>, max_attempts: i16) -> sqlx::Result<CodeCheck> {
     let mut tx = db.begin().await?;
     let Some(row) = sqlx::query!(
         "SELECT contact, code_hash, attempts, listing_id, display_name, user_id FROM login_codes
@@ -122,9 +137,9 @@ pub async fn check_login_code(db: &PgPool, id: Uuid, code_hash: &[u8], max_attem
         return Ok(CodeCheck::Gone);
     };
     if row.attempts >= max_attempts {
-        return Ok(CodeCheck::Gone);
+        return Ok(CodeCheck::TriedOut);
     }
-    let check = if row.code_hash == code_hash {
+    let check = if row.code_hash == hashed(&row.contact) {
         sqlx::query!("UPDATE login_codes SET used_at = now() WHERE id = $1", id).execute(&mut *tx).await?;
         CodeCheck::Signed {
             contact: row.contact,
@@ -132,10 +147,7 @@ pub async fn check_login_code(db: &PgPool, id: Uuid, code_hash: &[u8], max_attem
         }
     } else {
         sqlx::query!("UPDATE login_codes SET attempts = attempts + 1 WHERE id = $1", id).execute(&mut *tx).await?;
-        match max_attempts - row.attempts - 1 {
-            0 => CodeCheck::Gone,
-            left => CodeCheck::Wrong(left),
-        }
+        CodeCheck::Wrong(max_attempts - row.attempts - 1)
     };
     tx.commit().await?;
     Ok(check)
