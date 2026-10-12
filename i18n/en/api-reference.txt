@@ -1,0 +1,8 @@
+# The JSON API's reference data's own texts (crates/api/src/reference.rs), which each request reads
+# in the language it asks for (crates/api/src/lang.rs). The names it gives, a category's, a
+# property's, an option's, are the database's, in both languages at once (data.txt).
+
+# crates/api/src/reference.rs: why a category's fields weren't given, under "for"
+
+Duhet të jetë „filters“ ose „form“.
+= Must be “filters” or “form”.

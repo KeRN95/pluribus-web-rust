@@ -13,6 +13,7 @@ mod auth;
 mod dto;
 mod error;
 mod lang;
+pub mod reference;
 
 use axum::{
     Json, Router,
@@ -39,9 +40,15 @@ pub fn router(state: AppState) -> Router {
 }
 
 /// Every route of the API (README, "Routes", "API"): `GET /health`, for anyone, and `GET /me`,
-/// signed in (`ApiUser`).
+/// signed in (`ApiUser`); and the reference data the app loads first, for anyone (reference.rs):
+/// `GET /categories`, `GET /cities` and `GET /categories/{slug}/fields`.
 fn routes() -> Router<AppState> {
-    Router::new().route("/health", get(health)).route("/me", get(me))
+    Router::new()
+        .route("/health", get(health))
+        .route("/me", get(me))
+        .route("/categories", get(reference::categories))
+        .route("/cities", get(reference::cities))
+        .route("/categories/{slug}/fields", get(reference::fields))
 }
 
 /// Routes in the API's frame, which `router` puts the API's own in, and the tests a probe of
