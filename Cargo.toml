@@ -66,7 +66,9 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "postgres", "macros", "migrate", "uuid", "time", "rust_decimal", "json"] }
-time = { version = "0.3.45", features = ["formatting", "macros"] }
+# With `serde` and `serde-well-known`, a time goes into JSON as RFC 3339 (`time::serde::rfc3339`),
+# as the JSON API gives it (pluribus-api).
+time = { version = "0.3.45", features = ["formatting", "macros", "serde", "serde-well-known"] }
 tokio = { version = "1.53.2", features = ["macros", "rt-multi-thread", "net", "signal", "time"] }
 tower-http = { version = "0.7.1", features = ["fs", "trace", "compression-gzip", "compression-br"] }
 tracing = "0.1.44"

@@ -468,7 +468,7 @@ No Node, no npm, no bundler: the browser's code is plain JavaScript modules, wit
 | `askama` | web | Templates compiled into Rust and checked at compile time |
 | `serde`, `serde_json` | core, db, services (serde_json), web | JSON: the AI's answers, the hearts' numbers, stored properties |
 | `rust_decimal` | core, db, services, web | Prices and properties' numbers, without a float's rounding |
-| `time` | core, db, services, web | Dates and times |
+| `time` (with `serde` and `serde-well-known`) | core, db, services, web | Dates and times; with its `serde` and `serde-well-known` features, a time in JSON as RFC 3339 (`time::serde::rfc3339`), as the JSON API gives it |
 | `uuid` | core, db, services, web | Ids (UUIDv7, sortable by when they were made) |
 | `image` | services; web's tests | Decoding photos, turning them the right way up and resizing them; the cards' AVIF copies (its `avif` feature: ravif and rav1e, Rust's AV1 encoder, without the assembly NASM would build); quick JPEGs for the AI |
 | `libwebp-sys` | services | Photos as lossy WebP, by Google's libwebp, built from its C sources |
