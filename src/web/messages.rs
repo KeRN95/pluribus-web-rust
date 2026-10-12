@@ -4,8 +4,10 @@
 //! (inbox_controller.js). Spam is kept down by who may write and how much: only someone signed in,
 //! which takes a code sent to a phone number or an e-mail address (account.rs); to a few new
 //! sellers an hour and a day; until the other side answers, three messages at most and no links,
-//! which is what spam and scams mostly send; and anyone can block whoever writes to them. A
-//! store's conversations are its people's, each of whom sees and answers them (db/messages.rs).
+//! which is what spam and scams mostly send; and anyone can block whoever writes to them. Those
+//! rules are domain::messaging's, whose refusals, codes, this module words in the page's language
+//! (`reason`). A store's conversations are its people's, each of whom sees and answers them
+//! (db/messages.rs).
 
 use askama::Template;
 use axum::{
@@ -28,63 +30,24 @@ use super::{
 use crate::{
     AppState,
     db::{self, Conversation, InboxEntry, Message, MessageTarget, SessionUser},
-    domain::{ListingType, Status},
+    domain::{
+        ListingType, Status,
+        messaging::{self, Outgoing, Refusal, Writing},
+    },
     format,
     i18n::{english, t, t1},
 };
 
-/// A message's length, in characters.
-pub const MAX_CHARS: usize = 1000;
-/// Messages one account sends: in a minute, which only a script outpaces, and in a day.
-const PER_MINUTE: i64 = 8;
-const PER_DAY: i64 = 200;
-/// New sellers one account writes to (conversations it starts): in an hour, and in a day.
-const NEW_PER_HOUR: i64 = 5;
-const NEW_PER_DAY: i64 = 15;
-/// Until the other side answers, how many messages in a row; and those carry no links.
-const UNANSWERED: i64 = 3;
+/// A message's length, in characters (domain::messaging), which the box to write in holds to
+/// (conversation.html).
+pub use crate::domain::messaging::MAX_CHARS;
+
 /// The conversations the inbox shows, the latest first.
 const INBOX_MOST: i64 = 200;
 
 /// First messages a buyer can start with, a tap away (conversation_controller.js), in the page's
 /// language where conversation.html shows them (crate::t, whose catalogue has each).
 pub const QUICK: [&str; 3] = ["Përshëndetje! A është ende në dispozicion?", "Cili është çmimi i fundit?", "Kur mund ta shoh?"];
-
-/// What the conversation's page lets its visitor do: write, or why they can't.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Writing {
-    Open,
-    /// They blocked the other side, who can't write to them either; unblocking opens it again.
-    Blocked,
-    /// The other side blocked them.
-    BlockedBy,
-    /// A listing that takes no messages: down, sold, or with messages turned off.
-    Closed,
-}
-
-impl Writing {
-    fn of(open: bool, blocked: bool, blocked_by: bool) -> Self {
-        if blocked {
-            Writing::Blocked
-        } else if blocked_by {
-            Writing::BlockedBy
-        } else if open {
-            Writing::Open
-        } else {
-            Writing::Closed
-        }
-    }
-
-    /// Why a message can't go, for a form sent anyway.
-    fn refusal(self, other: &str) -> Option<String> {
-        match self {
-            Writing::Open => None,
-            Writing::Blocked => Some(t("E ke bllokuar këtë përdorues. Zhbllokoje për t'i shkruar.").to_string()),
-            Writing::BlockedBy => Some(t1("{} nuk pranon mesazhe nga ti.", other)),
-            Writing::Closed => Some(t("Ky njoftim nuk pranon mesazhe tani.").to_string()),
-        }
-    }
-}
 
 /// The listing a conversation is about, at the top of its page.
 pub struct ListingHead {
@@ -257,45 +220,28 @@ fn tidy(body: &str) -> String {
     body.replace("\r\n", "\n").trim().to_string()
 }
 
-/// Why this message can't go, if it can't: what it says, then how much its sender sent lately.
-/// `unanswered` is how many they sent in a row where the other side hasn't answered yet, and
-/// `new` whether it starts a conversation.
-async fn refusal(
-    state: &AppState,
-    user: &SessionUser,
-    body: &str,
-    unanswered: Option<i64>,
-    new: bool,
-    other: &str,
-) -> Result<Option<String>> {
-    let chars = body.chars().count();
-    if chars == 0 {
-        return Ok(Some(t("Shkruaj mesazhin.").to_string()));
-    }
-    if chars > MAX_CHARS {
-        return Ok(Some(t1("Mesazhi mund të ketë deri në {} shkronja.", MAX_CHARS)));
-    }
-    if let Some(in_a_row) = unanswered {
-        if in_a_row >= UNANSWERED {
-            return Ok(Some(t1("Prit që {} të të përgjigjet para se të shkruash më shumë.", other)));
-        }
-        if link_count(body) > 0 {
-            return Ok(Some(t1("Lidhjet mund t'i dërgosh pasi {} të të përgjigjet.", other)));
-        }
-    }
+/// Why this message can't go, if it can't (messaging::refuse, given what its sender sent lately),
+/// in the page's language: `other` is the other side's name, which some of the reasons say.
+async fn refusal(state: &AppState, user: &SessionUser, writing: Writing, message: Outgoing<'_>, other: &str) -> Result<Option<String>> {
     let sent = db::sent_lately(&state.db, user.id).await?;
-    let message = if sent.last_minute >= PER_MINUTE {
-        Some(t("Po dërgon shumë shpejt. Prit një minutë dhe provo përsëri.").to_string())
-    } else if sent.last_day >= PER_DAY {
-        Some(t("Ke dërguar shumë mesazhe sot. Provo përsëri nesër.").to_string())
-    } else if new && sent.started_last_hour >= NEW_PER_HOUR {
-        Some(t1("U ke shkruar {} shitësve këtë orë. Prit pak para se t'i shkruash një tjetri.", NEW_PER_HOUR))
-    } else if new && sent.started_last_day >= NEW_PER_DAY {
-        Some(t1("U ke shkruar {} shitësve sot. Mund t'u shkruash të tjerëve nesër.", NEW_PER_DAY))
-    } else {
-        None
-    };
-    Ok(message)
+    Ok(messaging::refuse(writing, &message, &sent).map(|refusal| reason(refusal, other)))
+}
+
+/// What a refusal says, in the page's language, naming the other side (`other`) where it does.
+fn reason(refusal: Refusal, other: &str) -> String {
+    match refusal {
+        Refusal::Blocked => t("E ke bllokuar këtë përdorues. Zhbllokoje për t'i shkruar.").to_string(),
+        Refusal::BlockedBy => t1("{} nuk pranon mesazhe nga ti.", other),
+        Refusal::Closed => t("Ky njoftim nuk pranon mesazhe tani.").to_string(),
+        Refusal::Empty => t("Shkruaj mesazhin.").to_string(),
+        Refusal::TooLong { most } => t1("Mesazhi mund të ketë deri në {} shkronja.", most),
+        Refusal::TooManyInARow { .. } => t1("Prit që {} të të përgjigjet para se të shkruash më shumë.", other),
+        Refusal::LinksBeforeAnswer => t1("Lidhjet mund t'i dërgosh pasi {} të të përgjigjet.", other),
+        Refusal::TooFast { .. } => t("Po dërgon shumë shpejt. Prit një minutë dhe provo përsëri.").to_string(),
+        Refusal::TooManyToday { .. } => t("Ke dërguar shumë mesazhe sot. Provo përsëri nesër.").to_string(),
+        Refusal::NewSellersThisHour { most } => t1("U ke shkruar {} shitësve këtë orë. Prit pak para se t'i shkruash një tjetri.", most),
+        Refusal::NewSellersToday { most } => t1("U ke shkruar {} shitësve sot. Mund t'u shkruash të tjerëve nesër.", most),
+    }
 }
 
 /// Someone not signed in: to sign in first, and back to `page` once they have
@@ -351,11 +297,8 @@ pub async fn start(
     let (blocked, blocked_by) = db::blocks_with_seller(&state.db, user.id, &target).await?;
     let writing = Writing::of(target.open, blocked, blocked_by);
     let body = tidy(&form.body);
-    let error = match writing.refusal(&target.seller_name) {
-        Some(reason) => Some(reason),
-        None => refusal(&state, &user, &body, Some(0), true, &target.seller_name).await?,
-    };
-    if let Some(error) = error {
+    let message = Outgoing { body: &body, links: link_count(&body), unanswered: Some(0), new_seller: true };
+    if let Some(error) = refusal(&state, &user, writing, message, &target.seller_name).await? {
         return unprocessable(ConversationPage::start(&target, writing, Some(error), body));
     }
     let id = db::start_conversation(&state.db, &target, user.id, &body).await?;
@@ -429,11 +372,8 @@ async fn send_into(state: &AppState, user: &SessionUser, id: Uuid, form: Message
     let body = tidy(&form.body);
     let writing = Writing::of(true, conversation.blocked, conversation.blocked_by);
     let unanswered = (!conversation.answered).then_some(conversation.in_a_row);
-    let error = match writing.refusal(&conversation.other_name) {
-        Some(reason) => Some(reason),
-        None => refusal(state, user, &body, unanswered, false, &conversation.other_name).await?,
-    };
-    if let Some(error) = error {
+    let message = Outgoing { body: &body, links: link_count(&body), unanswered, new_seller: false };
+    if let Some(error) = refusal(state, user, writing, message, &conversation.other_name).await? {
         let messages = db::messages(&state.db, id, user.id, None).await?;
         return unprocessable(ConversationPage::of(&conversation, messages, Some(error), body));
     }
@@ -530,5 +470,24 @@ mod tests {
     #[test]
     fn messages_go_without_space_around_them() {
         assert_eq!(tidy("  Përshëndetje!\r\nA është ende?  \n"), "Përshëndetje!\nA është ende?");
+    }
+
+    #[test]
+    fn each_refusal_says_why_in_the_pages_words() {
+        let said = |refusal| reason(refusal, "Ana");
+        assert_eq!(said(Refusal::Blocked), "E ke bllokuar këtë përdorues. Zhbllokoje për t'i shkruar.");
+        assert_eq!(said(Refusal::BlockedBy), "Ana nuk pranon mesazhe nga ti.");
+        assert_eq!(said(Refusal::Closed), "Ky njoftim nuk pranon mesazhe tani.");
+        assert_eq!(said(Refusal::Empty), "Shkruaj mesazhin.");
+        assert_eq!(said(Refusal::TooLong { most: MAX_CHARS }), "Mesazhi mund të ketë deri në 1000 shkronja.");
+        assert_eq!(said(Refusal::TooManyInARow { most: 3 }), "Prit që Ana të të përgjigjet para se të shkruash më shumë.");
+        assert_eq!(said(Refusal::LinksBeforeAnswer), "Lidhjet mund t'i dërgosh pasi Ana të të përgjigjet.");
+        assert_eq!(said(Refusal::TooFast { most: 8 }), "Po dërgon shumë shpejt. Prit një minutë dhe provo përsëri.");
+        assert_eq!(said(Refusal::TooManyToday { most: 200 }), "Ke dërguar shumë mesazhe sot. Provo përsëri nesër.");
+        assert_eq!(
+            said(Refusal::NewSellersThisHour { most: 5 }),
+            "U ke shkruar 5 shitësve këtë orë. Prit pak para se t'i shkruash një tjetri."
+        );
+        assert_eq!(said(Refusal::NewSellersToday { most: 15 }), "U ke shkruar 15 shitësve sot. Mund t'u shkruash të tjerëve nesër.");
     }
 }

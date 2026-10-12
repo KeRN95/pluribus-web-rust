@@ -10,6 +10,7 @@
 use time::PrimitiveDateTime;
 
 use super::*;
+use crate::domain::messaging::SentLately;
 
 /// The most messages a conversation's page shows: its latest.
 const MESSAGES_SHOWN: i64 = 300;
@@ -86,16 +87,9 @@ pub async fn message_target(db: &PgPool, public_no: i64, buyer_id: Uuid) -> sqlx
     .await
 }
 
-/// What an account sent lately, for the limits on sending (web/messages.rs): messages in the last
-/// minute and day, and conversations it started (sellers it wrote to) in the last hour and day.
-#[derive(Debug)]
-pub struct SentLately {
-    pub last_minute: i64,
-    pub last_day: i64,
-    pub started_last_hour: i64,
-    pub started_last_day: i64,
-}
-
+/// What an account sent lately, for the limits on sending (domain::messaging::refuse): messages in
+/// the last minute and day, and conversations it started (sellers it wrote to) in the last hour
+/// and day.
 pub async fn sent_lately(db: &PgPool, user_id: Uuid) -> sqlx::Result<SentLately> {
     sqlx::query_as!(
         SentLately,
