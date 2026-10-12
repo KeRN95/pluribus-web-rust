@@ -56,20 +56,56 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use time::OffsetDateTime;
+use utoipa::{
+    PartialSchema, ToSchema,
+    openapi::{
+        RefOr,
+        schema::{ArrayBuilder, KnownFormat, ObjectBuilder, Schema, SchemaFormat, Type},
+    },
+};
 use uuid::Uuid;
 
 use crate::{
     ApiError, ApiUser, JsonBody, browse,
     listing::{Action, CopiesDto, ListingDto, actions, listing_dto},
+    openapi::{Internal, NotFound, RateLimited, Unauthorized, Validation, kinds},
 };
 
 /// At most this many of a user's uploads wait for a listing at once: four listings' photos. More
 /// would be photos kept for nothing until they are forgotten (photos::UPLOADS_KEPT).
 const WAITING_MOST: i64 = 4 * MAX_PHOTOS as i64;
 
+/// What `POST /photos` takes, as the OpenAPI document says it: a multipart form, each photo a file
+/// of its field `photos`, which `upload` reads field by field (`Multipart`) rather than into a
+/// type, so that the document has this one, its schema written out.
+pub struct PhotosForm;
+
+impl PartialSchema for PhotosForm {
+    fn schema() -> RefOr<Schema> {
+        let photo = ObjectBuilder::new()
+            .schema_type(Type::String)
+            .format(Some(SchemaFormat::KnownFormat(KnownFormat::Binary)))
+            .content_media_type("application/octet-stream")
+            .description(Some("A photo, JPEG, PNG or WebP, 15 MB at most as sent"));
+        let photos = ArrayBuilder::new()
+            .items(photo)
+            .min_items(Some(1))
+            .max_items(Some(MAX_PHOTOS))
+            .description(Some("The photos, in their order, the field repeated for each"));
+        ObjectBuilder::new()
+            .schema_type(Type::Object)
+            .description(Some("A listing's photos, before the listing: the whole body 64 MB at most."))
+            .property("photos", photos)
+            .required("photos")
+            .into()
+    }
+}
+
+impl ToSchema for PhotosForm {}
+
 /// A photo uploaded (`POST /photos`), waiting for a listing to name it: its id, its copies as a
 /// listing's photos' are (`ListingDto`'s), its size and its tiny copy.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct UploadDto {
     /// What a listing names it by (`photo_ids`, `cover`, `order`), and the listing's photo keeps.
     pub id: Uuid,
@@ -88,6 +124,23 @@ pub struct UploadDto {
 /// uploads in their order. What isn't one, or too many or too big, is a validation error on
 /// `photos`, in the pages' words; a body that isn't multipart, one on `body`; more than
 /// WAITING_MOST waiting, too many requests.
+#[utoipa::path(
+    post,
+    path = "/photos",
+    tag = "own",
+    operation_id = "uploadPhotos",
+    summary = "Upload a listing's photos",
+    description = "Uploads a listing's photos before the listing, eight at most, each made into its copies and put in the store as the pages' form's are, and kept a day for a listing to name by its id.",
+    request_body(content = PhotosForm, content_type = "multipart/form-data"),
+    security(("bearer" = [])),
+    responses(
+        (status = 201, description = "The uploads, in their order", body = Vec<UploadDto>),
+        (status = 401, response = Unauthorized),
+        (status = 422, response = Validation),
+        (status = 429, response = RateLimited),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn upload(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -150,71 +203,100 @@ fn invalid(field: &'static str, message: impl Into<String>) -> ApiError {
 /// What `POST /listings` takes, and `PUT /listings/{no}` with what an edit adds (`ListingEditDto`):
 /// a listing's fields, by the posting form's names for them, its properties by their codes, and its
 /// photos by their uploads' ids. A field left out is as the form's left empty, and what is wrong
-/// with it is said under its name.
-#[derive(Debug, Default, Deserialize)]
-#[serde(default)]
+/// with it is said under its name: each field's own default, rather than the struct's, which the
+/// OpenAPI document would write into the schema, an enum's "" among them.
+#[derive(Debug, Default, Deserialize, ToSchema)]
 pub struct ListingInputDto {
     /// The category's slug ("makina"), one listings go into, not one that only groups others.
+    #[serde(default)]
+    #[schema(examples("makina"))]
     pub category: String,
     /// What it offers or asks for, one the category takes: SELL, BUY, RENT, WANTED_RENT, SERVICE or
     /// JOB (a category of one kind is of that kind whatever this says).
+    #[serde(default)]
+    #[schema(value_type = kinds::ListingType)]
     pub listing_type: String,
     /// What state the thing is in, where the category asks: NEW, LIKE_NEW, USED or FOR_PARTS.
+    #[serde(default)]
+    #[schema(value_type = Option<kinds::Condition>)]
     pub condition: Option<String>,
     /// 5 to 120 characters, without links.
+    #[serde(default)]
+    #[schema(examples("Volkswagen Golf 7, shumë i mirëmbajtur"))]
     pub title: String,
     /// 10 to 5 000 characters, two links at most.
+    #[serde(default)]
     pub description: String,
     /// FIXED, NEGOTIABLE, FREE or ON_REQUEST; FIXED without one.
+    #[serde(default)]
+    #[schema(value_type = kinds::PriceType)]
     pub price_type: String,
     /// The amount, a number (or its digits as text, "9500.50"), above 0, for a fixed or negotiable
     /// price; kept to the cent.
+    #[serde(default)]
+    #[schema(examples("9500"))]
     pub price: Option<Decimal>,
     /// EUR or ALL; any other is euros.
+    #[serde(default)]
+    #[schema(value_type = kinds::Currency)]
     pub currency: String,
     /// The town's slug ("tirane"), and for a property a zone of it ("blloku").
+    #[serde(default)]
+    #[schema(examples("tirane"))]
     pub city: String,
+    #[serde(default)]
+    #[schema(examples("blloku"))]
     pub zone: Option<String>,
     /// For a property or a car, its own point on the map, within 40 km of its town; none for its
     /// town's.
+    #[serde(default)]
     pub point: Option<PointInput>,
     /// The category's properties (`GET /categories/{slug}/fields?for=form`), by code: a value as
     /// text or a number ("VOLKSWAGEN", 2016, "148 000"), several for a multi-select (["ABS",
     /// "NAVIGATION"]), true for a box ticked, and for a list's "Tjetër" the name typed,
     /// {"other": "Zastava"} (or as the form sends it, "__other__" with the name under
     /// "<code>_other").
+    #[serde(default)]
+    #[schema(value_type = Object)]
     pub properties: BTreeMap<String, Value>,
     /// Its photos, by the ids of the caller's uploads (`POST /photos`), in their order, MAX_PHOTOS at
     /// most with those an edit keeps.
+    #[serde(default)]
     pub photo_ids: Vec<Uuid>,
     /// The cover, one of `photo_ids` (or, on an edit, of the listing's photos): first, whatever
     /// their order.
+    #[serde(default)]
     pub cover: Option<Uuid>,
     /// The name buyers see, 60 characters at most; none for the account's.
+    #[serde(default)]
     pub name: Option<String>,
     /// "Posto si": the store it is posted as, by its slug, one the caller posts for; none for their
     /// own. A new listing's alone, as on the pages.
+    #[serde(default)]
     pub store: Option<String>,
 }
 
 /// What `PUT /listings/{no}` takes: the listing's fields as `POST /listings` does, the photos it
 /// takes out, and the order of all of them.
-#[derive(Debug, Default, Deserialize)]
-#[serde(default)]
+#[derive(Debug, Default, Deserialize, ToSchema)]
 pub struct ListingEditDto {
     #[serde(flatten)]
     pub listing: ListingInputDto,
     /// The listing's photos taken out, by their ids; one that isn't the listing's counts for nothing.
+    #[serde(default)]
     pub removed: Vec<Uuid>,
     /// The order of its photos, by their ids, those it keeps and those `photo_ids` adds, the first
     /// the cover; those it leaves out follow, as they were.
+    #[serde(default)]
     pub order: Vec<Uuid>,
 }
 
 /// A point on the map.
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema)]
 pub struct PointInput {
+    #[schema(examples(41.3275))]
     pub lat: f64,
+    #[schema(examples(19.8187))]
     pub lng: f64,
 }
 
@@ -357,6 +439,23 @@ fn cover_elsewhere(cover: Option<Uuid>, shown: &[Uuid]) -> Option<(&'static str,
 /// `title`, in the pages' words; up at once, or, where the pages' would, waiting for a moderator
 /// (a photo another seller's listing has: PENDING_REVIEW, with its `status_note`). 201, the
 /// listing as `GET /listings/{no}` gives it.
+#[utoipa::path(
+    post,
+    path = "/listings",
+    tag = "own",
+    operation_id = "createListing",
+    summary = "Post a listing",
+    description = "Posts a listing with photos uploaded before, as the pages' form posts one signed in, checked as the form checks it, every problem a validation error under its field (a property's under `properties.<code>`); up at once or, where the pages' would, waiting for a moderator.",
+    request_body = ListingInputDto,
+    security(("bearer" = [])),
+    responses(
+        (status = 201, description = "The listing, as `GET /listings/{no}` gives it", body = ListingDto),
+        (status = 401, response = Unauthorized),
+        (status = 422, response = Validation),
+        (status = 429, response = RateLimited),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn create(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -424,6 +523,24 @@ pub async fn create(
 /// a price it lowered (push::after_price_drops, in the background). The listing as
 /// `GET /listings/{no}` gives it; not found for a listing that isn't the caller's to edit, or isn't
 /// up or paused.
+#[utoipa::path(
+    put,
+    path = "/listings/{no}",
+    tag = "own",
+    operation_id = "updateListing",
+    summary = "Edit a listing",
+    description = "Edits the caller's listing while it is up or paused, checked as a new one is, photos taken out, uploads added and all of them ordered, those who keep it told by push of a price it lowered.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    request_body = ListingEditDto,
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "The listing, as `GET /listings/{no}` gives it", body = ListingDto),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn update(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -467,17 +584,20 @@ pub async fn update(
 }
 
 /// One of the caller's listings, as "Njoftimet e mia" shows it (`GET /me/listings`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct MyListingDto {
     /// Its number, which its page and these routes go by.
+    #[schema(examples(1001))]
     pub no: i64,
     pub slug: String,
     /// What its page calls it: a car's made from what the car is, another's as its seller wrote it.
     pub title: String,
     /// What it offers or asks for: SELL, BUY, RENT, WANTED_RENT, SERVICE or JOB.
+    #[schema(value_type = kinds::ListingType)]
     pub kind: ListingType,
     /// Where it stands: ACTIVE, RESERVED, SOLD, PAUSED, EXPIRED, PENDING_REVIEW (or DRAFT, waiting
     /// for its code), SUSPENDED or REJECTED.
+    #[schema(value_type = kinds::Status)]
     pub status: Status,
     /// What its row says of it once it is no longer simply up, in the language asked for:
     /// "Rezervuar", "Shitur" ("Dhënë me qira" for a rental), "Skaduar", "Në pritje",
@@ -512,26 +632,31 @@ pub struct MyListingDto {
 }
 
 /// A listing's price, as its row on "Njoftimet e mia" says it.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OwnPriceDto {
     /// The amount, as text, every digit it has; none for a price on request, nor for a free one.
+    #[schema(examples("9500"))]
     pub amount: Option<Decimal>,
     /// EUR or ALL.
+    #[schema(examples("EUR"))]
     pub currency: String,
     /// How the price is meant: FIXED, NEGOTIABLE, FROM, FREE or ON_REQUEST.
     #[serde(rename = "type")]
+    #[schema(value_type = kinds::PriceType)]
     pub kind: PriceType,
     /// Whether the amount is a month's: a rent's, or a job's pay.
     pub per_month: bool,
 }
 
 /// A promotion on a listing now.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PromotionDto {
     /// Its name, in the language asked for: "I veçuar për 7 ditë".
+    #[schema(examples("I veçuar për 7 ditë"))]
     pub name: String,
     /// What it does: FEATURED, HIGHLIGHT, BUMP or CATEGORY_TOP.
     #[serde(rename = "type")]
+    #[schema(examples("FEATURED"))]
     pub kind: String,
     #[serde(with = "time::serde::rfc3339")]
     pub ends_at: OffsetDateTime,
@@ -582,6 +707,20 @@ impl MyListingDto {
 /// `GET /me/listings`: the caller's own listings, as "Njoftimet e mia" shows them (db::my_listings:
 /// the newest first, those deleted left out, those of a store they post for on its own page), each
 /// with where it stands, what it drew and its buttons.
+#[utoipa::path(
+    get,
+    path = "/me/listings",
+    tag = "own",
+    operation_id = "listMyListings",
+    summary = "The caller's own listings",
+    description = "The caller's own listings, as \"Njoftimet e mia\" shows them, the newest first, each with where it stands, what it drew and its seller's buttons.",
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "The caller's listings", body = Vec<MyListingDto>),
+        (status = 401, response = Unauthorized),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn mine(State(state): State<AppState>, ApiUser(user): ApiUser, headers: HeaderMap) -> Result<Json<Vec<MyListingDto>>, ApiError> {
     let listings = db::my_listings(&state.db, user.id, None).await?;
     let numbers: Vec<i64> = listings.iter().map(|listing| listing.public_no).collect();
@@ -597,33 +736,129 @@ pub async fn mine(State(state): State<AppState>, ApiUser(user): ApiUser, headers
 
 /// `POST /listings/{no}/pause`: the caller takes their listing down for a while (it is up): 204;
 /// not found where it isn't theirs, or can't be paused.
+#[utoipa::path(
+    post,
+    path = "/listings/{no}/pause",
+    tag = "own",
+    operation_id = "pauseListing",
+    summary = "Pause a listing",
+    description = "The caller takes their listing down for a while, while it is up.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Paused"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn pause(State(state): State<AppState>, ApiUser(user): ApiUser, no: Result<Path<i64>, PathRejection>) -> Result<StatusCode, ApiError> {
     change(&state, &user, no, ListingAction::Pause).await
 }
 
 /// `POST /listings/{no}/resume`: a paused or sold listing back up: 204, or not found.
+#[utoipa::path(
+    post,
+    path = "/listings/{no}/resume",
+    tag = "own",
+    operation_id = "resumeListing",
+    summary = "Put a listing back up",
+    description = "Puts a paused or sold listing back up.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Up again"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn resume(State(state): State<AppState>, ApiUser(user): ApiUser, no: Result<Path<i64>, PathRejection>) -> Result<StatusCode, ApiError> {
     change(&state, &user, no, ListingAction::Resume).await
 }
 
 /// `POST /listings/{no}/sell`: sold, or let out for a rental (on sale or for rent, up): its page
 /// stays, saying so: 204, or not found.
+#[utoipa::path(
+    post,
+    path = "/listings/{no}/sell",
+    tag = "own",
+    operation_id = "sellListing",
+    summary = "Mark a listing sold",
+    description = "The listing is sold, or let out for a rental, while it is up on sale or for rent: its page stays, saying so.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Sold"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn sell(State(state): State<AppState>, ApiUser(user): ApiUser, no: Result<Path<i64>, PathRejection>) -> Result<StatusCode, ApiError> {
     change(&state, &user, no, ListingAction::Sell).await
 }
 
 /// `POST /listings/{no}/reserve`: someone is taking it (on sale or for rent, active): 204, or not
 /// found.
+#[utoipa::path(
+    post,
+    path = "/listings/{no}/reserve",
+    tag = "own",
+    operation_id = "reserveListing",
+    summary = "Mark a listing reserved",
+    description = "Someone is taking the listing, while it is active, on sale or for rent: it stays up, saying so.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Reserved"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn reserve(State(state): State<AppState>, ApiUser(user): ApiUser, no: Result<Path<i64>, PathRejection>) -> Result<StatusCode, ApiError> {
     change(&state, &user, no, ListingAction::Reserve).await
 }
 
 /// `POST /listings/{no}/unreserve`: the reservation off, up as before: 204, or not found.
+#[utoipa::path(
+    post,
+    path = "/listings/{no}/unreserve",
+    tag = "own",
+    operation_id = "unreserveListing",
+    summary = "Take a reservation off",
+    description = "Takes the listing's reservation off, up as before.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "No longer reserved"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn unreserve(State(state): State<AppState>, ApiUser(user): ApiUser, no: Result<Path<i64>, PathRejection>) -> Result<StatusCode, ApiError> {
     change(&state, &user, no, ListingAction::Unreserve).await
 }
 
 /// `DELETE /listings/{no}`: the listing gone for good: 204, or not found.
+#[utoipa::path(
+    delete,
+    path = "/listings/{no}",
+    tag = "own",
+    operation_id = "deleteListing",
+    summary = "Delete a listing",
+    description = "Deletes the caller's listing for good, as \"Fshi\" does.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Deleted"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn delete(State(state): State<AppState>, ApiUser(user): ApiUser, no: Result<Path<i64>, PathRejection>) -> Result<StatusCode, ApiError> {
     change(&state, &user, no, ListingAction::Delete).await
 }
@@ -631,6 +866,22 @@ pub async fn delete(State(state): State<AppState>, ApiUser(user): ApiUser, no: R
 /// `POST /listings/{no}/renew`: up or reserved and expiring, or expired, it stays up 60 days more
 /// from now (db::renew_listing), back at the top of "newest first" once a week at most: 204, or not
 /// found.
+#[utoipa::path(
+    post,
+    path = "/listings/{no}/renew",
+    tag = "own",
+    operation_id = "renewListing",
+    summary = "Renew a listing",
+    description = "A listing up or reserved and expiring, or expired, stays up 60 days more from now, back at the top of \"newest first\" once a week at most.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Renewed"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn renew(State(state): State<AppState>, ApiUser(user): ApiUser, no: Result<Path<i64>, PathRejection>) -> Result<StatusCode, ApiError> {
     let Path(no) = no.map_err(|_| ApiError::NotFound)?;
     match db::renew_listing(&state.db, no, user.id).await? {
@@ -651,25 +902,47 @@ async fn change(state: &AppState, user: &SessionUser, no: Result<Path<i64>, Path
 }
 
 /// What `POST /listings/zone` takes: what the seller wrote, and the town chosen, if any.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, ToSchema)]
 #[serde(default)]
 pub struct ZoneWordsDto {
+    #[schema(examples("Apartament 2+1 te Blloku"))]
     pub title: String,
     pub description: String,
     /// The town's slug ("tirane"); none for a zone in a town the words name too.
+    #[schema(examples("tirane"))]
     pub city: String,
 }
 
-/// The zone a listing's words name, and its town, by their slugs; both null for none.
-#[derive(Debug, Serialize)]
+/// The zone a listing's words name, and its town, by their slugs; both null for none. In the
+/// OpenAPI document `ZoneGuessDto`, reference.rs having a `ZoneDto` of its own.
+#[derive(Debug, Serialize, ToSchema)]
+#[schema(as = ZoneGuessDto)]
 pub struct ZoneDto {
+    #[schema(examples("tirane"))]
     pub city: Option<String>,
+    #[schema(examples("blloku"))]
     pub zone: Option<String>,
 }
 
 /// `POST /listings/zone`: the zone a new listing's title or description names, with its town, as
 /// the pages' form guesses it while the seller hasn't chosen (posting::zone_named): in the town
 /// chosen, or, with none, in a town the words name too ("Blloku, Tiranë"); the title first.
+#[utoipa::path(
+    post,
+    path = "/listings/zone",
+    tag = "own",
+    operation_id = "guessZone",
+    summary = "The zone a listing's words name",
+    description = "The zone a new listing's title or description names, with its town, as the pages' form guesses it while the seller hasn't chosen: in the town chosen, or, with none, in a town the words name too.",
+    request_body = ZoneWordsDto,
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "The zone and its town, by their slugs; both null for none", body = ZoneDto),
+        (status = 401, response = Unauthorized),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn zone(State(state): State<AppState>, ApiUser(_): ApiUser, JsonBody(words): JsonBody<ZoneWordsDto>) -> Result<Json<ZoneDto>, ApiError> {
     let cities = db::cities(&state.db).await?;
     let found = posting::zone_named(&cities, &words.title, &words.description, &words.city);
@@ -678,7 +951,7 @@ pub async fn zone(State(state): State<AppState>, ApiUser(_): ApiUser, JsonBody(w
 
 /// What cars of a model and year ask, for the posting form's hint under a car's price
 /// (`GET /listings/price-hint`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PriceHintDto {
     /// What they ask, in a sentence, in the listing's currency and the language asked for:
     /// "Volkswagen Golf 2014–2018 në shitje: shumica kërkojnë 9 500–11 400 €, mesatarja 10 300 €."
@@ -686,6 +959,7 @@ pub struct PriceHintDto {
     /// How the price typed compares, as the car's page will judge it, as `ListingDto`'s
     /// `car_price.verdict`: "good", "near" or "above"; null without a price, or for one so far under
     /// them that it is likely wrong.
+    #[schema(value_type = Option<kinds::CarVerdict>)]
     pub verdict: Option<CarVerdict>,
     /// The same in a sentence, where a price was typed: what the car's page will say of it, or, far
     /// under them, that it may be wrong, or in the wrong currency.
@@ -697,6 +971,27 @@ pub struct PriceHintDto {
 /// how the price typed compares, as the pages' form says it (posting::price_hint); 204 without a
 /// model or a year, or where too few such cars are up to say. The category and the make it may name
 /// too change nothing.
+#[utoipa::path(
+    get,
+    path = "/listings/price-hint",
+    tag = "own",
+    operation_id = "getPriceHint",
+    summary = "What cars of a model ask",
+    description = "What cars of a model and year ask, in the currency, and how the price typed compares, as the posting form's hint under a car's price says it.",
+    params(
+        ("model" = Option<String>, Query, description = "The model's option code, as the form's fields name it", example = "VOLKSWAGEN_GOLF"),
+        ("year" = Option<i32>, Query, description = "The car's year", example = 2016),
+        ("currency" = Option<kinds::Currency>, Query, description = "The currency to say it in"),
+        ("price" = Option<String>, Query, description = "The price typed, a number as people type it", example = "9500"),
+    ),
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "What such cars ask, and how the price compares", body = PriceHintDto),
+        (status = 204, description = "No model or year, or too few such cars up to say"),
+        (status = 401, response = Unauthorized),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn price_hint(State(state): State<AppState>, ApiUser(_): ApiUser, RawQuery(query): RawQuery) -> Result<Response, ApiError> {
     let params = Params::parse(query.as_deref());
     let text = |name: &str| params.first(name).unwrap_or_default();

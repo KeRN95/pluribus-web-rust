@@ -10,6 +10,12 @@
 # The target directories default to ones outside the repository, under ~/.cache, which build far
 # faster than a Windows drive under WSL (/mnt/c); CHECK_TARGET and CLIPPY_TARGET change them.
 # The database of compose.yaml must be up, its template1 migrated (dev/test_template.sh).
+#
+# The JSON API's OpenAPI document, openapi.json at the root, which the phone app's client is
+# generated from, must be the one the API serves (crates/api/tests/openapi.rs fails otherwise):
+# after a change to the API, write it anew, and commit it with the change:
+#
+#   UPDATE_OPENAPI=1 cargo test -p pluribus-api --test openapi
 set -u
 cd "$(dirname "$0")/.."
 TESTS="${CHECK_TARGET:-$HOME/.cache/marketplace-target-test}"

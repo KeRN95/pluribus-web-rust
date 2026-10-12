@@ -5,9 +5,10 @@
 //! every failure answered in one envelope (error.rs); the language each request asks for, never a
 //! cookie (lang.rs); a request signed in by a bearer token, a session of the same table the pages'
 //! cookie names (auth.rs); the shapes it answers in, made from the rows and never the rows
-//! themselves (dto.rs). None of the pages' layers apply to it: neither their language cookie, nor
-//! the check on forms from other sites, nor their security headers, nor the signed-in cookie, nor
-//! the rail's path.
+//! themselves (dto.rs); and its OpenAPI document, which says all of that of every route, the
+//! contract the app's client is generated from (openapi.rs). None of the pages' layers apply to
+//! it: neither their language cookie, nor the check on forms from other sites, nor their security
+//! headers, nor the signed-in cookie, nor the rail's path.
 
 pub mod account;
 mod auth;
@@ -19,6 +20,7 @@ mod lang;
 pub mod listing;
 pub mod messages;
 pub mod notifications;
+pub mod openapi;
 pub mod own;
 pub mod reference;
 pub mod safety;
@@ -29,8 +31,10 @@ pub mod signin;
 use axum::{
     Json, Router,
     extract::{DefaultBodyLimit, FromRequest, OriginalUri, Request, State},
+    handler::Handler,
+    http::Method,
     middleware,
-    routing::{delete, get, post, put},
+    routing::{MethodFilter, MethodRouter, on},
 };
 use pluribus_db as db;
 use pluribus_services::{AppState, photos};
@@ -38,8 +42,10 @@ use serde::de::DeserializeOwned;
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 
 pub use auth::{ApiUser, OptionalApiUser};
-pub use dto::{HealthDto, MeDto, Page};
+pub use dto::{CardPage, HealthDto, MeDto, NotificationPage, Page};
 pub use error::{ApiError, ErrorBody, ErrorEnvelope};
+
+use openapi::{Internal, Unauthorized};
 
 /// Where the binary nests the API beside the pages: every path of it starts so.
 pub const PREFIX: &str = "/api/v1";
@@ -47,19 +53,64 @@ pub const PREFIX: &str = "/api/v1";
 /// The API, its paths under PREFIX, where the binary nests it beside the pages once their layers
 /// are on: `pluribus_web::router(state.clone()).nest(PREFIX, pluribus_api::router(state))`.
 pub fn router(state: AppState) -> Router {
-    framed(routes(), state)
+    framed(api(), state)
 }
 
-/// Every route of the API (README, "Routes", "API"): `GET /health`, for anyone, and `GET /me`,
-/// signed in (`ApiUser`); the reference data the app loads first, for anyone (reference.rs):
-/// `GET /categories`, `GET /cities` and `GET /categories/{slug}/fields`; `GET /listings` and
-/// `GET /home`, for anyone, a signed-in caller's lists without the listings of the accounts they
-/// blocked (browse.rs); one listing (listing.rs), for anyone, its seller and the moderators seeing
-/// it off the site too: `GET /listings/{no}`, `GET /listings/{no}/related`,
-/// `POST /listings/{no}/seen` and `POST /listings/{no}/contact`; the user's notifications,
-/// `GET /notifications` and `POST /notifications/seen`, and what the app's badges count,
-/// `GET /counts`, signed in (notifications.rs); signing in by a code (signin.rs): `POST /auth/code`
-/// and `POST /auth/verify`, for anyone, and `POST /auth/sign-out`, signed in; the listings a user
+/// Every route of the API, each its method and its path under PREFIX (`/listings/{no}`), from the
+/// one table the router is made from too (`table`): what crates/api/tests/openapi.rs holds the
+/// OpenAPI document's paths to, every route documented and every documented path a route.
+pub fn routes() -> Vec<(Method, &'static str)> {
+    table().into_iter().map(|route| (route.method, route.path)).collect()
+}
+
+/// The routes of the table, in one router: a path's methods each its own route there, as axum
+/// merges those of a path into one.
+fn api() -> Router<AppState> {
+    table().into_iter().fold(Router::new(), |router, route| router.route(route.path, route.handler))
+}
+
+/// One route of the API: the method and the path under PREFIX it answers, and its handler.
+struct Route {
+    method: Method,
+    path: &'static str,
+    handler: MethodRouter<AppState>,
+}
+
+impl Route {
+    /// The route, taking a body of up to `bytes` (`DefaultBodyLimit`) rather than the 2 MB the
+    /// others take.
+    fn up_to(mut self, bytes: usize) -> Self {
+        self.handler = self.handler.layer(DefaultBodyLimit::max(bytes));
+        self
+    }
+}
+
+/// `handler` answering `method` at `path` (a GET's also answering HEAD, as axum's `get` does).
+fn route<H: Handler<T, AppState>, T: 'static>(method: Method, path: &'static str, handler: H) -> Route {
+    let filter = MethodFilter::try_from(method.clone()).expect("a method a route answers");
+    Route { method, path, handler: on(filter, handler) }
+}
+
+// The methods the table's routes answer, by their names alone.
+const GET: Method = Method::GET;
+const POST: Method = Method::POST;
+const PUT: Method = Method::PUT;
+const PATCH: Method = Method::PATCH;
+const DELETE: Method = Method::DELETE;
+
+/// Every route of the API (README, "Routes", "API"), the router and the list of its routes both
+/// made from it (`api`, `routes`), each handler documented in the OpenAPI document by its
+/// `#[utoipa::path]` (openapi.rs): `GET /health`, for anyone, its OpenAPI document,
+/// `GET /openapi.json`, for anyone, and `GET /me`, signed in (`ApiUser`); the reference data the
+/// app loads first, for anyone (reference.rs): `GET /categories`, `GET /cities` and
+/// `GET /categories/{slug}/fields`; `GET /listings` and `GET /home`, for anyone, a signed-in
+/// caller's lists without the listings of the accounts they blocked (browse.rs); one listing
+/// (listing.rs), for anyone, its seller and the moderators seeing it off the site too:
+/// `GET /listings/{no}`, `GET /listings/{no}/related`, `POST /listings/{no}/seen` and
+/// `POST /listings/{no}/contact`; the user's notifications, `GET /notifications` and
+/// `POST /notifications/seen`, and what the app's badges count, `GET /counts`, signed in
+/// (notifications.rs); signing in by a code (signin.rs): `POST /auth/code` and
+/// `POST /auth/verify`, for anyone, and `POST /auth/sign-out`, signed in; the listings a user
 /// keeps, signed in (saved.rs): `PUT` and `DELETE /listings/{no}/saved`, `GET /saved` and
 /// `POST /saved/seen`; their saved searches, signed in (searches.rs): `GET` and `POST /searches`,
 /// `DELETE /searches/{id}`, `PUT /searches/{id}/alerts` and `GET /searches/{id}/listings`; trust
@@ -77,61 +128,72 @@ pub fn router(state: AppState) -> Router {
 /// `POST /listings`, `PUT` and `DELETE /listings/{no}`, `POST /listings/{no}/pause`, `/resume`,
 /// `/sell`, `/reserve`, `/unreserve` and `/renew`, `GET /me/listings`, `POST /listings/zone` and
 /// `GET /listings/price-hint`.
-fn routes() -> Router<AppState> {
-    Router::new()
-        .route("/health", get(health))
-        .route("/me", get(me).patch(account::rename).delete(account::close))
-        .route("/me/notices", get(account::notices).put(account::set_notices))
-        .route("/me/language", put(account::language))
-        .route("/me/contacts", post(account::add_contact))
-        .route("/me/contacts/verify", post(account::verify_contact))
-        .route("/me/contacts/{kind}", delete(account::remove_contact))
-        .route("/me/sessions", get(account::sessions))
-        .route("/me/sessions/others", delete(account::end_other_sessions))
-        .route("/me/devices", put(devices::register))
-        .route("/me/devices/{token}", delete(devices::forget))
-        .route("/categories", get(reference::categories))
-        .route("/cities", get(reference::cities))
-        .route("/categories/{slug}/fields", get(reference::fields))
-        .route("/listings", get(browse::listings).post(own::create))
-        .route("/home", get(browse::home))
-        .route("/listings/{no}", get(listing::show).put(own::update).delete(own::delete))
-        .route("/listings/{no}/related", get(listing::related))
-        .route("/listings/{no}/seen", post(listing::seen))
-        .route("/listings/{no}/contact", post(listing::contact))
-        .route("/photos", post(own::upload).layer(DefaultBodyLimit::max(photos::UPLOAD_BODY_BYTES)))
-        .route("/me/listings", get(own::mine))
-        .route("/listings/{no}/pause", post(own::pause))
-        .route("/listings/{no}/resume", post(own::resume))
-        .route("/listings/{no}/sell", post(own::sell))
-        .route("/listings/{no}/reserve", post(own::reserve))
-        .route("/listings/{no}/unreserve", post(own::unreserve))
-        .route("/listings/{no}/renew", post(own::renew))
-        .route("/listings/zone", post(own::zone))
-        .route("/listings/price-hint", get(own::price_hint))
-        .route("/notifications", get(notifications::list))
-        .route("/notifications/seen", post(notifications::seen))
-        .route("/counts", get(notifications::counts))
-        .route("/auth/code", post(signin::code))
-        .route("/auth/verify", post(signin::verify))
-        .route("/auth/sign-out", post(signin::sign_out))
-        .route("/listings/{no}/saved", put(saved::keep).delete(saved::let_go))
-        .route("/saved", get(saved::saved))
-        .route("/saved/seen", post(saved::seen))
-        .route("/searches", get(searches::list).post(searches::save))
-        .route("/searches/{id}", delete(searches::delete))
-        .route("/searches/{id}/alerts", put(searches::alerts))
-        .route("/searches/{id}/listings", get(searches::listings))
-        .route("/report/reasons", get(safety::reasons))
-        .route("/listings/{no}/report", post(safety::report))
-        .route("/sellers/{user_id}/blocked", put(safety::block).delete(safety::unblock))
-        .route("/conversations", get(messages::inbox))
-        .route("/conversations/{id}", get(messages::conversation))
-        .route("/listings/{no}/messages", post(messages::start))
-        .route("/conversations/{id}/messages", post(messages::reply))
-        .route("/conversations/{id}/read", post(messages::read))
-        .route("/conversations/{id}/block", post(messages::block))
-        .route("/conversations/{id}/unblock", post(messages::unblock))
+fn table() -> Vec<Route> {
+    vec![
+        route(GET, "/health", health),
+        route(GET, "/openapi.json", openapi::document),
+        route(GET, "/me", me),
+        route(PATCH, "/me", account::rename),
+        route(DELETE, "/me", account::close),
+        route(GET, "/me/notices", account::notices),
+        route(PUT, "/me/notices", account::set_notices),
+        route(PUT, "/me/language", account::language),
+        route(POST, "/me/contacts", account::add_contact),
+        route(POST, "/me/contacts/verify", account::verify_contact),
+        route(DELETE, "/me/contacts/{kind}", account::remove_contact),
+        route(GET, "/me/sessions", account::sessions),
+        route(DELETE, "/me/sessions/others", account::end_other_sessions),
+        route(PUT, "/me/devices", devices::register),
+        route(DELETE, "/me/devices/{token}", devices::forget),
+        route(GET, "/categories", reference::categories),
+        route(GET, "/cities", reference::cities),
+        route(GET, "/categories/{slug}/fields", reference::fields),
+        route(GET, "/listings", browse::listings),
+        route(POST, "/listings", own::create),
+        route(GET, "/home", browse::home),
+        route(GET, "/listings/{no}", listing::show),
+        route(PUT, "/listings/{no}", own::update),
+        route(DELETE, "/listings/{no}", own::delete),
+        route(GET, "/listings/{no}/related", listing::related),
+        route(POST, "/listings/{no}/seen", listing::seen),
+        route(POST, "/listings/{no}/contact", listing::contact),
+        route(POST, "/photos", own::upload).up_to(photos::UPLOAD_BODY_BYTES),
+        route(GET, "/me/listings", own::mine),
+        route(POST, "/listings/{no}/pause", own::pause),
+        route(POST, "/listings/{no}/resume", own::resume),
+        route(POST, "/listings/{no}/sell", own::sell),
+        route(POST, "/listings/{no}/reserve", own::reserve),
+        route(POST, "/listings/{no}/unreserve", own::unreserve),
+        route(POST, "/listings/{no}/renew", own::renew),
+        route(POST, "/listings/zone", own::zone),
+        route(GET, "/listings/price-hint", own::price_hint),
+        route(GET, "/notifications", notifications::list),
+        route(POST, "/notifications/seen", notifications::seen),
+        route(GET, "/counts", notifications::counts),
+        route(POST, "/auth/code", signin::code),
+        route(POST, "/auth/verify", signin::verify),
+        route(POST, "/auth/sign-out", signin::sign_out),
+        route(PUT, "/listings/{no}/saved", saved::keep),
+        route(DELETE, "/listings/{no}/saved", saved::let_go),
+        route(GET, "/saved", saved::saved),
+        route(POST, "/saved/seen", saved::seen),
+        route(GET, "/searches", searches::list),
+        route(POST, "/searches", searches::save),
+        route(DELETE, "/searches/{id}", searches::delete),
+        route(PUT, "/searches/{id}/alerts", searches::alerts),
+        route(GET, "/searches/{id}/listings", searches::listings),
+        route(GET, "/report/reasons", safety::reasons),
+        route(POST, "/listings/{no}/report", safety::report),
+        route(PUT, "/sellers/{user_id}/blocked", safety::block),
+        route(DELETE, "/sellers/{user_id}/blocked", safety::unblock),
+        route(GET, "/conversations", messages::inbox),
+        route(GET, "/conversations/{id}", messages::conversation),
+        route(POST, "/listings/{no}/messages", messages::start),
+        route(POST, "/conversations/{id}/messages", messages::reply),
+        route(POST, "/conversations/{id}/read", messages::read),
+        route(POST, "/conversations/{id}/block", messages::block),
+        route(POST, "/conversations/{id}/unblock", messages::unblock),
+    ]
 }
 
 /// Routes in the API's frame, which `router` puts the API's own in, and the tests a probe of
@@ -163,12 +225,38 @@ fn span(request: &Request) -> tracing::Span {
 }
 
 /// `GET /health`: `{"ok": true}`, once the database answers.
+#[utoipa::path(
+    get,
+    path = "/health",
+    tag = "meta",
+    operation_id = "getHealth",
+    summary = "Whether the API answers",
+    description = "Answers `{\"ok\": true}` once the server and its database answer.",
+    responses(
+        (status = 200, description = "The server and its database answer", body = HealthDto),
+        (status = 500, response = Internal),
+    ),
+)]
 async fn health(State(state): State<AppState>) -> Result<Json<HealthDto>, ApiError> {
     db::ping(&state.db).await?;
     Ok(Json(HealthDto { ok: true }))
 }
 
 /// `GET /me`: the signed-in user, as their account has them.
+#[utoipa::path(
+    get,
+    path = "/me",
+    tag = "account",
+    operation_id = "getMe",
+    summary = "The signed-in user",
+    description = "The signed-in user, as their account has them.",
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "The signed-in user", body = MeDto),
+        (status = 401, response = Unauthorized),
+        (status = 500, response = Internal),
+    ),
+)]
 async fn me(State(state): State<AppState>, ApiUser(user): ApiUser) -> Result<Json<MeDto>, ApiError> {
     let account = db::account_settings(&state.db, user.id).await?;
     Ok(Json(MeDto::from((&user, &account))))

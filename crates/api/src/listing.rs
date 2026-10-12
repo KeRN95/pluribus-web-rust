@@ -33,22 +33,27 @@ use pluribus_services::{
 use rust_decimal::Decimal;
 use serde::Serialize;
 use time::{OffsetDateTime, macros::format_description};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{
-    ApiError, OptionalApiUser, Page,
+    ApiError, CardPage, OptionalApiUser, Page,
     browse::{self, CardDto, Caller, SellerKind},
+    openapi::{Internal, NotFound, Unauthorized, Validation, kinds},
     signin::ClientIp,
 };
 
 /// `GET /listings/{no}`: a listing as its page shows it.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ListingDto {
     /// Its number, which its page and these routes go by.
+    #[schema(examples(1001))]
     pub no: i64,
+    #[schema(examples("volkswagen-golf-1-6-2016"))]
     pub slug: String,
     /// What its page calls it: a car's made from what the car is ("Volkswagen Golf 1.6, 2016"),
     /// another's as its seller wrote it.
+    #[schema(examples("Volkswagen Golf 1.6, 2016"))]
     pub title: String,
     /// A car's title as its seller wrote it, where `title` was made: what its page heads its
     /// description with; none for the others.
@@ -57,11 +62,14 @@ pub struct ListingDto {
     /// photos a mosaic, its key facts in a row, where it is on a map (`place.point`).
     pub deal: bool,
     /// What it offers or asks for: SELL, BUY, RENT, WANTED_RENT, SERVICE or JOB.
+    #[schema(value_type = kinds::ListingType)]
     pub kind: ListingType,
     /// What state the thing is in, in the categories that ask: NEW, LIKE_NEW, USED or FOR_PARTS.
+    #[schema(value_type = Option<kinds::Condition>)]
     pub condition: Option<Condition>,
     /// Where it stands: ACTIVE, RESERVED or SOLD for anyone; PAUSED, EXPIRED, PENDING_REVIEW,
     /// SUSPENDED or REJECTED for its seller and the moderators, who alone see it then.
+    #[schema(value_type = kinds::Status)]
     pub status: Status,
     /// What its page says over it to those who see it while nobody else does, or nobody yet
     /// (domain::Status::page_note), in the language asked for: that it waits for a moderator,
@@ -107,45 +115,55 @@ pub struct ListingDto {
 }
 
 /// A listing's price, as its page says it.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ListingPriceDto {
     /// The amount, as text, every digit it has; none for a price on request, nor for a free one.
+    #[schema(examples("9500"))]
     pub amount: Option<Decimal>,
     /// EUR or ALL.
+    #[schema(examples("EUR"))]
     pub currency: String,
     /// How the price is meant: FIXED, NEGOTIABLE, FROM, FREE or ON_REQUEST.
     #[serde(rename = "type")]
+    #[schema(value_type = kinds::PriceType)]
     pub kind: PriceType,
     /// What it was, when it dropped lately (by a hundredth or more, within the last 30 days).
+    #[schema(examples("10200"))]
     pub was: Option<Decimal>,
     /// Whether the amount is a month's: a rent's, or a job's pay.
     pub per_month: bool,
     /// The drop, as the pill beside its page's price says it.
     pub drop: Option<DropDto>,
     /// What a unit of its currency is worth in euros, for the app to say it in the other currency.
+    #[schema(examples("1"))]
     pub eur_rate: Option<Decimal>,
 }
 
 /// A price lowered lately (domain::listing::price_drop): from what, to what, and by how many
 /// percent, whole, 1 at least ("−7%"). The page doesn't know when; the 30 days before it
 /// changed are what `from` is the lowest of.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct DropDto {
+    #[schema(examples("10200"))]
     pub from: Decimal,
+    #[schema(examples("9500"))]
     pub to: Decimal,
+    #[schema(examples(7))]
     pub percent: i64,
 }
 
 /// A car's price against what cars of its model and year ask (two years either side), as its
 /// page's bubble says it (domain::listing::car_verdict, pluribus-services' listings::CarPrices).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CarPriceDto {
     /// The median, in the listing's currency, rounded as its page rounds it (to the hundred euros,
     /// the ten thousand lekë).
+    #[schema(examples("10300"))]
     pub median: Decimal,
     /// How its price compares: "good" 15 % or more under the median, "near" within 15 %, "above"
     /// 15 % or more over it; null under half of it, which says only that the price is likely wrong
     /// (its page then shows no bubble).
+    #[schema(value_type = Option<kinds::CarVerdict>)]
     pub verdict: Option<CarVerdict>,
     /// What such cars ask, in a sentence, in the language asked for: "Volkswagen Golf 2014–2018 në
     /// shitje: shumica kërkojnë 9 500–11 400 €, mesatarja 10 300 €."
@@ -154,20 +172,23 @@ pub struct CarPriceDto {
 
 /// What a square metre of a property on sale costs (domain::listing::area_price), against its
 /// zone's average (domain::listing::zone_price).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct AreaPriceDto {
     /// Its price over its area, in its currency, to the whole euro or lek.
+    #[schema(examples("1450"))]
     pub per_m2: Decimal,
     /// What one costs in its zone on average, among the zone's sales in its category, in its
     /// currency, rounded likewise; none outside a zone with an average, or for a starting price.
+    #[schema(examples("1600"))]
     pub zone_per_m2: Option<Decimal>,
     /// "below" the average by 200 € or more, "same", "near" within 200 € or "above" it by 200 €
     /// or more; none without an average.
+    #[schema(value_type = Option<kinds::ZoneVerdict>)]
     pub verdict: Option<ZoneVerdict>,
 }
 
 /// What the page's loan calculator starts from.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct LoanDto {
     /// The price it borrows on.
     pub amount: Decimal,
@@ -177,7 +198,7 @@ pub struct LoanDto {
 }
 
 /// One of a listing's properties, as data, and as its page words it in the language asked for.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct AttributeDto {
     /// The property's code: "vehicle_mileage".
     pub code: String,
@@ -215,16 +236,21 @@ pub struct AttributeDto {
 }
 
 /// An option chosen: its code, as the filters and the form name it, and its label, in Albanian and
-/// as an English page says it (the catalogue's, not the database's own label_i18n).
-#[derive(Debug, Serialize)]
+/// as an English page says it (the catalogue's, not the database's own label_i18n); in the OpenAPI
+/// document `AttributeOptionDto`, reference.rs having an `OptionDto` of its own.
+#[derive(Debug, Serialize, ToSchema)]
+#[schema(as = AttributeOptionDto)]
 pub struct OptionDto {
+    #[schema(examples("DIESEL"))]
     pub code: String,
+    #[schema(examples("Naftë"))]
     pub label: String,
+    #[schema(examples("Diesel"))]
     pub label_en: String,
 }
 
 /// One of a listing's photos, each copy's address absolute, as the pages name them.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ListingPhotoDto {
     /// Its id, by which an edit orders and removes it.
     pub id: Uuid,
@@ -241,7 +267,7 @@ pub struct ListingPhotoDto {
 }
 
 /// A photo's copies (pluribus-services' media::COPIES), as the pages offer them to a browser.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CopiesDto {
     /// The cards' copy, 600 px on its shorter side, as WebP with the query of the rules it is made
     /// by; for a photo kept before WebP, its card-sized JPEG.
@@ -264,11 +290,13 @@ pub struct CopiesDto {
 }
 
 /// Where a listing is.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PlaceDto {
     /// Its town: "Tiranë".
+    #[schema(examples("Tiranë"))]
     pub city: Option<String>,
     /// Its zone in the town, for a property that says one: "Blloku".
+    #[schema(examples("Blloku"))]
     pub zone: Option<String>,
     /// Where it is on the map, as its page's map shows it, a car's or a property's alone (`deal`):
     /// its own point, rounded to about a hundred metres as its form keeps it, or its town's; the
@@ -276,14 +304,17 @@ pub struct PlaceDto {
     pub point: Option<PointDto>,
 }
 
-#[derive(Debug, Serialize)]
+/// A point on the map.
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PointDto {
+    #[schema(examples(41.3275))]
     pub lat: f64,
+    #[schema(examples(19.8187))]
     pub lng: f64,
 }
 
 /// Who sells a listing, as its page's seller card says.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct SellerDto {
     /// A private seller ("user"), or a store ("business").
     pub kind: SellerKind,
@@ -317,7 +348,7 @@ pub struct SellerDto {
 }
 
 /// How a listing's seller can be reached.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ContactDto {
     /// What `POST /listings/{no}/contact` reveals: ["phone"], or ["email"] for a seller who signed
     /// in by e-mail and shows no number; none once the listing is off the site or sold, or where
@@ -328,7 +359,8 @@ pub struct ContactDto {
     pub revealed: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+/// A kind of contact: a phone number, or an e-mail address.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum ContactKind {
     Phone,
@@ -336,8 +368,10 @@ pub enum ContactKind {
 }
 
 /// What a seller can do to their listing from its page, by where it stands (domain::Status, the
-/// rules its routes on the pages and db::ListingAction go by).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+/// rules its routes on the pages and db::ListingAction go by): edit, pause, resume, sell, reserve,
+/// unreserve, renew or delete, each its route (`POST /listings/{no}/<action>`, `PUT` and `DELETE
+/// /listings/{no}`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Action {
     /// Up, or paused: change it.
@@ -359,11 +393,13 @@ pub enum Action {
 }
 
 /// `POST /listings/{no}/contact`: the seller's number or address, revealed.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ContactRevealedDto {
     /// The number, as +355691234567.
+    #[schema(examples("+355691234567"))]
     pub phone: Option<String>,
     /// The address, of a seller who shows no number.
+    #[schema(examples("ana@example.com"))]
     pub email: Option<String>,
     /// Beside a number WhatsApp can reach (not an Albanian landline), the address that opens a chat
     /// with it, a first message naming the listing typed in the language asked for.
@@ -373,6 +409,22 @@ pub struct ContactRevealedDto {
 /// `GET /listings/{no}`: the listing numbered `no`, as its page shows it (`ListingDto`, `listing_dto`),
 /// to whom its page shows; for a number no listing has, not found; a bearer token no good session
 /// has, 401.
+#[utoipa::path(
+    get,
+    path = "/listings/{no}",
+    tag = "listing",
+    operation_id = "getListing",
+    summary = "A listing",
+    description = "The listing as its page shows it, to anyone while it is on the site, and to its seller and the moderators whatever it is.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    security((), ("bearer" = [])),
+    responses(
+        (status = 200, description = "The listing", body = ListingDto),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn show(
     State(state): State<AppState>,
     OptionalApiUser(user): OptionalApiUser,
@@ -524,6 +576,26 @@ pub(crate) async fn listing_dto(state: &AppState, user: Option<&SessionUser>, he
 /// frames go on, as cards (`CardDto`); `next` is the next page's `after`, null on the last. Those
 /// of the accounts a signed-in caller blocked are left out, as the pages leave them out. Not found
 /// for a listing not on the site; an `after` that isn't a place in the list, 422.
+#[utoipa::path(
+    get,
+    path = "/listings/{no}/related",
+    tag = "listing",
+    operation_id = "listRelatedListings",
+    summary = "The listings like one",
+    description = "The listings like it, eight at a time, as its page's frames go on, without those of the accounts a signed-in caller blocked.",
+    params(
+        ("no" = i64, Path, description = "The listing's number", example = 1001),
+        ("after" = Option<String>, Query, description = "The last page's `next`: the place in the list the next page starts at", example = "8"),
+    ),
+    security((), ("bearer" = [])),
+    responses(
+        (status = 200, description = "A page of the listings like it", body = CardPage),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn related(
     State(state): State<AppState>,
     caller: Caller,
@@ -554,6 +626,20 @@ pub async fn related(
 /// the caller's address and browser (pluribus-services' listings::visitor), each once in a while,
 /// a bot's not at all; the app asks only for a page it showed, and not for its seller's own. Not
 /// found for a listing not on the site.
+#[utoipa::path(
+    post,
+    path = "/listings/{no}/seen",
+    tag = "listing",
+    operation_id = "markListingSeen",
+    summary = "A listing's page was shown",
+    description = "Counts a view of the listing's page, as the pages count one: by the caller's address and app, each once in a while, a bot's not at all; for a page the app showed, not its seller's own.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    responses(
+        (status = 204, description = "Seen"),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn seen(
     State(state): State<AppState>,
     ClientIp(ip): ClientIp,
@@ -577,6 +663,20 @@ pub async fn seen(
 /// it about the listing, its first message typed in the language asked for, as the page's button
 /// beside the number has it (format::whatsapp_url). Not found for a listing not up (active or
 /// reserved), or whose seller shows neither.
+#[utoipa::path(
+    post,
+    path = "/listings/{no}/contact",
+    tag = "listing",
+    operation_id = "revealContact",
+    summary = "Reveal a seller's number",
+    description = "Reveals the seller's number, or the address of a seller who shows no number, counted as the page's button counts it, with the address of a WhatsApp chat about the listing beside a number WhatsApp reaches.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    responses(
+        (status = 200, description = "The seller's number or address", body = ContactRevealedDto),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn contact(
     State(state): State<AppState>,
     headers: HeaderMap,

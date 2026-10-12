@@ -32,9 +32,13 @@ use pluribus_db::{self as db, Conversation, InboxEntry, Message, SessionUser, Se
 use pluribus_services::AppState;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::{ApiError, ApiUser, JsonBody, browse};
+use crate::{
+    ApiError, ApiUser, JsonBody, browse,
+    openapi::{Internal, NotFound, RateLimited, Unauthorized, Validation},
+};
 
 /// How many conversations the inbox gives, the latest first: as many as the pages' inbox shows
 /// (pluribus-web's INBOX_MOST).
@@ -49,9 +53,10 @@ const TEXT: &str = "TEXT";
 
 /// The listing a conversation is about, as its head and the inbox show it (pluribus-web's
 /// ListingHead).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ListingHeadDto {
     /// Its number, which its page goes by.
+    #[schema(examples(1001))]
     pub no: i64,
     pub title: String,
     /// Its cover's card-sized copy, its address absolute; none for a listing without photos.
@@ -76,20 +81,22 @@ impl ListingHeadDto {
 }
 
 /// The other side of a conversation.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OtherDto {
     /// A person's account, or a store's, by its id.
     pub id: Uuid,
     pub kind: OtherKind,
     /// Their name as the pages show it: as they gave it, or the one the site gives in the language
     /// asked for ("Përdorues", "User", until they give one); a store's own.
+    #[schema(examples("Besnik"))]
     pub name: String,
     /// A store's address, its page's (/biznes/{slug}); none for a person.
+    #[schema(examples("auto-durresi"))]
     pub slug: Option<String>,
 }
 
-/// Who the other side of a conversation is.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+/// Who the other side of a conversation is: a person (user), or a store (business).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum OtherKind {
     /// A person: the buyer, as the seller's side sees them, or a private seller.
@@ -111,9 +118,11 @@ impl OtherDto {
 }
 
 /// The store whose conversation it is, for one of its people: its address and its name.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct StoreDto {
+    #[schema(examples("auto-durresi"))]
     pub slug: String,
+    #[schema(examples("Auto Durrësi"))]
     pub name: String,
 }
 
@@ -124,7 +133,7 @@ impl StoreDto {
 }
 
 /// A conversation as the inbox lists it (`GET /conversations`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct InboxDto {
     pub id: Uuid,
     /// The listing it is about; none once it is gone for good.
@@ -176,7 +185,7 @@ impl InboxDto {
 }
 
 /// A conversation, with its messages (`GET /conversations/{id}`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ConversationDto {
     pub id: Uuid,
     /// The listing it is about; none once it is gone for good.
@@ -205,8 +214,9 @@ pub struct ConversationDto {
 
 /// Why a message can't go (domain::messaging::Refusal): its code, the same in every language
 /// (`Refusal::code`), and what it says (`Refusal::reason`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct WhyNotDto {
+    #[schema(examples("blocked"))]
     pub code: &'static str,
     pub message: String,
 }
@@ -242,7 +252,7 @@ impl ConversationDto {
 }
 
 /// A message, as a conversation shows it.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct MessageDto {
     /// A UUIDv7, which sorts as it was sent: what `after` and `up_to` name it by.
     pub id: Uuid,
@@ -251,6 +261,7 @@ pub struct MessageDto {
     /// What kind of message it is, as the database spells it: TEXT, what someone wrote, the only
     /// kind a conversation shows (the schema has room for others, SYSTEM among them, the site's
     /// own, which nothing writes yet).
+    #[schema(examples("TEXT"))]
     pub kind: &'static str,
     /// For one of a store's people, the colleague who sent it, where it wasn't them; none
     /// otherwise.
@@ -283,7 +294,7 @@ impl MessageDto {
 
 /// A message written to a listing's seller (`POST /listings/{no}/messages`): the message's own
 /// members, and the conversation it went into beside them.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct SentDto {
     pub conversation_id: Uuid,
     #[serde(flatten)]
@@ -292,13 +303,14 @@ pub struct SentDto {
 
 /// What the routes that write take: `{"body": "…"}`, the message, which goes without space
 /// around it (messaging::tidy).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct MessageBody {
+    #[schema(examples("Përshëndetje, a është ende në shitje?"))]
     pub body: String,
 }
 
 /// What `POST /conversations/{id}/read` takes: the latest message the app showed, by its id.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct ReadBody {
     pub up_to: Uuid,
 }
@@ -312,6 +324,20 @@ pub struct ConversationQuery {
 
 /// `GET /conversations`: the user's conversations, the latest written in first, as /mesazhet
 /// lists them (db::inbox), a store's among them for its people, INBOX_MOST at most.
+#[utoipa::path(
+    get,
+    path = "/conversations",
+    tag = "messages",
+    operation_id = "listConversations",
+    summary = "The conversations",
+    description = "The user's conversations, the latest written in first, as /mesazhet lists them, a store's among them for its people, 200 at most.",
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "The conversations", body = Vec<InboxDto>),
+        (status = 401, response = Unauthorized),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn inbox(State(state): State<AppState>, ApiUser(user): ApiUser, headers: HeaderMap) -> Result<Json<Vec<InboxDto>>, ApiError> {
     let origin = browse::origin(&state.config, &headers);
     let entries = db::inbox(&state.db, user.id, INBOX_MOST).await?;
@@ -322,6 +348,26 @@ pub async fn inbox(State(state): State<AppState>, ApiUser(user): ApiUser, header
 /// `after` (what the app asks for every few seconds, as the page does, the list empty when none
 /// came). Showing it reads nothing: the app says what it showed (`/read`), as the page's script
 /// does once it shows them. An `after` that isn't a message's id is a validation error on `after`.
+#[utoipa::path(
+    get,
+    path = "/conversations/{id}",
+    tag = "messages",
+    operation_id = "getConversation",
+    summary = "A conversation",
+    description = "The conversation with its latest 300 messages, the oldest first, or only those after one, as the page asks for them every few seconds; showing it reads nothing.",
+    params(
+        ("id" = Uuid, Path, description = "The conversation's id"),
+        ("after" = Option<Uuid>, Query, description = "The last message the app has, by its id: only those after it"),
+    ),
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "The conversation", body = ConversationDto),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn conversation(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -345,6 +391,25 @@ pub async fn conversation(
 /// an hour and a day too, starting it (db::start_conversation). 201, with the message and its
 /// conversation's id. A listing that takes no messages, the user's own or one off the site, is
 /// refused as `Refusal::Closed`; a number no listing has, or a listing deleted, is not found.
+#[utoipa::path(
+    post,
+    path = "/listings/{no}/messages",
+    tag = "messages",
+    operation_id = "startConversation",
+    summary = "Write to a listing's seller",
+    description = "Writes to the listing's seller, into the conversation the user has about it already, else starting one, within the limits the pages keep, each refusal said as the page says it.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    request_body = MessageBody,
+    security(("bearer" = [])),
+    responses(
+        (status = 201, description = "The message, with its conversation's id", body = SentDto),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 429, response = RateLimited),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn start(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -374,6 +439,25 @@ pub async fn start(
 
 /// `POST /conversations/{id}/messages` `{"body": "…"}`: writes in the conversation, as the page
 /// does (pluribus-web's messages.rs, reply), within its limits. 201, with the message.
+#[utoipa::path(
+    post,
+    path = "/conversations/{id}/messages",
+    tag = "messages",
+    operation_id = "sendMessage",
+    summary = "Write in a conversation",
+    description = "Writes in the conversation, as the page does, within the same limits, refused alike.",
+    params(("id" = Uuid, Path, description = "The conversation's id")),
+    request_body = MessageBody,
+    security(("bearer" = [])),
+    responses(
+        (status = 201, description = "The message", body = MessageDto),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 429, response = RateLimited),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn reply(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -391,6 +475,24 @@ pub async fn reply(
 /// nothing from the other side is left unread, the notifications of them; the badges' count of
 /// conversations (`/counts`' `messages`) drops with it. 204; a message that isn't the
 /// conversation's reads nothing.
+#[utoipa::path(
+    post,
+    path = "/conversations/{id}/read",
+    tag = "messages",
+    operation_id = "markConversationRead",
+    summary = "The messages were shown",
+    description = "The app showed the conversation's messages up to this one: they are read, as the page's script reads them, and once nothing from the other side is left unread, the notifications of them too.",
+    params(("id" = Uuid, Path, description = "The conversation's id")),
+    request_body = ReadBody,
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Read"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn read(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -408,12 +510,44 @@ pub async fn read(
 /// `POST /conversations/{id}/block`: blocks the other side, as the page's "Blloko" does: they can't
 /// write to the user any more, here or about another of their listings, nor start another
 /// conversation with them, nor the user write to them until they let them again. 204.
+#[utoipa::path(
+    post,
+    path = "/conversations/{id}/block",
+    tag = "messages",
+    operation_id = "blockConversation",
+    summary = "Block the other side",
+    description = "Blocks the other side, as the page's \"Blloko\" does: they can't write to the user any more, here or about another of their listings, nor the user to them.",
+    params(("id" = Uuid, Path, description = "The conversation's id")),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Blocked"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn block(state: State<AppState>, user: ApiUser, id: Result<Path<Uuid>, PathRejection>) -> Result<StatusCode, ApiError> {
     set_blocked(state, user, id, true).await
 }
 
 /// `POST /conversations/{id}/unblock`: lets them write again, as the page's "Zhblloko" does,
 /// whoever on a store's side blocked them. 204.
+#[utoipa::path(
+    post,
+    path = "/conversations/{id}/unblock",
+    tag = "messages",
+    operation_id = "unblockConversation",
+    summary = "Let the other side write again",
+    description = "Lets the other side write again, as the page's \"Zhblloko\" does, whoever on a store's side blocked them.",
+    params(("id" = Uuid, Path, description = "The conversation's id")),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Let write again"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn unblock(state: State<AppState>, user: ApiUser, id: Result<Path<Uuid>, PathRejection>) -> Result<StatusCode, ApiError> {
     set_blocked(state, user, id, false).await
 }

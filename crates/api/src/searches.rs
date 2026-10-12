@@ -28,25 +28,30 @@ use pluribus_services::{
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use time::OffsetDateTime;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{
-    ApiError, ApiUser, JsonBody, Page,
+    ApiError, ApiUser, CardPage, JsonBody, Page,
     browse::{CardDto, Caller, CountDto, cards_of, origin, paged, unreadable},
+    openapi::{Internal, NotFound, Unauthorized, Validation},
 };
 
 /// A saved search (`GET /searches`, `POST /searches`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct SearchDto {
     pub id: Uuid,
     /// What it shows by, as the pages name it, in Albanian whatever the language asked for: its
     /// words, its page's category and what each filter's chip says, "„golf“ · Makina · Tiranë ·
     /// Naftë", or "Të gjitha njoftimet".
+    #[schema(examples("Makina · Tiranë · Naftë"))]
     pub name: String,
     /// Its page, /search or a category's (/c/makina), and its filters as a query string in the
     /// pages' vocabulary, which `/listings` takes too ("city=tirane&vehicle_fuel=DIESEL"; a
     /// category's page's category is its path's).
+    #[schema(examples("/c/makina"))]
     pub path: String,
+    #[schema(examples("city=tirane&vehicle_fuel=DIESEL"))]
     pub query: String,
     /// Whether it tells of new listings: a notification, and an e-mail or a WhatsApp message where
     /// its saver has one, at most one in three hours.
@@ -80,6 +85,20 @@ impl SearchDto {
 
 /// `GET /searches`: the user's saved searches, the last kept first, each with how many listings
 /// came since it was last opened, as /kerkimet-e-ruajtura lists them.
+#[utoipa::path(
+    get,
+    path = "/searches",
+    tag = "searches",
+    operation_id = "listSearches",
+    summary = "The saved searches",
+    description = "The user's saved searches, the last kept first, each with how many listings came since it was last opened, as /kerkimet-e-ruajtura lists them.",
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "The saved searches", body = Vec<SearchDto>),
+        (status = 401, response = Unauthorized),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn list(State(state): State<AppState>, ApiUser(user): ApiUser) -> Result<Json<Vec<SearchDto>>, ApiError> {
     let (searches, categories, cities) =
         tokio::try_join!(db::saved_searches(&state.db, user.id), db::categories(&state.db), db::cities(&state.db))?;
@@ -103,10 +122,12 @@ async fn new_since_seen(db: &PgPool, categories: &Categories, cities: &[City], s
 /// What `POST /searches` takes: a page the pages' "Ruaj kërkimin" keeps, its path (/search, or a
 /// category's, /c/makina) and its filters' query string, in the pages' vocabulary, as
 /// `/listings` takes it ("city=tirane&vehicle_fuel=DIESEL"; a "?" before it is left out).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct NewSearchBody {
+    #[schema(examples("/c/makina"))]
     pub path: String,
     #[serde(default)]
+    #[schema(examples("city=tirane&vehicle_fuel=DIESEL"))]
     pub query: String,
 }
 
@@ -117,6 +138,22 @@ pub struct NewSearchBody {
 /// neither a search nor a category's page is a validation error on `path`, as is a category that
 /// doesn't exist (on `query` for /search's `category`), and one more than the most a user keeps
 /// (db::SEARCHES_MOST) one on `searches`, its message the page's.
+#[utoipa::path(
+    post,
+    path = "/searches",
+    tag = "searches",
+    operation_id = "saveSearch",
+    summary = "Keep a search",
+    description = "Keeps the search, written and named as its page writes and names it, so that the same filters asked for in another order are the one search; once however often.",
+    request_body = NewSearchBody,
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "The search kept", body = SearchDto),
+        (status = 401, response = Unauthorized),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn save(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -150,6 +187,22 @@ pub async fn save(
 }
 
 /// `DELETE /searches/{id}`: lets the search go; another's, or none, is not found.
+#[utoipa::path(
+    delete,
+    path = "/searches/{id}",
+    tag = "searches",
+    operation_id = "deleteSearch",
+    summary = "Let a search go",
+    description = "Lets the saved search go.",
+    params(("id" = Uuid, Path, description = "The saved search's id")),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Let go"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn delete(State(state): State<AppState>, ApiUser(user): ApiUser, id: Result<Path<Uuid>, PathRejection>) -> Result<StatusCode, ApiError> {
     let Path(id) = id.map_err(|_| ApiError::NotFound)?;
     match db::delete_search(&state.db, user.id, id).await? {
@@ -159,13 +212,31 @@ pub async fn delete(State(state): State<AppState>, ApiUser(user): ApiUser, id: R
 }
 
 /// What `PUT /searches/{id}/alerts` takes: whether the search tells of new listings.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct AlertsBody {
     pub on: bool,
 }
 
 /// `PUT /searches/{id}/alerts`: turns the search's alerts on or off (`on`); another's, or none, is
 /// not found.
+#[utoipa::path(
+    put,
+    path = "/searches/{id}/alerts",
+    tag = "searches",
+    operation_id = "setSearchAlerts",
+    summary = "Turn a search's alerts on or off",
+    description = "Turns the search's alerts on or off: a notification, and an e-mail or a WhatsApp message, at most every three hours, when new listings come.",
+    params(("id" = Uuid, Path, description = "The saved search's id")),
+    request_body = AlertsBody,
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Set"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn alerts(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -186,6 +257,26 @@ pub async fn alerts(
 /// new listings count from now on, and its alerts are seen; the pages after it only read it, so
 /// that what came meanwhile, at the top, still counts as new. Another's search, or one whose
 /// category is gone, is not found; an `after` that doesn't read, a validation error.
+#[utoipa::path(
+    get,
+    path = "/searches/{id}/listings",
+    tag = "searches",
+    operation_id = "listSearchListings",
+    summary = "A saved search's listings",
+    description = "A page of the saved search's listings, as its page finds them and in its order, without those of the accounts the user blocked; the first page opens the search, its new listings counting from then on.",
+    params(
+        ("id" = Uuid, Path, description = "The saved search's id"),
+        ("after" = Option<String>, Query, description = "The last page's `next`"),
+    ),
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "A page of the search's listings", body = CardPage),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn listings(
     State(state): State<AppState>,
     caller: Caller,

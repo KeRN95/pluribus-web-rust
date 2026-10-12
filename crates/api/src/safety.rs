@@ -16,9 +16,14 @@ use pluribus_core::i18n::{self, t};
 use pluribus_db::{self as db, Reported};
 use pluribus_services::AppState;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::{ApiError, ApiUser, JsonBody, reference::Cached};
+use crate::{
+    ApiError, ApiUser, JsonBody,
+    openapi::{Internal, NotFound, RateLimited, Unauthorized, Validation},
+    reference::Cached,
+};
 
 /// The reasons a listing can be reported for, as the pages' report form offers them
 /// (pluribus-web's safety.rs, REASONS): each code db::REASONS has, in its order, with its name and
@@ -37,12 +42,15 @@ const REASONS: [(&str, &str, &str); 7] = [
 const NOTE_MOST: usize = 1000;
 
 /// A reason a listing can be reported for (`GET /report/reasons`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ReasonDto {
     /// What a report says: SCAM, FAKE, PROHIBITED, SPAM, UNAVAILABLE, WRONG_DETAILS or OTHER.
+    #[schema(examples("SCAM"))]
     pub code: &'static str,
     /// Its name, in Albanian and as an English page says it: "Mashtrim", "Scam".
+    #[schema(examples("Mashtrim"))]
     pub label: &'static str,
+    #[schema(examples("Scam"))]
     pub label_en: &'static str,
     /// What it covers, which the form says under its name, likewise.
     pub hint: &'static str,
@@ -55,6 +63,22 @@ pub struct ReasonDto {
 /// `GET /report/reasons`: the reasons, in the form's order, each in both languages, as the
 /// reference data are, so that the app changes language without asking again; kept five minutes
 /// (`Cached`), for they change only with the code.
+#[utoipa::path(
+    get,
+    path = "/report/reasons",
+    tag = "safety",
+    operation_id = "listReportReasons",
+    summary = "The reasons to report a listing",
+    description = "The reasons a listing can be reported for, in the report form's order, each in both languages, the serious ones marked.",
+    responses(
+        (
+            status = 200,
+            description = "The reasons",
+            body = Vec<ReasonDto>,
+            headers(("Cache-Control" = String, description = "`public, max-age=300`: it may be kept five minutes")),
+        ),
+    ),
+)]
 pub async fn reasons() -> Cached<Vec<ReasonDto>> {
     let english = |text: &'static str| i18n::in_english(text).unwrap_or(text);
     Cached(
@@ -74,9 +98,10 @@ pub async fn reasons() -> Cached<Vec<ReasonDto>> {
 
 /// What `POST /listings/{no}/report` takes: one of the reasons' codes, and what the reporter adds,
 /// which OTHER needs.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct ReportBody {
     #[serde(default)]
+    #[schema(examples("SCAM"))]
     pub reason: String,
     #[serde(default)]
     pub note: Option<String>,
@@ -89,6 +114,25 @@ pub struct ReportBody {
 /// NOTE_MOST characters one on `note`; past db::REPORTS_PER_DAY reports a day, `rate_limited`,
 /// said as the page says it. A listing that isn't on the site, or is the reporter's own, is not
 /// found.
+#[utoipa::path(
+    post,
+    path = "/listings/{no}/report",
+    tag = "safety",
+    operation_id = "reportListing",
+    summary = "Report a listing",
+    description = "Reports the listing for the moderators, once a person until a moderator decides however often; the third person to give a serious reason takes it off the site until a moderator decides.",
+    params(("no" = i64, Path, description = "The listing's number", example = 1001)),
+    request_body = ReportBody,
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Reported"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 429, response = RateLimited),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn report(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -133,6 +177,22 @@ pub async fn report(
 /// neither can write to the other. The account is the one behind a listing, the person who posted
 /// it, as the pages block it: for a store's listing, the one of its people who posted it, not the
 /// store. One that isn't on the site, or the user's own, is not found.
+#[utoipa::path(
+    put,
+    path = "/sellers/{user_id}/blocked",
+    tag = "safety",
+    operation_id = "blockSeller",
+    summary = "Block a seller",
+    description = "Blocks the account behind a listing for the user, once however often: its listings leave the user's lists, and neither can write to the other.",
+    params(("user_id" = Uuid, Path, description = "The account that posted the listing, its seller's `user_id`")),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Blocked"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn block(State(state): State<AppState>, ApiUser(user): ApiUser, id: Result<Path<Uuid>, PathRejection>) -> Result<StatusCode, ApiError> {
     let Path(id) = id.map_err(|_| ApiError::NotFound)?;
     if id == user.id || db::user_profile(&state.db, id).await?.is_none() {
@@ -144,6 +204,22 @@ pub async fn block(State(state): State<AppState>, ApiUser(user): ApiUser, id: Re
 
 /// `DELETE /sellers/{user_id}/blocked`: lets the account be again, as "Cilësimet" does
 /// (db::unblock), whichever way it was blocked; one not blocked stays so.
+#[utoipa::path(
+    delete,
+    path = "/sellers/{user_id}/blocked",
+    tag = "safety",
+    operation_id = "unblockSeller",
+    summary = "Let a blocked seller be",
+    description = "Lets the account be again, as \"Cilësimet\" does, whichever way it was blocked.",
+    params(("user_id" = Uuid, Path, description = "The account blocked")),
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Let be"),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn unblock(State(state): State<AppState>, ApiUser(user): ApiUser, id: Result<Path<Uuid>, PathRejection>) -> Result<StatusCode, ApiError> {
     let Path(id) = id.map_err(|_| ApiError::NotFound)?;
     db::unblock(&state.db, user.id, id).await?;

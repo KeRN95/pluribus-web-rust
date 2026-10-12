@@ -7,7 +7,9 @@
 //! app to act on, the same in every language; the messages are for a person to read, in the
 //! language the request asks for (lang.rs), from the catalogue (i18n/en/api.txt), each code's own,
 //! or one of a refusal's own where it says more (`ApiError::said`: a sign-in code that expired, an
-//! account suspended). An error's details stay in the log, never in the answer.
+//! account suspended). An error's details stay in the log, never in the answer. The envelope is a
+//! schema of the OpenAPI document (`ErrorEnvelope`, `ErrorBody`), and each status a response of
+//! its own there (openapi.rs).
 
 use std::collections::BTreeMap;
 
@@ -19,6 +21,9 @@ use axum::{
 };
 use pluribus_core::t;
 use serde::Serialize;
+use utoipa::ToSchema;
+
+use crate::openapi::kinds;
 
 /// Why a request failed.
 #[derive(Debug)]
@@ -48,17 +53,19 @@ pub enum ApiError {
 }
 
 /// What a failed request answers: its error, the envelope's one member.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ErrorEnvelope {
     pub error: ErrorBody,
 }
 
 /// An error as the envelope gives it.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ErrorBody {
     /// `unauthorized`, `forbidden`, `not_found`, `validation`, `rate_limited` or `internal`.
+    #[schema(value_type = kinds::ErrorCode)]
     pub code: &'static str,
     /// What went wrong, in the request's language.
+    #[schema(examples("Disa fusha nuk janë në rregull."))]
     pub message: String,
     /// A validation error's fields, each with its message; on other errors, none (left out).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -66,10 +73,15 @@ pub struct ErrorBody {
     /// For a request that came too soon, in how many seconds to try again, where that is known
     /// (`Retry-After` says it too); otherwise none (left out).
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(examples(42))]
     pub retry_after: Option<u64>,
 }
 
 impl ApiError {
+    /// Every code the envelope says, one for each kind of error above (`Said` says its error's),
+    /// in their order: the OpenAPI document's `ErrorCode`.
+    pub const CODES: [&'static str; 6] = ["unauthorized", "forbidden", "not_found", "validation", "rate_limited", "internal"];
+
     /// The envelope's code for the error.
     pub fn code(&self) -> &'static str {
         match self {
@@ -223,6 +235,8 @@ mod tests {
             (ApiError::RateLimited, "rate_limited", 429),
             (ApiError::Internal(anyhow::anyhow!("the database went away at 10.0.0.5")), "internal", 500),
         ];
+        // The codes the document lists (`ErrorCode`), one for each kind of error, in its order.
+        assert_eq!(errors.each_ref().map(|(error, ..)| error.code()), ApiError::CODES);
         for (error, code, status) in errors {
             let envelope = error.envelope();
             assert_eq!((envelope.error.code, error.status().as_u16()), (code, status));

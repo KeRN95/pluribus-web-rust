@@ -26,9 +26,13 @@ use pluribus_core::{
 use pluribus_db::{self as db, AttributeOption, Categories, Category, City, FilterAttribute, FormAttribute, Zone};
 use pluribus_services::AppState;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::ApiError;
+use crate::{
+    ApiError,
+    openapi::{Internal, NotFound, Validation, kinds},
+};
 
 /// How long the app, and any cache on the way, may keep these answers: five minutes. They change
 /// only with a migration (a category, a property or a town added), and nothing in them is anyone's
@@ -56,27 +60,34 @@ fn english(text: &str) -> String {
 }
 
 /// A category, with those under it (`GET /categories`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CategoryDto {
     /// What names it in an address and a filter: "makina" (/c/makina, `category=makina`).
+    #[schema(examples("makina"))]
     pub slug: String,
     /// Its name in Albanian, one word where it can be, as the pages show it: "Makina".
+    #[schema(examples("Makina"))]
     pub name: String,
     /// Its name as an English page shows it: "Cars".
+    #[schema(examples("Cars"))]
     pub name_en: String,
     /// The category it is under; none for a main one.
+    #[schema(examples("automjete"))]
     pub parent_slug: Option<String>,
     /// Whether listings go into it: not into one that only groups others ("Automjete"), whose
     /// listings go into one of its `children`.
     pub allow_listings: bool,
     /// The currency its posting form starts with: "EUR" for cars and property, "ALL" for most.
+    #[schema(examples("EUR"))]
     pub default_currency: String,
     /// The kinds of listing it takes, of SELL, BUY, RENT, WANTED_RENT, SERVICE and JOB: what its
     /// posting form offers, and its filters where there are several.
+    #[schema(value_type = Vec<kinds::ListingType>)]
     pub listing_types: Vec<ListingType>,
     /// Whether its listings say what condition the thing is in (new, used...).
     pub uses_condition: bool,
     /// The categories under it, in their order, each likewise.
+    #[schema(no_recursion)]
     pub children: Vec<CategoryDto>,
 }
 
@@ -108,6 +119,23 @@ impl CategoryDto {
 
 /// `GET /categories`: the whole tree, each main category in the pages' order with those under it,
 /// as the welcome page and the posting form list them (db::categories, the active ones).
+#[utoipa::path(
+    get,
+    path = "/categories",
+    tag = "reference",
+    operation_id = "listCategories",
+    summary = "The categories",
+    description = "The whole tree of categories, each main one in the pages' order with those under it, as the welcome page and the posting form list them.",
+    responses(
+        (
+            status = 200,
+            description = "The main categories, each with those under it",
+            body = Vec<CategoryDto>,
+            headers(("Cache-Control" = String, description = "`public, max-age=300`: it may be kept five minutes")),
+        ),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn categories(State(state): State<AppState>) -> Result<Cached<Vec<CategoryDto>>, ApiError> {
     let categories = db::categories(&state.db).await?;
     let tree = categories.top_level().map(|main| CategoryDto::of(&categories, main, None)).collect::<Result<_, _>>()?;
@@ -116,14 +144,17 @@ pub async fn categories(State(state): State<AppState>) -> Result<Cached<Vec<Cate
 
 /// A town listings go into (`GET /cities`): a municipality, named after its main town. A place's
 /// name is the same in English.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CityDto {
     pub id: Uuid,
     /// "Tiranë".
+    #[schema(examples("Tiranë"))]
     pub name: String,
     /// What names it in a filter: "tirane" (`city=tirane`).
+    #[schema(examples("tirane"))]
     pub slug: String,
     /// Its county, which the filters list the towns under: "Tiranë".
+    #[schema(examples("Tiranë"))]
     pub county: String,
     /// Its point, where its listings stand on the map without one of their own.
     pub latitude: f64,
@@ -134,12 +165,14 @@ pub struct CityDto {
 }
 
 /// A zone of a town (`CityDto::zones`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ZoneDto {
     pub id: Uuid,
     /// "Blloku".
+    #[schema(examples("Blloku"))]
     pub name: String,
     /// What names it in a filter, beside its town: "blloku" (`city=tirane&zone=blloku`).
+    #[schema(examples("blloku"))]
     pub slug: String,
 }
 
@@ -165,13 +198,31 @@ impl From<Zone> for ZoneDto {
 
 /// `GET /cities`: the towns, by county, each county's main town first, as the filters list them
 /// (db::cities).
+#[utoipa::path(
+    get,
+    path = "/cities",
+    tag = "reference",
+    operation_id = "listCities",
+    summary = "The towns",
+    description = "The towns listings go into, by county, each county's main town first, as the filters list them, each with its zones.",
+    responses(
+        (
+            status = 200,
+            description = "The towns",
+            body = Vec<CityDto>,
+            headers(("Cache-Control" = String, description = "`public, max-age=300`: it may be kept five minutes")),
+        ),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn cities(State(state): State<AppState>) -> Result<Cached<Vec<CityDto>>, ApiError> {
     let cities = db::cities(&state.db).await?;
     Ok(Cached(cities.into_iter().map(CityDto::from).collect()))
 }
 
-/// Which of a category's properties `GET /categories/{slug}/fields` gives (`?for=`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+/// Which of a category's properties `GET /categories/{slug}/fields` gives (`?for=`): those its
+/// filters offer (filters), or those its posting form asks for (form).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum FieldsFor {
     /// Those its filters offer.
@@ -189,20 +240,26 @@ pub struct FieldsQuery {
 
 /// One of a category's properties, as its filters offer it or as its posting form asks for it
 /// (`GET /categories/{slug}/fields`): a car's make, a flat's rooms.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct FieldDto {
     /// What names it, and its value in a filter or a listing: "vehicle_make"
     /// (`vehicle_make=VOLKSWAGEN`, `vehicle_year_min=2010`).
+    #[schema(examples("vehicle_make"))]
     pub code: String,
     /// Its name in Albanian, the category's own name for it where it has one: "Marka".
+    #[schema(examples("Marka"))]
     pub label: String,
     /// Its name as an English page shows it: "Brand".
+    #[schema(examples("Brand"))]
     pub label_en: String,
     /// What its values are: TEXT, NUMBER, BOOLEAN, SELECT or MULTISELECT.
+    #[schema(value_type = kinds::DataType)]
     pub data_type: DataType,
     /// A number's unit, as the pages write it ("km", "inç"); none for most.
+    #[schema(examples("km"))]
     pub unit: Option<String>,
     /// The unit as an English page writes it ("km", "in").
+    #[schema(examples("km"))]
     pub unit_en: Option<String>,
     /// Whether the category asks every listing for it.
     pub required: bool,
@@ -223,14 +280,19 @@ pub struct FieldDto {
     pub order: usize,
 }
 
-/// One of a property's options (`FieldDto::options`).
-#[derive(Debug, Serialize)]
+/// One of a property's options (`FieldDto::options`); in the OpenAPI document `FieldOptionDto`,
+/// listing.rs having an `OptionDto` of its own.
+#[derive(Debug, Serialize, ToSchema)]
+#[schema(as = FieldOptionDto)]
 pub struct OptionDto {
     /// What names it as the property's value, in a filter or a listing: "VOLKSWAGEN".
+    #[schema(examples("VOLKSWAGEN"))]
     pub code: String,
     /// Its label in Albanian: "Naftë".
+    #[schema(examples("Naftë"))]
     pub label: String,
     /// Its label as an English page shows it: "Diesel".
+    #[schema(examples("Diesel"))]
     pub label_en: String,
     /// For a property that depends on another (`FieldDto::parent_code`), the code of the other's
     /// option it belongs under: a Golf's make, "VOLKSWAGEN"; none for the others.
@@ -239,7 +301,7 @@ pub struct OptionDto {
 
 /// The bounds the posting form holds a number to (`FieldDto::validation`), each where the property
 /// has one.
-#[derive(Debug, Clone, Copy, Default, Serialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, ToSchema)]
 pub struct ValidationDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub min: Option<Bound>,
@@ -249,7 +311,7 @@ pub struct ValidationDto {
 
 /// A bound as validation_json writes it: a whole number as one (1900), any other with its
 /// decimals (0.5).
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, ToSchema)]
 #[serde(untagged)]
 pub enum Bound {
     Whole(i64),
@@ -370,6 +432,29 @@ impl FieldDto {
 /// category that only groups others, whose listings go into one under it). A `for` that is
 /// neither, or none, is a validation error on `for`; a category the site hasn't, or not any more,
 /// is not found.
+#[utoipa::path(
+    get,
+    path = "/categories/{slug}/fields",
+    tag = "reference",
+    operation_id = "listCategoryFields",
+    summary = "A category's properties",
+    description = "A category's properties, its own and those it takes from the categories above it, in its order, as its filters offer them or as its posting form asks for them (none for the form of a category that only groups others).",
+    params(
+        ("slug" = String, Path, description = "The category's slug", example = "makina"),
+        ("for" = FieldsFor, Query, description = "`filters`, those its filters offer, or `form`, those its posting form asks for"),
+    ),
+    responses(
+        (
+            status = 200,
+            description = "The category's properties, in its order",
+            body = Vec<FieldDto>,
+            headers(("Cache-Control" = String, description = "`public, max-age=300`: it may be kept five minutes")),
+        ),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn fields(
     State(state): State<AppState>,
     slug: Result<Path<String>, PathRejection>,

@@ -26,9 +26,13 @@ use pluribus_services::{
     sign_in::{self, Client, Refused},
 };
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::{ApiError, ApiUser, JsonBody, MeDto, auth};
+use crate::{
+    ApiError, ApiUser, JsonBody, MeDto, auth,
+    openapi::{Forbidden, Internal, NotFound, RateLimited, Unauthorized, Validation, kinds},
+};
 
 /// The address the request came from, for the limits, as the pages read theirs
 /// (`sign_in::client_ip`): the connection's own, or behind a proxy on this machine (cloudflared's
@@ -47,43 +51,51 @@ impl<S: Send + Sync> FromRequestParts<S> for ClientIp {
 
 /// `POST /auth/code`'s body: a phone number or an e-mail address, as people type them ("069 123
 /// 4567", "Ana@Example.com"), and the name for an account it makes, if it makes one.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CodeRequest {
+    #[schema(examples("069 123 4567"))]
     pub contact: String,
     #[serde(default)]
+    #[schema(examples("Ana"))]
     pub name: Option<String>,
 }
 
 /// A code sent (`POST /auth/code`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CodeSentDto {
     /// What the code waits under, which `/auth/verify` takes back with it.
     pub code_id: Uuid,
     /// Where it went, as the pages show it: "+355 69 *** **67", "a***@example.com".
+    #[schema(examples("+355 69 *** **67"))]
     pub sent_to: String,
     /// How it went: "whatsapp", "email", or "log" where its channel isn't set up (as in
     /// development, where the server's log has it).
+    #[schema(value_type = kinds::Channel)]
     pub via: &'static str,
     /// In test mode alone (`SIGN_IN_CODES_ON_SCREEN`), the code itself, as the pages show it
     /// then; left out otherwise.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(examples("123456"))]
     pub code: Option<String>,
 }
 
 /// `POST /auth/verify`'s body: the code's id and the code as typed (its digits are what count);
 /// what is signing in, "ios", "android" or "web"; and the phone's name, if the app gives one,
 /// kept with the session (its first 80 characters).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct VerifyRequest {
     pub code_id: Uuid,
+    #[schema(examples("123456"))]
     pub code: String,
+    #[schema(value_type = kinds::Client)]
     pub client: String,
     #[serde(default)]
+    #[schema(examples("Pixel 9"))]
     pub device_name: Option<String>,
 }
 
 /// Signed in (`POST /auth/verify`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct SignedInDto {
     /// The bearer token, given this once: the database keeps its hash alone.
     pub token: String,
@@ -95,6 +107,21 @@ pub struct SignedInDto {
 
 /// `POST /auth/code`: a code to the contact, by the state's senders, as the pages send one; 422 on
 /// `contact` for one that is neither a mobile number nor an e-mail address.
+#[utoipa::path(
+    post,
+    path = "/auth/code",
+    tag = "signin",
+    operation_id = "requestCode",
+    summary = "Send a sign-in code",
+    description = "Sends a sign-in code to a phone number or an e-mail address, as the pages send one and within their limits.",
+    request_body = CodeRequest,
+    responses(
+        (status = 200, description = "The code went out", body = CodeSentDto),
+        (status = 422, response = Validation),
+        (status = 429, response = RateLimited),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn code(
     State(state): State<AppState>,
     ClientIp(ip): ClientIp,
@@ -111,6 +138,23 @@ pub async fn code(
 /// `POST /auth/verify`: the code back. Right, the account of its contact is signed in, made if it
 /// had none, for the client named (422 on `client` for another), and the language the request
 /// asks for (lang.rs) is the account's now, its e-mails' too.
+#[utoipa::path(
+    post,
+    path = "/auth/verify",
+    tag = "signin",
+    operation_id = "verifyCode",
+    summary = "Sign in with the code",
+    description = "Takes the code back and signs the account of its contact in, made if it had none, giving the bearer token once; the language the request asks for becomes the account's.",
+    request_body = VerifyRequest,
+    responses(
+        (status = 200, description = "Signed in: the token, given this once, and the user", body = SignedInDto),
+        (status = 403, response = Forbidden),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 429, response = RateLimited),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn verify(State(state): State<AppState>, JsonBody(body): JsonBody<VerifyRequest>) -> Result<Json<SignedInDto>, ApiError> {
     let Some(client) = Client::parse(&body.client) else {
         return Err(ApiError::Validation(vec![("client", t("Duhet të jetë „ios“, „android“ ose „web“.").to_string())]));
@@ -125,6 +169,20 @@ pub async fn verify(State(state): State<AppState>, JsonBody(body): JsonBody<Veri
 
 /// `POST /auth/sign-out`, signed in: the session the bearer token names ends, as signing out of the
 /// pages ends theirs: 204.
+#[utoipa::path(
+    post,
+    path = "/auth/sign-out",
+    tag = "signin",
+    operation_id = "signOut",
+    summary = "Sign out",
+    description = "Ends the session the bearer token names, as signing out of the pages ends theirs: the token signs nothing in after.",
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Signed out"),
+        (status = 401, response = Unauthorized),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn sign_out(State(state): State<AppState>, ApiUser(_): ApiUser, headers: HeaderMap) -> Result<StatusCode, ApiError> {
     if let Some(token) = auth::bearer(&headers) {
         sign_in::sign_out(&state, token).await?;

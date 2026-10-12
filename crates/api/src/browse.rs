@@ -31,9 +31,13 @@ use pluribus_services::{
 use rust_decimal::Decimal;
 use serde::Serialize;
 use time::OffsetDateTime;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::{ApiError, OptionalApiUser, Page, auth};
+use crate::{
+    ApiError, CardPage, OptionalApiUser, Page, auth,
+    openapi::{Internal, NotFound, Unauthorized, Validation, kinds},
+};
 
 /// How many of the listings the caller saw lately `/home` reads (`seen`), the latest first: as
 /// many as the pages' cookie of them keeps (pluribus-web's SEEN_MOST).
@@ -57,13 +61,16 @@ const SEEDS_END: char = '~';
 
 /// A listing as its card shows it, from the row the pages' cards are made from (`db::ListingCard`):
 /// what the app draws a card with, and the stand-in its page opens with while the rest comes.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CardDto {
     /// Its number, which its page goes by.
+    #[schema(examples(1001))]
     pub no: i64,
+    #[schema(examples("volkswagen-golf-7-2016"))]
     pub slug: String,
     /// What its card says: a car's made from what the car is ("Volkswagen Golf 7, 2016, naftë"),
     /// another's as its seller wrote it.
+    #[schema(examples("Volkswagen Golf 7, 2016, naftë"))]
     pub title: String,
     /// A car's title as its seller wrote it, where `title` was made: what its page heads itself
     /// with; none for the others.
@@ -72,15 +79,19 @@ pub struct CardDto {
     /// stand-in frames them in too.
     pub deal: bool,
     /// What it offers or asks for: SELL, BUY, RENT, WANTED_RENT, SERVICE or JOB.
+    #[schema(value_type = kinds::ListingType)]
     pub kind: ListingType,
     /// What state the thing is in, in the categories that ask: NEW, LIKE_NEW, USED or FOR_PARTS.
+    #[schema(value_type = Option<kinds::Condition>)]
     pub condition: Option<Condition>,
     /// Where it stands: ACTIVE; among those seen lately, RESERVED or SOLD too, which its card says.
+    #[schema(value_type = kinds::Status)]
     pub status: Status,
     pub price: PriceDto,
     /// Its cover photo; none for a listing without photos.
     pub photo: Option<PhotoDto>,
     /// Where it is: the zone and the town ("Blloku, Tiranë"), or the town; none without a place.
+    #[schema(examples("Blloku, Tiranë"))]
     pub place: Option<String>,
     /// When it was posted, or last brought up again, by which the newest come first.
     #[serde(with = "time::serde::rfc3339")]
@@ -109,11 +120,14 @@ pub struct CardDto {
 /// (label_i18n), which differs from it for many. One of: a number (as text, every digit it has),
 /// with its unit; a choice's label; a text someone typed, as they typed it; a box ticked (`flag`),
 /// with the property's name. What it hasn't is left out.
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, ToSchema)]
 pub struct DetailDto {
     /// The property's code: "vehicle_mileage".
+    #[schema(examples("vehicle_mileage"))]
     pub code: String,
+    /// A number, as text, every digit it has: "148000".
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(examples("148000"))]
     pub number: Option<Decimal>,
     /// The number's unit as the database keeps it ("km", "muaj"), and as an English page says it
     /// after this number ("km", "months"; "month" after a 1).
@@ -169,25 +183,29 @@ pub(crate) fn unit_en(unit: &str, number: Option<Decimal>) -> String {
 }
 
 /// A card's price.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PriceDto {
     /// The amount, as text, every digit it has ("9500", "12.5"); none for a price on request, nor
     /// for a free one without.
+    #[schema(examples("9500"))]
     pub amount: Option<Decimal>,
     /// EUR or ALL.
+    #[schema(examples("EUR"))]
     pub currency: String,
     /// How the price is meant: FIXED, NEGOTIABLE, FROM, FREE or ON_REQUEST.
     #[serde(rename = "type")]
+    #[schema(value_type = kinds::PriceType)]
     pub kind: PriceType,
     /// What it was, when it dropped lately (by a hundredth or more, within the last 30 days), as
     /// text; the drop is worked out from the two.
+    #[schema(examples("10200"))]
     pub was: Option<Decimal>,
     /// Whether the amount is a month's: a rent's, or a job's pay.
     pub per_month: bool,
 }
 
 /// A card's photo, every address absolute.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PhotoDto {
     /// The card's copy (600 px on its shorter side for a photo kept as WebP, as `card_webp`), or
     /// for a photo kept before WebP its card-sized JPEG.
@@ -206,8 +224,8 @@ pub struct PhotoDto {
     pub height: Option<u32>,
 }
 
-/// Who sells a listing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+/// Who sells a listing: a private seller (user), or a business.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SellerKind {
     /// A private seller, on their own account.
@@ -218,7 +236,7 @@ pub enum SellerKind {
 
 /// `GET /listings`: a page of the listings a query finds, where the next starts, and how many it
 /// finds.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ListingsDto {
     pub items: Vec<CardDto>,
     /// Sent back as `after`, with the same query, for the next page; null on the last.
@@ -228,14 +246,15 @@ pub struct ListingsDto {
 
 /// How many listings a query finds, counted up to a limit: past it, `n` is the limit and `more`
 /// says there are more ("1 000+").
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, ToSchema)]
 pub struct CountDto {
+    #[schema(examples(1000))]
     pub n: i64,
     pub more: bool,
 }
 
 /// `GET /home`: the front page's rows, as the welcome page has them.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct HomeDto {
     /// The main categories, in the welcome page's order.
     pub categories: Vec<MainCategoryDto>,
@@ -247,6 +266,7 @@ pub struct HomeDto {
     /// The first page of those recommended for the caller ("Të rekomanduara për ty"), or for a
     /// caller with too few like what they looked at, of the newest ("Njoftimet më të reja"), as
     /// `for_you` says; its `next` goes to `/listings` as `after` for the page after it.
+    #[schema(value_type = CardPage)]
     pub recommended: Page<CardDto>,
     /// Whether `recommended` is those recommended for the caller, rather than the newest.
     pub for_you: bool,
@@ -254,10 +274,13 @@ pub struct HomeDto {
 
 /// A main category, as `/home` lists them: its slug, which `/listings` takes as `category`, and its
 /// name in Albanian and in English.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct MainCategoryDto {
+    #[schema(examples("automjete"))]
     pub slug: String,
+    #[schema(examples("Automjete"))]
     pub name: String,
+    #[schema(examples("Vehicles"))]
     pub name_en: String,
 }
 
@@ -292,6 +315,40 @@ impl FromRequestParts<AppState> for Caller {
 /// in the query's order (422). With `sipas`, or an `after` that a recommended list's `next` gave,
 /// the listings recommended for those seeds, then every other one, newest first, as the welcome
 /// page goes on (`recommending`), the query's filters aside.
+#[utoipa::path(
+    get,
+    path = "/listings",
+    tag = "browse",
+    operation_id = "listListings",
+    summary = "The listings a query finds",
+    description = "A page of the listings a query finds, in the pages' own vocabulary, and how many it finds; a signed-in caller's without the listings of the accounts they blocked. Besides the parameters below, a category's own filters go in the query by their codes, as `GET /categories/{slug}/fields?for=filters` lists them: an option's code (`vehicle_fuel=DIESEL`, repeated for several), `<code>_min` and `<code>_max` for a number, `<code>=1` for a box, and `<x>_year` for the year of the vehicle a part fits; what doesn't exist is ignored, as on the pages.",
+    params(
+        ("q" = Option<String>, Query, description = "Words, searched as the pages search them (their first 100 characters)", example = "golf"),
+        ("category" = Option<String>, Query, description = "A category's slug, and those under it; one that doesn't exist is not found", example = "makina"),
+        ("city" = Option<String>, Query, description = "A town's slug; a town or a point, not both", example = "tirane"),
+        ("zone" = Option<String>, Query, description = "A zone of the town, by its slug: in property alone, with its town", example = "blloku"),
+        ("lat" = Option<f64>, Query, description = "A point's latitude, with `lng`: the listings around it"),
+        ("lng" = Option<f64>, Query, description = "The point's longitude"),
+        ("radius" = Option<u32>, Query, minimum = 1, maximum = 50, description = "How many kilometres around the point, 1 to 50; 10 without one"),
+        ("type" = Option<kinds::ListingType>, Query, description = "What the listings offer or ask for, where the category takes more than one kind"),
+        ("condition" = Option<Vec<kinds::Condition>>, Query, description = "What state the things are in, any of them (repeated)"),
+        ("price_min" = Option<String>, Query, description = "The lowest price, a number as people type it (\"5 000\", \"12,5\")", example = "5000"),
+        ("price_max" = Option<String>, Query, description = "The highest price, likewise", example = "12000"),
+        ("currency" = Option<kinds::Currency>, Query, description = "The prices' currency; the category's without one"),
+        ("sort" = Option<kinds::Sort>, Query, description = "The order: without one, relevance with words, else nearest with a point, else newest"),
+        ("after" = Option<String>, Query, description = "The last page's `next`, with the same query; or a recommended page's, which goes on with the listings recommended for its seeds"),
+        ("count" = Option<String>, Query, description = "`precise` counts up to 10 000 rather than 1 000, as a page asks once it shows", example = "precise"),
+        ("sipas" = Option<String>, Query, description = "The seeds of a recommended list (`1002x24.1005x20`): the listings recommended for them first, then every other one, newest first, the other filters aside", example = "1002x24.1005x20"),
+    ),
+    security((), ("bearer" = [])),
+    responses(
+        (status = 200, description = "A page of the listings found, and how many there are", body = ListingsDto),
+        (status = 401, response = Unauthorized),
+        (status = 404, response = NotFound),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn listings(
     State(state): State<AppState>,
     caller: Caller,
@@ -351,6 +408,24 @@ pub async fn listings(
 /// recommended for them, grown from those seen, those kept (`kept`, and a signed-in caller's own)
 /// and those a signed-in caller wrote to a seller about; with too few like them, the newest. The
 /// accounts the caller blocked left out of each.
+#[utoipa::path(
+    get,
+    path = "/home",
+    tag = "browse",
+    operation_id = "getHome",
+    summary = "The front page's rows",
+    description = "The front page's rows in one call: the main categories, the listings seen the most this week, those the caller saw lately, and the first page of those recommended for them, or of the newest.",
+    params(
+        ("seen" = Option<String>, Query, description = "The numbers of the listings the caller saw lately, the latest first, joined by dots (twelve at most)", example = "1005.1003"),
+        ("kept" = Option<String>, Query, description = "The numbers of the listings the caller keeps, likewise", example = "1002"),
+    ),
+    security((), ("bearer" = [])),
+    responses(
+        (status = 200, description = "The front page's rows", body = HomeDto),
+        (status = 401, response = Unauthorized),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn home(
     State(state): State<AppState>,
     caller: Caller,

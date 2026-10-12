@@ -6,10 +6,10 @@ rust-version.workspace = true
 
 # The JSON API the phone app calls, under /api/v1, which the binary nests beside the pages over
 # the same state (pluribus-services' AppState): its routes, its one error envelope, the language
-# each request asks for, the bearer tokens that sign a request in, and the shapes it answers in.
-# It calls what the pages call, in pluribus-services, pluribus-db and pluribus-core, and never the
-# pages themselves (pluribus-web), which only its tests take in, to mount it beside them as the
-# binary does.
+# each request asks for, the bearer tokens that sign a request in, and the shapes it answers in,
+# with the OpenAPI document that describes them all (utoipa). It calls what the pages call, in
+# pluribus-services, pluribus-db and pluribus-core, and never the pages themselves (pluribus-web),
+# which only its tests take in, to mount it beside them as the binary does.
 [dependencies]
 pluribus-core.workspace = true
 pluribus-db.workspace = true
@@ -24,6 +24,7 @@ time.workspace = true
 tokio.workspace = true
 tower-http.workspace = true
 tracing.workspace = true
+utoipa.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]

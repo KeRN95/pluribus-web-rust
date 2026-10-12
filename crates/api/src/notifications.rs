@@ -22,9 +22,13 @@ use pluribus_services::AppState;
 use serde::{Deserialize, Serialize};
 use sqlx::types::JsonValue;
 use time::OffsetDateTime;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::{ApiError, ApiUser, JsonBody, Page};
+use crate::{
+    ApiError, ApiUser, JsonBody, NotificationPage, Page,
+    openapi::{Internal, Unauthorized, Validation, kinds},
+};
 
 /// How many notifications a page holds: as many as /lajmerimet shows.
 const PAGE: usize = db::NOTIFICATIONS_MOST as usize;
@@ -44,15 +48,17 @@ const KEPT_TITLES: [&str; 8] = [
 ];
 
 /// A notification, as the app lists it (`GET /notifications`).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct NotificationDto {
     /// A UUIDv7, which sorts as it was made: what `after` and `up_to` name it by.
     pub id: Uuid,
     /// What it is about: PRICE_DROP, SAVED_SEARCH, NEW_MESSAGE, EXPIRING, EXPIRED, PROMOTED or
     /// STORE_INVITE.
+    #[schema(value_type = kinds::NotificationKind)]
     pub kind: NotificationKind,
     /// What it says, whole, in the language asked for: "Çmimi ra: Laptop Lenovo ThinkPad T14",
     /// "Price drop: Laptop Lenovo ThinkPad T14".
+    #[schema(examples("Çmimi ra: Laptop Lenovo ThinkPad T14"))]
     pub title: String,
     /// What it says under its title: a message notice's start of the message, as its writer wrote
     /// it; an invitation into a store's, the role it offers and what that lets one do, in the
@@ -149,6 +155,22 @@ pub struct NotificationsQuery {
 /// latest first, as /lajmerimet lists them, PAGE a page: the first those the page shows, and
 /// `next`, while more follow, the id of its last, which sent back as `after` gives those after it
 /// (db::notifications_after). An `after` that isn't an id is a validation error on `after`.
+#[utoipa::path(
+    get,
+    path = "/notifications",
+    tag = "notifications",
+    operation_id = "listNotifications",
+    summary = "The notifications",
+    description = "The user's notifications of the last 90 days, the latest first, as /lajmerimet lists them, a page of 100 at a time, each said in the language asked for.",
+    params(("after" = Option<Uuid>, Query, description = "The last page's `next`: the id of its last notification")),
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "A page of the notifications", body = NotificationPage),
+        (status = 401, response = Unauthorized),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn list(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -165,8 +187,10 @@ pub async fn list(
     Ok(Json(Page { items: rows.into_iter().filter_map(NotificationDto::of).collect(), next }))
 }
 
-/// What `POST /notifications/seen` reads.
-#[derive(Debug, Deserialize)]
+/// What `POST /notifications/seen` reads; in the OpenAPI document `NotificationsSeenBody`, saved.rs
+/// having a `SeenBody` of its own.
+#[derive(Debug, Deserialize, ToSchema)]
+#[schema(as = NotificationsSeenBody)]
 pub struct SeenBody {
     /// The latest of the unread notifications the app showed, by its id.
     pub up_to: Uuid,
@@ -176,6 +200,22 @@ pub struct SeenBody {
 /// the latest unread one it showed: those are read, and none that came after, which it didn't
 /// show (db::notifications_seen, as /lajmerimet's beacon reads them); and with them what the
 /// badges count (`GET /counts`), a price drop or a saved search's alert among them. 204.
+#[utoipa::path(
+    post,
+    path = "/notifications/seen",
+    tag = "notifications",
+    operation_id = "markNotificationsSeen",
+    summary = "The notifications were shown",
+    description = "The app showed the user's notifications up to the latest unread one it showed: those are read, none that came after, and with them what the badges count.",
+    request_body = SeenBody,
+    security(("bearer" = [])),
+    responses(
+        (status = 204, description = "Read"),
+        (status = 401, response = Unauthorized),
+        (status = 422, response = Validation),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn seen(
     State(state): State<AppState>,
     ApiUser(user): ApiUser,
@@ -187,7 +227,7 @@ pub async fn seen(
 
 /// What the app's badges count (`GET /counts`), each as the pages' own JSON counts it, by the same
 /// function.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CountsDto {
     /// The conversations with messages the user hasn't read (db::unread_conversations), as the
     /// messages button counts them (/mesazhet/numri).
@@ -207,6 +247,25 @@ pub struct CountsDto {
 
 /// `GET /counts`: what the app's badges count (`CountsDto`), in one call; never kept
 /// (`Cache-Control: no-store`), as the pages' counts aren't.
+#[utoipa::path(
+    get,
+    path = "/counts",
+    tag = "notifications",
+    operation_id = "getCounts",
+    summary = "What the badges count",
+    description = "What the app's badges count, in one call, each as the pages' own JSON counts it: the conversations unread, the notifications unread and those about the user's own listings, the price drops and the saved searches' alerts unseen.",
+    security(("bearer" = [])),
+    responses(
+        (
+            status = 200,
+            description = "The counts",
+            body = CountsDto,
+            headers(("Cache-Control" = String, description = "`no-store`: never kept")),
+        ),
+        (status = 401, response = Unauthorized),
+        (status = 500, response = Internal),
+    ),
+)]
 pub async fn counts(State(state): State<AppState>, ApiUser(user): ApiUser) -> Result<impl IntoResponse, ApiError> {
     let (messages, unread, drops, searches) = tokio::try_join!(
         db::unread_conversations(&state.db, user.id),
